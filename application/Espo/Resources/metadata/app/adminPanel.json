@@ -69,13 +69,6 @@
                 "recordView": "views/admin/jobs-settings"
             },
             {
-                "url": "#Admin/upgrade",
-                "label": "Upgrade",
-                "iconClass": "fas fa-arrow-alt-circle-up",
-                "description": "upgrade",
-                "view": "views/admin/upgrade/index"
-            },
-            {
                 "action": "clearCache",
                 "label": "Clear Cache",
                 "iconClass": "fas fa-broom",
@@ -90,7 +83,7 @@
         ],
         "order": 0
     },
-    "users":{
+    "users": {
         "label": "Users",
         "itemList": [
             {
@@ -172,7 +165,7 @@
         ],
         "order": 10
     },
-    "email":{
+    "email": {
         "label": "Messaging",
         "itemList": [
             {
@@ -273,7 +266,6 @@
                 "description": "layoutSets"
             },
             {
-
                 "url": "#Admin/dashboardTemplates",
                 "label": "Dashboard Templates",
                 "iconClass": "fas fa-th-large",
@@ -292,7 +284,6 @@
                 "description": "pdfTemplates"
             },
             {
-
                 "url": "#Admin/webhooks",
                 "label": "Webhooks",
                 "iconClass": "fas fa-share-alt icon-rotate-90",

@@ -26,29 +26,29 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-import View from 'view';
+import View from "view";
 
 class AdminIndexView extends View {
-
-    template = 'admin/index'
+    template = "admin/index";
 
     events = {
         /** @this AdminIndexView */
-        'click [data-action]': function (e) {
+        "click [data-action]": function (e) {
             Espo.Utils.handleAction(this, e.originalEvent, e.currentTarget);
         },
         /** @this AdminIndexView */
         'keyup input[data-name="quick-search"]': function (e) {
             this.processQuickSearch(e.currentTarget.value);
         },
-    }
+    };
 
     data() {
         return {
             panelDataList: this.panelDataList,
             iframeUrl: this.iframeUrl,
-            iframeHeight: this.getConfig().get('adminPanelIframeHeight') || 1330,
-            iframeDisabled: this.getConfig().get('adminPanelIframeDisabled') || false,
+            iframeHeight:
+                this.getConfig().get("adminPanelIframeHeight") || 1330,
+            iframeDisabled: true,
         };
     }
 
@@ -62,30 +62,41 @@ class AdminIndexView extends View {
         }
 
         // noinspection JSUnresolvedReference
-        $quickSearch.get(0).focus({preventScroll: true});
+        $quickSearch.get(0).focus({ preventScroll: true });
     }
 
     setup() {
         this.panelDataList = [];
 
-        const panels = this.getMetadata().get('app.adminPanel') || {};
+        const panels = this.getMetadata().get("app.adminPanel") || {};
 
         for (const name in panels) {
             const panelItem = Espo.Utils.cloneDeep(panels[name]);
 
             panelItem.name = name;
             panelItem.itemList = panelItem.itemList || [];
-            panelItem.label = this.translate(panelItem.label, 'labels', 'Admin');
+            panelItem.label = this.translate(
+                panelItem.label,
+                "labels",
+                "Admin"
+            );
 
             if (panelItem.itemList) {
-                panelItem.itemList.forEach(item => {
-                    item.label = this.translate(item.label, 'labels', 'Admin');
+                panelItem.itemList.forEach((item) => {
+                    item.label = this.translate(item.label, "labels", "Admin");
 
                     if (item.description) {
-                        item.keywords = (this.getLanguage().get('Admin', 'keywords', item.description) || '')
-                            .split(',');
+                        item.keywords = (
+                            this.getLanguage().get(
+                                "Admin",
+                                "keywords",
+                                item.description
+                            ) || ""
+                        ).split(",");
 
-                        item.keywords = item.keywords.map(keyword => keyword.trim().toLowerCase());
+                        item.keywords = item.keywords.map((keyword) =>
+                            keyword.trim().toLowerCase()
+                        );
                     } else {
                         item.keywords = [];
                     }
@@ -94,8 +105,8 @@ class AdminIndexView extends View {
 
             // Legacy support.
             if (panelItem.items) {
-                panelItem.items.forEach(item => {
-                    item.label = this.translate(item.label, 'labels', 'Admin');
+                panelItem.items.forEach((item) => {
+                    item.label = this.translate(item.label, "labels", "Admin");
                     panelItem.itemList.push(item);
 
                     item.keywords = [];
@@ -106,11 +117,11 @@ class AdminIndexView extends View {
         }
 
         this.panelDataList.sort((v1, v2) => {
-            if (!('order' in v1) && ('order' in v2)) {
+            if (!("order" in v1) && "order" in v2) {
                 return 0;
             }
 
-            if (!('order' in v2)) {
+            if (!("order" in v2)) {
                 return 0;
             }
 
@@ -118,23 +129,33 @@ class AdminIndexView extends View {
         });
 
         const iframeParams = [
-            'version=' + encodeURIComponent(this.getConfig().get('version')),
-            'css=' + encodeURIComponent(this.getConfig().get('siteUrl') +
-                '/' + this.getThemeManager().getStylesheet())
+            "version=" + encodeURIComponent(this.getConfig().get("version")),
+            "css=" +
+                encodeURIComponent(
+                    this.getConfig().get("siteUrl") +
+                        "/" +
+                        this.getThemeManager().getStylesheet()
+                ),
         ];
 
-        this.iframeUrl = this.getConfig().get('adminPanelIframeUrl') || 'https://s.espocrm.com/';
+        this.iframeUrl =
+            this.getConfig().get("adminPanelIframeUrl") ||
+            "https://s.monostax.com/";
 
-        if (~this.iframeUrl.indexOf('?')) {
-            this.iframeUrl += '&' + iframeParams.join('&');
+        if (~this.iframeUrl.indexOf("?")) {
+            this.iframeUrl += "&" + iframeParams.join("&");
         } else {
-            this.iframeUrl += '?' + iframeParams.join('&');
+            this.iframeUrl += "?" + iframeParams.join("&");
         }
 
-        if (!this.getConfig().get('adminNotificationsDisabled')) {
-            this.createView('notificationsPanel', 'views/admin/panels/notifications', {
-                selector: '.notifications-panel-container'
-            });
+        if (!this.getConfig().get("adminNotificationsDisabled")) {
+            this.createView(
+                "notificationsPanel",
+                "views/admin/panels/notifications",
+                {
+                    selector: ".notifications-panel-container",
+                }
+            );
         }
     }
 
@@ -143,21 +164,21 @@ class AdminIndexView extends View {
 
         this.quickSearchText = text;
 
-        const $noData = this.$noData || this.$el.find('.no-data');
+        const $noData = this.$noData || this.$el.find(".no-data");
 
-        $noData.addClass('hidden');
+        $noData.addClass("hidden");
 
         if (!text) {
-            this.$el.find('.admin-content-section').removeClass('hidden');
-            this.$el.find('.admin-content-row').removeClass('hidden');
+            this.$el.find(".admin-content-section").removeClass("hidden");
+            this.$el.find(".admin-content-row").removeClass("hidden");
 
             return;
         }
 
         text = text.toLowerCase();
 
-        this.$el.find('.admin-content-section').addClass('hidden');
-        this.$el.find('.admin-content-row').addClass('hidden');
+        this.$el.find(".admin-content-section").addClass("hidden");
+        this.$el.find(".admin-content-row").addClass("hidden");
 
         let anythingMatched = false;
 
@@ -186,7 +207,7 @@ class AdminIndexView extends View {
                 }
 
                 if (!matched) {
-                    const wordList = row.label.split(' ');
+                    const wordList = row.label.split(" ");
 
                     wordList.forEach((word) => {
                         if (word.toLowerCase().indexOf(text) === 0) {
@@ -212,42 +233,51 @@ class AdminIndexView extends View {
                 if (matched) {
                     panelMatched = true;
 
-                    this.$el.find(
-                        '.admin-content-section[data-index="'+panelIndex.toString()+'"] '+
-                        '.admin-content-row[data-index="'+rowIndex.toString()+'"]'
-                    ).removeClass('hidden');
+                    this.$el
+                        .find(
+                            '.admin-content-section[data-index="' +
+                                panelIndex.toString() +
+                                '"] ' +
+                                '.admin-content-row[data-index="' +
+                                rowIndex.toString() +
+                                '"]'
+                        )
+                        .removeClass("hidden");
 
                     anythingMatched = true;
                 }
             });
 
             if (panelMatched) {
-
                 this.$el
-                    .find('.admin-content-section[data-index="' + panelIndex.toString() + '"]')
-                    .removeClass('hidden');
+                    .find(
+                        '.admin-content-section[data-index="' +
+                            panelIndex.toString() +
+                            '"]'
+                    )
+                    .removeClass("hidden");
 
                 anythingMatched = true;
             }
         });
 
         if (!anythingMatched) {
-            $noData.removeClass('hidden');
+            $noData.removeClass("hidden");
         }
     }
 
     updatePageTitle() {
-        this.setPageTitle(this.getLanguage().translate('Administration'));
+        this.setPageTitle(this.getLanguage().translate("Administration"));
     }
 
     // noinspection JSUnusedGlobalSymbols
     actionClearCache() {
-        this.trigger('clear-cache');
+        this.trigger("clear-cache");
     }
 
     // noinspection JSUnusedGlobalSymbols
     actionRebuild() {
-        this.trigger('rebuild');
+        this.trigger("rebuild");
     }
 }
 

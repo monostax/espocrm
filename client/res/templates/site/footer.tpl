@@ -1,7 +1,7 @@
 <p class="credit small">&copy; 2025
 <a
-    href="https://www.espocrm.com"
-    title="Powered by EspoCRM"
+    href="https://www.monostax.com"
+    title="Hosted by Monostax"
     rel="noopener" target="_blank"
     tabindex="-1"
->EspoCRM, Inc.</a></p>
+>Monostax, Inc.</a></p>

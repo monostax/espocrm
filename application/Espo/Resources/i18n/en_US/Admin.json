@@ -243,16 +243,16 @@
         "notStorable": "Not Storable",
         "itemsEditable": "Items Editable"
     },
-    "strings" : {
+    "strings": {
         "rebuildRequired": "Rebuild is required"
     },
     "messages": {
         "cacheIsDisabled": "Cache is disabled, the application will run slow. Enable cache in the [settings](#Admin/settings).",
         "formulaFunctions": "More functions can be found in [documentation]({documentationUrl}).",
         "rebuildRequired": "You need to run rebuild from CLI.",
-        "upgradeVersion": "EspoCRM will be upgraded to version **{version}**. Please be patient as this may take a while.",
-        "upgradeDone": "EspoCRM has been upgraded to version **{version}**.",
-        "upgradeBackup": "We recommend making a backup of your EspoCRM files and data before upgrading.",
+        "upgradeVersion": "Will be upgraded to version **{version}**. Please be patient as this may take a while.",
+        "upgradeDone": "Has been upgraded to version **{version}**.",
+        "upgradeBackup": "We recommend making a backup of your files and data before upgrading.",
         "thousandSeparatorEqualsDecimalMark": "The thousands separator character can not be the same as the decimal point character.",
         "userHasNoEmailAddress": "User has no email address.",
         "selectEntityType": "Select entity type in the left menu.",
@@ -263,18 +263,18 @@
         "extensionInstalled": "Extension {name} {version} has been installed.",
         "installExtension": "Extension {name} {version} is ready for an installation.",
         "cronIsDisabled": "Cron is disabled, the application is not fully functional. Enable cron in the [settings](#Admin/settings).",
-        "cronIsNotConfigured": "Scheduled jobs are not running.  Hence inbound emails, notifications and reminders are not working. Please follow the [instructions](https://www.espocrm.com/documentation/administration/server-configuration/#user-content-setup-a-crontab) to setup cron job.",
-        "newVersionIsAvailable": "New EspoCRM version {latestVersion} is available. Please follow the [instructions](https://www.espocrm.com/documentation/administration/upgrading/) to upgrade your instance." ,
+        "cronIsNotConfigured": "Scheduled jobs are not running.  Hence inbound emails, notifications and reminders are not working. Please follow the [instructions](https://www.monostax.com/documentation/administration/server-configuration/#user-content-setup-a-crontab) to setup cron job.",
+        "newVersionIsAvailable": "New version {latestVersion} is available. Please follow the [instructions](https://www.monostax.com/documentation/administration/upgrading/) to upgrade your instance.",
         "newExtensionVersionIsAvailable": "New {extensionName} version {latestVersion} is available.",
         "uninstallConfirmation": "Are you sure you want to uninstall the extension?",
-        "upgradeInfo": "Check the [documentation]({url}) about how to upgrade your EspoCRM instance.",
+        "upgradeInfo": "Check the [documentation]({url}) about how to upgrade your instance.",
         "upgradeRecommendation": "This way of upgrading is not recommended. It's better to upgrade from CLI."
     },
     "descriptions": {
         "settings": "System settings of application.",
         "scheduledJob": "Jobs which are executed by cron.",
         "jobs": "Jobs execute tasks in the background.",
-        "upgrade": "Upgrade EspoCRM.",
+        "upgrade": "Upgrade.",
         "clearCache": "Clear all backend cache.",
         "rebuild": "Rebuild backend and clear cache.",
         "users": "Users management.",
@@ -308,7 +308,7 @@
         "appSecrets": "Store sensitive information like API keys, passwords, and other secrets.",
         "leadCapture": "Lead capture endpoints and web forms.",
         "attachments": "All file attachments stored in the system.",
-        "systemRequirements": "System Requirements for EspoCRM.",
+        "systemRequirements": "System Requirements",
         "apiUsers": "Separate users for integration purposes.",
         "webhooks": "Manage webhooks.",
         "authenticationProviders": "Additional authentication providers for portals.",
