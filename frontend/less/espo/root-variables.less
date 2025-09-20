@@ -1,5 +1,5 @@
 :root {
-
+    font-size: 14px;
     --1px: 0.0625rem;
     --2px: 0.125rem;
     --3px: 0.1875rem;
@@ -153,9 +153,13 @@
     // computed
     --popover-arrow-width-negative: calc(var(--popover-arrow-width) * -1);
     --popover-arrow-outer-width: calc(var(--popover-arrow-width) + var(--1px));
-    --popover-arrow-outer-width-negative: calc(var(--popover-arrow-outer-width) * -1);
+    --popover-arrow-outer-width-negative: calc(
+        var(--popover-arrow-outer-width) * -1
+    );
 
-    --navbar-padding-vertical: calc((var(--navbar-height) - var(--line-height-computed)) / 2);
+    --navbar-padding-vertical: calc(
+        (var(--navbar-height) - var(--line-height-computed)) / 2
+    );
     --line-height-computed-half: calc(var(--line-height-computed) / 2);
     --table-cell-padding-half: calc(var(--table-cell-padding) / 2);
     --grid-gutter-width-half: calc(var(--grid-gutter-width) / 2);
@@ -190,7 +194,7 @@
 
     // @todo Move values to theme variables.
     --tooltip-bg: #000;
-    --tooltip-color: #FFF;
+    --tooltip-color: #fff;
 
     --gray-base: @gray-base-value;
     --gray-soft: @gray-soft-value;
@@ -298,10 +302,16 @@
 
     --state-success-bg-5: darken(@state-success-bg-value, 5%);
     --state-success-text-10: darken(@state-success-text-value, 10%);
-    --state-success-text-10l: lighten(darken(@state-success-text-value, 10%), 20);
+    --state-success-text-10l: lighten(
+        darken(@state-success-text-value, 10%),
+        20
+    );
 
     --state-warning-text-10: darken(@state-warning-text-value, 10%);
-    --state-warning-text-10l: lighten(darken(@state-warning-text-value, 10%), 20);
+    --state-warning-text-10l: lighten(
+        darken(@state-warning-text-value, 10%),
+        20
+    );
     --state-warning-bg-5: darken(@state-warning-bg-value, 5%);
     --state-warning-bg-10: darken(@state-warning-bg-value, 10%);
 
@@ -394,7 +404,7 @@
         red(@input-border-focus-value),
         green(@input-border-focus-value),
         blue(@input-border-focus-value),
-        .6
+        0.6
     );
     --input-bg-disabled: @input-bg-disabled-value;
     --input-color-disabled: @input-color-disabled-value;
