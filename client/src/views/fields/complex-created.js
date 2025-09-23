@@ -39,7 +39,12 @@ class ComplexCreatedFieldView extends BaseFieldView {
             <span style="user-select: none"> <span class="text-muted middle-dot"></span> </span>
         {{~/if~}}
         {{~#if hasBy~}}
-            <span data-name="{{baseName}}By" class="field">{{{byField}}}</span>
+            <span data-name="{{baseName}}By" class="field">
+                {{~#if byUserAvatar~}}
+                    {{{byUserAvatar}}}
+                {{~/if~}}
+                {{{byField}}}
+            </span>
         {{~/if~}}
     `
 
@@ -69,11 +74,20 @@ class ComplexCreatedFieldView extends BaseFieldView {
         const hasBy = this.model.has(this.fieldBy + 'Id');
         const hasAt = this.model.has(this.fieldAt);
 
+        let byUserAvatar = null;
+        if (hasBy) {
+            const userId = this.model.get(this.fieldBy + 'Id');
+            if (userId) {
+                byUserAvatar = this.getHelper().getAvatarHtml(userId, 'small', 16, 'avatar-link');
+            }
+        }
+
         return {
             baseName: this.baseName,
             hasBy: hasBy,
             hasAt: hasAt,
             hasBoth: hasAt && hasBy,
+            byUserAvatar: byUserAvatar,
             ...super.data(),
         };
     }

@@ -4,8 +4,17 @@ SUBCOMPONENT_NAME := espocrm
 CACHE_COMPONENT := $(MONOSTAX_GLOBAL_CACHE_PATH_ROOT)/$(COMPONENT_NAME)
 CACHE_SUBCOMPONENT := $(CACHE_COMPONENT)/$(SUBCOMPONENT_NAME)
 WATCH_FILES := package.json package-lock.json composer.json composer.lock $(shell find application -name "*.php" 2>/dev/null) $(shell find html -name "*.html" 2>/dev/null)
+LESS_FILES := $(shell find frontend/less -name "*.less" 2>/dev/null)
 
 .PHONY: build
+
+$(CACHE_SUBCOMPONENT)/build/less: $(LESS_FILES)
+	@echo "Building less files..."
+	nix develop ../ --command ./node_modules/.bin/grunt less
+	@echo "Copying CSS files to cache..."
+	@mkdir -p $(CACHE_SUBCOMPONENT)/build/client/css
+	@cp -r client/css/* $(CACHE_SUBCOMPONENT)/build/client/css/
+	@touch $@
 
 vendor/composer/installed.json: composer.json composer.lock
 	@echo "Installing dependencies..."
@@ -26,4 +35,4 @@ $(CACHE_SUBCOMPONENT)/build/index.php: $(WATCH_FILES) node_modules/.WAS_INSTALLE
 	@touch $@
 
 # Build the project
-build: node_modules/.WAS_INSTALLED $(CACHE_SUBCOMPONENT)/build/index.php
+build: node_modules/.WAS_INSTALLED $(CACHE_SUBCOMPONENT)/build/index.php $(CACHE_SUBCOMPONENT)/build/less

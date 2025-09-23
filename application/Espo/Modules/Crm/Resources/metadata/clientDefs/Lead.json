@@ -118,9 +118,7 @@
             "style": "success"
         }
     ],
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "boolFilterList": ["onlyMy"],
     "dynamicLogic": {
         "fields": {
             "name": {
@@ -177,5 +175,5 @@
         }
     },
     "color": "#d6a2c9",
-    "iconClass": "fas fa-address-card"
+    "iconClass": "ti ti-diamond-filled"
 }

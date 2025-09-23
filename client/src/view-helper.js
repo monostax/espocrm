@@ -28,15 +28,14 @@
 
 /** @module view-helper */
 
-import {marked, Lexer} from 'marked';
-import DOMPurify from 'dompurify';
-import Handlebars from 'handlebars';
+import { marked, Lexer } from "marked";
+import DOMPurify from "dompurify";
+import Handlebars from "handlebars";
 
 /**
  * A view helper.
  */
 class ViewHelper {
-
     constructor() {
         this._registerHandlebarsHelpers();
 
@@ -53,7 +52,7 @@ class ViewHelper {
                 regex: /`([\s\S]*?)`/g,
                 value: (s, string) => {
                     // noinspection RegExpRedundantEscape
-                    return '`' + string.replace(/\\\</g, '<') + '`';
+                    return "`" + string.replace(/\\\</g, "<") + "`";
                 },
             },
         ];
@@ -75,7 +74,7 @@ class ViewHelper {
                     }
 
                     return {
-                        type: 'text',
+                        type: "text",
                         raw: cap[0],
                         inLink: this.lexer.state.inLink,
                         inRawBlock: this.lexer.state.inRawBlock,
@@ -90,9 +89,12 @@ class ViewHelper {
                     }
 
                     const token = {
-                        type: 'paragraph',
+                        type: "paragraph",
                         raw: cap[0],
-                        pre: (cap[1] === 'pre' || cap[1] === 'script' || cap[1] === 'style'),
+                        pre:
+                            cap[1] === "pre" ||
+                            cap[1] === "script" ||
+                            cap[1] === "style",
                         text: Handlebars.Utils.escapeExpression(cap[0]),
                     };
 
@@ -104,64 +106,68 @@ class ViewHelper {
             },
         });
 
-        DOMPurify.addHook('beforeSanitizeAttributes', function (node) {
+        DOMPurify.addHook("beforeSanitizeAttributes", function (node) {
             if (node instanceof HTMLAnchorElement) {
-                if (node.getAttribute('target')) {
+                if (node.getAttribute("target")) {
                     node.targetBlank = true;
-                }
-                else {
+                } else {
                     node.targetBlank = false;
                 }
             }
 
-            if (node instanceof HTMLOListElement && node.start && node.start > 99) {
-                node.removeAttribute('start');
+            if (
+                node instanceof HTMLOListElement &&
+                node.start &&
+                node.start > 99
+            ) {
+                node.removeAttribute("start");
             }
 
             if (node instanceof HTMLFormElement) {
                 if (node.action) {
-                    node.removeAttribute('action');
+                    node.removeAttribute("action");
                 }
 
-                if (node.hasAttribute('method')) {
-                    node.removeAttribute('method');
+                if (node.hasAttribute("method")) {
+                    node.removeAttribute("method");
                 }
             }
 
             if (node instanceof HTMLButtonElement) {
-                if (node.type === 'submit') {
-                    node.type = 'button';
+                if (node.type === "submit") {
+                    node.type = "button";
                 }
             }
         });
 
-        DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+        DOMPurify.addHook("afterSanitizeAttributes", function (node) {
             if (node instanceof HTMLAnchorElement) {
-                const href = node.getAttribute('href');
+                const href = node.getAttribute("href");
 
-                if (href && !href.startsWith('#')) {
-                    node.setAttribute('rel', 'noopener noreferrer');
+                if (href && !href.startsWith("#")) {
+                    node.setAttribute("rel", "noopener noreferrer");
                 }
 
                 if (node.targetBlank) {
-                    node.setAttribute('target', '_blank');
-                    node.setAttribute('rel', 'noopener noreferrer');
+                    node.setAttribute("target", "_blank");
+                    node.setAttribute("rel", "noopener noreferrer");
                 }
             }
         });
 
-        DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
-            if (data.attrName === 'style') {
+        DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
+            if (data.attrName === "style") {
                 const style = data.attrValue
-                    .split(';')
-                    .map(s => s.trim())
-                    .filter(rule => {
-                        const [property, value] = rule.split(':')
-                            .map(s => s.trim().toLowerCase());
+                    .split(";")
+                    .map((s) => s.trim())
+                    .filter((rule) => {
+                        const [property, value] = rule
+                            .split(":")
+                            .map((s) => s.trim().toLowerCase());
 
                         if (
-                            property === 'position' &&
-                            ['absolute', 'fixed', 'sticky'].includes(value)
+                            property === "position" &&
+                            ["absolute", "fixed", "sticky"].includes(value)
                         ) {
                             return false;
                         }
@@ -169,7 +175,7 @@ class ViewHelper {
                         return true;
                     });
 
-                data.attrValue = style.join('; ');
+                data.attrValue = style.join("; ");
             }
         });
     }
@@ -179,171 +185,173 @@ class ViewHelper {
      *
      * @type {module:layout-manager}
      */
-    layoutManager = null
+    layoutManager = null;
 
     /**
      * A config.
      *
      * @type {module:models/settings}
      */
-    settings = null
+    settings = null;
 
     /**
      * A config.
      *
      * @type {module:models/settings}
      */
-    config = null
+    config = null;
 
     /**
      * A current user.
      *
      * @type {module:models/user}
      */
-    user = null
+    user = null;
 
     /**
      * A preferences.
      *
      * @type {module:models/preferences}
      */
-    preferences = null
+    preferences = null;
 
     /**
      * An ACL manager.
      *
      * @type {module:acl-manager}
      */
-    acl = null
+    acl = null;
 
     /**
      * A model factory.
      *
      * @type {module:model-factory}
      */
-    modelFactory = null
+    modelFactory = null;
 
     /**
      * A collection factory.
      *
      * @type {module:collection-factory}
      */
-    collectionFactory = null
+    collectionFactory = null;
 
     /**
      * A router.
      *
      * @type {module:router}
      */
-    router = null
+    router = null;
 
     /**
      * A storage.
      *
      * @type {module:storage}
      */
-    storage = null
+    storage = null;
 
     /**
      * A session storage.
      *
      * @type {module:session-storage}
      */
-    sessionStorage = null
+    sessionStorage = null;
 
     /**
      * A date-time util.
      *
      * @type {module:date-time}
      */
-    dateTime = null
+    dateTime = null;
 
     /**
      * A language.
      *
      * @type {module:language}
      */
-    language = null
+    language = null;
 
     /**
      * A metadata.
      *
      * @type {module:metadata}
      */
-    metadata = null
+    metadata = null;
 
     /**
      * A field-manager util.
      *
      * @type {module:field-manager}
      */
-    fieldManager = null
+    fieldManager = null;
 
     /**
      * A cache.
      *
      * @type {module:cache}
      */
-    cache = null
+    cache = null;
 
     /**
      * A theme manager.
      *
      * @type {module:theme-manager}
      */
-    themeManager = null
+    themeManager = null;
 
     /**
      * A web-socket manager. Null if not enabled.
      *
      * @type {module:web-socket-manager|null}
      */
-    webSocketManager = null
+    webSocketManager = null;
 
     /**
      * A number util.
      *
      * @type {module:num-util}
      */
-    numberUtil = null
+    numberUtil = null;
 
     /**
      * A page-title util.
      *
      * @type {module:page-title}
      */
-    pageTitle = null
+    pageTitle = null;
 
     /**
      * A broadcast channel.
      *
      * @type {?module:broadcast-channel}
      */
-    broadcastChannel = null
+    broadcastChannel = null;
 
     /**
      * A base path.
      *
      * @type {string}
      */
-    basePath = ''
+    basePath = "";
 
     /**
      * Application parameters.
      *
      * @type {import('app-params').default|null}
      */
-    appParams = null
+    appParams = null;
 
     /**
      * @private
      */
     _registerHandlebarsHelpers() {
-        Handlebars.registerHelper('img', img => {
-            return new Handlebars.SafeString(`<img src="img/${img}" alt="img">`);
+        Handlebars.registerHelper("img", (img) => {
+            return new Handlebars.SafeString(
+                `<img src="img/${img}" alt="img">`
+            );
         });
 
-        Handlebars.registerHelper('prop', (object, name) => {
+        Handlebars.registerHelper("prop", (object, name) => {
             if (object === undefined) {
                 console.warn(`Undefined value passed to 'prop' helper.`);
 
@@ -357,8 +365,8 @@ class ViewHelper {
             return undefined;
         });
 
-        Handlebars.registerHelper('var', (name, context, options) => {
-            if (typeof context === 'undefined') {
+        Handlebars.registerHelper("var", (name, context, options) => {
+            if (typeof context === "undefined") {
                 return null;
             }
 
@@ -371,11 +379,11 @@ class ViewHelper {
             return new Handlebars.SafeString(contents);
         });
 
-        Handlebars.registerHelper('concat', function (left, right) {
+        Handlebars.registerHelper("concat", function (left, right) {
             return left + right;
         });
 
-        Handlebars.registerHelper('ifEqual', function (left, right, options) {
+        Handlebars.registerHelper("ifEqual", function (left, right, options) {
             // noinspection EqualityComparisonWithCoercionJS
             if (left == right) {
                 return options.fn(this);
@@ -384,59 +392,71 @@ class ViewHelper {
             return options.inverse(this);
         });
 
-        Handlebars.registerHelper('ifNotEqual', function (left, right, options) {
-            // noinspection EqualityComparisonWithCoercionJS
-            if (left != right) {
-                return options.fn(this);
+        Handlebars.registerHelper(
+            "ifNotEqual",
+            function (left, right, options) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (left != right) {
+                    return options.fn(this);
+                }
+
+                return options.inverse(this);
             }
+        );
 
-            return options.inverse(this);
-        });
+        Handlebars.registerHelper(
+            "ifPropEquals",
+            function (object, property, value, options) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (object[property] == value) {
+                    return options.fn(this);
+                }
 
-        Handlebars.registerHelper('ifPropEquals', function (object, property, value, options) {
-            // noinspection EqualityComparisonWithCoercionJS
-            if (object[property] == value) {
-                return options.fn(this);
+                return options.inverse(this);
             }
+        );
 
-            return options.inverse(this);
-        });
+        Handlebars.registerHelper(
+            "ifAttrEquals",
+            function (model, attr, value, options) {
+                // noinspection EqualityComparisonWithCoercionJS
+                if (model.get(attr) == value) {
+                    return options.fn(this);
+                }
 
-        Handlebars.registerHelper('ifAttrEquals', function (model, attr, value, options) {
-            // noinspection EqualityComparisonWithCoercionJS
-            if (model.get(attr) == value) {
-                return options.fn(this);
+                return options.inverse(this);
             }
+        );
 
-            return options.inverse(this);
-        });
+        Handlebars.registerHelper(
+            "ifAttrNotEmpty",
+            function (model, attr, options) {
+                const value = model.get(attr);
 
-        Handlebars.registerHelper('ifAttrNotEmpty', function (model, attr, options) {
-            const value = model.get(attr);
+                if (value !== null && typeof value !== "undefined") {
+                    return options.fn(this);
+                }
 
-            if (value !== null && typeof value !== 'undefined') {
-                return options.fn(this);
+                return options.inverse(this);
             }
+        );
 
-            return options.inverse(this);
-        });
+        Handlebars.registerHelper("get", (model, name) => model.get(name));
 
-        Handlebars.registerHelper('get', (model, name) => model.get(name));
+        Handlebars.registerHelper("length", (arr) => arr.length);
 
-        Handlebars.registerHelper('length', arr => arr.length);
-
-        Handlebars.registerHelper('translate', (name, options) => {
+        Handlebars.registerHelper("translate", (name, options) => {
             const scope = options.hash.scope || null;
             const category = options.hash.category || null;
 
-            if (name === 'null') {
-                return '';
+            if (name === "null") {
+                return "";
             }
 
             return this.language.translate(name, category, scope);
         });
 
-        Handlebars.registerHelper('dropdownItem', (name, options) => {
+        Handlebars.registerHelper("dropdownItem", (name, options) => {
             const scope = options.hash.scope || null;
             const label = options.hash.label;
             const labelTranslation = options.hash.labelTranslation;
@@ -452,66 +472,66 @@ class ViewHelper {
             let html =
                 options.hash.html ||
                 options.hash.text ||
-                (
-                    labelTranslation ?
-                        this.language.translatePath(labelTranslation) :
-                        this.language.translate(label, 'labels', scope)
-                );
+                (labelTranslation
+                    ? this.language.translatePath(labelTranslation)
+                    : this.language.translate(label, "labels", scope));
 
             if (!options.hash.html) {
                 html = this.escapeString(html);
             }
 
             if (iconHtml) {
-                html = iconHtml + ' ' + html;
+                html = iconHtml + " " + html;
+            } else if (iconClass) {
+                const iconHtml = $("<span>")
+                    .addClass(iconClass)
+                    .get(0).outerHTML;
+
+                html = iconHtml + " " + html;
             }
-            else if (iconClass) {
-                const iconHtml = $('<span>').addClass(iconClass).get(0).outerHTML;
 
-                html = iconHtml + ' ' + html;
-            }
+            const $li = $("<li>")
+                .addClass(hidden ? "hidden" : "")
+                .addClass(disabled ? "disabled" : "");
 
-            const $li = $('<li>')
-                .addClass(hidden ? 'hidden' : '')
-                .addClass(disabled ? 'disabled' : '');
-
-            const $a = $('<a>')
-                .attr('role', 'button')
-                .attr('tabindex', '0')
-                .attr('data-name', name)
-                .addClass(options.hash.className || '')
-                .addClass('action')
+            const $a = $("<a>")
+                .attr("role", "button")
+                .attr("tabindex", "0")
+                .attr("data-name", name)
+                .addClass(options.hash.className || "")
+                .addClass("action")
                 .html(html);
 
             if (action) {
-                $a.attr('data-action', action);
+                $a.attr("data-action", action);
             }
 
             $li.append($a);
 
-            link ?
-                $a.attr('href', link) :
-                $a.attr('role', 'button');
+            link ? $a.attr("href", link) : $a.attr("role", "button");
 
             if (data) {
                 for (const key in data) {
-                    $a.attr('data-' + Espo.Utils.camelCaseToHyphen(key), data[key]);
+                    $a.attr(
+                        "data-" + Espo.Utils.camelCaseToHyphen(key),
+                        data[key]
+                    );
                 }
             }
 
             if (disabled) {
-                $li.attr('disabled', 'disabled');
+                $li.attr("disabled", "disabled");
             }
 
             if (title) {
-                $a.attr('title', title);
+                $a.attr("title", title);
             }
 
             return new Handlebars.SafeString($li.get(0).outerHTML);
         });
 
-        Handlebars.registerHelper('button', (name, options) => {
-            const style = options.hash.style || 'default';
+        Handlebars.registerHelper("button", (name, options) => {
+            const style = options.hash.style || "default";
             const scope = options.hash.scope || null;
             const label = options.hash.label || name;
             const labelTranslation = options.hash.labelTranslation;
@@ -522,182 +542,202 @@ class ViewHelper {
             let html =
                 options.hash.html ||
                 options.hash.text ||
-                (
-                    labelTranslation ?
-                        this.language.translatePath(labelTranslation) :
-                        this.language.translate(label, 'labels', scope)
-                );
+                (labelTranslation
+                    ? this.language.translatePath(labelTranslation)
+                    : this.language.translate(label, "labels", scope));
 
             if (!options.hash.html) {
                 html = this.escapeString(html);
             }
 
             if (iconHtml) {
-                html = iconHtml + ' ' + '<span>' + html + '</span>';
-            }
-            else if (iconClass) {
-                const iconHtml = $('<span>').addClass(iconClass).get(0).outerHTML;
+                html = iconHtml + " " + "<span>" + html + "</span>";
+            } else if (iconClass) {
+                const iconHtml = $("<span>")
+                    .addClass(iconClass)
+                    .get(0).outerHTML;
 
-                html = iconHtml + ' ' + '<span>' + html + '</span>';
+                html = iconHtml + " " + "<span>" + html + "</span>";
             }
 
-            const tag = link ? '<a>' : '<button>';
+            const tag = link ? "<a>" : "<button>";
 
             const $button = $(tag)
-                .addClass('btn action')
-                .addClass(options.hash.className || '')
-                .addClass(options.hash.hidden ? 'hidden' : '')
-                .addClass(options.hash.disabled ? 'disabled' : '')
-                .attr('data-action', name)
-                .attr('data-name', name)
-                .addClass('btn-' + style)
+                .addClass("btn action")
+                .addClass(options.hash.className || "")
+                .addClass(options.hash.hidden ? "hidden" : "")
+                .addClass(options.hash.disabled ? "disabled" : "")
+                .attr("data-action", name)
+                .attr("data-name", name)
+                .addClass("btn-" + style)
                 .html(html);
 
-            link ?
-                $button.href(link) :
-                $button.attr('type', 'button')
+            link ? $button.href(link) : $button.attr("type", "button");
 
             if (options.hash.disabled) {
-                $button.attr('disabled', 'disabled');
+                $button.attr("disabled", "disabled");
             }
 
             if (options.hash.title) {
-                $button.attr('title', options.hash.title);
+                $button.attr("title", options.hash.title);
             }
 
             return new Handlebars.SafeString($button.get(0).outerHTML);
         });
 
-        Handlebars.registerHelper('hyphen', (string) => {
-            return Espo.Utils.convert(string, 'c-h');
+        Handlebars.registerHelper("hyphen", (string) => {
+            return Espo.Utils.convert(string, "c-h");
         });
 
-        Handlebars.registerHelper('toDom', (string) => {
+        Handlebars.registerHelper("toDom", (string) => {
             return Espo.Utils.toDom(string);
         });
 
         // noinspection SpellCheckingInspection
-        Handlebars.registerHelper('breaklines', (text) => {
-            text = Handlebars.Utils.escapeExpression(text || '');
-            text = text.replace(/(\r\n|\n|\r)/gm, '<br>');
+        Handlebars.registerHelper("breaklines", (text) => {
+            text = Handlebars.Utils.escapeExpression(text || "");
+            text = text.replace(/(\r\n|\n|\r)/gm, "<br>");
 
             return new Handlebars.SafeString(text);
         });
 
-        Handlebars.registerHelper('complexText', (text, options) => {
-            if (typeof text !== 'string' && !(text instanceof String)) {
-                return '';
+        Handlebars.registerHelper("complexText", (text, options) => {
+            if (typeof text !== "string" && !(text instanceof String)) {
+                return "";
             }
 
             return this.transformMarkdownText(text, options.hash);
         });
 
-        Handlebars.registerHelper('translateOption', (name, options) => {
+        Handlebars.registerHelper("translateOption", (name, options) => {
             const scope = options.hash.scope || null;
             const field = options.hash.field || null;
 
             if (!field) {
-                return '';
+                return "";
             }
 
             let translationHash = options.hash.translatedOptions || null;
 
             if (translationHash === null) {
-                translationHash = this.language.translate(/** @type {string} */field, 'options', scope) || {};
+                translationHash =
+                    this.language.translate(
+                        /** @type {string} */ field,
+                        "options",
+                        scope
+                    ) || {};
 
-                if (typeof translationHash !== 'object') {
+                if (typeof translationHash !== "object") {
                     translationHash = {};
                 }
             }
 
             if (name === null) {
-                name = '';
+                name = "";
             }
 
             return translationHash[name] || name;
         });
 
-        Handlebars.registerHelper('options', (/** any[] */list, value, options) => {
-            if (typeof value === 'undefined') {
-                value = false;
-            }
-
-            list = list || [];
-
-            let html = '';
-
-            const multiple = (Object.prototype.toString.call(value) === '[object Array]');
-
-            const checkOption = name => {
-                if (multiple) {
-                    return value.indexOf(name) !== -1;
+        Handlebars.registerHelper(
+            "options",
+            (/** any[] */ list, value, options) => {
+                if (typeof value === "undefined") {
+                    value = false;
                 }
 
-                return value === name || (!value && !name && name !== 0);
-            };
+                list = list || [];
 
-            options.hash = /** @type {Record} */options.hash || {};
+                let html = "";
 
-            const scope = options.hash.scope || false;
-            const category = options.hash.category || false;
-            const field = options.hash.field || false;
-            const styleMap = options.hash.styleMap || {};
+                const multiple =
+                    Object.prototype.toString.call(value) === "[object Array]";
 
-            if (!multiple && options.hash.includeMissingOption && (value || value === '')) {
-                if (!list.includes(value)) {
-                    list = Espo.Utils.clone(list);
+                const checkOption = (name) => {
+                    if (multiple) {
+                        return value.indexOf(name) !== -1;
+                    }
 
-                    list.push(value);
-                }
-            }
+                    return value === name || (!value && !name && name !== 0);
+                };
 
-            let translationHash = options.hash.translationHash ||
-                options.hash.translatedOptions ||
-                null;
+                options.hash = /** @type {Record} */ options.hash || {};
 
-            if (translationHash === null) {
-                translationHash = {};
+                const scope = options.hash.scope || false;
+                const category = options.hash.category || false;
+                const field = options.hash.field || false;
+                const styleMap = options.hash.styleMap || {};
 
-                if (!category && field) {
-                    translationHash = this.language
-                        .translate(/** @type {string} */field, 'options', /** @type {string} */scope) || {};
+                if (
+                    !multiple &&
+                    options.hash.includeMissingOption &&
+                    (value || value === "")
+                ) {
+                    if (!list.includes(value)) {
+                        list = Espo.Utils.clone(list);
 
-                    if (typeof translationHash !== 'object') {
-                        translationHash = {};
+                        list.push(value);
                     }
                 }
-            }
 
-            const translate = name => {
-                if (!category) {
-                    return translationHash[name] || name;
+                let translationHash =
+                    options.hash.translationHash ||
+                    options.hash.translatedOptions ||
+                    null;
+
+                if (translationHash === null) {
+                    translationHash = {};
+
+                    if (!category && field) {
+                        translationHash =
+                            this.language.translate(
+                                /** @type {string} */ field,
+                                "options",
+                                /** @type {string} */ scope
+                            ) || {};
+
+                        if (typeof translationHash !== "object") {
+                            translationHash = {};
+                        }
+                    }
                 }
 
-                return this.language.translate(name, category, /** @type {string} */scope);
-            };
+                const translate = (name) => {
+                    if (!category) {
+                        return translationHash[name] || name;
+                    }
 
-            for (const key in list) {
-                const value = list[key];
-                const label = translate(value);
+                    return this.language.translate(
+                        name,
+                        category,
+                        /** @type {string} */ scope
+                    );
+                };
 
-                const $option =
-                    $('<option>')
-                        .attr('value', value)
-                        .addClass(styleMap[value] ? 'text-' + styleMap[value] : '')
+                for (const key in list) {
+                    const value = list[key];
+                    const label = translate(value);
+
+                    const $option = $("<option>")
+                        .attr("value", value)
+                        .addClass(
+                            styleMap[value] ? "text-" + styleMap[value] : ""
+                        )
                         .text(label);
 
-                if (checkOption(list[key])) {
-                    $option.attr('selected', 'selected')
+                    if (checkOption(list[key])) {
+                        $option.attr("selected", "selected");
+                    }
+
+                    html += $option.get(0).outerHTML;
                 }
 
-                html += $option.get(0).outerHTML;
+                return new Handlebars.SafeString(html);
             }
+        );
 
-            return new Handlebars.SafeString(html);
-        });
-
-        Handlebars.registerHelper('basePath', () => {
-            return this.basePath || '';
+        Handlebars.registerHelper("basePath", () => {
+            return this.basePath || "";
         });
     }
 
@@ -735,30 +775,35 @@ class ViewHelper {
      * @returns {string}
      */
     getAvatarHtml(id, size, width, additionalClassName) {
-        if (this.config.get('avatarsDisabled')) {
-            return '';
+        if (this.config.get("avatarsDisabled")) {
+            return "";
         }
 
-        const t = this.cache ? this.cache.get('app', 'timestamp') : this.settings.get('cacheTimestamp');
+        const t = this.cache
+            ? this.cache.get("app", "timestamp")
+            : this.settings.get("cacheTimestamp");
 
-        const basePath = this.basePath || '';
-        size = size || 'small';
+        const basePath = this.basePath || "";
+        size = size || "small";
         width = width || 16;
 
-        let className = 'avatar';
+        let className = "avatar";
 
         if (additionalClassName) {
-            className += ' ' + additionalClassName;
+            className += " " + additionalClassName;
         }
 
         // noinspection RequiredAttributes,HtmlRequiredAltAttribute
         return $(`<img>`)
-            .attr('src', `${basePath}?entryPoint=avatar&size=${size}&id=${id}&t=${t}`)
-            .attr('alt', 'avatar')
+            .attr(
+                "src",
+                `${basePath}?entryPoint=avatar&size=${size}&id=${id}&t=${t}`
+            )
+            .attr("alt", "avatar")
             .addClass(className)
-            .attr('data-width', width.toString())
-            .css('width', `var(--${width.toString()}px)`)
-            .attr('draggable', 'false')
+            .attr("data-width", width.toString())
+            .css("width", `var(--${width.toString()}px)`)
+            .attr("draggable", "false")
             .get(0).outerHTML;
     }
 
@@ -769,7 +814,7 @@ class ViewHelper {
      * @returns {Handlebars.SafeString} HTML.
      */
     transformMarkdownInlineText(text) {
-        return this.transformMarkdownText(text, {inline: true});
+        return this.transformMarkdownText(text, { inline: true });
     }
 
     /**
@@ -780,22 +825,23 @@ class ViewHelper {
      * @returns {Handlebars.SafeString} HTML.
      */
     transformMarkdownText(text, options) {
-        text = text || '';
+        text = text || "";
 
-        this.mdBeforeList.forEach(item => {
+        this.mdBeforeList.forEach((item) => {
             text = text.replace(item.regex, item.value);
         });
 
         options = options || {};
 
-        text = options.inline ?
-            marked.parseInline(text) :
-            marked.parse(text);
+        text = options.inline ? marked.parseInline(text) : marked.parse(text);
 
         text = DOMPurify.sanitize(text, {}).toString();
 
         if (options.linksInNewTab) {
-            text = text.replace(/<a href=/gm, '<a target="_blank" rel="noopener noreferrer" href=');
+            text = text.replace(
+                /<a href=/gm,
+                '<a target="_blank" rel="noopener noreferrer" href='
+            );
         }
 
         text = text.replace(
@@ -815,24 +861,60 @@ class ViewHelper {
      * @returns {string}
      */
     getScopeColorIconHtml(scope, noWhiteSpace, additionalClassName) {
-        if (this.config.get('scopeColorsDisabled') || this.preferences.get('scopeColorsDisabled')) {
-            return '';
+        if (
+            this.config.get("scopeColorsDisabled") ||
+            this.preferences.get("scopeColorsDisabled")
+        ) {
+            return "";
         }
 
-        const color = this.metadata.get(['clientDefs', scope, 'color']);
+        const color = this.metadata.get(["clientDefs", scope, "color"]);
+        const iconClass = this.metadata.get(["clientDefs", scope, "iconClass"]);
 
-        let html = '';
+        let html = "";
 
-        if (color) {
-            const $span = $('<span class="color-icon fas fa-square">');
+        if (color || iconClass) {
+            // Create flexbox container
+            const $container = $("<span>").css({
+                display: "inline-flex",
+                "align-items": "center",
+            });
 
-            $span.css('color', color);
+            if (color) {
+                const $iconSpan = $("<span>").addClass(
+                    "color-icon fas fa-square"
+                );
+                $iconSpan.css("color", color);
 
-            if (additionalClassName) {
-                $span.addClass(additionalClassName);
+                if (additionalClassName) {
+                    $iconSpan.addClass(additionalClassName);
+                }
+
+                $container.append($iconSpan);
             }
 
-            html = $span.get(0).outerHTML;
+            // Add entity icon after the square if it exists
+            if (iconClass) {
+                const $iconSpan = $("<span>").addClass(iconClass);
+
+                // Add a class for conditional styling instead of direct CSS
+                $iconSpan.addClass("scope-icon");
+
+                // The font-size will be controlled by CSS:
+                // .breadcrumb-item .scope-icon { font-size: calc(var(--font-size-base) * 1.8); }
+
+                if (color) {
+                    $iconSpan.css("color", color);
+                }
+
+                if (additionalClassName) {
+                    $iconSpan.addClass(additionalClassName);
+                }
+
+                $container.append($iconSpan);
+            }
+
+            html = $container.get(0).outerHTML;
         }
 
         if (!noWhiteSpace) {
@@ -862,16 +944,22 @@ class ViewHelper {
      * @returns {string}
      */
     moderateSanitizeHtml(value) {
-        value = value || '';
-        value = value.replace(/<\/?(base)[^><]*>/gi, '');
-        value = value.replace(/<\/?(object)[^><]*>/gi, '');
-        value = value.replace(/<\/?(embed)[^><]*>/gi, '');
-        value = value.replace(/<\/?(applet)[^><]*>/gi, '');
-        value = value.replace(/<\/?(iframe)[^><]*>/gi, '');
-        value = value.replace(/<\/?(script)[^><]*>/gi, '');
-        value = value.replace(/<[^><]*([^a-z]on[a-z]+)=[^><]*>/gi, function (match) {
-            return match.replace(/[^a-z]on[a-z]+=/gi, ' data-handler-stripped=');
-        });
+        value = value || "";
+        value = value.replace(/<\/?(base)[^><]*>/gi, "");
+        value = value.replace(/<\/?(object)[^><]*>/gi, "");
+        value = value.replace(/<\/?(embed)[^><]*>/gi, "");
+        value = value.replace(/<\/?(applet)[^><]*>/gi, "");
+        value = value.replace(/<\/?(iframe)[^><]*>/gi, "");
+        value = value.replace(/<\/?(script)[^><]*>/gi, "");
+        value = value.replace(
+            /<[^><]*([^a-z]on[a-z]+)=[^><]*>/gi,
+            function (match) {
+                return match.replace(
+                    /[^a-z]on[a-z]+=/gi,
+                    " data-handler-stripped="
+                );
+            }
+        );
 
         value = this.stripEventHandlersInHtml(value);
 
@@ -917,12 +1005,12 @@ class ViewHelper {
         let strip = false;
         let lastQuote = false;
 
-        for (let i = 0; i < html.length; i++){
-            if (html[i] === '<' && html[i + 1] && isValidTagChar(html[i + 1])) {
+        for (let i = 0; i < html.length; i++) {
+            if (html[i] === "<" && html[i + 1] && isValidTagChar(html[i + 1])) {
                 i++;
 
-                for (let j = i; j < html.length; j++){
-                    if (!lastQuote && html[j] === '>'){
+                for (let j = i; j < html.length; j++) {
+                    if (!lastQuote && html[j] === ">") {
                         if (strip) {
                             stripHTML();
                         }
@@ -933,21 +1021,30 @@ class ViewHelper {
                     }
 
                     // noinspection JSIncompatibleTypesComparison
-                    if (lastQuote === html[j]){
+                    if (lastQuote === html[j]) {
                         lastQuote = false;
 
                         continue;
                     }
 
-                    if (!lastQuote && html[j - 1] === "=" && (html[j] === "'" || html[j] === '"')) {
+                    if (
+                        !lastQuote &&
+                        html[j - 1] === "=" &&
+                        (html[j] === "'" || html[j] === '"')
+                    ) {
                         lastQuote = html[j];
                     }
 
-                    if (!lastQuote && html[j - 2] === " " && html[j - 1] === "o" && html[j] === "n") {
+                    if (
+                        !lastQuote &&
+                        html[j - 2] === " " &&
+                        html[j - 1] === "o" &&
+                        html[j] === "n"
+                    ) {
                         strip = j - 2;
                     }
 
-                    if (strip && html[j] === " " && !lastQuote){
+                    if (strip && html[j] === " " && !lastQuote) {
                         stripHTML();
                     }
                 }
@@ -964,11 +1061,11 @@ class ViewHelper {
      * @returns {number}
      */
     calculateContentContainerHeight(element) {
-        const smallScreenWidth = this.themeManager.getParam('screenWidthXs');
+        const smallScreenWidth = this.themeManager.getParam("screenWidthXs");
 
         const $window = $(window);
 
-        const footerHeight = $('#footer').height() || 26;
+        const footerHeight = $("#footer").height() || 26;
         let top = 0;
 
         element = $(element).get(0);
@@ -977,9 +1074,12 @@ class ViewHelper {
             top = element.getBoundingClientRect().top;
 
             if ($window.width() < smallScreenWidth) {
-                const $navbarCollapse = $('#navbar .navbar-body');
+                const $navbarCollapse = $("#navbar .navbar-body");
 
-                if ($navbarCollapse.hasClass('in') || $navbarCollapse.hasClass('collapsing')) {
+                if (
+                    $navbarCollapse.hasClass("in") ||
+                    $navbarCollapse.hasClass("collapsing")
+                ) {
                     top -= $navbarCollapse.height();
                 }
             }
@@ -1002,13 +1102,23 @@ class ViewHelper {
         // noinspection JSUnresolvedReference
         scope = scope || view.scope || view.entityType;
 
-        let handlerIdList = this.metadata.get(['clientDefs', 'Global', 'viewSetupHandlers', type]) || [];
+        let handlerIdList =
+            this.metadata.get([
+                "clientDefs",
+                "Global",
+                "viewSetupHandlers",
+                type,
+            ]) || [];
 
         if (scope) {
-            handlerIdList = handlerIdList
-                .concat(
-                    this.metadata.get(['clientDefs', scope, 'viewSetupHandlers', type]) || []
-                );
+            handlerIdList = handlerIdList.concat(
+                this.metadata.get([
+                    "clientDefs",
+                    scope,
+                    "viewSetupHandlers",
+                    type,
+                ]) || []
+            );
         }
 
         if (handlerIdList.length === 0) {
@@ -1028,18 +1138,25 @@ class ViewHelper {
         const promiseList = [];
 
         for (const id of handlerIdList) {
-            const promise = new Promise(resolve => {
-                Espo.loader.require(id, /** typeof ViewHelper~Handler */Handler => {
-                    const result = (new Handler(view)).process(view);
+            const promise = new Promise((resolve) => {
+                Espo.loader.require(
+                    id,
+                    /** typeof ViewHelper~Handler */ (Handler) => {
+                        const result = new Handler(view).process(view);
 
-                    if (result && Object.prototype.toString.call(result) === '[object Promise]') {
-                        result.then(() => resolve());
+                        if (
+                            result &&
+                            Object.prototype.toString.call(result) ===
+                                "[object Promise]"
+                        ) {
+                            result.then(() => resolve());
 
-                        return;
+                            return;
+                        }
+
+                        resolve();
                     }
-
-                    resolve();
-                });
+                );
             });
 
             promiseList.push(promise);
@@ -1049,7 +1166,7 @@ class ViewHelper {
     }
 
     /** @private */
-    _isXsScreen
+    _isXsScreen;
 
     /**
      * Is xs screen width.
@@ -1058,7 +1175,8 @@ class ViewHelper {
      */
     isXsScreen() {
         if (this._isXsScreen == null) {
-            this._isXsScreen = window.innerWidth < this.themeManager.getParam('screenWidthXs');
+            this._isXsScreen =
+                window.innerWidth < this.themeManager.getParam("screenWidthXs");
         }
 
         return this._isXsScreen;
@@ -1066,3 +1184,4 @@ class ViewHelper {
 }
 
 export default ViewHelper;
+

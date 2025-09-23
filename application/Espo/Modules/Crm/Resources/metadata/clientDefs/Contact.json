@@ -90,9 +90,7 @@
             "createHandler": "handlers/create-related/set-parent"
         }
     },
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "boolFilterList": ["onlyMy"],
     "additionalLayouts": {
         "detailConvert": {
             "type": "detail"
@@ -101,9 +99,6 @@
             "type": "listSmall"
         }
     },
-    "filterList": [
-        "portalUsers"
-    ],
-    "color": "#a4c5e0",
-    "iconClass": "fas fa-id-badge"
+    "filterList": ["portalUsers"],
+    "iconClass": "ti ti-address-book"
 }

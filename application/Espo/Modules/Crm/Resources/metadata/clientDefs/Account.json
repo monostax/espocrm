@@ -50,10 +50,7 @@
     },
     "relationshipPanels": {
         "contacts": {
-            "filterList": [
-                "all",
-                "accountActive"
-            ],
+            "filterList": ["all", "accountActive"],
             "layout": "listForAccount",
             "orderBy": "name",
             "createAttributeMap": {
@@ -85,14 +82,11 @@
             "name": "recentlyCreated"
         }
     ],
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "boolFilterList": ["onlyMy"],
     "additionalLayouts": {
         "detailConvert": {
             "type": "detail"
         }
     },
-    "color": "#edc755",
-    "iconClass": "fas fa-building"
+    "iconClass": "ti ti-buildings"
 }

@@ -4622,3 +4622,26 @@ body > .autocomplete-suggestions.text-search-suggestions {
 @import "elements/popup-notification.less";
 @import "elements/grid.less";
 @import "elements/animation.less";
+
+// Conditional styling for scope icons in breadcrumbs
+.breadcrumb-item {
+    display: inline-flex !important;
+    align-items: center;
+
+    .scope-icon {
+        font-size: calc(var(--font-size-base) * 1.8);
+    }
+}
+
+// Hide scope icons when inside stream-head-container
+.stream-head-container .scope-icon {
+    display: none;
+}
+
+// Hide scope icons when avatar is present in the same container
+.field:has(.avatar) .scope-icon,
+.cell:has(.avatar) .scope-icon,
+span:has(.avatar) .scope-icon {
+    display: none;
+}
+

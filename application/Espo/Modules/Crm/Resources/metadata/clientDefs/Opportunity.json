@@ -1,47 +1,47 @@
 {
     "controller": "controllers/record",
     "modelDefaultsPreparator": "crm:handlers/opportunity/defaults-preparator",
-   "views":{
-      "detail":"crm:views/opportunity/detail"
-   },
-   "recordViews":{
-      "edit":"crm:views/opportunity/record/edit",
-      "editSmall":"crm:views/opportunity/record/edit-small",
-      "list":"crm:views/opportunity/record/list",
-      "kanban": "crm:views/opportunity/record/kanban"
-   },
-   "sidePanels": {
-      "detail": [
-          {
-              "name": "activities",
-              "reference": "activities",
-              "view": "crm:views/opportunity/record/panels/activities"
-          },
-          {
-              "name": "history",
-              "reference": "history"
-          },
-          {
-              "name": "tasks",
-              "reference": "tasks"
-          }
-      ],
-      "detailSmall": [
-          {
-              "name": "activities",
-              "reference": "activities",
-              "view": "crm:views/opportunity/record/panels/activities"
-          },
-          {
-              "name": "history",
-              "reference": "history"
-          },
-          {
-              "name": "tasks",
-              "reference": "tasks"
-          }
-      ]
-   },
+    "views": {
+        "detail": "crm:views/opportunity/detail"
+    },
+    "recordViews": {
+        "edit": "crm:views/opportunity/record/edit",
+        "editSmall": "crm:views/opportunity/record/edit-small",
+        "list": "crm:views/opportunity/record/list",
+        "kanban": "crm:views/opportunity/record/kanban"
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "activities",
+                "reference": "activities",
+                "view": "crm:views/opportunity/record/panels/activities"
+            },
+            {
+                "name": "history",
+                "reference": "history"
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks"
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "activities",
+                "reference": "activities",
+                "view": "crm:views/opportunity/record/panels/activities"
+            },
+            {
+                "name": "history",
+                "reference": "history"
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks"
+            }
+        ]
+    },
     "bottomPanels": {
         "detail": [
             {
@@ -57,28 +57,28 @@
             }
         ]
     },
-   "filterList": [
-      {
-         "name":"open"
-      },
-      {
-         "name":"won",
-         "style": "success"
-      }
-   ],
-   "boolFilterList": ["onlyMy"],
-   "additionalLayouts": {
-      "detailConvert": {
-         "type": "detail"
-      },
-      "listForAccount": {
-         "type": "listSmall"
-      },
-      "listForContact": {
-         "type": "listSmall"
-      }
-   },
-   "kanbanViewMode": true,
+    "filterList": [
+        {
+            "name": "open"
+        },
+        {
+            "name": "won",
+            "style": "success"
+        }
+    ],
+    "boolFilterList": ["onlyMy"],
+    "additionalLayouts": {
+        "detailConvert": {
+            "type": "detail"
+        },
+        "listForAccount": {
+            "type": "listSmall"
+        },
+        "listForContact": {
+            "type": "listSmall"
+        }
+    },
+    "kanbanViewMode": true,
     "relationshipPanels": {
         "contacts": {
             "createAttributeMap": {
@@ -99,6 +99,6 @@
             "selectHandler": "handlers/select-related/same-account-many"
         }
     },
-   "color": "#9fc77e",
-   "iconClass": "fas fa-dollar-sign"
+    "color": "#9fc77e",
+    "iconClass": "ti ti-coin-filled"
 }
