@@ -552,7 +552,7 @@ module.exports = (grunt) => {
 
     grunt.registerTask("build", [
         "composer-install",
-        "npm-install",
+        // "npm-install",
         "set-config-params",
         "offline",
     ]);
@@ -578,14 +578,14 @@ module.exports = (grunt) => {
     ]);
 
     grunt.registerTask("dev", [
-        "composer-install-dev",
-        "npm-install",
+        // "composer-install-dev",
+        // "npm-install",
         "internal",
     ]);
 
     grunt.registerTask("test", [
-        "composer-install-dev",
-        "npm-install",
+        // "composer-install-dev",
+        // "npm-install",
         "offline-test",
     ]);
 };

@@ -41,6 +41,7 @@ use Espo\Core\ApplicationState;
 use Espo\Core\FieldProcessing\Saver as SaverInterface;
 use Espo\Core\FieldProcessing\Saver\Params;
 use Espo\Core\Utils\Metadata;
+use Espo\Core\Utils\Util;
 
 /**
  * @implements SaverInterface<Entity>
@@ -332,6 +333,11 @@ class Saver implements SaverInterface
             }
 
             $entityPhoneNumber = $this->entityManager->getNewEntity('EntityPhoneNumber');
+
+            // Generate ID for EntityPhoneNumber entity to prevent null constraint violation
+            if (!$entityPhoneNumber->hasId()) {
+                $entityPhoneNumber->set('id', Util::generateId());
+            }
 
             $entityPhoneNumber->set([
                 'entityId' => $entity->getId(),
