@@ -3,7 +3,7 @@ COMPONENT_NAME := center
 SUBCOMPONENT_NAME := espocrm
 CACHE_COMPONENT := $(MONOSTAX_GLOBAL_CACHE_PATH_ROOT)/$(COMPONENT_NAME)
 CACHE_SUBCOMPONENT := $(CACHE_COMPONENT)/$(SUBCOMPONENT_NAME)
-WATCH_FILES := package.json package-lock.json composer.json composer.lock $(shell find application -name "*.php" 2>/dev/null) $(shell find html -name "*.html" 2>/dev/null)
+WATCH_FILES := package.json package-lock.json composer.json composer.lock $(shell find application -name "*.php" 2>/dev/null) $(shell find html -name "*.html" 2>/dev/null) $(shell find custom -name "*.php" -o -name "*.json" 2>/dev/null)
 LESS_FILES := $(shell find frontend/less -name "*.less" 2>/dev/null)
 
 .PHONY: build
@@ -32,6 +32,8 @@ $(CACHE_SUBCOMPONENT)/build/index.php: $(WATCH_FILES) node_modules/.WAS_INSTALLE
 	nix develop ../ --command ./node_modules/.bin/grunt --force
 	@mkdir -p $(CACHE_SUBCOMPONENT)/build/
 	@cp -r build/EspoCRM-*/* $(CACHE_SUBCOMPONENT)/build/
+	@mkdir -p $(CACHE_SUBCOMPONENT)/build/custom/
+	@cp -r custom/* $(CACHE_SUBCOMPONENT)/build/custom/
 	@touch $@
 
 # Build the project
