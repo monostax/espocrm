@@ -1,0 +1,12 @@
+{
+    "controller": "controllers/record",
+    "searchPanelDisabled": false,
+    "filterDisabled": false,
+    "quickCreateDisabled": true,
+    "massUpdateDisabled": true,
+    "duplicateDisabled": true,
+    "createDisabled": true,
+    "editDisabled": true,
+    "icon": "ti ti-webhook"
+}
+

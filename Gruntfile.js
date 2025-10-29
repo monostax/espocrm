@@ -254,6 +254,10 @@ module.exports = (grunt) => {
                     "web.config",
                 ],
                 dest: "build/tmp/",
+                filter: function (filepath) {
+                    // Exclude .git directories and files to avoid permission issues
+                    return !filepath.includes("/.git/");
+                },
             },
             final: {
                 expand: true,
@@ -583,9 +587,33 @@ module.exports = (grunt) => {
         "internal",
     ]);
 
+    // Atomic development tasks for faster builds
+    grunt.registerTask("less-only", ["less", "cssmin"]);
+    grunt.registerTask("js-only", [
+        "prepare-lib-original",
+        "clean:transpiled",
+        "transpile",
+        "bundle",
+        "bundle-templates",
+        "uglify:bundle",
+        "copy:frontendLib",
+        "prepare-lib",
+        "uglify:lib",
+    ]);
+    grunt.registerTask("php-only", ["copy:backend"]);
+    grunt.registerTask("assets-only", ["copy:frontend"]);
+
+    // Fast development build (internal + copy to web root)
+    grunt.registerTask("dev-fast", [
+        "internal",
+        "copy:frontend",
+        "copy:backend",
+    ]);
+
     grunt.registerTask("test", [
         // "composer-install-dev",
         // "npm-install",
         "offline-test",
     ]);
 };
+

@@ -1,0 +1,63 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "tipo"
+                },
+                {
+                    "name": "consultaMedica"
+                }
+            ],
+            [
+                {
+                    "name": "description"
+                }
+            ]
+        ],
+        "style": "default",
+        "label": "Overview"
+    },
+    {
+        "rows": [
+            [
+                {
+                    "name": "status"
+                },
+                {
+                    "name": "recordingUrl"
+                }
+            ],
+            [
+                {
+                    "name": "transcript"
+                }
+            ],
+            [
+                {
+                    "name": "callCost"
+                },
+                {
+                    "name": "callCostConverted"
+                }
+            ]
+        ],
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "incomingWebhooksIds",
+                    "data": {
+                        "field": "incomingWebhooks"
+                    }
+                }
+            ]
+        },
+        "style": "default",
+        "tabBreak": false,
+        "hidden": false,
+        "noteText": null,
+        "noteStyle": "info",
+        "customLabel": "Detalhes da Ligação"
+    }
+]

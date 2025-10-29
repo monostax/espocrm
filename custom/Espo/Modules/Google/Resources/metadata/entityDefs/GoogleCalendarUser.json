@@ -1,0 +1,52 @@
+{
+    "fields": {
+        "googleCalendar": {
+            "type": "link",
+            "required": true
+        },
+        "role": {
+            "type": "enum",
+            "options": ["owner", "writter","none","freeBusyReader","reader"],
+            "default":"owner"
+        },
+        "type": {
+            "type": "enum",
+            "options": ["monitored", "main"]
+        },
+        "active": {
+            "type": "bool",
+            "default": true
+        },
+        "syncToken": {
+            "type": "text"
+        },
+        "pageToken": {
+            "type": "text"
+        },
+        "lastLooked": {
+            "type": "datetime"
+        },
+        "lastSync": {
+            "type": "varchar"
+        },
+        "user": {
+            "type": "link",
+            "required": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "googleCalendar": {
+            "type": "belongsTo",
+            "entity": "GoogleCalendar"
+        },
+        "googleCalendarRecurrentEvent": {
+            "type": "hasMany",
+            "entity": "GoogleCalendarRecurrentEvent",
+            "foreign": "googleCalendarUser"
+        }
+    }
+}

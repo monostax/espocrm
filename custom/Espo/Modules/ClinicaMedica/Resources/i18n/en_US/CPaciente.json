@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "address": "Address",
+        "consultaMedicas": "Consultas Médicas",
+        "ligacoesIAs": "Ligacoes IAs",
+        "dateOfBirth": "Data de Nascimento"
+    },
+    "links": {
+        "meetings": "Meetings",
+        "calls": "Calls",
+        "tasks": "Tasks",
+        "consultaMedicas": "Consultas Médicas",
+        "ligacoesIAs": "Ligacoes IAs"
+    },
+    "labels": {
+        "Create CPaciente": "Criar Paciente"
+    }
+}

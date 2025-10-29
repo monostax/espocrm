@@ -1,0 +1,17 @@
+{
+    "sidePanels": {
+        "detail": [
+            "__APPEND__",
+            {
+                "name": "gmail",
+                "label": "Gmail",
+                "view": "google:views/inbound-email/panels/gmail",
+                "hidden": true
+            }
+        ]
+    },
+    "dynamicHandlerList": [
+        "__APPEND__",
+        "google:inbound-email-dynamic-handler"
+    ]
+}

@@ -1,0 +1,3 @@
+{
+    "beforeSaveCustomScript": "name = string\\concatenate(medico.name, \" <> \",paciente.name)"
+}

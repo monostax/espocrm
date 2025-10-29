@@ -1,0 +1,32 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Chiama",
+      "Meeting": "Riunione"
+    },
+    "calendarDirection": {
+      "EspoToGC": "Unica direzione: EspoCRM > Google Calendar",
+      "GCToEspo": "Unica direzione: Google Calendar > EspoCRM",
+      "Both": "Due direzioni"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Sincronizza da",
+    "calendarEntityTypes": "Sincronizza Entità ed etichette di identificazione",
+    "calendarDirection": "Direzione",
+    "calendarMonitoredCalendars": "Altri calendari",
+    "calendarMainCalendar": "Calendario principale",
+    "calendarDefaultEntity": "Entità predefinita",
+    "contactsGroups": "Aggiungi contatti a gruppi",
+    "removeGoogleCalendarEventIfRemovedInEspo": "Rimuovere l'evento da Google calendar dopo la rimozione in EspoCRM",
+    "dontSyncEventAttendees": "Non sincronizzare gli eventi dei partecipanti"
+  },
+  "messages": {
+    "disconnectConfirmation": "Vuoi davvero disconnetterti?",
+    "noPanels": "Nessun prodotto Google disponibile. Contattare l'amministratore."
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Per il tipo che riconosce il nome dell'evento deve iniziare dall'etichetta di identificazione. L'etichetta per l'entità predefinita può essere vuota. Raccomandazione: non modificare le etichette di identificazione dopo aver salvato l'impostazione di sincronizzazione",
+    "calendarDefaultEntity": "L'evento non riconosciuto verrà caricato come entità selezionata."
+  }
+}

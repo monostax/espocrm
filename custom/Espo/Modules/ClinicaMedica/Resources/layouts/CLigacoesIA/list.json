@@ -1,0 +1,19 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "align": "left"
+    },
+    {
+        "name": "consultaMedica",
+        "width": 16
+    },
+    {
+        "name": "tipo",
+        "width": 16
+    },
+    {
+        "name": "status",
+        "width": 16
+    }
+]

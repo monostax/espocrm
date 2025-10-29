@@ -1,0 +1,27 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar"
+        },
+       "googleCalendarUser": {
+            "type": "link",
+            "required": true
+        },
+        "pageToken": {
+            "type": "text"
+        },
+        "lastLoadedEventTime":{
+            "type": "datetime"
+        },
+        "eventId":{
+            "type": "varchar"
+        }
+    },
+    "links": {
+        "googleCalendarUser": {
+            "type": "belongsTo",
+            "entity": "GoogleCalendarUser",
+            "foreignName": "id"
+        }
+    }
+}

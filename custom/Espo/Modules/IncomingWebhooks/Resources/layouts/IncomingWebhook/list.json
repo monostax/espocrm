@@ -1,0 +1,22 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "event"
+    },
+    {
+        "name": "status"
+    },
+    {
+        "name": "sourceIp"
+    },
+    {
+        "name": "processedAt"
+    },
+    {
+        "name": "createdAt"
+    }
+]
+

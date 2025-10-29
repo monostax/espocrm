@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "fieldLabelIsRequired": "Nur eine Entität darf kein ID Feld haben",
+    "emptyNotDefaultEnitityLabel": "ID Feld eines Nicht-Standardeintrags darf nicht leer sein",
+    "defaultEntityIsRequiredInList": "Standardentität wird in der Sync Entitätsliste benötigt",
+    "notUniqueIdentificationLabel": "Identifikationsbezeichnung müssen eindeutig sein"
+  }
+}

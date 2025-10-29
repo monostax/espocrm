@@ -1,7 +1,7 @@
 <p class="credit small">&copy; 2025
 <a
-    href="https://www.monostax.com"
-    title="Hosted by Monostax"
+    href="https://www.monostax.ai"
+    title="Monostax CRM"
     rel="noopener" target="_blank"
     tabindex="-1"
->Monostax, Inc.</a></p>
+>Monostax CRM</a></p>

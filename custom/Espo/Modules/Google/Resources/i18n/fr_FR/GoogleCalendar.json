@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "fieldLabelIsRequired": "Une seule entité peut être sans étiquette d'identification",
+    "emptyNotDefaultEnitityLabel": "L'étiquette d'identification de l'entité non par défaut ne peut pas être vide",
+    "defaultEntityIsRequiredInList": "L'entité par défaut est requise dans la liste des entités de synchronisation",
+    "notUniqueIdentificationLabel": "Les étiquettes d'identification doivent être uniques"
+  }
+}

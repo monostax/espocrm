@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "address": "Address",
+        "consultaMedicas": "Consultas Médicas"
+    },
+    "links": {
+        "meetings": "Meetings",
+        "calls": "Calls",
+        "tasks": "Tasks",
+        "consultaMedicas": "Consultas Médicas"
+    },
+    "labels": {
+        "Create CMedico": "Criar Médico"
+    },
+    "options": {
+        "salutationName": {
+            "": "",
+            "Dr.": "Dr.",
+            "Dra.": "Dra."
+        }
+    }
+}

@@ -1,0 +1,9 @@
+{
+  "massActions": {
+    "pushToGoogle": "Pousser vers Google"
+  },
+  "messages": {
+    "confirmationGoogleContactsPush": "Voulez-vous pousser les clients potentiels sélectionnés vers Google Contacts ?",
+    "successGoogleContactsPush": "{count} enregistrement(s) poussé(s) avec succès. Le reste est sur le point d'être poussé en mode veille."
+  }
+}

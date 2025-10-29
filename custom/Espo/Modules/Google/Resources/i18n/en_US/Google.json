@@ -1,0 +1,11 @@
+{
+    "products":{
+        "googleCalendar": "Google Calendar",
+        "googleTask": "Google Task",
+        "googleContacts": "Contacts",
+        "gmail": "Gmail"
+    },
+    "message": {
+        "notConfigured": "Google Integration is not configured."
+    }
+}

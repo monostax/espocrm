@@ -1,0 +1,9 @@
+{
+    "entity": true,
+    "layouts": false,
+    "tab": false,
+    "acl": false,
+    "module": "Google",
+    "customizable": false,
+    "importable": false
+}

@@ -1,0 +1,33 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Llamada",
+      "Meeting": "Reunión"
+    },
+    "calendarDirection": {
+      "EspoToGC": "Unidireccional: EspoCRM > Calendario de Google",
+      "GCToEspo": "Unidireccional: Calendario de Google > EspoCRM",
+      "Both": "Bidireccional"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Sincronizar desde",
+    "calendarEntityTypes": "Sincronizar entidades y etiquetas de identificación",
+    "calendarDirection": "Dirección",
+    "calendarMonitoredCalendars": "Otros calendarios",
+    "calendarMainCalendar": "Calendario principal",
+    "calendarDefaultEntity": "Entidad predeterminada",
+    "contactsGroups": "Añadir contactos a grupos",
+    "removeGoogleCalendarEventIfRemovedInEspo": "Eliminar evento del Calendario de Google al eliminarlo en EspoCRM",
+    "dontSyncEventAttendees": "No sincronizar los asistentes al evento",
+    "gmailEmailAddress": "Dirección de correo electrónico"
+  },
+  "messages": {
+    "disconnectConfirmation": "¿Seguro que quiere desconectarse?",
+    "noPanels": "No hay productos de Google disponibles. Póngase en contacto con su administrador."
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Para que el tipo reconozca el nombre del evento, debe comenzar desde la etiqueta de identificación. La etiqueta para la entidad predeterminada puede estar vacía. Recomendación: no cambie las etiquetas de identificación después de guardar la configuración de sincronización",
+    "calendarDefaultEntity": "El evento no reconocido se cargará como entidad seleccionada."
+  }
+}

@@ -1,0 +1,39 @@
+{
+    "labels": {
+        "Create IncomingWebhook": "Create Incoming Webhook",
+        "IncomingWebhook": "Incoming Webhook",
+        "Incoming Webhooks": "Incoming Webhooks"
+    },
+    "fields": {
+        "name": "Name",
+        "event": "Event Type",
+        "payload": "Payload",
+        "headers": "Headers",
+        "status": "Status",
+        "processedAt": "Processed At",
+        "errorMessage": "Error Message",
+        "webhookId": "Webhook ID",
+        "signature": "Signature",
+        "retryCount": "Retry Count",
+        "sourceIp": "Source IP",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Processed": "Processed",
+            "Failed": "Failed"
+        }
+    },
+    "tooltips": {
+        "event": "The type of event that triggered this webhook",
+        "payload": "The JSON payload received from the webhook",
+        "headers": "HTTP headers received with the webhook request",
+        "webhookId": "Unique identifier for this webhook (used for idempotency)",
+        "signature": "Digital signature or verification token from the webhook source"
+    }
+}
+

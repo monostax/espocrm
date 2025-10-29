@@ -1,0 +1,8 @@
+{
+    "messages": {
+        "fieldLabelIsRequired":"Only one entity can be w/o Identification Label",
+        "emptyNotDefaultEnitityLabel":"Identification Label of not by default Entity can't be empty",
+        "defaultEntityIsRequiredInList":"Default Entity is required in the Sync Entities List",
+        "notUniqueIdentificationLabel":"Identification Labels have to be unique"
+    }
+}

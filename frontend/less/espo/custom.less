@@ -4629,7 +4629,7 @@ body > .autocomplete-suggestions.text-search-suggestions {
     align-items: center;
 
     .scope-icon {
-        font-size: calc(var(--font-size-base) * 1.8);
+        font-size: calc(var(--font-size-base) * 1.5);
     }
 }
 
@@ -4645,3 +4645,95 @@ span:has(.avatar) .scope-icon {
     display: none;
 }
 
+/* ===================================================================
+ * Iframe Embedding Styles
+ * These styles are applied when the application is embedded in an iframe
+ * =================================================================== */
+
+// When embedded in an iframe, you can customize the appearance
+html.is-embedded,
+html.is-iframe {
+    // Example: Add a subtle border or indicator
+    // border: 2px solid var(--primary);
+
+    // Example: Adjust scrollbar behavior for embedded mode
+    // scrollbar-gutter: auto;
+}
+
+// Adjust body styles when embedded
+html.is-embedded body,
+html.is-iframe body {
+    // Example: Remove margins for seamless embedding
+    // margin: 0;
+    // padding: 0;
+}
+
+// You can also target specific elements differently when embedded
+html.is-embedded #header,
+html.is-iframe #header {
+    // Example: Make header more compact in iframe mode
+    // padding-top: var(--4px);
+    // padding-bottom: var(--4px);
+}
+
+// Example: Hide certain elements when embedded
+html.is-embedded .hide-when-embedded,
+html.is-iframe .hide-when-embedded {
+    display: none !important;
+}
+
+// Example: Show elements only when embedded
+.show-only-when-embedded {
+    display: none;
+}
+
+html.is-embedded .show-only-when-embedded,
+html.is-iframe .show-only-when-embedded {
+    display: block;
+}
+
+// Using data attributes for more granular control
+html[data-embedded="true"] {
+    // Alternative selector using data attribute
+}
+
+// Remove navbar padding when embedded
+html.is-embedded,
+html.is-iframe {
+    // Hide header when embedded
+    #header,
+    body > header {
+        display: none !important;
+    }
+
+    // Remove padding from content container
+    #content.container.content,
+    .content.container {
+        padding: 0 !important;
+    }
+
+    // Remove top padding from main element
+    #main {
+        padding-top: 0 !important;
+    }
+
+    // Remove side navbar padding for embedded mode
+    body[data-navbar="side"] {
+        // Remove top padding for header
+        padding-top: 0 !important;
+
+        @media screen and (min-width: @screen-sm-min) {
+            &.has-navbar > .content {
+                padding-left: 0 !important;
+                max-width: 100% !important;
+            }
+
+            &.minimized #content {
+                padding-left: 0 !important;
+                max-width: 100% !important;
+            }
+        }
+    }
+}
+
+/* End Iframe Embedding Styles */

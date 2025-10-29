@@ -1,0 +1,33 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar"
+        },
+        "googleAccountEmail": {
+            "type": "varchar"
+        },
+        "parent": {
+            "type": "linkParent",
+            "entityList": ["Contact", "Lead"]
+        },
+        "googleContactId": {
+            "type": "varchar"
+        },
+        "resourceName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "index": true
+        },
+        "etag": {
+            "type": "varchar",
+            "maxLength": 255,
+            "index": true
+        }
+    },
+    "links": {
+        "parent": {
+            "type": "belongsToParent",
+            "foreign": "googleContacts"
+        }
+    }
+}

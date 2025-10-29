@@ -1,0 +1,9 @@
+{
+  "fields": {
+    "googleCalendar": "Calendrier",
+    "googleTasks": "Tâches"
+  },
+  "help": {
+    "Google": "**Obtenez les informations d'identification OAuth 2.0 à partir de la Google Developers Console**\n\nAccédez à [Google Developers Console](https://console.developers.google.com/project) pour obtenir les informations d'identification OAuth 2.0 telles qu'un ID client et un secret client connu à la fois par l'application Google et EspoCRM.\n\nCette intégration nécessite l'extension *curl*. Google Contacts a également besoin de *libxml* et *xml*."
+  }
+}

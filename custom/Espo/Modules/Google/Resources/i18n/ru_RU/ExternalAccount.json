@@ -1,0 +1,32 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Звонок",
+      "Meeting": "Втреча"
+    },
+    "calendarDirection": {
+      "EspoToGC": "Одностороннее: EspoCRM -> Google Calendar",
+      "GCToEspo": "Одностороннее: Google Calendar -> EspoCRM",
+      "Both": "Двустороннее"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Синхронизировать от",
+    "calendarEntityTypes": "Синхронизировать сущности и их идентификационные метки",
+    "calendarDirection": "Направление",
+    "calendarMonitoredCalendars": "Другие календари",
+    "calendarMainCalendar": "Главный календарь",
+    "calendarDefaultEntity": "Сущность по умолчанию",
+    "contactsGroups": "Добавить контакты в группы",
+    "removeGoogleCalendarEventIfRemovedInEspo": "Удалить событие Календаря Google при удалении в EspoCRM",
+    "dontSyncEventAttendees": "Не синхронизировать участников события"
+  },
+  "messages": {
+    "disconnectConfirmation": "Вы действительно хотите отключиться?",
+    "noPanels": "Нет доступных продуктов Google. Свяжитесь с вашим администратором."
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Для распознания типа события имя должно начинаться с распознавательной метки. Метка сущности по умолчанию может быть не оприделённой. Рекомендация: после сохранения настроек синхронизации не меняйте распознавательные метки",
+    "calendarDefaultEntity": "Нераспознаные события будут загружены, как выбранная сущность"
+  }
+}

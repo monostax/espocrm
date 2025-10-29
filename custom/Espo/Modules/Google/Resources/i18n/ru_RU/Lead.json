@@ -1,0 +1,9 @@
+{
+  "massActions": {
+    "pushToGoogle": "Загрузить в Google "
+  },
+  "messages": {
+    "confirmationGoogleContactsPush": "Хотите загрузить выбранных кандидатов в Google Контакты?",
+    "successGoogleContactsPush": "{count} записей успешно загружено. Остальное загрузиться в режиме ожидания."
+  }
+}

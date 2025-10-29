@@ -1,0 +1,9 @@
+{
+    "scopeNames": {
+        "IncomingWebhook": "Incoming Webhook"
+    },
+    "scopeNamesPlural": {
+        "IncomingWebhook": "Incoming Webhooks"
+    }
+}
+

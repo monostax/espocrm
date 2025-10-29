@@ -1,0 +1,7 @@
+{
+  "messages": {
+    "fieldLabelIsRequired": "Pouze jeden subjekt by nemusel mít identifikační štítek",
+    "emptyNotDefaultEnitityLabel": "Identifikační štítek nemůže být u nevýchozího subjektu prázdný",
+    "defaultEntityIsRequiredInList": "Výchozí subjekt je vyžadován v seznamu synchronizačních subjektů"
+  }
+}

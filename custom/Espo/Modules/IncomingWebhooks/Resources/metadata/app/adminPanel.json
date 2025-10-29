@@ -1,0 +1,13 @@
+{
+    "setup": {
+        "items": [
+            {
+                "url": "#IncomingWebhook",
+                "label": "Incoming Webhooks",
+                "description": "Manage incoming webhooks from external systems",
+                "iconClass": "ti ti-webhook"
+            }
+        ]
+    }
+}
+

@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "address": "Endereço",
+        "ligacoesIAs": "Ligacoes IAs",
+        "dateOfBirth": "Data de Nascimento",
+        "age": "Idade"
+    },
+    "links": {
+        "meetings": "Reuniões",
+        "calls": "Ligações",
+        "tasks": "Tarefas",
+        "ligacoesIAs": "Ligacoes IAs"
+    },
+    "labels": {
+        "Create CPaciente": "Criar Paciente"
+    }
+}

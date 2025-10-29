@@ -1,0 +1,9 @@
+{
+  "massActions": {
+    "pushToGoogle": "Inserire su Google"
+  },
+  "messages": {
+    "confirmationGoogleContactsPush": "Vuoi inserire i contatti selezionati sui contatti Google?",
+    "successGoogleContactsPush": "i record {count} sono stati inseriti correttamente. Il resto sta per essere inserito in modalità nascosta."
+  }
+}

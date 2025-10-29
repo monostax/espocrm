@@ -1,0 +1,32 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Дзвінок",
+      "Meeting": "Зустріч"
+    },
+    "calendarDirection": {
+      "EspoToGC": "Односторонній: EspoCRM -> Google Calendar",
+      "GCToEspo": "Односторонній: Google Calendar -> EspoCRM",
+      "Both": "Двосторонній"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Синхронізувати з",
+    "calendarEntityTypes": "Сутності і їх розпізнавальні мітки в синхронізації",
+    "calendarDirection": "Напрямок",
+    "calendarMonitoredCalendars": "Інші календарі",
+    "calendarMainCalendar": "Основний календар",
+    "calendarDefaultEntity": "Сутність за замовчуванням",
+    "contactsGroups": "Додати контакти до груп",
+    "removeGoogleCalendarEventIfRemovedInEspo": "Видалити запис Календаря Google при видаленні в EspoCRM",
+    "dontSyncEventAttendees": "Не синхронізувати учасників подій"
+  },
+  "messages": {
+    "disconnectConfirmation": "Ви дійсно хочете від'єднатися?",
+    "noPanels": "Немає доступних продуктів Google. Зв'яжіться зі своїм адміністратором."
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Для розпізнавання типу події назва події має починатися із зазначеної розпізнавальної мітки. Мітка сутності за замовчуванням може залишатись порожньою. Рекомендація: Не змінюйте розпізнавальні мітки після збереження налаштування синхронізації",
+    "calendarDefaultEntity": "Нерозпізнані події будуть завантажені як вибрана сутність"
+  }
+}

@@ -1,0 +1,7 @@
+{
+    "order": 15,
+    "version": "1.0.0",
+    "name": "IncomingWebhooks",
+    "description": "Incoming Webhooks module for receiving and processing webhooks from external systems"
+}
+

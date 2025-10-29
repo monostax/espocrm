@@ -28,37 +28,37 @@
 
 /** @module app */
 
-import Backbone from 'backbone';
-import {Events, View as BullView, Factory as BullFactory} from 'bullbone';
-import Base64 from 'js-base64';
-import Ui from 'ui';
-import Utils from 'utils';
-import AclManager from 'acl-manager';
-import Cache from 'cache';
-import Storage from 'storage';
-import Settings from 'models/settings';
-import Language from 'language';
-import Metadata from 'metadata';
-import FieldManager from 'field-manager';
-import User from 'models/user';
-import Preferences from 'models/preferences';
-import ModelFactory from 'model-factory';
-import CollectionFactory from 'collection-factory';
-import BaseController from 'controllers/base';
-import Router from 'router';
-import DateTime from 'date-time';
-import LayoutManager from 'layout-manager';
-import ThemeManager from 'theme-manager';
-import SessionStorage from 'session-storage';
-import ViewHelper from 'view-helper';
-import WebSocketManager from 'web-socket-manager';
-import Ajax from 'ajax';
-import NumberUtil from 'number-util';
-import PageTitle from 'page-title';
-import BroadcastChannel from 'broadcast-channel';
-import uiAppInit from 'ui/app-init';
-import AppParams from 'app-params';
-import {container} from 'di';
+import Backbone from "backbone";
+import { Events, View as BullView, Factory as BullFactory } from "bullbone";
+import Base64 from "js-base64";
+import Ui from "ui";
+import Utils from "utils";
+import AclManager from "acl-manager";
+import Cache from "cache";
+import Storage from "storage";
+import Settings from "models/settings";
+import Language from "language";
+import Metadata from "metadata";
+import FieldManager from "field-manager";
+import User from "models/user";
+import Preferences from "models/preferences";
+import ModelFactory from "model-factory";
+import CollectionFactory from "collection-factory";
+import BaseController from "controllers/base";
+import Router from "router";
+import DateTime from "date-time";
+import LayoutManager from "layout-manager";
+import ThemeManager from "theme-manager";
+import SessionStorage from "session-storage";
+import ViewHelper from "view-helper";
+import WebSocketManager from "web-socket-manager";
+import Ajax from "ajax";
+import NumberUtil from "number-util";
+import PageTitle from "page-title";
+import BroadcastChannel from "broadcast-channel";
+import uiAppInit from "ui/app-init";
+import AppParams from "app-params";
+import { container } from "di";
 
 /**
  * A main application class.
@@ -66,7 +66,6 @@ import {container} from 'di';
  * @mixes Bull.Events
  */
 class App {
-
     /**
      * @param {module:app~Options} options Options.
      * @param {function(App): void} callback A callback.
@@ -80,7 +79,7 @@ class App {
          * @private
          * @type {string}
          */
-        this.id = options.id || 'espocrm';
+        this.id = options.id || "espocrm";
 
         /**
          * Use cache.
@@ -97,7 +96,7 @@ class App {
          *
          * @type {string}
          */
-        this.basePath = options.basePath || '';
+        this.basePath = options.basePath || "";
 
         /**
          * A default ajax request timeout.
@@ -130,12 +129,11 @@ class App {
 
         this.appTimestamp = options.appTimestamp;
 
-        this.initCache(options)
-            .then(async () => {
-                await this.init(options);
+        this.initCache(options).then(async () => {
+            await this.init(options);
 
-                callback(this);
-            });
+            callback(this);
+        });
 
         uiAppInit();
     }
@@ -144,67 +142,67 @@ class App {
      * @private
      * @type {boolean}
      */
-    useCache = false
+    useCache = false;
 
     /**
      * @protected
      * @type {User}
      */
-    user = null
+    user = null;
 
     /**
      * @private
      * @type {Preferences}
      */
-    preferences = null
+    preferences = null;
 
     /**
      * @protected
      * @type {module:models/settings}
      */
-    settings = null
+    settings = null;
 
     /**
      * @private
      * @type {Metadata}
      */
-    metadata = null
+    metadata = null;
 
     /**
      * @private
      * @type {module:language}
      */
-    language = null
+    language = null;
 
     /**
      * @private
      * @type {module:field-manager}
      */
-    fieldManager = null
+    fieldManager = null;
 
     /**
      * @private
      * @type {module:cache|null}
      */
-    cache = null
+    cache = null;
 
     /**
      * @private
      * @type {module:storage|null}
      */
-    storage = null
+    storage = null;
 
     /**
      * @private
      */
-    loader = null
+    loader = null;
 
     /**
      * An API URL.
      *
      * @private
      */
-    apiUrl = 'api/v1'
+    apiUrl = "api/v1";
 
     /**
      * An auth credentials string.
@@ -212,7 +210,7 @@ class App {
      * @private
      * @type {?string}
      */
-    auth = null
+    auth = null;
 
     /**
      * Another user to login as.
@@ -220,7 +218,7 @@ class App {
      * @private
      * @type {?string}
      */
-    anotherUser = null
+    anotherUser = null;
 
     /**
      * A base controller.
@@ -228,30 +226,30 @@ class App {
      * @private
      * @type {module:controllers/base}
      */
-    baseController = null
+    baseController = null;
 
     /**
      * @private
      */
-    controllers = null
+    controllers = null;
 
     /**
      * @private
      * @type {module:router}
      */
-    router = null
+    router = null;
 
     /**
      * @private
      * @type {module:model-factory}
      */
-    modelFactory = null
+    modelFactory = null;
 
     /**
      * @private
      * @type {module:collection-factory}
      */
-    collectionFactory = null
+    collectionFactory = null;
 
     /**
      * A view factory.
@@ -259,7 +257,7 @@ class App {
      * @private
      * @type {Factory}
      */
-    viewFactory = null
+    viewFactory = null;
 
     /**
      * App params.
@@ -267,19 +265,19 @@ class App {
      * @private
      * @type {import('app-params').default}
      */
-    appParams
+    appParams;
 
     /**
      * @type {function(string, function(View))}
      * @private
      */
-    viewLoader = null
+    viewLoader = null;
 
     /**
      * @private
      * @type {module:view-helper}
      */
-    viewHelper = null
+    viewHelper = null;
 
     /**
      * A body view.
@@ -287,43 +285,43 @@ class App {
      * @protected
      * @type {string}
      */
-    masterView = 'views/site/master'
+    masterView = "views/site/master";
 
     /**
      * @private
      * @type {Cache|null}
      */
-    responseCache = null
+    responseCache = null;
 
     /**
      * @private
      * @type {module:broadcast-channel|null}
      */
-    broadcastChannel = null
+    broadcastChannel = null;
 
     /**
      * @private
      * @type {module:date-time|null}
      */
-    dateTime = null
+    dateTime = null;
 
     /**
      * @private
      * @type {module:num-util|null}
      */
-    numberUtil = null
+    numberUtil = null;
 
     /**
      * @private
      * @type {module:web-socket-manager}
      */
-    webSocketManager
+    webSocketManager;
 
     /**
      * @private
      * @type {AclManager}
      */
-    acl
+    acl;
 
     /**
      * An application timestamp. Used for asset cache busting and update detection.
@@ -331,13 +329,13 @@ class App {
      * @private
      * @type {Number|null}
      */
-    appTimestamp = null
+    appTimestamp = null;
 
     /** @private */
-    started = false
+    started = false;
 
     /** @private */
-    aclName = 'acl'
+    aclName = "acl";
 
     /**
      * @private
@@ -354,22 +352,23 @@ class App {
 
         const storedTimestamp = this.cache.getCacheTimestamp();
 
-        timestamp ?
-            this.cache.handleActuality(timestamp) :
-            this.cache.storeTimestamp();
+        timestamp
+            ? this.cache.handleActuality(timestamp)
+            : this.cache.storeTimestamp();
 
         if (!window.caches) {
             return;
         }
 
-        const deleteCache = !timestamp || !storedTimestamp || timestamp !== storedTimestamp;
+        const deleteCache =
+            !timestamp || !storedTimestamp || timestamp !== storedTimestamp;
 
         try {
             if (deleteCache) {
-                await caches.delete('espo');
+                await caches.delete("espo");
             }
 
-            this.responseCache = await caches.open('espo');
+            this.responseCache = await caches.open("espo");
         } catch (e) {
             console.error(`Could not open 'espo' cache.`);
         }
@@ -392,7 +391,11 @@ class App {
 
         this.loader.setResponseCache(this.responseCache);
 
-        if (this.useCache && !this.loader.getCacheTimestamp() && options.cacheTimestamp) {
+        if (
+            this.useCache &&
+            !this.loader.getCacheTimestamp() &&
+            options.cacheTimestamp
+        ) {
             this.loader.setCacheTimestamp(options.cacheTimestamp);
         }
 
@@ -422,7 +425,7 @@ class App {
             this.initTemplateBundles(),
         ]);
 
-        this.loader.setIsDeveloperMode(this.settings.get('isDeveloperMode'));
+        this.loader.setIsDeveloperMode(this.settings.get("isDeveloperMode"));
 
         this.user = new User();
         this.preferences = new Preferences();
@@ -433,9 +436,18 @@ class App {
 
         this.fieldManager.acl = this.acl;
 
-        this.themeManager = new ThemeManager(this.settings, this.preferences, this.metadata, this.themeName);
+        this.themeManager = new ThemeManager(
+            this.settings,
+            this.preferences,
+            this.metadata,
+            this.themeName
+        );
         this.modelFactory = new ModelFactory(this.metadata);
-        this.collectionFactory = new CollectionFactory(this.modelFactory, this.settings, this.metadata);
+        this.collectionFactory = new CollectionFactory(
+            this.modelFactory,
+            this.settings,
+            this.metadata
+        );
         this.webSocketManager = new WebSocketManager(this.settings);
 
         container.set(AclManager, this.acl);
@@ -475,11 +487,13 @@ class App {
     async onAuth(afterLogin = false) {
         await this.metadata.load();
 
-        this.fieldManager.defs = this.metadata.get('fields') || {};
+        this.fieldManager.defs = this.metadata.get("fields") || {};
         this.fieldManager.metadata = this.metadata;
 
-        this.settings.setDefs(this.metadata.get('entityDefs.Settings') || {});
-        this.preferences.setDefs(this.metadata.get('entityDefs.Preferences') || {});
+        this.settings.setDefs(this.metadata.get("entityDefs.Settings") || {});
+        this.preferences.setDefs(
+            this.metadata.get("entityDefs.Preferences") || {}
+        );
 
         this.viewHelper.layoutManager.setUserId(this.user.id);
 
@@ -493,7 +507,7 @@ class App {
             this.viewHelper.webSocketManager = null;
         }
 
-        if (this.settings.get('useWebSocket') && !this.anotherUser) {
+        if (this.settings.get("useWebSocket") && !this.anotherUser) {
             this.webSocketManager.setEnabled();
         }
 
@@ -504,9 +518,9 @@ class App {
         const promiseList = [];
         const aclImplementationClassMap = {};
 
-        const clientDefs = this.metadata.get('clientDefs') || {};
+        const clientDefs = this.metadata.get("clientDefs") || {};
 
-        Object.keys(clientDefs).forEach(scope => {
+        Object.keys(clientDefs).forEach((scope) => {
             const o = clientDefs[scope];
 
             const implClassName = (o || {})[this.aclName];
@@ -515,8 +529,8 @@ class App {
                 return;
             }
 
-            const promise = new Promise(resolve => {
-                this.loader.require(implClassName, Class => {
+            const promise = new Promise((resolve) => {
+                this.loader.require(implClassName, (Class) => {
                     aclImplementationClassMap[scope] = Class;
 
                     resolve();
@@ -527,8 +541,8 @@ class App {
         });
 
         if (!this.themeManager.isApplied() && this.themeManager.isUserTheme()) {
-            const promise = new Promise(resolve => {
-                const check = i => {
+            const promise = new Promise((resolve) => {
+                const check = (i) => {
                     if (this.themeManager.isApplied() || i === 50) {
                         resolve();
 
@@ -538,7 +552,7 @@ class App {
                     i = i || 0;
 
                     setTimeout(() => check(i + 1), 10);
-                }
+                };
 
                 check();
             });
@@ -549,7 +563,7 @@ class App {
         const promise = Promise.all(promiseList);
 
         if (afterLogin) {
-            this.broadcastChannel.postMessage('logged-in');
+            this.broadcastChannel.postMessage("logged-in");
         }
 
         await promise;
@@ -563,9 +577,9 @@ class App {
      * @private
      */
     initRouter() {
-        const routes = this.metadata.get('app.clientRoutes') || {};
+        const routes = this.metadata.get("app.clientRoutes") || {};
 
-        this.router = new Router({routes: routes});
+        this.router = new Router({ routes: routes });
 
         container.set(Router, this.router);
 
@@ -573,14 +587,18 @@ class App {
 
         this.baseController.setRouter(this.router);
 
-        this.router.confirmLeaveOutMessage = this.language.translate('confirmLeaveOutMessage', 'messages');
-        this.router.confirmLeaveOutConfirmText = this.language.translate('Yes');
-        this.router.confirmLeaveOutCancelText = this.language.translate('Cancel');
+        this.router.confirmLeaveOutMessage = this.language.translate(
+            "confirmLeaveOutMessage",
+            "messages"
+        );
+        this.router.confirmLeaveOutConfirmText = this.language.translate("Yes");
+        this.router.confirmLeaveOutCancelText =
+            this.language.translate("Cancel");
 
-        this.router.on('routed', params => this.doAction(params));
+        this.router.on("routed", (params) => this.doAction(params));
 
         try {
-            Backbone.history.start({root: window.location.pathname});
+            Backbone.history.start({ root: window.location.pathname });
         } catch (e) {
             Backbone.history.loadUrl();
         }
@@ -598,25 +616,25 @@ class App {
      * }} params
      */
     doAction(params) {
-        this.trigger('action', params);
+        this.trigger("action", params);
 
-        this.baseController.trigger('action');
+        this.baseController.trigger("action");
 
-        const callback = controller => {
+        const callback = (controller) => {
             try {
                 controller.doAction(params.action, params.options);
 
-                this.trigger('action:done');
+                this.trigger("action:done");
             } catch (e) {
                 console.error(e);
 
                 switch (e.name) {
-                    case 'AccessDenied':
+                    case "AccessDenied":
                         this.baseController.error403();
 
                         break;
 
-                    case 'NotFound':
+                    case "NotFound":
                         this.baseController.error404();
 
                         break;
@@ -640,7 +658,10 @@ class App {
      * @private
      */
     initBaseController() {
-        this.baseController = new BaseController({}, this.getControllerInjection());
+        this.baseController = new BaseController(
+            {},
+            this.getControllerInjection()
+        );
 
         this.viewHelper.baseController = this.baseController;
     }
@@ -691,7 +712,7 @@ class App {
             if (!className) {
                 const module = this.metadata.get(`scopes.${name}.module`);
 
-                className = Utils.composeClassName(module, name, 'controllers');
+                className = Utils.composeClassName(module, name, "controllers");
             }
 
             this.createController(className, name, callback);
@@ -707,15 +728,18 @@ class App {
     createController(className, name, callback) {
         Espo.loader.require(
             className,
-            controllerClass => {
+            (controllerClass) => {
                 const injections = this.getControllerInjection();
 
-                const controller = new controllerClass(this.baseController.params, injections);
+                const controller = new controllerClass(
+                    this.baseController.params,
+                    injections
+                );
 
                 controller.name = name;
                 controller.masterView = this.masterView;
 
-                this.controllers[name] = controller
+                this.controllers[name] = controller;
 
                 callback(controller);
             },
@@ -728,7 +752,10 @@ class App {
      */
     initUtils() {
         this.dateTime = new DateTime();
-        this.dateTime.setSettingsAndPreferences(this.settings, this.preferences);
+        this.dateTime.setSettingsAndPreferences(
+            this.settings,
+            this.preferences
+        );
         this.numberUtil = new NumberUtil(this.settings, this.preferences);
 
         container.set(DateTime, this.dateTime);
@@ -742,14 +769,18 @@ class App {
      * @return {module:acl-manager}
      */
     createAclManager() {
-        return new AclManager(this.user, null, this.settings.get('aclAllowDeleteCreated'));
+        return new AclManager(
+            this.user,
+            null,
+            this.settings.get("aclAllowDeleteCreated")
+        );
     }
 
     /**
      * @private
      */
     initView() {
-        const helper = this.viewHelper = new ViewHelper();
+        const helper = (this.viewHelper = new ViewHelper());
 
         helper.layoutManager = new LayoutManager(this.cache, this.id);
         helper.settings = this.settings;
@@ -773,7 +804,9 @@ class App {
         helper.appParams = this.appParams;
         helper.broadcastChannel = this.broadcastChannel;
 
-        helper.webSocketManager = this.settings.get('useWebSocket') ? this.webSocketManager : null;
+        helper.webSocketManager = this.settings.get("useWebSocket")
+            ? this.webSocketManager
+            : null;
 
         container.set(ViewHelper, this.viewHelper);
         container.set(LayoutManager, helper.layoutManager);
@@ -787,7 +820,8 @@ class App {
 
         const isModuleInternal = (module) => {
             if (!(module in internalModuleMap)) {
-                internalModuleMap[module] = this.internalModuleList.indexOf(module) !== -1;
+                internalModuleMap[module] =
+                    this.internalModuleList.indexOf(module) !== -1;
             }
 
             return internalModuleMap[module];
@@ -797,17 +831,21 @@ class App {
             let path = null;
 
             switch (type) {
-                case 'template':
-                    if (~name.indexOf('.')) {
-                        console.warn(name + ': template name should use slashes for a directory separator.');
+                case "template":
+                    if (~name.indexOf(".")) {
+                        console.warn(
+                            name +
+                                ": template name should use slashes for a directory separator."
+                        );
                     }
 
-                    path = 'res/templates/' + name.split('.').join('/') + '.tpl';
+                    path =
+                        "res/templates/" + name.split(".").join("/") + ".tpl";
 
                     break;
 
-                case 'layoutTemplate':
-                    path = 'res/layout-types/' + name + '.tpl';
+                case "layoutTemplate":
+                    path = "res/layout-types/" + name + ".tpl";
 
                     break;
             }
@@ -816,44 +854,57 @@ class App {
         };
 
         const getResourcePath = (type, name) => {
-            if (!name.includes(':')) {
-                return 'client/' + getResourceInnerPath(type, name);
+            if (!name.includes(":")) {
+                return "client/" + getResourceInnerPath(type, name);
             }
 
-            const [mod, path] = name.split(':');
+            const [mod, path] = name.split(":");
 
-            if (mod === 'custom') {
-                return 'client/custom/' + getResourceInnerPath(type, path);
+            if (mod === "custom") {
+                return "client/custom/" + getResourceInnerPath(type, path);
             }
 
             if (isModuleInternal(mod)) {
-                return 'client/modules/' + mod + '/' + getResourceInnerPath(type, path);
+                return (
+                    "client/modules/" +
+                    mod +
+                    "/" +
+                    getResourceInnerPath(type, path)
+                );
             }
 
-            return 'client/custom/modules/' + mod + '/' + getResourceInnerPath(type, path);
+            return (
+                "client/custom/modules/" +
+                mod +
+                "/" +
+                getResourceInnerPath(type, path)
+            );
         };
 
         this.viewFactory = new BullFactory({
-            defaultViewName: 'views/base',
+            defaultViewName: "views/base",
             helper: helper,
             viewLoader: this.viewLoader,
             resources: {
                 loaders: {
                     template: (name, callback) => {
-                        const path = getResourcePath('template', name);
+                        const path = getResourcePath("template", name);
 
-                        this.loader.require('res!' + path, callback);
+                        this.loader.require("res!" + path, callback);
                     },
                     layoutTemplate: (name, callback) => {
-                        if (Espo.layoutTemplates && name in Espo.layoutTemplates) {
+                        if (
+                            Espo.layoutTemplates &&
+                            name in Espo.layoutTemplates
+                        ) {
                             callback(Espo.layoutTemplates[name]);
 
                             return;
                         }
 
-                        const path = getResourcePath('layoutTemplate', name);
+                        const path = getResourcePath("layoutTemplate", name);
 
-                        this.loader.require('res!' + path, callback);
+                        this.loader.require("res!" + path, callback);
                     },
                 },
             },
@@ -880,34 +931,37 @@ class App {
      * @public
      */
     initAuth() {
-        this.auth = this.storage.get('user', 'auth') || null;
-        this.anotherUser = this.storage.get('user', 'anotherUser') || null;
+        this.auth = this.storage.get("user", "auth") || null;
+        this.anotherUser = this.storage.get("user", "anotherUser") || null;
 
-        this.baseController.on('login', /** module:app~LoginData */ data => {
-            const userId = data.user.id;
-            const userName = data.auth.userName;
-            const token = data.auth.token;
-            const anotherUser = data.auth.anotherUser || null;
+        this.baseController.on(
+            "login",
+            /** module:app~LoginData */ (data) => {
+                const userId = data.user.id;
+                const userName = data.auth.userName;
+                const token = data.auth.token;
+                const anotherUser = data.auth.anotherUser || null;
 
-            this.auth = Base64.encode(userName  + ':' + token);
-            this.anotherUser = anotherUser;
+                this.auth = Base64.encode(userName + ":" + token);
+                this.anotherUser = anotherUser;
 
-            const lastUserId = this.storage.get('user', 'lastUserId');
+                const lastUserId = this.storage.get("user", "lastUserId");
 
-            if (lastUserId !== userId) {
-                this.metadata.clearCache();
-                this.language.clearCache();
+                if (lastUserId !== userId) {
+                    this.metadata.clearCache();
+                    this.language.clearCache();
+                }
+
+                this.storage.set("user", "auth", this.auth);
+                this.storage.set("user", "lastUserId", userId);
+                this.storage.set("user", "anotherUser", this.anotherUser);
+
+                this.setCookieAuth(userName, token);
+                this.initUserData(data, () => this.onAuth(true));
             }
+        );
 
-            this.storage.set('user', 'auth', this.auth);
-            this.storage.set('user', 'lastUserId', userId);
-            this.storage.set('user', 'anotherUser', this.anotherUser);
-
-            this.setCookieAuth(userName, token);
-            this.initUserData(data, () => this.onAuth(true));
-        });
-
-        this.baseController.on('logout', () => this.logout());
+        this.baseController.on("logout", () => this.logout());
     }
 
     /**
@@ -919,25 +973,35 @@ class App {
         let logoutWait = false;
 
         if (this.auth && !afterFail) {
-            const arr = Base64.decode(this.auth).split(':');
+            const arr = Base64.decode(this.auth).split(":");
 
             if (arr.length > 1) {
-                logoutWait = this.appParams.get('logoutWait') || false;
+                logoutWait = this.appParams.get("logoutWait") || false;
 
-                Ajax.postRequest('App/destroyAuthToken', {token: arr[1]}, {resolveWithXhr: true})
-                    .then(/** XMLHttpRequest */xhr => {
-                        const redirectUrl = xhr.getResponseHeader('X-Logout-Redirect-Url');
+                Ajax.postRequest(
+                    "App/destroyAuthToken",
+                    { token: arr[1] },
+                    { resolveWithXhr: true }
+                ).then(
+                    /** XMLHttpRequest */ (xhr) => {
+                        const redirectUrl = xhr.getResponseHeader(
+                            "X-Logout-Redirect-Url"
+                        );
 
                         if (redirectUrl) {
-                            setTimeout(() => window.location.href = redirectUrl, 50);
+                            setTimeout(
+                                () => (window.location.href = redirectUrl),
+                                50
+                            );
 
                             return;
                         }
 
                         if (logoutWait) {
-                            this.doAction({action: 'login'});
+                            this.doAction({ action: "login" });
                         }
-                    });
+                    }
+                );
             }
         }
 
@@ -945,9 +1009,11 @@ class App {
             this.webSocketManager.close();
         }
 
-        silent = silent || afterFail &&
-            this.auth &&
-            this.auth !== this.storage.get('user', 'auth');
+        silent =
+            silent ||
+            (afterFail &&
+                this.auth &&
+                this.auth !== this.storage.get("user", "auth"));
 
         this.auth = null;
         this.anotherUser = null;
@@ -957,13 +1023,13 @@ class App {
         this.acl.clear();
 
         if (!silent) {
-            this.storage.clear('user', 'auth');
-            this.storage.clear('user', 'anotherUser');
+            this.storage.clear("user", "auth");
+            this.storage.clear("user", "anotherUser");
         }
 
-        const action = logoutWait ? 'logoutWait' : 'login';
+        const action = logoutWait ? "logoutWait" : "login";
 
-        this.doAction({action: action});
+        this.doAction({ action: action });
 
         if (!silent) {
             this.unsetCookieAuth();
@@ -971,7 +1037,7 @@ class App {
 
         if (this.broadcastChannel.object) {
             if (!silent) {
-                this.broadcastChannel.postMessage('logged-out');
+                this.broadcastChannel.postMessage("logged-out");
             }
         }
 
@@ -986,11 +1052,14 @@ class App {
      * @private
      */
     sendLogoutRequest() {
-        const xhr = new XMLHttpRequest;
+        const xhr = new XMLHttpRequest();
 
-        xhr.open('GET', this.basePath + this.apiUrl + '/');
-        xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode('**logout:logout'));
-        xhr.send('');
+        xhr.open("GET", this.basePath + this.apiUrl + "/");
+        xhr.setRequestHeader(
+            "Authorization",
+            "Basic " + Base64.encode("**logout:logout")
+        );
+        xhr.send("");
         xhr.abort();
     }
 
@@ -998,26 +1067,26 @@ class App {
      * @private
      */
     loadStylesheet() {
-        if (!this.metadata.get(['themes'])) {
+        if (!this.metadata.get(["themes"])) {
             return;
         }
 
         const path = this.basePath + this.themeManager.getStylesheet();
 
-        const element = document.querySelector('#main-stylesheet');
+        const element = document.querySelector("#main-stylesheet");
 
         if (!element) {
             return;
         }
 
-        element.setAttribute('href', path);
+        element.setAttribute("href", path);
     }
 
     /**
      * @private
      */
     applyUserStyle() {
-        const pageContentWidth = this.preferences.get('pageContentWidth');
+        const pageContentWidth = this.preferences.get("pageContentWidth");
 
         if (pageContentWidth) {
             document.body.dataset.contentWidth = pageContentWidth;
@@ -1032,16 +1101,40 @@ class App {
     setCookieAuth(username, token) {
         const date = new Date();
 
-        date.setTime(date.getTime() + (1000 * 24 * 60 * 60 * 1000));
+        date.setTime(date.getTime() + 1000 * 24 * 60 * 60 * 1000);
 
-        document.cookie = `auth-token=${token}; SameSite=Lax; expires=${date.toUTCString()}; path=/`;
+        // Extract tenant domain for cookie sharing across subdomains
+        const host = window.location.hostname;
+        const parts = host.split(".");
+        let domainParam = "";
+
+        // If host has more than 2 parts (e.g., crm.acme.am...), use tenant domain
+        if (parts.length > 2) {
+            parts.shift(); // Remove first subdomain (e.g., 'crm')
+            const cookieDomain = "." + parts.join(".");
+            domainParam = `; domain=${cookieDomain}`;
+        }
+
+        document.cookie = `auth-token=${token}; SameSite=Lax; expires=${date.toUTCString()}; path=/${domainParam}`;
     }
 
     /**
      * @private
      */
     unsetCookieAuth() {
-        document.cookie = `auth-token=; SameSite=Lax; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/`;
+        // Extract tenant domain for cookie deletion
+        const host = window.location.hostname;
+        const parts = host.split(".");
+        let domainParam = "";
+
+        // If host has more than 2 parts (e.g., crm.acme.am...), use tenant domain
+        if (parts.length > 2) {
+            parts.shift(); // Remove first subdomain (e.g., 'crm')
+            const cookieDomain = "." + parts.join(".");
+            domainParam = `; domain=${cookieDomain}`;
+        }
+
+        document.cookie = `auth-token=; SameSite=Lax; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/${domainParam}`;
     }
 
     /**
@@ -1098,12 +1191,12 @@ class App {
 
         const xhr = new XMLHttpRequest();
 
-        xhr.open('GET', `${this.basePath}${this.apiUrl}/`);
-        xhr.setRequestHeader('Authorization', `Basic ${this.auth}`);
+        xhr.open("GET", `${this.basePath}${this.apiUrl}/`);
+        xhr.setRequestHeader("Authorization", `Basic ${this.auth}`);
 
         xhr.onreadystatechange = () => {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                const arr = Base64.decode(this.auth).split(':');
+                const arr = Base64.decode(this.auth).split(":");
 
                 this.setCookieAuth(arr[0], arr[1]);
 
@@ -1111,11 +1204,11 @@ class App {
             }
 
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 401) {
-                Ui.error('Auth error');
+                Ui.error("Auth error");
             }
         };
 
-        xhr.send('');
+        xhr.send("");
     }
 
     /**
@@ -1123,7 +1216,7 @@ class App {
      * @return {Promise<module:app~UserData>}
      */
     async requestUserData() {
-        return Ajax.getRequest('App/user', {}, {appStart: true});
+        return Ajax.getRequest("App/user", {}, { appStart: true });
     }
 
     /**
@@ -1136,13 +1229,13 @@ class App {
          */
         const beforeSend = (xhr, options) => {
             if (this.auth !== null && !options.login) {
-                xhr.setRequestHeader('Authorization', 'Basic ' + this.auth);
-                xhr.setRequestHeader('Espo-Authorization', this.auth);
-                xhr.setRequestHeader('Espo-Authorization-By-Token', 'true');
+                xhr.setRequestHeader("Authorization", "Basic " + this.auth);
+                xhr.setRequestHeader("Espo-Authorization", this.auth);
+                xhr.setRequestHeader("Espo-Authorization-By-Token", "true");
             }
 
             if (this.anotherUser !== null && !options.login) {
-                xhr.setRequestHeader('X-Another-User', this.anotherUser);
+                xhr.setRequestHeader("X-Another-User", this.anotherUser);
             }
         };
 
@@ -1153,7 +1246,7 @@ class App {
          * @param {Object.<string, *>} options
          */
         const onSuccess = (xhr, options) => {
-            const appTimestampHeader = xhr.getResponseHeader('X-App-Timestamp');
+            const appTimestampHeader = xhr.getResponseHeader("X-App-Timestamp");
 
             if (!appTimestampHeader || appTimestampChangeProcessed) {
                 return;
@@ -1172,23 +1265,21 @@ class App {
             ) {
                 appTimestampChangeProcessed = true;
 
-                Ui
-                    .confirm(
-                        this.language.translate('confirmAppRefresh', 'messages'),
-                        {
-                            confirmText: this.language.translate('Refresh'),
-                            cancelText: this.language.translate('Cancel'),
-                            backdrop: 'static',
-                            confirmStyle: 'success',
-                        }
-                    )
-                    .then(() => {
-                        window.location.reload();
+                Ui.confirm(
+                    this.language.translate("confirmAppRefresh", "messages"),
+                    {
+                        confirmText: this.language.translate("Refresh"),
+                        cancelText: this.language.translate("Cancel"),
+                        backdrop: "static",
+                        confirmStyle: "success",
+                    }
+                ).then(() => {
+                    window.location.reload();
 
-                        if (this.broadcastChannel) {
-                            this.broadcastChannel.postMessage('reload');
-                        }
-                    });
+                    if (this.broadcastChannel) {
+                        this.broadcastChannel.postMessage("reload");
+                    }
+                });
             }
         };
 
@@ -1204,9 +1295,13 @@ class App {
 
                 switch (xhr.status) {
                     case 200:
-                        Ui.error(this.language.translate('Bad server response'));
+                        Ui.error(
+                            this.language.translate("Bad server response")
+                        );
 
-                        console.error('Bad server response: ' + xhr.responseText);
+                        console.error(
+                            "Bad server response: " + xhr.responseText
+                        );
 
                         break;
 
@@ -1216,16 +1311,30 @@ class App {
                             break;
                         }
 
-                        if (this.auth && this.router && !this.router.hasConfirmLeaveOut()) {
+                        if (
+                            this.auth &&
+                            this.router &&
+                            !this.router.hasConfirmLeaveOut()
+                        ) {
                             this.logout(true);
 
                             break;
                         }
 
-                        if (this.auth && this.router && this.router.hasConfirmLeaveOut()) {
-                            Ui.error(this.language.translate('loggedOutLeaveOut', 'messages'), true);
+                        if (
+                            this.auth &&
+                            this.router &&
+                            this.router.hasConfirmLeaveOut()
+                        ) {
+                            Ui.error(
+                                this.language.translate(
+                                    "loggedOutLeaveOut",
+                                    "messages"
+                                ),
+                                true
+                            );
 
-                            this.router.trigger('logout');
+                            this.router.trigger("logout");
 
                             break;
                         }
@@ -1237,7 +1346,7 @@ class App {
                             this.logout(true, silent);
                         }
 
-                        console.error('Error 401: Unauthorized.');
+                        console.error("Error 401: Unauthorized.");
 
                         break;
 
@@ -1249,12 +1358,12 @@ class App {
                             break;
                         }
 
-                        this._processErrorAlert(xhr, 'Access denied');
+                        this._processErrorAlert(xhr, "Access denied");
 
                         break;
 
                     case 400:
-                        this._processErrorAlert(xhr, 'Bad request');
+                        this._processErrorAlert(xhr, "Bad request");
 
                         break;
 
@@ -1263,10 +1372,10 @@ class App {
                         if (options.main) {
                             this.baseController.error404();
 
-                            break
+                            break;
                         }
 
-                        this._processErrorAlert(xhr, 'Not found', true);
+                        this._processErrorAlert(xhr, "Not found", true);
 
                         break;
 
@@ -1274,20 +1383,22 @@ class App {
                         this._processErrorAlert(xhr, null);
                 }
 
-                const statusReason = xhr.getResponseHeader('X-Status-Reason');
+                const statusReason = xhr.getResponseHeader("X-Status-Reason");
 
                 if (statusReason) {
-                    console.error('Server side error ' + xhr.status + ': ' + statusReason);
+                    console.error(
+                        "Server side error " + xhr.status + ": " + statusReason
+                    );
                 }
             }, 0);
         };
 
         const onTimeout = () => {
-            Ui.error(this.language.translate('Timeout'), true);
+            Ui.error(this.language.translate("Timeout"), true);
         };
 
         const onOffline = () => {
-            Ui.error(this.language.translate('No internet'));
+            Ui.error(this.language.translate("No internet"));
         };
 
         Ajax.configure({
@@ -1308,13 +1419,13 @@ class App {
      * @param {boolean} [noDetail]
      */
     _processErrorAlert(xhr, label, noDetail) {
-        let msg = '';
+        let msg = "";
 
         if (!label) {
             if (xhr.status === 0) {
-                msg += this.language.translate('Network error');
+                msg += this.language.translate("Network error");
             } else {
-                msg += this.language.translate('Error') + ' ' + xhr.status;
+                msg += this.language.translate("Error") + " " + xhr.status;
             }
         } else {
             msg += this.language.translate(label);
@@ -1331,41 +1442,42 @@ class App {
             isMessageDone = true;
         }
 
-        if (!isMessageDone && xhr.responseText && xhr.responseText[0] === '{') {
+        if (!isMessageDone && xhr.responseText && xhr.responseText[0] === "{") {
             /** @type {Object.<string, *>|null} */
             let data = null;
 
             try {
                 data = JSON.parse(xhr.responseText);
-            }
-            catch (e) {}
+            } catch (e) {}
 
-            if (data && data.messageTranslation && data.messageTranslation.label) {
+            if (
+                data &&
+                data.messageTranslation &&
+                data.messageTranslation.label
+            ) {
                 let msgDetail = this.language.translate(
                     data.messageTranslation.label,
-                    'messages',
+                    "messages",
                     data.messageTranslation.scope
                 );
 
                 const msgData = data.messageTranslation.data || {};
 
                 for (const key in msgData) {
-                    msgDetail = msgDetail.replace('{' + key + '}', msgData[key]);
+                    msgDetail = msgDetail.replace(
+                        "{" + key + "}",
+                        msgData[key]
+                    );
                 }
 
-                obj.msg += '\n' + msgDetail;
+                obj.msg += "\n" + msgDetail;
                 obj.closeButton = true;
 
                 isMessageDone = true;
             }
 
-            if (
-                !isMessageDone &&
-                data &&
-                'message'in data &&
-                data.message
-            ) {
-                obj.msg += '\n' + data.message;
+            if (!isMessageDone && data && "message" in data && data.message) {
+                obj.msg += "\n" + data.message;
                 obj.closeButton = true;
 
                 isMessageDone = true;
@@ -1373,10 +1485,10 @@ class App {
         }
 
         if (!isMessageDone) {
-            const statusReason = xhr.getResponseHeader('X-Status-Reason');
+            const statusReason = xhr.getResponseHeader("X-Status-Reason");
 
             if (statusReason) {
-                obj.msg += '\n' + statusReason;
+                obj.msg += "\n" + statusReason;
                 obj.closeButton = true;
             }
         }
@@ -1390,9 +1502,9 @@ class App {
     initBroadcastChannel() {
         this.broadcastChannel = new BroadcastChannel();
 
-        this.broadcastChannel.subscribe(event => {
+        this.broadcastChannel.subscribe((event) => {
             if (!this.auth && this.started) {
-                if (event.data === 'logged-in') {
+                if (event.data === "logged-in") {
                     // This works if the same instance opened in different tabs.
                     // This does not work for different instances on the same domain
                     // which may be the case in dev environment.
@@ -1402,7 +1514,7 @@ class App {
                 return;
             }
 
-            if (event.data === 'update:all') {
+            if (event.data === "update:all") {
                 this.metadata.loadSkipCache();
                 this.settings.load();
                 this.language.loadSkipCache();
@@ -1411,47 +1523,53 @@ class App {
                 return;
             }
 
-            if (event.data === 'update:metadata') {
+            if (event.data === "update:metadata") {
                 this.metadata.loadSkipCache();
 
                 return;
             }
 
-            if (event.data === 'update:config') {
+            if (event.data === "update:config") {
                 this.settings.load();
 
                 return;
             }
 
-            if (event.data === 'update:language') {
+            if (event.data === "update:language") {
                 this.language.loadSkipCache();
 
                 return;
             }
 
-            if (event.data === 'update:layout') {
+            if (event.data === "update:layout") {
                 this.viewHelper.layoutManager.clearLoadedData();
 
                 return;
             }
 
-            if (event.data === 'update:appParams') {
+            if (event.data === "update:appParams") {
                 this.appParams.load();
 
                 return;
             }
 
-            if (event.data === 'reload') {
+            if (event.data === "reload") {
                 window.location.reload();
 
                 return;
             }
 
-            if (event.data === 'logged-out' && this.started) {
+            if (event.data === "logged-out" && this.started) {
                 if (this.auth && this.router.hasConfirmLeaveOut()) {
-                    Ui.error(this.language.translate('loggedOutLeaveOut', 'messages'), true);
+                    Ui.error(
+                        this.language.translate(
+                            "loggedOutLeaveOut",
+                            "messages"
+                        ),
+                        true
+                    );
 
-                    this.router.trigger('logout');
+                    this.router.trigger("logout");
 
                     return;
                 }
@@ -1471,18 +1589,18 @@ class App {
             return;
         }
 
-        const key = 'templateBundlesCached';
+        const key = "templateBundlesCached";
 
-        if (this.cache.get('app', key)) {
+        if (this.cache.get("app", key)) {
             return;
         }
 
-        const files = ['client/lib/templates.tpl'];
+        const files = ["client/lib/templates.tpl"];
 
-        this.bundledModuleList.forEach(mod => {
-            const file = this.internalModuleList.includes(mod) ?
-                `client/modules/${mod}/lib/templates.tpl` :
-                `client/custom/modules/${mod}/lib/templates.tpl`;
+        this.bundledModuleList.forEach((mod) => {
+            const file = this.internalModuleList.includes(mod)
+                ? `client/modules/${mod}/lib/templates.tpl`
+                : `client/custom/modules/${mod}/lib/templates.tpl`;
 
             files.push(file);
         });
@@ -1490,12 +1608,12 @@ class App {
         const baseUrl = Utils.obtainBaseUrl();
         const timestamp = this.loader.getCacheTimestamp();
 
-        const promiseList = files.map(file => {
+        const promiseList = files.map((file) => {
             const url = new URL(baseUrl + this.basePath + file);
-            url.searchParams.append('t', this.appTimestamp);
+            url.searchParams.append("t", this.appTimestamp);
 
-            return new Promise(resolve => {
-                fetch(url).then(response => {
+            return new Promise((resolve) => {
+                fetch(url).then((response) => {
                     if (!response.ok) {
                         console.error(`Could not fetch ${url}.`);
                         resolve();
@@ -1505,8 +1623,8 @@ class App {
 
                     const promiseList = [];
 
-                    response.text().then(text => {
-                        const index = text.indexOf('\n');
+                    response.text().then((text) => {
+                        const index = text.indexOf("\n");
 
                         if (index <= 0) {
                             resolve();
@@ -1517,22 +1635,26 @@ class App {
                         const delimiter = text.slice(0, index + 1);
                         text = text.slice(index + 1);
 
-                        text.split(delimiter).forEach(item => {
-                            const index = item.indexOf('\n');
+                        text.split(delimiter).forEach((item) => {
+                            const index = item.indexOf("\n");
 
                             const file = item.slice(0, index).trim();
                             let content = item.slice(index + 1);
 
                             // noinspection RegExpDuplicateCharacterInClass
-                            content = content.replace(/[\r|\n|\r\n]$/, '');
+                            content = content.replace(/[\r|\n|\r\n]$/, "");
 
-                            const url = baseUrl + this.basePath + 'client/' + file;
+                            const url =
+                                baseUrl + this.basePath + "client/" + file;
 
                             const urlObj = new URL(url);
-                            urlObj.searchParams.append('r', timestamp);
+                            urlObj.searchParams.append("r", timestamp);
 
                             promiseList.push(
-                                this.responseCache.put(urlObj, new Response(content))
+                                this.responseCache.put(
+                                    urlObj,
+                                    new Response(content)
+                                )
                             );
                         });
                     });
@@ -1544,7 +1666,7 @@ class App {
 
         await Promise.all(promiseList);
 
-        this.cache.set('app', key, true);
+        this.cache.set("app", key, true);
     }
 }
 

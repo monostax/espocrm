@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "address": "Adresse"
+  },
+  "links": {
+    "meetings": "Møder",
+    "calls": "Opkald",
+    "tasks": "Opgaver"
+  },
+  "labels": {
+    "Create CMedico": "Opret Médico"
+  }
+}

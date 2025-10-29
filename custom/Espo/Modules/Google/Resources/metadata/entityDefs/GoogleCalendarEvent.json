@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "entity": {
+            "type": "linkParent"
+        },
+        "googleCalendar": {
+            "type": "link"
+        },
+        "googleCalendarEventId": {
+            "type": "varchar",
+            "maxLength": 384,
+            "index": true
+        }
+    }
+}

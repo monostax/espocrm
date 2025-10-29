@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "name": {
+            "type":"varchar"
+        },
+        "googleContactsGroup": {
+            "type": "link",
+            "required": true
+        },
+        "type": {
+            "type": "enum",
+            "options": ["monitored", "main"]
+        },
+        "active": {
+            "type": "bool",
+            "default": true
+        },
+        "lastLooked": {
+            "type": "datetime"
+        },
+        "lastSync": {
+            "type": "varchar"
+        },
+        "user": {
+            "type": "link",
+            "required": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "googleContactsGroup": {
+            "type": "belongsTo",
+            "entity": "GoogleContactsGroup"
+        }
+    }
+}

@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "address": "Dirección"
+  },
+  "links": {
+    "meetings": "Reuniones",
+    "calls": "Llamadas",
+    "tasks": "Tareas"
+  },
+  "labels": {
+    "Create CMedico": "Crear Médico"
+  }
+}

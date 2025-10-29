@@ -1,0 +1,10 @@
+{
+  "scopeNames": {
+    "GoogleCalendar": "Google Календарь",
+    "GoogleContacts": "Google Контакты"
+  },
+  "scopeNamesPlural": {
+    "GoogleCalendar": "Google Календарь",
+    "GoogleContacts": "Google Контакты"
+  }
+}

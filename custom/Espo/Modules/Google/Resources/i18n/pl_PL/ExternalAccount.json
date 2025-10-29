@@ -1,0 +1,25 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Połączenie",
+      "Meeting": "Spotkanie"
+    },
+    "calendarDirection": {
+      "EspoToGC": "W jedną stronę: EspoCRM -> Google Calendar",
+      "GCToEspo": "W jedną stronę: Google Calendar -> EspoCRM",
+      "Both": "Dwukierunkowy"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Synchronizuj od",
+    "calendarEntityTypes": "Synchronizuj Połączenia i tykiety identyfikacyjne",
+    "calendarDirection": "Kierunek",
+    "calendarMonitoredCalendars": "Pozstałe Kalendarze",
+    "calendarMainCalendar": "Główny Kalendarz",
+    "calendarDefaultEntity": "Jednostka Domyślna"
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Żeby zidentyfikować nazwę jednostki musimy zacząć od identyfikacji etykiety. Etykieta domyślnej jednostki może być pusta. Zalecenie: Nie zmienieć etykiety identyfikacyjnej po zapisaniu ustawień synchronizacji.",
+    "calendarDefaultEntity": "Nieznane zdarzenie zostanie załadowane z wybranych jednostek"
+  }
+}

@@ -1,0 +1,34 @@
+{
+    "options": {
+        "calendarDefaultEntity" : {
+            "Call": "Call",
+            "Meeting":"Meeting"
+        },
+        "calendarDirection": {
+            "EspoToGC": "One-way: EspoCRM > Google Calendar",
+            "GCToEspo": "One-way: Google Calendar > EspoCRM",
+            "Both": "Two-way"
+        }
+    },
+    "fields": {
+        "calendarStartDate": "Sync since",
+        "calendarEntityTypes": "Sync Entities and Identification Labels",
+        "calendarDirection": "Direction",
+        "calendarMonitoredCalendars": "Other Calendars",
+        "calendarMainCalendar": "Main Calendar",
+        "calendarDefaultEntity": "Default Entity",
+        "contactsGroups": "Add Contacts to Groups",
+        "removeGoogleCalendarEventIfRemovedInEspo": "Remove Google Calendar Event upon removal in EspoCRM",
+        "dontSyncEventAttendees": "Don't sync event attendees",
+        "gmailEmailAddress": "Email Address",
+        "calendarAssignDefaultTeam": "Assign User's Default Team"
+    },
+    "messages": {
+        "disconnectConfirmation": "Do you really want to disconnect?",
+        "noPanels" : "No available Google Products. Contact your Admin."
+    },
+    "tooltips": {
+        "calendarEntityTypes": "For type recognizing event name has to start from identification label. Label for default entity can be empty. Recommendation: Do not change identification labels after you saved sync setting",
+        "calendarDefaultEntity": "Unrecognized Event will be loaded as selected entity."
+    }
+}

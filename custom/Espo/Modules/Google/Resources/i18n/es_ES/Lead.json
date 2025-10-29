@@ -1,0 +1,9 @@
+{
+  "massActions": {
+    "pushToGoogle": "Enviar a Google"
+  },
+  "messages": {
+    "confirmationGoogleContactsPush": "¿Desea insertar los clientes potenciales seleccionados en los contactos de Google?",
+    "successGoogleContactsPush": "{count} registro(s) enviado(s) correctamente. El resto está a punto de ser puesto en modo inactivo."
+  }
+}

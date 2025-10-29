@@ -1,0 +1,103 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255
+        },
+        "event": {
+            "type": "varchar",
+            "maxLength": 100,
+            "tooltip": true
+        },
+        "payload": {
+            "type": "jsonObject",
+            "tooltip": true
+        },
+        "headers": {
+            "type": "jsonObject",
+            "tooltip": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pending", "Processed", "Failed"],
+            "default": "Pending",
+            "style": {
+                "Processed": "success",
+                "Failed": "danger",
+                "Pending": "warning"
+            }
+        },
+        "processedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "webhookId": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": true
+        },
+        "signature": {
+            "type": "varchar",
+            "maxLength": 500,
+            "tooltip": true
+        },
+        "retryCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "sourceIp": {
+            "type": "varchar",
+            "maxLength": 45,
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc",
+        "textFilterFields": ["name", "event", "webhookId"]
+    },
+    "indexes": {
+        "webhookId": {
+            "columns": ["webhookId"]
+        },
+        "status": {
+            "columns": ["status"]
+        },
+        "event": {
+            "columns": ["event"]
+        }
+    }
+}
+

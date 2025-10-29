@@ -1,0 +1,54 @@
+{
+    "fields": {
+        "consultaMedica": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "equals",
+                        "attribute": "tipo",
+                        "value": "Feedback de Consulta"
+                    }
+                ]
+            }
+        },
+        "transcript": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "isNotEmpty",
+                        "attribute": "incomingWebhooksIds",
+                        "data": {
+                            "field": "incomingWebhooks"
+                        }
+                    }
+                ]
+            }
+        },
+        "callCost": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "isNotEmpty",
+                        "attribute": "incomingWebhooksIds",
+                        "data": {
+                            "field": "incomingWebhooks"
+                        }
+                    }
+                ]
+            }
+        },
+        "recordingUrl": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "isNotEmpty",
+                        "attribute": "incomingWebhooksIds",
+                        "data": {
+                            "field": "incomingWebhooks"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -140,7 +140,7 @@ class AdminIndexView extends View {
 
         this.iframeUrl =
             this.getConfig().get("adminPanelIframeUrl") ||
-            "https://s.monostax.com/";
+            "https://s.monostax.ai/";
 
         if (~this.iframeUrl.indexOf("?")) {
             this.iframeUrl += "&" + iframeParams.join("&");

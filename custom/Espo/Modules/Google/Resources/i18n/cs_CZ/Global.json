@@ -1,0 +1,25 @@
+{
+  "scopeNames": {
+    "Workflow": "Workflow",
+    "Report": "Zpráva",
+    "Product": "Produkt",
+    "ProductCategory": "Kategorie produktu",
+    "ProductBrand": "Označení produktu",
+    "Quote": "Nabídka",
+    "QuoteItem": "Položka nabídky",
+    "Tax": "Daň",
+    "ShippingProvider": "Dodavatel",
+    "OpportunityItem": "Možnosti položek"
+  },
+  "scopeNamesPlural": {
+    "Workflow": "Workflows",
+    "Product": "Produkty",
+    "ProductCategory": "Kategorie produktu",
+    "Quote": "Nabídky",
+    "QuoteItem": "Položky nabídky",
+    "Tax": "Daně",
+    "ShippingProvider": "Dodavatelé",
+    "OpportunityItem": "Možnosti položek",
+    "ProductBrand": "Označení produktu"
+  }
+}

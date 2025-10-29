@@ -1,0 +1,9 @@
+{
+    "fields": {
+        "googleCalendarEventId": "Google Calendar Event ID",
+        "googleCalendar": "Google Calendar"
+    },
+    "links": {
+        "googleCalendar": "Google Calendar"
+    }
+}

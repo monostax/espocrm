@@ -1,0 +1,13 @@
+{
+    "mandatory": {
+        "scopeLevel": {
+            "IncomingWebhook": {
+                "create": "no",
+                "read": "yes",
+                "edit": "no",
+                "delete": "no"
+            }
+        }
+    }
+}
+

@@ -1,0 +1,12 @@
+{
+    "massActions": {
+        "pushToGoogle": "Push to Google"
+    },
+    "actions": {
+        "pushToGoogle": "Push to Google"
+    },
+    "messages": {
+        "confirmationGoogleContactsPush": "Do you want to push selected leads to Google Contacts?",
+        "successGoogleContactsPush": "{count} record(s) successfully pushed. The rest is about to be pushed in idle mode."
+    }
+}

@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "status": "Status",
+        "consultaMedica": "Consulta Médica",
+        "tipo": "Tipo",
+        "incomingWebhooks": "Incoming Webhooks",
+        "transcript": "Transcrição",
+        "callCost": "Custo da Ligação",
+        "callCostCurrency": "Custo da Ligação (Moeda)",
+        "callCostConverted": "Custo da Ligação (Convertido)",
+        "recordingUrl": "URL da Gravação"
+    },
+    "links": {
+        "meetings": "Meetings",
+        "calls": "Calls",
+        "tasks": "Tasks",
+        "paciente": "Paciente",
+        "consultaMedica": "Consulta Médica",
+        "incomingWebhooks": "Incoming Webhooks"
+    },
+    "labels": {
+        "Create CLigacoesIA": "Criar Ligação (IA)"
+    },
+    "options": {
+        "status": {
+            "Agendada": "Agendada",
+            "Ligando": "Ligando",
+            "Em Progresso": "Em Progresso",
+            "Recusada": "Recusada",
+            "Finalizada": "Finalizada",
+            "Cancelada": "Cancelada"
+        },
+        "tipo": {
+            "Feedback de Consulta": "Feedback de Consulta"
+        }
+    }
+}

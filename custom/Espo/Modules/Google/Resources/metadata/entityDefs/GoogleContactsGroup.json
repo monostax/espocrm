@@ -1,0 +1,11 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar"
+        },
+        "groupId": {
+            "type": "varchar",
+            "required": true
+        }
+    }
+}

@@ -1,0 +1,9 @@
+{
+  "massActions": {
+    "pushToGoogle": "An Google senden"
+  },
+  "messages": {
+    "confirmationGoogleContactsPush": "Möchten Sie ausgewählte Interessenten an Google Kontakte senden?",
+    "successGoogleContactsPush": "{count} Datensatz (e) erfolgreich gesendet. Der Rest wird im Leerlaufmodus gesendet."
+  }
+}

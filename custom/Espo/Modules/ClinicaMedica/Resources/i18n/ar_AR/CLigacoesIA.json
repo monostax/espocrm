@@ -1,0 +1,10 @@
+{
+  "links": {
+    "meetings": "الاجتماعات",
+    "calls": "المكالمات",
+    "tasks": "مهام"
+  },
+  "labels": {
+    "Create CLigacoesIA": "إنشاء {الكيانTypeTranslated}"
+  }
+}

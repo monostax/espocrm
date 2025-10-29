@@ -1,0 +1,10 @@
+{
+    "mandatory": {
+        "read": "yes",
+        "edit": "no",
+        "delete": "no",
+        "create": "no"
+    },
+    "strictDefault": false
+}
+

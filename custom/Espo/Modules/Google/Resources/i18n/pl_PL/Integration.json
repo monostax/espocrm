@@ -1,0 +1,19 @@
+{
+  "fields": {
+    "apiKey": "Klucz API",
+    "createEmails": "Sprawdz wysłane Emaile",
+    "markEmailsOptedOut": "Oznacz adresy e-mail jeżeli zrezygnowali z subskrypcji",
+    "hardBouncedAction": "Hard Bounced Handling"
+  },
+  "options": {
+    "hardBouncedAction": {
+      "setAsInvalid": "Ustawiony adres email jest nieprawidłowy",
+      "removeFromList": "Usuń z listy",
+      "setAsInvalidAndRemove": "Obie akcje"
+    }
+  },
+  "help": {
+    "Google": "<p><b>Uzyskanie poświadczenia do OAuth 2.0 z Google Developers Console.</b></p><p>Odwiedź <a href=\"https://console.developers.google.com/project\" target=\"_blank\">Google Developers Console</a> w celu uzyskania poświadczenia OAuth 2.0 takie jak Client ID i Client Secret które są znane zarówne w Google jaki i EspoCRM.</p><p>This integration requires <b>curl</b> extension. Google Contacts also needs <b>libxml</b> and <b>xml</b>.</p>",
+    "MailChimp": "<p><b>Konfiguracja MailChimp</b></p><p>Możesz otrzymać klucz API do konta MailChimp, w zakładce Dodatki wybierz klucze API, lub kliknij <a href='https://admin.mailchimp.com/account/api/' target='_blank'>here</a>.</p>"
+  }
+}

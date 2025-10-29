@@ -1,0 +1,25 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Hovor",
+      "Meeting": "Schůze"
+    },
+    "calendarDirection": {
+      "EspoToGC": "Jednostranně: EspoCRM -> Gogle kalendář",
+      "GCToEspo": "Jednostranně: Google kalendář -> EspoCRM",
+      "Both": "Dvoustranně"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Synchronizováno od",
+    "calendarEntityTypes": "Synchronizační subjekty a identifikační štítky",
+    "calendarDirection": "Směr",
+    "calendarMonitoredCalendars": "Další kalendáře",
+    "calendarMainCalendar": "Hlavní kalendář",
+    "calendarDefaultEntity": "Výchozí subjekt"
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Pro rozpoznání názvu případ je nutné začít od identifikačního štítku. Štítek může být pro výchozí subjekt prázdný. Doporučení: Po uložení nastavení synchronizace již neměňte identifikační štítek",
+    "calendarDefaultEntity": "Nerozpoznaný případ bude načten jako vybraný subjekt"
+  }
+}

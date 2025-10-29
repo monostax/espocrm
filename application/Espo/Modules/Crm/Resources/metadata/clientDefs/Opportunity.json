@@ -99,6 +99,5 @@
             "selectHandler": "handlers/select-related/same-account-many"
         }
     },
-    "color": "#9fc77e",
     "iconClass": "ti ti-coin-filled"
 }

@@ -662,6 +662,23 @@ class Authentication
             '; HttpOnly' .
             '; SameSite=Lax';
 
+        // Set domain to allow cookie sharing across subdomains (e.g., crm.acme.* and acme.*)
+        if ($request) {
+            $host = $request->getServerParam('HTTP_HOST');
+            
+            if ($host) {
+                // Extract tenant domain from host (e.g., crm.acme.am.monostax.dev.localhost -> .acme.am.monostax.dev.localhost)
+                $parts = explode('.', $host);
+                
+                // If host has more than 2 parts (e.g., crm.acme.am...), remove first part and use remaining as domain
+                if (count($parts) > 2) {
+                    array_shift($parts); // Remove first subdomain (e.g., 'crm')
+                    $cookieDomain = '.' . implode('.', $parts); // Add leading dot for subdomain sharing
+                    $headerValue .= '; Domain=' . $cookieDomain;
+                }
+            }
+        }
+
         if ($request && self::isSecureRequest($request)) {
             $headerValue .= "; Secure";
         }

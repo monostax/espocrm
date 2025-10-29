@@ -1,0 +1,9 @@
+{
+  "scopeNames": {
+    "GoogleCalendar": "Google Kalender",
+    "GoogleContacts": "Google Kontakte"
+  },
+  "scopeNamesPlural": {
+    "GoogleCalendar": "Google Kalender"
+  }
+}

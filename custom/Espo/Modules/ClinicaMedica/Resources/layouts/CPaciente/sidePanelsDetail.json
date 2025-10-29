@@ -1,0 +1,17 @@
+{
+    "_delimiter_": {
+        "disabled": true
+    },
+    "default": {
+        "index": 0
+    },
+    "tasks": {
+        "index": 1
+    },
+    "activities": {
+        "index": 2
+    },
+    "history": {
+        "index": 3
+    }
+}

@@ -1,0 +1,63 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "event"
+                },
+                {
+                    "name": "webhookId"
+                }
+            ],
+            [
+                {
+                    "name": "sourceIp"
+                },
+                {
+                    "name": "retryCount"
+                }
+            ],
+            [
+                {
+                    "name": "processedAt"
+                },
+                {
+                    "name": "createdAt"
+                }
+            ],
+            [
+                {
+                    "name": "signature",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "errorMessage",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "payload",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "headers",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]
+

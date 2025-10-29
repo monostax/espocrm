@@ -1,0 +1,7 @@
+{
+  "messages": {
+    "fieldLabelIsRequired": "Tylko jeden podmiot może mieć Etykietę Identyfikacyjną",
+    "emptyNotDefaultEnitityLabel": "Etykieta identyfikacyjna w domyślnej jednostce nie może być pusta.",
+    "defaultEntityIsRequiredInList": "Domyślna jednostka jest wymagana w liście synchronizowanych jednostek."
+  }
+}

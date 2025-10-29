@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "googleCalendar": "Calendar",
+        "googleContacts": "Contacts",
+        "googleTasks": "Tasks"
+    },
+    "help": {
+        "Google": "**Obtain OAuth 2.0 credentials from the Google Developers Console**\n\nVisit [Google Developers Console](https://console.developers.google.com/project) to obtain OAuth 2.0 credentials such as a Client ID and Client Secret that are known to both Google and EspoCRM application.\n\nThis integration requires *curl* extension. Google Contacts also needs *libxml* and *xml*."
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "activities": {
+        "disabled": true
+    },
+    "history": {
+        "disabled": true
+    },
+    "_delimiter_": {
+        "disabled": true
+    },
+    "consultaMedicas": {
+        "index": 0
+    }
+}

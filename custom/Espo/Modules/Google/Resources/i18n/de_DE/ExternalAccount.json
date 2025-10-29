@@ -1,0 +1,31 @@
+{
+  "options": {
+    "calendarDefaultEntity": {
+      "Call": "Anruf"
+    },
+    "calendarDirection": {
+      "EspoToGC": "Einseitig: EspoCRM -> Google Kalender",
+      "GCToEspo": "Einseitig: Google Kalender -> EspoCRM",
+      "Both": "Zweiseitig"
+    }
+  },
+  "fields": {
+    "calendarStartDate": "Sync seit",
+    "calendarEntityTypes": "Entitäten und ID Felder syncen",
+    "calendarDirection": "Richtung",
+    "calendarMonitoredCalendars": "Andere Kalender",
+    "calendarMainCalendar": "Hauptkalender",
+    "calendarDefaultEntity": "Standardeintrag",
+    "contactsGroups": "Kontakte zu Gruppen hinzufügen ",
+    "removeGoogleCalendarEventIfRemovedInEspo": "Entfernen Sie das Google Kalender-Ereignis beim Entfernen in EspoCRM",
+    "dontSyncEventAttendees": "Keine Veranstaltungsteilnehmer synchronisieren"
+  },
+  "messages": {
+    "disconnectConfirmation": "Möchten Sie wirklich trennen?",
+    "noPanels": "Keine verfügbaren Google-Produkte. Kontaktieren Sie Ihren Administrator."
+  },
+  "tooltips": {
+    "calendarEntityTypes": "Um den Typ zu identifizieren muss der Name des Ereignisses im ID Feld gesetzt sein. Das Feld für den Standardeintrag kann leer bleiben. Empfehlung: Ändern Sie die ID Felder nicht mehr, nachdem die Synchronisierungseinstellungen gespeichert wurden.",
+    "calendarDefaultEntity": "Nicht erkanntes Ereignis wird als ausgewählte Entität geladen"
+  }
+}

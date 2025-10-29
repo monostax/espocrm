@@ -1,0 +1,22 @@
+[
+    {
+        "route": "/webhook/receive",
+        "method": "post",
+        "params": {
+            "controller": "WebhookReceiver",
+            "action": "receive"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/webhook/receive/:apiKey",
+        "method": "post",
+        "params": {
+            "controller": "WebhookReceiver",
+            "action": "receive",
+            "apiKey": ":apiKey"
+        },
+        "noAuth": true
+    }
+]
+

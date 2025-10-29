@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "fieldLabelIsRequired": "Solo una entidad puede estar sin etiqueta de identificación",
+    "emptyNotDefaultEnitityLabel": "La etiqueta de identificación de la entidad no predeterminada no puede estar vacía",
+    "defaultEntityIsRequiredInList": "Se requiere una entidad predeterminada en la lista de entidades de sincronización",
+    "notUniqueIdentificationLabel": "Las etiquetas de identificación deben ser únicas"
+  }
+}

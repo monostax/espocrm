@@ -1,0 +1,7 @@
+{
+  "options": {
+    "job": {
+      "SynchronizeEventsWithGoogleCalendar": "Sincronización con el calendario de Google"
+    }
+  }
+}
