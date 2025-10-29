@@ -4707,10 +4707,10 @@ html.is-iframe {
     }
 
     // Remove padding from content container
-    #content.container.content,
-    .content.container {
-        padding: 0 !important;
-    }
+    // #content.container.content,
+    // .content.container {
+    //     padding: 0 !important;
+    // }
 
     // Remove top padding from main element
     #main {
@@ -4724,12 +4724,12 @@ html.is-iframe {
 
         @media screen and (min-width: @screen-sm-min) {
             &.has-navbar > .content {
-                padding-left: 0 !important;
+                padding-left: var(--container-padding);
                 max-width: 100% !important;
             }
 
             &.minimized #content {
-                padding-left: 0 !important;
+                padding-left: var(--container-padding);
                 max-width: 100% !important;
             }
         }
