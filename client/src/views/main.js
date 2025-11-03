@@ -28,28 +28,27 @@
 
 /** @module views/main */
 
-import View from 'view';
-import {inject} from 'di';
-import ShortcutManager from 'helpers/site/shortcut-manager';
+import View from "view";
+import { inject } from "di";
+import ShortcutManager from "helpers/site/shortcut-manager";
 
 /**
  * A base main view. The detail, edit, list views to be extended from.
  */
 class MainView extends View {
-
     /**
      * A scope name.
      *
      * @type {string} scope
      */
-    scope = ''
+    scope = "";
 
     /**
      * A name.
      *
      * @type {string} name
      */
-    name = ''
+    name = "";
 
     /**
      * A top-right menu item (button or dropdown action).
@@ -96,13 +95,13 @@ class MainView extends View {
      * @private
      * @internal
      */
-    menu = {}
+    menu = {};
 
     /**
      * @private
      * @type {JQuery|null}
      */
-    $headerActionsContainer = null
+    $headerActionsContainer = null;
 
     /**
      * A shortcut-key => action map.
@@ -110,27 +109,27 @@ class MainView extends View {
      * @protected
      * @type {?Object.<string, string|function (KeyboardEvent): void>}
      */
-    shortcutKeys = null
+    shortcutKeys = null;
 
     /**
      * @private
      * @type {ShortcutManager}
      */
     @inject(ShortcutManager)
-    shortcutManager
+    shortcutManager;
 
     /** @inheritDoc */
     events = {
         /** @this MainView */
-        'click .action': function (e) {
+        "click .action": function (e) {
             Espo.Utils.handleAction(this, e.originalEvent, e.currentTarget, {
                 actionItems: [...this.menu.buttons, ...this.menu.dropdown],
-                className: 'main-header-manu-action',
+                className: "main-header-manu-action",
             });
         },
-    }
+    };
 
-    lastUrl
+    lastUrl;
 
     /** @inheritDoc */
     init() {
@@ -142,14 +141,20 @@ class MainView extends View {
         if (this.name && this.scope) {
             const key = this.name.charAt(0).toLowerCase() + this.name.slice(1);
 
-            this.menu = this.getMetadata().get(['clientDefs', this.scope, 'menu', key]) || {};
+            this.menu =
+                this.getMetadata().get([
+                    "clientDefs",
+                    this.scope,
+                    "menu",
+                    key,
+                ]) || {};
         }
 
         /**
          * @private
          * @type {string[]}
          */
-        this.headerActionItemTypeList = ['buttons', 'dropdown', 'actions'];
+        this.headerActionItemTypeList = ["buttons", "dropdown", "actions"];
 
         this.menu = Espo.Utils.cloneDeep(this.menu);
 
@@ -157,9 +162,12 @@ class MainView extends View {
 
         if (this.name) {
             globalMenu = Espo.Utils.cloneDeep(
-                this.getMetadata()
-                    .get(['clientDefs', 'Global', 'menu',
-                        this.name.charAt(0).toLowerCase() + this.name.slice(1)]) || {}
+                this.getMetadata().get([
+                    "clientDefs",
+                    "Global",
+                    "menu",
+                    this.name.charAt(0).toLowerCase() + this.name.slice(1),
+                ]) || {}
             );
         }
 
@@ -167,13 +175,13 @@ class MainView extends View {
 
         this._menuHandlers = {};
 
-        this.headerActionItemTypeList.forEach(type => {
+        this.headerActionItemTypeList.forEach((type) => {
             this.menu[type] = this.menu[type] || [];
             this.menu[type] = this.menu[type].concat(globalMenu[type] || []);
 
             const itemList = this.menu[type];
 
-            itemList.forEach(item => {
+            itemList.forEach((item) => {
                 const viewObject = this;
 
                 // @todo Set _reRenderHeaderOnSync to true if `acl` is set `ascScope` is not set?
@@ -181,31 +189,36 @@ class MainView extends View {
 
                 if (
                     (item.initFunction || item.checkVisibilityFunction) &&
-                    (item.handler || item.data && item.data.handler)
+                    (item.handler || (item.data && item.data.handler))
                 ) {
-                    this.wait(new Promise(resolve => {
-                        const handler = item.handler || item.data.handler;
+                    this.wait(
+                        new Promise((resolve) => {
+                            const handler = item.handler || item.data.handler;
 
-                        Espo.loader.require(handler, Handler => {
-                            const handler = new Handler(viewObject);
+                            Espo.loader.require(handler, (Handler) => {
+                                const handler = new Handler(viewObject);
 
-                            const name = item.name || item.action;
+                                const name = item.name || item.action;
 
-                            if (name) {
-                                this._menuHandlers[name] = handler;
-                            }
+                                if (name) {
+                                    this._menuHandlers[name] = handler;
+                                }
 
-                            if (item.initFunction) {
-                                handler[item.initFunction].call(handler);
-                            }
+                                if (item.initFunction) {
+                                    handler[item.initFunction].call(handler);
+                                }
 
-                            if (item.checkVisibilityFunction && this.model) {
-                                this._reRenderHeaderOnSync = true;
-                            }
+                                if (
+                                    item.checkVisibilityFunction &&
+                                    this.model
+                                ) {
+                                    this._reRenderHeaderOnSync = true;
+                                }
 
-                            resolve();
-                        });
-                    }));
+                                resolve();
+                            });
+                        })
+                    );
                 }
             });
         });
@@ -216,7 +229,7 @@ class MainView extends View {
                     return;
                 }
 
-                this.listenTo(this.model, 'sync', () => {
+                this.listenTo(this.model, "sync", () => {
                     if (!this.getHeaderView()) {
                         return;
                     }
@@ -228,17 +241,21 @@ class MainView extends View {
 
         this.updateLastUrl();
 
-        this.on('after:render-internal', () => {
-            this.$headerActionsContainer = this.$el.find('.page-header .header-buttons');
+        this.on("after:render-internal", () => {
+            this.$headerActionsContainer = this.$el.find(
+                ".page-header .header-buttons"
+            );
         });
 
-        this.on('header-rendered', () => {
-            this.$headerActionsContainer = this.$el.find('.page-header .header-buttons');
+        this.on("header-rendered", () => {
+            this.$headerActionsContainer = this.$el.find(
+                ".page-header .header-buttons"
+            );
 
             this.adjustButtons();
         });
 
-        this.on('after:render', () => this.adjustButtons());
+        this.on("after:render", () => this.adjustButtons());
 
         if (this.shortcutKeys) {
             this.shortcutKeys = Espo.Utils.cloneDeep(this.shortcutKeys);
@@ -255,7 +272,7 @@ class MainView extends View {
 
         this.shortcutManager.add(this, this.shortcutKeys);
 
-        this.once('remove', () => {
+        this.once("remove", () => {
             this.shortcutManager.remove(this);
         });
     }
@@ -286,8 +303,8 @@ class MainView extends View {
 
         const menu = {};
 
-        this.headerActionItemTypeList.forEach(type => {
-            (this.menu[type] || []).forEach(item => {
+        this.headerActionItemTypeList.forEach((type) => {
+            (this.menu[type] || []).forEach((item) => {
                 if (item === false) {
                     menu[type].push(false);
 
@@ -298,17 +315,29 @@ class MainView extends View {
 
                 menu[type] = menu[type] || [];
 
-                if (!Espo.Utils.checkActionAvailability(this.getHelper(), item)) {
+                if (
+                    !Espo.Utils.checkActionAvailability(this.getHelper(), item)
+                ) {
                     return;
                 }
 
-                if (!Espo.Utils.checkActionAccess(this.getAcl(), this.model || this.scope, item)) {
+                if (
+                    !Espo.Utils.checkActionAccess(
+                        this.getAcl(),
+                        this.model || this.scope,
+                        item
+                    )
+                ) {
                     return;
                 }
 
                 if (item.accessDataList) {
-                    if (!Espo.Utils
-                        .checkAccessDataList(item.accessDataList, this.getAcl(), this.getUser())
+                    if (
+                        !Espo.Utils.checkAccessDataList(
+                            item.accessDataList,
+                            this.getAcl(),
+                            this.getUser()
+                        )
                     ) {
                         return;
                     }
@@ -317,7 +346,10 @@ class MainView extends View {
                 item.name = item.name || item.action;
                 item.action = item.action || null;
 
-                if (this._menuHandlers[item.name] && item.checkVisibilityFunction) {
+                if (
+                    this._menuHandlers[item.name] &&
+                    item.checkVisibilityFunction
+                ) {
                     const handler = this._menuHandlers[item.name];
 
                     if (!handler[item.checkVisibilityFunction](item.name)) {
@@ -344,7 +376,7 @@ class MainView extends View {
      * @returns {string} HTML.
      */
     getHeader() {
-        return '';
+        return "";
     }
 
     /**
@@ -355,14 +387,13 @@ class MainView extends View {
      * @returns {string} HTML
      */
     buildHeaderHtml(itemList) {
-        const $itemList = itemList.map(item => {
-            return $('<div>')
-                .addClass('breadcrumb-item')
-                .append(item);
+        const $itemList = itemList.map((item) => {
+            return $("<div>").addClass("breadcrumb-item").append(item);
         });
 
-        const $div = $('<div>')
-            .addClass('header-breadcrumbs');
+        const $div = $("<div>")
+            .addClass("header-breadcrumbs")
+            .addClass("hide-when-embedded");
 
         $itemList.forEach(($item, i) => {
             $div.append($item);
@@ -372,17 +403,12 @@ class MainView extends View {
             }
 
             $div.append(
-                $('<div>')
-                    .addClass('breadcrumb-separator')
-                    .append(
-                        $('<span>')
-                    )
-            )
+                $("<div>").addClass("breadcrumb-separator").append($("<span>"))
+            );
         });
 
         return $div.get(0).outerHTML;
     }
-
 
     /**
      * Get an icon HTML.
@@ -408,22 +434,27 @@ class MainView extends View {
             return;
         }
 
-        this.createView('modal', view, {
-            model: this.model,
-            collection: this.collection,
-        }, view => {
-            view.render();
+        this.createView(
+            "modal",
+            view,
+            {
+                model: this.model,
+                collection: this.collection,
+            },
+            (view) => {
+                view.render();
 
-            this.listenTo(view, 'after:save', () => {
-                if (this.model) {
-                    this.model.fetch();
-                }
+                this.listenTo(view, "after:save", () => {
+                    if (this.model) {
+                        this.model.fetch();
+                    }
 
-                if (this.collection) {
-                    this.collection.fetch();
-                }
-            });
-        });
+                    if (this.collection) {
+                        this.collection.fetch();
+                    }
+                });
+            }
+        );
     }
 
     /**
@@ -459,7 +490,7 @@ class MainView extends View {
         if (this.isBeingRendered()) {
             this.whenRendered().then(() => {
                 this.getHeaderView().reRender();
-            })
+            });
         }
     }
 
@@ -492,10 +523,10 @@ class MainView extends View {
             }
         }
 
-        let method = 'push';
+        let method = "push";
 
         if (toBeginning) {
-            method  = 'unshift';
+            method = "unshift";
         }
 
         this.menu[type][method](item);
@@ -507,7 +538,7 @@ class MainView extends View {
         }
 
         if (!doNotReRender && this.isBeingRendered()) {
-            this.once('after:render', () => {
+            this.once("after:render", () => {
                 this.getHeaderView().reRender();
             });
         }
@@ -523,7 +554,7 @@ class MainView extends View {
         let index = -1;
         let type = false;
 
-        this.headerActionItemTypeList.forEach(t => {
+        this.headerActionItemTypeList.forEach((t) => {
             (this.menu[t] || []).forEach((item, i) => {
                 item = item || {};
 
@@ -545,16 +576,17 @@ class MainView extends View {
         }
 
         if (!doNotReRender && this.isBeingRendered()) {
-            this.once('after:render', () => {
+            this.once("after:render", () => {
                 this.getHeaderView().reRender();
-
             });
 
             return;
         }
 
         if (doNotReRender && this.isRendered()) {
-            this.$headerActionsContainer.find('[data-name="' + name + '"]').remove();
+            this.$headerActionsContainer
+                .find('[data-name="' + name + '"]')
+                .remove();
         }
     }
 
@@ -573,8 +605,8 @@ class MainView extends View {
         const process = () => {
             this.$headerActionsContainer
                 .find(`[data-name="${name}"]`)
-                .addClass('disabled')
-                .attr('disabled');
+                .addClass("disabled")
+                .attr("disabled");
         };
 
         if (this.isBeingRendered()) {
@@ -605,8 +637,8 @@ class MainView extends View {
         const process = () => {
             this.$headerActionsContainer
                 .find(`[data-name="${name}"]`)
-                .removeClass('disabled')
-                .removeAttr('disabled');
+                .removeClass("disabled")
+                .removeAttr("disabled");
         };
 
         if (this.isBeingRendered()) {
@@ -633,9 +665,15 @@ class MainView extends View {
         event.stopPropagation();
 
         this.getRouter().checkConfirmLeaveOut(() => {
-            const rootUrl = this.options.rootUrl || this.options.params.rootUrl || '#' + this.scope;
+            const rootUrl =
+                this.options.rootUrl ||
+                this.options.params.rootUrl ||
+                "#" + this.scope;
 
-            this.getRouter().navigate(rootUrl, {trigger: true, isReturn: true});
+            this.getRouter().navigate(rootUrl, {
+                trigger: true,
+                isReturn: true,
+            });
         });
     }
 
@@ -676,14 +714,19 @@ class MainView extends View {
             return;
         }
 
-        this.$headerActionsContainer.find(`li > .action[data-name="${name}"]`).parent().addClass('hidden');
-        this.$headerActionsContainer.find(`a.action[data-name="${name}"]`).addClass('hidden');
+        this.$headerActionsContainer
+            .find(`li > .action[data-name="${name}"]`)
+            .parent()
+            .addClass("hidden");
+        this.$headerActionsContainer
+            .find(`a.action[data-name="${name}"]`)
+            .addClass("hidden");
 
         this.controlMenuDropdownVisibility();
         this.adjustButtons();
 
         if (this.getHeaderView()) {
-            this.getHeaderView().trigger('action-item-update');
+            this.getHeaderView().trigger("action-item-update");
         }
     }
 
@@ -700,8 +743,12 @@ class MainView extends View {
         }
 
         const processUi = () => {
-            const $dropdownItem = this.$headerActionsContainer.find(`li > .action[data-name="${name}"]`).parent();
-            const $button = this.$headerActionsContainer.find(`a.action[data-name="${name}"]`);
+            const $dropdownItem = this.$headerActionsContainer
+                .find(`li > .action[data-name="${name}"]`)
+                .parent();
+            const $button = this.$headerActionsContainer.find(
+                `a.action[data-name="${name}"]`
+            );
 
             // Item can be available but not rendered as it was skipped by access check in getMenu.
             if (item && !$dropdownItem.length && !$button.length) {
@@ -712,14 +759,14 @@ class MainView extends View {
                 return;
             }
 
-            $dropdownItem.removeClass('hidden');
-            $button.removeClass('hidden');
+            $dropdownItem.removeClass("hidden");
+            $button.removeClass("hidden");
 
             this.controlMenuDropdownVisibility();
             this.adjustButtons();
 
             if (this.getHeaderView()) {
-                this.getHeaderView().trigger('action-item-update');
+                this.getHeaderView().trigger("action-item-update");
             }
         };
 
@@ -743,7 +790,7 @@ class MainView extends View {
     hasMenuVisibleDropdownItems() {
         let hasItems = false;
 
-        (this.menu.dropdown || []).forEach(item => {
+        (this.menu.dropdown || []).forEach((item) => {
             if (!item.hidden) {
                 hasItems = true;
             }
@@ -756,17 +803,17 @@ class MainView extends View {
      * @private
      */
     controlMenuDropdownVisibility() {
-        const $group = this.$headerActionsContainer.find('.dropdown-group');
+        const $group = this.$headerActionsContainer.find(".dropdown-group");
 
         if (this.hasMenuVisibleDropdownItems()) {
-            $group.removeClass('hidden');
-            $group.find('> button').removeClass('hidden');
+            $group.removeClass("hidden");
+            $group.find("> button").removeClass("hidden");
 
             return;
         }
 
-        $group.addClass('hidden');
-        $group.find('> button').addClass('hidden');
+        $group.addClass("hidden");
+        $group.find("> button").addClass("hidden");
     }
 
     /**
@@ -774,23 +821,21 @@ class MainView extends View {
      * @return {module:views/header}
      */
     getHeaderView() {
-        return this.getView('header');
+        return this.getView("header");
     }
 
     /**
      * @private
      */
     adjustButtons() {
-        const $buttons = this.$headerActionsContainer.find('.btn');
+        const $buttons = this.$headerActionsContainer.find(".btn");
 
-        $buttons
-            .removeClass('radius-left')
-            .removeClass('radius-right');
+        $buttons.removeClass("radius-left").removeClass("radius-right");
 
-        const $buttonsVisible = $buttons.filter(':not(.hidden)');
+        const $buttonsVisible = $buttons.filter(":not(.hidden)");
 
-        $buttonsVisible.first().addClass('radius-left');
-        $buttonsVisible.last().addClass('radius-right');
+        $buttonsVisible.first().addClass("radius-left");
+        $buttonsVisible.last().addClass("radius-right");
     }
 
     /**
