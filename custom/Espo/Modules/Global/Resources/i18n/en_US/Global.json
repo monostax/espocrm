@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "weight": "Weight"
+    },
+    "fieldTypes": {
+        "weight": "Weight"
+    },
+    "options": {
+        "weightUnit": {
+            "kg": "Kilogram (kg)",
+            "g": "Gram (g)",
+            "mg": "Milligram (mg)",
+            "lb": "Pound (lb)",
+            "oz": "Ounce (oz)",
+            "t": "Ton (t)"
+        }
+    },
+    "tooltips": {
+        "weightDecimal": "Weight decimal storage. Uses VARCHAR type for database storage to maintain precise values."
+    },
+    "messages": {
+        "validUnit": "Unit must be valid"
+    },
+    "scopeNames": {
+        "CAIPlaybook": "Playbook"
+    },
+    "scopeNamesPlural": {
+        "CAIPlaybook": "Playbooks"
+    }
+}

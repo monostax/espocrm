@@ -1,0 +1,19 @@
+{
+    "labels": {
+        "Create CAIThread": "Nova Tarefa"
+    },
+    "fields": {
+        "metadata": "Metadata",
+        "mastraThreadId": "Mastra Thread Id",
+        "status": "Status"
+    },
+    "options": {
+        "status": {
+            "success": "Sucesso",
+            "error": "Erro",
+            "": "Blocked",
+            "Waiting": "Aguardando",
+            "Running": "Executando"
+        }
+    }
+}

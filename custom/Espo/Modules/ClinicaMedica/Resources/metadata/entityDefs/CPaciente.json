@@ -93,6 +93,9 @@
         "ligacoesIAs": {
             "type": "linkMultiple"
         },
+        "registrosBiometricos": {
+            "type": "linkMultiple"
+        },
         "dateOfBirth": {
             "notNull": false,
             "type": "date",
@@ -159,6 +162,13 @@
             "type": "hasMany",
             "foreign": "paciente",
             "entity": "CLigacoesIA",
+            "audited": false,
+            "isCustom": true
+        },
+        "registrosBiometricos": {
+            "type": "hasMany",
+            "foreign": "paciente",
+            "entity": "CRegistroBiometrico",
             "audited": false,
             "isCustom": true
         }

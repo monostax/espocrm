@@ -1,5 +1,9 @@
 {
     "scopeNames": {
+        "CConsultaMedica": "Consulta Médica",
+        "CPaciente": "Paciente",
+        "CMedico": "Médico",
+        "CAIThread": "Nova Atividade",
         "Email": "E-mail",
         "User": "Usuário",
         "Team": "Time",
@@ -50,6 +54,10 @@
         "Mass Action": "Ação em massa"
     },
     "scopeNamesPlural": {
+        "CAIThread": "Histórico de Atividades",
+        "CConsultaMedica": "Consultas Médicas",
+        "CPaciente": "Pacientes",
+        "CMedico": "Médicos",
         "Email": "E-mails",
         "User": "Usuários",
         "Team": "Times",

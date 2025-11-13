@@ -1,0 +1,12 @@
+{
+    "unitList": ["kg", "g", "mg", "lb", "oz", "t"],
+    "symbolMap": {
+        "kg": "kg",
+        "g": "g",
+        "mg": "mg",
+        "lb": "lb",
+        "oz": "oz",
+        "t": "t"
+    }
+}
+

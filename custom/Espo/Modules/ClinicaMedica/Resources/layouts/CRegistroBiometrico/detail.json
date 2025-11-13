@@ -1,0 +1,64 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name",
+                    "span": 2
+                },
+                false
+            ],
+            [
+                {
+                    "name": "paciente"
+                },
+                {
+                    "name": "assignedUser"
+                }
+            ],
+            [
+                {
+                    "name": "weight",
+                    "span": 2
+                },
+                false
+            ],
+            [
+                {
+                    "name": "description",
+                    "span": 2
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Additional",
+        "rows": [
+            [
+                {
+                    "name": "teams"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
+                }
+            ],
+            [
+                {
+                    "name": "createdBy"
+                },
+                {
+                    "name": "modifiedBy"
+                }
+            ]
+        ]
+    }
+]
+

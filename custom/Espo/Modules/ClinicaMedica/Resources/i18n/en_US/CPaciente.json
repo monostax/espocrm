@@ -3,6 +3,7 @@
         "address": "Address",
         "consultaMedicas": "Consultas Médicas",
         "ligacoesIAs": "Ligacoes IAs",
+        "registrosBiometricos": "Biometric Records",
         "dateOfBirth": "Data de Nascimento"
     },
     "links": {
@@ -10,7 +11,8 @@
         "calls": "Calls",
         "tasks": "Tasks",
         "consultaMedicas": "Consultas Médicas",
-        "ligacoesIAs": "Ligacoes IAs"
+        "ligacoesIAs": "Ligacoes IAs",
+        "registrosBiometricos": "Biometric Records"
     },
     "labels": {
         "Create CPaciente": "Criar Paciente"

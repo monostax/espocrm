@@ -1,7 +1,8 @@
 {
     "name": "ClinicaMedica",
-    "description": "Clinica Medica customizations - Patient management, medical consultations, doctors, and AI agent integration",
+    "description": "Clinica Medica - Módulo de gerenciamento de pacientes, consultas médicas, médicos e integração com agente IA",
     "version": "1.0.0",
-    "order": 15
+    "order": 15,
+    "jsTranspiled": true
 }
 

@@ -1,0 +1,13 @@
+{
+    "controller": "controllers/record",
+    "boolFilterList": [
+        "onlyMy"
+    ],
+    "iconClass": "ti ti-scale-outline",
+    "relationshipPanels": {
+        "paciente": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        }
+    }
+}

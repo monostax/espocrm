@@ -1,0 +1,8 @@
+{
+    "scriptList": [
+        "__APPEND__",
+        "client/custom/modules/global/lib/iframe-detection.js",
+        "client/custom/modules/global/lib/iframe-parent-bridge.js"
+    ]
+}
+

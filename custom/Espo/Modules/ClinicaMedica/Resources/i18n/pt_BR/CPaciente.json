@@ -2,6 +2,7 @@
     "fields": {
         "address": "Endereço",
         "ligacoesIAs": "Ligacoes IAs",
+        "registrosBiometricos": "Registros Biométricos",
         "dateOfBirth": "Data de Nascimento",
         "age": "Idade"
     },
@@ -9,7 +10,8 @@
         "meetings": "Reuniões",
         "calls": "Ligações",
         "tasks": "Tarefas",
-        "ligacoesIAs": "Ligacoes IAs"
+        "ligacoesIAs": "Ligacoes IAs",
+        "registrosBiometricos": "Registros Biométricos"
     },
     "labels": {
         "Create CPaciente": "Criar Paciente"

@@ -1,0 +1,84 @@
+{
+    "params": [
+        {
+            "name": "required",
+            "type": "bool",
+            "default": false
+        },
+        {
+            "name": "default",
+            "type": "float"
+        },
+        {
+            "name": "min",
+            "type": "float"
+        },
+        {
+            "name": "max",
+            "type": "float"
+        },
+        {
+            "name": "onlyDefaultUnit",
+            "type": "bool",
+            "default": false
+        },
+        {
+            "name": "decimal",
+            "type": "bool",
+            "readOnlyNotNew": true,
+            "tooltip": "weightDecimal"
+        },
+        {
+            "name": "audited",
+            "type": "bool"
+        },
+        {
+            "name": "readOnly",
+            "type": "bool"
+        },
+        {
+            "name": "readOnlyAfterCreate",
+            "type": "bool"
+        },
+        {
+            "name": "precision",
+            "type": "int",
+            "hidden": true
+        },
+        {
+            "name": "scale",
+            "type": "int",
+            "hidden": true
+        }
+    ],
+    "actualFields": ["unit", ""],
+    "fields": {
+        "unit": {
+            "type": "enum",
+            "view": "clinica-medica:views/fields/weight-unit-list",
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutDefaultSidePanelDisabled": true,
+            "customizationRequiredDisabled": true,
+            "customizationOptionsDisabled": true,
+            "customizationOptionsReferenceDisabled": true,
+            "customizationIsSortedDisabled": true,
+            "customizationDisplayAsLabelDisabled": true,
+            "customizationAuditedDisabled": true,
+            "customizationReadOnlyDisabled": true,
+            "customizationInlineEditDisabledDisabled": true,
+            "customizationDefaultView": "clinica-medica:views/admin/field-manager/fields/weight-default",
+            "customizationTooltipTextDisabled": true,
+            "maxLength": 10
+        }
+    },
+    "converterClassName": "Espo\\Modules\\ClinicaMedica\\Core\\Utils\\Database\\Orm\\FieldConverters\\Weight",
+    "validationList": ["required", "min", "max"],
+    "mandatoryValidationList": ["valid", "validUnit", "inPermittedRange"],
+    "filter": true,
+    "personalData": true,
+    "valueFactoryClassName": "Espo\\Modules\\ClinicaMedica\\Core\\Field\\Weight\\WeightFactory",
+    "attributeExtractorClassName": "Espo\\Modules\\ClinicaMedica\\Core\\Field\\Weight\\WeightAttributeExtractor"
+}
+

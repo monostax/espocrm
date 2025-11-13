@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "metadata": "Metadata",
+        "mastraThreadId": "Mastra Thread Id",
+        "status": "Status"
+    },
+    "links": [],
+    "labels": {
+        "Create CAIThread": "Create AI Thread"
+    },
+    "options": {
+        "status": {
+            "success": "Success",
+            "error": "Error",
+            "": "Blocked",
+            "Waiting": "Waiting",
+            "Running": "Running"
+        }
+    }
+}

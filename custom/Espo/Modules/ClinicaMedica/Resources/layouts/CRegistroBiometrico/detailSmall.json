@@ -1,0 +1,28 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name",
+                    "span": 2
+                },
+                false
+            ],
+            [
+                {
+                    "name": "paciente"
+                },
+                {
+                    "name": "weight"
+                }
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                false
+            ]
+        ]
+    }
+]
+

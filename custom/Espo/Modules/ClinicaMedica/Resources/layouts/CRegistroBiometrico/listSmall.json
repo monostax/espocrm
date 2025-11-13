@@ -1,0 +1,13 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "weight"
+    },
+    {
+        "name": "createdAt"
+    }
+]
+

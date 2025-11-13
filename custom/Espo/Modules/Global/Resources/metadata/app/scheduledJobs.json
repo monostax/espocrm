@@ -1,0 +1,16 @@
+{
+    "CheckNewVersion": {
+        "name": "Check for New Version (DISABLED)",
+        "isSystem": true,
+        "scheduling": null,
+        "jobClassName": "Espo\\Classes\\Jobs\\CheckNewVersion",
+        "disabled": true
+    },
+    "CheckNewExtensionVersion": {
+        "name": "Check for New Versions of Installed Extensions (DISABLED)",
+        "isSystem": true,
+        "scheduling": null,
+        "jobClassName": "Espo\\Classes\\Jobs\\CheckNewExtensionVersion",
+        "disabled": true
+    }
+}

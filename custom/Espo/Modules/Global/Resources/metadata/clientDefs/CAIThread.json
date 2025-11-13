@@ -1,0 +1,12 @@
+{
+    "controller": "controllers/record",
+    "boolFilterList": ["onlyMy"],
+    "iconClass": "ti ti-sparkles",
+    "views": {
+        "list": "custom:views/caithread/list"
+    },
+    "recordViews": {
+        "list": "custom:views/caithread/record/list"
+    }
+}
+

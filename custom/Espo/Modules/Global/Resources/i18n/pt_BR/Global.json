@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "weight": "Peso"
+    },
+    "fieldTypes": {
+        "weight": "Peso"
+    },
+    "options": {
+        "weightUnit": {
+            "kg": "Quilograma (kg)",
+            "g": "Grama (g)",
+            "mg": "Miligrama (mg)",
+            "lb": "Libra (lb)",
+            "oz": "Onça (oz)",
+            "t": "Tonelada (t)"
+        }
+    },
+    "tooltips": {
+        "weightDecimal": "Armazenamento decimal de peso. Usa o tipo VARCHAR para armazenamento em banco de dados para manter valores precisos."
+    },
+    "messages": {
+        "validUnit": "A unidade deve ser válida"
+    }
+}

@@ -391,9 +391,8 @@ class MainView extends View {
             return $("<div>").addClass("breadcrumb-item").append(item);
         });
 
-        const $div = $("<div>")
-            .addClass("header-breadcrumbs")
-            .addClass("hide-when-embedded");
+        const $div = $("<div>").addClass("header-breadcrumbs");
+        // .addClass("hide-when-embedded");
 
         $itemList.forEach(($item, i) => {
             $div.append($item);

@@ -1,0 +1,10 @@
+.panel {
+    &:has(> .panel-body > .report-container .chart-container) {
+        //overflow: hidden;
+    }
+}
+
+.chart-container[data-type="line"] {
+    margin-right: var(--16px);
+    margin-left: var(--2px);
+}

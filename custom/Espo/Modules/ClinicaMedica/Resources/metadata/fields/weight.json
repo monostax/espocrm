@@ -1,0 +1,17 @@
+{
+    "view": "clinica-medica:views/fields/weight",
+    "actualFields": ["", "Unit"],
+    "fields": {
+        "Unit": {
+            "type": "varchar"
+        }
+    },
+    "filter": true,
+    "fieldDefs": {
+        "Unit": {
+            "type": "varchar",
+            "len": 16
+        }
+    }
+}
+

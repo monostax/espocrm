@@ -1,0 +1,28 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "createdBy",
+        "width": 16
+    },
+    {
+        "name": "mastraThreadId",
+        "width": 16,
+        "align": "left",
+        "hidden": true
+    },
+    {
+        "name": "createdAt",
+        "width": 16
+    },
+    {
+        "name": "modifiedAt",
+        "width": 16
+    },
+    {
+        "name": "status",
+        "width": 16
+    }
+]
