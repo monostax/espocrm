@@ -19,7 +19,8 @@
         },
         "firstName": {
             "type": "varchar",
-            "maxLength": 100
+            "maxLength": 100,
+            "required": true
         },
         "lastName": {
             "type": "varchar",
@@ -31,19 +32,43 @@
         },
         "emailAddress": {
             "type": "email",
-            "isPersonalData": true
+            "isPersonalData": true,
+            "required": true
         },
         "phoneNumber": {
             "type": "phone",
             "typeList": [
                 "Mobile",
-                "Office",
-                "Home",
-                "Fax",
                 "Other"
             ],
             "defaultType": "Mobile",
             "isPersonalData": true
+        },
+        "especialidade": {
+            "type": "enum",
+            "required": true,
+            "options": [
+                "geral",
+                "dermatologista",
+                "nutricionista",
+                "psicologo",
+                "fisioterapeuta",
+                "fisiologista",
+                "outro"
+            ],
+            "style": {
+                "geral": null,
+                "dermatologista": null,
+                "nutricionista": null,
+                "psicologo": null,
+                "fisioterapeuta": null,
+                "fisiologista": null,
+                "outro": null
+            },
+            "default": "geral",
+            "isSorted": true,
+            "maxLength": 100,
+            "isCustom": true
         },
         "address": {
             "type": "address",
@@ -92,6 +117,9 @@
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams"
+        },
+        "systemUser": {
+            "type": "linkOne"
         }
     },
     "links": {
@@ -133,6 +161,12 @@
             "foreign": "medico",
             "entity": "CConsultaMedica",
             "audited": false,
+            "isCustom": true
+        },
+        "systemUser": {
+            "type": "hasOne",
+            "foreign": "cMedico",
+            "entity": "User",
             "isCustom": true
         }
     },

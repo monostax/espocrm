@@ -7,9 +7,6 @@
                 },
                 {
                     "name": "paciente"
-                },
-                {
-                    "name": "status"
                 }
             ],
             [
@@ -17,10 +14,10 @@
                     "name": "dateStart"
                 },
                 {
-                    "name": "dateEnd"
+                    "name": "duration"
                 },
                 {
-                    "name": "duration"
+                    "name": "dateEnd"
                 }
             ]
         ],

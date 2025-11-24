@@ -14,13 +14,16 @@
         "ligacoesIAs": "Ligacoes IAs",
         "amountPaid": "Valor Pago",
         "amountPaidCurrency": "Valor Pago (Moeda)",
-        "amountPaidConverted": "Valor Pago (Convertido)"
+        "amountPaidConverted": "Valor Pago (Convertido)",
+        "participantUsers": "Participantes",
+        "users": "Usuários"
     },
     "links": {
         "parent": "Parent",
         "medico": "Médico",
         "paciente": "Pacientes",
-        "ligacoesIAs": "Ligacoes IAs"
+        "ligacoesIAs": "Ligacoes IAs",
+        "participantUsers": "Participantes"
     },
     "options": {
         "status": {

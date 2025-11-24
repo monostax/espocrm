@@ -2,16 +2,16 @@
     "_delimiter_": {
         "disabled": true
     },
-    "default": {
-        "index": 0
-    },
-    "tasks": {
-        "index": 1
-    },
     "activities": {
-        "index": 2
+        "disabled": true
     },
     "history": {
-        "index": 3
+        "disabled": true
+    },
+    "default": {
+        "disabled": false
+    },
+    "tasks": {
+        "disabled": true
     }
 }

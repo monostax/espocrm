@@ -8,14 +8,14 @@
         "priority": "Prioridade",
         "description": "Descrição",
         "isOverdue": "Atrasada",
-        "account": "Conta",
+        "account": "Empresa",
         "attachments": "Anexos",
         "reminders": "Lembretes",
         "contact": "Contato"
     },
     "links": {
         "attachments": "Anexos",
-        "account": "Conta",
+        "account": "Empresa",
         "contact": "Contato"
     },
     "options": {

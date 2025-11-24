@@ -4,7 +4,8 @@
         "consultaMedicas": "Consultas Médicas",
         "ligacoesIAs": "Ligacoes IAs",
         "registrosBiometricos": "Biometric Records",
-        "dateOfBirth": "Data de Nascimento"
+        "dateOfBirth": "Data de Nascimento",
+        "systemUser": "System User"
     },
     "links": {
         "meetings": "Meetings",
@@ -12,7 +13,8 @@
         "tasks": "Tasks",
         "consultaMedicas": "Consultas Médicas",
         "ligacoesIAs": "Ligacoes IAs",
-        "registrosBiometricos": "Biometric Records"
+        "registrosBiometricos": "Biometric Records",
+        "systemUser": "System User"
     },
     "labels": {
         "Create CPaciente": "Criar Paciente"

@@ -5,7 +5,9 @@
                 {
                     "name": "name"
                 },
-                false
+                {
+                    "name": "dateOfBirth"
+                }
             ],
             [
                 {
@@ -14,25 +16,13 @@
                 {
                     "name": "phoneNumber"
                 }
-            ],
-            [
-                {
-                    "name": "address"
-                },
-                {
-                    "name": "dateOfBirth"
-                },
-                {
-                    "name": "age"
-                }
-            ],
-            [
-                {
-                    "name": "description"
-                }
             ]
         ],
+        "dynamicLogicVisible": null,
         "style": "default",
-        "label": ""
+        "tabBreak": false,
+        "hidden": false,
+        "noteText": null,
+        "customLabel": "Dados Cadastrais"
     }
 ]

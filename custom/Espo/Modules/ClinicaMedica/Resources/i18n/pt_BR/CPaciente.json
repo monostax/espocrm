@@ -4,14 +4,16 @@
         "ligacoesIAs": "Ligacoes IAs",
         "registrosBiometricos": "Registros Biométricos",
         "dateOfBirth": "Data de Nascimento",
-        "age": "Idade"
+        "age": "Idade",
+        "systemUser": "Usuário do Sistema"
     },
     "links": {
         "meetings": "Reuniões",
         "calls": "Ligações",
         "tasks": "Tarefas",
         "ligacoesIAs": "Ligacoes IAs",
-        "registrosBiometricos": "Registros Biométricos"
+        "registrosBiometricos": "Registros Biométricos",
+        "systemUser": "Usuário do Sistema"
     },
     "labels": {
         "Create CPaciente": "Criar Paciente"

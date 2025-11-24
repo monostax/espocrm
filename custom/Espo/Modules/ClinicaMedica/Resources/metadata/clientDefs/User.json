@@ -1,0 +1,16 @@
+{
+    "relationshipPanels": {
+        "medico": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        },
+        "cMedico": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        },
+        "consultasMedicas": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        }
+    }
+}

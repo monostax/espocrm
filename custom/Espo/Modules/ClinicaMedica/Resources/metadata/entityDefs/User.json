@@ -1,0 +1,33 @@
+{
+    "fields": {
+        "cMedico": {
+            "type": "link"
+        },
+        "cPaciente": {
+            "type": "link"
+        }
+    },
+    "links": {
+        "cMedico": {
+            "type": "belongsTo",
+            "foreign": "systemUser",
+            "entity": "CMedico",
+            "isCustom": true
+        },
+        "cPaciente": {
+            "type": "belongsTo",
+            "foreign": "systemUser",
+            "entity": "CPaciente",
+            "isCustom": true
+        },
+        "cConsultasMedicas": {
+            "type": "hasMany",
+            "relationName": "cConsultaMedicaUser",
+            "foreign": "users",
+            "entity": "CConsultaMedica",
+            "audited": false,
+            "isCustom": true
+        }
+    }
+}
+

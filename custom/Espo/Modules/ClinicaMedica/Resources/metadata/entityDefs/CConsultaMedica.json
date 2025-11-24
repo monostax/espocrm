@@ -9,11 +9,7 @@
         },
         "status": {
             "type": "enum",
-            "options": [
-                "Planned",
-                "Held",
-                "Not Held"
-            ],
+            "options": ["Planned", "Held", "Not Held"],
             "default": "Planned",
             "style": {
                 "Planned": null,
@@ -36,9 +32,7 @@
             "view": "crm:views/meeting/fields/date-end",
             "required": true,
             "after": "dateStart",
-            "suppressValidationList": [
-                "required"
-            ]
+            "suppressValidationList": ["required"]
         },
         "isAllDay": {
             "type": "bool",
@@ -50,16 +44,7 @@
             "type": "duration",
             "start": "dateStart",
             "end": "dateEnd",
-            "options": [
-                300,
-                600,
-                900,
-                1800,
-                2700,
-                3600,
-                7200,
-                10800
-            ],
+            "options": [300, 600, 900, 1800, 2700, 3600, 7200, 10800],
             "default": 300,
             "notStorable": true,
             "select": {
@@ -67,21 +52,13 @@
             },
             "order": {
                 "order": [
-                    [
-                        "TIMESTAMPDIFF_SECOND:(dateStart, dateEnd)",
-                        "{direction}"
-                    ]
+                    ["TIMESTAMPDIFF_SECOND:(dateStart, dateEnd)", "{direction}"]
                 ]
             }
         },
         "parent": {
             "type": "linkParent",
-            "entityList": [
-                "Account",
-                "Lead",
-                "Contact",
-                "CLigacoesIA"
-            ]
+            "entityList": ["Account", "Lead", "Contact", "CLigacoesIA"]
         },
         "description": {
             "type": "text"
@@ -138,9 +115,29 @@
             "conversionDisabled": true,
             "decimal": true,
             "isCustom": true
+        },
+        "users": {
+            "type": "linkMultiple",
+            "view": "crm:views/meeting/fields/users",
+            "layoutDetailDisabled": false,
+            "layoutListDisabled": true,
+            "columns": {
+                "status": "acceptanceStatus"
+            },
+            "additionalAttributeList": ["columns"],
+            "orderBy": "name",
+            "isCustom": true
         }
     },
     "links": {
+        "users": {
+            "type": "hasMany",
+            "relationName": "cConsultaMedicaUser",
+            "foreign": "cConsultasMedicas",
+            "entity": "User",
+            "audited": false,
+            "isCustom": true
+        },
         "parent": {
             "type": "belongsToParent",
             "foreign": "cConsultaMedicaChildren"
@@ -188,55 +185,34 @@
     "collection": {
         "orderBy": "dateStart",
         "order": "desc",
-        "textFilterFields": [
-            "name"
-        ],
+        "textFilterFields": ["name"],
         "fullTextSearch": false,
         "countDisabled": false
     },
     "indexes": {
         "dateStartStatus": {
-            "columns": [
-                "dateStart",
-                "status"
-            ]
+            "columns": ["dateStart", "status"]
         },
         "dateStart": {
-            "columns": [
-                "dateStart",
-                "deleted"
-            ]
+            "columns": ["dateStart", "deleted"]
         },
         "status": {
-            "columns": [
-                "status",
-                "deleted"
-            ]
+            "columns": ["status", "deleted"]
         },
         "assignedUser": {
-            "columns": [
-                "assignedUserId",
-                "deleted"
-            ]
+            "columns": ["assignedUserId", "deleted"]
         },
         "assignedUserStatus": {
-            "columns": [
-                "assignedUserId",
-                "status"
-            ]
+            "columns": ["assignedUserId", "status"]
         },
         "createdAt": {
-            "columns": [
-                "createdAt"
-            ]
+            "columns": ["createdAt"]
         },
         "createdAtId": {
             "unique": true,
-            "columns": [
-                "createdAt",
-                "id"
-            ]
+            "columns": ["createdAt", "id"]
         }
     },
     "optimisticConcurrencyControl": false
 }
+

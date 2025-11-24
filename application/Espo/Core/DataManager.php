@@ -88,7 +88,11 @@ class DataManager
         $this->rebuildDatabase($entityTypeList);
         $this->rebuildActionProcessor->process();
         $this->configMissingDefaultParamsSaver->process();
+        // Clear hook cache to ensure modules and hooks are discovered after metadata rebuild
+        $this->hookManager->clearCache();
         $this->enableHooks();
+        // Preload hooks so they are cached with updated module information
+        $this->hookManager->preloadHooks();
     }
 
     /**

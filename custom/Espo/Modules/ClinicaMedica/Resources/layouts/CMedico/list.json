@@ -12,11 +12,7 @@
         "width": 16
     },
     {
-        "name": "addressCity",
-        "width": 16
-    },
-    {
-        "name": "addressState",
+        "name": "especialidade",
         "width": 16
     }
 ]

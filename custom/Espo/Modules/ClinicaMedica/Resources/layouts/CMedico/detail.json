@@ -3,9 +3,11 @@
         "rows": [
             [
                 {
-                    "name": "name"
+                    "name": "firstName"
                 },
-                false
+                {
+                    "name": "lastName"
+                }
             ],
             [
                 {
@@ -14,19 +16,9 @@
                 {
                     "name": "phoneNumber"
                 }
-            ],
-            [
-                {
-                    "name": "address"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "description",
-                    "fullWidth": true
-                }
             ]
-        ]
+        ],
+        "style": "default",
+        "label": ""
     }
 ]

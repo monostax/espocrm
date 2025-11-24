@@ -9,7 +9,9 @@
         "ligacoesIAs": "Ligacoes IAs",
         "amountPaid": "Valor Pago",
         "amountPaidCurrency": "Valor Pago (Moeda)",
-        "amountPaidConverted": "Valor Pago (Convertido)"
+        "amountPaidConverted": "Valor Pago (Convertido)",
+        "participantUsers": "Participantes",
+        "users": "Usuários"
     },
     "options": {
         "status": {
@@ -34,6 +36,7 @@
         "todays": "De hoje"
     },
     "links": {
-        "ligacoesIAs": "Ligacoes IAs"
+        "ligacoesIAs": "Ligacoes IAs",
+        "participantUsers": "Participantes"
     }
 }

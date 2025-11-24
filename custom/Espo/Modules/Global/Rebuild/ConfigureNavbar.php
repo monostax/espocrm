@@ -30,13 +30,11 @@ use Espo\Core\Utils\Log;
 
 /**
  * Rebuild action to configure the navbar tab list.
- * This moves "Call" from the Activities section to the top section.
+ * Adds ClinicaMedica divider at the top of the navbar.
  * Runs automatically during system rebuild.
  */
 class ConfigureNavbar implements RebuildAction
 {
-    private const CACHE_KEY = 'navbarConfigured';
-
     public function __construct(
         private Config $config,
         private ConfigWriter $configWriter,
@@ -45,12 +43,8 @@ class ConfigureNavbar implements RebuildAction
 
     public function process(): void
     {
-        // Check if already configured (to avoid re-running on every rebuild)
-        if ($this->config->get(self::CACHE_KEY)) {
-            return;
-        }
-
-        // Get current tabList from config
+        $this->updateApplicationName();
+        
         $tabList = $this->config->get('tabList');
         
         if (!is_array($tabList)) {
@@ -58,149 +52,80 @@ class ConfigureNavbar implements RebuildAction
             return;
         }
 
-        // Check if this looks like the default tabList
-        $hasCallInActivities = $this->hasCallInActivitiesSection($tabList);
-        
-        if (!$hasCallInActivities) {
-            // Already modified or user has customized
-            $this->configWriter->set(self::CACHE_KEY, true);
-            $this->configWriter->save();
-            return;
-        }
+        $newTabList = $this->addClinicaMedicaSection($tabList);
 
-        // Modify the tabList
-        $newTabList = $this->moveCallToTopSection($tabList);
-        
-        if ($newTabList === $tabList) {
-            // No changes needed
-            $this->configWriter->set(self::CACHE_KEY, true);
-            $this->configWriter->save();
-            return;
-        }
-
-        // Save the new tabList
+        if ($newTabList !== $tabList) {
         $this->configWriter->set('tabList', $newTabList);
-        $this->configWriter->set(self::CACHE_KEY, true);
         $this->configWriter->save();
-
-        $this->log->info('Global Module: Successfully configured navbar - moved Call to top section.');
+            $this->log->info('Global Module: Successfully configured navbar - added ClinicaMedica section.');
+            }
     }
 
-    /**
-     * Check if Call is in the Activities section
-     */
-    private function hasCallInActivitiesSection(array $tabList): bool
+    private function addClinicaMedicaSection(array $tabList): array
     {
-        $inActivitiesSection = false;
+        // Define the complete ClinicaMedica section
+        $clinicaMedicaItems = [
+            [
+            'type' => 'divider',
+            'text' => '$ClinicaMedica',
+            ],
+            'CPaciente',
+            'CMedico',
+            'CConsultaMedica',
+        ];
         
-        foreach ($tabList as $item) {
-            // Check if we're entering Activities section
-            if (is_object($item) && 
-                isset($item->type) && 
-                $item->type === 'divider' && 
-                isset($item->text) && 
-                $item->text === '$Activities'
-            ) {
-                $inActivitiesSection = true;
-                continue;
-            }
-            
-            // Check if we're leaving Activities section (next divider)
-            if ($inActivitiesSection && 
-                is_object($item) && 
-                isset($item->type) && 
-                $item->type === 'divider'
-            ) {
-                $inActivitiesSection = false;
-                continue;
-            }
-            
-            // If we're in Activities section and find Call, return true
-            if ($inActivitiesSection && $item === 'Call') {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /**
-     * Move Call from Activities section to top section (after CRM divider)
-     */
-    private function moveCallToTopSection(array $tabList): array
-    {
+        // Find if ClinicaMedica section exists and remove it (including all items until next divider)
         $newTabList = [];
-        $callRemoved = false;
-        $inActivitiesSection = false;
-        $crmDividerPassed = false;
-        $callInserted = false;
+        $inClinicaMedicaSection = false;
+        $foundSection = false;
         
         foreach ($tabList as $item) {
-            // Check if we're at CRM divider
-            if (is_object($item) && 
-                isset($item->type) && 
-                $item->type === 'divider' && 
-                isset($item->text) && 
-                $item->text === '$CRM'
+            // Check if we're at the ClinicaMedica divider
+            if (is_array($item) && 
+                isset($item['type']) && 
+                $item['type'] === 'divider' && 
+                isset($item['text']) && 
+                $item['text'] === '$ClinicaMedica'
             ) {
-                $newTabList[] = $item;
-                $crmDividerPassed = true;
-                continue;
+                $inClinicaMedicaSection = true;
+                $foundSection = true;
+                continue; // Skip the divider
             }
             
-            // Insert Call right after CRM divider and before first entity
-            if ($crmDividerPassed && 
-                !$callInserted && 
-                !is_object($item) && 
-                $item !== '_delimiter_' &&
-                $item !== 'Home'
+            // If we're in ClinicaMedica section and hit another divider, we're done with this section
+            if ($inClinicaMedicaSection && 
+                is_array($item) && 
+                isset($item['type']) && 
+                $item['type'] === 'divider'
             ) {
-                $newTabList[] = 'Call';
-                $callInserted = true;
-            }
-            
-            // Check if we're entering Activities section
-            if (is_object($item) && 
-                isset($item->type) && 
-                $item->type === 'divider' && 
-                isset($item->text) && 
-                $item->text === '$Activities'
-            ) {
-                $inActivitiesSection = true;
+                $inClinicaMedicaSection = false;
                 $newTabList[] = $item;
                 continue;
             }
             
-            // Check if we're leaving Activities section
-            if ($inActivitiesSection && 
-                is_object($item) && 
-                isset($item->type) && 
-                $item->type === 'divider'
-            ) {
-                $inActivitiesSection = false;
-            }
-            
-            // Skip Call in Activities section
-            if ($inActivitiesSection && $item === 'Call') {
-                $callRemoved = true;
+            // Skip items that are in the ClinicaMedica section
+            if ($inClinicaMedicaSection) {
                 continue;
             }
             
             $newTabList[] = $item;
         }
         
-        // If Call wasn't inserted yet (edge case), add it at the beginning
-        if ($callRemoved && !$callInserted) {
-            // Insert after Home if it exists, otherwise at the start
-            $homeIndex = array_search('Home', $newTabList);
-            if ($homeIndex !== false) {
-                array_splice($newTabList, $homeIndex + 1, 0, ['Call']);
-            } else {
-                array_unshift($newTabList, 'Call');
-            }
-        }
+        // Prepend the ClinicaMedica section to the beginning
+        array_unshift($newTabList, ...$clinicaMedicaItems);
         
         return $newTabList;
+    }
+
+    private function updateApplicationName(): void
+    {
+        $currentApplicationName = $this->config->get('applicationName');
+        
+        if ($currentApplicationName === 'EspoCRM') {
+            $this->configWriter->set('applicationName', 'Monostax CRM');
+            $this->configWriter->save();
+            $this->log->info('Global Module: Successfully updated application name from EspoCRM to Monostax CRM.');
+        }
     }
 }
 

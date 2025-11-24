@@ -4,7 +4,7 @@
         "emailAddress": "E-mail",
         "title": "Cargo",
         "website": "Website",
-        "accountName": "Conta",
+        "accountName": "Empresa",
         "phone": "Telefone",
         "phoneOffice": "Telefone (Comercial)",
         "fax": "Fax",
@@ -12,8 +12,7 @@
         "address": "Endereço",
         "description": "Descrição"
     },
-    "links": {
-    },
+    "links": {},
     "labels": {
         "Create Prospect": "Criar Prospecto",
         "Convert to Lead": "Converter para Lead"

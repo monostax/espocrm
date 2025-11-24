@@ -1,39 +1,39 @@
 {
-  "labels": {
-    "Create Document": "Criar Documento",
-    "Details": "Detalhes"
-  },
-  "fields": {
-    "name": "Nome",
-    "file": "Arquivo",
-    "type": "Tipo",
-    "publishDate": "Data de Publicação",
-    "expirationDate": "Data de expiração",
-    "description": "Descrição",
-    "accounts": "Contas",
-    "folder": "Pasta"
-  },
-  "links": {
-    "accounts": "Contas",
-    "opportunities": "Oportunidades",
-    "folder": "Pasta",
-    "contacts": "Contatos"
-  },
-  "options": {
-    "status": {
-      "Active": "Ativo",
-      "Draft": "Rascunho",
-      "Expired": "Expirado",
-      "Canceled": "Cancelado"
+    "labels": {
+        "Create Document": "Criar Documento",
+        "Details": "Detalhes"
     },
-    "type": {
-      "": "Nenhum",
-      "Contract": "Contrato",
-      "License Agreement": "Contrato de Licença"
+    "fields": {
+        "name": "Nome",
+        "file": "Arquivo",
+        "type": "Tipo",
+        "publishDate": "Data de Publicação",
+        "expirationDate": "Data de expiração",
+        "description": "Descrição",
+        "accounts": "Empresas",
+        "folder": "Pasta"
+    },
+    "links": {
+        "accounts": "Empresas",
+        "opportunities": "Oportunidades",
+        "folder": "Pasta",
+        "contacts": "Contatos"
+    },
+    "options": {
+        "status": {
+            "Active": "Ativo",
+            "Draft": "Rascunho",
+            "Expired": "Expirado",
+            "Canceled": "Cancelado"
+        },
+        "type": {
+            "": "Nenhum",
+            "Contract": "Contrato",
+            "License Agreement": "Contrato de Licença"
+        }
+    },
+    "presetFilters": {
+        "active": "Ativo",
+        "draft": "Rascunho"
     }
-  },
-  "presetFilters": {
-    "active": "Ativo",
-    "draft": "Rascunho"
-  }
 }

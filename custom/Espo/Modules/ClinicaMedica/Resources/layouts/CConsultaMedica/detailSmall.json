@@ -3,46 +3,22 @@
         "rows": [
             [
                 {
-                    "name": "name",
-                    "fullWidth": true
+                    "name": "medico"
+                },
+                {
+                    "name": "paciente"
                 }
             ],
             [
                 {
-                    "name": "status",
-                    "fullWidth": true
-                }
-            ],
-            [
+                    "name": "dateStart"
+                },
                 {
-                    "name": "dateStart",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
-                    "name": "duration",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
-                    "name": "dateEnd",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
-                    "name": "parent",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
-                    "name": "description",
-                    "fullWidth": true
+                    "name": "dateEnd"
                 }
             ]
-        ]
+        ],
+        "style": "default",
+        "label": ""
     }
 ]

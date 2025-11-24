@@ -6,13 +6,7 @@
         },
         "salutationName": {
             "type": "enum",
-            "options": [
-                "",
-                "Mr.",
-                "Ms.",
-                "Mrs.",
-                "Dr."
-            ]
+            "options": ["", "Mr.", "Ms.", "Mrs.", "Dr."]
         },
         "firstName": {
             "type": "varchar",
@@ -32,13 +26,7 @@
         },
         "phoneNumber": {
             "type": "phone",
-            "typeList": [
-                "Mobile",
-                "Office",
-                "Home",
-                "Fax",
-                "Other"
-            ],
+            "typeList": ["Mobile", "Office", "Home", "Fax", "Other"],
             "defaultType": "Mobile",
             "isPersonalData": true
         },
@@ -112,9 +100,10 @@
             "select": {
                 "select": "IF:(IS_NOT_NULL:(dateOfBirth), TIMESTAMPDIFF_YEAR:(dateOfBirth, NOW:()), NULL)"
             },
-            "fieldManagerParamList": [
-                "tooltipText"
-            ]
+            "fieldManagerParamList": ["tooltipText"]
+        },
+        "systemUser": {
+            "type": "link"
         }
     },
     "links": {
@@ -171,48 +160,38 @@
             "entity": "CRegistroBiometrico",
             "audited": false,
             "isCustom": true
+        },
+        "systemUser": {
+            "type": "belongsTo",
+            "entity": "User",
+            "noJoin": false
         }
     },
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": [
-            "name"
-        ],
+        "textFilterFields": ["name"],
         "fullTextSearch": false,
         "countDisabled": false
     },
     "indexes": {
         "firstName": {
-            "columns": [
-                "firstName",
-                "deleted"
-            ]
+            "columns": ["firstName", "deleted"]
         },
         "name": {
-            "columns": [
-                "firstName",
-                "lastName"
-            ]
+            "columns": ["firstName", "lastName"]
         },
         "assignedUser": {
-            "columns": [
-                "assignedUserId",
-                "deleted"
-            ]
+            "columns": ["assignedUserId", "deleted"]
         },
         "createdAt": {
-            "columns": [
-                "createdAt"
-            ]
+            "columns": ["createdAt"]
         },
         "createdAtId": {
             "unique": true,
-            "columns": [
-                "createdAt",
-                "id"
-            ]
+            "columns": ["createdAt", "id"]
         }
     },
     "optimisticConcurrencyControl": false
 }
+

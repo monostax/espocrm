@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "cMedico": "Medico",
+        "cPaciente": "Paciente",
+        "cConsultasMedicas": "Consultas Médicas"
+    },
+    "links": {
+        "cMedico": "Medico",
+        "cPaciente": "Paciente",
+        "cConsultasMedicas": "Consultas Médicas"
+    }
+}

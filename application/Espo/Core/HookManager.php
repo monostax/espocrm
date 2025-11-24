@@ -141,6 +141,24 @@ class HookManager
         $this->isDisabled = false;
     }
 
+    /**
+     * Clear hook cache. Forces hooks to be reloaded from filesystem.
+     */
+    public function clearCache(): void
+    {
+        $this->data = null;
+        $this->hookListHash = [];
+        $this->dataCache->clear($this->cacheKey);
+    }
+
+    /**
+     * Preload and cache hooks. Useful after rebuild to ensure hooks are discovered and cached.
+     */
+    public function preloadHooks(): void
+    {
+        $this->loadHooks();
+    }
+
     private function loadHooks(): void
     {
         if ($this->systemConfig->useCache() && $this->dataCache->has($this->cacheKey)) {

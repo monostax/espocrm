@@ -24,20 +24,41 @@
             {
                 "name": "activities",
                 "reference": "activities",
-                "disabled": true
+                "disabled": true,
+                "view": "crm:views/record/panels/activities",
+                "filterList": ["all"],
+                "orderBy": "dateStart",
+                "order": "desc"
             },
             {
                 "name": "history",
                 "reference": "history",
-                "disabled": true
+                "disabled": true,
+                "view": "crm:views/record/panels/history",
+                "orderBy": "dateStart",
+                "order": "desc"
             }
         ]
+    },
+    "activityDefs": {
+        "activities": {
+            "link": "consultaMedicas",
+            "additionalEntityTypeList": ["CConsultaMedica"]
+        },
+        "history": {
+            "link": "consultaMedicas",
+            "additionalEntityTypeList": ["CConsultaMedica"]
+        }
     },
     "iconClass": "fas fa-stethoscope",
     "relationshipPanels": {
         "consultaMedicas": {
             "layout": null,
             "selectPrimaryFilterName": null
+        },
+        "systemUser": {
+            "layout": null,
+            "selectPrimaryFilterName": "active"
         }
     },
     "kanbanViewMode": false,
