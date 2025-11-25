@@ -66,20 +66,19 @@ class ConfigureNavbar implements RebuildAction
         // Define the complete ClinicaMedica section
         $clinicaMedicaItems = [
             [
-            'type' => 'divider',
-            'text' => '$ClinicaMedica',
+                'type' => 'divider',
+                'text' => '$ClinicaMedica',
             ],
             'CPaciente',
             'CMedico',
             'CConsultaMedica',
         ];
         
-        // Find if ClinicaMedica section exists and remove it (including all items until next divider)
-        $newTabList = [];
-        $inClinicaMedicaSection = false;
-        $foundSection = false;
+        // Find existing ClinicaMedica section
+        $sectionStartIndex = null;
+        $sectionEndIndex = null;
         
-        foreach ($tabList as $item) {
+        foreach ($tabList as $index => $item) {
             // Check if we're at the ClinicaMedica divider
             if (is_array($item) && 
                 isset($item['type']) && 
@@ -87,34 +86,37 @@ class ConfigureNavbar implements RebuildAction
                 isset($item['text']) && 
                 $item['text'] === '$ClinicaMedica'
             ) {
-                $inClinicaMedicaSection = true;
-                $foundSection = true;
-                continue; // Skip the divider
+                $sectionStartIndex = $index;
+                // Find the end of this section (next divider or end of array)
+                for ($i = $index + 1; $i < count($tabList); $i++) {
+                    if (is_array($tabList[$i]) && 
+                        isset($tabList[$i]['type']) && 
+                        $tabList[$i]['type'] === 'divider'
+                    ) {
+                        $sectionEndIndex = $i - 1;
+                        break;
+                    }
+                }
+                // If no next divider found, section goes to the end
+                if ($sectionEndIndex === null) {
+                    $sectionEndIndex = count($tabList) - 1;
+                }
+                break;
             }
-            
-            // If we're in ClinicaMedica section and hit another divider, we're done with this section
-            if ($inClinicaMedicaSection && 
-                is_array($item) && 
-                isset($item['type']) && 
-                $item['type'] === 'divider'
-            ) {
-                $inClinicaMedicaSection = false;
-                $newTabList[] = $item;
-                continue;
-            }
-            
-            // Skip items that are in the ClinicaMedica section
-            if ($inClinicaMedicaSection) {
-                continue;
-            }
-            
-            $newTabList[] = $item;
         }
         
-        // Prepend the ClinicaMedica section to the beginning
-        array_unshift($newTabList, ...$clinicaMedicaItems);
+        // If ClinicaMedica section exists, replace it in-place
+        if ($sectionStartIndex !== null) {
+            // Remove old section
+            array_splice($tabList, $sectionStartIndex, $sectionEndIndex - $sectionStartIndex + 1);
+            // Insert new section at the same position
+            array_splice($tabList, $sectionStartIndex, 0, $clinicaMedicaItems);
+        } else {
+            // Section doesn't exist, add it at the beginning
+            array_unshift($tabList, ...$clinicaMedicaItems);
+        }
         
-        return $newTabList;
+        return $tabList;
     }
 
     private function updateApplicationName(): void
