@@ -146,3 +146,44 @@ console.log(
     `\n  Total: transpiled:  ${totalTranspiled}, copied: ${totalCopied}\n`
 );
 
+// Fix module IDs to add namespace prefix
+console.log("  Fixing module IDs...");
+
+let totalFixed = 0;
+
+for (const module of modules) {
+    const files = require("glob").globSync(
+        require("path").join(module.clientPath, "lib/transpiled/**/*.js").replace(/\\/g, "/")
+    ).filter(f => !f.endsWith(".map"));
+
+    for (const file of files) {
+        let content = fs.readFileSync(file, "utf-8");
+        const originalContent = content;
+        
+        // Pattern 1: define("modules/{moduleName}/path", ...)
+        const pattern1 = new RegExp(
+            `define\\("modules/${module.moduleName}/([^"]+)"`,
+            "g"
+        );
+        content = content.replace(pattern1, (match, pathPart) => {
+            return `define("${module.moduleName}:${pathPart}"`;
+        });
+        
+        // Pattern 2: define("path", ...) where path doesn't contain ':'
+        const pattern2 = /define\("([^":]+)",/g;
+        content = content.replace(pattern2, (match, pathPart) => {
+            if (pathPart.includes(':')) {
+                return match;
+            }
+            return `define("${module.moduleName}:${pathPart}",`;
+        });
+
+        if (content !== originalContent) {
+            fs.writeFileSync(file, content, "utf-8");
+            totalFixed++;
+        }
+    }
+}
+
+console.log(`  Fixed ${totalFixed} module ID(s)\n`);
+

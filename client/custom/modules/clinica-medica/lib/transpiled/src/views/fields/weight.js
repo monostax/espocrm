@@ -1,4 +1,4 @@
-define("views/fields/weight", ["exports", "views/fields/float", "ui/select"], function (_exports, _float, _select) {
+define("clinica-medica:views/fields/weight", ["exports", "views/fields/float", "ui/select"], function (_exports, _float, _select) {
   "use strict";
 
   Object.defineProperty(_exports, "__esModule", {

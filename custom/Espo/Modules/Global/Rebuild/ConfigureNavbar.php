@@ -45,20 +45,20 @@ class ConfigureNavbar implements RebuildAction
     {
         $this->updateApplicationName();
         
-        $tabList = $this->config->get('tabList');
+        // $tabList = $this->config->get('tabList');
         
-        if (!is_array($tabList)) {
-            $this->log->warning('Global Module: tabList is not an array, skipping navbar configuration.');
-            return;
-        }
+        // if (!is_array($tabList)) {
+        //     $this->log->warning('Global Module: tabList is not an array, skipping navbar configuration.');
+        //     return;
+        // }
 
-        $newTabList = $this->addClinicaMedicaSection($tabList);
+        // $newTabList = $this->addClinicaMedicaSection($tabList);
 
-        if ($newTabList !== $tabList) {
-        $this->configWriter->set('tabList', $newTabList);
-        $this->configWriter->save();
-            $this->log->info('Global Module: Successfully configured navbar - added ClinicaMedica section.');
-            }
+        // if ($newTabList !== $tabList) {
+        // $this->configWriter->set('tabList', $newTabList);
+        // $this->configWriter->save();
+        //     $this->log->info('Global Module: Successfully configured navbar - added ClinicaMedica section.');
+        //     }
     }
 
     private function addClinicaMedicaSection(array $tabList): array

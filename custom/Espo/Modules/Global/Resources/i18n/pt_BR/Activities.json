@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "_scope": "Tipo de Entidade",
+        "name": "Nome",
+        "status": "Status",
+        "dateStart": "Data de Início",
+        "dateEnd": "Data de Fim",
+        "assignedUser": "Usuário Designado",
+        "users": "Participantes",
+        "contacts": "Contatos",
+        "parent": "Relações",
+        "teams": "Times",
+        "description": "Descrição",
+        "createdAt": "Criado em",
+        "modifiedAt": "Modificado em",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por"
+    },
+    "boolFilters": {
+        "onlyMy": "Atribuído a Mim ou Participando",
+        "assignedToMe": "Atribuído a Mim"
+    }
+}
+

@@ -1,0 +1,207 @@
+{
+    "fields": {
+        "_scope": {
+            "type": "enum",
+            "options": ["Meeting", "Call", "Task"],
+            "translation": "Global.options.activityEntityType",
+            "notStorable": false,
+            "layoutListDisabled": false,
+            "layoutFiltersDisabled": false
+        },
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "trim": true,
+            "view": "global:views/activities/fields/name-with-icon"
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Planned",
+                "Held",
+                "Not Held",
+                "Not Started",
+                "Started",
+                "Completed",
+                "Canceled",
+                "Deferred"
+            ],
+            "default": "Planned",
+            "style": {
+                "Completed": "success",
+                "Held": "success",
+                "Not Held": "danger",
+                "Canceled": "danger",
+                "Deferred": "warning"
+            }
+        },
+        "dateStart": {
+            "type": "datetime",
+            "default": "javascript: return this.dateTime.getNow(1);"
+        },
+        "dateEnd": {
+            "type": "datetime"
+        },
+        "assignedUser": {
+            "type": "link",
+            "view": "views/fields/assigned-user",
+            "entity": "User"
+        },
+        "assignedUserId": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "assignedUserName": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "entity": "Team"
+        },
+        "teamsIds": {
+            "type": "jsonArray",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "teamsNames": {
+            "type": "jsonObject",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "parent": {
+            "type": "linkParent",
+            "entityList": ["Account", "Lead", "Contact", "Opportunity"]
+        },
+        "parentId": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "parentName": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "parentType": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "entity": "User"
+        },
+        "createdById": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "createdByName": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "entity": "User"
+        },
+        "modifiedById": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "modifiedByName": {
+            "type": "varchar",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "users": {
+            "type": "linkMultiple",
+            "entity": "User",
+            "view": "global:views/fields/link-multiple-with-icons"
+        },
+        "usersIds": {
+            "type": "jsonArray",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "usersNames": {
+            "type": "jsonObject",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "contacts": {
+            "type": "linkMultiple",
+            "entity": "Contact",
+            "view": "global:views/fields/link-multiple-with-icons"
+        },
+        "contactsIds": {
+            "type": "jsonArray",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "contactsNames": {
+            "type": "jsonObject",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true
+        }
+    },
+    "links": {
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "EntityTeam"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "sortBy": "dateStart",
+        "asc": false
+    }
+}
+

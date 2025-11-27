@@ -1,4 +1,4 @@
-define("views/settings/fields/default-weight-unit", ["exports", "views/fields/enum"], function (_exports, _enum) {
+define("clinica-medica:views/settings/fields/default-weight-unit", ["exports", "views/fields/enum"], function (_exports, _enum) {
   "use strict";
 
   Object.defineProperty(_exports, "__esModule", {

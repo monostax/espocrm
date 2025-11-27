@@ -15,6 +15,7 @@
     "notifications": true,
     "calendar": true,
     "calendarOneDay": true,
+    "activity": true,
     "object": true,
     "statusField": "status",
     "stream": true,

@@ -13,6 +13,11 @@
             "lb": "Libra (lb)",
             "oz": "Onça (oz)",
             "t": "Tonelada (t)"
+        },
+        "activityEntityType": {
+            "Meeting": "Reunião",
+            "Call": "Ligação",
+            "Task": "Tarefa"
         }
     },
     "tooltips": {
@@ -20,5 +25,16 @@
     },
     "messages": {
         "validUnit": "A unidade deve ser válida"
+    },
+    "boolFilters": {
+        "onlyMy": "Atribuído a Mim ou Participando",
+        "assignedToMe": "Atribuído a Mim"
+    },
+    "scopeNames": {
+        "Activities": "Atividades"
+    },
+    "scopeNamesPlural": {
+        "Activities": "Atividades"
     }
 }
+

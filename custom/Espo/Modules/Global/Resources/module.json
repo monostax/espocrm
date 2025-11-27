@@ -2,6 +2,7 @@
     "order": 10,
     "version": "1.0.0",
     "name": "Global",
-    "description": "Global customizations for navbar and system-wide configurations"
+    "description": "Global customizations for navbar and system-wide configurations",
+    "jsTranspiled": true
 }
 

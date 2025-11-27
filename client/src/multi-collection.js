@@ -62,7 +62,8 @@ class MultiCollection extends Collection {
             }
 
             attributes = _.clone(attributes);
-            delete attributes['_scope'];
+            // Keep _scope attribute for display purposes
+            // delete attributes['_scope'];
 
             const model = this.seeds[entityType].clone();
 

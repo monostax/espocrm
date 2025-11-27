@@ -1,0 +1,34 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "view": "global:views/activities/fields/name-with-icon"
+    },
+    {
+        "name": "_scope"
+    },
+    {
+        "name": "status"
+    },
+    {
+        "name": "dateStart"
+    },
+    {
+        "name": "dateEnd"
+    },
+    {
+        "name": "assignedUser"
+    },
+    {
+        "name": "users",
+        "view": "global:views/fields/link-multiple-with-icons"
+    },
+    {
+        "name": "contacts",
+        "view": "global:views/fields/link-multiple-with-icons"
+    },
+    {
+        "name": "parent"
+    }
+]
+

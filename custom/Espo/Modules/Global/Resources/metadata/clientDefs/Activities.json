@@ -1,0 +1,7 @@
+{
+    "controller": "global:controllers/activities",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy", "assignedToMe"],
+    "iconClass": "fas fa-tasks"
+}
+

@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "_scope": "Entity Type",
+        "name": "Name",
+        "status": "Status",
+        "dateStart": "Start Date",
+        "dateEnd": "End Date",
+        "assignedUser": "Assigned User",
+        "users": "Participants",
+        "contacts": "Contacts",
+        "parent": "Relations",
+        "teams": "Teams",
+        "description": "Description",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "boolFilters": {
+        "onlyMy": "Only My",
+        "assignedToMe": "Assigned to Me"
+    }
+}
+

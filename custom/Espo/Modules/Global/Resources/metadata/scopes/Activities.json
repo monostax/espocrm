@@ -1,0 +1,11 @@
+{
+    "tab": true,
+    "disabled": false,
+    "entity": true,
+    "layouts": true,
+    "acl": "boolean",
+    "customizable": true,
+    "module": "Global",
+    "object": true
+}
+

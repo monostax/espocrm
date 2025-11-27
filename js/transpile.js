@@ -102,6 +102,41 @@ if (fs.existsSync(customModulesPath)) {
                         count += result.transpiled.length;
                         copiedCount += result.copied.length;
 
+                        // Fix module IDs to add namespace prefix for custom modules
+                        const transpiledFiles = require("glob")
+                            .globSync(
+                                path.join(clientPath, "lib/transpiled/**/*.js")
+                                    .replace(/\\/g, "/")
+                            )
+                            .filter((f) => !f.endsWith(".map"));
+
+                        for (const file of transpiledFiles) {
+                            let content = fs.readFileSync(file, "utf-8");
+                            const originalContent = content;
+
+                            // Pattern 1: define("modules/{moduleName}/path", ...)
+                            const pattern1 = new RegExp(
+                                `define\\("modules/${moduleName}/([^"]+)"`,
+                                "g"
+                            );
+                            content = content.replace(pattern1, (match, pathPart) => {
+                                return `define("${moduleName}:${pathPart}"`;
+                            });
+
+                            // Pattern 2: define("path", ...) where path doesn't contain ':'
+                            const pattern2 = /define\("([^":]+)",/g;
+                            content = content.replace(pattern2, (match, pathPart) => {
+                                if (pathPart.includes(":")) {
+                                    return match;
+                                }
+                                return `define("${moduleName}:${pathPart}",`;
+                            });
+
+                            if (content !== originalContent) {
+                                fs.writeFileSync(file, content, "utf-8");
+                            }
+                        }
+
                         // Bundle if needed
                         if (moduleConfig.bundled) {
                             const bundleConfigPath = path.join(

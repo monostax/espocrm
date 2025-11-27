@@ -1,6 +1,14 @@
 {
-    "data": {
-        "items": []
+    "system": {
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#Admin/layouts/scope=Activities",
+                "label": "Activities Layout",
+                "description": "Customize Activities list columns and filters",
+                "iconClass": "fas fa-tasks"
+            }
+        ]
     }
 }
 

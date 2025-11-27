@@ -1,0 +1,14 @@
+{
+    "boolFilterClassNameMap": {
+        "assignedToMe": "Espo\\Modules\\Global\\Classes\\Select\\Meeting\\BoolFilters\\AssignedToMe"
+    },
+    "selectAttributesDependencyMap": {
+        "users": ["usersIds", "usersNames"],
+        "usersIds": ["usersIds"],
+        "usersNames": ["usersNames"],
+        "contacts": ["contactsIds", "contactsNames"],
+        "contactsIds": ["contactsIds"],
+        "contactsNames": ["contactsNames"]
+    }
+}
+

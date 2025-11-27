@@ -13,6 +13,11 @@
             "lb": "Pound (lb)",
             "oz": "Ounce (oz)",
             "t": "Ton (t)"
+        },
+        "activityEntityType": {
+            "Meeting": "Meeting",
+            "Call": "Call",
+            "Task": "Task"
         }
     },
     "tooltips": {
@@ -21,10 +26,16 @@
     "messages": {
         "validUnit": "Unit must be valid"
     },
+    "boolFilters": {
+        "onlyMy": "Participating",
+        "assignedToMe": "Assigned to Me"
+    },
     "scopeNames": {
+        "Activities": "Activities",
         "CAIPlaybook": "Playbook"
     },
     "scopeNamesPlural": {
+        "Activities": "Activities",
         "CAIPlaybook": "Playbooks"
     }
 }

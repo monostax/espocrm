@@ -1,0 +1,42 @@
+[
+    {
+        "name": "_scope"
+    },
+    {
+        "name": "name"
+    },
+    {
+        "name": "status"
+    },
+    {
+        "name": "dateStart"
+    },
+    {
+        "name": "dateEnd"
+    },
+    {
+        "name": "assignedUser"
+    },
+    {
+        "name": "users"
+    },
+    {
+        "name": "contacts"
+    },
+    {
+        "name": "parent"
+    },
+    {
+        "name": "teams"
+    },
+    {
+        "name": "description"
+    },
+    {
+        "name": "createdAt"
+    },
+    {
+        "name": "modifiedAt"
+    }
+]
+

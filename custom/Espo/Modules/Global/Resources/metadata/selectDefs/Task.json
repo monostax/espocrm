@@ -1,0 +1,6 @@
+{
+    "boolFilterClassNameMap": {
+        "assignedToMe": "Espo\\Modules\\Global\\Classes\\Select\\Task\\BoolFilters\\AssignedToMe"
+    }
+}
+
