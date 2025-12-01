@@ -65,14 +65,12 @@
             "maxLength": 100,
             "isCustom": true
         },
-        "consultaMedica": {
+        "agendamento": {
             "type": "link"
         },
         "tipo": {
             "type": "enum",
-            "options": [
-                "Feedback de Consulta"
-            ],
+            "options": ["Feedback de Consulta"],
             "style": {
                 "Feedback de Consulta": null
             },
@@ -156,10 +154,10 @@
             "audited": false,
             "isCustom": true
         },
-        "consultaMedica": {
+        "agendamento": {
             "type": "belongsTo",
             "foreign": "ligacoesIAs",
-            "entity": "CConsultaMedica",
+            "entity": "CAgendamento",
             "audited": false,
             "isCustom": true
         },
@@ -174,36 +172,23 @@
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": [
-            "name"
-        ],
+        "textFilterFields": ["name"],
         "fullTextSearch": false,
         "countDisabled": false
     },
     "indexes": {
         "name": {
-            "columns": [
-                "name",
-                "deleted"
-            ]
+            "columns": ["name", "deleted"]
         },
         "assignedUser": {
-            "columns": [
-                "assignedUserId",
-                "deleted"
-            ]
+            "columns": ["assignedUserId", "deleted"]
         },
         "createdAt": {
-            "columns": [
-                "createdAt"
-            ]
+            "columns": ["createdAt"]
         },
         "createdAtId": {
             "unique": true,
-            "columns": [
-                "createdAt",
-                "id"
-            ]
+            "columns": ["createdAt", "id"]
         }
     },
     "optimisticConcurrencyControl": false

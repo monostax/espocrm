@@ -1,7 +1,7 @@
 {
     "actionClassNameList": [
         "Espo\\Modules\\ClinicaMedica\\Rebuild\\SeedTeams",
-        "Espo\\Modules\\ClinicaMedica\\Rebuild\\SeedCalendarViews"
+        "Espo\\Modules\\ClinicaMedica\\Rebuild\\SeedCalendarViews",
+        "Espo\\Modules\\ClinicaMedica\\Rebuild\\ModifyConfig"
     ]
 }
-

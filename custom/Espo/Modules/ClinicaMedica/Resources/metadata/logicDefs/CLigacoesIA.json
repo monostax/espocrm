@@ -1,6 +1,6 @@
 {
     "fields": {
-        "consultaMedica": {
+        "agendamento": {
             "visible": {
                 "conditionGroup": [
                     {

@@ -1,7 +1,7 @@
 {
     "fields": {
         "address": "Address",
-        "consultaMedicas": "Consultas Médicas",
+        "agendamentos": "Agendamentos",
         "ligacoesIAs": "Ligacoes IAs",
         "registrosBiometricos": "Biometric Records",
         "dateOfBirth": "Data de Nascimento",
@@ -11,7 +11,7 @@
         "meetings": "Meetings",
         "calls": "Calls",
         "tasks": "Tasks",
-        "consultaMedicas": "Consultas Médicas",
+        "agendamentos": "Agendamentos",
         "ligacoesIAs": "Ligacoes IAs",
         "registrosBiometricos": "Biometric Records",
         "systemUser": "System User"

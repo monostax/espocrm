@@ -20,7 +20,7 @@ The module manages the following custom entities:
     - Custom detail and list views
     - Relationships with patients and consultations
 
-3. **CConsultaMedica** (Medical Consultation)
+3. **CAgendamento** (Medical Consultation)
 
     - Event-based entity for scheduling and tracking medical appointments
     - Formula and logic definitions for automation
@@ -43,14 +43,14 @@ The module manages the following custom entities:
 ClinicaMedica/
 ├── Controllers/           # PHP controllers for each entity
 │   ├── CAIAgent.php
-│   ├── CConsultaMedica.php
+│   ├── CAgendamento.php
 │   ├── CLigacoesIA.php
 │   ├── CMedico.php
 │   └── CPaciente.php
 ├── Resources/
 │   ├── i18n/             # Translations (30+ languages)
 │   ├── layouts/          # Custom UI layouts
-│   │   ├── CConsultaMedica/
+│   │   ├── CAgendamento/
 │   │   ├── CLigacoesIA/
 │   │   ├── CMedico/
 │   │   └── CPaciente/
@@ -127,4 +127,3 @@ This module is already installed as part of the EspoCRM customization. After dep
 -   Version: 1.0.0
 -   Migration Date: October 7, 2025
 -   Total Files: 234
-

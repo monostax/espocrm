@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "parent": "Parent",
+        "dateStart": "Date Start",
+        "dateEnd": "Date End",
+        "duration": "Duration",
+        "status": "Status",
+        "reminders": "Reminders",
+        "dateStartDate": "Date Start (all day)",
+        "dateEndDate": "Date End (all day)",
+        "isAllDay": "Is All-Day",
+        "medico": "Médico",
+        "paciente": "Pacientes",
+        "ligacoesIAs": "Ligacoes IAs",
+        "amountPaid": "Valor Pago",
+        "amountPaidCurrency": "Valor Pago (Moeda)",
+        "amountPaidConverted": "Valor Pago (Convertido)",
+        "participantUsers": "Participantes",
+        "users": "Usuários"
+    },
+    "links": {
+        "parent": "Parent",
+        "medico": "Médico",
+        "paciente": "Pacientes",
+        "ligacoesIAs": "Ligacoes IAs",
+        "participantUsers": "Participantes"
+    },
+    "options": {
+        "status": {
+            "Planned": "Planned",
+            "Held": "Held",
+            "Not Held": "Not Held"
+        }
+    },
+    "labels": {
+        "Create CAgendamento": "Criar Agendamento",
+        "Schedule CAgendamento": "Schedule Agendamento",
+        "Log CAgendamento": "Log Agendamento",
+        "Set Held": "Set Held",
+        "Set Not Held": "Set Not Held"
+    },
+    "massActions": {
+        "setHeld": "Set Held",
+        "setNotHeld": "Set Not Held"
+    },
+    "presetFilters": {
+        "planned": "Planned",
+        "held": "Held",
+        "todays": "Today's"
+    }
+}

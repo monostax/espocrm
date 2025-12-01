@@ -8,7 +8,7 @@
     "_delimiter_": {
         "disabled": true
     },
-    "consultaMedicas": {
+    "agendamentos": {
         "index": 0
     }
 }

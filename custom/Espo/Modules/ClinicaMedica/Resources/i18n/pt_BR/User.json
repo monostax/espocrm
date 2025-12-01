@@ -2,14 +2,11 @@
     "fields": {
         "cMedico": "Medico",
         "cPaciente": "Paciente",
-        "cConsultasMedicas": "Consultas Médicas"
+        "cConsultasMedicas": "Agendamentos"
     },
     "links": {
         "cMedico": "Medico",
         "cPaciente": "Paciente",
-        "cConsultasMedicas": "Consultas Médicas"
+        "cConsultasMedicas": "Agendamentos"
     }
 }
-
-
-

@@ -24,10 +24,9 @@
             "type": "hasMany",
             "relationName": "cConsultaMedicaUser",
             "foreign": "users",
-            "entity": "CConsultaMedica",
+            "entity": "CAgendamento",
             "audited": false,
             "isCustom": true
         }
     }
 }
-

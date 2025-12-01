@@ -6,11 +6,7 @@
         },
         "salutationName": {
             "type": "enum",
-            "options": [
-                "",
-                "Dr.",
-                "Dra."
-            ],
+            "options": ["", "Dr.", "Dra."],
             "style": {
                 "": null,
                 "Dr.": null,
@@ -37,10 +33,7 @@
         },
         "phoneNumber": {
             "type": "phone",
-            "typeList": [
-                "Mobile",
-                "Other"
-            ],
+            "typeList": ["Mobile", "Other"],
             "defaultType": "Mobile",
             "isPersonalData": true
         },
@@ -156,10 +149,10 @@
             "entity": "Task",
             "foreign": "parent"
         },
-        "consultaMedicas": {
+        "agendamentos": {
             "type": "hasMany",
             "foreign": "medico",
-            "entity": "CConsultaMedica",
+            "entity": "CAgendamento",
             "audited": false,
             "isCustom": true
         },
@@ -173,42 +166,26 @@
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": [
-            "name"
-        ],
+        "textFilterFields": ["name"],
         "fullTextSearch": false,
         "countDisabled": false
     },
     "indexes": {
         "firstName": {
-            "columns": [
-                "firstName",
-                "deleted"
-            ]
+            "columns": ["firstName", "deleted"]
         },
         "name": {
-            "columns": [
-                "firstName",
-                "lastName"
-            ]
+            "columns": ["firstName", "lastName"]
         },
         "assignedUser": {
-            "columns": [
-                "assignedUserId",
-                "deleted"
-            ]
+            "columns": ["assignedUserId", "deleted"]
         },
         "createdAt": {
-            "columns": [
-                "createdAt"
-            ]
+            "columns": ["createdAt"]
         },
         "createdAtId": {
             "unique": true,
-            "columns": [
-                "createdAt",
-                "id"
-            ]
+            "columns": ["createdAt", "id"]
         }
     },
     "optimisticConcurrencyControl": false

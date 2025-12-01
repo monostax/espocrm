@@ -54,7 +54,8 @@ return [
     'recordsPerPageSelect' => 10,
     'recordsPerPageKanban' => 5,
     'applicationName' => 'Monostax Revenue Center',
-    'version' => '@@version',
+    // 'version' => '@@version',
+    'version' => '9.1.8',
     'timeZone' => 'UTC',
     'dateFormat' => 'DD.MM.YYYY',
     'timeFormat' => 'HH:mm',
@@ -98,48 +99,53 @@ return [
     'tabList' => [
         (object) [
             'type' => 'divider',
-            'id' => '342567',
-            'text' => '$CRM'
-        ],
-        'Account',
-        'Contact',
-        'Lead',
-        'Opportunity',
-        (object) [
-            'type' => 'divider',
             'text' => '$Activities',
             'id' => '219419'
         ],
-        'Email',
-        'Meeting',
         'Task',
-        'Calendar',
+        'Meeting',
+        'Call',
         (object) [
             'type' => 'divider',
-            'id' => '655187',
-            'text' => '$Support'
+            'text' => '$Communication',
+            'id' => '342567'
         ],
-        'Case',
-        'KnowledgeBaseArticle',
+        'Email',
         (object) [
             'type' => 'divider',
-            'text' => NULL,
-            'id' => '137994'
+            'id' => '342567',
+            'text' => '$Sales'
         ],
-        '_delimiter_',
+        'Opportunity',
+        'Contact',
+        'Account',
         (object) [
             'type' => 'divider',
             'text' => '$Marketing',
             'id' => '463280'
         ],
+        'Lead',
         'Campaign',
         'TargetList',
-        (object) [
-            'type' => 'divider',
-            'text' => '$Business',
-            'id' => '518202'
-        ],
-        'Document',
+        // (object) [
+        //     'type' => 'divider',
+        //     'id' => '655187',
+        //     'text' => '$Support'
+        // ],
+        // 'Case',
+        // 'KnowledgeBaseArticle',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => NULL,
+        //     'id' => '137994'
+        // ],
+        // '_delimiter_',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => '$Business',
+        //     'id' => '518202'
+        // ],
+        // 'Document',
         (object) [
             'type' => 'divider',
             'text' => '$Organization',
@@ -148,25 +154,16 @@ return [
         'User',
         'Team',
         'WorkingTimeCalendar',
-        (object) [
-            'type' => 'divider',
-            'text' => NULL,
-            'id' => '898671'
-        ],
-        'EmailTemplate',
-        'Template',
-        'Import',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => NULL,
+        //     'id' => '898671'
+        // ],
+        // 'EmailTemplate',
+        // 'Template',
+        // 'Import',
     ],
     'quickCreateList' => [
-        "Account",
-        "Contact",
-        "Lead",
-        "Opportunity",
-        "Meeting",
-        "Call",
-        "Task",
-        "Case",
-        "Email"
     ],
     'exportDisabled' => false,
     'adminNotifications' => true,

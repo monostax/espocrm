@@ -4,7 +4,7 @@
         "calls": "Ligações",
         "tasks": "Tarefas",
         "paciente": "Paciente",
-        "consultaMedica": "Consulta Médica",
+        "agendamento": "Agendamento",
         "incomingWebhooks": "Incoming Webhooks"
     },
     "labels": {
@@ -13,7 +13,7 @@
     "fields": {
         "paciente": "Paciente",
         "status": "Status",
-        "consultaMedica": "Consulta Médica",
+        "agendamento": "Agendamento",
         "tipo": "Tipo",
         "incomingWebhooks": "Incoming Webhooks",
         "transcript": "Transcrição",

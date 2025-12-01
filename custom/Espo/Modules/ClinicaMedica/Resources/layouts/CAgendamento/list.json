@@ -1,0 +1,28 @@
+[
+    {
+        "name": "name",
+        "width": 16,
+        "link": true,
+        "align": "left"
+    },
+    {
+        "name": "medico",
+        "width": 16
+    },
+    {
+        "name": "paciente",
+        "width": 16
+    },
+    {
+        "name": "dateStart",
+        "width": 16
+    },
+    {
+        "name": "dateEnd",
+        "width": 16
+    },
+    {
+        "name": "status",
+        "width": 16
+    }
+]

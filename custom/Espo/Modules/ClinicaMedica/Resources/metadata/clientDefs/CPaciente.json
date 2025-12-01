@@ -1,8 +1,6 @@
 {
     "controller": "controllers/record",
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "boolFilterList": ["onlyMy"],
     "sidePanels": {
         "detail": [
             {
@@ -35,7 +33,7 @@
     },
     "iconClass": "ti ti-empathize",
     "relationshipPanels": {
-        "consultaMedicas": {
+        "agendamentos": {
             "layout": null,
             "selectPrimaryFilterName": null
         },

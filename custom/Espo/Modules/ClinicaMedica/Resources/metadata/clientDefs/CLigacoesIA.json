@@ -1,8 +1,6 @@
 {
     "controller": "controllers/record",
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "boolFilterList": ["onlyMy"],
     "sidePanels": {
         "detail": [
             {
@@ -39,7 +37,7 @@
             "layout": null,
             "selectPrimaryFilterName": null
         },
-        "consultaMedica": {
+        "agendamento": {
             "layout": null,
             "selectPrimaryFilterName": null
         },

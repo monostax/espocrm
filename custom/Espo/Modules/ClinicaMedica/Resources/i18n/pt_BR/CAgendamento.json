@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "dateStart": "Data de Início",
+        "dateEnd": "Data Final",
+        "duration": "Duração",
+        "dateStartDate": "Data de Início (dia todo)",
+        "dateEndDate": "Data Final (dia todo)",
+        "isAllDay": "É o Dia Todo",
+        "ligacoesIAs": "Ligacoes IAs",
+        "amountPaid": "Valor Pago",
+        "amountPaidCurrency": "Valor Pago (Moeda)",
+        "amountPaidConverted": "Valor Pago (Convertido)",
+        "participantUsers": "Participantes",
+        "users": "Usuários"
+    },
+    "options": {
+        "status": {
+            "Planned": "Agendada",
+            "Held": "Finalizada",
+            "Not Held": "Cancelada"
+        }
+    },
+    "labels": {
+        "Create CAgendamento": "Criar Agendamento",
+        "Schedule CAgendamento": "Agenda Agendamento",
+        "Set Held": "Marcar Realizada",
+        "Set Not Held": "Marcar como Não Realizada"
+    },
+    "massActions": {
+        "setHeld": "Marcar como Realizada",
+        "setNotHeld": "Marcar como Não Realizada"
+    },
+    "presetFilters": {
+        "planned": "Planejado",
+        "held": "Realizada",
+        "todays": "De hoje"
+    },
+    "links": {
+        "ligacoesIAs": "Ligacoes IAs",
+        "participantUsers": "Participantes"
+    }
+}

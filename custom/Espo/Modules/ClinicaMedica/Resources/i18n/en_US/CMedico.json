@@ -1,7 +1,7 @@
 {
     "fields": {
         "address": "Address",
-        "consultaMedicas": "Consultas Médicas",
+        "agendamentos": "Agendamentos",
         "especialidade": "Especialidade",
         "systemUser": "Usuário"
     },
@@ -9,7 +9,7 @@
         "meetings": "Meetings",
         "calls": "Calls",
         "tasks": "Tasks",
-        "consultaMedicas": "Consultas Médicas",
+        "agendamentos": "Agendamentos",
         "systemUser": "Usuário"
     },
     "labels": {

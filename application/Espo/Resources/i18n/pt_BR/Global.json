@@ -1,6 +1,6 @@
 {
     "scopeNames": {
-        "CConsultaMedica": "Consulta Médica",
+        "CAgendamento": "Agendamento",
         "CPaciente": "Paciente",
         "CMedico": "Médico",
         "CRegistroBiometrico": "Registro Biométrico",
@@ -58,7 +58,7 @@
     },
     "scopeNamesPlural": {
         "CAIThread": "Histórico de Atividades",
-        "CConsultaMedica": "Consultas Médicas",
+        "CAgendamento": "Agendamentos",
         "CPaciente": "Pacientes",
         "CMedico": "Médicos",
         "CRegistroBiometrico": "Registros Biométricos",

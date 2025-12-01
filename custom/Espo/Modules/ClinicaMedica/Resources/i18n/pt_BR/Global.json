@@ -1,9 +1,16 @@
 {
     "scopeNames": {
-        "ClinicaMedica": "Clínica Médica"
+        "ClinicaMedica": "Clínica Médica",
+        "CAgendamento": "Agendamento",
+        "CPaciente": "Paciente",
+        "CMedico": "Médico",
+        "CProcedimento": "Procedimento"
     },
-    "navbarTabs": {
-        "ClinicaMedica": "Clínica Médica"
+    "scopeNamesPlural": {
+        "ClinicaMedica": "Clínicas Médicas",
+        "CAgendamento": "Agendamentos",
+        "CPaciente": "Pacientes",
+        "CMedico": "Médicos",
+        "CProcedimento": "Procedimentos"
     }
 }
-

@@ -332,4 +332,3 @@ class ActivitiesListView extends ListView {
 }
 
 export default ActivitiesListView;
-

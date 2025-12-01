@@ -71,7 +71,7 @@ class ConfigureNavbar implements RebuildAction
             ],
             'CPaciente',
             'CMedico',
-            'CConsultaMedica',
+            'CAgendamento',
         ];
         
         // Find existing ClinicaMedica section

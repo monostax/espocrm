@@ -1,8 +1,6 @@
 {
     "controller": "controllers/record",
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "boolFilterList": ["onlyMy"],
     "sidePanels": {
         "detail": [
             {
@@ -42,17 +40,17 @@
     },
     "activityDefs": {
         "activities": {
-            "link": "consultaMedicas",
-            "additionalEntityTypeList": ["CConsultaMedica"]
+            "link": "agendamentos",
+            "additionalEntityTypeList": ["CAgendamento"]
         },
         "history": {
-            "link": "consultaMedicas",
-            "additionalEntityTypeList": ["CConsultaMedica"]
+            "link": "agendamentos",
+            "additionalEntityTypeList": ["CAgendamento"]
         }
     },
     "iconClass": "fas fa-stethoscope",
     "relationshipPanels": {
-        "consultaMedicas": {
+        "agendamentos": {
             "layout": null,
             "selectPrimaryFilterName": null
         },

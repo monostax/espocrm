@@ -140,10 +140,10 @@
             "entity": "Task",
             "foreign": "parent"
         },
-        "consultaMedicas": {
+        "agendamentos": {
             "type": "hasMany",
             "foreign": "paciente",
-            "entity": "CConsultaMedica",
+            "entity": "CAgendamento",
             "audited": false,
             "isCustom": true
         },
@@ -194,4 +194,3 @@
     },
     "optimisticConcurrencyControl": false
 }
-
