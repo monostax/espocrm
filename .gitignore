@@ -13,6 +13,7 @@
 /npm-debug.log
 /test.php
 /main.html
+/client/custom/modules/**/lib/transpiled/
 
 /tests/unit/testData/cache/*
 !/tests/unit/testData/cache/.data
