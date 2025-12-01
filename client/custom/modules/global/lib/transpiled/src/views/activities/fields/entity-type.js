@@ -36,9 +36,9 @@ define("global:views/activities/fields/entity-type", ["exports", "views/fields/b
    ************************************************************************/
 
   class EntityTypeFieldView extends _base.default {
-    type = 'base';
-    listTemplate = 'global:activities/fields/entity-type/list';
-    detailTemplate = 'global:activities/fields/entity-type/detail';
+    type = "base";
+    listTemplate = "global:activities/fields/entity-type/list";
+    detailTemplate = "global:activities/fields/entity-type/detail";
     data() {
       return {
         entityType: this.model.entityType || this.model.name,
@@ -48,11 +48,11 @@ define("global:views/activities/fields/entity-type", ["exports", "views/fields/b
     }
     getEntityTypeLabel() {
       const entityType = this.model.entityType || this.model.name;
-      return this.translate(entityType, 'scopeNames');
+      return this.translate(entityType, "scopeNames");
     }
     getIconClass() {
       const entityType = this.model.entityType || this.model.name;
-      return this.getMetadata().get(['clientDefs', entityType, 'iconClass']) || 'fas fa-circle';
+      return this.getMetadata().get(["clientDefs", entityType, "iconClass"]) || "fas fa-circle";
     }
   }
   var _default = _exports.default = EntityTypeFieldView;

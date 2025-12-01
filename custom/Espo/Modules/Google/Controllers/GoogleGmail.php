@@ -107,6 +107,7 @@ class GoogleGmail
      * @throws BadRequest
      * @throws Forbidden
      * @throws NotFound
+     * @throws Error
      */
     public function postActionPing(Request $request)
     {
@@ -133,9 +134,18 @@ class GoogleGmail
             throw new NotFound();
         }
 
+        $siteUrl = $this->config->get('siteUrl');
+        
+        if (!$siteUrl) {
+            throw new Error('Site URL is not configured. Please set the siteUrl in the configuration.');
+        }
+
+        // Ensure siteUrl doesn't end with a slash
+        $siteUrl = rtrim($siteUrl, '/');
+
         return [
             'clientId' => $integration->get('clientId'),
-            'redirectUri' => $this->config->get('siteUrl') . '?entryPoint=oauthCallback',
+            'redirectUri' => $siteUrl . '?entryPoint=oauthCallback',
             'isConnected' => $service->ping($entityType, $id),
         ];
     }

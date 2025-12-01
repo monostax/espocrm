@@ -15,11 +15,9 @@
  * License ID: 99e925c7f52e4853679eb7c383162336
  ************************************************************************************/
 
-define('google:views/inbound-email/panels/gmail', 'view', function (Dep) {
-
+define("google:views/inbound-email/panels/gmail", "view", function (Dep) {
     return Dep.extend({
-
-        template: 'google:inbound-email/panels/gmail',
+        template: "google:inbound-email/panels/gmail",
 
         data: function () {
             var data = {};
@@ -28,8 +26,8 @@ define('google:views/inbound-email/panels/gmail', 'view', function (Dep) {
         },
 
         events: {
-            'click [data-action="connect"]': 'actionConnect',
-            'click [data-action="disconnect"]': 'actionDisconnect',
+            'click [data-action="connect"]': "actionConnect",
+            'click [data-action="disconnect"]': "actionDisconnect",
         },
 
         setup: function () {
@@ -37,21 +35,19 @@ define('google:views/inbound-email/panels/gmail', 'view', function (Dep) {
 
             this.id = this.model.id;
 
-            Espo.Ajax
-                .postRequest('GoogleGmail/action/ping', {
-                    id: this.id,
-                    entityType: this.model.entityType,
-                })
-                .then(response =>  {
-                    this.clientId = response.clientId;
-                    this.redirectUri = response.redirectUri;
+            Espo.Ajax.postRequest("GoogleGmail/action/ping", {
+                id: this.id,
+                entityType: this.model.entityType,
+            }).then((response) => {
+                this.clientId = response.clientId;
+                this.redirectUri = response.redirectUri;
 
-                    if (response.isConnected) {
-                        this.setConnected();
-                    } else {
-                        this.setNotConnected();
-                    }
-                });
+                if (response.isConnected) {
+                    this.setConnected();
+                } else {
+                    this.setNotConnected();
+                }
+            });
         },
 
         setConnected: function () {
@@ -69,112 +65,159 @@ define('google:views/inbound-email/panels/gmail', 'view', function (Dep) {
         },
 
         actionConnect: function () {
-            this.popup({
-                path: this.getMetadata().get(['integrations', 'Google', 'params', 'endpoint']),
-                params: {
-                    client_id: this.clientId,
-                    redirect_uri: this.redirectUri,
-                    scope: this.getMetadata().get(['integrations', 'Google', 'params', 'scopeGmail']),
-                    response_type: 'code',
-                    access_type: 'offline',
-                    approval_prompt: 'force',
-                }
-            }, function (res) {
-                if (res.error) {
-                    Espo.Ui.notify(false);
+            this.popup(
+                {
+                    path: this.getMetadata().get([
+                        "integrations",
+                        "Google",
+                        "params",
+                        "endpoint",
+                    ]),
+                    params: {
+                        client_id: this.clientId,
+                        redirect_uri: this.redirectUri,
+                        scope: this.getMetadata().get([
+                            "integrations",
+                            "Google",
+                            "params",
+                            "scopeGmail",
+                        ]),
+                        response_type: "code",
+                        access_type: "offline",
+                        approval_prompt: "force",
+                    },
+                },
+                function (res) {
+                    if (res.error) {
+                        Espo.Ui.notify(false);
 
-                    return;
-                }
+                        return;
+                    }
 
-                if (res.code) {
-                    this.$el.find('[data-action="connect"]').addClass('disabled');
+                    if (res.code) {
+                        this.$el
+                            .find('[data-action="connect"]')
+                            .addClass("disabled");
 
-                    Espo.Ui.notify(this.translate('pleaseWait', 'messages'));
+                        Espo.Ui.notify(
+                            this.translate("pleaseWait", "messages")
+                        );
 
-                    Espo.Ajax
-                        .postRequest('GoogleGmail/action/connect', {
+                        Espo.Ajax.postRequest("GoogleGmail/action/connect", {
                             id: this.id,
                             code: res.code,
                             entityType: this.model.entityType,
                         })
-                        .then(response => {
-                            this.notify(false);
+                            .then((response) => {
+                                this.notify(false);
 
-                            if (response === true) {
-                                this.setConnected();
-                            } else {
-                                this.setNotConnected();
-                            }
+                                if (response === true) {
+                                    this.setConnected();
+                                } else {
+                                    this.setNotConnected();
+                                }
 
-                            this.$el.find('[data-action="connect"]').removeClass('disabled');
-                        })
-                        .catch(() => {
-                            this.$el.find('[data-action="connect"]').removeClass('disabled');
-                        });
-
-                } else {
-                    this.notify('Error occurred', 'error');
+                                this.$el
+                                    .find('[data-action="connect"]')
+                                    .removeClass("disabled");
+                            })
+                            .catch(() => {
+                                this.$el
+                                    .find('[data-action="connect"]')
+                                    .removeClass("disabled");
+                            });
+                    } else {
+                        this.notify("Error occurred", "error");
+                    }
                 }
-            });
+            );
         },
 
         actionDisconnect: function () {
-            this.confirm(this.translate('disconnectConfirmation', 'messages', 'ExternalAccount'), () => {
-                this.$el.find('[data-action="disconnect"]').addClass('disabled');
-                this.$el.find('[data-action="connect"]').addClass('disabled');
+            this.confirm(
+                this.translate(
+                    "disconnectConfirmation",
+                    "messages",
+                    "ExternalAccount"
+                ),
+                () => {
+                    this.$el
+                        .find('[data-action="disconnect"]')
+                        .addClass("disabled");
+                    this.$el
+                        .find('[data-action="connect"]')
+                        .addClass("disabled");
 
-                Espo.Ajax
-                    .postRequest('GoogleGmail/action/disconnect', {
+                    Espo.Ajax.postRequest("GoogleGmail/action/disconnect", {
                         id: this.id,
                         entityType: this.model.entityType,
                     })
-                    .then(() => {
-                        this.setNotConnected();
+                        .then(() => {
+                            this.setNotConnected();
 
-                        this.$el.find('[data-action="disconnect"]').removeClass('disabled');
-                        this.$el.find('[data-action="connect"]').removeClass('disabled');
-                    })
-                    .catch(() => {
-                        this.$el.find('[data-action="disconnect"]').removeClass('disabled');
-                        this.$el.find('[data-action="connect"]').removeClass('disabled');
-                    });
-            });
+                            this.$el
+                                .find('[data-action="disconnect"]')
+                                .removeClass("disabled");
+                            this.$el
+                                .find('[data-action="connect"]')
+                                .removeClass("disabled");
+                        })
+                        .catch(() => {
+                            this.$el
+                                .find('[data-action="disconnect"]')
+                                .removeClass("disabled");
+                            this.$el
+                                .find('[data-action="connect"]')
+                                .removeClass("disabled");
+                        });
+                }
+            );
         },
 
         popup: function (options, callback) {
-            options.windowName = options.windowName || 'ConnectWithOAuth';
-            options.windowOptions = options.windowOptions || 'location=0,status=0,width=800,height=600';
-            options.callback = options.callback || function(){ window.location.reload(); };
+            options.windowName = options.windowName || "ConnectWithOAuth";
+            options.windowOptions =
+                options.windowOptions ||
+                "location=0,status=0,width=800,height=600";
+            options.callback =
+                options.callback ||
+                function () {
+                    window.location.reload();
+                };
 
             var self = this;
 
             var path = options.path;
 
             var arr = [];
-            var params = (options.params || {});
+            var params = options.params || {};
             for (var name in params) {
                 if (params[name]) {
-                    arr.push(name + '=' + encodeURI(params[name]));
+                    arr.push(
+                        encodeURIComponent(name) +
+                            "=" +
+                            encodeURIComponent(params[name])
+                    );
                 }
             }
 
-            path += '?' + arr.join('&');
+            path += "?" + arr.join("&");
 
             var parseUrl = function (str) {
                 var code = null;
                 var error = null;
 
-                str = str.substr(str.indexOf('?') + 1, str.length);
+                str = str.substr(str.indexOf("?") + 1, str.length);
 
-                str.split('&').forEach(function (part) {
-                    var arr = part.split('=');
-                    var name = decodeURI(arr[0]);
-                    var value = decodeURI(arr[1] || '');
+                str.split("&").forEach(function (part) {
+                    var arr = part.split("=");
+                    var name = decodeURIComponent(arr[0]);
+                    var value = decodeURIComponent(arr[1] || "");
 
-                    if (name == 'code') {
+                    if (name == "code") {
                         code = value;
                     }
-                    if (name == 'error') {
+                    if (name == "error") {
                         error = value;
                     }
                 }, this);
@@ -182,15 +225,19 @@ define('google:views/inbound-email/panels/gmail', 'view', function (Dep) {
                 if (code) {
                     return {
                         code: code,
-                    }
+                    };
                 } else if (error) {
                     return {
                         error: error,
-                    }
+                    };
                 }
-            }
+            };
 
-            var popup = window.open(path, options.windowName, options.windowOptions);
+            var popup = window.open(
+                path,
+                options.windowName,
+                options.windowOptions
+            );
 
             var interval = window.setInterval(function () {
                 if (popup.closed) {
@@ -205,6 +252,5 @@ define('google:views/inbound-email/panels/gmail', 'view', function (Dep) {
                 }
             }, 500);
         },
-
     });
 });
