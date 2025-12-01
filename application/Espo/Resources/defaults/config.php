@@ -112,7 +112,6 @@ return [
         ],
         'Email',
         'Meeting',
-        'Call',
         'Task',
         'Calendar',
         (object) [
