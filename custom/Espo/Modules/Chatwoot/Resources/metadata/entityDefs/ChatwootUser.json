@@ -25,7 +25,7 @@
         },
         "assignedUser": {
             "type": "link",
-            "required": true,
+            "required": false,
             "view": "views/fields/assigned-user",
             "tooltip": true
         },
@@ -100,7 +100,6 @@
             "columns": ["deleted"]
         },
         "assignedUser": {
-            "unique": true,
             "columns": ["assignedUserId", "deleted"]
         },
         "createdAt": {

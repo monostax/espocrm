@@ -30,7 +30,17 @@
                 {
                     "name": "chatwootAccountId"
                 },
-                false
+                {
+                    "name": "apiKey"
+                }
+            ],
+            [
+                {
+                    "name": "automationUserId"
+                },
+                {
+                    "name": "automationUserEmail"
+                }
             ]
         ]
     },

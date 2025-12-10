@@ -14,6 +14,21 @@
             "readOnly": true,
             "tooltip": true
         },
+        "apiKey": {
+            "type": "password",
+            "tooltip": true,
+            "required": false
+        },
+        "automationUserId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "automationUserEmail": {
+            "type": "varchar",
+            "readOnly": true,
+            "tooltip": true
+        },
         "locale": {
             "type": "enum",
             "options": ["pt_BR", "en", "es", "fr", "de", "it"],
@@ -64,6 +79,11 @@
             "type": "hasMany",
             "entity": "ChatwootUser",
             "foreign": "account"
+        },
+        "contacts": {
+            "type": "hasMany",
+            "entity": "ChatwootContact",
+            "foreign": "chatwootAccount"
         },
         "createdBy": {
             "type": "belongsTo",

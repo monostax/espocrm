@@ -1,0 +1,105 @@
+{
+    "fields": {
+        "contactName": {
+            "type": "foreign",
+            "relation": "contact",
+            "foreign": "name",
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "required": true,
+            "tooltip": true
+        },
+        "phoneNumber": {
+            "type": "varchar",
+            "required": true,
+            "tooltip": true,
+            "maxLength": 50
+        },
+        "chatwootContactId": {
+            "type": "int",
+            "tooltip": true,
+            "readOnly": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true,
+            "tooltip": true
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending",
+            "tooltip": true
+        },
+        "syncError": {
+            "type": "text",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "chatwootContacts"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "contacts"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "chatwootContactIdAccount": {
+            "unique": true,
+            "columns": ["chatwootContactId", "chatwootAccountId", "deleted"]
+        },
+        "phoneNumberAccount": {
+            "columns": ["phoneNumber", "chatwootAccountId", "deleted"]
+        },
+        "contactId": {
+            "columns": ["contactId", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        }
+    }
+}
+

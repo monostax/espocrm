@@ -1,35 +1,12 @@
 {
     "fields": {
-        "name": "Name",
-        "platform": "Platform",
-        "chatwootAccountId": "Chatwoot Account ID",
-        "locale": "Locale",
-        "domain": "Domain",
-        "supportEmail": "Support Email",
-        "status": "Status"
-    },
-    "links": {
-        "platform": "Platform"
-    },
-    "labels": {
-        "Create ChatwootAccount": "Create Chatwoot Account"
-    },
-    "options": {
-        "locale": {
-            "pt_BR": "Portuguese (Brazil)",
-            "en": "English",
-            "es": "Spanish",
-            "fr": "French",
-            "de": "German",
-            "it": "Italian"
-        },
-        "status": {
-            "active": "Active",
-            "suspended": "Suspended"
-        }
+        "apiKey": "Account API Key",
+        "automationUserId": "Automation User ID",
+        "automationUserEmail": "Automation User Email"
     },
     "tooltips": {
-        "chatwootAccountId": "ID of the account created in Chatwoot. This field is automatically populated after creation."
+        "apiKey": "Account-level API token from Chatwoot. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chatwoot → Profile Settings → Access Token.",
+        "automationUserId": "The Chatwoot user ID of the automation user created for this account.",
+        "automationUserEmail": "The email address of the automation user. Use this to login to Chatwoot if needed."
     }
 }
-

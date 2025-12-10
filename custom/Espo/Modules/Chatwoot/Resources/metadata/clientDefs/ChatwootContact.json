@@ -1,0 +1,13 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-link",
+    "color": "#7B68EE",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    }
+}
+

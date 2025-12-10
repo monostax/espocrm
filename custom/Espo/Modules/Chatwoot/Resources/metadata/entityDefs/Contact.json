@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "chatwootAccount": {
+            "type": "link",
+            "tooltip": true
+        }
+    },
+    "links": {
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount"
+        },
+        "chatwootContacts": {
+            "type": "hasMany",
+            "entity": "ChatwootContact",
+            "foreign": "contact"
+        }
+    }
+}
+

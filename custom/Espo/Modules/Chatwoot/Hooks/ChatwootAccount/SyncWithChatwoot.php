@@ -32,6 +32,7 @@ use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Config;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Entities\User;
 
 /**
  * Hook to synchronize ChatwootAccount with Chatwoot Platform API.
@@ -45,7 +46,8 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private Log $log,
-        private Config $config
+        private Config $config,
+        private User $user
     ) {}
 
     /**
@@ -130,7 +132,34 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
 
             // Update entity with Chatwoot account ID
             if (isset($response['id'])) {
-                $entity->set('chatwootAccountId', $response['id']);
+                $chatwootAccountId = $response['id'];
+                $entity->set('chatwootAccountId', $chatwootAccountId);
+                
+                // Create automation user for this account
+                $automationUser = $this->createAutomationUser(
+                    $platformUrl,
+                    $accessToken,
+                    $chatwootAccountId,
+                    $entity->get('name'),
+                    $entity
+                );
+                
+                if ($automationUser) {
+                    // Store automation user details
+                    $entity->set('automationUserId', $automationUser['user_id']);
+                    $entity->set('automationUserEmail', $automationUser['email']);
+                    
+                    if (isset($automationUser['access_token'])) {
+                        // Store the automation user's access token as API key
+                        $entity->set('apiKey', $automationUser['access_token']);
+                        $this->log->info('Automation user created with access token for account: ' . $chatwootAccountId);
+                    } else {
+                        $this->log->warning(
+                            'Automation user created but no access token received. ' .
+                            'Manual API Key configuration needed. Login email: ' . $automationUser['email']
+                        );
+                    }
+                }
                 
                 // Save without triggering hooks again
                 $this->entityManager->saveEntity($entity, [
@@ -140,7 +169,7 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
 
                 $this->log->info(
                     'Successfully created Chatwoot account: ' . 
-                    $response['id'] . ' for ' . $entity->getId()
+                    $chatwootAccountId . ' for ' . $entity->getId()
                 );
             } else {
                 throw new Error('Chatwoot API response missing account ID.');
@@ -211,6 +240,196 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
         }
 
         return $url;
+    }
+
+    /**
+     * Create an automation user for the account.
+     * The user will be created as a ChatwootUser entity in EspoCRM
+     * and inherit the Teams from the ChatwootAccount for proper tenant isolation.
+     *
+     * @param string $platformUrl
+     * @param string $accessToken
+     * @param int $chatwootAccountId
+     * @param string $accountName
+     * @return array<string, mixed>|null
+     */
+    private function createAutomationUser(
+        string $platformUrl,
+        string $accessToken,
+        int $chatwootAccountId,
+        string $accountName,
+        Entity $chatwootAccount
+    ): ?array {
+        try {
+            // Generate automation user credentials
+            $email = 'automation.' . $chatwootAccountId . '@chatwoot.local';
+            $name = 'Automation User - ' . $accountName;
+            
+            // Generate password meeting Chatwoot requirements:
+            // - At least 1 uppercase (A-Z)
+            // - At least 1 special character
+            // - Minimum 6 characters
+            $password = $this->generateSecurePassword();
+
+            // Create user via Platform API
+            $userData = [
+                'name' => $name,
+                'email' => $email,
+                'password' => $password,
+                'custom_attributes' => [
+                    'type' => 'automation',
+                    'created_by' => 'espocrm',
+                    'account_id' => $chatwootAccountId
+                ]
+            ];
+
+            $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, $userData);
+
+            if (!isset($userResponse['id'])) {
+                $this->log->error('Failed to create automation user: missing user ID in response');
+                return null;
+            }
+
+            $chatwootUserId = $userResponse['id'];
+
+            // Attach user to account as administrator
+            $this->apiClient->attachUserToAccount(
+                $platformUrl,
+                $accessToken,
+                $chatwootAccountId,
+                $chatwootUserId,
+                'administrator'
+            );
+
+            $this->log->info("Created automation user (ID: $chatwootUserId) for account $chatwootAccountId");
+
+            // Create corresponding ChatwootUser entity in EspoCRM
+            // This ensures proper Team-based access control
+            $chatwootUser = $this->createChatwootUserEntity(
+                $chatwootAccount,
+                $chatwootUserId,
+                $name,
+                $email,
+                $password
+            );
+
+            // Try to get the user's login token/access token
+            // Note: Platform API may not directly return Application API tokens
+            // In that case, we'll need to use the Platform token with proper permissions
+            
+            // Return user info - access_token might not be available
+            return [
+                'user_id' => $chatwootUserId,
+                'espocrm_user_id' => $chatwootUser ? $chatwootUser->getId() : null,
+                'email' => $email,
+                'access_token' => $userResponse['access_token'] ?? null
+            ];
+
+        } catch (\Exception $e) {
+            $this->log->error('Failed to create automation user: ' . $e->getMessage());
+            // Don't fail the entire account creation if automation user fails
+            return null;
+        }
+    }
+
+    /**
+     * Create ChatwootUser entity in EspoCRM for the automation user.
+     * This ensures the user inherits the proper Teams for tenant isolation.
+     *
+     * @param Entity $chatwootAccount
+     * @param int $chatwootUserId
+     * @param string $name
+     * @param string $email
+     * @param string $password
+     * @return Entity|null
+     */
+    private function createChatwootUserEntity(
+        Entity $chatwootAccount,
+        int $chatwootUserId,
+        string $name,
+        string $email,
+        string $password
+    ): ?Entity {
+        try {
+            // Get Teams from the ChatwootAccount for tenant isolation
+            $teams = $this->entityManager
+                ->getRDBRepository('ChatwootAccount')
+                ->getRelation($chatwootAccount, 'teams')
+                ->find();
+
+            $teamIds = [];
+            foreach ($teams as $team) {
+                $teamIds[] = $team->getId();
+            }
+
+            // Create the ChatwootUser entity
+            // Note: assignedUser is NOT set for automation users to avoid unique constraint violation
+            // Automation users are system users, not tied to a specific EspoCRM user
+            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
+                'name' => $name,
+                'email' => $email,
+                'password' => $password,
+                'displayName' => $name,
+                'accountId' => $chatwootAccount->getId(),
+                'role' => 'administrator',
+                'chatwootUserId' => $chatwootUserId,
+                'teamsIds' => $teamIds // Inherit Teams from ChatwootAccount
+            ], [
+                'skipHooks' => true, // Skip hooks to avoid recursive creation
+                'silent' => true
+            ]);
+
+            $this->log->info(
+                'Created ChatwootUser entity for automation user: ' . 
+                $chatwootUser->getId() . 
+                ' with Teams: ' . implode(', ', $teamIds)
+            );
+
+            return $chatwootUser;
+
+        } catch (\Exception $e) {
+            $this->log->error('Failed to create ChatwootUser entity: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generate a secure password meeting Chatwoot requirements.
+     * Requirements:
+     * - At least 1 uppercase character (A-Z)
+     * - At least 1 special character (!@#$%^&*()_+-=[]{}|"/\.,`<>:;?~')
+     * - Minimum 6 characters
+     *
+     * @return string
+     */
+    private function generateSecurePassword(): string
+    {
+        $lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $numbers = '0123456789';
+        $special = '!@#$%^&*()_+-=[]{}';
+        
+        // Build password with guaranteed character types
+        $password = '';
+        
+        // At least 2 uppercase
+        $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
+        $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
+        
+        // At least 2 special characters
+        $password .= $special[random_int(0, strlen($special) - 1)];
+        $password .= $special[random_int(0, strlen($special) - 1)];
+        
+        // Fill rest with random mix (total 20 characters)
+        $allChars = $lowercase . $uppercase . $numbers . $special;
+        for ($i = 0; $i < 16; $i++) {
+            $password .= $allChars[random_int(0, strlen($allChars) - 1)];
+        }
+        
+        // Shuffle to randomize position of required characters
+        $password = str_shuffle($password);
+        
+        return $password;
     }
 }
 

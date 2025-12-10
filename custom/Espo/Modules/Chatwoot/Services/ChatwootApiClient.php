@@ -376,5 +376,229 @@ class ChatwootApiClient
 
         return $response['body']['url'];
     }
+
+    // ========================================================================
+    // Contact API Methods (Account-level API)
+    // ========================================================================
+
+    /**
+     * Create a contact on Chatwoot via Account API.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param array<string, mixed> $contactData Contact data to send
+     * @return array<string, mixed> Response data from Chatwoot API
+     * @throws Error
+     */
+    public function createContact(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        array $contactData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts';
+        
+        $payload = json_encode($contactData);
+        
+        if ($payload === false) {
+            throw new Error('Failed to encode contact data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+            
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+            
+            $this->log->error('Chatwoot API Error (createContact): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Update a contact on Chatwoot via Account API.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $contactId The Chatwoot contact ID
+     * @param array<string, mixed> $contactData Contact data to update
+     * @return array<string, mixed> Response data from Chatwoot API
+     * @throws Error
+     */
+    public function updateContact(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId,
+        array $contactData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts/' . $contactId;
+        
+        $payload = json_encode($contactData);
+        
+        if ($payload === false) {
+            throw new Error('Failed to encode contact data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'PATCH', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+            
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+            
+            $this->log->error('Chatwoot API Error (updateContact): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Get contact details from Chatwoot via Account API.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $contactId The Chatwoot contact ID
+     * @return array<string, mixed> Contact data
+     * @throws Error
+     */
+    public function getContact(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts/' . $contactId;
+        
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to get contact from Chatwoot: HTTP ' . $response['code'];
+            
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+            
+            $this->log->error('Chatwoot API Error (getContact): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Search for contacts on Chatwoot via Account API.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param string $query Search query (email, phone, or name)
+     * @return array<string, mixed> Search results with 'payload' containing contacts
+     * @throws Error
+     */
+    public function searchContacts(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        string $query
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts/search';
+        $url .= '?q=' . urlencode($query);
+        
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to search contacts on Chatwoot: HTTP ' . $response['code'];
+            
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+            
+            $this->log->error('Chatwoot API Error (searchContacts): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Search for a contact by phone number.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param string $phoneNumber The phone number to search for
+     * @return array|null Contact data if found, null otherwise
+     * @throws Error
+     */
+    public function searchContactByPhone(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        string $phoneNumber
+    ): ?array {
+        $results = $this->searchContacts($platformUrl, $accountApiKey, $accountId, $phoneNumber);
+        
+        // Check different response structures
+        $contacts = [];
+        if (isset($results['payload'])) {
+            $contacts = $results['payload'];
+        } elseif (isset($results['contacts'])) {
+            $contacts = $results['contacts'];
+        } elseif (is_array($results) && isset($results[0])) {
+            $contacts = $results;
+        }
+        
+        // Find exact phone number match
+        foreach ($contacts as $contact) {
+            if (isset($contact['phone_number']) && $contact['phone_number'] === $phoneNumber) {
+                return $contact;
+            }
+        }
+        
+        // If no exact match, return first result if it exists
+        return !empty($contacts) ? $contacts[0] : null;
+    }
 }
 
