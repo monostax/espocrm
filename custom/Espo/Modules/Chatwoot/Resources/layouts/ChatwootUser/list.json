@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 20
+    },
+    {
+        "name": "email",
+        "width": 25
+    },
+    {
+        "name": "account",
+        "width": 20
+    },
+    {
+        "name": "role",
+        "width": 10
+    },
+    {
+        "name": "chatwootUserId",
+        "width": 10
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    }
+]
+

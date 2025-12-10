@@ -1,0 +1,6 @@
+{
+    "chatwootSsoUrl": {
+        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootSsoUrl"
+    }
+}
+

@@ -1,0 +1,16 @@
+{
+    "relationshipPanels": {
+        "profissional": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        },
+        "cProfissional": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        },
+        "consultasMedicas": {
+            "layout": null,
+            "selectPrimaryFilterName": null
+        }
+    }
+}

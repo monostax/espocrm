@@ -1,0 +1,37 @@
+{
+    "fields": {
+        "name": "Nome",
+        "platform": "Plataforma",
+        "chatwootAccountId": "ID da Conta Chatwoot",
+        "locale": "Idioma",
+        "domain": "Domínio",
+        "supportEmail": "Email de Suporte",
+        "status": "Status",
+        "teams": "Times"
+    },
+    "links": {
+        "platform": "Plataforma",
+        "teams": "Times"
+    },
+    "labels": {
+        "Create ChatwootAccount": "Criar Conta Chatwoot"
+    },
+    "options": {
+        "locale": {
+            "pt_BR": "Português (Brasil)",
+            "en": "Inglês",
+            "es": "Espanhol",
+            "fr": "Francês",
+            "de": "Alemão",
+            "it": "Italiano"
+        },
+        "status": {
+            "active": "Ativo",
+            "suspended": "Suspenso"
+        }
+    },
+    "tooltips": {
+        "chatwootAccountId": "ID da conta criada no Chatwoot. Este campo é preenchido automaticamente após a criação."
+    }
+}
+

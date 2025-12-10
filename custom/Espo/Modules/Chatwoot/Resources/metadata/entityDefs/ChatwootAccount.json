@@ -1,0 +1,103 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255
+        },
+        "platform": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootAccountId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "locale": {
+            "type": "enum",
+            "options": ["pt_BR", "en", "es", "fr", "de", "it"],
+            "default": "pt_BR"
+        },
+        "domain": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "supportEmail": {
+            "type": "email"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["active", "suspended"],
+            "default": "active"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "platform": {
+            "type": "belongsTo",
+            "entity": "ChatwootPlatform",
+            "foreign": "accounts"
+        },
+        "users": {
+            "type": "hasMany",
+            "entity": "ChatwootUser",
+            "foreign": "account"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "assignedUser": {
+            "columns": ["deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}
+

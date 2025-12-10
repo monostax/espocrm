@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "name": "Nome",
+        "url": "URL",
+        "accessToken": "Token de Acesso",
+        "teams": "Times"
+    },
+    "links": {
+        "accounts": "Contas",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times"
+    },
+    "labels": {
+        "Create ChatwootPlatform": "Criar Plataforma Chatwoot"
+    },
+    "tooltips": {
+        "url": "URL base da plataforma Chatwoot (ex: https://chatwoot.am.monostax.dev.localhost)",
+        "accessToken": "Token de acesso da API da plataforma Chatwoot. Usado para criar e gerenciar contas."
+    }
+}
+

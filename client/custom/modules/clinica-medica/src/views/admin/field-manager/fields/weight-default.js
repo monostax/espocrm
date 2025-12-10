@@ -26,13 +26,12 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-define('clinica-medica:views/admin/field-manager/fields/weight-default', ['views/fields/float'], function (Dep) {
-
+define("clinica:views/admin/field-manager/fields/weight-default", [
+    "views/fields/float",
+], function (Dep) {
     return Dep.extend({
-
         setup: function () {
             Dep.prototype.setup.call(this);
         },
     });
 });
-

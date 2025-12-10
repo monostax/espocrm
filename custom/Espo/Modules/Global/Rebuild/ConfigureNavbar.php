@@ -30,7 +30,7 @@ use Espo\Core\Utils\Log;
 
 /**
  * Rebuild action to configure the navbar tab list.
- * Adds ClinicaMedica divider at the top of the navbar.
+ * Adds Clinica divider at the top of the navbar.
  * Runs automatically during system rebuild.
  */
 class ConfigureNavbar implements RebuildAction
@@ -52,39 +52,39 @@ class ConfigureNavbar implements RebuildAction
         //     return;
         // }
 
-        // $newTabList = $this->addClinicaMedicaSection($tabList);
+        // $newTabList = $this->addClinicaSection($tabList);
 
         // if ($newTabList !== $tabList) {
         // $this->configWriter->set('tabList', $newTabList);
         // $this->configWriter->save();
-        //     $this->log->info('Global Module: Successfully configured navbar - added ClinicaMedica section.');
+        //     $this->log->info('Global Module: Successfully configured navbar - added Clinica section.');
         //     }
     }
 
-    private function addClinicaMedicaSection(array $tabList): array
+    private function addClinicaSection(array $tabList): array
     {
-        // Define the complete ClinicaMedica section
-        $clinicaMedicaItems = [
+        // Define the complete Clinica section
+        $clinicaItems = [
             [
                 'type' => 'divider',
-                'text' => '$ClinicaMedica',
+                'text' => '$Clinica',
             ],
             'CPaciente',
-            'CMedico',
+            'CProfissional',
             'CAgendamento',
         ];
         
-        // Find existing ClinicaMedica section
+        // Find existing Clinica section
         $sectionStartIndex = null;
         $sectionEndIndex = null;
         
         foreach ($tabList as $index => $item) {
-            // Check if we're at the ClinicaMedica divider
+            // Check if we're at the Clinica divider
             if (is_array($item) && 
                 isset($item['type']) && 
                 $item['type'] === 'divider' && 
                 isset($item['text']) && 
-                $item['text'] === '$ClinicaMedica'
+                $item['text'] === '$Clinica'
             ) {
                 $sectionStartIndex = $index;
                 // Find the end of this section (next divider or end of array)
@@ -105,15 +105,15 @@ class ConfigureNavbar implements RebuildAction
             }
         }
         
-        // If ClinicaMedica section exists, replace it in-place
+        // If Clinica section exists, replace it in-place
         if ($sectionStartIndex !== null) {
             // Remove old section
             array_splice($tabList, $sectionStartIndex, $sectionEndIndex - $sectionStartIndex + 1);
             // Insert new section at the same position
-            array_splice($tabList, $sectionStartIndex, 0, $clinicaMedicaItems);
+            array_splice($tabList, $sectionStartIndex, 0, $clinicaItems);
         } else {
             // Section doesn't exist, add it at the beginning
-            array_unshift($tabList, ...$clinicaMedicaItems);
+            array_unshift($tabList, ...$clinicaItems);
         }
         
         return $tabList;

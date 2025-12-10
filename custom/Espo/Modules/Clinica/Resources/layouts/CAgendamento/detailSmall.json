@@ -1,0 +1,24 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "profissional"
+                },
+                {
+                    "name": "paciente"
+                }
+            ],
+            [
+                {
+                    "name": "dateStart"
+                },
+                {
+                    "name": "dateEnd"
+                }
+            ]
+        ],
+        "style": "default",
+        "label": ""
+    }
+]

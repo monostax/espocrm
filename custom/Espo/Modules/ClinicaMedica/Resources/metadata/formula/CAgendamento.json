@@ -1,4 +1,0 @@
-{
-    "beforeSaveApiScript": "// Add Participantes (System User from Medico)\nif (medicoId) {\n  $systemUserId = record\\attribute('CMedico', medicoId, 'systemUserId');\n  $patientSystemUserId = record\\attribute('CPaciente', pacienteId, 'systemUserId');\n  if ($systemUserId && $patientSystemUserId) {\n    usersIds = list($systemUserId, $patientSystemUserId);\n  }\n}\n",
-    "beforeSaveCustomScript": "name = string\\concatenate(medico.name, \" <> \",paciente.name)"
-}

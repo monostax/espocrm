@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "address": "Address",
+        "agendamentos": "Agendamentos",
+        "especialidade": "Especialidade",
+        "systemUser": "Usuário"
+    },
+    "links": {
+        "meetings": "Meetings",
+        "calls": "Calls",
+        "tasks": "Tasks",
+        "agendamentos": "Agendamentos",
+        "systemUser": "Usuário"
+    },
+    "labels": {
+        "Create CProfissional": "Criar Profissional"
+    },
+    "options": {
+        "salutationName": {
+            "": "",
+            "Dr.": "Dr.",
+            "Dra.": "Dra."
+        },
+        "especialidade": {
+            "Geral": "geral",
+            "Dermatologista": "dermatologista",
+            "Nutricionista": "nutricionista",
+            "Psicólogo": "psicólogo",
+            "Fisioterapeuta": "fisioterapeuta",
+            "Fisiologista": "fisiologista",
+            "Outro": "outro",
+            "geral": "Geral",
+            "dermatologista": "Dermatologista",
+            "nutricionista": "Nutricionista",
+            "psicologo": "Psicologo",
+            "fisioterapeuta": "Fisioterapeuta",
+            "fisiologista": "Fisiologista",
+            "outro": "Outro"
+        }
+    }
+}

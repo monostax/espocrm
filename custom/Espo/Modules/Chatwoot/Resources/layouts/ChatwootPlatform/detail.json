@@ -1,0 +1,63 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "url",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "accessToken",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Accounts",
+        "rows": [
+            [
+                {
+                    "name": "accounts"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [
+                {
+                    "name": "teams"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
+                }
+            ],
+            [
+                {
+                    "name": "createdBy"
+                },
+                {
+                    "name": "modifiedBy"
+                }
+            ]
+        ]
+    }
+]
+

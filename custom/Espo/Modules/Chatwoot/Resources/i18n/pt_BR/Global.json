@@ -1,0 +1,13 @@
+{
+    "scopeNames": {
+        "ChatwootAccount": "Chatwoot - Conta",
+        "ChatwootPlatform": "Chatwoot - Plataforma",
+        "ChatwootUser": "Chatwoot - Usuário"
+    },
+    "scopeNamesPlural": {
+        "ChatwootAccount": "Chatwoot - Contas",
+        "ChatwootPlatform": "Chatwoot - Plataformas",
+        "ChatwootUser": "Chatwoot - Usuários"
+    }
+}
+

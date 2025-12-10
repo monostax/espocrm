@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 25
+    },
+    {
+        "name": "platform",
+        "width": 20
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "locale",
+        "width": 10
+    },
+    {
+        "name": "chatwootAccountId",
+        "width": 15
+    },
+    {
+        "name": "createdAt",
+        "width": 20
+    }
+]
+

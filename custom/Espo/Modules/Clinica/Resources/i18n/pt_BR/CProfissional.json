@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "address": "Endereço",
+        "especialidade": "Especialidade",
+        "assignedUser": "Usuário Atribuído",
+        "systemUser": "Usuário"
+    },
+    "links": {
+        "meetings": "Reuniões",
+        "calls": "Ligações",
+        "tasks": "Tarefas",
+        "systemUser": "Usuário"
+    },
+    "labels": {
+        "Create CProfissional": "Criar Profissional"
+    },
+    "options": {
+        "phoneNumber": {
+            "Mobile": "Celular",
+            "Other": "Outro"
+        },
+        "especialidade": {
+            "Geral": "geral",
+            "Dermatologista": "dermatologista",
+            "Nutricionista": "nutricionista",
+            "Psicólogo": "psicólogo",
+            "Fisioterapeuta": "fisioterapeuta",
+            "Fisiologista": "fisiologista",
+            "Outro": "outro",
+            "geral": "Geral",
+            "dermatologista": "Dermatologista",
+            "nutricionista": "Nutricionista",
+            "psicologo": "Psicologo",
+            "fisioterapeuta": "Fisioterapeuta",
+            "fisiologista": "Fisiologista",
+            "outro": "Outro"
+        }
+    }
+}

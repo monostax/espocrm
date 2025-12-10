@@ -1,0 +1,65 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "displayName"
+                }
+            ],
+            [
+                {
+                    "name": "email"
+                },
+                {
+                    "name": "password"
+                }
+            ],
+            [
+                {
+                    "name": "account"
+                },
+                {
+                    "name": "role"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootUserId"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [
+                {
+                    "name": "teams"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
+                }
+            ],
+            [
+                {
+                    "name": "createdBy"
+                },
+                {
+                    "name": "modifiedBy"
+                }
+            ]
+        ]
+    }
+]
+

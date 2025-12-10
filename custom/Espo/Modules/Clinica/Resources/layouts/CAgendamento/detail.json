@@ -1,0 +1,31 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "profissional"
+                },
+                {
+                    "name": "paciente"
+                }
+            ],
+            [
+                {
+                    "name": "dateStart"
+                },
+                {
+                    "name": "duration"
+                },
+                {
+                    "name": "dateEnd"
+                }
+            ]
+        ],
+        "dynamicLogicVisible": null,
+        "style": "default",
+        "tabBreak": false,
+        "hidden": false,
+        "noteText": null,
+        "customLabel": "Dados da Consulta"
+    }
+]

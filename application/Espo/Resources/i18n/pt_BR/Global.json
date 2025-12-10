@@ -2,7 +2,7 @@
     "scopeNames": {
         "CAgendamento": "Agendamento",
         "CPaciente": "Paciente",
-        "CMedico": "Médico",
+        "CProfissional": "Profissional",
         "CRegistroBiometrico": "Registro Biométrico",
         "CLigacoesIA": "Ligação IA",
         "CAIAgent": "Agente IA",
@@ -60,7 +60,7 @@
         "CAIThread": "Histórico de Atividades",
         "CAgendamento": "Agendamentos",
         "CPaciente": "Pacientes",
-        "CMedico": "Médicos",
+        "CProfissional": "Profissionais",
         "CRegistroBiometrico": "Registros Biométricos",
         "CLigacoesIA": "Ligações IA",
         "CAIAgent": "Agentes IA",

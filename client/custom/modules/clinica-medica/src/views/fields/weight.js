@@ -26,29 +26,28 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-/** @module clinica-medica:views/fields/weight */
+/** @module clinica:views/fields/weight */
 
-import FloatFieldView from 'views/fields/float';
-import Select from 'ui/select';
+import FloatFieldView from "views/fields/float";
+import Select from "ui/select";
 
 /**
  * A weight field.
  *
- * @extends FloatFieldView<module:clinica-medica:views/fields/weight~params>
+ * @extends FloatFieldView<module:clinica:views/fields/weight~params>
  */
 class WeightFieldView extends FloatFieldView {
-
     /**
-     * @typedef {Object} module:clinica-medica:views/fields/weight~options
+     * @typedef {Object} module:clinica:views/fields/weight~options
      * @property {
-     *     module:clinica-medica:views/fields/weight~params &
+     *     module:clinica:views/fields/weight~params &
      *     module:views/fields/base~params &
      *     Record
      * } [params] Parameters.
      */
 
     /**
-     * @typedef {Object} module:clinica-medica:views/fields/weight~params
+     * @typedef {Object} module:clinica:views/fields/weight~params
      * @property {number} [min] A min value.
      * @property {number} [max] A max value.
      * @property {boolean} [required] Required.
@@ -61,7 +60,7 @@ class WeightFieldView extends FloatFieldView {
 
     /**
      * @param {
-     *     module:clinica-medica:views/fields/weight~options &
+     *     module:clinica:views/fields/weight~options &
      *     module:views/fields/base~options
      * } options Options.
      */
@@ -69,38 +68,42 @@ class WeightFieldView extends FloatFieldView {
         super(options);
     }
 
-    type = 'weight'
+    type = "weight";
 
-    editTemplate = 'clinica-medica:fields/weight/edit'
-    detailTemplate = 'clinica-medica:fields/weight/detail'
-    listTemplate = 'clinica-medica:fields/weight/list'
+    editTemplate = "clinica:fields/weight/edit";
+    detailTemplate = "clinica:fields/weight/detail";
+    listTemplate = "clinica:fields/weight/list";
 
-    maxDecimalPlaces = 4
+    maxDecimalPlaces = 4;
 
     /**
      * @inheritDoc
      * @type {Array<(function (): boolean)|string>}
      */
-    validations = [
-        'required',
-        'number',
-        'range',
-    ]
+    validations = ["required", "number", "range"];
 
     /** @inheritDoc */
     data() {
-        const unitValue = this.model.get(this.unitFieldName) ||
-            this.getConfig().get('defaultWeightUnit') ||
+        const unitValue =
+            this.model.get(this.unitFieldName) ||
+            this.getConfig().get("defaultWeightUnit") ||
             this.defaultUnit;
 
-        const multipleUnits = !this.isSingleUnit || unitValue !== this.defaultUnit;
+        const multipleUnits =
+            !this.isSingleUnit || unitValue !== this.defaultUnit;
 
         return {
             ...super.data(),
             unitFieldName: this.unitFieldName,
             unitValue: unitValue,
             unitList: this.unitList,
-            unitSymbol: this.getMetadata().get(['app', 'weight', 'symbolMap', unitValue]) || '',
+            unitSymbol:
+                this.getMetadata().get([
+                    "app",
+                    "weight",
+                    "symbolMap",
+                    unitValue,
+                ]) || "",
             multipleUnits: multipleUnits,
             defaultUnit: this.defaultUnit,
         };
@@ -110,10 +113,17 @@ class WeightFieldView extends FloatFieldView {
     setup() {
         super.setup();
 
-        this.unitFieldName = this.name + 'Unit';
-        this.defaultUnit = this.getConfig().get('defaultWeightUnit') || 'kg';
-        this.unitList = this.getMetadata().get(['app', 'weight', 'unitList']) || ['kg', 'g', 'mg', 'lb', 'oz', 't'];
-        this.decimalPlaces = this.params.decimalPlaces !== undefined ? this.params.decimalPlaces : 2;
+        this.unitFieldName = this.name + "Unit";
+        this.defaultUnit = this.getConfig().get("defaultWeightUnit") || "kg";
+        this.unitList = this.getMetadata().get([
+            "app",
+            "weight",
+            "unitList",
+        ]) || ["kg", "g", "mg", "lb", "oz", "t"];
+        this.decimalPlaces =
+            this.params.decimalPlaces !== undefined
+                ? this.params.decimalPlaces
+                : 2;
 
         if (this.params.onlyDefaultUnit) {
             this.unitList = [this.defaultUnit];
@@ -121,8 +131,8 @@ class WeightFieldView extends FloatFieldView {
 
         this.isSingleUnit = this.unitList.length <= 1;
 
-        const unitValue = this.unitValue = this.model.get(this.unitFieldName) ||
-            this.defaultUnit;
+        const unitValue = (this.unitValue =
+            this.model.get(this.unitFieldName) || this.defaultUnit);
 
         if (!this.unitList.includes(unitValue)) {
             this.unitList = Espo.Utils.clone(this.unitList);
@@ -133,7 +143,7 @@ class WeightFieldView extends FloatFieldView {
     /** @inheritDoc */
     setupAutoNumericOptions() {
         this.autoNumericOptions = {
-            digitGroupSeparator: this.thousandSeparator || '',
+            digitGroupSeparator: this.thousandSeparator || "",
             decimalCharacter: this.decimalMark,
             modifyValueOnWheel: false,
             selectOnFocus: false,
@@ -145,7 +155,8 @@ class WeightFieldView extends FloatFieldView {
 
         if (this.decimalPlaces === null) {
             this.autoNumericOptions.decimalPlaces = this.decimalPlacesRawValue;
-            this.autoNumericOptions.decimalPlacesRawValue = this.decimalPlacesRawValue;
+            this.autoNumericOptions.decimalPlacesRawValue =
+                this.decimalPlacesRawValue;
             this.autoNumericOptions.allowDecimalPadding = false;
         }
     }
@@ -160,39 +171,42 @@ class WeightFieldView extends FloatFieldView {
 
             if (weightDecimalPlaces === 0) {
                 value = Math.round(value);
-            }
-            else if (weightDecimalPlaces) {
-                value = Math.round(
-                    value * Math.pow(10, weightDecimalPlaces)) / (Math.pow(10, weightDecimalPlaces)
-                );
-            }
-            else {
-                value = Math.round(
-                    value * Math.pow(10, this.maxDecimalPlaces)) / (Math.pow(10, this.maxDecimalPlaces)
-                );
+            } else if (weightDecimalPlaces) {
+                value =
+                    Math.round(value * Math.pow(10, weightDecimalPlaces)) /
+                    Math.pow(10, weightDecimalPlaces);
+            } else {
+                value =
+                    Math.round(value * Math.pow(10, this.maxDecimalPlaces)) /
+                    Math.pow(10, this.maxDecimalPlaces);
             }
 
             const parts = value.toString().split(".");
 
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, this.thousandSeparator);
+            parts[0] = parts[0].replace(
+                /\B(?=(\d{3})+(?!\d))/g,
+                this.thousandSeparator
+            );
 
             if (weightDecimalPlaces === 0) {
                 return parts[0];
-            }
-            else if (weightDecimalPlaces) {
+            } else if (weightDecimalPlaces) {
                 let decimalPartLength = 0;
 
                 if (parts.length > 1) {
                     decimalPartLength = parts[1].length;
                 } else {
-                    parts[1] = '';
+                    parts[1] = "";
                 }
 
-                if (weightDecimalPlaces && decimalPartLength < weightDecimalPlaces) {
+                if (
+                    weightDecimalPlaces &&
+                    decimalPartLength < weightDecimalPlaces
+                ) {
                     const limit = weightDecimalPlaces - decimalPartLength;
 
                     for (let i = 0; i < limit; i++) {
-                        parts[1] += '0';
+                        parts[1] += "0";
                     }
                 }
             }
@@ -200,28 +214,28 @@ class WeightFieldView extends FloatFieldView {
             return parts.join(this.decimalMark);
         }
 
-        return '';
+        return "";
     }
 
     parse(value) {
-        value = (value !== '') ? value : null;
+        value = value !== "" ? value : null;
 
         if (value === null) {
             return null;
         }
 
-        value = value.split(this.thousandSeparator).join('');
-        value = value.split(this.decimalMark).join('.');
+        value = value.split(this.thousandSeparator).join("");
+        value = value.split(this.decimalMark).join(".");
 
         if (this.params.decimal) {
             const scale = this.params.scale || 4;
 
-            const parts = value.split('.');
+            const parts = value.split(".");
 
-            const decimalPart = parts[1] || '';
+            const decimalPart = parts[1] || "";
 
             if (decimalPart.length < scale) {
-                value = parts[0] + '.' + decimalPart.padEnd(scale, '0');
+                value = parts[0] + "." + decimalPart.padEnd(scale, "0");
             }
         }
 
@@ -239,8 +253,10 @@ class WeightFieldView extends FloatFieldView {
             this.$unit = this.$el.find(`[data-name="${this.unitFieldName}"]`);
 
             if (this.$unit.length) {
-                this.$unit.on('change', () => {
-                    this.model.set(this.unitFieldName, this.$unit.val(), {ui: true});
+                this.$unit.on("change", () => {
+                    this.model.set(this.unitFieldName, this.$unit.val(), {
+                        ui: true,
+                    });
                 });
 
                 Select.init(this.$unit);
@@ -256,8 +272,10 @@ class WeightFieldView extends FloatFieldView {
         const value = this.model.get(this.name);
 
         if (Number.isNaN(Number(value))) {
-            const msg = this.translate('fieldShouldBeNumber', 'messages')
-                .replace('{field}', this.getLabelText());
+            const msg = this.translate(
+                "fieldShouldBeNumber",
+                "messages"
+            ).replace("{field}", this.getLabelText());
 
             this.showValidationMessage(msg);
 
@@ -272,9 +290,7 @@ class WeightFieldView extends FloatFieldView {
 
         const data = {};
 
-        let unitValue = this.$unit.length ?
-            this.$unit.val() :
-            this.defaultUnit;
+        let unitValue = this.$unit.length ? this.$unit.val() : this.defaultUnit;
 
         if (value === null) {
             unitValue = null;
@@ -288,4 +304,3 @@ class WeightFieldView extends FloatFieldView {
 }
 
 export default WeightFieldView;
-

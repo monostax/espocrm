@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "cProfissional": "Doctor",
+        "cPaciente": "Patient",
+        "cConsultasMedicas": "Medical Consultations"
+    },
+    "links": {
+        "cProfissional": "Doctor",
+        "cPaciente": "Patient",
+        "cConsultasMedicas": "Medical Consultations"
+    }
+}

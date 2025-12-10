@@ -64,17 +64,23 @@
         try {
             const referrerUrl = new URL(document.referrer);
             const referrerOrigin = referrerUrl.origin;
-            
+
             // Add referrer to allowed origins if not already there
             if (!allowedOrigins.includes(referrerOrigin)) {
                 allowedOrigins.push(referrerOrigin);
-                console.log("EspoCRM: Added referrer to allowed origins:", referrerOrigin);
+                console.log(
+                    "EspoCRM: Added referrer to allowed origins:",
+                    referrerOrigin
+                );
             }
-            
+
             // Only use referrer as parentOrigin if we don't have one yet
             if (!parentOrigin) {
                 parentOrigin = referrerOrigin;
-                console.log("EspoCRM: Using referrer as parent origin:", referrerOrigin);
+                console.log(
+                    "EspoCRM: Using referrer as parent origin:",
+                    referrerOrigin
+                );
             }
         } catch (e) {
             console.error("EspoCRM: Failed to parse referrer:", e);
@@ -117,7 +123,9 @@
      */
     function notifyParentOfThreadNavigation(aiThreadId) {
         if (!isInIframe() || !parentOrigin) {
-            console.warn("EspoCRM: Cannot notify parent - not in iframe or no parent origin");
+            console.warn(
+                "EspoCRM: Cannot notify parent - not in iframe or no parent origin"
+            );
             return;
         }
 
@@ -130,9 +138,15 @@
                 },
                 parentOrigin
             );
-            console.log("EspoCRM: Notified parent to navigate to thread:", aiThreadId);
+            console.log(
+                "EspoCRM: Notified parent to navigate to thread:",
+                aiThreadId
+            );
         } catch (e) {
-            console.error("EspoCRM: Failed to notify parent of thread navigation:", e);
+            console.error(
+                "EspoCRM: Failed to notify parent of thread navigation:",
+                e
+            );
         }
     }
 
@@ -240,25 +254,35 @@
         window.Espo.Ajax.getRequest("Settings")
             .then((data) => {
                 const currentTheme = data?.theme || null;
-                
-                console.log("EspoCRM: Current persisted theme:", currentTheme, "Target theme:", espoCRMTheme);
+
+                console.log(
+                    "EspoCRM: Current persisted theme:",
+                    currentTheme,
+                    "Target theme:",
+                    espoCRMTheme
+                );
 
                 // Only update if theme is different
                 if (currentTheme === espoCRMTheme) {
-                    console.log("EspoCRM: Theme already set to", espoCRMTheme, "- skipping update");
+                    console.log(
+                        "EspoCRM: Theme already set to",
+                        espoCRMTheme,
+                        "- skipping update"
+                    );
                     return;
                 }
 
                 // Use EspoCRM's built-in Ajax utility (handles auth automatically)
-                return window.Espo.Ajax.putRequest("Settings/1", { theme: espoCRMTheme })
-                    .then((data) => {
-                        console.log("EspoCRM: Theme updated successfully:", data);
-                        // Reload to apply theme change
-                        setTimeout(() => {
-                            console.log("EspoCRM: Reloading to apply theme change");
-                            window.location.reload();
-                        }, 500);
-                    });
+                return window.Espo.Ajax.putRequest("Settings/1", {
+                    theme: espoCRMTheme,
+                }).then((data) => {
+                    console.log("EspoCRM: Theme updated successfully:", data);
+                    // Reload to apply theme change
+                    setTimeout(() => {
+                        console.log("EspoCRM: Reloading to apply theme change");
+                        window.location.reload();
+                    }, 500);
+                });
             })
             .catch((error) => {
                 console.error("EspoCRM: Error checking/updating theme:", error);

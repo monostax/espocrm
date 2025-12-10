@@ -1,0 +1,17 @@
+[
+    "createdAt",
+    "dateEnd",
+    "parent",
+    "assignedUser",
+    "status",
+    "teams",
+    "modifiedBy",
+    "paciente",
+    "name",
+    "createdBy",
+    "modifiedAt",
+    "dateStart",
+    "isAllDay",
+    "profissional",
+    "description"
+]

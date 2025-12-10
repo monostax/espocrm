@@ -1,0 +1,16 @@
+{
+    "scopeNames": {
+        "Clinica": "Clínica",
+        "CAgendamento": "Agendamento",
+        "CPaciente": "Paciente",
+        "CProfissional": "Profissional",
+        "CProcedimento": "Procedimento"
+    },
+    "scopeNamesPlural": {
+        "Clinica": "Clínicas Médicas",
+        "CAgendamento": "Agendamentos",
+        "CPaciente": "Pacientes",
+        "CProfissional": "Profissionais",
+        "CProcedimento": "Procedimentos"
+    }
+}
