@@ -1,19 +1,15 @@
 {
     "entity": true,
     "layouts": true,
-    "tab": true,
+    "tab": false,
     "acl": true,
-    "aclPortal": true,
-    "aclPortalLevelList": ["all", "account", "contact", "own", "no"],
+    "aclPortal": false,
     "customizable": true,
-    "importable": true,
-    "notifications": true,
+    "importable": false,
+    "notifications": false,
     "stream": false,
     "disabled": false,
     "type": "Base",
     "module": "Chatwoot",
     "object": true
 }
-
-
-

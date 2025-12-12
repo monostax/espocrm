@@ -1,0 +1,138 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "tooltip": true
+        },
+        "syncType": {
+            "type": "enum",
+            "options": ["contact_sync", "conversation_sync", "message_sync"],
+            "default": "contact_sync",
+            "required": true,
+            "tooltip": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true,
+            "tooltip": true
+        },
+        "lastChatwootCursor": {
+            "type": "datetime",
+            "tooltip": true
+        },
+        "lastEspocrmCursor": {
+            "type": "datetime",
+            "tooltip": true
+        },
+        "lastRunAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "lastRunDurationMs": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "lastRunStatus": {
+            "type": "enum",
+            "options": ["success", "partial", "error", "running"],
+            "default": "success",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "lastRunError": {
+            "type": "text",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "totalSyncedToEspocrm": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0,
+            "tooltip": true
+        },
+        "totalSyncedToChatwoot": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0,
+            "tooltip": true
+        },
+        "totalConflictsResolved": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0,
+            "tooltip": true
+        },
+        "isEnabled": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "syncIntervalSeconds": {
+            "type": "int",
+            "default": 15,
+            "min": 5,
+            "max": 3600,
+            "tooltip": true
+        },
+        "conflictResolution": {
+            "type": "enum",
+            "options": ["chatwoot_wins", "espocrm_wins", "most_recent"],
+            "default": "most_recent",
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "syncStates"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "lastRunAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "syncTypeAccount": {
+            "unique": true,
+            "columns": ["syncType", "chatwootAccountId", "deleted"]
+        },
+        "lastRunAt": {
+            "columns": ["lastRunAt"]
+        },
+        "isEnabled": {
+            "columns": ["isEnabled", "deleted"]
+        }
+    }
+}
+

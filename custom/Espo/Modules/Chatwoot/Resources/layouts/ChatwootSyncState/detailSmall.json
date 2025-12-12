@@ -1,0 +1,28 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "syncType"
+                }
+            ],
+            [
+                {
+                    "name": "isEnabled"
+                }
+            ],
+            [
+                {
+                    "name": "lastRunStatus"
+                }
+            ]
+        ]
+    }
+]
+

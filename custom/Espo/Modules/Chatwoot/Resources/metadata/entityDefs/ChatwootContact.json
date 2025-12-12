@@ -1,5 +1,10 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
         "contactName": {
             "type": "foreign",
             "relation": "contact",
@@ -8,12 +13,12 @@
         },
         "contact": {
             "type": "link",
-            "required": true,
+            "required": false,
             "tooltip": true
         },
         "phoneNumber": {
             "type": "varchar",
-            "required": true,
+            "required": false,
             "tooltip": true,
             "maxLength": 50
         },
@@ -89,13 +94,13 @@
     "indexes": {
         "chatwootContactIdAccount": {
             "unique": true,
-            "columns": ["chatwootContactId", "chatwootAccountId", "deleted"]
+            "columns": ["chatwootContactId", "chatwootAccountId"]
         },
         "phoneNumberAccount": {
-            "columns": ["phoneNumber", "chatwootAccountId", "deleted"]
+            "columns": ["phoneNumber", "chatwootAccountId"]
         },
         "contactId": {
-            "columns": ["contactId", "deleted"]
+            "columns": ["contactId"]
         },
         "createdAt": {
             "columns": ["createdAt"]

@@ -1,0 +1,110 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "syncType"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "isEnabled"
+                }
+            ],
+            [
+                {
+                    "name": "conflictResolution"
+                },
+                {
+                    "name": "syncIntervalSeconds"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Cursors",
+        "rows": [
+            [
+                {
+                    "name": "lastChatwootCursor"
+                },
+                {
+                    "name": "lastEspocrmCursor"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Last Run",
+        "rows": [
+            [
+                {
+                    "name": "lastRunAt"
+                },
+                {
+                    "name": "lastRunStatus"
+                }
+            ],
+            [
+                {
+                    "name": "lastRunDurationMs"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "lastRunError",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Statistics",
+        "rows": [
+            [
+                {
+                    "name": "totalSyncedToEspocrm"
+                },
+                {
+                    "name": "totalSyncedToChatwoot"
+                }
+            ],
+            [
+                {
+                    "name": "totalConflictsResolved"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
+                }
+            ],
+            [
+                {
+                    "name": "createdBy"
+                },
+                {
+                    "name": "modifiedBy"
+                }
+            ]
+        ]
+    }
+]
+

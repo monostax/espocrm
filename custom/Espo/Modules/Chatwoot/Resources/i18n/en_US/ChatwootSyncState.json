@@ -1,0 +1,56 @@
+{
+    "labels": {
+        "Create ChatwootSyncState": "Create Sync State"
+    },
+    "fields": {
+        "name": "Name",
+        "syncType": "Sync Type",
+        "chatwootAccount": "Chatwoot Account",
+        "lastChatwootCursor": "Last Chatwoot Cursor",
+        "lastEspocrmCursor": "Last EspoCRM Cursor",
+        "lastRunAt": "Last Run At",
+        "lastRunDurationMs": "Last Run Duration (ms)",
+        "lastRunStatus": "Last Run Status",
+        "lastRunError": "Last Run Error",
+        "totalSyncedToEspocrm": "Total Synced → EspoCRM",
+        "totalSyncedToChatwoot": "Total Synced → Chatwoot",
+        "totalConflictsResolved": "Total Conflicts Resolved",
+        "isEnabled": "Enabled",
+        "syncIntervalSeconds": "Sync Interval (seconds)",
+        "conflictResolution": "Conflict Resolution"
+    },
+    "tooltips": {
+        "name": "A descriptive name for this sync configuration",
+        "syncType": "Type of data being synchronized",
+        "lastChatwootCursor": "Timestamp of the last processed Chatwoot record. Only records modified after this time will be synced.",
+        "lastEspocrmCursor": "Timestamp of the last processed EspoCRM record. Only records modified after this time will be synced.",
+        "lastRunAt": "When the sync workflow last executed",
+        "lastRunDurationMs": "How long the last sync took in milliseconds",
+        "lastRunStatus": "Result of the last sync run",
+        "lastRunError": "Error message if the last sync failed",
+        "totalSyncedToEspocrm": "Total records synced from Chatwoot to EspoCRM",
+        "totalSyncedToChatwoot": "Total records synced from EspoCRM to Chatwoot",
+        "totalConflictsResolved": "Total conflicts that were automatically resolved",
+        "isEnabled": "Whether this sync is active",
+        "syncIntervalSeconds": "How often to run the sync (minimum 5 seconds)",
+        "conflictResolution": "Strategy when both systems have changes: chatwoot_wins, espocrm_wins, or most_recent timestamp"
+    },
+    "options": {
+        "syncType": {
+            "contact_sync": "Contact Sync",
+            "conversation_sync": "Conversation Sync",
+            "message_sync": "Message Sync"
+        },
+        "lastRunStatus": {
+            "success": "Success",
+            "partial": "Partial",
+            "error": "Error",
+            "running": "Running"
+        },
+        "conflictResolution": {
+            "chatwoot_wins": "Chatwoot Wins",
+            "espocrm_wins": "EspoCRM Wins",
+            "most_recent": "Most Recent"
+        }
+    }
+}

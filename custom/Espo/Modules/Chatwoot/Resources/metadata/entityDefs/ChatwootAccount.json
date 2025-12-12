@@ -98,6 +98,11 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "syncStates": {
+            "type": "hasMany",
+            "entity": "ChatwootSyncState",
+            "foreign": "chatwootAccount"
         }
     },
     "collection": {

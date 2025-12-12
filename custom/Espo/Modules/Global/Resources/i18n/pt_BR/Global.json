@@ -31,10 +31,11 @@
         "assignedToMe": "Atribuído a Mim"
     },
     "scopeNames": {
-        "Activities": "Atividades"
+        "Activities": "Atividades",
+        "Contact": "Pessoa"
     },
     "scopeNamesPlural": {
-        "Activities": "Atividades"
+        "Activities": "Atividades",
+        "Contact": "Pessoas"
     }
 }
-

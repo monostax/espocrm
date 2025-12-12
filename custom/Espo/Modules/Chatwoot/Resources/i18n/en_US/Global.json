@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "ChatwootAccount": "Chatwoot - Account",
+        "ChatwootPlatform": "Chatwoot - Platform",
+        "ChatwootUser": "Chatwoot - User",
+        "ChatwootSyncState": "Sync State"
+    },
+    "scopeNamesPlural": {
+        "ChatwootAccount": "Chatwoot - Accounts",
+        "ChatwootPlatform": "Chatwoot - Platforms",
+        "ChatwootUser": "Chatwoot - Users",
+        "ChatwootSyncState": "Sync States"
+    }
+}
+
