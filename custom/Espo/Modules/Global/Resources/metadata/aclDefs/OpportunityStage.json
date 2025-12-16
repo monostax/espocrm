@@ -1,0 +1,5 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\OpportunityStage\\AccessChecker",
+    "ownershipCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\OpportunityStage\\OwnershipChecker"
+}
+

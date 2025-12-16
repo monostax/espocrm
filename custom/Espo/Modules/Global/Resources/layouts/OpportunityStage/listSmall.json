@@ -1,0 +1,20 @@
+[
+    {
+        "name": "name",
+        "width": 35,
+        "link": true
+    },
+    {
+        "name": "order",
+        "width": 20
+    },
+    {
+        "name": "probability",
+        "width": 20
+    },
+    {
+        "name": "isActive",
+        "width": 25
+    }
+]
+

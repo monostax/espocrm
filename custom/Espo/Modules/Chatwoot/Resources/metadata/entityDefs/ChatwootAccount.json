@@ -80,6 +80,11 @@
             "entity": "ChatwootUser",
             "foreign": "account"
         },
+        "chatwootTeams": {
+            "type": "hasMany",
+            "entity": "ChatwootTeam",
+            "foreign": "account"
+        },
         "contacts": {
             "type": "hasMany",
             "entity": "ChatwootContact",
@@ -123,6 +128,11 @@
             "unique": true,
             "columns": ["createdAt", "id"]
         }
+    },
+    "webhooks": {
+        "type": "hasMany",
+        "entity": "ChatwootAccountWebhook",
+        "foreign": "account"
     }
 }
 

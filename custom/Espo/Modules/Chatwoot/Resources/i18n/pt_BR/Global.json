@@ -1,15 +1,19 @@
 {
     "scopeNames": {
-        "ChatwootAccount": "Chatwoot - Conta",
-        "ChatwootPlatform": "Chatwoot - Plataforma",
-        "ChatwootUser": "Chatwoot - Usuário",
-        "ChatwootSyncState": "Estado de Sincronização"
+        "ChatwootAccount": "Chatwoot / Conta",
+        "ChatwootPlatform": "Chatwoot / Plataforma",
+        "ChatwootUser": "Chatwoot / Usuário",
+        "ChatwootTeam": "Chatwoot / Equipe",
+        "ChatwootSyncState": "Chatwoot / Sync",
+        "ChatwootAccountWebhook": "Chatwoot / Webhook"
     },
     "scopeNamesPlural": {
-        "ChatwootAccount": "Chatwoot - Contas",
-        "ChatwootPlatform": "Chatwoot - Plataformas",
-        "ChatwootUser": "Chatwoot - Usuários",
-        "ChatwootSyncState": "Estados de Sincronização"
+        "ChatwootAccount": "Chatwoot / Contas",
+        "ChatwootPlatform": "Chatwoot / Plataformas",
+        "ChatwootUser": "Chatwoot / Usuários",
+        "ChatwootTeam": "Chatwoot / Equipes",
+        "ChatwootSyncState": "Chatwoot / Syncs",
+        "ChatwootAccountWebhook": "Chatwoot / Webhooks"
     }
 }
 

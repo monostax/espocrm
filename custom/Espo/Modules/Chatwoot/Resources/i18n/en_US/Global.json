@@ -3,12 +3,14 @@
         "ChatwootAccount": "Chatwoot - Account",
         "ChatwootPlatform": "Chatwoot - Platform",
         "ChatwootUser": "Chatwoot - User",
+        "ChatwootTeam": "Chatwoot - Team",
         "ChatwootSyncState": "Sync State"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chatwoot - Accounts",
         "ChatwootPlatform": "Chatwoot - Platforms",
         "ChatwootUser": "Chatwoot - Users",
+        "ChatwootTeam": "Chatwoot - Teams",
         "ChatwootSyncState": "Sync States"
     }
 }

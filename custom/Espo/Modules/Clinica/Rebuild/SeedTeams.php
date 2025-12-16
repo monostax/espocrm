@@ -71,8 +71,16 @@ class SeedTeams implements RebuildAction
         $skippedCount = 0;
 
         foreach ($teams as $teamData) {
-            // Check if team already exists
+            // Check if team already exists by ID or by name
             $existingTeam = $this->entityManager->getEntityById('Team', $teamData['id']);
+            
+            if (!$existingTeam) {
+                // Also check by name to be extra safe
+                $existingTeam = $this->entityManager
+                    ->getRDBRepository('Team')
+                    ->where(['name' => $teamData['name']])
+                    ->findOne();
+            }
             
             if (!$existingTeam) {
                 try {
@@ -83,7 +91,13 @@ class SeedTeams implements RebuildAction
                     $createdCount++;
                     $this->log->info("Clinica Module: Created team '{$teamData['name']}' with ID '{$teamData['id']}'");
                 } catch (\Exception $e) {
-                    $this->log->error("Clinica Module: Failed to create team '{$teamData['name']}': " . $e->getMessage());
+                    // Check if it's a duplicate key error
+                    if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                        $skippedCount++;
+                        $this->log->debug("Clinica Module: Team '{$teamData['name']}' already exists (caught duplicate), skipping.");
+                    } else {
+                        $this->log->error("Clinica Module: Failed to create team '{$teamData['name']}': " . $e->getMessage());
+                    }
                 }
             } else {
                 $skippedCount++;

@@ -1,0 +1,10 @@
+{
+    "links": {
+        "funnels": {
+            "type": "hasMany",
+            "entity": "Funnel",
+            "foreign": "team"
+        }
+    }
+}
+

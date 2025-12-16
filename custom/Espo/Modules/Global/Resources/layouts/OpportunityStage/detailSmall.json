@@ -1,0 +1,29 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "order"
+                },
+                {
+                    "name": "probability"
+                }
+            ],
+            [
+                {
+                    "name": "style"
+                },
+                {
+                    "name": "isActive"
+                }
+            ]
+        ]
+    }
+]
+

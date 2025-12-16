@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "name": "Name",
+        "order": "Order",
+        "probability": "Probability (%)",
+        "style": "Style",
+        "isActive": "Is Active",
+        "description": "Description",
+        "funnel": "Funnel",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "links": {
+        "opportunities": "Opportunities",
+        "funnel": "Funnel",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "labels": {
+        "Create OpportunityStage": "Create Opportunity Stage"
+    },
+    "tooltips": {
+        "order": "Display order in dropdowns (lower numbers appear first)",
+        "probability": "Expected probability of closing at this stage (0-100%)",
+        "style": "Visual style/color for this stage in the UI"
+    },
+    "options": {
+        "style": {
+            "default": "Default",
+            "success": "Success (Green)",
+            "danger": "Danger (Red)",
+            "warning": "Warning (Orange)",
+            "info": "Info (Blue)",
+            "primary": "Primary"
+        }
+    }
+}

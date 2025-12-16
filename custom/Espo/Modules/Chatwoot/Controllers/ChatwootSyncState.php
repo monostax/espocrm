@@ -7,3 +7,4 @@ class ChatwootSyncState extends \Espo\Core\Templates\Controllers\Base
 }
 
 
+

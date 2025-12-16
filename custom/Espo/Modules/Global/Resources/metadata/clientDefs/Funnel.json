@@ -1,0 +1,41 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-filter",
+    "color": "#6C5CE7",
+    "boolFilterList": ["onlyMy", "onlyActive"],
+    "filterList": ["active", "all"],
+    "defaultFilterData": {
+        "active": {
+            "isActive": true
+        }
+    },
+    "menu": {
+        "list": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "Create Funnel",
+                    "action": "quickCreate",
+                    "style": "primary",
+                    "acl": "create"
+                }
+            ]
+        }
+    },
+    "relationshipPanels": {
+        "opportunityStages": {
+            "label": "Opportunity Stages",
+            "view": "views/record/panels/relationship",
+            "orderBy": "order",
+            "orderDirection": "asc",
+            "createDisabled": false,
+            "selectDisabled": true,
+            "unlinkDisabled": true
+        },
+        "opportunities": {
+            "label": "Opportunities",
+            "view": "views/record/panels/relationship"
+        }
+    }
+}
+

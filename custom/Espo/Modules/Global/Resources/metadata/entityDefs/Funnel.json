@@ -1,0 +1,87 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "pattern": "$noBadCharacters",
+            "maxLength": 100,
+            "trim": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "team": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/link"
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "isDefault": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "team": {
+            "type": "belongsTo",
+            "entity": "Team",
+            "foreign": "funnels"
+        },
+        "opportunityStages": {
+            "type": "hasMany",
+            "entity": "OpportunityStage",
+            "foreign": "funnel"
+        },
+        "opportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "funnel"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "teamId": {
+            "columns": ["teamId"]
+        },
+        "isActive": {
+            "columns": ["isActive"]
+        }
+    }
+}
+

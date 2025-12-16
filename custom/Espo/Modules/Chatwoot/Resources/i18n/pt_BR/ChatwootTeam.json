@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "name": "Nome da Equipe",
+        "description": "Descrição",
+        "allowAutoAssign": "Permitir Atribuição Automática",
+        "account": "Conta Chatwoot",
+        "chatwootTeamId": "ID da Equipe Chatwoot",
+        "isMember": "É Membro"
+    },
+    "tooltips": {
+        "allowAutoAssign": "Se esta configuração estiver ativada, o sistema atribuirá automaticamente a conversa a um agente da equipe ao atribuir a conversa à equipe.",
+        "chatwootTeamId": "O ID da equipe no Chatwoot. Isso é definido automaticamente quando a equipe é sincronizada.",
+        "isMember": "Indica se o usuário atual é membro desta equipe no Chatwoot."
+    }
+}
+

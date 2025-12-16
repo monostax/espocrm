@@ -25,7 +25,7 @@
         }
     },
     "tooltips": {
-        "assignedUser": "Usuário do EspoCRM que será vinculado a este usuário Chatwoot. Cada usuário EspoCRM pode ter apenas um usuário Chatwoot.",
+        "assignedUser": "Usuário do CRM que será vinculado a este usuário Chatwoot. Cada usuário CRM pode ter apenas um usuário Chatwoot.",
         "chatwootUserId": "ID do usuário criado no Chatwoot. Este campo é preenchido automaticamente após a criação.",
         "password": "Senha do usuário para acesso ao Chatwoot. Mínimo 6 caracteres."
     }

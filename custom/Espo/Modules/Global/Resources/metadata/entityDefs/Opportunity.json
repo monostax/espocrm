@@ -1,0 +1,75 @@
+{
+    "fields": {
+        "stage": {
+            "type": "enum",
+            "disabled": true,
+            "utility": true,
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutDefaultSidePanelDisabled": true,
+            "layoutAvailabilityList": [],
+            "readOnly": true,
+            "customizationDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "textFilterDisabled": true,
+            "tooltip": true
+        },
+        "funnel": {
+            "type": "link",
+            "required": true,
+            "audited": true,
+            "tooltip": true,
+            "entity": "Funnel",
+            "view": "views/fields/link"
+        },
+        "opportunityStage": {
+            "type": "link",
+            "required": true,
+            "audited": true,
+            "tooltip": true,
+            "entity": "OpportunityStage",
+            "view": "global:views/opportunity/fields/opportunity-stage"
+        },
+        "stageName": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
+        "stageProbability": {
+            "type": "int",
+            "notStorable": true,
+            "readOnly": true,
+            "min": 0,
+            "max": 100,
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        }
+    },
+    "links": {
+        "funnel": {
+            "type": "belongsTo",
+            "entity": "Funnel",
+            "foreign": "opportunities"
+        },
+        "opportunityStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage",
+            "foreign": "opportunities"
+        }
+    },
+    "indexes": {
+        "funnelId": {
+            "columns": ["funnelId"]
+        }
+    }
+}
+

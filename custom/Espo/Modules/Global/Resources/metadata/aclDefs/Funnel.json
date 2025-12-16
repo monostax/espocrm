@@ -1,0 +1,5 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\Funnel\\AccessChecker",
+    "ownershipCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\Funnel\\OwnershipChecker"
+}
+

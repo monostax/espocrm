@@ -80,15 +80,16 @@ class ModifyConfig implements RebuildAction
         $cadastrosItems = [
             [
                 'type' => 'divider',
-                'text' => '$Cadastros (Clínica)',
+                'text' => '$Cadastros',
             ],
-            'CAgendamento',
+            'Contact',
             'CPaciente',
             'CProfissional',
+            'CAgendamento',
             'CProcedimento'
         ];
         
-        // Find existing Cadastros (Clínica) section
+        // Find existing Cadastros section
         $sectionStartIndex = null;
         $sectionEndIndex = null;
         
@@ -96,12 +97,12 @@ class ModifyConfig implements RebuildAction
             // Convert object to array for comparison (EspoCRM may store as stdClass)
             $itemArray = is_object($item) ? (array) $item : $item;
             
-            // Check if we're at the Cadastros (Clínica) divider
+            // Check if we're at the Cadastros divider
             if (is_array($itemArray) && 
                 isset($itemArray['type']) && 
                 $itemArray['type'] === 'divider' && 
                 isset($itemArray['text']) && 
-                $itemArray['text'] === '$Cadastros (Clínica)'
+                $itemArray['text'] === '$Cadastros'
             ) {
                 $sectionStartIndex = $index;
                 $this->log->debug('Clinica Module: Found existing Cadastros section at index ' . $index);

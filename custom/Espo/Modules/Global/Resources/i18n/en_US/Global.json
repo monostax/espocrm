@@ -32,10 +32,14 @@
     },
     "scopeNames": {
         "Activities": "Activities",
-        "CAIPlaybook": "Playbook"
+        "CAIPlaybook": "Playbook",
+        "Funnel": "Funnel",
+        "OpportunityStage": "Opportunity Stage"
     },
     "scopeNamesPlural": {
         "Activities": "Activities",
-        "CAIPlaybook": "Playbooks"
+        "CAIPlaybook": "Playbooks",
+        "Funnel": "Funnels",
+        "OpportunityStage": "Opportunity Stages"
     }
 }

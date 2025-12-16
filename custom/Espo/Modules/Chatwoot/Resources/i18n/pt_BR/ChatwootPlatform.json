@@ -15,7 +15,7 @@
         "Create ChatwootPlatform": "Criar Plataforma Chatwoot"
     },
     "tooltips": {
-        "url": "URL base da plataforma Chatwoot (ex: https://chatwoot.am.monostax.dev.localhost)",
+        "url": "URL base da plataforma Chatwoot",
         "accessToken": "Token de acesso da API da plataforma Chatwoot. Usado para criar e gerenciar contas."
     }
 }

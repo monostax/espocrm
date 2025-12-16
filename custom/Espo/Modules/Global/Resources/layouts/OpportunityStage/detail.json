@@ -1,0 +1,38 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "funnel"
+                }
+            ],
+            [
+                {
+                    "name": "order"
+                },
+                {
+                    "name": "probability"
+                }
+            ],
+            [
+                {
+                    "name": "style"
+                },
+                {
+                    "name": "isActive"
+                }
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]
+

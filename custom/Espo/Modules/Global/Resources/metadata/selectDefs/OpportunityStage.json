@@ -1,0 +1,11 @@
+{
+    "primaryFilterClassNameMap": {
+        "active": "Espo\\Modules\\Global\\Classes\\Select\\OpportunityStage\\PrimaryFilters\\Active"
+    },
+    "accessControlFilterClassNameMap": {
+        "onlyTeam": "Espo\\Modules\\Global\\Classes\\Select\\OpportunityStage\\AccessControlFilters\\OnlyTeam"
+    },
+    "boolFilterClassNameMap": {
+        "onlyActive": "Espo\\Modules\\Global\\Classes\\Select\\OpportunityStage\\BoolFilters\\OnlyActive"
+    }
+}

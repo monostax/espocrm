@@ -1,0 +1,12 @@
+{
+    "primaryFilterClassNameMap": {
+        "active": "Espo\\Modules\\Global\\Classes\\Select\\Funnel\\PrimaryFilters\\Active"
+    },
+    "accessControlFilterClassNameMap": {
+        "onlyTeam": "Espo\\Modules\\Global\\Classes\\Select\\Funnel\\AccessControlFilters\\OnlyTeam"
+    },
+    "boolFilterClassNameMap": {
+        "onlyActive": "Espo\\Modules\\Global\\Classes\\Select\\Funnel\\BoolFilters\\OnlyActive"
+    }
+}
+

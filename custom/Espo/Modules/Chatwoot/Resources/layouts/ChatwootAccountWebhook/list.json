@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 20
+    },
+    {
+        "name": "account",
+        "width": 20
+    },
+    {
+        "name": "url",
+        "width": 25
+    },
+    {
+        "name": "subscriptions",
+        "width": 20
+    },
+    {
+        "name": "teams",
+        "width": 10
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    }
+]
+

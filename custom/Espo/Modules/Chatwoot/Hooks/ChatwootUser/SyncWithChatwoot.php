@@ -23,116 +23,50 @@
 
 namespace Espo\Modules\Chatwoot\Hooks\ChatwootUser;
 
-use Espo\Core\Hook\Hook\AfterSave;
-use Espo\Core\Hook\Hook\BeforeSave;
+use Espo\Core\Record\Hook\CreateHook;
+use Espo\Core\Record\CreateParams;
 use Espo\Core\Exceptions\Error;
-use Espo\ORM\Repository\Option\SaveOptions;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
-use Espo\Core\Utils\Config;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
  * Hook to synchronize ChatwootUser with Chatwoot Platform API.
- * Creates users on Chatwoot and attaches them to accounts when created in EspoCRM.
+ * Creates user on Chatwoot AND attaches to account BEFORE saving to database.
+ * This ensures the database only contains users that fully exist in Chatwoot.
  */
-class SyncWithChatwoot implements AfterSave, BeforeSave
+class SyncWithChatwoot implements CreateHook
 {
-    public static int $order = 10;
+    public static int $order = 10; // Run after ValidateBeforeSync
 
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
-        private Log $log,
-        private Config $config
+        private Log $log
     ) {}
 
     /**
-     * Validate account is set and configured before save.
+     * Create user on Chatwoot AND attach to account BEFORE entity is saved to database.
+     * The entity will be populated with chatwootUserId before the INSERT.
+     * If either operation fails, an exception is thrown and nothing is saved.
+     * 
+     * @throws Error
      */
-    public function beforeSave(Entity $entity, SaveOptions $options): void
+    public function process(Entity $entity, CreateParams $params): void
     {
-        // Only validate for new records
-        if (!$entity->isNew()) {
-            return;
-        }
-
-        // Ensure account is set
-        $accountId = $entity->get('accountId');
-        if (!$accountId) {
-            throw new Error('Account is required for ChatwootUser.');
-        }
-
-        // Validate that the account exists
-        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-        
-        if (!$account) {
-            throw new Error('Selected ChatwootAccount does not exist.');
-        }
-
-        // Validate account has a chatwootAccountId (has been synced to Chatwoot)
-        $chatwootAccountId = $account->get('chatwootAccountId');
-        if (!$chatwootAccountId) {
-            throw new Error('ChatwootAccount has not been synchronized with Chatwoot yet. Please wait for the account to be created on Chatwoot first.');
-        }
-
-        // Get platform from account
-        $platformId = $account->get('platformId');
-        if (!$platformId) {
-            throw new Error('ChatwootAccount does not have a platform configured.');
-        }
-
-        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
-        
-        if (!$platform) {
-            throw new Error('ChatwootPlatform not found.');
-        }
-
-        // Validate platform has URL
-        $url = $platform->get('url');
-        if (!$url) {
-            throw new Error('ChatwootPlatform does not have a URL configured.');
-        }
-
-        // Validate platform has access token
-        $accessToken = $platform->get('accessToken');
-        if (!$accessToken) {
-            throw new Error('ChatwootPlatform does not have an access token configured.');
-        }
-
-        // Validate password is set for new users
-        if (!$entity->get('password')) {
-            throw new Error('Password is required for ChatwootUser.');
-        }
-
-        // Validate email is set
-        if (!$entity->get('email')) {
-            throw new Error('Email is required for ChatwootUser.');
-        }
-    }
-
-    /**
-     * Create user on Chatwoot and attach to account after entity is saved.
-     */
-    public function afterSave(Entity $entity, SaveOptions $options): void
-    {
-        // Only run for new ChatwootUser records (not updates)
-        if (!$entity->isNew()) {
-            return;
-        }
-
         // Skip if chatwootUserId already exists (user already synced)
         if ($entity->get('chatwootUserId')) {
             return;
         }
 
-        // Skip if no account is linked
+        // Skip if no account is linked (should have been caught by validation)
         $accountId = $entity->get('accountId');
         if (!$accountId) {
-            $this->log->warning('ChatwootUser created without account link: ' . $entity->getId());
-            return;
+            throw new Error('Account is required for ChatwootUser.');
         }
+
+        $createdUserId = null;
 
         try {
             // Get the account entity
@@ -167,10 +101,10 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
                 throw new Error('ChatwootPlatform does not have an access token.');
             }
 
-            // Prepare user data for Chatwoot API
+            // STEP 1: Create user on Chatwoot
+            $this->log->info('Creating Chatwoot user: ' . $entity->get('email'));
+            
             $userData = $this->prepareUserData($entity);
-
-            // Step 1: Create user on Chatwoot
             $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, $userData);
 
             if (!isset($userResponse['id'])) {
@@ -178,8 +112,13 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
             }
 
             $chatwootUserId = $userResponse['id'];
+            $createdUserId = $chatwootUserId;
+            
+            $this->log->info('Chatwoot user created successfully with ID: ' . $chatwootUserId);
 
-            // Step 2: Attach user to account
+            // STEP 2: Attach user to account
+            $this->log->info("Attaching user $chatwootUserId to account $chatwootAccountId");
+            
             $role = $entity->get('role') ?? 'agent';
             $this->apiClient->attachUserToAccount(
                 $platformUrl,
@@ -189,36 +128,35 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
                 $role
             );
 
-            // Update entity with Chatwoot user ID
+            $this->log->info('User successfully attached to account');
+
+            // STEP 3: Set chatwootUserId on entity BEFORE database insert
             $entity->set('chatwootUserId', $chatwootUserId);
-            
-            // Save without triggering hooks again
-            $this->entityManager->saveEntity($entity, [
-                'skipHooks' => true,
-                'silent' => true
-            ]);
 
             $this->log->info(
-                'Successfully created Chatwoot user: ' . 
-                $chatwootUserId . ' and attached to account ' . $chatwootAccountId .
-                ' for ' . $entity->getId()
+                'Successfully prepared Chatwoot user ' . 
+                $chatwootUserId . ' attached to account ' . $chatwootAccountId .
+                ' for database insert'
             );
+
         } catch (\Exception $e) {
-            // Since afterSave runs after the entity is committed to DB,
-            // we need to delete it if the API call fails to maintain sync
+            // ROLLBACK: If anything failed, log for manual cleanup
             $this->log->error(
-                'Failed to create Chatwoot user for ' . $entity->getId() . 
-                ': ' . $e->getMessage() . '. Deleting entity to maintain sync.'
+                'Failed to create Chatwoot user for ' . $entity->get('email') . 
+                ': ' . $e->getMessage()
             );
             
-            // Delete the entity to prevent orphaned records
-            $this->entityManager->getRDBRepository($entity->getEntityType())
-                ->deleteFromDb($entity->getId());
-            
-            // Re-throw the exception with a clear message
+            if ($createdUserId) {
+                $this->log->error(
+                    'Orphaned Chatwoot user created with ID: ' . $createdUserId . 
+                    '. Manual cleanup may be required.'
+                );
+            }
+
+            // Re-throw - this will prevent the database INSERT from happening
             throw new Error(
                 'Failed to create user on Chatwoot: ' . $e->getMessage() . 
-                '. The user was not created to maintain synchronization.'
+                '. The user was not created in EspoCRM to maintain synchronization.'
             );
         }
     }
@@ -246,4 +184,3 @@ class SyncWithChatwoot implements AfterSave, BeforeSave
         return $data;
     }
 }
-

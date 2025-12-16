@@ -1,0 +1,13 @@
+{
+    "fields": {
+        "geminiFileSearchDocId": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "utility": true,
+            "tooltip": true,
+            "tooltipText": "Google Gemini File Search document ID for this article. Used for RAG (Retrieval Augmented Generation) queries."
+        }
+    }
+}
+

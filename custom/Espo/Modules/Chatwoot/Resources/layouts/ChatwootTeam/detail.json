@@ -1,0 +1,36 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "account"
+                }
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "allowAutoAssign"
+                },
+                {
+                    "name": "chatwootTeamId"
+                }
+            ],
+            [
+                {
+                    "name": "isMember"
+                },
+                false
+            ]
+        ]
+    }
+]
+

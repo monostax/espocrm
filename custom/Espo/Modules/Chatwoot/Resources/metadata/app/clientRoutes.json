@@ -1,0 +1,24 @@
+{
+    "ChatwootInbox": {
+        "params": {
+            "controller": "chatwoot:controllers/chatwoot",
+            "action": "inbox"
+        },
+        "order": 1
+    },
+    "Chatwoot/:options": {
+        "params": {
+            "controller": "chatwoot:controllers/chatwoot",
+            "action": "index"
+        },
+        "order": 2
+    },
+    "Chatwoot": {
+        "params": {
+            "controller": "chatwoot:controllers/chatwoot",
+            "action": "index"
+        },
+        "order": 3
+    }
+}
+

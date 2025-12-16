@@ -1,0 +1,23 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "team"
+                }
+            ],
+            [
+                {
+                    "name": "isActive"
+                }
+            ]
+        ]
+    }
+]
+

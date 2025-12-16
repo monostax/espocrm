@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 25
+    },
+    {
+        "name": "account",
+        "width": 20
+    },
+    {
+        "name": "allowAutoAssign",
+        "width": 15
+    },
+    {
+        "name": "chatwootTeamId",
+        "width": 15
+    },
+    {
+        "name": "isMember",
+        "width": 10
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    }
+]
+

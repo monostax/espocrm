@@ -1,0 +1,36 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "account"
+                }
+            ],
+            [
+                {
+                    "name": "url",
+                    "fullWidth": true
+                },
+                false
+            ],
+            [
+                {
+                    "name": "subscriptions",
+                    "fullWidth": true
+                },
+                false
+            ],
+            [
+                {
+                    "name": "chatwootWebhookId"
+                },
+                false
+            ]
+        ]
+    }
+]
+

@@ -33,35 +33,6 @@
                 false
             ]
         ]
-    },
-    {
-        "label": "System",
-        "rows": [
-            [
-                {
-                    "name": "teams"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "createdAt"
-                },
-                {
-                    "name": "modifiedAt"
-                }
-            ],
-            [
-                {
-                    "name": "createdBy"
-                },
-                {
-                    "name": "modifiedBy"
-                }
-            ]
-        ]
     }
 ]
-
-
 

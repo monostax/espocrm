@@ -20,6 +20,10 @@
         "width": 15
     },
     {
+        "name": "teams",
+        "width": 15
+    },
+    {
         "name": "createdAt",
         "width": 20
     }

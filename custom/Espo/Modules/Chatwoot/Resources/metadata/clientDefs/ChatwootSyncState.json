@@ -1,7 +1,6 @@
 {
+    "iconClass": "fas fa-comments",
     "controller": "controllers/record",
-    "iconClass": "fas fa-sync-alt",
-    "color": "#28a745",
     "kanbanViewMode": false,
     "modalViews": {
         "detail": "views/modals/detail"

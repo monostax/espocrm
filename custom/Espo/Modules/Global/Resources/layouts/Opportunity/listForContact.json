@@ -1,0 +1,20 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "opportunityStage",
+        "width": 21
+    },
+    {
+        "name": "closeDate",
+        "width": 18
+    },
+    {
+        "name": "amount",
+        "align": "right",
+        "width": 20
+    }
+]
+

@@ -1,0 +1,19 @@
+{
+    "kanbanStatusField": "opportunityStageId",
+    "kanbanViewMode": true,
+    "recordViews": {
+        "kanban": "global:views/opportunity/record/kanban"
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "opportunityStage",
+                "label": "Stage Details",
+                "view": "views/record/panels/relationship",
+                "hidden": false,
+                "order": 5
+            }
+        ]
+    }
+}
+

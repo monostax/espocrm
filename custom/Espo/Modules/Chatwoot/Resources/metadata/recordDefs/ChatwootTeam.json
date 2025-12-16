@@ -1,0 +1,8 @@
+{
+    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
+    "beforeCreateHookClassNameList": [
+        "Espo\\Modules\\Chatwoot\\Hooks\\ChatwootTeam\\ValidateBeforeSync",
+        "Espo\\Modules\\Chatwoot\\Hooks\\ChatwootTeam\\SyncWithChatwoot"
+    ]
+}
+

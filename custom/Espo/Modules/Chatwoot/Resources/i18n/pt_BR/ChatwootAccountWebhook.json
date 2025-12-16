@@ -1,0 +1,34 @@
+{
+    "fields": {
+        "name": "Nome",
+        "account": "Conta Chatwoot",
+        "chatwootWebhookId": "ID do Webhook Chatwoot",
+        "url": "URL",
+        "subscriptions": "Assinaturas",
+        "teams": "Times"
+    },
+    "links": {
+        "account": "Conta Chatwoot",
+        "teams": "Times"
+    },
+    "labels": {
+        "Create ChatwootAccountWebhook": "Criar Webhook da Conta Chatwoot"
+    },
+    "options": {
+        "subscriptions": {
+            "conversation_created": "Conversa Criada",
+            "conversation_status_changed": "Status da Conversa Alterado",
+            "conversation_updated": "Conversa Atualizada",
+            "contact_created": "Contato Criado",
+            "contact_updated": "Contato Atualizado",
+            "message_created": "Mensagem Criada",
+            "message_updated": "Mensagem Atualizada",
+            "webwidget_triggered": "Widget Web Acionado"
+        }
+    },
+    "tooltips": {
+        "chatwootWebhookId": "ID do webhook criado no Chatwoot. Este campo é preenchido automaticamente após a criação.",
+        "url": "URL para onde os eventos serão enviados",
+        "subscriptions": "Eventos que você deseja assinar"
+    }
+}

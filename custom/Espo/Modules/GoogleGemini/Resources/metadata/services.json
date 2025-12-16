@@ -1,0 +1,6 @@
+{
+    "GeminiFileSearchService": {
+        "className": "Espo\\Modules\\GoogleGemini\\Services\\GeminiFileSearchService"
+    }
+}
+

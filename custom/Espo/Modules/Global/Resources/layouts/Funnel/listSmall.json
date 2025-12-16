@@ -1,0 +1,16 @@
+[
+    {
+        "name": "name",
+        "width": 50,
+        "link": true
+    },
+    {
+        "name": "team",
+        "width": 30
+    },
+    {
+        "name": "isActive",
+        "width": 20
+    }
+]
+

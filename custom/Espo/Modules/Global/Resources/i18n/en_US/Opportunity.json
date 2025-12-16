@@ -1,0 +1,25 @@
+{
+    "fields": {
+        "stage": "Stage (Deprecated)",
+        "funnel": "Funnel",
+        "opportunityStage": "Stage",
+        "stageName": "Stage Name",
+        "stageProbability": "Stage Probability"
+    },
+    "links": {
+        "funnel": "Funnel",
+        "opportunityStage": "Stage"
+    },
+    "labels": {
+        "Select Funnel": "Select Funnel"
+    },
+    "tooltips": {
+        "stage": "This field is deprecated. Please use the 'Stage' link field instead, which allows custom stages.",
+        "funnel": "The sales funnel this opportunity belongs to. Stages will be filtered based on the selected funnel.",
+        "opportunityStage": "The current stage of this opportunity. Stages are filtered by the selected funnel."
+    },
+    "messages": {
+        "stageDeprecated": "The enum 'Stage' field has been replaced with a link to OpportunityStage. This allows custom stages with different probabilities and styles.",
+        "selectFunnelFirst": "Please select a Funnel first."
+    }
+}

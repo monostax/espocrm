@@ -1,0 +1,19 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-stairs",
+    "color": "#4CAF50",
+    "kanbanViewMode": false,
+    "boolFilterList": ["onlyMy", "onlyActive"],
+    "filterList": ["active", "all"],
+    "defaultFilterData": {
+        "active": {
+            "isActive": true
+        }
+    },
+    "relationshipPanels": {
+        "opportunities": {
+            "label": "Opportunities",
+            "view": "views/record/panels/relationship"
+        }
+    }
+}

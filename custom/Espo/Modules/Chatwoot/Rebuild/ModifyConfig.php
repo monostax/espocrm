@@ -71,8 +71,12 @@ class ModifyConfig implements RebuildAction
                 'type' => 'divider',
                 'text' => '$Chatwoot',
             ],
+            'ChatwootPlatform',
             'ChatwootAccount',
-            'ChatwootPlatform'
+            'ChatwootUser',
+            'ChatwootTeam',
+            'ChatwootAccountWebhook',
+            'ChatwootSyncState'
         ];
         
         // Find existing Chatwoot section

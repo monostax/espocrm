@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 25,
+        "link": true
+    },
+    {
+        "name": "funnel",
+        "width": 20
+    },
+    {
+        "name": "order",
+        "width": 15
+    },
+    {
+        "name": "probability",
+        "width": 15
+    },
+    {
+        "name": "style",
+        "width": 15
+    },
+    {
+        "name": "isActive",
+        "width": 10
+    }
+]

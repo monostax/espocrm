@@ -1,0 +1,9 @@
+{
+    "order": 20,
+    "version": "1.0.0",
+    "name": "GoogleGemini",
+    "description": "Google Gemini AI integration for File Search and RAG capabilities",
+    "author": "Monostax",
+    "skipRebuild": false
+}
+

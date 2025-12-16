@@ -1,0 +1,101 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255
+        },
+        "account": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootWebhookId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "url": {
+            "type": "url",
+            "required": true,
+            "maxLength": 512,
+            "tooltip": true
+        },
+        "subscriptions": {
+            "type": "multiEnum",
+            "required": true,
+            "options": [
+                "conversation_created",
+                "conversation_status_changed",
+                "conversation_updated",
+                "contact_created",
+                "contact_updated",
+                "message_created",
+                "message_updated",
+                "webwidget_triggered"
+            ],
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "account": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "webhooks"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "accountId": {
+            "columns": ["accountId", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}
