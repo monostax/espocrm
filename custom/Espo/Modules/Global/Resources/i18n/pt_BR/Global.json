@@ -32,10 +32,14 @@
     },
     "scopeNames": {
         "Activities": "Atividades",
-        "Contact": "Pessoa"
+        "Contact": "Pessoa",
+        "Funnel": "Funil",
+        "OpportunityStage": "Estágio da Oportunidade"
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
-        "Contact": "Pessoas"
+        "Contact": "Pessoas",
+        "Funnel": "Funis",
+        "OpportunityStage": "Estágios da Oportunidade"
     }
 }

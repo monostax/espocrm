@@ -12,6 +12,9 @@
         "build-dev": "grunt dev",
         "build-test": "grunt test",
         "build-frontend": "grunt internal",
+        "tailwind": "npx @tailwindcss/cli -i ./client/css/tailwind-input.css -o ./client/css/tailwind.css",
+        "tailwind:watch": "npx @tailwindcss/cli -i ./client/css/tailwind-input.css -o ./client/css/tailwind.css --watch",
+        "tailwind:minify": "npx @tailwindcss/cli -i ./client/css/tailwind-input.css -o ./client/css/tailwind.css --minify",
         "sa": "php vendor/bin/phpstan",
         "unit-tests": "php vendor/bin/phpunit ./tests/unit",
         "integration-tests": "php vendor/bin/phpunit ./tests/integration"
@@ -36,9 +39,9 @@
         "@rollup/plugin-commonjs": "^28.0.6",
         "@rollup/plugin-node-resolve": "^16.0.1",
         "archiver": "^5.3.0",
+        "autoprefixer": "^10.4.23",
         "chromedriver": "^127.0.1",
         "espo-frontend-build-tools": "github:espocrm/frontend-build-tools#0.2.2",
-        "espocrm": "link:",
         "filter": "^0.1.1",
         "fstream": ">=1.0.12",
         "glob": "^10.2.6",
@@ -56,7 +59,9 @@
         "js-yaml": "^3.13.1",
         "nodemon": "^3.0.2",
         "pofile": "^1.1.3",
+        "postcss": "^8.5.6",
         "rollup": "^4.44.0",
+        "tailwindcss": "^4.1.18",
         "tar": "^6.1.11"
     },
     "dependencies": {
@@ -110,3 +115,4 @@
         "node": ">=17"
     }
 }
+

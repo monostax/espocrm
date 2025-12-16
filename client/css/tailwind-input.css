@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Specify content sources for class detection (paths relative to CSS file location) */
+@source "../res/templates";
+@source "../modules";
+@source "../custom";
+@source "../src";
+@source "../../html";
+
+/* Custom components */
+@layer components {
+  /* Add custom component classes here */
+}
+
+/* Custom utilities */
+@layer utilities {
+  /* Add custom utility classes here */
+}

@@ -278,6 +278,7 @@ class OpportunityKanban
 
     /**
      * Get the list of OpportunityStage records for the current funnel.
+     * Respects ACL - only returns stages the user has access to.
      *
      * @return array<int, array{id: string, name: string, style: ?string}>
      * @throws Error
@@ -288,14 +289,40 @@ class OpportunityKanban
             throw new Error("Funnel ID is required to get opportunity stages.");
         }
 
-        // Get stages belonging to the selected funnel
+        // Using warning level to ensure visibility in logs
+        $GLOBALS['log']->warning(
+            "[OpportunityKanban] getOpportunityStageList() funnelId=" . ($this->funnelId ?? 'NULL')
+        );
+
+        // Build query with ACL protection
+        $query = $this->selectBuilderFactory
+            ->create()
+            ->from('OpportunityStage')
+            ->withStrictAccessControl()
+            ->withSearchParams(
+                SearchParams::create()
+                    ->withWhere(
+                        \Espo\Core\Select\Where\Item::createBuilder()
+                            ->setAttribute('funnelId')
+                            ->setType('equals')
+                            ->setValue($this->funnelId)
+                            ->build()
+                    )
+            )
+            ->build();
+
+        // Add isActive filter and ordering
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->clone($query)
+            ->where(['isActive' => true])
+            ->order('order', 'ASC')
+            ->build();
+
         $stages = $this->entityManager
             ->getRDBRepository('OpportunityStage')
-            ->where([
-                'funnelId' => $this->funnelId,
-                'isActive' => true,
-            ])
-            ->order('order', 'ASC')
+            ->clone($query)
             ->find();
 
         $list = [];
@@ -308,6 +335,15 @@ class OpportunityKanban
             ];
         }
 
+        $stageIds = implode(',', array_column($list, 'id'));
+        $stageNames = implode(',', array_column($list, 'name'));
+        $GLOBALS['log']->warning(
+            "[OpportunityKanban] getOpportunityStageList() result funnelId=" . ($this->funnelId ?? 'NULL') .
+            " stageCount=" . count($list) .
+            " stageIds=[{$stageIds}]" .
+            " stageNames=[{$stageNames}]"
+        );
+
         if (empty($list)) {
             throw new Error("No active OpportunityStage records found for the selected funnel.");
         }
@@ -317,37 +353,54 @@ class OpportunityKanban
 
     /**
      * Get the default funnel ID for the current user.
+     * Respects ACL - only considers funnels the user has access to.
      */
     private function getDefaultFunnelId(): ?string
     {
-        $teamIdList = $this->user->getTeamIdList();
+        // Build query with ACL protection for default funnel
+        $defaultQuery = $this->selectBuilderFactory
+            ->create()
+            ->from('Funnel')
+            ->withStrictAccessControl()
+            ->build();
 
-        if (empty($teamIdList)) {
-            return null;
-        }
-
-        // Try to find a default funnel for user's teams
-        $defaultFunnel = $this->entityManager
-            ->getRDBRepository('Funnel')
+        $defaultQuery = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->clone($defaultQuery)
             ->where([
-                'teamId' => $teamIdList,
                 'isDefault' => true,
                 'isActive' => true,
             ])
+            ->build();
+
+        $defaultFunnel = $this->entityManager
+            ->getRDBRepository('Funnel')
+            ->clone($defaultQuery)
             ->findOne();
 
         if ($defaultFunnel) {
             return $defaultFunnel->getId();
         }
 
-        // Fall back to first active funnel for user's teams
+        // Fall back to first active funnel the user has access to
+        $fallbackQuery = $this->selectBuilderFactory
+            ->create()
+            ->from('Funnel')
+            ->withStrictAccessControl()
+            ->build();
+
+        $fallbackQuery = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->clone($fallbackQuery)
+            ->where(['isActive' => true])
+            ->order('name', 'ASC')
+            ->build();
+
         $firstFunnel = $this->entityManager
             ->getRDBRepository('Funnel')
-            ->where([
-                'teamId' => $teamIdList,
-                'isActive' => true,
-            ])
-            ->order('name', 'ASC')
+            ->clone($fallbackQuery)
             ->findOne();
 
         return $firstFunnel?->getId();

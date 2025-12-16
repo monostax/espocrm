@@ -4,16 +4,12 @@
         "link": true
     },
     {
-        "name": "account",
-        "width": 22
+        "name": "funnel",
+        "width": 15
     },
     {
         "name": "opportunityStage",
         "width": 15
-    },
-    {
-        "name": "assignedUser",
-        "width": 12
     },
     {
         "name": "createdAt",

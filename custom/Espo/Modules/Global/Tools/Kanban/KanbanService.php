@@ -72,6 +72,13 @@ class KanbanService extends BaseKanbanService
             // Extract funnelId from search params (passed via where clause or custom param)
             $funnelId = $this->extractFunnelId($searchParams);
 
+            // Debug logging - using warning level to ensure visibility
+            $whereRaw = $searchParams->getWhere()?->getRaw();
+            $GLOBALS['log']->warning(
+                "[KanbanService] getData() entityType={$entityType} extractedFunnelId=" . ($funnelId ?? 'NULL') .
+                " whereClause=" . json_encode($whereRaw)
+            );
+
             $kanban
                 ->setEntityType($entityType)
                 ->setSearchParams($searchParams)
@@ -83,6 +90,11 @@ class KanbanService extends BaseKanbanService
             if ($funnelId) {
                 $kanban->setFunnelId($funnelId);
             }
+
+            $GLOBALS['log']->warning(
+                "[KanbanService] getData() funnelIdExtracted=" . ($funnelId ?? 'NULL') .
+                " funnelIdOnKanban=" . ($kanban->getFunnelId() ?? 'NULL')
+            );
 
             return $kanban->getResult();
         }
@@ -120,6 +132,25 @@ class KanbanService extends BaseKanbanService
      */
     private function findFunnelIdInWhere(array $whereRaw): ?string
     {
+        // Handle root-level where clause structure: {"type": "and", "value": [...]}
+        if (isset($whereRaw['type']) && isset($whereRaw['value']) && is_array($whereRaw['value'])) {
+            // Check if this IS the funnelId condition itself
+            $attribute = $whereRaw['attribute'] ?? null;
+            $field = $whereRaw['field'] ?? null;
+
+            if ($attribute === 'funnelId' || $attribute === 'funnel' || $field === 'funnelId' || $field === 'funnel') {
+                $value = $whereRaw['value'] ?? null;
+
+                if ($value && is_string($value)) {
+                    return $value;
+                }
+            }
+
+            // Otherwise, recurse into the value array (for AND/OR wrappers)
+            return $this->findFunnelIdInWhere($whereRaw['value']);
+        }
+
+        // Handle array of conditions
         foreach ($whereRaw as $item) {
             if (!is_array($item)) {
                 continue;
@@ -129,7 +160,7 @@ class KanbanService extends BaseKanbanService
             $attribute = $item['attribute'] ?? null;
             $field = $item['field'] ?? null;
 
-            if (($attribute === 'funnelId' || $attribute === 'funnel' || $field === 'funnelId' || $field === 'funnel')) {
+            if ($attribute === 'funnelId' || $attribute === 'funnel' || $field === 'funnelId' || $field === 'funnel') {
                 $value = $item['value'] ?? null;
 
                 if ($value && is_string($value)) {

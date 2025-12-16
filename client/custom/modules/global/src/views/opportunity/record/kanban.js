@@ -77,6 +77,24 @@ define("global:views/opportunity/record/kanban", [
                 this.actionSelectFunnel()
             );
 
+            // Listen for collection sync to log when groups are updated
+            // The base class already has a sync listener that updates groupRawDataList
+            // and calls buildRowsAndRender(), so we just add debugging here
+            this.listenTo(this.collection, "sync", (collection, response) => {
+                console.log("[Kanban] SYNC event fired", {
+                    hasResponse: !!response,
+                    hasGroups: !!response?.groups,
+                    groupCount: response?.groups?.length,
+                    groupNames: response?.groups
+                        ?.map((g) => g.name || g.label)
+                        .join(", "),
+                    currentFunnelId: this.currentFunnelId,
+                });
+
+                // Schedule aggregates refresh after sync
+                this.scheduleAggregatesRefresh();
+            });
+
             console.log("[Kanban] setup() END");
         },
 
@@ -127,9 +145,19 @@ define("global:views/opportunity/record/kanban", [
          */
         setFunnel: function (funnelId, funnelName) {
             console.log("[Kanban] setFunnel() called", {
-                funnelId,
-                funnelName,
+                previousFunnelId: this.currentFunnelId,
+                previousFunnelName: this.currentFunnelName,
+                newFunnelId: funnelId,
+                newFunnelName: funnelName,
+                isSameFunnel: this.currentFunnelId === funnelId,
             });
+
+            // Warn if switching to the same funnel
+            if (this.currentFunnelId === funnelId) {
+                console.warn(
+                    "[Kanban] setFunnel() SAME FUNNEL - no change expected"
+                );
+            }
 
             this.currentFunnelId = funnelId;
             this.currentFunnelName = funnelName;
@@ -146,13 +174,18 @@ define("global:views/opportunity/record/kanban", [
                 funnelName
             );
 
+            // Update funnel selector display immediately (without full re-render)
+            this.updateFunnelSelectorDisplay();
+
             console.log("[Kanban] setFunnel() calling applyFunnelFilter...");
             // Update the collection filter and reload
+            // The sync handler will rebuild rows and re-render with new stages
             this.applyFunnelFilter();
 
-            console.log("[Kanban] setFunnel() calling reRender...");
-            // Rerender
-            this.reRender();
+            // NOTE: Don't call reRender() here - it renders with OLD groupRawDataList
+            // before the fetch completes. The collection's 'sync' event listener
+            // (set up in the base kanban view) will call buildRowsAndRender()
+            // which rebuilds groupDataList with the new stages and re-renders.
         },
 
         /**
@@ -211,11 +244,35 @@ define("global:views/opportunity/record/kanban", [
             console.log("[Kanban] applyFunnelFilter() FETCHING...");
             this._isFetching = true;
 
+            // Store previous group count to detect changes
+            const previousGroupCount = this.groupRawDataList?.length || 0;
+            const previousGroupNames =
+                this.groupRawDataList?.map((g) => g.name).join(",") || "";
+
             this.collection
                 .fetch()
                 .then(() => {
-                    console.log("[Kanban] applyFunnelFilter() FETCH COMPLETE");
+                    console.log("[Kanban] applyFunnelFilter() FETCH COMPLETE", {
+                        newGroupCount: this.groupRawDataList?.length,
+                        newGroupNames: this.groupRawDataList
+                            ?.map((g) => g.name)
+                            .join(","),
+                        previousGroupCount,
+                        previousGroupNames,
+                        groupsChanged:
+                            previousGroupNames !==
+                            (this.groupRawDataList
+                                ?.map((g) => g.name)
+                                .join(",") || ""),
+                    });
                     this._isFetching = false;
+
+                    // The sync event should have updated groupRawDataList and triggered buildRowsAndRender.
+                    // Log the current state to debug if columns didn't update.
+                    console.log(
+                        "[Kanban] applyFunnelFilter() groupRawDataList after fetch:",
+                        this.groupRawDataList
+                    );
                 })
                 .catch((err) => {
                     console.error(
@@ -297,11 +354,173 @@ define("global:views/opportunity/record/kanban", [
                 this,
                 function () {
                     console.log("[Kanban] buildRows() callback - COMPLETE");
+
+                    // Calculate count and amount sum for each group
+                    this.calculateGroupStats();
+
                     if (callback) {
                         callback();
                     }
                 }.bind(this)
             );
+        },
+
+        /**
+         * Calculate count and amount sum for each group/lane.
+         * Initially uses local data, then fetches server aggregates for accurate totals.
+         */
+        calculateGroupStats: function () {
+            if (!this.groupDataList) {
+                return;
+            }
+
+            // First, set initial values from local data (for immediate display)
+            this.groupDataList.forEach((group) => {
+                // Count from local collection
+                group.count = group.collection ? group.collection.total : 0;
+                if (group.count === -1) {
+                    group.count = group.collection
+                        ? group.collection.length
+                        : 0;
+                }
+
+                // Calculate sum from loaded models (partial sum)
+                let amountSum = 0;
+                if (group.collection && group.collection.models) {
+                    group.collection.models.forEach((model) => {
+                        const amount = model.get("amount") || 0;
+                        amountSum += parseFloat(amount) || 0;
+                    });
+                }
+                group.amountSum = amountSum;
+                group.amountSumFormatted = this.formatCurrency(amountSum);
+            });
+
+            // Fetch accurate aggregates from server
+            this.fetchKanbanAggregates();
+
+            console.log(
+                "[Kanban] calculateGroupStats() initial calculation COMPLETE",
+                this.groupDataList
+            );
+        },
+
+        /**
+         * Fetch aggregated count and sum from server for accurate totals.
+         */
+        fetchKanbanAggregates: function () {
+            if (!this.currentFunnelId) {
+                console.log(
+                    "[Kanban] fetchKanbanAggregates() - No funnel ID, skipping"
+                );
+                return;
+            }
+
+            Espo.Ajax.getRequest("Opportunity/action/kanbanAggregates", {
+                funnelId: this.currentFunnelId,
+            })
+                .then((response) => {
+                    console.log(
+                        "[Kanban] fetchKanbanAggregates() response:",
+                        response
+                    );
+
+                    if (response && response.aggregates) {
+                        this.applyServerAggregates(response.aggregates);
+                    }
+                })
+                .catch((error) => {
+                    console.error(
+                        "[Kanban] fetchKanbanAggregates() ERROR:",
+                        error
+                    );
+                });
+        },
+
+        /**
+         * Apply server aggregates to group data and update the UI.
+         */
+        applyServerAggregates: function (aggregates) {
+            if (!this.groupDataList) {
+                return;
+            }
+
+            this.groupDataList.forEach((group) => {
+                const stageId = group.name;
+                const serverData = aggregates[stageId];
+
+                if (serverData) {
+                    group.count = serverData.count;
+                    group.amountSum = serverData.amountSum;
+                    group.amountSumFormatted = this.formatCurrency(
+                        serverData.amountSum
+                    );
+                }
+            });
+
+            // Update the UI with the new values
+            this.updateGroupStatsUI();
+
+            console.log(
+                "[Kanban] applyServerAggregates() COMPLETE",
+                this.groupDataList
+            );
+        },
+
+        /**
+         * Update the group stats in the UI without full re-render.
+         */
+        updateGroupStatsUI: function () {
+            if (!this.groupDataList || !this.$el) {
+                return;
+            }
+
+            this.groupDataList.forEach((group) => {
+                // Update visual kanban board
+                const $visualColumn = this.$el.find(
+                    `.kanban-board .kanban-column[data-name="${group.name}"]`
+                );
+
+                if ($visualColumn.length) {
+                    $visualColumn.find(".kanban-group-count").text(group.count);
+                    $visualColumn
+                        .find(".kanban-group-amount")
+                        .text(group.amountSumFormatted);
+                }
+
+                // Also update original hidden structure for compatibility
+                const $header = this.$el.find(
+                    `.kanban-head .group-header[data-name="${group.name}"]`
+                );
+
+                if ($header.length) {
+                    $header.find(".kanban-group-count").text(group.count);
+                    $header
+                        .find(".kanban-group-amount")
+                        .text(group.amountSumFormatted);
+                }
+            });
+        },
+
+        /**
+         * Format currency value for display.
+         */
+        formatCurrency: function (value) {
+            const currency = this.getConfig().get("defaultCurrency") || "BRL";
+            const decimalMark = this.getConfig().get("decimalMark") || ",";
+            const thousandSeparator =
+                this.getConfig().get("thousandSeparator") || ".";
+
+            // Format number with thousands separator
+            const parts = value.toFixed(2).split(".");
+            parts[0] = parts[0].replace(
+                /\B(?=(\d{3})+(?!\d))/g,
+                thousandSeparator
+            );
+
+            const formattedNumber = parts.join(decimalMark);
+
+            return currency + " " + formattedNumber;
         },
 
         afterRender: function () {
@@ -315,13 +534,204 @@ define("global:views/opportunity/record/kanban", [
             // Update funnel selector display
             this.updateFunnelSelectorDisplay();
 
+            // Setup visual kanban sync
+            this.setupVisualKanban();
+
             console.log("[Kanban] afterRender() COMPLETE");
+        },
+
+        /**
+         * Setup the visual kanban board synchronization.
+         * Syncs items between the modern visual board and the hidden original structure.
+         */
+        setupVisualKanban: function () {
+            // Sync items from original structure to visual board
+            this.syncItemsToVisualBoard();
+
+            // Setup drag and drop for visual board
+            this.setupVisualDragDrop();
+        },
+
+        /**
+         * Sync items from the original hidden kanban structure to the visual board.
+         */
+        syncItemsToVisualBoard: function () {
+            if (!this.groupDataList) {
+                return;
+            }
+
+            this.groupDataList.forEach((group) => {
+                const $originalColumn = this.$el.find(
+                    `.kanban-columns-container .group-column-list[data-name="${group.name}"]`
+                );
+                const $visualColumn = this.$el.find(
+                    `.kanban-board .group-column-list-visual[data-name="${group.name}"]`
+                );
+
+                if ($originalColumn.length && $visualColumn.length) {
+                    // Clone items from original to visual
+                    const $items = $originalColumn.find(".item").clone(true);
+
+                    if ($items.length > 0) {
+                        $visualColumn.empty().append($items);
+                    } else {
+                        // Show empty placeholder
+                        $visualColumn.html(
+                            `<div class="kanban-empty-placeholder">${
+                                this.translate(
+                                    "Drop here",
+                                    "labels",
+                                    "Opportunity"
+                                ) || "Drop here"
+                            }</div>`
+                        );
+                    }
+                }
+            });
+        },
+
+        /**
+         * Setup drag and drop for the visual kanban board.
+         */
+        setupVisualDragDrop: function () {
+            const self = this;
+
+            // Make visual items draggable
+            this.$el.find(".kanban-board .item").each(function () {
+                const $item = $(this);
+                $item.attr("draggable", "true");
+
+                $item.on("dragstart", function (e) {
+                    e.originalEvent.dataTransfer.setData(
+                        "text/plain",
+                        $(this).data("id")
+                    );
+                    $(this).addClass("dragging");
+                    self.$el
+                        .find(".kanban-column-content")
+                        .addClass("drag-active");
+                });
+
+                $item.on("dragend", function () {
+                    $(this).removeClass("dragging");
+                    self.$el
+                        .find(".kanban-column-content")
+                        .removeClass("drag-active");
+                    self.$el
+                        .find(".kanban-empty-placeholder")
+                        .removeClass("drag-over");
+                });
+            });
+
+            // Setup drop zones
+            this.$el.find(".kanban-column-content").each(function () {
+                const $dropZone = $(this);
+                const groupName = $dropZone
+                    .find(".group-column-list-visual")
+                    .data("name");
+
+                $dropZone.on("dragover", function (e) {
+                    e.preventDefault();
+                    $(this)
+                        .find(".kanban-empty-placeholder")
+                        .addClass("drag-over");
+                });
+
+                $dropZone.on("dragleave", function (e) {
+                    if (
+                        !$(e.relatedTarget)
+                            .closest(".kanban-column-content")
+                            .is(this)
+                    ) {
+                        $(this)
+                            .find(".kanban-empty-placeholder")
+                            .removeClass("drag-over");
+                    }
+                });
+
+                $dropZone.on("drop", function (e) {
+                    e.preventDefault();
+                    const itemId =
+                        e.originalEvent.dataTransfer.getData("text/plain");
+                    $(this)
+                        .find(".kanban-empty-placeholder")
+                        .removeClass("drag-over");
+
+                    if (itemId && groupName) {
+                        // Trigger the original EspoCRM move functionality
+                        self.moveItemToGroup(itemId, groupName);
+                    }
+                });
+            });
+        },
+
+        /**
+         * Move an item to a new group using EspoCRM's built-in functionality.
+         */
+        moveItemToGroup: function (itemId, groupName) {
+            // Find the model
+            const model = this.collection.get(itemId);
+            if (!model) {
+                return;
+            }
+
+            // Get the current group
+            const currentGroup = model.get(this.statusField);
+            if (currentGroup === groupName) {
+                return;
+            }
+
+            // Use EspoCRM's built-in move functionality if available
+            if (this.moveModelToGroup) {
+                this.moveModelToGroup(model, groupName);
+                // Refresh aggregates after EspoCRM handles the move
+                this.scheduleAggregatesRefresh();
+            } else {
+                // Fallback: directly update the model
+                const attributes = {};
+                this.handleAttributesOnGroupChange(
+                    model,
+                    attributes,
+                    groupName
+                );
+                attributes[this.statusField] = groupName;
+
+                model.save(attributes, {
+                    patch: true,
+                    success: () => {
+                        // Refresh aggregates after successful save
+                        this.fetchKanbanAggregates();
+                        this.reRender();
+                    },
+                });
+            }
+        },
+
+        /**
+         * Schedule a refresh of aggregates after a short delay.
+         * This allows time for the server to process the move.
+         */
+        scheduleAggregatesRefresh: function () {
+            // Clear any existing timeout to prevent multiple refreshes
+            if (this._aggregatesRefreshTimeout) {
+                clearTimeout(this._aggregatesRefreshTimeout);
+            }
+
+            // Delay the refresh slightly to allow the save to complete
+            this._aggregatesRefreshTimeout = setTimeout(() => {
+                this.fetchKanbanAggregates();
+            }, 500);
         },
 
         /**
          * Update the funnel selector UI.
          */
         updateFunnelSelectorDisplay: function () {
+            // Handle case where view isn't rendered yet
+            if (!this.$el || !this.$el.length) {
+                return;
+            }
+
             const $selector = this.$el.find(".funnel-selector-name");
 
             if ($selector.length) {

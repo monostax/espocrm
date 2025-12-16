@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "stage": "Estágio (Obsoleto)",
+        "funnel": "Funil",
+        "opportunityStage": "Estágio",
+        "stageName": "Nome do Estágio",
+        "stageProbability": "Probabilidade do Estágio"
+    },
+    "links": {
+        "funnel": "Funil",
+        "opportunityStage": "Estágio"
+    },
+    "labels": {
+        "Select Funnel": "Selecionar Funil",
+        "Total Value": "Valor Total",
+        "Drop here": "Solte aqui",
+        "Show more": "Ver mais"
+    },
+    "tooltips": {
+        "stage": "Este campo está obsoleto. Por favor, use o campo de link 'Estágio', que permite estágios personalizados.",
+        "funnel": "O funil de vendas ao qual esta oportunidade pertence. Os estágios serão filtrados com base no funil selecionado.",
+        "opportunityStage": "O estágio atual desta oportunidade. Os estágios são filtrados pelo funil selecionado."
+    },
+    "messages": {
+        "stageDeprecated": "O campo enum 'Estágio' foi substituído por um link para OpportunityStage. Isso permite estágios personalizados com diferentes probabilidades e estilos.",
+        "selectFunnelFirst": "Por favor, selecione um Funil primeiro."
+    }
+}
+

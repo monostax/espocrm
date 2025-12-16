@@ -11,7 +11,10 @@
         "opportunityStage": "Stage"
     },
     "labels": {
-        "Select Funnel": "Select Funnel"
+        "Select Funnel": "Select Funnel",
+        "Total Value": "Total Value",
+        "Drop here": "Drop here",
+        "Show more": "Show more"
     },
     "tooltips": {
         "stage": "This field is deprecated. Please use the 'Stage' link field instead, which allows custom stages.",

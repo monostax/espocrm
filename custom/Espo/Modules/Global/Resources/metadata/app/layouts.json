@@ -2,6 +2,12 @@
     "Opportunity": {
         "detail": {
             "module": "Global"
+        },
+        "filters": {
+            "module": "Global"
+        },
+        "list": {
+            "module": "Global"
         }
     }
 }
