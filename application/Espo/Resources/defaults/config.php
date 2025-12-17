@@ -96,36 +96,36 @@ return [
         'Opportunity',
     ],
     'tabList' => [
-        (object) [
-            'type' => 'divider',
-            'text' => '$Activities',
-            'id' => '219419'
-        ],
-        'Task',
-        'Meeting',
-        'Call',
-        (object) [
-            'type' => 'divider',
-            'text' => '$Communication',
-            'id' => '342567'
-        ],
-        'Email',
-        (object) [
-            'type' => 'divider',
-            'id' => '342567',
-            'text' => '$Sales'
-        ],
-        'Opportunity',
-        'Contact',
-        'Account',
-        (object) [
-            'type' => 'divider',
-            'text' => '$Marketing',
-            'id' => '463280'
-        ],
-        'Lead',
-        'Campaign',
-        'TargetList',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => '$Activities',
+        //     'id' => '219419'
+        // ],
+        // 'Task',
+        // 'Meeting',
+        // 'Call',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => '$Communication',
+        //     'id' => '342567'
+        // ],
+        // 'Email',
+        // (object) [
+        //     'type' => 'divider',
+        //     'id' => '342567',
+        //     'text' => '$Sales'
+        // ],
+        // 'Opportunity',
+        // 'Contact',
+        // 'Account',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => '$Marketing',
+        //     'id' => '463280'
+        // ],
+        // 'Lead',
+        // 'Campaign',
+        // 'TargetList',
         // (object) [
         //     'type' => 'divider',
         //     'id' => '655187',
@@ -145,14 +145,14 @@ return [
         //     'id' => '518202'
         // ],
         // 'Document',
-        (object) [
-            'type' => 'divider',
-            'text' => '$Organization',
-            'id' => '566592'
-        ],
-        'User',
-        'Team',
-        'WorkingTimeCalendar',
+        // (object) [
+        //     'type' => 'divider',
+        //     'text' => '$Organization',
+        //     'id' => '566592'
+        // ],
+        // 'User',
+        // 'Team',
+        // 'WorkingTimeCalendar',
         // (object) [
         //     'type' => 'divider',
         //     'text' => NULL,
@@ -202,7 +202,7 @@ return [
     'displayListViewRecordCount' => true,
     'dashboardLayout' => [
         (object) [
-            'name' => 'My Espo',
+            'name' => 'My Dashboard',
             'layout' => [
                 (object) [
                     'id' => 'default-activities',

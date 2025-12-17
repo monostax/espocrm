@@ -79,8 +79,16 @@ class ChatwootController extends Controller {
             console.log("Chatwoot Controller: Resolved cwPath:", cwPath);
         }
 
+        // Get SSO URL for authentication (required for first load)
+        const chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+        console.log(
+            "Chatwoot Controller: SSO URL available:",
+            !!chatwootSsoUrl
+        );
+
         this.main("chatwoot:views/chatwoot/index", {
             cwPath: cwPath,
+            chatwootSsoUrl: chatwootSsoUrl,
         });
     }
 
@@ -154,23 +162,10 @@ class ChatwootController extends Controller {
                 "Chatwoot Controller: Make sure you've rebuilt EspoCRM after fixing data (Administration → Rebuild)"
             );
 
-            // Fallback: Try to use SSO URL which might redirect properly
-            if (chatwootSsoUrl) {
-                console.log(
-                    "Chatwoot Controller: Falling back to SSO URL:",
-                    chatwootSsoUrl
-                );
-                // Navigate to SSO URL which should authenticate and redirect
-                window.location.href = chatwootSsoUrl;
-                return;
-            }
-
-            // Last resort: Load Chatwoot base URL and let it handle the redirect
-            console.log(
-                "Chatwoot Controller: No SSO URL available either, loading base Chatwoot URL"
-            );
+            // Fallback: Load with SSO URL only
             this.main("chatwoot:views/chatwoot/index", {
                 cwPath: "",
+                chatwootSsoUrl: chatwootSsoUrl,
             });
             return;
         }
@@ -185,6 +180,7 @@ class ChatwootController extends Controller {
 
         this.main("chatwoot:views/chatwoot/index", {
             cwPath: cwPath,
+            chatwootSsoUrl: chatwootSsoUrl,
         });
     }
 }

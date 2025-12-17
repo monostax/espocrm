@@ -124,3 +124,5 @@ class IndexToGemini implements AfterSave, AfterRemove
     }
 }
 
+
+

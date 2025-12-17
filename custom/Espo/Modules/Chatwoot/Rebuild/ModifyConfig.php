@@ -30,8 +30,7 @@ use Espo\Core\Utils\Log;
 
 /**
  * Rebuild action to configure system settings.
- * - Adds Cadastros section with CProfissional, CPaciente, and CAgendamento to the navbar.
- * - Ensures CAgendamento is present in calendarEntityList, activitiesEntityList, and historyEntityList.
+ * - Adds/updates the Conversations group in the navbar with Chatwoot conversation links.
  * Runs automatically during system rebuild.
  */
 class ModifyConfig implements RebuildAction
@@ -65,64 +64,82 @@ class ModifyConfig implements RebuildAction
 
     private function addTabListSection(array $tabList): array
     {
-        // Define the complete Cadastros section
-        $cItems = [
-            [
-                'type' => 'divider',
-                'text' => '$Chatwoot',
-            ],
-            'ChatwootPlatform',
-            'ChatwootAccount',
-            'ChatwootUser',
-            'ChatwootTeam',
-            'ChatwootAccountWebhook',
-            'ChatwootSyncState'
+        // Define the Conversations group
+        $conversationsGroup = (object) [
+            'type' => 'group',
+            'text' => '$Conversations',
+            'iconClass' => 'ti ti-messages',
+            'color' => null,
+            'id' => '853524',
+            'itemList' => [
+                (object) [
+                    'type' => 'url',
+                    'text' => '$Inbox',
+                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/inbox-view',
+                    'iconClass' => 'ti ti-inbox',
+                    'color' => null,
+                    'aclScope' => null,
+                    'onlyAdmin' => false,
+                    'id' => '906874'
+                ],
+                (object) [
+                    'type' => 'url',
+                    'text' => '$All',
+                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/dashboard',
+                    'iconClass' => 'ti ti-message-down',
+                    'color' => null,
+                    'aclScope' => null,
+                    'onlyAdmin' => false,
+                    'id' => '927132'
+                ],
+                (object) [
+                    'type' => 'url',
+                    'text' => '$Unattended',
+                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/unattended/conversations',
+                    'iconClass' => 'ti ti-message-report',
+                    'color' => null,
+                    'aclScope' => null,
+                    'onlyAdmin' => false,
+                    'id' => '442501'
+                ],
+                (object) [
+                    'type' => 'url',
+                    'text' => '$Mentions',
+                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/mentions/conversations',
+                    'iconClass' => 'ti ti-message-bolt',
+                    'color' => null,
+                    'aclScope' => null,
+                    'onlyAdmin' => false,
+                    'id' => '128471'
+                ]
+            ]
         ];
         
-        // Find existing Chatwoot section
-        $sectionStartIndex = null;
-        $sectionEndIndex = null;
+        // Find existing Conversations group
+        $existingIndex = null;
         
         foreach ($tabList as $index => $item) {
             // Convert object to array for comparison (EspoCRM may store as stdClass)
             $itemArray = is_object($item) ? (array) $item : $item;
             
-            // Check if we're at the Chatwoot divider
+            // Check if we're at the Conversations group
             if (is_array($itemArray) && 
                 isset($itemArray['type']) && 
-                $itemArray['type'] === 'divider' && 
+                $itemArray['type'] === 'group' && 
                 isset($itemArray['text']) && 
-                $itemArray['text'] === '$Chatwoot'
+                $itemArray['text'] === '$Conversations'
             ) {
-                $sectionStartIndex = $index;
-                // Find the end of this section (next divider or end of array)
-                for ($i = $index + 1; $i < count($tabList); $i++) {
-                    $nextItemArray = is_object($tabList[$i]) ? (array) $tabList[$i] : $tabList[$i];
-                    if (is_array($nextItemArray) && 
-                        isset($nextItemArray['type']) && 
-                        $nextItemArray['type'] === 'divider'
-                    ) {
-                        $sectionEndIndex = $i - 1;
-                        break;
-                    }
-                }
-                // If no next divider found, section goes to the end
-                if ($sectionEndIndex === null) {
-                    $sectionEndIndex = count($tabList) - 1;
-                }
+                $existingIndex = $index;
                 break;
             }
         }
         
-        // If Cadastros section exists, replace it in-place
-        if ($sectionStartIndex !== null) {
-            // Remove old section
-            array_splice($tabList, $sectionStartIndex, $sectionEndIndex - $sectionStartIndex + 1);
-            // Insert new section at the same position
-            array_splice($tabList, $sectionStartIndex, 0, $cItems);
+        // If Conversations group exists, replace it in-place
+        if ($existingIndex !== null) {
+            $tabList[$existingIndex] = $conversationsGroup;
         } else {
-            // Section doesn't exist, add it at the beginning
-            array_unshift($tabList, ...$cItems);
+            // Group doesn't exist, add it at the beginning
+            array_unshift($tabList, $conversationsGroup);
         }
         
         return $tabList;

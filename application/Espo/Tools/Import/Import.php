@@ -572,6 +572,27 @@ class Import
             }
 
             if ($entity->hasId()) {
+                // Check if a record with this ID exists and if user has access to overwrite it.
+                $existingEntity = $this->entityManager
+                    ->getRDBRepository($entity->getEntityType())
+                    ->getById($entity->getId());
+
+                if (
+                    $existingEntity &&
+                    !$this->user->isAdmin() &&
+                    !$this->aclManager->checkEntityEdit($this->user, $existingEntity)
+                ) {
+                    $this->createError(
+                        ImportError::TYPE_NO_ACCESS,
+                        $index,
+                        $row,
+                        $import,
+                        $errorIndex
+                    );
+
+                    return ['isError' => true];
+                }
+
                 /** @noinspection PhpDeprecationInspection */
                 $this->entityManager
                     ->getRDBRepository($entity->getEntityType())

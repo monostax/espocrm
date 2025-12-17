@@ -107,3 +107,5 @@ From the Gemini File Search documentation:
 
 Typical KnowledgeBaseArticle costs < $0.01 per article to index.
 
+
+

@@ -57,55 +57,45 @@ class ModifyConfig implements RebuildAction
             return;
         }
 
-        $this->log->debug('Clinica Module: Current tabList before processing: ' . json_encode($tabList));
-        $this->log->debug('Clinica Module: Current tabList count: ' . count($tabList));
-
-        $newTabList = $this->addCadastrosSection($tabList);
-
-        $this->log->debug('Clinica Module: New tabList after processing: ' . json_encode($newTabList));
-        $this->log->debug('Clinica Module: New tabList count: ' . count($newTabList));
+        $newTabList = $this->upsertToSection($tabList, '$Records', [
+            'CAgendamento',
+            'CPaciente',
+            'CProcedimento',
+            'CProfissional',
+        ], 'beginning');
 
         if ($newTabList !== $tabList) {
             $this->configWriter->set('tabList', $newTabList);
             $this->configWriter->save();
-            $this->log->info('Clinica Module: Successfully configured navbar - added Cadastros section.');
-        } else {
-            $this->log->info('Clinica Module: No changes needed to navbar configuration.');
+            $this->log->info('Clinica Module: Successfully configured navbar.');
         }
     }
 
-    private function addCadastrosSection(array $tabList): array
+    /**
+     * Upsert items into a divider section.
+     * 
+     * @param array $tabList The current tab list
+     * @param string $sectionName The divider text to find/create
+     * @param array $items Items to upsert (strings for entity names, arrays for complex items)
+     * @param string $createPosition Where to create section if missing: 'beginning' or 'end'
+     * @return array Modified tab list
+     */
+    private function upsertToSection(array $tabList, string $sectionName, array $items, string $createPosition = 'beginning'): array
     {
-        // Define the complete Cadastros section
-        $cadastrosItems = [
-            [
-                'type' => 'divider',
-                'text' => '$Cadastros',
-            ],
-            'Contact',
-            'CPaciente',
-            'CProfissional',
-            'CAgendamento',
-            'CProcedimento'
-        ];
-        
-        // Find existing Cadastros section
-        $sectionStartIndex = null;
+        // Find the divider position and section bounds
+        $dividerIndex = null;
         $sectionEndIndex = null;
         
         foreach ($tabList as $index => $item) {
-            // Convert object to array for comparison (EspoCRM may store as stdClass)
             $itemArray = is_object($item) ? (array) $item : $item;
             
-            // Check if we're at the Cadastros divider
             if (is_array($itemArray) && 
                 isset($itemArray['type']) && 
                 $itemArray['type'] === 'divider' && 
                 isset($itemArray['text']) && 
-                $itemArray['text'] === '$Cadastros'
+                $itemArray['text'] === $sectionName
             ) {
-                $sectionStartIndex = $index;
-                $this->log->debug('Clinica Module: Found existing Cadastros section at index ' . $index);
+                $dividerIndex = $index;
                 // Find the end of this section (next divider or end of array)
                 for ($i = $index + 1; $i < count($tabList); $i++) {
                     $nextItemArray = is_object($tabList[$i]) ? (array) $tabList[$i] : $tabList[$i];
@@ -117,26 +107,49 @@ class ModifyConfig implements RebuildAction
                         break;
                     }
                 }
-                // If no next divider found, section goes to the end
                 if ($sectionEndIndex === null) {
                     $sectionEndIndex = count($tabList) - 1;
                 }
-                $this->log->debug('Clinica Module: Cadastros section ends at index ' . $sectionEndIndex);
                 break;
             }
         }
         
-        // If Cadastros section exists, replace it in-place
-        if ($sectionStartIndex !== null) {
-            $this->log->info('Clinica Module: Replacing existing Cadastros section (indices ' . $sectionStartIndex . ' to ' . $sectionEndIndex . ')');
-            // Remove old section
-            array_splice($tabList, $sectionStartIndex, $sectionEndIndex - $sectionStartIndex + 1);
-            // Insert new section at the same position
-            array_splice($tabList, $sectionStartIndex, 0, $cadastrosItems);
-        } else {
-            $this->log->info('Clinica Module: Adding new Cadastros section at the beginning');
-            // Section doesn't exist, add it at the beginning
-            array_unshift($tabList, ...$cadastrosItems);
+        // If divider doesn't exist, create it
+        if ($dividerIndex === null) {
+            $divider = [
+                'type' => 'divider',
+                'text' => $sectionName,
+            ];
+            if ($createPosition === 'beginning') {
+                array_unshift($tabList, $divider);
+                $dividerIndex = 0;
+            } else {
+                $tabList[] = $divider;
+                $dividerIndex = count($tabList) - 1;
+            }
+            $sectionEndIndex = $dividerIndex;
+        }
+        
+        // Collect existing items in the section
+        $existingItems = [];
+        for ($i = $dividerIndex + 1; $i <= $sectionEndIndex; $i++) {
+            $item = $tabList[$i];
+            if (is_string($item)) {
+                $existingItems[] = $item;
+            }
+        }
+        
+        // Upsert: add items that don't exist yet
+        $insertPosition = $dividerIndex + 1;
+        foreach ($items as $itemToAdd) {
+            if (is_string($itemToAdd) && !in_array($itemToAdd, $existingItems)) {
+                array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
+                $insertPosition++;
+            } elseif (is_array($itemToAdd)) {
+                // For complex items (like groups), just add them
+                array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
+                $insertPosition++;
+            }
         }
         
         return $tabList;

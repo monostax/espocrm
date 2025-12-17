@@ -40,7 +40,7 @@ class GoogleCalendar
         return $entity instanceof Event;
     }
 
-    public function beforeSave(Entity $entity): void
+    public function beforeSave(Entity $entity, array $options = []): void
     {
         if (!empty($options['silent'])) {
             return;

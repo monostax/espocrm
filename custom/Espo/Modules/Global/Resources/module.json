@@ -1,5 +1,5 @@
 {
-    "order": 10,
+    "order": 20,
     "version": "1.0.0",
     "name": "Global",
     "description": "Global customizations for navbar and system-wide configurations",

@@ -12,6 +12,13 @@
         "ChatwootUser": "Chatwoot - Users",
         "ChatwootTeam": "Chatwoot - Teams",
         "ChatwootSyncState": "Sync States"
+    },
+    "navbarTabs": {
+        "Conversations": "Conversations",
+        "Inbox": "Inbox",
+        "All": "All",
+        "Unattended": "Unattended",
+        "Mentions": "Mentions"
     }
 }
 

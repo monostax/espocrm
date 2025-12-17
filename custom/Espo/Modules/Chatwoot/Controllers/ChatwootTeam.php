@@ -6,3 +6,5 @@ class ChatwootTeam extends \Espo\Core\Templates\Controllers\Base
 {
 }
 
+
+

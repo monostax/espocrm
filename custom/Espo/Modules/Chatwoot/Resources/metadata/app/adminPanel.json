@@ -1,0 +1,44 @@
+{
+    "chatwoot": {
+        "label": "Chatwoot",
+        "itemList": [
+            {
+                "url": "#ChatwootPlatform",
+                "label": "Platforms",
+                "iconClass": "fas fa-server",
+                "description": "chatwootPlatforms"
+            },
+            {
+                "url": "#ChatwootAccount",
+                "label": "Accounts",
+                "iconClass": "fas fa-building",
+                "description": "chatwootAccounts"
+            },
+            {
+                "url": "#ChatwootUser",
+                "label": "Users",
+                "iconClass": "fas fa-user",
+                "description": "chatwootUsers"
+            },
+            {
+                "url": "#ChatwootTeam",
+                "label": "Teams",
+                "iconClass": "fas fa-users",
+                "description": "chatwootTeams"
+            },
+            {
+                "url": "#ChatwootAccountWebhook",
+                "label": "Webhooks",
+                "iconClass": "fas fa-share-alt",
+                "description": "chatwootWebhooks"
+            },
+            {
+                "url": "#ChatwootSyncState",
+                "label": "Sync State",
+                "iconClass": "fas fa-sync",
+                "description": "chatwootSyncState"
+            }
+        ],
+        "order": 30
+    }
+}

@@ -41,5 +41,9 @@
         "CAIPlaybook": "Playbooks",
         "Funnel": "Funnels",
         "OpportunityStage": "Opportunity Stages"
+    },
+    "navbarTabs": {
+        "Lists": "Lists"
     }
 }
+

@@ -14,6 +14,13 @@
         "ChatwootTeam": "Chatwoot / Equipes",
         "ChatwootSyncState": "Chatwoot / Syncs",
         "ChatwootAccountWebhook": "Chatwoot / Webhooks"
+    },
+    "navbarTabs": {
+        "Conversations": "Conversas",
+        "Inbox": "Caixa de Entrada",
+        "All": "Todas",
+        "Unattended": "Não Atendidas",
+        "Mentions": "Mencionadas"
     }
 }
 

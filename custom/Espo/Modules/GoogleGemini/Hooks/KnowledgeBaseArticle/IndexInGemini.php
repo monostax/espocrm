@@ -25,6 +25,8 @@ namespace Espo\Modules\GoogleGemini\Hooks\KnowledgeBaseArticle;
 
 use Espo\Core\Hook\Hook\AfterSave;
 use Espo\Core\Hook\Hook\AfterRemove;
+use Espo\Core\ORM\Repository\Option\SaveOption;
+use Espo\Core\ORM\Repository\Option\RemoveOption;
 use Espo\ORM\Repository\Option\SaveOptions;
 use Espo\ORM\Repository\Option\RemoveOptions;
 use Espo\ORM\Entity;
@@ -57,7 +59,7 @@ class IndexInGemini implements AfterSave, AfterRemove
     public function afterSave(Entity $entity, SaveOptions $options): void
     {
         // Skip if this is a silent save
-        if ($options->getSilent()) {
+        if ($options->get(SaveOption::SILENT)) {
             return;
         }
 
@@ -108,7 +110,7 @@ class IndexInGemini implements AfterSave, AfterRemove
     public function afterRemove(Entity $entity, RemoveOptions $options): void
     {
         // Skip if this is a silent remove
-        if ($options->getSilent()) {
+        if ($options->get(RemoveOption::SILENT)) {
             return;
         }
 
@@ -127,4 +129,6 @@ class IndexInGemini implements AfterSave, AfterRemove
         );
     }
 }
+
+
 

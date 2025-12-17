@@ -33,11 +33,16 @@ class ChatwootIndexView extends View {
 
     chatwootBaseUrl = "https://chatwoot.am.monostax.dev.localhost";
 
+    // Track if SSO authentication has been completed this session
+    static hasSsoAuthenticated = false;
+
     setup() {
-        // Get cwPath from options (passed from controller)
+        // Get cwPath and SSO URL from options (passed from controller)
         this.cwPath = this.options.cwPath || "";
+        this.chatwootSsoUrl = this.options.chatwootSsoUrl || "";
 
         console.log("Chatwoot View: Setup called with cwPath:", this.cwPath);
+        console.log("Chatwoot View: SSO URL available:", !!this.chatwootSsoUrl);
         console.log("Chatwoot View: Full options:", this.options);
 
         // Notify parent to switch to Chatwoot mode when this view is loaded
@@ -165,12 +170,40 @@ class ChatwootIndexView extends View {
     }
 
     data() {
-        // Build the full Chatwoot URL with path
-        const chatwootUrl = this.cwPath
-            ? `${this.chatwootBaseUrl}${this.cwPath}`
-            : this.chatwootBaseUrl;
+        let chatwootUrl;
 
-        console.log("Chatwoot View: Building URL with cwPath:", this.cwPath);
+        // For first load, use SSO URL to authenticate
+        // SSO URLs are single-use, so we only use them once per session
+        if (this.chatwootSsoUrl && !ChatwootIndexView.hasSsoAuthenticated) {
+            // Use SSO URL for authentication
+            // The SSO URL will authenticate and redirect to the Chatwoot dashboard
+            chatwootUrl = this.chatwootSsoUrl;
+            ChatwootIndexView.hasSsoAuthenticated = true;
+
+            console.log("Chatwoot View: Using SSO URL for authentication");
+            console.log("Chatwoot View: SSO URL:", chatwootUrl);
+
+            // If we have a specific path to navigate to after auth,
+            // we'll need to navigate there after the iframe loads
+            if (this.cwPath) {
+                console.log(
+                    "Chatwoot View: Will navigate to path after SSO auth:",
+                    this.cwPath
+                );
+                this.pendingNavigation = this.cwPath;
+            }
+        } else {
+            // Already authenticated or no SSO URL - use direct path
+            chatwootUrl = this.cwPath
+                ? `${this.chatwootBaseUrl}${this.cwPath}`
+                : this.chatwootBaseUrl;
+
+            console.log(
+                "Chatwoot View: Building URL with cwPath:",
+                this.cwPath
+            );
+        }
+
         console.log("Chatwoot View: Final chatwootUrl:", chatwootUrl);
 
         return {
@@ -201,6 +234,35 @@ class ChatwootIndexView extends View {
 
         // Update height on window resize
         $(window).on("resize", updateHeight);
+
+        // If we used SSO and have a pending navigation, navigate after auth completes
+        if (this.pendingNavigation) {
+            const pendingPath = this.pendingNavigation;
+            this.pendingNavigation = null;
+
+            // Listen for the CHATWOOT_READY message indicating auth is complete
+            const handleReady = (event) => {
+                if (event.data.type === "CHATWOOT_READY") {
+                    console.log(
+                        "Chatwoot View: SSO auth complete, navigating to:",
+                        pendingPath
+                    );
+
+                    // Navigate to the pending path by updating iframe src
+                    const targetUrl = `${this.chatwootBaseUrl}${pendingPath}`;
+                    $iframe.attr("src", targetUrl);
+
+                    window.removeEventListener("message", handleReady);
+                }
+            };
+
+            window.addEventListener("message", handleReady);
+
+            // Clean up if view is removed before navigation
+            this.once("remove", () => {
+                window.removeEventListener("message", handleReady);
+            });
+        }
 
         // Clean up event listener when view is removed
         this.once("remove", () => {

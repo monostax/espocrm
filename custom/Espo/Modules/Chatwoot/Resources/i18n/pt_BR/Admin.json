@@ -1,0 +1,13 @@
+{
+    "labels": {
+        "Chatwoot": "Chatwoot"
+    },
+    "descriptions": {
+        "chatwootPlatforms": "Gerenciar plataformas",
+        "chatwootAccounts": "Gerenciar contas",
+        "chatwootUsers": "Gerenciar usuários",
+        "chatwootTeams": "Gerenciar times",
+        "chatwootWebhooks": "Gerenciar webhooks",
+        "chatwootSyncState": "Visualizar estado de sincronização"
+    }
+}

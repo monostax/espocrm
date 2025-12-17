@@ -41,5 +41,22 @@
         "Contact": "Pessoas",
         "Funnel": "Funis",
         "OpportunityStage": "Estágios da Oportunidade"
+    },
+    "labels": {
+        "Home": "Dashboard"
+    },
+    "navbarTabs": {
+        "Conversations": "Conversas",
+        "Inbox": "Caixa de Entrada",
+        "All": "Todas",
+        "Unattended": "Não Atendidas",
+        "Mentions": "Mencionadas",
+        "Configurations": "Configurações",
+        "Configuration": "Configuração",
+        "Funnels": "Funis",
+        "Import": "Importação",
+        "Reports": "Relatórios",
+        "Lists": "Listas"
     }
 }
+

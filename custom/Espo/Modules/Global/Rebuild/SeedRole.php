@@ -1,0 +1,362 @@
+<?php
+/************************************************************************
+ * This file is part of Monostax.
+ *
+ * Monostax – Custom EspoCRM extensions.
+ * Copyright (C) 2025 Antonio Moura. All rights reserved.
+ * Website: https://www.monostax.ai
+ *
+ * PROPRIETARY AND CONFIDENTIAL
+ *
+ * This software and associated documentation files (the "Software") are
+ * the proprietary and confidential information of Monostax.
+ *
+ * Unauthorized copying, distribution, modification, public display, or use
+ * of this Software, in whole or in part, via any medium, is strictly
+ * prohibited without the express prior written permission of Monostax.
+ *
+ * This Software is licensed, not sold. Commercial use of this Software
+ * requires a valid license from Monostax.
+ *
+ * For licensing information, please visit: https://www.monostax.ai
+ ************************************************************************/
+
+namespace Espo\Modules\Global\Rebuild;
+
+use Espo\Core\Rebuild\RebuildAction;
+use Espo\Core\Utils\Metadata;
+use Espo\Core\Utils\Log;
+use Espo\ORM\EntityManager;
+
+/**
+ * Rebuild action to seed/update system roles with static IDs.
+ * Runs automatically during system rebuild.
+ */
+class SeedRole implements RebuildAction
+{
+    public function __construct(
+        private EntityManager $entityManager,
+        private Metadata $metadata,
+        private Log $log
+    ) {}
+
+    public function process(): void
+    {
+        $this->log->info('Global Module: Starting to seed/update system roles...');
+
+        // Check if UUID mode is enabled
+        $toHash = $this->metadata->get(['app', 'recordId', 'type']) === 'uuid4' ||
+                  $this->metadata->get(['app', 'recordId', 'dbType']) === 'uuid';
+
+        // Define all roles to be seeded
+        $roles = $this->getRoleDefinitions();
+
+        $createdCount = 0;
+        $updatedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($roles as $roleConfig) {
+            $result = $this->seedRole($roleConfig, $toHash);
+            
+            if ($result === 'created') {
+                $createdCount++;
+            } elseif ($result === 'updated') {
+                $updatedCount++;
+            } else {
+                $skippedCount++;
+            }
+        }
+
+        $this->log->info(
+            "Global Module: Role seeding complete. " .
+            "Created: {$createdCount}, Updated: {$updatedCount}, Skipped: {$skippedCount}"
+        );
+    }
+
+    /**
+     * Define all roles to be seeded.
+     * Add new roles here with their configuration.
+     */
+    protected function getRoleDefinitions(): array
+    {
+        return [
+
+            [
+                'staticId' => 'tenant-b2b',
+                'name' => '{{ Tenant }} B2B',
+                'data' => [
+                    'Account' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
+                ]],
+            ],
+            [
+                'staticId' => 'tenant',
+                'name' => '{{ Tenant }}',
+                'assignmentPermission' => 'team',
+                'userPermission' => 'team',
+                'messagePermission' => 'team',
+                'portalPermission' => 'not-set',
+                'groupEmailAccountPermission' => 'team',
+                'exportPermission' => 'not-set',
+                'massUpdatePermission' => 'not-set',
+                'dataPrivacyPermission' => 'not-set',
+                'followerManagementPermission' => 'team',
+                'auditPermission' => 'not-set',
+                'mentionPermission' => 'team',
+                'userCalendarPermission' => 'team',
+                'data' => [
+                    'Import' => true,
+                    'Report' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
+                    ],
+                    'Case' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
+                    ],
+                    'Contact' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
+                    ],
+                    'Opportunity' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
+                    ],
+                    'Funnel' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'OpportunityStage' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'BpmnFlowchart' => [
+                        'read' => 'team',
+                    ],
+                ],
+                'fieldData' => [
+                    'Email' => (object)[],
+                    'IncomingWebhook' => (object)[],
+                    'Team' => (object)[],
+                    'User' => (object)[],
+                    'Account' => (object)[],
+                    'Call' => (object)[],
+                    'Campaign' => (object)[],
+                    'Case' => (object)[],
+                    'Contact' => (object)[],
+                    'DocumentFolder' => (object)[],
+                    'Document' => (object)[],
+                    'KnowledgeBaseArticle' => (object)[],
+                    'KnowledgeBaseCategory' => (object)[],
+                    'Lead' => (object)[],
+                    'Meeting' => (object)[],
+                    'Opportunity' => (object)[],
+                    'TargetListCategory' => (object)[],
+                    'TargetList' => (object)[],
+                    'Task' => (object)[],
+                    'Activities' => (object)[],
+                    'Funnel' => (object)[],
+                    'OpportunityStage' => (object)[],
+                    'BpmnFlowchart' => (object)[],
+                    'BpmnUserTask' => (object)[],
+                    'BpmnProcess' => (object)[],
+                    'ReportCategory' => (object)[],
+                    'Report' => (object)[],
+                    'CAgendamento' => (object)[],
+                    'CPaciente' => (object)[],
+                    'CProfissional' => (object)[],
+                    'CRegistroBiometrico' => (object)[],
+                    'ChatwootAccount' => (object)[],
+                    'ChatwootPlatform' => (object)[],
+                    'ChatwootTeam' => (object)[],
+                    'ChatwootUser' => (object)[],
+                    'ChatwootAccountWebhook' => (object)[],
+                    'ChatwootContact' => (object)[],
+                    'ChatwootSyncState' => (object)[],
+                    'GoogleCalendar' => (object)[],
+                    'CAIAgent' => (object)[],
+                    'CAIThread' => (object)[],
+                    'CLigacoesIA' => (object)[],
+                    'CAIPlaybook' => (object)[],
+                ],
+            ],
+            [
+                'staticId' => 'tenant-user-api',
+                'name' => '{{ Tenant }} / User API',
+                'assignmentPermission' => 'team',
+                'userPermission' => 'team',
+                'messagePermission' => 'team',
+                'portalPermission' => 'not-set',
+                'groupEmailAccountPermission' => 'team',
+                'exportPermission' => 'not-set',
+                'massUpdatePermission' => 'not-set',
+                'dataPrivacyPermission' => 'not-set',
+                'followerManagementPermission' => 'team',
+                'auditPermission' => 'not-set',
+                'mentionPermission' => 'team',
+                'userCalendarPermission' => 'team',
+                'data' => [
+                    'Webhook' => true,
+                ],
+                'fieldData' => [
+                    'Email' => (object)[],
+                    'IncomingWebhook' => (object)[],
+                    'Team' => (object)[],
+                    'User' => (object)[],
+                    'Account' => (object)[],
+                    'Call' => (object)[],
+                    'Campaign' => (object)[],
+                    'Case' => (object)[],
+                    'Contact' => (object)[],
+                    'DocumentFolder' => (object)[],
+                    'Document' => (object)[],
+                    'KnowledgeBaseArticle' => (object)[],
+                    'KnowledgeBaseCategory' => (object)[],
+                    'Lead' => (object)[],
+                    'Meeting' => (object)[],
+                    'Opportunity' => (object)[],
+                    'TargetListCategory' => (object)[],
+                    'TargetList' => (object)[],
+                    'Task' => (object)[],
+                    'Activities' => (object)[],
+                    'Funnel' => (object)[],
+                    'OpportunityStage' => (object)[],
+                    'BpmnFlowchart' => (object)[],
+                    'BpmnUserTask' => (object)[],
+                    'BpmnProcess' => (object)[],
+                    'ReportCategory' => (object)[],
+                    'Report' => (object)[],
+                    'CAgendamento' => (object)[],
+                    'CPaciente' => (object)[],
+                    'CProfissional' => (object)[],
+                    'CRegistroBiometrico' => (object)[],
+                    'ChatwootAccount' => (object)[],
+                    'ChatwootPlatform' => (object)[],
+                    'ChatwootTeam' => (object)[],
+                    'ChatwootUser' => (object)[],
+                    'ChatwootAccountWebhook' => (object)[],
+                    'ChatwootContact' => (object)[],
+                    'ChatwootSyncState' => (object)[],
+                    'GoogleCalendar' => (object)[],
+                    'CAIAgent' => (object)[],
+                    'CAIThread' => (object)[],
+                    'CLigacoesIA' => (object)[],
+                    'CAIPlaybook' => (object)[],
+                ],
+            ]
+            // Add more roles here as needed
+            // Example:
+            // [
+            //     'staticId' => 'manager',
+            //     'name' => '{{ Manager }}',
+            //     'assignmentPermission' => 'all',
+            //     ...
+            // ],
+        ];
+    }
+
+    /**
+     * Seed or update a single role.
+     * Returns 'created', 'updated', or 'skipped'.
+     */
+    protected function seedRole(array $roleConfig, bool $toHash): string
+    {
+        $staticId = $roleConfig['staticId'];
+        $roleId = $this->prepareId($staticId, $toHash);
+        
+        // First, try to restore any soft-deleted role with this ID
+        $this->restoreSoftDeletedRole($roleId);
+
+        // Prepare role data (remove staticId from config as it's not a DB field)
+        $roleData = $roleConfig;
+        unset($roleData['staticId']);
+        $roleData['id'] = $roleId;
+
+        // Check if role already exists by ID (should be active after restoration)
+        $existingRole = $this->entityManager->getEntityById('Role', $roleId);
+
+        if ($existingRole) {
+            // Update existing role
+            try {
+                $existingRole->set($roleData);
+                
+                $this->entityManager->saveEntity($existingRole, [
+                    'modifiedById' => 'system',
+                    'skipWorkflow' => true,
+                ]);
+                
+                $this->log->info("Global Module: Updated role '{$roleData['name']}' (ID: '{$roleId}')");
+                return 'updated';
+            } catch (\Exception $e) {
+                $this->log->error("Global Module: Failed to update role '{$roleData['name']}': " . $e->getMessage());
+                return 'skipped';
+            }
+        } else {
+            // Create new role
+            try {
+                $this->entityManager->createEntity('Role', $roleData, [
+                    'createdById' => 'system',
+                    'skipWorkflow' => true,
+                ]);
+                $this->log->info("Global Module: Created role '{$roleData['name']}' (ID: '{$roleId}')");
+                return 'created';
+            } catch (\Exception $e) {
+                $this->log->error("Global Module: Failed to create role '{$roleData['name']}': " . $e->getMessage());
+                return 'skipped';
+            }
+        }
+    }
+
+    /**
+     * Restore soft-deleted role with the given ID using raw SQL.
+     */
+    protected function restoreSoftDeletedRole(string $roleId): void
+    {
+        try {
+            $pdo = $this->entityManager->getPDO();
+            $sql = "UPDATE `role` SET `deleted` = 0 WHERE `id` = :id AND `deleted` = 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['id' => $roleId]);
+            
+            if ($stmt->rowCount() > 0) {
+                $this->log->info("Global Module: Restored soft-deleted Tenant role with ID '{$roleId}'");
+            }
+        } catch (\Exception $e) {
+            $this->log->debug("Global Module: Could not restore soft-deleted role (might not exist): " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Prepare ID for entity.
+     * If UUID mode is enabled, returns MD5 hash of the ID.
+     * Otherwise, returns the ID as-is.
+     */
+    protected function prepareId(string $id, bool $toHash): string
+    {
+        if ($toHash) {
+            return md5($id);
+        }
+
+        return $id;
+    }
+}

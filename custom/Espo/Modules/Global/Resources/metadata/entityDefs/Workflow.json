@@ -1,0 +1,31 @@
+{
+    "entityListToIgnore": [
+        "PhoneNumber",
+        "Notification",
+        "EmailAddress",
+        "Attachment",
+        "Extension",
+        "Currency",
+        "Reminder",
+        "PasswordChangeRequest",
+        "Workflow",
+        "AuthToken",
+        "Role",
+        "EmailAccount",
+        "EmailTemplate",
+        "ExternalAccount",
+        "Integration",
+        "Job",
+        "Preferences",
+        "ScheduledJob",
+        "ScheduledJobLogRecord",
+        "Settings",
+        "UniqueId",
+        "InboundEmail",
+        "BpmnFlowchart",
+        "Report",
+        "WorkingTimeCalendar",
+        "Template"
+    ]
+}
+
