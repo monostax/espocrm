@@ -86,3 +86,4 @@ class StarredReports implements AppParam
         return $result;
     }
 }
+

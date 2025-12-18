@@ -1,10 +1,12 @@
 {
+    "activities": {
+        "sticked": false,
+        "index": 0,
+        "orderDirection": "asc"
+    },
     "stream": {
         "sticked": false,
         "index": 1
-    },
-    "contacts": {
-        "disabled": true
     },
     "opportunities": {
         "disabled": true

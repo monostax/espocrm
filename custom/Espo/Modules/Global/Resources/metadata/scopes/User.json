@@ -1,0 +1,10 @@
+{
+    "aclActionList": ["create", "read", "edit", "delete"],
+    "aclActionLevelListMap": {
+        "create": ["yes", "no"],
+        "read": ["all", "team", "own", "no"],
+        "edit": ["team", "own", "no"],
+        "delete": ["team", "own", "no"]
+    }
+}
+

@@ -1,0 +1,11 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\User\\BeforeCreate"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\User\\BeforeUpdate"
+    ]
+}
+

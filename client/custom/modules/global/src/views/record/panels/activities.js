@@ -47,8 +47,8 @@ class CustomActivitiesPanelView extends ActivitiesPanelView {
             return dateA.localeCompare(dateB);
         });
 
-        // Trigger a reset to update the view
-        this.collection.trigger("sort");
+        // Trigger reset to force the view to re-render
+        this.collection.trigger("reset", this.collection);
     }
 }
 

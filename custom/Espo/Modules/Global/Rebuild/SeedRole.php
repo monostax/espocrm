@@ -110,6 +110,12 @@ class SeedRole implements RebuildAction
                 'userCalendarPermission' => 'team',
                 'data' => [
                     'Import' => true,
+                    'User' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
                     'Report' => [
                         'create' => 'yes',
                         'read' => 'team',
@@ -158,7 +164,14 @@ class SeedRole implements RebuildAction
                     'Email' => (object)[],
                     'IncomingWebhook' => (object)[],
                     'Team' => (object)[],
-                    'User' => (object)[],
+                    'User' => (object)[
+                        'userName' => (object)['read' => 'yes', 'edit' => 'yes'],
+                        'password' => (object)['read' => 'yes', 'edit' => 'yes'],
+                        'emailAddress' => (object)['read' => 'yes', 'edit' => 'yes'],
+                        'isActive' => (object)['read' => 'yes', 'edit' => 'yes'],
+                        'teams' => (object)['read' => 'yes', 'edit' => 'yes'],
+                        'defaultTeam' => (object)['read' => 'yes', 'edit' => 'yes'],
+                    ],
                     'Account' => (object)[],
                     'Call' => (object)[],
                     'Campaign' => (object)[],

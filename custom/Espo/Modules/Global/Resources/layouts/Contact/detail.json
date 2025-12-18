@@ -2,37 +2,14 @@
     {
         "label": "Overview",
         "rows": [
-            [{ "name": "name" }, { "name": "website" }],
+            [{ "name": "name" }, { "name": "accountName" }],
             [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
-            [{ "name": "billingAddress" }, { "name": "shippingAddress" }]
+            [{ "name": "address" }, { "name": "title" }]
         ]
     },
     {
         "label": "Details",
-        "rows": [
-            [{ "name": "type" }, { "name": "industry" }],
-            [{ "name": "description", "fullWidth": true }]
-        ]
-    },
-    {
-        "tabBreak": true,
-        "tabLabel": "$Contacts",
-        "name": "contactsTab",
-        "rows": [
-            [
-                {
-                    "name": "contactsList",
-                    "view": "global:views/fields/relationship-list",
-                    "noLabel": true,
-                    "span": 4,
-                    "options": {
-                        "link": "contacts",
-                        "layout": "listSmall",
-                        "recordsPerPage": 10
-                    }
-                }
-            ]
-        ]
+        "rows": [[{ "name": "description", "fullWidth": true }]]
     },
     {
         "tabBreak": true,
@@ -95,5 +72,4 @@
         ]
     }
 ]
-
 

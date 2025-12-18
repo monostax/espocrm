@@ -127,3 +127,4 @@ class AccountDetailRecordView extends DetailRecordView {
 
 export default AccountDetailRecordView;
 
+

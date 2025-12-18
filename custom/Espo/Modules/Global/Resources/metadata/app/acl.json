@@ -1,6 +1,17 @@
 {
     "mandatory": {
-        "scopeLevel": {}
+        "scopeLevel": {},
+        "scopeFieldLevel": {
+            "User": {
+                "password": {
+                    "read": "yes",
+                    "edit": "yes"
+                },
+                "passwordConfirm": {
+                    "read": "yes",
+                    "edit": "yes"
+                }
+            }
+        }
     }
 }
-

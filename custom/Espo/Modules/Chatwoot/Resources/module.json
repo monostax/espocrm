@@ -2,7 +2,7 @@
     "name": "Chatwoot",
     "description": "Chatwoot integration module",
     "version": "1.0.0",
-    "order": 20,
+    "order": 25,
     "jsTranspiled": true
 }
 

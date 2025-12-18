@@ -5,6 +5,20 @@
         },
         "bottomPanelsDetail": {
             "module": "Global"
+        },
+        "sidePanelsDetail": {
+            "module": "Global"
+        }
+    },
+    "Contact": {
+        "detail": {
+            "module": "Global"
+        },
+        "bottomPanelsDetail": {
+            "module": "Global"
+        },
+        "sidePanelsDetail": {
+            "module": "Global"
         }
     },
     "Opportunity": {

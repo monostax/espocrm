@@ -1,0 +1,37 @@
+{
+    "__comment": "Override to allow regular users to create/edit users in their teams (validation in hooks)",
+    "fields": {
+        "userName": {
+            "nonAdminReadOnly": false
+        },
+        "password": {
+            "internal": true,
+            "nonAdminReadOnly": false
+        },
+        "passwordConfirm": {
+            "internal": true,
+            "nonAdminReadOnly": false
+        },
+        "isActive": {
+            "nonAdminReadOnly": false
+        },
+        "emailAddress": {
+            "nonAdminReadOnly": false
+        },
+        "teams": {
+            "nonAdminReadOnly": false
+        },
+        "defaultTeam": {
+            "nonAdminReadOnly": false
+        }
+    },
+    "links": {
+        "teams": {
+            "nonAdminReadOnly": false
+        },
+        "defaultTeam": {
+            "nonAdminReadOnly": false
+        }
+    }
+}
+
