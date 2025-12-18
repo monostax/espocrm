@@ -2,19 +2,19 @@
     "SyncInboxesFromChatwoot": {
         "name": "Sync Inboxes from Chatwoot",
         "isSystem": false,
-        "scheduling": "*/5 * * * *",
+        "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxesFromChatwoot"
     },
     "SyncContactsFromChatwoot": {
         "name": "Sync Contacts from Chatwoot",
         "isSystem": false,
-        "scheduling": "*/5 * * * *",
+        "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncContactsFromChatwoot"
     },
     "SyncConversationsFromChatwoot": {
         "name": "Sync Conversations from Chatwoot",
         "isSystem": false,
-        "scheduling": "*/5 * * * *",
+        "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncConversationsFromChatwoot"
     }
 }
