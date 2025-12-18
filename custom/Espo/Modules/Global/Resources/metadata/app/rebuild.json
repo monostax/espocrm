@@ -1,6 +1,7 @@
 {
     "actionClassNameList": [
         "Espo\\Modules\\Global\\Rebuild\\SeedRole",
-        "Espo\\Modules\\Global\\Rebuild\\ModifyConfig"
+        "Espo\\Modules\\Global\\Rebuild\\ModifyConfig",
+        "Espo\\Modules\\Global\\Rebuild\\SetDefaultSidePanelView"
     ]
 }

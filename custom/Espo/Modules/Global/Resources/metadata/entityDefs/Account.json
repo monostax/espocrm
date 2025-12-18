@@ -1,0 +1,11 @@
+{
+    "fields": {
+        "createdBy": {
+            "view": "views/fields/user-with-avatar"
+        },
+        "modifiedBy": {
+            "view": "views/fields/user-with-avatar"
+        }
+    }
+}
+

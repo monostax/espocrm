@@ -372,6 +372,16 @@ class ModifyConfig implements RebuildAction
                     'aclScope' => null,
                     'onlyAdmin' => false,
                     'id' => '906876'
+                ],
+                (object) [
+                    'type' => 'url',
+                    'text' => '$Users',
+                    'url' => '#Users',
+                    'iconClass' => 'ti ti-users',
+                    'color' => null,
+                    'aclScope' => null,
+                    'onlyAdmin' => false,
+                    'id' => '906878'
                 ]
             ]
         ];
