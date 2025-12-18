@@ -501,13 +501,25 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Convert Chatwoot Unix timestamp to EspoCRM datetime string.
+     * Convert Chatwoot timestamp to EspoCRM datetime string.
+     * Handles both Unix timestamps (int) and ISO date strings.
      */
-    private function convertChatwootTimestamp(?int $timestamp): ?string
+    private function convertChatwootTimestamp(int|string|null $timestamp): ?string
     {
         if ($timestamp === null) {
             return null;
         }
+
+        // If it's already a string (ISO format), parse it
+        if (is_string($timestamp)) {
+            $parsed = strtotime($timestamp);
+            if ($parsed === false) {
+                return null;
+            }
+            return date('Y-m-d H:i:s', $parsed);
+        }
+
+        // Unix timestamp (int)
         return date('Y-m-d H:i:s', $timestamp);
     }
 }
