@@ -4,7 +4,7 @@
         "rows": [
             [
                 {
-                    "name": "inboxName"
+                    "name": "inbox"
                 },
                 {
                     "name": "inboxChannelType"
@@ -12,7 +12,7 @@
             ],
             [
                 {
-                    "name": "inboxId"
+                    "name": "chatwootInboxId"
                 },
                 {
                     "name": "sourceId"

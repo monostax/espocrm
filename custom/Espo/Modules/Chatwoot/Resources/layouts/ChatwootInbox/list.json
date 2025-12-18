@@ -1,0 +1,28 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 25
+    },
+    {
+        "name": "channelType",
+        "width": 15
+    },
+    {
+        "name": "phoneNumber",
+        "width": 15
+    },
+    {
+        "name": "provider",
+        "width": 15
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 15
+    },
+    {
+        "name": "lastSyncedAt",
+        "width": 15
+    }
+]
+

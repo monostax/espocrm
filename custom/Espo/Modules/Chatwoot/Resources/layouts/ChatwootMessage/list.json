@@ -1,0 +1,28 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 30
+    },
+    {
+        "name": "messageType",
+        "width": 10
+    },
+    {
+        "name": "senderName",
+        "width": 15
+    },
+    {
+        "name": "conversation",
+        "width": 20
+    },
+    {
+        "name": "chatwootCreatedAt",
+        "width": 15
+    },
+    {
+        "name": "status",
+        "width": 10
+    }
+]
+

@@ -1,0 +1,86 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": true
+        },
+        "chatwootInboxId": {
+            "type": "int",
+            "required": true,
+            "readOnly": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "channelType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "websiteUrl": {
+            "type": "url"
+        },
+        "phoneNumber": {
+            "type": "varchar",
+            "maxLength": 50
+        },
+        "provider": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "medium": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "greetingEnabled": {
+            "type": "bool",
+            "default": false
+        },
+        "greetingMessage": {
+            "type": "text"
+        },
+        "avatarUrl": {
+            "type": "url"
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "inboxes"
+        },
+        "contactInboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootContactInbox",
+            "foreign": "inbox"
+        },
+        "conversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "inbox"
+        }
+    },
+    "indexes": {
+        "uniqueInbox": {
+            "unique": true,
+            "columns": ["chatwootInboxId", "chatwootAccountId"]
+        },
+        "chatwootAccountId": {
+            "columns": ["chatwootAccountId"]
+        }
+    }
+}
+

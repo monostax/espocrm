@@ -1,0 +1,28 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "messageType"
+                }
+            ],
+            [
+                {
+                    "name": "senderName"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootCreatedAt"
+                }
+            ]
+        ]
+    }
+]
+

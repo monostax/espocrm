@@ -4,7 +4,15 @@
         "rows": [
             [
                 {
-                    "name": "chatwootConversationId"
+                    "name": "conversation"
+                },
+                {
+                    "name": "chatwootMessageId"
+                }
+            ],
+            [
+                {
+                    "name": "messageType"
                 },
                 {
                     "name": "status"
@@ -12,10 +20,10 @@
             ],
             [
                 {
-                    "name": "inbox"
+                    "name": "senderName"
                 },
                 {
-                    "name": "chatwootInboxId"
+                    "name": "senderType"
                 }
             ],
             [
@@ -28,40 +36,49 @@
             ],
             [
                 {
-                    "name": "contactInbox"
+                    "name": "chatwootAccount"
                 },
                 {
-                    "name": "chatwootAccount"
+                    "name": "isPrivate"
                 }
             ]
         ]
     },
     {
-        "label": "Activity",
+        "label": "Content",
         "rows": [
             [
                 {
-                    "name": "assigneeName"
-                },
-                {
-                    "name": "assigneeId"
+                    "name": "content",
+                    "fullWidth": true
                 }
             ],
             [
                 {
-                    "name": "messagesCount"
+                    "name": "contentType"
                 },
                 {
-                    "name": "lastActivityAt"
+                    "name": "sourceId"
                 }
-            ],
+            ]
+        ]
+    },
+    {
+        "label": "Timestamps",
+        "rows": [
             [
                 {
                     "name": "chatwootCreatedAt"
                 },
                 {
-                    "name": "lastSyncedAt"
+                    "name": "chatwootUpdatedAt"
                 }
+            ],
+            [
+                {
+                    "name": "lastSyncedAt"
+                },
+                false
             ]
         ]
     }

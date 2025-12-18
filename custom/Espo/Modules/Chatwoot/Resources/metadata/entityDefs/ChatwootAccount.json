@@ -123,6 +123,11 @@
             "type": "hasMany",
             "entity": "ChatwootSyncState",
             "foreign": "chatwootAccount"
+        },
+        "inboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootInbox",
+            "foreign": "chatwootAccount"
         }
     },
     "collection": {

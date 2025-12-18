@@ -217,7 +217,16 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ->getRDBRepository('ChatwootContactInbox')
             ->where([
                 'chatwootContactId' => $cwtContact->getId(),
-                'inboxId' => $inboxId,
+                'chatwootInboxId' => $inboxId,
+                'chatwootAccountId' => $espoAccountId,
+            ])
+            ->findOne();
+
+        // Find the ChatwootInbox entity for linking
+        $chatwootInbox = $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->where([
+                'chatwootInboxId' => $inboxId,
                 'chatwootAccountId' => $espoAccountId,
             ])
             ->findOne();
@@ -231,11 +240,33 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ])
             ->findOne();
 
+        $conversation = null;
+        $result = 'skipped';
+
         if ($existingConversation) {
-            return $this->updateExistingConversation($existingConversation, $chatwootConversation, $cwtContact, $contactInbox);
+            $result = $this->updateExistingConversation($existingConversation, $chatwootConversation, $cwtContact, $contactInbox, $chatwootInbox);
+            $conversation = $existingConversation;
+        } else {
+            $result = $this->createNewConversation($chatwootConversation, $espoAccountId, $cwtContact, $contactInbox, $chatwootInbox);
+            // Find the newly created conversation
+            $conversation = $this->entityManager
+                ->getRDBRepository('ChatwootConversation')
+                ->where([
+                    'chatwootConversationId' => $chatwootConversationId,
+                    'chatwootAccountId' => $espoAccountId,
+                ])
+                ->findOne();
         }
 
-        return $this->createNewConversation($chatwootConversation, $espoAccountId, $cwtContact, $contactInbox);
+        // Sync messages for this conversation
+        if ($conversation && $result === 'synced') {
+            $messages = $chatwootConversation['messages'] ?? [];
+            if (!empty($messages)) {
+                $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -245,7 +276,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
         Entity $conversation,
         array $chatwootConversation,
         Entity $cwtContact,
-        ?Entity $contactInbox
+        ?Entity $contactInbox,
+        ?Entity $chatwootInbox
     ): string {
         // Extract assignee info (can be null)
         $assignee = $chatwootConversation['meta']['assignee'] ?? null;
@@ -279,7 +311,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
         $conversation->set('name', $name);
         $conversation->set('status', $chatwootConversation['status'] ?? 'open');
-        $conversation->set('inboxId', $chatwootConversation['inbox_id'] ?? null);
+        $conversation->set('chatwootInboxId', $chatwootConversation['inbox_id'] ?? null);
         $conversation->set('inboxName', $channel);
         $conversation->set('assigneeId', $assignee['id'] ?? null);
         $conversation->set('assigneeName', $assignee['name'] ?? $assignee['available_name'] ?? null);
@@ -295,6 +327,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $conversation->set('contactInboxId', $contactInbox->getId());
         }
 
+        if ($chatwootInbox) {
+            $conversation->set('inboxId', $chatwootInbox->getId()); // Link to ChatwootInbox entity
+        }
+
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
 
         return 'synced';
@@ -307,7 +343,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
         array $chatwootConversation,
         string $espoAccountId,
         Entity $cwtContact,
-        ?Entity $contactInbox
+        ?Entity $contactInbox,
+        ?Entity $chatwootInbox
     ): string {
         // Extract assignee info (can be null)
         $assignee = $chatwootConversation['meta']['assignee'] ?? null;
@@ -346,8 +383,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'chatwootContactId' => $cwtContact->getId(),
             'contactId' => $cwtContact->get('contactId'), // Denormalized from ChatwootContact
             'contactInboxId' => $contactInbox?->getId(),
+            'inboxId' => $chatwootInbox?->getId(), // Link to ChatwootInbox entity
             'status' => $chatwootConversation['status'] ?? 'open',
-            'inboxId' => $chatwootConversation['inbox_id'] ?? null,
+            'chatwootInboxId' => $chatwootConversation['inbox_id'] ?? null,
             'inboxName' => $channel,
             'assigneeId' => $assignee['id'] ?? null,
             'assigneeName' => $assignee['name'] ?? $assignee['available_name'] ?? null,
@@ -358,6 +396,108 @@ class SyncConversationsFromChatwoot implements JobDataLess
         ], ['silent' => true]);
 
         return 'synced';
+    }
+
+    /**
+     * Sync messages for a conversation.
+     */
+    private function syncMessages(
+        array $messages,
+        Entity $conversation,
+        Entity $cwtContact,
+        string $espoAccountId
+    ): void {
+        foreach ($messages as $messageData) {
+            $chatwootMessageId = $messageData['id'] ?? null;
+            if (!$chatwootMessageId) {
+                continue;
+            }
+
+            try {
+                // Check if message already exists
+                $existingMessage = $this->entityManager
+                    ->getRDBRepository('ChatwootMessage')
+                    ->where([
+                        'chatwootMessageId' => $chatwootMessageId,
+                        'chatwootAccountId' => $espoAccountId,
+                    ])
+                    ->findOne();
+
+                // Map message_type: 0=incoming, 1=outgoing, 2=activity, 3=template
+                $messageTypeMap = [
+                    0 => 'incoming',
+                    1 => 'outgoing',
+                    2 => 'activity',
+                    3 => 'template'
+                ];
+                $messageType = $messageTypeMap[$messageData['message_type'] ?? 0] ?? 'incoming';
+
+                // Generate display name (truncated content)
+                $content = $messageData['content'] ?? '';
+                $name = mb_substr(strip_tags($content), 0, 100);
+                if (mb_strlen($content) > 100) {
+                    $name .= '...';
+                }
+                if (!$name) {
+                    $name = 'Message #' . $chatwootMessageId;
+                }
+
+                // Get sender info
+                $sender = $messageData['sender'] ?? null;
+                $senderName = null;
+                if ($sender) {
+                    $senderName = $sender['name'] ?? $sender['available_name'] ?? null;
+                }
+
+                $data = [
+                    'name' => $name,
+                    'chatwootMessageId' => $chatwootMessageId,
+                    'conversationId' => $conversation->getId(),
+                    'chatwootContactId' => $cwtContact->getId(),
+                    'contactId' => $cwtContact->get('contactId'), // denormalized
+                    'chatwootAccountId' => $espoAccountId,
+                    'content' => $content,
+                    'messageType' => $messageType,
+                    'contentType' => $messageData['content_type'] ?? 'text',
+                    'status' => $messageData['status'] ?? 'sent',
+                    'isPrivate' => $messageData['private'] ?? false,
+                    'senderType' => $messageData['sender_type'] ?? null,
+                    'senderId' => $messageData['sender_id'] ?? null,
+                    'senderName' => $senderName,
+                    'chatwootCreatedAt' => $this->convertChatwootTimestamp($messageData['created_at'] ?? null),
+                    'chatwootUpdatedAt' => $this->convertChatwootTimestamp($messageData['updated_at'] ?? null),
+                    'sourceId' => $messageData['source_id'] ?? null,
+                    'lastSyncedAt' => date('Y-m-d H:i:s'),
+                ];
+
+                if ($existingMessage) {
+                    foreach ($data as $field => $value) {
+                        $existingMessage->set($field, $value);
+                    }
+                    $this->entityManager->saveEntity($existingMessage, ['silent' => true]);
+                } else {
+                    $this->entityManager->createEntity('ChatwootMessage', $data, ['silent' => true]);
+                }
+            } catch (\Exception $e) {
+                $this->log->warning(
+                    "SyncConversationsFromChatwoot: Failed to sync message {$chatwootMessageId}: " . $e->getMessage()
+                );
+            }
+        }
+    }
+
+    /**
+     * Map Chatwoot message type integer to string.
+     */
+    private function mapMessageType(int $type): string
+    {
+        $map = [
+            0 => 'incoming',
+            1 => 'outgoing',
+            2 => 'activity',
+            3 => 'template'
+        ];
+        return $map[$type] ?? 'incoming';
     }
 
     /**

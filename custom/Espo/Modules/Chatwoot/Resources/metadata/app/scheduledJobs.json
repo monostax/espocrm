@@ -1,4 +1,10 @@
 {
+    "SyncInboxesFromChatwoot": {
+        "name": "Sync Inboxes from Chatwoot",
+        "isSystem": false,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxesFromChatwoot"
+    },
     "SyncContactsFromChatwoot": {
         "name": "Sync Contacts from Chatwoot",
         "isSystem": false,

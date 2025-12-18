@@ -1,0 +1,127 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "chatwootMessageId": {
+            "type": "int",
+            "required": true
+        },
+        "conversation": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootContact": {
+            "type": "link"
+        },
+        "contact": {
+            "type": "link"
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "content": {
+            "type": "text"
+        },
+        "messageType": {
+            "type": "enum",
+            "options": ["incoming", "outgoing", "activity", "template"],
+            "default": "incoming"
+        },
+        "contentType": {
+            "type": "enum",
+            "options": [
+                "text",
+                "input_select",
+                "cards",
+                "form",
+                "article",
+                "input_email",
+                "input_csat"
+            ],
+            "default": "text"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["sent", "delivered", "read", "failed", "progress"],
+            "default": "sent"
+        },
+        "isPrivate": {
+            "type": "bool",
+            "default": false
+        },
+        "senderType": {
+            "type": "varchar",
+            "maxLength": 50
+        },
+        "senderId": {
+            "type": "int"
+        },
+        "senderName": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "chatwootCreatedAt": {
+            "type": "datetime"
+        },
+        "chatwootUpdatedAt": {
+            "type": "datetime"
+        },
+        "sourceId": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "conversation": {
+            "type": "belongsTo",
+            "entity": "ChatwootConversation",
+            "foreign": "messages"
+        },
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "chatwootMessages"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount"
+        }
+    },
+    "indexes": {
+        "uniqueMessage": {
+            "unique": true,
+            "columns": ["chatwootMessageId", "chatwootAccountId"]
+        },
+        "conversationId": {
+            "columns": ["conversationId"]
+        },
+        "chatwootAccountId": {
+            "columns": ["chatwootAccountId"]
+        }
+    },
+    "collection": {
+        "orderBy": "chatwootCreatedAt",
+        "order": "desc"
+    }
+}
+

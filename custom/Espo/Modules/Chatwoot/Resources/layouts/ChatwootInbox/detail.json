@@ -4,15 +4,15 @@
         "rows": [
             [
                 {
-                    "name": "chatwootConversationId"
+                    "name": "name"
                 },
                 {
-                    "name": "status"
+                    "name": "chatwootAccount"
                 }
             ],
             [
                 {
-                    "name": "inbox"
+                    "name": "channelType"
                 },
                 {
                     "name": "chatwootInboxId"
@@ -20,47 +20,50 @@
             ],
             [
                 {
-                    "name": "contact"
+                    "name": "phoneNumber"
                 },
                 {
-                    "name": "chatwootContact"
+                    "name": "websiteUrl"
                 }
             ],
             [
                 {
-                    "name": "contactInbox"
+                    "name": "provider"
                 },
                 {
-                    "name": "chatwootAccount"
+                    "name": "medium"
                 }
             ]
         ]
     },
     {
-        "label": "Activity",
+        "label": "Settings",
         "rows": [
             [
                 {
-                    "name": "assigneeName"
+                    "name": "greetingEnabled"
                 },
                 {
-                    "name": "assigneeId"
+                    "name": "avatarUrl"
                 }
             ],
             [
                 {
-                    "name": "messagesCount"
-                },
-                {
-                    "name": "lastActivityAt"
+                    "name": "greetingMessage",
+                    "fullWidth": true
                 }
-            ],
+            ]
+        ]
+    },
+    {
+        "label": "Sync",
+        "rows": [
             [
-                {
-                    "name": "chatwootCreatedAt"
-                },
                 {
                     "name": "lastSyncedAt"
+                },
+                {
+                    "name": "createdAt"
                 }
             ]
         ]

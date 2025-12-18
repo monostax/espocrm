@@ -8,7 +8,8 @@
         "chatwootContact": { "type": "link", "required": true },
         "contact": { "type": "link" },
         "chatwootAccount": { "type": "link", "required": true },
-        "inboxId": { "type": "int", "required": true },
+        "inbox": { "type": "link" },
+        "chatwootInboxId": { "type": "int", "required": true },
         "inboxName": { "type": "varchar", "maxLength": 255 },
         "inboxChannelType": {
             "type": "enum",
@@ -49,12 +50,21 @@
             "type": "hasMany",
             "entity": "ChatwootConversation",
             "foreign": "contactInbox"
+        },
+        "inbox": {
+            "type": "belongsTo",
+            "entity": "ChatwootInbox",
+            "foreign": "contactInboxes"
         }
     },
     "indexes": {
         "uniqueContactInbox": {
             "unique": true,
-            "columns": ["chatwootContactId", "inboxId", "chatwootAccountId"]
+            "columns": [
+                "chatwootContactId",
+                "chatwootInboxId",
+                "chatwootAccountId"
+            ]
         }
     }
 }

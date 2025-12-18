@@ -7,6 +7,7 @@
         },
         "chatwootConversationId": { "type": "int", "required": true },
         "contactInbox": { "type": "link" },
+        "inbox": { "type": "link" },
         "chatwootContact": { "type": "link" },
         "contact": { "type": "link" },
         "chatwootAccount": { "type": "link", "required": true },
@@ -15,7 +16,7 @@
             "options": ["open", "resolved", "pending", "snoozed"],
             "default": "open"
         },
-        "inboxId": { "type": "int" },
+        "chatwootInboxId": { "type": "int" },
         "inboxName": { "type": "varchar", "maxLength": 255 },
         "assigneeId": { "type": "int" },
         "assigneeName": { "type": "varchar", "maxLength": 255 },
@@ -48,6 +49,16 @@
             "type": "hasMany",
             "entity": "Opportunity",
             "foreign": "chatwootConversation"
+        },
+        "inbox": {
+            "type": "belongsTo",
+            "entity": "ChatwootInbox",
+            "foreign": "conversations"
+        },
+        "messages": {
+            "type": "hasMany",
+            "entity": "ChatwootMessage",
+            "foreign": "conversation"
         }
     },
     "indexes": {

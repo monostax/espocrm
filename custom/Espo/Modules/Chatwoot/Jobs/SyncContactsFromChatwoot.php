@@ -396,12 +396,21 @@ class SyncContactsFromChatwoot implements JobDataLess
                 $name .= ' (' . $mappedChannelType . ')';
             }
 
+            // Find ChatwootInbox entity for linking
+            $chatwootInbox = $this->entityManager
+                ->getRDBRepository('ChatwootInbox')
+                ->where([
+                    'chatwootInboxId' => $inboxId,
+                    'chatwootAccountId' => $espoAccountId,
+                ])
+                ->findOne();
+
             // Check if ChatwootContactInbox already exists
             $existing = $this->entityManager
                 ->getRDBRepository('ChatwootContactInbox')
                 ->where([
                     'chatwootContactId' => $cwtContact->getId(),
-                    'inboxId' => $inboxId,
+                    'chatwootInboxId' => $inboxId,
                     'chatwootAccountId' => $espoAccountId,
                 ])
                 ->findOne();
@@ -413,6 +422,7 @@ class SyncContactsFromChatwoot implements JobDataLess
                 $existing->set('inboxName', $inboxName);
                 $existing->set('inboxChannelType', $mappedChannelType);
                 $existing->set('contactId', $cwtContact->get('contactId')); // Denormalized
+                $existing->set('inboxId', $chatwootInbox?->getId()); // Link to ChatwootInbox entity
                 $existing->set('lastSyncedAt', date('Y-m-d H:i:s'));
                 $this->entityManager->saveEntity($existing, ['silent' => true]);
             } else {
@@ -422,7 +432,8 @@ class SyncContactsFromChatwoot implements JobDataLess
                     'chatwootContactId' => $cwtContact->getId(),
                     'contactId' => $cwtContact->get('contactId'), // Denormalized
                     'chatwootAccountId' => $espoAccountId,
-                    'inboxId' => $inboxId,
+                    'chatwootInboxId' => $inboxId, // Chatwoot inbox ID (int)
+                    'inboxId' => $chatwootInbox?->getId(), // Link to ChatwootInbox entity
                     'inboxName' => $inboxName,
                     'inboxChannelType' => $mappedChannelType,
                     'sourceId' => $sourceId,
