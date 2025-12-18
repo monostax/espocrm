@@ -1,0 +1,98 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "website" }],
+            [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
+            [{ "name": "billingAddress" }, { "name": "shippingAddress" }]
+        ]
+    },
+    {
+        "label": "Details",
+        "rows": [
+            [{ "name": "type" }, { "name": "industry" }],
+            [{ "name": "description", "fullWidth": true }]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Contacts",
+        "name": "contactsTab",
+        "rows": [
+            [
+                {
+                    "name": "contactsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "contacts",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Opportunities",
+        "name": "opportunitiesTab",
+        "rows": [
+            [
+                {
+                    "name": "opportunitiesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "opportunities",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Cases",
+        "name": "casesTab",
+        "rows": [
+            [
+                {
+                    "name": "casesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "cases",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Documents",
+        "name": "documentsTab",
+        "rows": [
+            [
+                {
+                    "name": "documentsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "documents",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    }
+]
+

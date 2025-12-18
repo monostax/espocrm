@@ -45,6 +45,81 @@ class ModifyConfig implements RebuildAction
     public function process(): void
     {
         $this->configureNavbar();
+        $this->configureActivitiesEntityList();
+    }
+
+    /**
+     * Configure activitiesEntityList and historyEntityList.
+     * - Add Task to activities
+     * - Remove invalid/non-existent entities
+     */
+    private function configureActivitiesEntityList(): void
+    {
+        // Valid entity types for activities/history panels
+        $validActivityEntities = ['Meeting', 'Call', 'Email', 'Task'];
+        $validHistoryEntities = ['Meeting', 'Call', 'Email'];
+
+        $modified = false;
+
+        // Configure activitiesEntityList
+        $activitiesEntityList = $this->config->get('activitiesEntityList') ?? [];
+        
+        if (!is_array($activitiesEntityList)) {
+            $activitiesEntityList = [];
+        }
+
+        // Filter to only valid entities and add Task
+        $newActivitiesEntityList = array_values(array_intersect($activitiesEntityList, $validActivityEntities));
+        
+        // Ensure Task is included
+        if (!in_array('Task', $newActivitiesEntityList)) {
+            $newActivitiesEntityList[] = 'Task';
+        }
+
+        // Ensure core entities are included
+        foreach (['Meeting', 'Call'] as $entity) {
+            if (!in_array($entity, $newActivitiesEntityList)) {
+                array_unshift($newActivitiesEntityList, $entity);
+            }
+        }
+
+        if ($newActivitiesEntityList !== $activitiesEntityList) {
+            $this->configWriter->set('activitiesEntityList', $newActivitiesEntityList);
+            $modified = true;
+        }
+
+        // Configure historyEntityList
+        $historyEntityList = $this->config->get('historyEntityList') ?? [];
+        
+        if (!is_array($historyEntityList)) {
+            $historyEntityList = [];
+        }
+
+        // Filter to only valid entities
+        $newHistoryEntityList = array_values(array_intersect($historyEntityList, $validHistoryEntities));
+
+        // Ensure core entities are included
+        foreach (['Meeting', 'Call', 'Email'] as $entity) {
+            if (!in_array($entity, $newHistoryEntityList)) {
+                $newHistoryEntityList[] = $entity;
+            }
+        }
+
+        if ($newHistoryEntityList !== $historyEntityList) {
+            $this->configWriter->set('historyEntityList', $newHistoryEntityList);
+            $modified = true;
+        }
+
+        // Set activitiesCreateButtonMaxCount to 4 to include Task icon button
+        $currentButtonMaxCount = $this->config->get('activitiesCreateButtonMaxCount');
+        if ($currentButtonMaxCount !== 4) {
+            $this->configWriter->set('activitiesCreateButtonMaxCount', 4);
+            $modified = true;
+        }
+
+        if ($modified) {
+            $this->configWriter->save();
+        }
     }
 
     private function configureNavbar(): void

@@ -1,0 +1,48 @@
+{
+    "recordViews": {
+        "detail": "global:views/account/record/detail"
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "activities",
+                "view": "global:views/record/panels/activities",
+                "label": "Activities",
+                "aclScope": "Activities",
+                "orderDirection": "asc"
+            },
+            {
+                "name": "history",
+                "view": "crm:views/record/panels/history",
+                "label": "History",
+                "aclScope": "Activities"
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks",
+                "disabled": true
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "activities",
+                "view": "global:views/record/panels/activities",
+                "label": "Activities",
+                "aclScope": "Activities",
+                "orderDirection": "asc"
+            },
+            {
+                "name": "history",
+                "view": "crm:views/record/panels/history",
+                "label": "History",
+                "aclScope": "Activities"
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks",
+                "disabled": true
+            }
+        ]
+    }
+}
+

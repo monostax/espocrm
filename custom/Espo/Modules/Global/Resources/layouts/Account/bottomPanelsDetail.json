@@ -1,0 +1,19 @@
+{
+    "stream": {
+        "sticked": false,
+        "index": 0
+    },
+    "contacts": {
+        "disabled": true
+    },
+    "opportunities": {
+        "disabled": true
+    },
+    "documents": {
+        "disabled": true
+    },
+    "cases": {
+        "disabled": true
+    }
+}
+

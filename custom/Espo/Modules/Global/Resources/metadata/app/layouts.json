@@ -1,4 +1,12 @@
 {
+    "Account": {
+        "detail": {
+            "module": "Global"
+        },
+        "bottomPanelsDetail": {
+            "module": "Global"
+        }
+    },
     "Opportunity": {
         "detail": {
             "module": "Global"
