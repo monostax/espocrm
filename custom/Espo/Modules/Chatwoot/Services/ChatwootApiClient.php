@@ -533,6 +533,11 @@ class ChatwootApiClient
         int $accountId,
         array $contactData
     ): array {
+        // Validate required field
+        if (!isset($contactData['inbox_id'])) {
+            throw new Error('inbox_id is required to create a contact in Chatwoot.');
+        }
+        
         $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts';
         
         $payload = json_encode($contactData);
@@ -1110,5 +1115,107 @@ class ChatwootApiClient
             $this->log->info("Webhook $webhookId was already deleted from account $accountId or doesn't exist");
         }
     }
+
+    /**
+ * List resolved contacts from a Chatwoot account with pagination.
+ * Note: Page size is fixed at 15 by Chatwoot API.
+ * Only returns contacts with identifier, email, or phone_number.
+ *
+ * @param string $platformUrl The base URL of the Chatwoot platform
+ * @param string $accountApiKey The account-level API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $page Page number (1-based)
+ * @param string $sort Sort field (name, email, phone_number, last_activity_at, or prefixed with - for desc)
+ * @return array{meta: array{count: int, current_page: string}, payload: array<int, array<string, mixed>>}
+ * @throws Error
+ */
+public function listContacts(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $page = 1,
+    string $sort = '-last_activity_at'
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts';
+
+    $queryParams = ['page' => $page];
+    if ($sort) {
+        $queryParams['sort'] = $sort;
+    }
+    $url .= '?' . http_build_query($queryParams);
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to list contacts from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (listContacts): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
+ * List conversations from a Chatwoot account.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $page Page number (default 1)
+ * @param string $status Filter by status: all, open, resolved, pending, snoozed (default 'all')
+ * @param string $assigneeType Filter by assignee: me, unassigned, all, assigned (default 'all')
+ * @return array The API response with conversations
+ */
+public function listConversations(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $page = 1,
+    string $status = 'all',
+    string $assigneeType = 'all'
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations';
+
+    $queryParams = [
+        'page' => $page,
+        'status' => $status,
+        'assignee_type' => $assigneeType,
+    ];
+    $url .= '?' . http_build_query($queryParams);
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to list conversations from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (listConversations): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
 }
 

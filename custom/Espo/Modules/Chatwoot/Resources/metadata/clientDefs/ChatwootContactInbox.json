@@ -1,7 +1,7 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fas fa-link",
-    "color": "#7B68EE",
+    "iconClass": "fas fa-inbox",
+    "color": "#17a2b8",
     "kanbanViewMode": false,
     "modalViews": {
         "detail": "views/modals/detail"
@@ -12,33 +12,18 @@
     "bottomPanels": {
         "detail": [
             {
-                "name": "contactInboxes",
-                "label": "Channels",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 5,
-                "disabled": false
-            },
-            {
                 "name": "conversations",
                 "label": "Conversations",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
                 "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 6,
+                "order": 5,
                 "disabled": false
             }
         ]
     },
     "relationshipPanels": {
-        "contactInboxes": {
-            "create": false,
-            "select": false,
-            "view": "views/record/panels/relationship"
-        },
         "conversations": {
             "create": false,
             "select": false,

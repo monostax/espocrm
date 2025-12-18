@@ -43,6 +43,25 @@
                 }
             ]
         ]
+    },
+    {
+        "label": "Sync",
+        "rows": [
+            [
+                {
+                    "name": "contactSyncEnabled"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "lastContactSyncAt"
+                },
+                {
+                    "name": "lastConversationSyncAt"
+                }
+            ]
+        ]
     }
 ]
 

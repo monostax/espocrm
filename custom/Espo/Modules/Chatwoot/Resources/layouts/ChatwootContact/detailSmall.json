@@ -1,0 +1,33 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "phoneNumber"
+                }
+            ],
+            [
+                {
+                    "name": "email"
+                }
+            ],
+            [
+                {
+                    "name": "contact"
+                }
+            ],
+            [
+                {
+                    "name": "syncStatus"
+                }
+            ]
+        ]
+    }
+]
+

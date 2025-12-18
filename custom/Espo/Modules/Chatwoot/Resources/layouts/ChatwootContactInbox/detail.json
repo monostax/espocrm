@@ -1,0 +1,40 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "inboxName"
+                },
+                {
+                    "name": "inboxChannelType"
+                }
+            ],
+            [
+                {
+                    "name": "inboxId"
+                },
+                {
+                    "name": "sourceId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootContact"
+                },
+                {
+                    "name": "contact"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "lastSyncedAt"
+                }
+            ]
+        ]
+    }
+]
+

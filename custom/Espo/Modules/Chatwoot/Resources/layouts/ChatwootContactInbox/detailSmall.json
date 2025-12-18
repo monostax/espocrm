@@ -1,0 +1,28 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "inboxName"
+                }
+            ],
+            [
+                {
+                    "name": "inboxChannelType"
+                }
+            ],
+            [
+                {
+                    "name": "sourceId"
+                }
+            ],
+            [
+                {
+                    "name": "contact"
+                }
+            ]
+        ]
+    }
+]
+

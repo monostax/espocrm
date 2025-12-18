@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "chatwootConversation": { "type": "link" }
+    },
+    "links": {
+        "chatwootConversation": {
+            "type": "belongsTo",
+            "entity": "ChatwootConversation",
+            "foreign": "opportunities"
+        }
+    }
+}

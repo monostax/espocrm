@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 20
+    },
+    {
+        "name": "phoneNumber",
+        "width": 15
+    },
+    {
+        "name": "email",
+        "width": 15
+    },
+    {
+        "name": "contact",
+        "width": 15
+    },
+    {
+        "name": "syncStatus",
+        "width": 10
+    },
+    {
+        "name": "lastSyncedAt",
+        "width": 15
+    }
+]
+

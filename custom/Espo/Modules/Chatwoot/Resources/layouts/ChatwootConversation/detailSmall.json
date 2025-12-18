@@ -1,0 +1,33 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "chatwootConversationId"
+                }
+            ],
+            [
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "inboxName"
+                }
+            ],
+            [
+                {
+                    "name": "contact"
+                }
+            ],
+            [
+                {
+                    "name": "lastActivityAt"
+                }
+            ]
+        ]
+    }
+]
+

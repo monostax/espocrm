@@ -1,0 +1,34 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-comments",
+    "color": "#28a745",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "opportunities",
+                "label": "Opportunities",
+                "view": "views/record/panels/relationship",
+                "select": true,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship",
+                "order": 5,
+                "disabled": false
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "opportunities": {
+            "create": false,
+            "select": true,
+            "view": "views/record/panels/relationship"
+        }
+    }
+}
+

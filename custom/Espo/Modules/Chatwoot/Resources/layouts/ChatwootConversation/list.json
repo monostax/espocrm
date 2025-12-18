@@ -1,0 +1,28 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 25
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "contact",
+        "width": 15
+    },
+    {
+        "name": "assigneeName",
+        "width": 15
+    },
+    {
+        "name": "messagesCount",
+        "width": 10
+    },
+    {
+        "name": "lastActivityAt",
+        "width": 15
+    }
+]
+

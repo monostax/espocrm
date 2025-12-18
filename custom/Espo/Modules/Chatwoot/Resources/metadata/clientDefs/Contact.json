@@ -10,6 +10,26 @@
                 "rowActionsView": "views/record/row-actions/relationship",
                 "order": 5,
                 "disabled": false
+            },
+            {
+                "name": "chatwootContactInboxes",
+                "label": "Chatwoot Channels",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 6,
+                "disabled": false
+            },
+            {
+                "name": "chatwootConversations",
+                "label": "Chatwoot Conversations",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 7,
+                "disabled": false
             }
         ]
     },
@@ -17,6 +37,16 @@
         "chatwootContacts": {
             "create": false,
             "select": true,
+            "view": "views/record/panels/relationship"
+        },
+        "chatwootContactInboxes": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "chatwootConversations": {
+            "create": false,
+            "select": false,
             "view": "views/record/panels/relationship"
         }
     }

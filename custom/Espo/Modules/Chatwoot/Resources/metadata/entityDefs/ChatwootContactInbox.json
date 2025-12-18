@@ -1,0 +1,61 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "chatwootContact": { "type": "link", "required": true },
+        "contact": { "type": "link" },
+        "chatwootAccount": { "type": "link", "required": true },
+        "inboxId": { "type": "int", "required": true },
+        "inboxName": { "type": "varchar", "maxLength": 255 },
+        "inboxChannelType": {
+            "type": "enum",
+            "options": [
+                "whatsapp",
+                "email",
+                "web_widget",
+                "api",
+                "telegram",
+                "sms",
+                "facebook",
+                "instagram"
+            ]
+        },
+        "sourceId": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": "Contact identifier for this inbox"
+        },
+        "lastSyncedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact",
+            "foreign": "contactInboxes"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "chatwootContactInboxes"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount"
+        },
+        "conversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "contactInbox"
+        }
+    },
+    "indexes": {
+        "uniqueContactInbox": {
+            "unique": true,
+            "columns": ["chatwootContactId", "inboxId", "chatwootAccountId"]
+        }
+    }
+}
+

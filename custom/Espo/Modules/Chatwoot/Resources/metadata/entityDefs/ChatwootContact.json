@@ -11,6 +11,39 @@
             "foreign": "name",
             "readOnly": true
         },
+        "email": {
+            "type": "email",
+            "tooltip": true
+        },
+        "identifier": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": true
+        },
+        "chatwootInboxId": {
+            "type": "int",
+            "tooltip": true
+        },
+        "chatwootCreatedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootLastActivityAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "availabilityStatus": {
+            "type": "enum",
+            "options": ["online", "offline"],
+            "readOnly": true
+        },
+        "blocked": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true
+        },
         "contact": {
             "type": "link",
             "required": false,
@@ -85,6 +118,16 @@
         "modifiedBy": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "contactInboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootContactInbox",
+            "foreign": "chatwootContact"
+        },
+        "conversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "chatwootContact"
         }
     },
     "collection": {

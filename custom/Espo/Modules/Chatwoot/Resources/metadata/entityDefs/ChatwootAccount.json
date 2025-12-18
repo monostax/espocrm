@@ -46,6 +46,21 @@
             "options": ["active", "suspended"],
             "default": "active"
         },
+        "contactSyncEnabled": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "lastContactSyncAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "lastConversationSyncAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

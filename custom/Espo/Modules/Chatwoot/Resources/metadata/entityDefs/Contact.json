@@ -1,11 +1,19 @@
 {
-    "fields": {},
     "links": {
         "chatwootContacts": {
             "type": "hasMany",
             "entity": "ChatwootContact",
             "foreign": "contact"
+        },
+        "chatwootContactInboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootContactInbox",
+            "foreign": "contact"
+        },
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "contact"
         }
     }
 }
-

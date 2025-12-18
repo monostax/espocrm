@@ -1,0 +1,83 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "contact"
+                }
+            ],
+            [
+                {
+                    "name": "phoneNumber"
+                },
+                {
+                    "name": "email"
+                }
+            ],
+            [
+                {
+                    "name": "identifier"
+                },
+                {
+                    "name": "chatwootContactId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "chatwootInboxId"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Status",
+        "rows": [
+            [
+                {
+                    "name": "availabilityStatus"
+                },
+                {
+                    "name": "blocked"
+                }
+            ],
+            [
+                {
+                    "name": "syncStatus"
+                },
+                {
+                    "name": "syncError",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Timestamps",
+        "rows": [
+            [
+                {
+                    "name": "chatwootCreatedAt"
+                },
+                {
+                    "name": "chatwootLastActivityAt"
+                }
+            ],
+            [
+                {
+                    "name": "lastSyncedAt"
+                },
+                {
+                    "name": "createdAt"
+                }
+            ]
+        ]
+    }
+]
+

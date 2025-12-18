@@ -1,0 +1,69 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "chatwootConversationId"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "inboxName"
+                },
+                {
+                    "name": "inboxId"
+                }
+            ],
+            [
+                {
+                    "name": "contact"
+                },
+                {
+                    "name": "chatwootContact"
+                }
+            ],
+            [
+                {
+                    "name": "contactInbox"
+                },
+                {
+                    "name": "chatwootAccount"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Activity",
+        "rows": [
+            [
+                {
+                    "name": "assigneeName"
+                },
+                {
+                    "name": "assigneeId"
+                }
+            ],
+            [
+                {
+                    "name": "messagesCount"
+                },
+                {
+                    "name": "lastActivityAt"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootCreatedAt"
+                },
+                {
+                    "name": "lastSyncedAt"
+                }
+            ]
+        ]
+    }
+]
+

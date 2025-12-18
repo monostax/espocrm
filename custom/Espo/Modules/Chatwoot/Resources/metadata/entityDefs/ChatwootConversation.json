@@ -1,0 +1,60 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "chatwootConversationId": { "type": "int", "required": true },
+        "contactInbox": { "type": "link" },
+        "chatwootContact": { "type": "link" },
+        "contact": { "type": "link" },
+        "chatwootAccount": { "type": "link", "required": true },
+        "status": {
+            "type": "enum",
+            "options": ["open", "resolved", "pending", "snoozed"],
+            "default": "open"
+        },
+        "inboxId": { "type": "int" },
+        "inboxName": { "type": "varchar", "maxLength": 255 },
+        "assigneeId": { "type": "int" },
+        "assigneeName": { "type": "varchar", "maxLength": 255 },
+        "lastActivityAt": { "type": "datetime" },
+        "chatwootCreatedAt": { "type": "datetime" },
+        "messagesCount": { "type": "int", "default": 0 },
+        "lastSyncedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "contactInbox": {
+            "type": "belongsTo",
+            "entity": "ChatwootContactInbox",
+            "foreign": "conversations"
+        },
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact",
+            "foreign": "conversations"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "chatwootConversations"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount"
+        },
+        "opportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "chatwootConversation"
+        }
+    },
+    "indexes": {
+        "uniqueConversation": {
+            "unique": true,
+            "columns": ["chatwootConversationId", "chatwootAccountId"]
+        }
+    }
+}
+
