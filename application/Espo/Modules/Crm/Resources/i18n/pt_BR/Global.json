@@ -31,7 +31,7 @@
         "MassEmail": "E-mail em Massa",
         "EmailQueueItem": "Item da Fila de Email",
         "CampaignTrackingUrl": "URL de Rastreamento",
-        "Activities": "Atividades (Planejadas)",
+        "Activities": "Atividades",
         "KnowledgeBaseArticle": "Artigo da Base de Conhecimento",
         "KnowledgeBaseCategory": "Categoria da Base de Conhecimento",
         "CampaignLogRecord": "Registro de Log de Campanha"
@@ -53,7 +53,7 @@
         "MassEmail": "E-mails em Massa",
         "EmailQueueItem": "Itens da Fila de Email",
         "CampaignTrackingUrl": "URLs de Rastreamento",
-        "Activities": "Atividades (Planejadas)",
+        "Activities": "Atividades",
         "KnowledgeBaseArticle": "Base de Conhecimento ",
         "KnowledgeBaseCategory": "Categorias da base de conhecimento",
         "CampaignLogRecord": "Registros de Log de Campanha"
@@ -74,7 +74,7 @@
     },
     "labels": {
         "Create InboundEmail": "Criar E-mail de Entrada",
-        "Activities": "Atividades (Planejadas)",
+        "Activities": "Atividades",
         "History": "Atividades (Realizadas)",
         "Attendees": "participantes",
         "Schedule Meeting": "Agendar Reunião",

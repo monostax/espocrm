@@ -56,7 +56,10 @@
         "Funnels": "Funis",
         "Import": "Importação",
         "Reports": "Relatórios",
-        "Lists": "Listas"
+        "Lists": "Listas",
+        "Records": "Cadastros",
+        "Calendar": "Calendário",
+        "Activities": "Atividades"
     }
 }
 

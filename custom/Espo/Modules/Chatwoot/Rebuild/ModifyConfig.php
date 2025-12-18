@@ -55,6 +55,9 @@ class ModifyConfig implements RebuildAction
         }
 
         $newTabList = $this->addTabListSection($tabList);
+        
+        // Filter out null values and re-index
+        $newTabList = array_values(array_filter($newTabList, fn($item) => $item !== null));
 
         if ($newTabList !== $tabList) {
             $this->configWriter->set('tabList', $newTabList);
@@ -119,6 +122,10 @@ class ModifyConfig implements RebuildAction
         $existingIndex = null;
         
         foreach ($tabList as $index => $item) {
+            if ($item === null) {
+                continue;
+            }
+            
             // Convert object to array for comparison (EspoCRM may store as stdClass)
             $itemArray = is_object($item) ? (array) $item : $item;
             

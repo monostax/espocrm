@@ -12,64 +12,16 @@ import NavbarSiteView from "views/site/navbar";
 
 /**
  * Custom navbar view that injects starred Reports into a "Lists" divider.
+ * Uses appParams.starredReports from the /api/v1/App/user response.
  */
 class CustomNavbarSiteView extends NavbarSiteView {
     /**
+     * Get starred reports from appParams (loaded with the initial App/user request).
      * @private
-     * @type {Object[]}
+     * @return {Object[]}
      */
-    starredReports = [];
-
-    /**
-     * @private
-     * @type {boolean}
-     */
-    starredReportsLoaded = false;
-
-    setup() {
-        super.setup();
-
-        // Fetch starred reports asynchronously
-        this.loadStarredReports();
-    }
-
-    /**
-     * @private
-     */
-    async loadStarredReports() {
-        try {
-            // Check if Report entity exists and user has access
-            if (!this.getMetadata().get(["scopes", "Report"])) {
-                this.starredReportsLoaded = true;
-                return;
-            }
-
-            if (!this.getAcl().check("Report", "read")) {
-                this.starredReportsLoaded = true;
-                return;
-            }
-
-            // Fetch starred reports using the primary filter
-            const response = await Espo.Ajax.getRequest("Report", {
-                select: ["id", "name"],
-                primaryFilter: "starred",
-                maxSize: 20,
-                orderBy: "name",
-                order: "asc",
-            });
-
-            this.starredReports = response.list || [];
-            this.starredReportsLoaded = true;
-
-            // Re-render if already rendered
-            if (this.isRendered()) {
-                this.setupTabDefsList();
-                this.reRender();
-            }
-        } catch (e) {
-            console.error("Failed to load starred reports:", e);
-            this.starredReportsLoaded = true;
-        }
+    getStarredReports() {
+        return this.getHelper().getAppParam("starredReports") || [];
     }
 
     /**
@@ -78,8 +30,9 @@ class CustomNavbarSiteView extends NavbarSiteView {
      */
     getTabList() {
         const tabList = super.getTabList();
+        const starredReports = this.getStarredReports();
 
-        if (!this.starredReportsLoaded || this.starredReports.length === 0) {
+        if (starredReports.length === 0) {
             return tabList;
         }
 
@@ -167,11 +120,11 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * @return {Object[]}
      */
     createReportUrlItems() {
-        return this.starredReports.map((report, index) => ({
+        return this.getStarredReports().map((report) => ({
             type: "url",
             text: report.name,
-            url: "#Report/show/" + report.id,
-            iconClass: "fas fa-chart-bar",
+            url: report.url || "#Report/show/" + report.id,
+            iconClass: "ti ti-list",
             color: null,
             aclScope: "Report",
             onlyAdmin: false,

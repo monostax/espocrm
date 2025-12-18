@@ -56,7 +56,12 @@ class ModifyConfig implements RebuildAction
         }
 
         $newTabList = $this->upsertToSection($tabList, '$Records', ['Contact', 'Account', 'Opportunity'], 'beginning');
+        $newTabList = $this->addCalendarItem($newTabList);
+        $newTabList = $this->addActivitiesSection($newTabList);
         $newTabList = $this->addConfigurationSection($newTabList);
+        
+        // Filter out null values and re-index
+        $newTabList = array_values(array_filter($newTabList, fn($item) => $item !== null));
 
         if ($newTabList !== $tabList) {
             $this->configWriter->set('tabList', $newTabList);
@@ -80,6 +85,10 @@ class ModifyConfig implements RebuildAction
         $sectionEndIndex = null;
         
         foreach ($tabList as $index => $item) {
+            if ($item === null) {
+                continue;
+            }
+            
             $itemArray = is_object($item) ? (array) $item : $item;
             
             if (is_array($itemArray) && 
@@ -91,6 +100,9 @@ class ModifyConfig implements RebuildAction
                 $dividerIndex = $index;
                 // Find the end of this section (next divider or end of array)
                 for ($i = $index + 1; $i < count($tabList); $i++) {
+                    if ($tabList[$i] === null) {
+                        continue;
+                    }
                     $nextItemArray = is_object($tabList[$i]) ? (array) $tabList[$i] : $tabList[$i];
                     if (is_array($nextItemArray) && 
                         isset($nextItemArray['type']) && 
@@ -109,7 +121,7 @@ class ModifyConfig implements RebuildAction
         
         // If divider doesn't exist, create it
         if ($dividerIndex === null) {
-            $divider = [
+            $divider = (object) [
                 'type' => 'divider',
                 'text' => $sectionName,
             ];
@@ -146,6 +158,97 @@ class ModifyConfig implements RebuildAction
         }
         
         return $tabList;
+    }
+
+    private function addCalendarItem(array $tabList): array
+    {
+        // Define the Calendar URL item
+        $calendarItem = (object) [
+            'type' => 'url',
+            'text' => '$Calendar',
+            'url' => '#Calendar',
+            'iconClass' => 'ti ti-calendar',
+            'color' => null,
+            'aclScope' => null,
+            'onlyAdmin' => false,
+            'id' => '906879'
+        ];
+        
+        // Define the My Activities URL item
+        $myActivitiesItem = (object) [
+            'type' => 'url',
+            'text' => '$Activities',
+            'url' => '#Activities',
+            'iconClass' => 'ti ti-checklist',
+            'color' => null,
+            'aclScope' => null,
+            'onlyAdmin' => false,
+            'id' => '906883'
+        ];
+        
+        // Find and remove existing Calendar and My Activities items
+        $indicesToRemove = [];
+        
+        foreach ($tabList as $index => $item) {
+            if ($item === null) {
+                $indicesToRemove[] = $index;
+                continue;
+            }
+            
+            $itemArray = is_object($item) ? (array) $item : $item;
+            
+            if (is_array($itemArray) && 
+                isset($itemArray['type']) && 
+                $itemArray['type'] === 'url' && 
+                isset($itemArray['text']) && 
+                ($itemArray['text'] === '$Calendar' || $itemArray['text'] === '$Activities')
+            ) {
+                $indicesToRemove[] = $index;
+            }
+        }
+        
+        // Remove in reverse order to preserve indices
+        rsort($indicesToRemove);
+        foreach ($indicesToRemove as $index) {
+            array_splice($tabList, $index, 1);
+        }
+        
+        // Find the Conversations group and insert Calendar and My Activities before it
+        $conversationsIndex = null;
+        
+        foreach ($tabList as $index => $item) {
+            if ($item === null) {
+                continue;
+            }
+            
+            $itemArray = is_object($item) ? (array) $item : $item;
+            
+            if (is_array($itemArray) && 
+                isset($itemArray['type']) && 
+                $itemArray['type'] === 'group' && 
+                isset($itemArray['text']) && 
+                $itemArray['text'] === '$Conversations'
+            ) {
+                $conversationsIndex = $index;
+                break;
+            }
+        }
+        
+        if ($conversationsIndex !== null) {
+            // Insert Calendar and My Activities before Conversations
+            array_splice($tabList, $conversationsIndex, 0, [$calendarItem, $myActivitiesItem]);
+        } else {
+            // If Conversations doesn't exist, add Calendar and My Activities at position 1 (after Home)
+            array_splice($tabList, 1, 0, [$calendarItem, $myActivitiesItem]);
+        }
+        
+        return $tabList;
+    }
+
+    private function addActivitiesSection(array $tabList): array
+    {
+        // Use upsertToSection to add/update the $Activities divider with Task, Call, Meeting
+        return $this->upsertToSection($tabList, '$Activities', ['Task', 'Call', 'Meeting'], 'end');
     }
 
     private function addConfigurationSection(array $tabList): array
@@ -202,6 +305,11 @@ class ModifyConfig implements RebuildAction
         $indicesToRemove = [];
         
         foreach ($tabList as $index => $item) {
+            if ($item === null) {
+                $indicesToRemove[] = $index;
+                continue;
+            }
+            
             $itemArray = is_object($item) ? (array) $item : $item;
             
             if (!is_array($itemArray) || !isset($itemArray['type'])) {
