@@ -41,10 +41,6 @@ class ChatwootIndexView extends View {
         this.cwPath = this.options.cwPath || "";
         this.chatwootSsoUrl = this.options.chatwootSsoUrl || "";
 
-        console.log("Chatwoot View: Setup called with cwPath:", this.cwPath);
-        console.log("Chatwoot View: SSO URL available:", !!this.chatwootSsoUrl);
-        console.log("Chatwoot View: Full options:", this.options);
-
         // Notify parent to switch to Chatwoot mode when this view is loaded
         this.notifyParentToChatwoot();
 
@@ -57,9 +53,6 @@ class ChatwootIndexView extends View {
         const isInIframe = window.self !== window.top;
 
         if (!isInIframe) {
-            console.log(
-                "Chatwoot View: Not in iframe, skip parent notification"
-            );
             return;
         }
 
@@ -74,7 +67,6 @@ class ChatwootIndexView extends View {
         }
 
         if (!parentOrigin) {
-            console.warn("Chatwoot View: Could not determine parent origin");
             return;
         }
 
@@ -87,12 +79,8 @@ class ChatwootIndexView extends View {
                 },
                 parentOrigin
             );
-            console.log(
-                "Chatwoot View: Notified parent to switch to Chatwoot mode with path:",
-                this.cwPath
-            );
         } catch (e) {
-            console.error("Chatwoot View: Failed to notify parent:", e);
+            // Failed to notify parent
         }
     }
 
@@ -103,10 +91,6 @@ class ChatwootIndexView extends View {
             // Only process Chatwoot messages
             if (event.data.type === "CHATWOOT_ROUTE_CHANGE") {
                 const chatwootPath = event.data.path || "";
-                console.log(
-                    "Chatwoot View: Route change detected:",
-                    chatwootPath
-                );
 
                 // Check if we're in an iframe (parent app mode)
                 const isInIframe = window.self !== window.top;
@@ -132,15 +116,8 @@ class ChatwootIndexView extends View {
                                 },
                                 parentOrigin
                             );
-                            console.log(
-                                "Chatwoot View: Forwarded path change to parent:",
-                                chatwootPath
-                            );
                         } catch (e) {
-                            console.error(
-                                "Chatwoot View: Failed to forward path change:",
-                                e
-                            );
+                            // Failed to forward path change
                         }
                     }
                 } else {
@@ -152,10 +129,6 @@ class ChatwootIndexView extends View {
                     // Update URL without reloading the page
                     if (window.location.hash !== newHash) {
                         window.history.replaceState(null, null, newHash);
-                        console.log(
-                            "Chatwoot View: Updated URL bar to:",
-                            newHash
-                        );
                     }
                 }
             }
@@ -180,16 +153,9 @@ class ChatwootIndexView extends View {
             chatwootUrl = this.chatwootSsoUrl;
             ChatwootIndexView.hasSsoAuthenticated = true;
 
-            console.log("Chatwoot View: Using SSO URL for authentication");
-            console.log("Chatwoot View: SSO URL:", chatwootUrl);
-
             // If we have a specific path to navigate to after auth,
             // we'll need to navigate there after the iframe loads
             if (this.cwPath) {
-                console.log(
-                    "Chatwoot View: Will navigate to path after SSO auth:",
-                    this.cwPath
-                );
                 this.pendingNavigation = this.cwPath;
             }
         } else {
@@ -197,14 +163,7 @@ class ChatwootIndexView extends View {
             chatwootUrl = this.cwPath
                 ? `${this.chatwootBaseUrl}${this.cwPath}`
                 : this.chatwootBaseUrl;
-
-            console.log(
-                "Chatwoot View: Building URL with cwPath:",
-                this.cwPath
-            );
         }
-
-        console.log("Chatwoot View: Final chatwootUrl:", chatwootUrl);
 
         return {
             chatwootUrl: chatwootUrl,
@@ -213,13 +172,6 @@ class ChatwootIndexView extends View {
 
     afterRender() {
         const $iframe = this.$el.find("iframe");
-
-        console.log("Chatwoot View: afterRender called");
-        console.log(
-            "Chatwoot View: Iframe src attribute:",
-            $iframe.attr("src")
-        );
-        console.log("Chatwoot View: Iframe element:", $iframe[0]);
 
         // Set iframe to full height
         const updateHeight = () => {
@@ -243,11 +195,6 @@ class ChatwootIndexView extends View {
             // Listen for the CHATWOOT_READY message indicating auth is complete
             const handleReady = (event) => {
                 if (event.data.type === "CHATWOOT_READY") {
-                    console.log(
-                        "Chatwoot View: SSO auth complete, navigating to:",
-                        pendingPath
-                    );
-
                     // Navigate to the pending path by updating iframe src
                     const targetUrl = `${this.chatwootBaseUrl}${pendingPath}`;
                     $iframe.attr("src", targetUrl);

@@ -202,3 +202,4 @@ class AccessChecker implements AccessEntityCREDSChecker
         return $this->aclManager->checkUserPermission($user, $entity, Permission::USER);
     }
 }
+

@@ -234,3 +234,4 @@ class BeforeUpdate implements SaveHook
         }
     }
 }
+

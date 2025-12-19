@@ -207,3 +207,4 @@ class SyncInboxesFromChatwoot implements JobDataLess
         ], ['silent' => true]);
     }
 }
+

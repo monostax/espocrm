@@ -142,3 +142,4 @@ class BeforeCreate implements SaveHook
         return self::TENANT_ROLE_STATIC_ID;
     }
 }
+

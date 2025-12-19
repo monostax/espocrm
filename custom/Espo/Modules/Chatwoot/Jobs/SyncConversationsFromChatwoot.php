@@ -15,7 +15,8 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
  */
 class SyncConversationsFromChatwoot implements JobDataLess
 {
-    private const MAX_PAGES_PER_RUN = 10;
+    private const MAX_PAGES_PER_RUN = 50;
+    private const PAGE_SIZE = 25; // Chatwoot conversations API page size
 
     public function __construct(
         private EntityManager $entityManager,
@@ -85,21 +86,29 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 throw new \Exception('Missing platform URL, API key, or Chatwoot account ID');
             }
 
+            // Get cursor for incremental sync
+            $cursor = $account->get('conversationSyncCursor');
+
             // Sync conversations
-            $stats = $this->syncConversations(
+            $result = $this->syncConversations(
                 $platformUrl,
                 $apiKey,
                 $chatwootAccountId,
-                $account->getId()
+                $account->getId(),
+                $cursor
             );
 
-            // Update last sync timestamp
+            // Update sync timestamps and cursor
             $account->set('lastConversationSyncAt', date('Y-m-d H:i:s'));
+            if ($result['newCursor'] !== null) {
+                $account->set('conversationSyncCursor', $result['newCursor']);
+            }
             $this->entityManager->saveEntity($account, ['silent' => true]);
 
             $this->log->warning(
                 "SyncConversationsFromChatwoot: Account {$accountName} - " .
-                "{$stats['synced']} synced, {$stats['skipped']} skipped, {$stats['errors']} errors"
+                "{$result['synced']} synced, {$result['skipped']} skipped, {$result['errors']} errors" .
+                ($result['hasMore'] ? " (more pages remaining)" : " (complete)")
             );
 
         } catch (\Exception $e) {
@@ -110,39 +119,66 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Sync conversations from Chatwoot to EspoCRM.
+     * Sync conversations from Chatwoot to EspoCRM using cursor-based incremental sync.
      *
-     * @return array{synced: int, skipped: int, errors: int}
+     * @param string $platformUrl
+     * @param string $apiKey
+     * @param int $chatwootAccountId
+     * @param string $espoAccountId
+     * @param int|null $cursor Unix timestamp of last synced conversation's last_activity_at
+     * @return array{synced: int, skipped: int, errors: int, newCursor: int|null, hasMore: bool}
      */
     private function syncConversations(
         string $platformUrl,
         string $apiKey,
         int $chatwootAccountId,
-        string $espoAccountId
+        string $espoAccountId,
+        ?int $cursor = null
     ): array {
-        $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0];
+        $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0, 'newCursor' => $cursor, 'hasMore' => false];
         $page = 1;
         $pagesProcessed = 0;
+        $maxLastActivityAt = $cursor;
+
+        // Build filter for incremental sync
+        // Chatwoot filter uses date-only comparison, so we subtract 1 day 
+        // to ensure we don't miss same-day updates (may re-sync some records)
+        $filters = [];
+        if ($cursor !== null) {
+            // Subtract 1 day to catch same-day updates
+            $cursorDate = date('Y-m-d', $cursor - 86400);
+            $filters[] = [
+                'attribute_key' => 'last_activity_at',
+                'filter_operator' => 'is_greater_than',
+                'values' => [$cursorDate],
+                'query_operator' => null
+            ];
+        }
+
+        $this->log->warning(
+            "SyncConversationsFromChatwoot: Starting sync with cursor=" .
+            ($cursor !== null ? date('Y-m-d H:i:s', $cursor) . " ({$cursor})" : 'null')
+        );
 
         do {
-            $response = $this->apiClient->listConversations(
+            $response = $this->apiClient->filterConversations(
                 $platformUrl,
                 $apiKey,
                 $chatwootAccountId,
                 $page,
-                'all', // status
-                'all'  // assignee_type
+                $filters
             );
 
-            $conversations = $response['data']['payload'] ?? [];
-            $meta = $response['data']['meta'] ?? [];
+            // Handle response structure - filter API returns {meta, payload} directly
+            $conversations = $response['payload'] ?? [];
+            $meta = $response['meta'] ?? [];
 
             // Get counts for pagination
             $allCount = $meta['all_count'] ?? count($conversations);
-            
+
             $this->log->warning(
-                "SyncConversationsFromChatwoot: Page {$page} - Found " . count($conversations) . 
-                " conversations, all_count: {$allCount}"
+                "SyncConversationsFromChatwoot: Page {$page} - " . count($conversations) .
+                " conversations, total: {$allCount}"
             );
 
             foreach ($conversations as $chatwootConversation) {
@@ -153,6 +189,14 @@ class SyncConversationsFromChatwoot implements JobDataLess
                         $stats['synced']++;
                     } else {
                         $stats['skipped']++;
+                    }
+
+                    // Track max last_activity_at for cursor update
+                    $convLastActivity = $chatwootConversation['last_activity_at'] ?? null;
+                    if ($convLastActivity !== null) {
+                        if ($maxLastActivityAt === null || $convLastActivity > $maxLastActivityAt) {
+                            $maxLastActivityAt = $convLastActivity;
+                        }
                     }
                 } catch (\Exception $e) {
                     $stats['errors']++;
@@ -166,17 +210,19 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $page++;
             $pagesProcessed++;
 
-            // Chatwoot API typically returns 25 conversations per page
-            $pageSize = 25;
-            $totalPages = (int) ceil($allCount / $pageSize);
+            $totalPages = (int) ceil($allCount / self::PAGE_SIZE);
             $hasMorePages = $page <= $totalPages;
 
             // Stop if we've processed enough pages this run (prevent timeout)
             if ($pagesProcessed >= self::MAX_PAGES_PER_RUN) {
+                $stats['hasMore'] = $hasMorePages;
                 break;
             }
 
         } while ($hasMorePages && count($conversations) > 0);
+
+        // Update cursor to max last_activity_at seen
+        $stats['newCursor'] = $maxLastActivityAt;
 
         return $stats;
     }
@@ -523,3 +569,4 @@ class SyncConversationsFromChatwoot implements JobDataLess
         return date('Y-m-d H:i:s', $timestamp);
     }
 }
+

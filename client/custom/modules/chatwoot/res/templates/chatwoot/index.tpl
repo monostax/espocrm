@@ -4,6 +4,7 @@
         style="width: 100%; height: 100%; border: none; margin: 0; padding: 0;"
         frameborder="0"
         allowfullscreen
+        sandbox="allow-same-origin allow-scripts allow-forms"
     ></iframe>
 </div>
 

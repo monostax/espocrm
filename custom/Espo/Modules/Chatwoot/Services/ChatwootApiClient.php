@@ -1219,6 +1219,110 @@ public function listConversations(
 }
 
 /**
+ * Filter contacts from a Chatwoot account using the filter API.
+ * Supports cursor-based incremental sync using last_activity_at.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $page Page number (1-based)
+ * @param array<array{attribute_key: string, filter_operator: string, values: array, query_operator: string|null}> $filters
+ * @return array{meta: array{count: int, current_page: string}, payload: array}
+ * @throws Error
+ */
+public function filterContacts(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $page = 1,
+    array $filters = []
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts/filter';
+    $url .= '?page=' . $page;
+
+    $payload = json_encode(['payload' => $filters]);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode filter payload to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to filter contacts from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (filterContacts): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
+ * Filter conversations from a Chatwoot account using the filter API.
+ * Supports cursor-based incremental sync using last_activity_at.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $page Page number (1-based)
+ * @param array<array{attribute_key: string, filter_operator: string, values: array, query_operator: string|null}> $filters
+ * @return array{data: array{meta: array, payload: array}}
+ * @throws Error
+ */
+public function filterConversations(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $page = 1,
+    array $filters = []
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/filter';
+    $url .= '?page=' . $page;
+
+    $payload = json_encode(['payload' => $filters]);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode filter payload to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to filter conversations from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (filterConversations): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
  * List all inboxes from a Chatwoot account.
  *
  * @param string $platformUrl The Chatwoot platform URL

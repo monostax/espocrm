@@ -1,0 +1,36 @@
+{
+    "labels": {
+        "Create GeminiFileSearchStore": "Create File Search Store",
+        "Sync from Gemini": "Sync from Gemini",
+        "Sync Store": "Sync Store",
+        "Syncing...": "Syncing...",
+        "Sync completed": "Sync completed",
+        "Sync failed": "Sync failed"
+    },
+    "fields": {
+        "name": "Name",
+        "geminiStoreName": "Gemini Store Name",
+        "description": "Description",
+        "status": "Status",
+        "activeDocumentsCount": "Active Documents",
+        "pendingDocumentsCount": "Pending Documents",
+        "failedDocumentsCount": "Failed Documents",
+        "sizeBytes": "Size (Bytes)",
+        "lastSyncAt": "Last Sync At",
+        "teams": "Teams",
+        "assignedUser": "Assigned User"
+    },
+    "options": {
+        "status": {
+            "Active": "Active",
+            "Pending": "Pending",
+            "Failed": "Failed",
+            "Inactive": "Inactive"
+        }
+    },
+    "tooltips": {
+        "name": "Display name for the File Search Store",
+        "geminiStoreName": "The actual resource name in Google Gemini API (e.g., fileSearchStores/abc-123)"
+    }
+}
+

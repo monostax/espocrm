@@ -29,23 +29,52 @@ class GeminiFileSearchService
     ) {}
 
     /**
+     * Format custom metadata to the Gemini API expected structure.
+     *
+     * @param array<string, mixed> $metadata Key-value pairs
+     * @return array<int, array<string, mixed>> Formatted metadata array
+     */
+    private function formatCustomMetadata(array $metadata): array
+    {
+        $formatted = [];
+        foreach ($metadata as $key => $value) {
+            $item = ['key' => $key];
+            if (is_array($value)) {
+                $item['stringListValue'] = ['values' => $value];
+            } elseif (is_numeric($value) && !is_string($value)) {
+                $item['numericValue'] = $value;
+            } else {
+                $item['stringValue'] = (string) $value;
+            }
+            $formatted[] = $item;
+        }
+        return $formatted;
+    }
+
+    /**
      * Upload content directly to a File Search Store.
      *
      * @param string $content The content to upload
      * @param string $displayName Display name for the document
-     * @param array<string, mixed> $customMetadata Optional metadata
+     * @param array<string, mixed> $customMetadata Optional metadata (key-value pairs)
+     * @param string|null $mimeType Optional MIME type (defaults to text/plain)
+     * @param array<string, mixed>|null $chunkingConfig Optional chunking configuration
+     * @param string|null $storeName Optional store name (uses config if not provided)
      * @return array<string, mixed>|null Operation response or null on failure
      */
     public function uploadToFileSearchStore(
         string $content,
         string $displayName,
-        array $customMetadata = []
+        array $customMetadata = [],
+        ?string $mimeType = null,
+        ?array $chunkingConfig = null,
+        ?string $storeName = null
     ): ?array {
-        $apiKey = $this->config->get('googleGeminiApiKey');
-        $fileSearchStoreName = $this->config->get('googleGeminiFileSearchStoreName');
+        $apiKey = getenv('GEMINI_API_KEY');
+        $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
 
         if (!$apiKey) {
-            $this->log->error('Google Gemini API key not configured');
+            $this->log->error('GEMINI_API_KEY environment variable not set');
             return null;
         }
 
@@ -55,31 +84,36 @@ class GeminiFileSearchService
         }
 
         try {
-            // Create temporary file with content
-            $tmpFile = tmpfile();
-            $tmpPath = stream_get_meta_data($tmpFile)['uri'];
-            fwrite($tmpFile, $content);
-            fseek($tmpFile, 0);
-
             // Prepare metadata
             $metadata = [
                 'displayName' => $displayName,
             ];
 
             if (!empty($customMetadata)) {
-                $metadata['customMetadata'] = $customMetadata;
+                $metadata['customMetadata'] = $this->formatCustomMetadata($customMetadata);
+            }
+
+            if ($mimeType !== null) {
+                $metadata['mimeType'] = $mimeType;
+            }
+
+            if ($chunkingConfig !== null) {
+                $metadata['chunkingConfig'] = $chunkingConfig;
             }
 
             // Upload using multipart/related
             $boundary = 'espo_' . uniqid();
             $url = self::UPLOAD_API_BASE . '/' . $fileSearchStoreName . ':uploadToFileSearchStore?key=' . $apiKey;
 
+            // Determine content type for the file part
+            $contentMimeType = $mimeType ?? 'text/plain';
+
             // Build multipart body
             $body = "--{$boundary}\r\n";
             $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
             $body .= json_encode($metadata) . "\r\n";
             $body .= "--{$boundary}\r\n";
-            $body .= "Content-Type: text/plain\r\n\r\n";
+            $body .= "Content-Type: {$contentMimeType}\r\n\r\n";
             $body .= $content . "\r\n";
             $body .= "--{$boundary}--\r\n";
 
@@ -95,8 +129,6 @@ class GeminiFileSearchService
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-
-            fclose($tmpFile);
 
             if ($httpCode !== 200) {
                 $this->log->error('Failed to upload to File Search Store. HTTP ' . $httpCode . ': ' . $response);
@@ -126,10 +158,10 @@ class GeminiFileSearchService
      */
     public function deleteDocument(string $documentName): bool
     {
-        $apiKey = $this->config->get('googleGeminiApiKey');
+        $apiKey = getenv('GEMINI_API_KEY');
 
         if (!$apiKey) {
-            $this->log->error('Google Gemini API key not configured');
+            $this->log->error('GEMINI_API_KEY environment variable not set');
             return false;
         }
 
@@ -166,7 +198,7 @@ class GeminiFileSearchService
      */
     public function waitForOperation(string $operationName, int $maxWaitSeconds = 60): bool
     {
-        $apiKey = $this->config->get('googleGeminiApiKey');
+        $apiKey = getenv('GEMINI_API_KEY');
 
         if (!$apiKey) {
             return false;
@@ -208,6 +240,153 @@ class GeminiFileSearchService
 
         $this->log->warning('Operation timed out after ' . $maxWaitSeconds . ' seconds');
         return false;
+    }
+
+    /**
+     * Get information about a specific document.
+     *
+     * @param string $documentName Full document name (e.g., "fileSearchStores/xxx/documents/yyy")
+     * @return array<string, mixed>|null Document data or null on failure
+     */
+    public function getDocument(string $documentName): ?array
+    {
+        $apiKey = getenv('GEMINI_API_KEY');
+
+        if (!$apiKey) {
+            $this->log->error('GEMINI_API_KEY environment variable not set');
+            return null;
+        }
+
+        try {
+            $url = self::API_BASE . '/' . $documentName . '?key=' . $apiKey;
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->log->warning('Failed to get document. HTTP ' . $httpCode . ': ' . $response);
+                return null;
+            }
+
+            return json_decode($response, true);
+
+        } catch (Exception $e) {
+            $this->log->error('Exception getting document: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * List all documents in a File Search Store.
+     *
+     * @param int $pageSize Number of documents per page (max 20)
+     * @param string|null $pageToken Token for pagination
+     * @param string|null $storeName Optional store name (uses config if not provided)
+     * @return array<string, mixed>|null Response with documents array and nextPageToken, or null on failure
+     */
+    public function listDocuments(int $pageSize = 20, ?string $pageToken = null, ?string $storeName = null): ?array
+    {
+        $apiKey = getenv('GEMINI_API_KEY');
+        $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
+
+        if (!$apiKey) {
+            $this->log->error('GEMINI_API_KEY environment variable not set');
+            return null;
+        }
+
+        if (!$fileSearchStoreName) {
+            $this->log->error('Google Gemini File Search Store name not configured');
+            return null;
+        }
+
+        try {
+            $url = self::API_BASE . '/' . $fileSearchStoreName . '/documents?key=' . $apiKey;
+            $url .= '&pageSize=' . min($pageSize, 20);
+
+            if ($pageToken !== null) {
+                $url .= '&pageToken=' . urlencode($pageToken);
+            }
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->log->warning('Failed to list documents. HTTP ' . $httpCode . ': ' . $response);
+                return null;
+            }
+
+            return json_decode($response, true);
+
+        } catch (Exception $e) {
+            $this->log->error('Exception listing documents: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get information about a File Search Store.
+     *
+     * @param string|null $storeName Optional store name (uses config if not provided)
+     * @return array<string, mixed>|null Store data including document counts, or null on failure
+     */
+    public function getFileSearchStore(?string $storeName = null): ?array
+    {
+        $apiKey = getenv('GEMINI_API_KEY');
+        $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
+
+        if (!$apiKey) {
+            $this->log->error('GEMINI_API_KEY environment variable not set');
+            return null;
+        }
+
+        if (!$fileSearchStoreName) {
+            $this->log->error('Google Gemini File Search Store name not configured');
+            return null;
+        }
+
+        try {
+            $url = self::API_BASE . '/' . $fileSearchStoreName . '?key=' . $apiKey;
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->log->warning('Failed to get File Search Store. HTTP ' . $httpCode . ': ' . $response);
+                return null;
+            }
+
+            return json_decode($response, true);
+
+        } catch (Exception $e) {
+            $this->log->error('Exception getting File Search Store: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Check if a document is in active state (ready for queries).
+     *
+     * @param string $documentName Full document name
+     * @return bool True if document is active
+     */
+    public function isDocumentActive(string $documentName): bool
+    {
+        $document = $this->getDocument($documentName);
+
+        if ($document === null) {
+            return false;
+        }
+
+        return isset($document['state']) && $document['state'] === 'STATE_ACTIVE';
     }
 }
 

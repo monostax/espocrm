@@ -1,0 +1,35 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-database",
+    "boolFilterList": ["onlyMy"],
+    "menu": {
+        "list": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "Sync from Gemini",
+                    "name": "syncFromGemini",
+                    "style": "default",
+                    "acl": "edit",
+                    "handler": "google-gemini:handlers/gemini-file-search-store",
+                    "actionFunction": "syncFromGemini"
+                }
+            ]
+        },
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "Sync Store",
+                    "name": "syncStore",
+                    "style": "default",
+                    "acl": "edit",
+                    "handler": "google-gemini:handlers/gemini-file-search-store",
+                    "actionFunction": "syncStore",
+                    "checkVisibilityFunction": "isSyncVisible"
+                }
+            ]
+        }
+    }
+}
+

@@ -48,3 +48,4 @@ class SetDefaultSidePanelView implements RebuildAction
         $this->metadata->save();
     }
 }
+

@@ -61,6 +61,16 @@
             "readOnly": true,
             "tooltip": true
         },
+        "contactSyncCursor": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "conversationSyncCursor": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

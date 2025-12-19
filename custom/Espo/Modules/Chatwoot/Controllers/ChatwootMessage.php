@@ -6,3 +6,4 @@ class ChatwootMessage extends \Espo\Core\Templates\Controllers\Base
 {
 }
 
+

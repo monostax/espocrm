@@ -1,0 +1,120 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "tooltip": true
+        },
+        "geminiStoreName": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Active", "Pending", "Failed", "Inactive"],
+            "default": "Pending"
+        },
+        "activeDocumentsCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "pendingDocumentsCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "failedDocumentsCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "sizeBytes": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "lastSyncAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "assignedUser": {
+            "type": "link",
+            "view": "views/fields/assigned-user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "documents": {
+            "type": "hasMany",
+            "entity": "GeminiDocument",
+            "foreign": "fileSearchStore"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "geminiStoreName": {
+            "columns": ["geminiStoreName", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}
+

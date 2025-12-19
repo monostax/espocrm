@@ -31,3 +31,4 @@ class DefaultSidePanelView extends BaseDefaultSidePanelView {
 
 export default DefaultSidePanelView;
 
+
