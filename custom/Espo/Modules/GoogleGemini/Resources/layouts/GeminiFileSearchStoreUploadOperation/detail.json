@@ -1,0 +1,30 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "status" }],
+            [{ "name": "knowledgeBaseArticle" }, { "name": "documentType" }],
+            [{ "name": "operationName", "fullWidth": true }]
+        ]
+    },
+    {
+        "label": "Attachment Info",
+        "rows": [[{ "name": "attachmentId" }, { "name": "attachmentName" }]]
+    },
+    {
+        "label": "Result",
+        "rows": [
+            [{ "name": "geminiDocumentName", "fullWidth": true }],
+            [{ "name": "errorMessage", "fullWidth": true }],
+            [{ "name": "response", "fullWidth": true }]
+        ]
+    },
+    {
+        "label": "Processing",
+        "rows": [
+            [{ "name": "attempts" }, { "name": "completedAt" }],
+            [{ "name": "createdAt" }, { "name": "modifiedAt" }]
+        ]
+    }
+]
+

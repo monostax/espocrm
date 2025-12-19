@@ -1,0 +1,9 @@
+{
+    "ProcessGeminiUploadOperations": {
+        "name": "Process Gemini Upload Operations",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\GoogleGemini\\Jobs\\ProcessUploadOperations"
+    }
+}
+

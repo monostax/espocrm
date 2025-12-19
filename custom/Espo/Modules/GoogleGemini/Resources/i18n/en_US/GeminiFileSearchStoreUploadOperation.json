@@ -1,0 +1,40 @@
+{
+    "labels": {
+        "Create GeminiFileSearchStoreUploadOperation": "Create Upload Operation"
+    },
+    "links": {
+        "knowledgeBaseArticle": "Knowledge Base Article"
+    },
+    "fields": {
+        "name": "Name",
+        "operationName": "Operation Name",
+        "status": "Status",
+        "documentType": "Document Type",
+        "knowledgeBaseArticle": "Article",
+        "attachmentId": "Attachment ID",
+        "attachmentName": "Attachment Name",
+        "geminiDocumentName": "Gemini Document Name",
+        "response": "Response",
+        "errorMessage": "Error Message",
+        "attempts": "Attempts",
+        "completedAt": "Completed At",
+        "teams": "Teams"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Processing": "Processing",
+            "Completed": "Completed",
+            "Failed": "Failed"
+        },
+        "documentType": {
+            "ArticleBody": "Article Body",
+            "Attachment": "Attachment"
+        }
+    },
+    "tooltips": {
+        "operationName": "The Gemini API operation resource name (e.g., fileSearchStores/xxx/upload/operations/yyy)",
+        "geminiDocumentName": "The resulting document resource name in Gemini after successful upload"
+    }
+}
+

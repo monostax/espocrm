@@ -7,10 +7,12 @@
         "geminiFileSearchStore": "File Search Store",
         "geminiDocumentName": "Gemini Document",
         "geminiIndexedAt": "Indexed At",
+        "geminiLastProcessedAt": "Last Processed At",
         "geminiIndexError": "Index Error"
     },
     "links": {
-        "geminiFileSearchStore": "File Search Store"
+        "geminiFileSearchStore": "File Search Store",
+        "geminiUploadOperations": "Upload Operations"
     },
     "options": {
         "geminiIndexStatus": {

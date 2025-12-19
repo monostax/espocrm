@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-cloud-upload-alt",
+    "boolFilterList": ["onlyMy"],
+    "createDisabled": true,
+    "menu": {
+        "list": {
+            "buttons": []
+        },
+        "detail": {
+            "buttons": []
+        }
+    }
+}
+

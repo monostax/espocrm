@@ -85,7 +85,8 @@ class IndexInGemini implements AfterSave, AfterRemove
                               $entity->isAttributeChanged('bodyPlain') ||
                               $entity->isAttributeChanged('description') ||
                               $entity->isAttributeChanged('language') ||
-                              $entity->isAttributeChanged('status');
+                              $entity->isAttributeChanged('status') ||
+                              $entity->isAttributeChanged('attachmentsIds');
 
             if (!$hasContentChange) {
                 $this->log->debug("GoogleGemini: Skipping indexing for article {$entity->getId()} - no content changes");
@@ -116,7 +117,9 @@ class IndexInGemini implements AfterSave, AfterRemove
 
         // Only attempt deletion if the article had a Gemini document
         $geminiDocumentName = $entity->get('geminiDocumentName');
-        if (!$geminiDocumentName) {
+        $geminiAttachmentDocuments = $entity->get('geminiAttachmentDocuments');
+
+        if (!$geminiDocumentName && empty($geminiAttachmentDocuments)) {
             $this->log->debug("GoogleGemini: Skipping deletion for article {$entity->getId()} - not indexed");
             return;
         }
@@ -126,7 +129,8 @@ class IndexInGemini implements AfterSave, AfterRemove
         $this->indexingService->queueArticleIndexing(
             $entity->getId(),
             'delete',
-            $geminiDocumentName
+            $geminiDocumentName,
+            $geminiAttachmentDocuments
         );
     }
 }

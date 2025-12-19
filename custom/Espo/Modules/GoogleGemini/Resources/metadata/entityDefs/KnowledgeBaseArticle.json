@@ -12,9 +12,20 @@
             "readOnly": true,
             "utility": true,
             "tooltip": true,
-            "tooltipText": "Full document resource name in Gemini File Search (e.g., fileSearchStores/team-xxx/documents/doc-yyy)"
+            "tooltipText": "Full document resource name in Gemini File Search for article body (e.g., fileSearchStores/team-xxx/documents/doc-yyy)"
+        },
+        "geminiAttachmentDocuments": {
+            "type": "jsonArray",
+            "readOnly": true,
+            "utility": true,
+            "tooltip": true,
+            "tooltipText": "Array of Gemini document names for indexed attachments. Each entry contains: documentName, attachmentId, attachmentName"
         },
         "geminiIndexedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "geminiLastProcessedAt": {
             "type": "datetime",
             "readOnly": true
         },
@@ -34,6 +45,11 @@
             "type": "belongsTo",
             "entity": "GeminiFileSearchStore",
             "foreign": "knowledgeBaseArticles"
+        },
+        "geminiUploadOperations": {
+            "type": "hasMany",
+            "entity": "GeminiFileSearchStoreUploadOperation",
+            "foreign": "knowledgeBaseArticle"
         }
     }
 }

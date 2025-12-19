@@ -1,0 +1,5 @@
+{
+    "assignmentPermission": "no",
+    "readOnlyActionList": ["create", "edit", "delete"]
+}
+

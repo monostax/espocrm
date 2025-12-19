@@ -1,0 +1,15 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }],
+            [{ "name": "status" }],
+            [{ "name": "knowledgeBaseArticle" }],
+            [{ "name": "documentType" }],
+            [{ "name": "attachmentName" }],
+            [{ "name": "attempts" }],
+            [{ "name": "completedAt" }]
+        ]
+    }
+]
+

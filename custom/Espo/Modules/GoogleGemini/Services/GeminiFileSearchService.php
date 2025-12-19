@@ -151,6 +151,95 @@ class GeminiFileSearchService
     }
 
     /**
+     * Upload binary content directly to a File Search Store.
+     * Used for file attachments (PDFs, images, documents, etc.)
+     *
+     * @param string $binaryContent The raw binary file content
+     * @param string $displayName Display name for the document
+     * @param string $mimeType MIME type of the file
+     * @param array<string, mixed> $customMetadata Optional metadata (key-value pairs)
+     * @param string|null $storeName Optional store name (uses config if not provided)
+     * @return array<string, mixed>|null Operation response or null on failure
+     */
+    public function uploadBinaryToFileSearchStore(
+        string $binaryContent,
+        string $displayName,
+        string $mimeType,
+        array $customMetadata = [],
+        ?string $storeName = null
+    ): ?array {
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
+        $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
+
+        if (!$apiKey) {
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
+            return null;
+        }
+
+        if (!$fileSearchStoreName) {
+            $this->log->error('Google Gemini File Search Store name not configured');
+            return null;
+        }
+
+        try {
+            // Prepare metadata
+            $metadata = [
+                'displayName' => $displayName,
+                'mimeType' => $mimeType,
+            ];
+
+            if (!empty($customMetadata)) {
+                $metadata['customMetadata'] = $this->formatCustomMetadata($customMetadata);
+            }
+
+            // Upload using multipart/related
+            $boundary = 'espo_' . uniqid();
+            $url = self::UPLOAD_API_BASE . '/' . $fileSearchStoreName . ':uploadToFileSearchStore?key=' . $apiKey;
+
+            // Build multipart body
+            $body = "--{$boundary}\r\n";
+            $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
+            $body .= json_encode($metadata) . "\r\n";
+            $body .= "--{$boundary}\r\n";
+            $body .= "Content-Type: {$mimeType}\r\n";
+            $body .= "Content-Transfer-Encoding: binary\r\n\r\n";
+            $body .= $binaryContent . "\r\n";
+            $body .= "--{$boundary}--\r\n";
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: multipart/related; boundary=' . $boundary,
+                'X-Goog-Upload-Protocol: multipart',
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->log->error('Failed to upload binary to File Search Store. HTTP ' . $httpCode . ': ' . $response);
+                return null;
+            }
+
+            $result = json_decode($response, true);
+            
+            if (!$result) {
+                $this->log->error('Invalid JSON response from Gemini API for binary upload');
+                return null;
+            }
+
+            return $result;
+
+        } catch (Exception $e) {
+            $this->log->error('Exception uploading binary to File Search Store: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Delete a document from the File Search Store.
      *
      * @param string $documentName Full document name (e.g., "fileSearchStores/xxx/documents/yyy")
@@ -240,6 +329,52 @@ class GeminiFileSearchService
 
         $this->log->warning('Operation timed out after ' . $maxWaitSeconds . ' seconds');
         return null;
+    }
+
+    /**
+     * Get the current status of an operation (single non-blocking call).
+     * Use this for polling operations from a scheduled job.
+     *
+     * @param string $operationName Operation name from upload response
+     * @return array<string, mixed>|null Operation status with 'done' boolean, or null on API error
+     */
+    public function getOperationStatus(string $operationName): ?array
+    {
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
+
+        if (!$apiKey) {
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
+            return null;
+        }
+
+        try {
+            $url = self::API_BASE . '/' . $operationName . '?key=' . $apiKey;
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->log->warning('Failed to get operation status. HTTP ' . $httpCode . ': ' . $response);
+                return null;
+            }
+
+            $result = json_decode($response, true);
+
+            if (!$result) {
+                $this->log->error('Invalid JSON response when getting operation status');
+                return null;
+            }
+
+            return $result;
+
+        } catch (Exception $e) {
+            $this->log->error('Exception getting operation status: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**

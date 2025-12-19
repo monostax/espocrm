@@ -1,0 +1,35 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "documentType",
+        "width": 10
+    },
+    {
+        "name": "knowledgeBaseArticle",
+        "width": 20
+    },
+    {
+        "name": "attachmentName",
+        "width": 15
+    },
+    {
+        "name": "attempts",
+        "width": 8
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    },
+    {
+        "name": "completedAt",
+        "width": 15
+    }
+]
+

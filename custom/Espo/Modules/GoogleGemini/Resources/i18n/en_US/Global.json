@@ -1,9 +1,11 @@
 {
     "scopeNames": {
-        "GeminiFileSearchStore": "File Search Store"
+        "GeminiFileSearchStore": "File Search Store",
+        "GeminiFileSearchStoreUploadOperation": "Upload Operation"
     },
     "scopeNamesPlural": {
-        "GeminiFileSearchStore": "File Search Stores"
+        "GeminiFileSearchStore": "File Search Stores",
+        "GeminiFileSearchStoreUploadOperation": "Upload Operations"
     }
 }
 

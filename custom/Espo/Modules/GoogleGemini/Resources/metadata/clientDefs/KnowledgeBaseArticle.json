@@ -1,4 +1,13 @@
 {
+    "relationshipPanels": {
+        "geminiUploadOperations": {
+            "label": "Upload Operations",
+            "view": "views/record/panels/relationship",
+            "rowActionsView": "views/record/row-actions/relationship-no-unlink",
+            "selectDisabled": true,
+            "createDisabled": true
+        }
+    },
     "sidePanels": {
         "detail": [
             "__APPEND__",
@@ -17,6 +26,9 @@
                         },
                         {
                             "name": "geminiIndexedAt"
+                        },
+                        {
+                            "name": "geminiLastProcessedAt"
                         },
                         {
                             "name": "geminiDocumentName"

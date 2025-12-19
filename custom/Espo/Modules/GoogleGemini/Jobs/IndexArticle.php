@@ -14,14 +14,20 @@ namespace Espo\Modules\GoogleGemini\Jobs;
 use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
 use Espo\Core\Utils\Log;
+use Espo\Core\FileStorage\Manager as FileStorageManager;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
+use Espo\Entities\Attachment;
 use Espo\Modules\GoogleGemini\Services\GeminiFileSearchService;
 
 /**
  * Job to index a KnowledgeBaseArticle to Gemini File Search.
  * Uses a per-team File Search Store. Stores are created on-demand and 
  * their Google-generated names are saved in the GeminiFileSearchStore entity.
+ * 
+ * This job is NON-BLOCKING: it uploads content to Gemini and creates
+ * GeminiFileSearchStoreUploadOperation entities to track the async operations.
+ * A separate scheduled job (ProcessUploadOperations) polls these operations.
  */
 class IndexArticle implements Job
 {
@@ -30,6 +36,7 @@ class IndexArticle implements Job
     public function __construct(
         private EntityManager $entityManager,
         private GeminiFileSearchService $geminiService,
+        private FileStorageManager $fileStorageManager,
         private Log $log
     ) {}
 
@@ -38,6 +45,7 @@ class IndexArticle implements Job
         $articleId = $data->get('articleId');
         $operation = $data->get('operation') ?? 'index';
         $geminiDocumentName = $data->get('geminiDocumentName');
+        $geminiAttachmentDocuments = $data->get('geminiAttachmentDocuments');
 
         if (!$articleId) {
             $this->log->error('GoogleGemini IndexArticle: No articleId provided');
@@ -47,10 +55,10 @@ class IndexArticle implements Job
         $article = $this->entityManager->getEntityById('KnowledgeBaseArticle', $articleId);
 
         // For delete operations, we can proceed even if article is already deleted
-        // as long as we have the geminiDocumentName
-        if (!$article && $operation === 'delete' && $geminiDocumentName) {
-            $this->log->info("GoogleGemini IndexArticle: Article {$articleId} already deleted, using stored document name");
-            $this->deleteDocumentByName($geminiDocumentName, $articleId);
+        // as long as we have the document names
+        if (!$article && $operation === 'delete' && ($geminiDocumentName || $geminiAttachmentDocuments)) {
+            $this->log->info("GoogleGemini IndexArticle: Article {$articleId} already deleted, using stored document names");
+            $this->deleteDocumentsByName($geminiDocumentName, $geminiAttachmentDocuments, $articleId);
             return;
         }
 
@@ -73,6 +81,7 @@ class IndexArticle implements Job
 
     /**
      * Index or update an article in Gemini File Search.
+     * This method is NON-BLOCKING: it uploads and creates operation tracking entities.
      */
     private function indexArticle(Entity $article): void
     {
@@ -91,11 +100,11 @@ class IndexArticle implements Job
         // Get or create the store for this team (returns actual Gemini store name)
         $storeName = $this->getOrCreateStoreForTeam($teamId);
 
-        // If article was previously indexed, delete the old document first
-        $existingDocName = $article->get('geminiDocumentName');
-        if ($existingDocName) {
-            $this->geminiService->deleteDocument($existingDocName);
-        }
+        // Delete all previously indexed documents (article body + attachments)
+        $this->deleteExistingDocuments($article);
+
+        // Cancel any pending operations for this article
+        $this->cancelPendingOperations($articleId);
 
         // Build content
         $content = $this->buildArticleContent($article);
@@ -106,6 +115,7 @@ class IndexArticle implements Job
             'articleId' => $articleId,
             'articleName' => $article->get('name'),
             'entityType' => 'KnowledgeBaseArticle',
+            'documentType' => 'articleBody',
             'teamId' => $teamId,
         ];
 
@@ -113,7 +123,7 @@ class IndexArticle implements Job
             $metadata['language'] = $article->get('language');
         }
 
-        // Upload to Gemini
+        // Upload article body to Gemini
         $result = $this->geminiService->uploadToFileSearchStore(
             $content,
             $displayName,
@@ -127,64 +137,307 @@ class IndexArticle implements Job
             throw new \Exception('Upload to Gemini failed');
         }
 
-        // Wait for operation to complete
-        if (isset($result['name'])) {
-            $operationName = $result['name'];
-            $operationResult = $this->geminiService->waitForOperation($operationName, 120);
-
-            if ($operationResult === null) {
-                throw new \Exception('Operation timed out or failed');
-            }
-
-            // Get the document name from the completed operation response
-            $documentName = $this->extractDocumentName($operationResult);
-            
-            if (!$documentName) {
-                $this->log->warning("GoogleGemini IndexArticle: Could not extract document name from response: " . json_encode($operationResult));
-            }
-            
-            $this->updateArticleStatus($article, 'Indexed', null, $documentName);
-            $this->log->info("GoogleGemini IndexArticle: Successfully indexed {$articleId}" . ($documentName ? " as {$documentName}" : ""));
-        } else {
+        if (!isset($result['name'])) {
             throw new \Exception('No operation name in response');
+        }
+
+        // Create operation entity for article body (NON-BLOCKING)
+        $this->createUploadOperation(
+            $result['name'],
+            $articleId,
+            'ArticleBody',
+            null,
+            null,
+            $article->get('name')
+        );
+
+        // Upload attachments and create operation entities for each
+        $this->uploadAttachments($article, $storeName, $teamId);
+
+        // Get the local FileSearchStore ID for linking
+        $localStore = $this->entityManager
+            ->getRDBRepository('GeminiFileSearchStore')
+            ->where(['geminiStoreName' => $storeName])
+            ->findOne();
+        $storeId = $localStore ? $localStore->getId() : null;
+
+        // Set article status to Pending - ProcessUploadOperations will update to Indexed
+        $this->updateArticleStatus($article, 'Pending', null, null, $storeId);
+
+        $this->log->info("GoogleGemini IndexArticle: Uploaded {$articleId}, operations created for async processing");
+    }
+
+    /**
+     * Upload all attachments for an article and create operation entities.
+     * NON-BLOCKING: creates operation entities instead of waiting.
+     */
+    private function uploadAttachments(Entity $article, string $storeName, string $teamId): void
+    {
+        $articleId = $article->getId();
+
+        // Get attachments linked to the article
+        $attachments = $this->entityManager
+            ->getRDBRepository('KnowledgeBaseArticle')
+            ->getRelation($article, 'attachments')
+            ->find();
+
+        foreach ($attachments as $attachment) {
+            /** @var Attachment $attachment */
+            try {
+                $this->uploadSingleAttachment($attachment, $article, $storeName, $teamId);
+            } catch (\Exception $e) {
+                $this->log->error(
+                    "GoogleGemini IndexArticle: Failed to upload attachment {$attachment->getId()} " .
+                    "for article {$articleId}: " . $e->getMessage()
+                );
+                // Continue with other attachments
+            }
         }
     }
 
     /**
-     * Delete an article from Gemini File Search.
+     * Upload a single attachment file and create an operation entity.
+     * NON-BLOCKING: creates operation entity instead of waiting.
      */
-    private function deleteArticle(Entity $article): void
+    private function uploadSingleAttachment(Attachment $attachment, Entity $article, string $storeName, string $teamId): void
     {
-        $documentName = $article->get('geminiDocumentName');
+        $attachmentId = $attachment->getId();
+        $attachmentName = $attachment->getName() ?? 'unnamed';
+        $mimeType = $attachment->getType() ?? 'application/octet-stream';
 
-        if (!$documentName) {
-            $this->log->debug("GoogleGemini IndexArticle: Article {$article->getId()} has no Gemini document");
+        // Check if file exists
+        if (!$this->fileStorageManager->exists($attachment)) {
+            $this->log->warning("GoogleGemini IndexArticle: Attachment file not found for {$attachmentId}");
             return;
         }
 
-        $success = $this->geminiService->deleteDocument($documentName);
+        // Get file contents
+        $fileContents = $this->fileStorageManager->getContents($attachment);
 
-        if ($success) {
-            $this->updateArticleStatus($article, 'NotIndexed', null, null);
-            $this->log->info("GoogleGemini IndexArticle: Deleted document for {$article->getId()}");
-        } else {
-            $this->log->warning("GoogleGemini IndexArticle: Failed to delete document for {$article->getId()}");
+        if (empty($fileContents)) {
+            $this->log->warning("GoogleGemini IndexArticle: Empty file contents for attachment {$attachmentId}");
+            return;
+        }
+
+        $displayName = 'KB Attachment: ' . $article->get('name') . ' - ' . $attachmentName;
+
+        // Prepare metadata
+        $metadata = [
+            'articleId' => $article->getId(),
+            'articleName' => $article->get('name'),
+            'attachmentId' => $attachmentId,
+            'attachmentName' => $attachmentName,
+            'entityType' => 'KnowledgeBaseArticle',
+            'documentType' => 'attachment',
+            'teamId' => $teamId,
+        ];
+
+        if ($article->get('language')) {
+            $metadata['language'] = $article->get('language');
+        }
+
+        // Upload to Gemini
+        $result = $this->geminiService->uploadBinaryToFileSearchStore(
+            $fileContents,
+            $displayName,
+            $mimeType,
+            $metadata,
+            $storeName
+        );
+
+        if ($result === null) {
+            throw new \Exception("Upload to Gemini failed for attachment {$attachmentId}");
+        }
+
+        if (!isset($result['name'])) {
+            throw new \Exception("No operation name in response for attachment {$attachmentId}");
+        }
+
+        // Create operation entity (NON-BLOCKING)
+        $this->createUploadOperation(
+            $result['name'],
+            $article->getId(),
+            'Attachment',
+            $attachmentId,
+            $attachmentName,
+            $article->get('name') . ' - ' . $attachmentName
+        );
+
+        $this->log->debug("GoogleGemini IndexArticle: Uploaded attachment {$attachmentId}, operation created");
+    }
+
+    /**
+     * Create a GeminiFileSearchStoreUploadOperation entity to track the async operation.
+     */
+    private function createUploadOperation(
+        string $operationName,
+        string $articleId,
+        string $documentType,
+        ?string $attachmentId,
+        ?string $attachmentName,
+        string $displayName
+    ): void {
+        $article = $this->entityManager->getEntityById('KnowledgeBaseArticle', $articleId);
+        $teamIds = $article ? $article->getLinkMultipleIdList('teams') : [];
+
+        $operation = $this->entityManager->createEntity('GeminiFileSearchStoreUploadOperation', [
+            'name' => $displayName,
+            'operationName' => $operationName,
+            'status' => 'Pending',
+            'documentType' => $documentType,
+            'knowledgeBaseArticleId' => $articleId,
+            'attachmentId' => $attachmentId,
+            'attachmentName' => $attachmentName,
+            'attempts' => 0,
+        ], [
+            'silent' => true,
+            'skipCreatedBy' => true,
+        ]);
+
+        // Link to same teams as the article
+        if (!empty($teamIds)) {
+            foreach ($teamIds as $teamId) {
+                $this->entityManager
+                    ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
+                    ->getRelation($operation, 'teams')
+                    ->relateById($teamId);
+            }
+        }
+
+        $this->log->debug("GoogleGemini IndexArticle: Created operation entity for {$operationName}");
+    }
+
+    /**
+     * Cancel any pending operations for an article (when re-indexing).
+     */
+    private function cancelPendingOperations(string $articleId): void
+    {
+        $pendingOperations = $this->entityManager
+            ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
+            ->where([
+                'knowledgeBaseArticleId' => $articleId,
+                'status' => ['Pending', 'Processing'],
+            ])
+            ->find();
+
+        foreach ($pendingOperations as $operation) {
+            $operation->set('status', 'Failed');
+            $operation->set('errorMessage', 'Cancelled: article re-indexed');
+            $operation->set('completedAt', date('Y-m-d H:i:s'));
+            $this->entityManager->saveEntity($operation, ['silent' => true]);
+        }
+
+        $count = count($pendingOperations);
+        if ($count > 0) {
+            $this->log->debug("GoogleGemini IndexArticle: Cancelled {$count} pending operations for article {$articleId}");
         }
     }
 
     /**
-     * Delete a document from Gemini by name (when article entity is already deleted).
+     * Delete all existing Gemini documents for an article (body + attachments).
+     */
+    private function deleteExistingDocuments(Entity $article): void
+    {
+        // Delete article body document
+        $existingDocName = $article->get('geminiDocumentName');
+        if ($existingDocName) {
+            $this->geminiService->deleteDocument($existingDocName);
+        }
+
+        // Delete attachment documents
+        $attachmentDocuments = $article->get('geminiAttachmentDocuments') ?? [];
+        foreach ($attachmentDocuments as $doc) {
+            if (isset($doc['documentName'])) {
+                $this->geminiService->deleteDocument($doc['documentName']);
+            }
+        }
+    }
+
+    /**
+     * Delete an article from Gemini File Search (body + all attachments).
+     */
+    private function deleteArticle(Entity $article): void
+    {
+        $articleId = $article->getId();
+        $hasDocuments = false;
+        $allDeleted = true;
+
+        // Cancel any pending operations
+        $this->cancelPendingOperations($articleId);
+
+        // Delete article body document
+        $documentName = $article->get('geminiDocumentName');
+        if ($documentName) {
+            $hasDocuments = true;
+            if (!$this->geminiService->deleteDocument($documentName)) {
+                $allDeleted = false;
+                $this->log->warning("GoogleGemini IndexArticle: Failed to delete body document for {$articleId}");
+            }
+        }
+
+        // Delete attachment documents
+        $attachmentDocuments = $article->get('geminiAttachmentDocuments') ?? [];
+        foreach ($attachmentDocuments as $doc) {
+            if (isset($doc['documentName'])) {
+                $hasDocuments = true;
+                if (!$this->geminiService->deleteDocument($doc['documentName'])) {
+                    $allDeleted = false;
+                    $this->log->warning("GoogleGemini IndexArticle: Failed to delete attachment document {$doc['documentName']} for {$articleId}");
+                }
+            }
+        }
+
+        if (!$hasDocuments) {
+            $this->log->debug("GoogleGemini IndexArticle: Article {$articleId} has no Gemini documents");
+            return;
+        }
+
+        if ($allDeleted) {
+            // Clear all document references
+            $this->updateArticleStatus($article, 'NotIndexed', null, null, null, []);
+            $this->log->info("GoogleGemini IndexArticle: Deleted all documents for {$articleId}");
+        } else {
+            $this->log->warning("GoogleGemini IndexArticle: Some documents failed to delete for {$articleId}");
+        }
+    }
+
+    /**
+     * Delete documents from Gemini by name (when article entity is already deleted).
      * Used for mass delete operations where the article is deleted before the job runs.
      */
-    private function deleteDocumentByName(string $documentName, string $articleId): void
+    private function deleteDocumentsByName(?string $documentName, ?array $attachmentDocuments, string $articleId): void
     {
-        $success = $this->geminiService->deleteDocument($documentName);
+        $deletedCount = 0;
+        $failedCount = 0;
 
-        if ($success) {
-            $this->log->info("GoogleGemini IndexArticle: Deleted document {$documentName} for removed article {$articleId}");
-        } else {
-            $this->log->warning("GoogleGemini IndexArticle: Failed to delete document {$documentName} for removed article {$articleId}");
+        // Delete article body document
+        if ($documentName) {
+            if ($this->geminiService->deleteDocument($documentName)) {
+                $deletedCount++;
+                $this->log->debug("GoogleGemini IndexArticle: Deleted body document {$documentName} for removed article {$articleId}");
+            } else {
+                $failedCount++;
+                $this->log->warning("GoogleGemini IndexArticle: Failed to delete body document {$documentName} for removed article {$articleId}");
+            }
         }
+
+        // Delete attachment documents
+        if ($attachmentDocuments) {
+            foreach ($attachmentDocuments as $doc) {
+                if (isset($doc['documentName'])) {
+                    if ($this->geminiService->deleteDocument($doc['documentName'])) {
+                        $deletedCount++;
+                        $this->log->debug("GoogleGemini IndexArticle: Deleted attachment document {$doc['documentName']} for removed article {$articleId}");
+                    } else {
+                        $failedCount++;
+                        $this->log->warning("GoogleGemini IndexArticle: Failed to delete attachment document {$doc['documentName']} for removed article {$articleId}");
+                    }
+                }
+            }
+        }
+
+        $this->log->info("GoogleGemini IndexArticle: Deleted {$deletedCount} document(s) for removed article {$articleId}" . 
+            ($failedCount > 0 ? ", {$failedCount} failed" : ""));
     }
 
     /**
@@ -326,47 +579,30 @@ class IndexArticle implements Job
     }
 
     /**
-     * Extract document name from completed operation response.
-     * 
-     * The Gemini API returns the document name in the operation result at:
-     * - response.name (standard path)
-     * - response.document.name (alternate path)
-     * - metadata.document (some API versions)
-     */
-    private function extractDocumentName(array $operationResult): ?string
-    {
-        // Standard path: response.name
-        if (isset($operationResult['response']['name'])) {
-            return $operationResult['response']['name'];
-        }
-
-        // Alternate path: response.document.name
-        if (isset($operationResult['response']['document']['name'])) {
-            return $operationResult['response']['document']['name'];
-        }
-
-        // Some API versions use metadata
-        if (isset($operationResult['metadata']['document'])) {
-            return $operationResult['metadata']['document'];
-        }
-
-        return null;
-    }
-
-    /**
      * Update article's Gemini indexing status.
      */
     private function updateArticleStatus(
         Entity $article,
         string $status,
         ?string $error = null,
-        ?string $documentName = null
+        ?string $documentName = null,
+        ?string $fileSearchStoreId = null,
+        ?array $attachmentDocuments = null
     ): void {
         $article->set('geminiIndexStatus', $status);
         $article->set('geminiIndexError', $error);
+        $article->set('geminiLastProcessedAt', date('Y-m-d H:i:s'));
 
         if ($documentName !== null) {
             $article->set('geminiDocumentName', $documentName);
+        }
+
+        if ($fileSearchStoreId !== null) {
+            $article->set('geminiFileSearchStoreId', $fileSearchStoreId);
+        }
+
+        if ($attachmentDocuments !== null) {
+            $article->set('geminiAttachmentDocuments', $attachmentDocuments);
         }
 
         if ($status === 'Indexed') {

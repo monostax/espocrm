@@ -1,0 +1,130 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "operationName": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 512,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pending", "Processing", "Completed", "Failed"],
+            "default": "Pending"
+        },
+        "documentType": {
+            "type": "enum",
+            "options": ["ArticleBody", "Attachment"],
+            "required": true
+        },
+        "knowledgeBaseArticle": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/link"
+        },
+        "attachmentId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true
+        },
+        "attachmentName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "geminiDocumentName": {
+            "type": "varchar",
+            "maxLength": 512,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "response": {
+            "type": "jsonObject",
+            "readOnly": true
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "attempts": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "completedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "knowledgeBaseArticle": {
+            "type": "belongsTo",
+            "entity": "KnowledgeBaseArticle",
+            "foreign": "geminiUploadOperations"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "status": {
+            "columns": ["status", "deleted"]
+        },
+        "operationName": {
+            "columns": ["operationName", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        },
+        "knowledgeBaseArticleId": {
+            "columns": ["knowledgeBaseArticleId", "deleted"]
+        }
+    }
+}
+
