@@ -20,7 +20,8 @@ use Espo\Modules\GoogleGemini\Services\GeminiFileSearchService;
 
 /**
  * Job to index a KnowledgeBaseArticle to Gemini File Search.
- * Uses the article's team ID as the store name.
+ * Uses a per-team File Search Store. Stores are created on-demand and 
+ * their Google-generated names are saved in the GeminiFileSearchStore entity.
  */
 class IndexArticle implements Job
 {
@@ -36,6 +37,7 @@ class IndexArticle implements Job
     {
         $articleId = $data->get('articleId');
         $operation = $data->get('operation') ?? 'index';
+        $geminiDocumentName = $data->get('geminiDocumentName');
 
         if (!$articleId) {
             $this->log->error('GoogleGemini IndexArticle: No articleId provided');
@@ -43,6 +45,14 @@ class IndexArticle implements Job
         }
 
         $article = $this->entityManager->getEntityById('KnowledgeBaseArticle', $articleId);
+
+        // For delete operations, we can proceed even if article is already deleted
+        // as long as we have the geminiDocumentName
+        if (!$article && $operation === 'delete' && $geminiDocumentName) {
+            $this->log->info("GoogleGemini IndexArticle: Article {$articleId} already deleted, using stored document name");
+            $this->deleteDocumentByName($geminiDocumentName, $articleId);
+            return;
+        }
 
         if (!$article) {
             $this->log->warning("GoogleGemini IndexArticle: Article {$articleId} not found");
@@ -77,10 +87,9 @@ class IndexArticle implements Job
 
         // Use the first team ID as the store
         $teamId = $teamIds[0];
-        $storeName = "fileSearchStores/team-{$teamId}";
 
-        // Ensure the store exists
-        $this->ensureStoreExists($teamId, $storeName);
+        // Get or create the store for this team (returns actual Gemini store name)
+        $storeName = $this->getOrCreateStoreForTeam($teamId);
 
         // If article was previously indexed, delete the old document first
         $existingDocName = $article->get('geminiDocumentName');
@@ -121,18 +130,21 @@ class IndexArticle implements Job
         // Wait for operation to complete
         if (isset($result['name'])) {
             $operationName = $result['name'];
-            $success = $this->geminiService->waitForOperation($operationName, 120);
+            $operationResult = $this->geminiService->waitForOperation($operationName, 120);
 
-            if (!$success) {
+            if ($operationResult === null) {
                 throw new \Exception('Operation timed out or failed');
             }
 
-            // Get the document name from operation result
-            // The document name is typically in the response metadata
-            $documentName = $this->extractDocumentName($result, $storeName);
+            // Get the document name from the completed operation response
+            $documentName = $this->extractDocumentName($operationResult);
+            
+            if (!$documentName) {
+                $this->log->warning("GoogleGemini IndexArticle: Could not extract document name from response: " . json_encode($operationResult));
+            }
             
             $this->updateArticleStatus($article, 'Indexed', null, $documentName);
-            $this->log->info("GoogleGemini IndexArticle: Successfully indexed {$articleId}");
+            $this->log->info("GoogleGemini IndexArticle: Successfully indexed {$articleId}" . ($documentName ? " as {$documentName}" : ""));
         } else {
             throw new \Exception('No operation name in response');
         }
@@ -161,6 +173,21 @@ class IndexArticle implements Job
     }
 
     /**
+     * Delete a document from Gemini by name (when article entity is already deleted).
+     * Used for mass delete operations where the article is deleted before the job runs.
+     */
+    private function deleteDocumentByName(string $documentName, string $articleId): void
+    {
+        $success = $this->geminiService->deleteDocument($documentName);
+
+        if ($success) {
+            $this->log->info("GoogleGemini IndexArticle: Deleted document {$documentName} for removed article {$articleId}");
+        } else {
+            $this->log->warning("GoogleGemini IndexArticle: Failed to delete document {$documentName} for removed article {$articleId}");
+        }
+    }
+
+    /**
      * Build the content string for indexing.
      */
     private function buildArticleContent(Entity $article): string
@@ -181,41 +208,46 @@ class IndexArticle implements Job
     }
 
     /**
-     * Ensure a File Search Store exists for the team.
+     * Get or create a File Search Store for the team.
+     * Returns the actual Gemini store name (e.g., "fileSearchStores/knowledge-base-teamname-abc123def456").
      */
-    private function ensureStoreExists(string $teamId, string $storeName): void
+    private function getOrCreateStoreForTeam(string $teamId): string
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
         
         if (!$apiKey) {
-            throw new \Exception('GEMINI_API_KEY not set');
+            throw new \Exception('GOOGLE_GENERATIVE_AI_API_KEY not set');
         }
 
-        // Check if store exists
-        $url = self::API_BASE . '/' . $storeName . '?key=' . $apiKey;
-        
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // First, check if we already have a store for this team in our database
+        $existingStore = $this->entityManager
+            ->getRDBRepository('GeminiFileSearchStore')
+            ->join('teams')
+            ->where(['teams.id' => $teamId])
+            ->findOne();
 
-        if ($httpCode === 200) {
-            // Store exists
-            return;
+        if ($existingStore) {
+            $storeName = $existingStore->get('geminiStoreName');
+            if ($storeName) {
+                // Verify the store actually exists in Gemini
+                if ($this->verifyStoreExists($storeName, $apiKey)) {
+                    return $storeName;
+                }
+                
+                // Store doesn't exist in Gemini, delete the stale record
+                $this->log->warning("GoogleGemini: Store {$storeName} not found in Gemini, removing stale record");
+                $this->entityManager->removeEntity($existingStore);
+            }
         }
 
-        // Create the store with specific ID
-        $team = $this->entityManager->getEntityById('Team', $teamId);
-        $teamName = $team ? $team->get('name') : "Team {$teamId}";
-        $storeId = "team-{$teamId}";
-
-        $createUrl = self::API_BASE . '/fileSearchStores?fileSearchStoreId=' . urlencode($storeId) . '&key=' . $apiKey;
+        // No valid store exists, create a new one via Gemini API
+        // Use team-{teamId} as displayName so the generated store name is predictable
+        $createUrl = self::API_BASE . '/fileSearchStores?key=' . $apiKey;
         
         $ch = curl_init($createUrl);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'displayName' => "Knowledge Base - {$teamName}",
+            'displayName' => "team-{$teamId}",
         ]));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -225,20 +257,46 @@ class IndexArticle implements Job
         curl_close($ch);
 
         if ($httpCode !== 200 && $httpCode !== 201) {
-            $this->log->error("GoogleGemini: Failed to create store {$storeName}: HTTP {$httpCode}: {$response}");
+            $this->log->error("GoogleGemini: Failed to create store for team {$teamId}: HTTP {$httpCode}: {$response}");
             throw new \Exception("Failed to create store: HTTP {$httpCode}");
         }
 
+        $result = json_decode($response, true);
+        
+        if (!$result || !isset($result['name'])) {
+            $this->log->error("GoogleGemini: Invalid response when creating store: {$response}");
+            throw new \Exception('Invalid response from Gemini API - no store name returned');
+        }
+
+        $storeName = $result['name'];
         $this->log->info("GoogleGemini: Created store {$storeName} for team {$teamId}");
 
-        // Also create/update local GeminiFileSearchStore entity
-        $this->syncLocalStore($teamId, $storeName, $teamName);
+        // Save the store to our database
+        $this->syncLocalStore($teamId, $storeName);
+
+        return $storeName;
+    }
+
+    /**
+     * Verify a File Search Store exists in Gemini.
+     */
+    private function verifyStoreExists(string $storeName, string $apiKey): bool
+    {
+        $url = self::API_BASE . '/' . $storeName . '?key=' . $apiKey;
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return $httpCode === 200;
     }
 
     /**
      * Create or update local GeminiFileSearchStore entity.
      */
-    private function syncLocalStore(string $teamId, string $storeName, string $teamName): void
+    private function syncLocalStore(string $teamId, string $storeName): void
     {
         $existing = $this->entityManager
             ->getRDBRepository('GeminiFileSearchStore')
@@ -250,10 +308,15 @@ class IndexArticle implements Job
         }
 
         $entity = $this->entityManager->createEntity('GeminiFileSearchStore', [
-            'name' => "Knowledge Base - {$teamName}",
+            'name' => "team-{$teamId}",
             'geminiStoreName' => $storeName,
             'status' => 'Active',
-        ], ['silent' => true]);
+            'createdById' => 'system',
+        ], [
+            'silent' => true,
+            'skipCreatedBy' => true,
+            'skipStream' => true,
+        ]);
 
         // Link to team
         $this->entityManager
@@ -263,17 +326,30 @@ class IndexArticle implements Job
     }
 
     /**
-     * Extract document name from operation response.
+     * Extract document name from completed operation response.
+     * 
+     * The Gemini API returns the document name in the operation result at:
+     * - response.name (standard path)
+     * - response.document.name (alternate path)
+     * - metadata.document (some API versions)
      */
-    private function extractDocumentName(array $result, string $storeName): ?string
+    private function extractDocumentName(array $operationResult): ?string
     {
-        // The document name might be in the response or we need to derive it
-        if (isset($result['response']['name'])) {
-            return $result['response']['name'];
+        // Standard path: response.name
+        if (isset($operationResult['response']['name'])) {
+            return $operationResult['response']['name'];
         }
 
-        // If not available, we'll need to list documents and find the latest
-        // For now, return null and rely on subsequent sync
+        // Alternate path: response.document.name
+        if (isset($operationResult['response']['document']['name'])) {
+            return $operationResult['response']['document']['name'];
+        }
+
+        // Some API versions use metadata
+        if (isset($operationResult['metadata']['document'])) {
+            return $operationResult['metadata']['document'];
+        }
+
         return null;
     }
 

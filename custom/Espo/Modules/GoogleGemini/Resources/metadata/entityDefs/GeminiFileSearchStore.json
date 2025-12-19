@@ -95,6 +95,11 @@
             "type": "hasMany",
             "entity": "GeminiDocument",
             "foreign": "fileSearchStore"
+        },
+        "knowledgeBaseArticles": {
+            "type": "hasMany",
+            "entity": "KnowledgeBaseArticle",
+            "foreign": "geminiFileSearchStore"
         }
     },
     "collection": {

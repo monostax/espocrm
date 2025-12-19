@@ -848,15 +848,15 @@ Here are some examples of how to manage your File Search stores:
 
 ### REST
 
-    curl -X POST "https://generativelanguage.googleapis.com/v1beta/fileSearchStores?key=${GEMINI_API_KEY}" \
+    curl -X POST "https://generativelanguage.googleapis.com/v1beta/fileSearchStores?key=${GOOGLE_GENERATIVE_AI_API_KEY }" \
         -H "Content-Type: application/json"
         -d '{ "displayName": "My Store" }'
 
-    curl "https://generativelanguage.googleapis.com/v1beta/fileSearchStores?key=${GEMINI_API_KEY}" \
+    curl "https://generativelanguage.googleapis.com/v1beta/fileSearchStores?key=${GOOGLE_GENERATIVE_AI_API_KEY }" \
 
-    curl "https://generativelanguage.googleapis.com/v1beta/fileSearchStores/my-file_search-store-123?key=${GEMINI_API_KEY}"
+    curl "https://generativelanguage.googleapis.com/v1beta/fileSearchStores/my-file_search-store-123?key=${GOOGLE_GENERATIVE_AI_API_KEY }"
 
-    curl -X DELETE "https://generativelanguage.googleapis.com/v1beta/fileSearchStores/my-file_search-store-123?key=${GEMINI_API_KEY}"
+    curl -X DELETE "https://generativelanguage.googleapis.com/v1beta/fileSearchStores/my-file_search-store-123?key=${GOOGLE_GENERATIVE_AI_API_KEY }"
 
 The[File Search Documents](https://ai.google.dev/api/file-search/documents)API reference for methods and fields related to managing documents in your file stores.
 
@@ -930,7 +930,7 @@ This is useful when you have multiple documents in a File Search store and want 
 
 ### REST
 
-    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_GENERATIVE_AI_API_KEY }" \
         -H 'Content-Type: application/json' \
         -X POST \
         -d '{

@@ -1,5 +1,4 @@
 {
-    "assignmentPermission": "yes",
-    "readOwnerUserField": "assignedUserId"
+    "assignmentPermission": "no"
 }
 

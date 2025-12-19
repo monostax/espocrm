@@ -125,7 +125,8 @@ class IndexInGemini implements AfterSave, AfterRemove
         
         $this->indexingService->queueArticleIndexing(
             $entity->getId(),
-            'delete'
+            'delete',
+            $geminiDocumentName
         );
     }
 }

@@ -70,11 +70,11 @@ class GeminiFileSearchService
         ?array $chunkingConfig = null,
         ?string $storeName = null
     ): ?array {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
         $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
 
         if (!$apiKey) {
-            $this->log->error('GEMINI_API_KEY environment variable not set');
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
             return null;
         }
 
@@ -158,10 +158,10 @@ class GeminiFileSearchService
      */
     public function deleteDocument(string $documentName): bool
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
 
         if (!$apiKey) {
-            $this->log->error('GEMINI_API_KEY environment variable not set');
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
             return false;
         }
 
@@ -194,14 +194,14 @@ class GeminiFileSearchService
      *
      * @param string $operationName Operation name from upload response
      * @param int $maxWaitSeconds Maximum seconds to wait
-     * @return bool True if operation completed successfully
+     * @return array<string, mixed>|null Operation result with response data, or null on failure
      */
-    public function waitForOperation(string $operationName, int $maxWaitSeconds = 60): bool
+    public function waitForOperation(string $operationName, int $maxWaitSeconds = 60): ?array
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
 
         if (!$apiKey) {
-            return false;
+            return null;
         }
 
         $startTime = time();
@@ -217,7 +217,7 @@ class GeminiFileSearchService
                 curl_close($ch);
 
                 if ($httpCode !== 200) {
-                    return false;
+                    return null;
                 }
 
                 $result = json_decode($response, true);
@@ -225,21 +225,21 @@ class GeminiFileSearchService
                 if (isset($result['done']) && $result['done'] === true) {
                     if (isset($result['error'])) {
                         $this->log->error('Operation failed: ' . json_encode($result['error']));
-                        return false;
+                        return null;
                     }
-                    return true;
+                    return $result;
                 }
 
                 sleep(2);
 
             } catch (Exception $e) {
                 $this->log->error('Exception checking operation status: ' . $e->getMessage());
-                return false;
+                return null;
             }
         }
 
         $this->log->warning('Operation timed out after ' . $maxWaitSeconds . ' seconds');
-        return false;
+        return null;
     }
 
     /**
@@ -250,10 +250,10 @@ class GeminiFileSearchService
      */
     public function getDocument(string $documentName): ?array
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
 
         if (!$apiKey) {
-            $this->log->error('GEMINI_API_KEY environment variable not set');
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
             return null;
         }
 
@@ -289,11 +289,11 @@ class GeminiFileSearchService
      */
     public function listDocuments(int $pageSize = 20, ?string $pageToken = null, ?string $storeName = null): ?array
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
         $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
 
         if (!$apiKey) {
-            $this->log->error('GEMINI_API_KEY environment variable not set');
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
             return null;
         }
 
@@ -337,11 +337,11 @@ class GeminiFileSearchService
      */
     public function getFileSearchStore(?string $storeName = null): ?array
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
         $fileSearchStoreName = $storeName ?? $this->config->get('googleGeminiFileSearchStoreName');
 
         if (!$apiKey) {
-            $this->log->error('GEMINI_API_KEY environment variable not set');
+            $this->log->error('GOOGLE_GENERATIVE_AI_API_KEY environment variable not set');
             return null;
         }
 

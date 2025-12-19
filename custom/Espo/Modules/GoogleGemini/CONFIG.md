@@ -9,7 +9,7 @@ This module automatically indexes KnowledgeBaseArticle records to Google Gemini 
 1. **Create a File Search Store** (if you don't have one)
 
 ```bash
-curl -X POST "https://generativelanguage.googleapis.com/v1beta/fileSearchStores?key=${GEMINI_API_KEY}" \
+curl -X POST "https://generativelanguage.googleapis.com/v1beta/fileSearchStores?key=${GOOGLE_GENERATIVE_AI_API_KEY }" \
     -H "Content-Type: application/json" \
     -d '{ "displayName": "EspoCRM Knowledge Base" }'
 ```
@@ -26,8 +26,9 @@ Add the following to your EspoCRM configuration file (`data/config.php`):
 ```
 
 Or use the EspoCRM Administration panel:
-- Go to Administration > Settings
-- Add custom settings via System > Custom Config
+
+-   Go to Administration > Settings
+-   Add custom settings via System > Custom Config
 
 3. **Clear Cache**
 
@@ -38,19 +39,22 @@ php command.php clear-cache
 ### How It Works
 
 When a KnowledgeBaseArticle is:
-- **Created or Updated** with status "Published" → Automatically indexed to Gemini File Search Store
-- **Deleted** → Logged (manual cleanup may be required)
+
+-   **Created or Updated** with status "Published" → Automatically indexed to Gemini File Search Store
+-   **Deleted** → Logged (manual cleanup may be required)
 
 The following data is indexed:
-- Article name (as title)
-- Article description
-- Article body (plain text)
+
+-   Article name (as title)
+-   Article description
+-   Article body (plain text)
 
 Metadata stored with each document:
-- `article_id`: The EspoCRM record ID
-- `article_name`: The article name
-- `entity_type`: Always "KnowledgeBaseArticle"
-- `language`: Article language (if set)
+
+-   `article_id`: The EspoCRM record ID
+-   `article_name`: The article name
+-   `entity_type`: Always "KnowledgeBaseArticle"
+-   `language`: Article language (if set)
 
 ### Using File Search in Gemini
 
@@ -92,20 +96,20 @@ grep "Gemini" data/logs/*.log
 ```
 
 Common issues:
-- **API key not configured**: Add `googleGeminiApiKey` to config
-- **Store name not configured**: Add `googleGeminiFileSearchStoreName` to config
-- **API rate limits**: Gemini has rate limits on indexing operations
-- **Content too large**: Maximum file size per document is 100 MB
+
+-   **API key not configured**: Add `googleGeminiApiKey` to config
+-   **Store name not configured**: Add `googleGeminiFileSearchStoreName` to config
+-   **API rate limits**: Gemini has rate limits on indexing operations
+-   **Content too large**: Maximum file size per document is 100 MB
 
 ### Cost Considerations
 
 From the Gemini File Search documentation:
-- **Indexing**: $0.15 per 1M tokens (charged once during indexing)
-- **Storage**: Free
-- **Query embeddings**: Free
-- **Retrieved tokens**: Charged as regular context tokens
+
+-   **Indexing**: $0.15 per 1M tokens (charged once during indexing)
+-   **Storage**: Free
+-   **Query embeddings**: Free
+-   **Retrieved tokens**: Charged as regular context tokens
 
 Typical KnowledgeBaseArticle costs < $0.01 per article to index.
-
-
 

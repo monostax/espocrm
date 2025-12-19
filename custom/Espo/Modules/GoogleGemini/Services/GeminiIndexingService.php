@@ -32,18 +32,26 @@ class GeminiIndexingService
      * 
      * @param string $articleId The ID of the KnowledgeBaseArticle
      * @param string $operation Operation type: 'index', 'update', 'delete'
+     * @param string|null $geminiDocumentName The Gemini document name (required for delete when article is already removed)
      * @return void
      */
-    public function queueArticleIndexing(string $articleId, string $operation = 'index'): void
+    public function queueArticleIndexing(string $articleId, string $operation = 'index', ?string $geminiDocumentName = null): void
     {
         try {
+            $data = [
+                'articleId' => $articleId,
+                'operation' => $operation,
+            ];
+
+            // For delete operations, include the document name so deletion works even if article is already removed
+            if ($geminiDocumentName !== null) {
+                $data['geminiDocumentName'] = $geminiDocumentName;
+            }
+
             $this->jobSchedulerFactory->create()
                 ->setClassName(IndexArticle::class)
                 ->setQueue(QueueName::E0)
-                ->setData([
-                    'articleId' => $articleId,
-                    'operation' => $operation,
-                ])
+                ->setData($data)
                 ->schedule();
 
             $this->log->debug("GoogleGemini: Queued article {$operation} for ID: {$articleId}");

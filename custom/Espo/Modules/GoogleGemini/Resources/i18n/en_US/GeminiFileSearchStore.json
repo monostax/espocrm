@@ -10,7 +10,8 @@
         "Statistics": "Statistics"
     },
     "links": {
-        "documents": "Documents"
+        "documents": "Documents",
+        "knowledgeBaseArticles": "Knowledge Base Articles"
     },
     "fields": {
         "name": "Name",

@@ -22,6 +22,18 @@
             "type": "text",
             "readOnly": true,
             "utility": true
+        },
+        "geminiFileSearchStore": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/link"
+        }
+    },
+    "links": {
+        "geminiFileSearchStore": {
+            "type": "belongsTo",
+            "entity": "GeminiFileSearchStore",
+            "foreign": "knowledgeBaseArticles"
         }
     }
 }

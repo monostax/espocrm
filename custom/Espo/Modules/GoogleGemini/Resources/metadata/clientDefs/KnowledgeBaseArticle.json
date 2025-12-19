@@ -1,0 +1,52 @@
+{
+    "sidePanels": {
+        "detail": [
+            "__APPEND__",
+            {
+                "name": "geminiIndexing",
+                "label": "Gemini Indexing",
+                "view": "views/record/panels/side",
+                "isForm": true,
+                "options": {
+                    "fieldList": [
+                        {
+                            "name": "geminiIndexStatus"
+                        },
+                        {
+                            "name": "geminiFileSearchStore"
+                        },
+                        {
+                            "name": "geminiIndexedAt"
+                        },
+                        {
+                            "name": "geminiDocumentName"
+                        },
+                        {
+                            "name": "geminiIndexError"
+                        }
+                    ]
+                }
+            }
+        ],
+        "detailSmall": [
+            "__APPEND__",
+            {
+                "name": "geminiIndexing",
+                "label": "Gemini Indexing",
+                "view": "views/record/panels/side",
+                "isForm": true,
+                "options": {
+                    "fieldList": [
+                        {
+                            "name": "geminiIndexStatus"
+                        },
+                        {
+                            "name": "geminiIndexedAt"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
+

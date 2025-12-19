@@ -25,7 +25,7 @@ use stdClass;
  * 
  * @extends RecordService<Entity>
  */
-class GeminiFileSearchStore extends RecordService implements
+class GeminiFileSearchStoreService extends RecordService implements
     Di\LogAware
 {
     use Di\LogSetter;
@@ -62,8 +62,17 @@ class GeminiFileSearchStore extends RecordService implements
         $this->syncStoreFromGemini($entity);
     }
 
-    // Note: Gemini API deletion is now handled by the DeleteFromGemini hook
-    // which properly supports both single and mass delete operations.
+    /**
+     * Delete from Gemini API before deleting locally.
+     */
+    protected function beforeDeleteEntity(Entity $entity): void
+    {
+        $geminiStoreName = $entity->get('geminiStoreName');
+
+        if ($geminiStoreName) {
+            $this->deleteFromGemini($geminiStoreName);
+        }
+    }
 
     /**
      * Sync store statistics from Gemini API.
