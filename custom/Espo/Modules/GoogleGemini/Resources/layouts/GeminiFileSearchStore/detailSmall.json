@@ -1,0 +1,16 @@
+[
+    {
+        "rows": [
+            [{ "name": "name" }, { "name": "status" }],
+            [{ "name": "geminiStoreName" }],
+            [{ "name": "description" }],
+            [
+                { "name": "activeDocumentsCount" },
+                { "name": "pendingDocumentsCount" }
+            ],
+            [{ "name": "failedDocumentsCount" }, { "name": "sizeBytes" }],
+            [{ "name": "lastSyncAt" }]
+        ]
+    }
+]
+

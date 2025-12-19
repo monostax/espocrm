@@ -114,9 +114,9 @@ class IndexInGemini implements AfterSave, AfterRemove
             return;
         }
 
-        // Only attempt deletion if the article had a Gemini document ID
-        $geminiDocId = $entity->get('geminiFileSearchDocId');
-        if (!$geminiDocId) {
+        // Only attempt deletion if the article had a Gemini document
+        $geminiDocumentName = $entity->get('geminiDocumentName');
+        if (!$geminiDocumentName) {
             $this->log->debug("GoogleGemini: Skipping deletion for article {$entity->getId()} - not indexed");
             return;
         }

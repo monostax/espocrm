@@ -1,0 +1,22 @@
+[
+    {
+        "rows": [
+            [{ "name": "name" }],
+            [{ "name": "status" }, { "name": "publishDate" }],
+            [{ "name": "categories" }, { "name": "expirationDate" }],
+            [{ "name": "portals" }, { "name": "language" }]
+        ]
+    },
+    {
+        "rows": [[{ "name": "body" }], [{ "name": "attachments" }]]
+    },
+    {
+        "label": "Gemini Indexing",
+        "rows": [
+            [{ "name": "geminiIndexStatus" }, { "name": "geminiIndexedAt" }],
+            [{ "name": "geminiDocumentName", "fullWidth": true }],
+            [{ "name": "geminiIndexError", "fullWidth": true }]
+        ]
+    }
+]
+

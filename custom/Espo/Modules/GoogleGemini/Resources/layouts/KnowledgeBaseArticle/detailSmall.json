@@ -1,0 +1,20 @@
+[
+    {
+        "rows": [
+            [{ "name": "name" }],
+            [{ "name": "status" }, { "name": "language" }],
+            [{ "name": "categories" }, { "name": "portals" }]
+        ]
+    },
+    {
+        "rows": [[{ "name": "body" }], [{ "name": "attachments" }]]
+    },
+    {
+        "label": "Gemini Indexing",
+        "rows": [
+            [{ "name": "geminiIndexStatus" }, { "name": "geminiIndexedAt" }],
+            [{ "name": "geminiDocumentName" }]
+        ]
+    }
+]
+

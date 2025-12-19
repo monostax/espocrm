@@ -1,0 +1,23 @@
+{
+    "labels": {
+        "Gemini Indexing": "Gemini Indexing"
+    },
+    "fields": {
+        "geminiIndexStatus": "Index Status",
+        "geminiDocumentName": "Gemini Document",
+        "geminiIndexedAt": "Indexed At",
+        "geminiIndexError": "Index Error"
+    },
+    "options": {
+        "geminiIndexStatus": {
+            "NotIndexed": "Not Indexed",
+            "Pending": "Pending",
+            "Indexed": "Indexed",
+            "Failed": "Failed"
+        }
+    },
+    "tooltips": {
+        "geminiDocumentName": "The document resource name in Google Gemini File Search API"
+    }
+}
+

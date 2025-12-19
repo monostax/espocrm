@@ -1,0 +1,31 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "activeDocumentsCount",
+        "width": 10
+    },
+    {
+        "name": "pendingDocumentsCount",
+        "width": 10
+    },
+    {
+        "name": "failedDocumentsCount",
+        "width": 10
+    },
+    {
+        "name": "lastSyncAt",
+        "width": 15
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    }
+]
+

@@ -1,15 +1,28 @@
 {
     "fields": {
-        "geminiFileSearchDocId": {
+        "geminiIndexStatus": {
+            "type": "enum",
+            "options": ["NotIndexed", "Pending", "Indexed", "Failed"],
+            "default": "NotIndexed",
+            "readOnly": true
+        },
+        "geminiDocumentName": {
             "type": "varchar",
-            "maxLength": 255,
+            "maxLength": 512,
             "readOnly": true,
             "utility": true,
             "tooltip": true,
-            "tooltipText": "Google Gemini File Search document ID for this article. Used for RAG (Retrieval Augmented Generation) queries."
+            "tooltipText": "Full document resource name in Gemini File Search (e.g., fileSearchStores/team-xxx/documents/doc-yyy)"
+        },
+        "geminiIndexedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "geminiIndexError": {
+            "type": "text",
+            "readOnly": true,
+            "utility": true
         }
     }
 }
-
-
 

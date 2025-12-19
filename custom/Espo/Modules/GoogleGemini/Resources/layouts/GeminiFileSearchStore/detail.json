@@ -1,0 +1,22 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "status" }],
+            [{ "name": "geminiStoreName" }, { "name": "assignedUser" }],
+            [{ "name": "description", "fullWidth": true }]
+        ]
+    },
+    {
+        "label": "Statistics",
+        "rows": [
+            [
+                { "name": "activeDocumentsCount" },
+                { "name": "pendingDocumentsCount" }
+            ],
+            [{ "name": "failedDocumentsCount" }, { "name": "sizeBytes" }],
+            [{ "name": "lastSyncAt" }, false]
+        ]
+    }
+]
+

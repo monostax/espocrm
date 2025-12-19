@@ -5,7 +5,12 @@
         "Sync Store": "Sync Store",
         "Syncing...": "Syncing...",
         "Sync completed": "Sync completed",
-        "Sync failed": "Sync failed"
+        "Sync failed": "Sync failed",
+        "Overview": "Overview",
+        "Statistics": "Statistics"
+    },
+    "links": {
+        "documents": "Documents"
     },
     "fields": {
         "name": "Name",
