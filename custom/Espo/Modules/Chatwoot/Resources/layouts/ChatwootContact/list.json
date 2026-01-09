@@ -1,28 +1,39 @@
 [
     {
+        "name": "avatarUrl",
+        "width": 4,
+        "link": false,
+        "notSortable": true
+    },
+    {
         "name": "name",
-        "width": 20
+        "width": 16
     },
     {
         "name": "phoneNumber",
-        "width": 15
+        "width": 13
     },
     {
         "name": "email",
-        "width": 15
+        "width": 13
     },
     {
         "name": "contact",
-        "width": 15
+        "width": 13
     },
     {
         "name": "syncStatus",
         "width": 10
     },
     {
+        "name": "mergedIntoChatwootContactId",
+        "width": 10
+    },
+    {
         "name": "lastSyncedAt",
-        "width": 15
+        "width": 12
     }
 ]
+
 
 

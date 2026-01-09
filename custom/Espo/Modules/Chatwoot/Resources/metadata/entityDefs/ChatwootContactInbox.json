@@ -29,7 +29,11 @@
             "maxLength": 255,
             "tooltip": "Contact identifier for this inbox"
         },
-        "lastSyncedAt": { "type": "datetime", "readOnly": true }
+        "lastSyncedAt": { "type": "datetime", "readOnly": true },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
     },
     "links": {
         "chatwootContact": {
@@ -55,6 +59,12 @@
             "type": "belongsTo",
             "entity": "ChatwootInbox",
             "foreign": "contactInboxes"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     },
     "indexes": {

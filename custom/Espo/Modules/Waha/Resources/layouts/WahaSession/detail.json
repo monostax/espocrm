@@ -1,0 +1,59 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "pushName"
+                },
+                {
+                    "name": "waId"
+                }
+            ],
+            [
+                {
+                    "name": "platform"
+                },
+                {
+                    "name": "lastActivity"
+                }
+            ],
+            [
+                {
+                    "name": "assignedWorker"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "WhatsApp Connection",
+        "rows": [
+            [
+                {
+                    "name": "qrCode",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Configuration",
+        "rows": [
+            [
+                {
+                    "name": "config",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

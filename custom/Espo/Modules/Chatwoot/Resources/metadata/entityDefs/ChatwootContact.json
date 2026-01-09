@@ -44,6 +44,12 @@
             "default": false,
             "readOnly": true
         },
+        "avatarUrl": {
+            "type": "text",
+            "readOnly": true,
+            "tooltip": true,
+            "view": "chatwoot:views/chatwoot-contact/fields/avatar-url"
+        },
         "contact": {
             "type": "link",
             "required": false,
@@ -72,8 +78,21 @@
         },
         "syncStatus": {
             "type": "enum",
-            "options": ["pending", "synced", "error"],
+            "options": ["pending", "synced", "error", "merged", "deleted"],
             "default": "pending",
+            "tooltip": true,
+            "view": "views/fields/enum-styled",
+            "style": {
+                "pending": "default",
+                "synced": "success",
+                "error": "danger",
+                "merged": "warning",
+                "deleted": "default"
+            }
+        },
+        "mergedIntoChatwootContactId": {
+            "type": "int",
+            "readOnly": true,
             "tooltip": true
         },
         "syncError": {
@@ -98,6 +117,10 @@
             "type": "link",
             "readOnly": true,
             "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
         }
     },
     "links": {
@@ -128,6 +151,12 @@
             "type": "hasMany",
             "entity": "ChatwootConversation",
             "foreign": "chatwootContact"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     },
     "collection": {

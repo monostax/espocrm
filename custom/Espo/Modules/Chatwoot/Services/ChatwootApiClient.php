@@ -1323,6 +1323,62 @@ public function filterConversations(
 }
 
 /**
+ * Merge two contacts in Chatwoot.
+ * The mergee contact will be deleted and its data merged into the base contact.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $baseContactId The contact to keep (survives the merge)
+ * @param int $mergeeContactId The contact to merge and delete
+ * @return array The merged contact data
+ * @throws Error
+ */
+public function mergeContacts(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $baseContactId,
+    int $mergeeContactId
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/actions/contact_merge';
+
+    $payload = json_encode([
+        'base_contact_id' => $baseContactId,
+        'mergee_contact_id' => $mergeeContactId,
+    ]);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode merge payload to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to merge contacts in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (mergeContacts): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    $this->log->info("Chatwoot: Merged contact {$mergeeContactId} into {$baseContactId} for account {$accountId}");
+
+    return $response['body'];
+}
+
+/**
  * List all inboxes from a Chatwoot account.
  *
  * @param string $platformUrl The Chatwoot platform URL
@@ -1356,6 +1412,111 @@ public function listInboxes(
         $this->log->error('Chatwoot API Error (listInboxes): ' . json_encode($response));
         throw new Error($errorMsg);
     }
+
+    return $response['body'];
+}
+
+/**
+ * Delete an inbox from a Chatwoot account.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @return void
+ * @throws Error
+ */
+public function deleteInbox(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): void {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inboxes/' . $inboxId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+    // Accept 204 No Content, 200 OK, or 404 (already deleted) as success
+    if ($response['code'] !== 200 && $response['code'] !== 204 && $response['code'] !== 404) {
+        $errorMsg = 'Failed to delete inbox from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (deleteInbox): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    // Log if inbox was already deleted
+    if ($response['code'] === 404) {
+        $this->log->info("Inbox $inboxId was already deleted from account $accountId or doesn't exist");
+    }
+}
+
+/**
+ * Toggle the status of a conversation in Chatwoot.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $conversationId The Chatwoot conversation ID
+ * @param string $status The new status (open, resolved, pending, snoozed)
+ * @param int|null $snoozedUntil Unix timestamp for snooze (optional, only for snoozed status)
+ * @return array The API response
+ * @throws Error
+ */
+public function toggleConversationStatus(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $conversationId,
+    string $status,
+    ?int $snoozedUntil = null
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId . '/toggle_status';
+
+    $data = ['status' => $status];
+    
+    if ($status === 'snoozed' && $snoozedUntil !== null) {
+        $data['snoozed_until'] = $snoozedUntil;
+    }
+
+    $payload = json_encode($data);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode status data to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to toggle conversation status in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (toggleConversationStatus): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    $this->log->info("Chatwoot: Toggled conversation {$conversationId} status to '{$status}' for account {$accountId}");
 
     return $response['body'];
 }

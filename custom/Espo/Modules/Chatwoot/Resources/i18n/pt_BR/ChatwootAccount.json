@@ -7,11 +7,11 @@
         "domain": "Domínio",
         "supportEmail": "Email de Suporte",
         "status": "Status",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "links": {
         "platform": "Plataforma",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "labels": {
         "Create ChatwootAccount": "Criar Conta Chatwoot"

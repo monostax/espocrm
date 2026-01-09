@@ -77,6 +77,5 @@
             "selectPrimaryFilterName": null
         }
     },
-    "kanbanViewMode": false,
-    "color": "#4a90e2"
+    "kanbanViewMode": false
 }

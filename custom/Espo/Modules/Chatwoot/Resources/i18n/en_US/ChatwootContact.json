@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "mergedIntoChatwootContactId": "Merged Into Contact ID",
+        "syncStatus": "Sync Status",
+        "avatarUrl": "Avatar URL"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error",
+            "merged": "Merged",
+            "deleted": "Deleted"
+        }
+    },
+    "tooltips": {
+        "mergedIntoChatwootContactId": "The Chatwoot Contact ID this contact was merged into",
+        "avatarUrl": "Profile image URL from Chatwoot"
+    },
+    "presetFilters": {
+        "all": "All",
+        "synced": "Synced",
+        "pendingReview": "Pending Review",
+        "merged": "Merged",
+        "deleted": "Deleted",
+        "errors": "Errors"
+    }
+}
+
+
+

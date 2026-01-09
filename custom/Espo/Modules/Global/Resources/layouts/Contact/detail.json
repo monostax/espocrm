@@ -70,7 +70,26 @@
                 }
             ]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$ChatwootConversations",
+        "name": "chatwootConversationsTab",
+        "rows": [
+            [
+                {
+                    "name": "chatwootConversationsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "chatwootConversations",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
     }
 ]
-
 

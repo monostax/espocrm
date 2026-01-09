@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-puzzle-piece",
+    "createDisabled": false,
+    "isExpandedByDefault": false,
+    "modalViews": {
+        "edit": "waha:views/waha-session-app/modals/edit"
+    }
+}
+

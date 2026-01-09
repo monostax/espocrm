@@ -39,7 +39,7 @@
         "auth2FATotpSecret": "Segredo 2FA TOTP"
     },
     "links": {
-        "teams": "Times",
+        "teams": "Times / Contas",
         "roles": "Regras",
         "notes": "Notas",
         "portals": "Portais",

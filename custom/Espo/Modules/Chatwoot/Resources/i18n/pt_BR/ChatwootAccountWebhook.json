@@ -5,11 +5,11 @@
         "chatwootWebhookId": "ID do Webhook Chatwoot",
         "url": "URL",
         "subscriptions": "Assinaturas",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "links": {
         "account": "Conta Chatwoot",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "labels": {
         "Create ChatwootAccountWebhook": "Criar Webhook da Conta Chatwoot"
@@ -32,3 +32,4 @@
         "subscriptions": "Eventos que você deseja assinar"
     }
 }
+

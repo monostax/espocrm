@@ -1,25 +1,11 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-filter",
-    "color": "#6C5CE7",
     "boolFilterList": ["onlyMy", "onlyActive"],
     "filterList": ["active", "all"],
     "defaultFilterData": {
         "active": {
             "isActive": true
-        }
-    },
-    "menu": {
-        "list": {
-            "buttons": [
-                "__APPEND__",
-                {
-                    "label": "Create Funnel",
-                    "action": "quickCreate",
-                    "style": "primary",
-                    "acl": "create"
-                }
-            ]
         }
     },
     "relationshipPanels": {
@@ -38,6 +24,4 @@
         }
     }
 }
-
-
 

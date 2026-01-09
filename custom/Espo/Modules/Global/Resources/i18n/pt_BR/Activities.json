@@ -9,7 +9,7 @@
         "users": "Participantes",
         "contacts": "Contatos",
         "parent": "Relações",
-        "teams": "Times",
+        "teams": "Times / Contas",
         "description": "Descrição",
         "createdAt": "Criado em",
         "modifiedAt": "Modificado em",
@@ -21,4 +21,3 @@
         "assignedToMe": "Atribuído a Mim"
     }
 }
-

@@ -1,0 +1,18 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": false,
+    "acl": true,
+    "aclPortal": true,
+    "aclPortalLevelList": ["all", "account", "contact", "own", "no"],
+    "customizable": false,
+    "importable": false,
+    "notifications": false,
+    "stream": false,
+    "disabled": false,
+    "type": "Base",
+    "module": "Waha",
+    "object": false,
+    "isVirtual": true
+}
+

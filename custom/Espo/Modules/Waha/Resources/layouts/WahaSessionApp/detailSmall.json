@@ -1,0 +1,28 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "appType"
+                }
+            ],
+            [
+                {
+                    "name": "enabled"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Configuration",
+        "rows": [
+            [
+                {
+                    "name": "config",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

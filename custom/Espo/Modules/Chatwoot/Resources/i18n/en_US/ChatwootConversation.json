@@ -1,0 +1,44 @@
+{
+    "fields": {
+        "name": "Name",
+        "status": "Status",
+        "lastActivityAt": "Last Activity",
+        "messagesCount": "Messages Count",
+        "assigneeName": "Assignee",
+        "inboxName": "Inbox Name",
+        "chatwootCreatedAt": "Created at Chatwoot",
+        "chatwootConversationId": "Conversation ID",
+        "contactInbox": "Contact Inbox",
+        "inbox": "Inbox",
+        "chatwootContact": "Chatwoot Contact",
+        "contact": "Contact",
+        "chatwootAccount": "Chatwoot Account",
+        "lastSyncedAt": "Last Synced At",
+        "lastMessageContent": "Last Message",
+        "contactAvatarUrl": "Contact Avatar",
+        "contactDisplayName": "Contact Name",
+        "inboxChannelType": "Channel Type"
+    },
+    "options": {
+        "status": {
+            "open": "Open",
+            "resolved": "Resolved",
+            "pending": "Pending",
+            "snoozed": "Snoozed"
+        }
+    },
+    "labels": {
+        "Create ChatwootConversation": "Create Chatwoot Conversation",
+        "View Details": "View Details"
+    },
+    "tabs": {
+        "Conversation": "Conversation",
+        "Overview": "Overview"
+    },
+    "messages": {
+        "Your user is not linked to a Chatwoot account": "Your user is not linked to a Chatwoot account",
+        "No conversation ID available": "No conversation ID available",
+        "No conversation data available": "No conversation data available"
+    }
+}
+

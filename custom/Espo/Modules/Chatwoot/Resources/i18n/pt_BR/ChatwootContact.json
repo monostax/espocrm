@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "mergedIntoChatwootContactId": "Mesclado em Contato ID",
+        "syncStatus": "Status de Sincronização",
+        "avatarUrl": "URL do Avatar"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro",
+            "merged": "Mesclado",
+            "deleted": "Excluído"
+        }
+    },
+    "tooltips": {
+        "mergedIntoChatwootContactId": "O ID do Contato do Chatwoot para o qual este contato foi mesclado",
+        "avatarUrl": "URL da imagem de perfil do Chatwoot"
+    },
+    "presetFilters": {
+        "all": "Todos",
+        "synced": "Sincronizados",
+        "pendingReview": "Revisão Pendente",
+        "merged": "Mesclados",
+        "deleted": "Excluídos",
+        "errors": "Erros"
+    }
+}
+
+
+

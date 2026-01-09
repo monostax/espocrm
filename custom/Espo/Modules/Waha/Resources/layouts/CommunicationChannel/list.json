@@ -1,0 +1,31 @@
+[
+    {
+        "name": "name",
+        "width": 20
+    },
+    {
+        "name": "channelType",
+        "width": 15
+    },
+    {
+        "name": "status",
+        "width": 12
+    },
+    {
+        "name": "phoneNumber",
+        "width": 13
+    },
+    {
+        "name": "whatsappName",
+        "width": 13
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 13
+    },
+    {
+        "name": "connectedAt",
+        "width": 14
+    }
+]
+

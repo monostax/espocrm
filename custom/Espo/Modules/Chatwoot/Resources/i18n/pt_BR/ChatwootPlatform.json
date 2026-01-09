@@ -3,13 +3,13 @@
         "name": "Nome",
         "url": "URL",
         "accessToken": "Token de Acesso",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "links": {
         "accounts": "Contas",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "labels": {
         "Create ChatwootPlatform": "Criar Plataforma Chatwoot"

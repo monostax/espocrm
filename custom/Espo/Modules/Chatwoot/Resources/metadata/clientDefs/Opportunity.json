@@ -2,8 +2,8 @@
     "bottomPanels": {
         "detail": [
             {
-                "name": "chatwootConversation",
-                "label": "Chatwoot Conversation",
+                "name": "chatwootConversations",
+                "label": "Chatwoot Conversations",
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,
@@ -14,12 +14,10 @@
         ]
     },
     "relationshipPanels": {
-        "chatwootConversation": {
+        "chatwootConversations": {
             "create": false,
             "select": true,
             "view": "views/record/panels/relationship"
         }
     }
 }
-
-

@@ -55,3 +55,6 @@ class CustomActivitiesPanelView extends ActivitiesPanelView {
 export default CustomActivitiesPanelView;
 
 
+
+
+

@@ -11,7 +11,11 @@
     "disabled": false,
     "type": "Base",
     "module": "Chatwoot",
-    "object": true
+    "object": true,
+    "statusField": "status"
 }
+
+
+
 
 

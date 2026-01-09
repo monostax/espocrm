@@ -5,11 +5,10 @@
                 "name": "chatwootContacts",
                 "label": "Chatwoot Contacts",
                 "view": "views/record/panels/relationship",
-                "select": true,
+                "select": false,
                 "create": false,
-                "rowActionsView": "views/record/row-actions/relationship",
-                "order": 5,
-                "disabled": false
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 10
             },
             {
                 "name": "chatwootContactInboxes",
@@ -18,36 +17,29 @@
                 "select": false,
                 "create": false,
                 "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 6,
-                "disabled": false
+                "order": 11
             },
             {
                 "name": "chatwootConversations",
-                "label": "Chatwoot Conversations",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 7,
-                "disabled": false
+                "disabled": true
             }
         ]
     },
     "relationshipPanels": {
         "chatwootContacts": {
             "create": false,
-            "select": true,
-            "view": "views/record/panels/relationship"
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-remove"
         },
         "chatwootContactInboxes": {
             "create": false,
             "select": false,
-            "view": "views/record/panels/relationship"
+            "rowActionsView": "views/record/row-actions/relationship-no-remove"
         },
         "chatwootConversations": {
             "create": false,
             "select": false,
-            "view": "views/record/panels/relationship"
+            "rowActionsView": "views/record/row-actions/relationship-no-remove"
         }
     }
 }

@@ -138,6 +138,11 @@
             "type": "hasMany",
             "entity": "ChatwootInbox",
             "foreign": "chatwootAccount"
+        },
+        "communicationChannels": {
+            "type": "hasMany",
+            "entity": "CommunicationChannel",
+            "foreign": "chatwootAccount"
         }
     },
     "collection": {

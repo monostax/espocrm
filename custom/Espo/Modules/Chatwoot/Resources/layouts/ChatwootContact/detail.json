@@ -33,6 +33,12 @@
                 {
                     "name": "chatwootInboxId"
                 }
+            ],
+            [
+                {
+                    "name": "avatarUrl"
+                },
+                false
             ]
         ]
     },
@@ -52,9 +58,15 @@
                     "name": "syncStatus"
                 },
                 {
+                    "name": "mergedIntoChatwootContactId"
+                }
+            ],
+            [
+                {
                     "name": "syncError",
                     "fullWidth": true
-                }
+                },
+                false
             ]
         ]
     },
@@ -80,5 +92,6 @@
         ]
     }
 ]
+
 
 

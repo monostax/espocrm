@@ -2,12 +2,15 @@
     "controller": "controllers/record",
     "iconClass": "fas fa-comments",
     "color": "#28a745",
-    "kanbanViewMode": false,
+    "createDisabled": true,
+    "kanbanViewMode": true,
+    "kanbanStatusField": "status",
     "modalViews": {
         "detail": "views/modals/detail"
     },
     "recordViews": {
-        "list": "views/record/list"
+        "list": "views/record/list",
+        "kanban": "chatwoot:views/chatwoot-conversation/record/kanban"
     },
     "bottomPanels": {
         "detail": [
@@ -46,5 +49,4 @@
         }
     }
 }
-
 

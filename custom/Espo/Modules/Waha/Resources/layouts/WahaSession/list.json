@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "width": 20
+    },
+    {
+        "name": "platformName",
+        "width": 15
+    },
+    {
+        "name": "status",
+        "width": 15
+    },
+    {
+        "name": "pushName",
+        "width": 15
+    },
+    {
+        "name": "waId",
+        "width": 20
+    },
+    {
+        "name": "lastActivity",
+        "width": 15
+    }
+]
+

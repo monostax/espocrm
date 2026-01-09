@@ -1,0 +1,65 @@
+{
+    "fields": {
+        "name": "Nome da Sessão",
+        "status": "Status",
+        "waId": "ID WhatsApp",
+        "pushName": "Nome de Exibição",
+        "assignedWorker": "Worker Atribuído",
+        "lastActivity": "Última Atividade",
+        "config": "Configuração",
+        "platform": "Plataforma",
+        "platformId": "ID da Plataforma",
+        "platformName": "Plataforma",
+        "qrCode": "QR Code"
+    },
+    "links": {
+        "platform": "Plataforma"
+    },
+    "labels": {
+        "Create WahaSession": "Criar Sessão",
+        "Start Session": "Iniciar Sessão",
+        "Stop Session": "Parar Sessão",
+        "Restart Session": "Reiniciar Sessão",
+        "Logout Session": "Desconectar Sessão",
+        "Remove Session": "Remover Sessão",
+        "WhatsApp Connection": "Conexão WhatsApp",
+        "Loading QR Code": "Carregando QR Code",
+        "Scan QR Code with WhatsApp": "Escaneie este QR Code com o WhatsApp",
+        "QR Code refreshes automatically": "O QR Code atualiza automaticamente a cada 20 segundos",
+        "Session is connected": "Sessão está conectada e funcionando",
+        "Session is stopped": "Sessão está parada. Inicie a sessão para conectar.",
+        "Session is starting": "Sessão está iniciando...",
+        "Session failed": "Falha ao iniciar sessão",
+        "Starting...": "Iniciando...",
+        "Stopping...": "Parando...",
+        "Restarting...": "Reiniciando...",
+        "Logging out...": "Desconectando...",
+        "Removing...": "Removendo..."
+    },
+    "options": {
+        "status": {
+            "STOPPED": "Parada",
+            "STARTING": "Iniciando",
+            "SCAN_QR_CODE": "Escanear QR Code",
+            "WORKING": "Funcionando",
+            "FAILED": "Falhou"
+        }
+    },
+    "tooltips": {
+        "waId": "O ID da conta WhatsApp (formato de telefone: 5511999999999@c.us)",
+        "name": "Um nome único para esta sessão do WhatsApp"
+    },
+    "messages": {
+        "sessionStarted": "Sessão iniciada com sucesso.",
+        "sessionStopped": "Sessão parada com sucesso.",
+        "sessionRestarted": "Sessão reiniciada com sucesso.",
+        "sessionLoggedOut": "Sessão desconectada com sucesso.",
+        "sessionRemoved": "Sessão removida com sucesso.",
+        "sessionCreated": "Sessão criada com sucesso.",
+        "Platform is required": "Por favor, selecione uma plataforma.",
+        "confirmStopSession": "Tem certeza que deseja parar esta sessão?",
+        "confirmRestartSession": "Tem certeza que deseja reiniciar esta sessão?",
+        "confirmLogoutSession": "Tem certeza que deseja desconectar desta sessão? Isso irá desconectar a conta do WhatsApp.",
+        "confirmRemoveSession": "Tem certeza que deseja remover esta sessão? Esta ação não pode ser desfeita."
+    }
+}

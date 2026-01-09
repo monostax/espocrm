@@ -4737,3 +4737,73 @@ html.is-iframe {
 }
 
 /* End Iframe Embedding Styles */
+
+/* Chatwoot Avatar Styles */
+.chatwoot-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+.chatwoot-avatar-list {
+    .chatwoot-avatar-img {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .chatwoot-avatar-initials {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+    }
+}
+
+.chatwoot-avatar-detail {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+
+    .chatwoot-avatar-img {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--panel-default-border);
+    }
+
+    .chatwoot-avatar-initials-large {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        color: #fff;
+        font-size: 24px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+    }
+
+    .chatwoot-avatar-url {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        
+        a {
+            font-size: 11px;
+        }
+    }
+}
+/* End Chatwoot Avatar Styles */

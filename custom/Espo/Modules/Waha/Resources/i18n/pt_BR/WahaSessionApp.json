@@ -1,0 +1,33 @@
+{
+    "fields": {
+        "name": "Nome",
+        "wahaAppId": "ID do App",
+        "enabled": "Habilitado",
+        "appType": "Tipo de App",
+        "config": "Configuração",
+        "sessionName": "Sessão",
+        "platformId": "ID da Plataforma",
+        "platformName": "Plataforma"
+    },
+    "links": {},
+    "labels": {
+        "Create WahaSessionApp": "Criar App",
+        "Configuration": "Configuração"
+    },
+    "options": {
+        "appType": {
+            "chatwoot": "ChatWoot",
+            "calls": "Chamadas"
+        }
+    },
+    "tooltips": {
+        "wahaAppId": "Identificador único deste app no WAHA (ex: app_UUID para chatwoot, ou nome da sessão para calls)"
+    },
+    "messages": {
+        "appCreated": "App criado com sucesso.",
+        "appUpdated": "App atualizado com sucesso.",
+        "appDeleted": "App excluído com sucesso.",
+        "confirmDeleteApp": "Tem certeza que deseja excluir este app?"
+    }
+}
+

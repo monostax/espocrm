@@ -6,3 +6,6 @@ class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
 {
 }
 
+
+
+

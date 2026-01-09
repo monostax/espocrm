@@ -1,0 +1,79 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "readOnlyAfterCreate": true
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "STOPPED",
+                "STARTING",
+                "SCAN_QR_CODE",
+                "WORKING",
+                "FAILED"
+            ],
+            "default": "STOPPED",
+            "readOnly": true
+        },
+        "waId": {
+            "type": "varchar",
+            "maxLength": 50,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "pushName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "assignedWorker": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "lastActivity": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "config": {
+            "type": "text",
+            "readOnly": true
+        },
+        "platform": {
+            "type": "link",
+            "required": true,
+            "readOnlyAfterCreate": true
+        },
+        "platformId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "platformName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "qrCode": {
+            "type": "text",
+            "notStorable": true,
+            "readOnly": true,
+            "layoutDetailDisabled": false,
+            "layoutListDisabled": true,
+            "layoutEditDisabled": true,
+            "view": "waha:views/waha-session/fields/qr-code"
+        }
+    },
+    "links": {
+        "platform": {
+            "type": "belongsTo",
+            "entity": "WahaPlatform",
+            "foreign": "sessions"
+        }
+    }
+}
+

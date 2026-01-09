@@ -13,7 +13,9 @@ namespace Espo\Modules\GoogleGemini\Controllers;
 
 use Espo\Core\Controllers\Record;
 use Espo\Core\Api\Request;
+use Espo\Core\Api\Response;
 use Espo\Core\Exceptions\Forbidden;
+use stdClass;
 
 /**
  * Controller for GeminiFileSearchStoreUploadOperation entity.
@@ -29,7 +31,7 @@ class GeminiFileSearchStoreUploadOperation extends Record
      *
      * @throws Forbidden
      */
-    public function postActionCreate(Request $request): never
+    public function postActionCreate(Request $request, Response $response): stdClass
     {
         throw new Forbidden("Upload operations are created automatically by the system.");
     }
@@ -40,7 +42,7 @@ class GeminiFileSearchStoreUploadOperation extends Record
      *
      * @throws Forbidden
      */
-    public function putActionUpdate(Request $request): never
+    public function putActionUpdate(Request $request, Response $response): stdClass
     {
         throw new Forbidden("Upload operations cannot be modified manually.");
     }
@@ -50,8 +52,11 @@ class GeminiFileSearchStoreUploadOperation extends Record
      *
      * @throws Forbidden
      */
-    public function deleteActionDelete(Request $request): never
+    public function deleteActionDelete(Request $request, Response $response): bool
     {
         throw new Forbidden("Upload operations cannot be deleted manually.");
     }
 }
+
+
+

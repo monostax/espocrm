@@ -1,5 +1,21 @@
 [
     {
+        "tabLabel": "$Conversation",
+        "name": "chatwootIframeTab",
+        "rows": [
+            [
+                {
+                    "name": "chatwootIframe",
+                    "view": "chatwoot:views/chatwoot-conversation/fields/iframe-conversation",
+                    "noLabel": true,
+                    "span": 4
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Overview",
         "label": "Overview",
         "rows": [
             [
@@ -66,5 +82,8 @@
         ]
     }
 ]
+
+
+
 
 

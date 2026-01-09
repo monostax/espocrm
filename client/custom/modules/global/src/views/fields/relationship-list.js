@@ -24,10 +24,45 @@
  * }
  */
 
-import View from "view";
+import BaseFieldView from "views/fields/base";
 
-class RelationshipListFieldView extends View {
-    template = "global:fields/relationship-list";
+class RelationshipListFieldView extends BaseFieldView {
+    // noinspection JSUnusedGlobalSymbols
+    templateContent = `
+        <div class="relationship-list-field">
+            <div class="btn-group pull-right relationship-buttons">
+                {{#if showCreateButton}}
+                <button
+                    class="btn btn-default btn-sm action"
+                    data-action="createRelated"
+                    title="{{translate 'Create'}}"
+                ><span class="fas fa-plus"></span></button>
+                {{/if}}
+                {{#if showSelectButton}}
+                <button
+                    class="btn btn-default btn-sm action"
+                    data-action="selectRelated"
+                    title="{{translate 'Select'}}"
+                ><span class="fas fa-link"></span></button>
+                {{/if}}
+                {{#if showViewListButton}}
+                <button
+                    class="btn btn-default btn-sm action"
+                    data-action="viewRelatedList"
+                    title="{{translate 'View List'}}"
+                ><span class="fas fa-list"></span></button>
+                {{/if}}
+            </div>
+            <div class="clearfix"></div>
+            {{#if hasId}}
+            <div class="relationship-list-container" style="margin-top: 10px;"></div>
+            {{else}}
+            <div class="text-muted" style="margin-top: 10px;">
+                {{translate 'Save record first'}}
+            </div>
+            {{/if}}
+        </div>
+    `;
 
     /** @type {string} */
     link = null;
@@ -78,14 +113,49 @@ class RelationshipListFieldView extends View {
     };
 
     data() {
+        const hasId = !!this.model.id;
+
         return {
-            showCreateButton: this.showCreateButton,
-            showSelectButton: this.showSelectButton,
-            showViewListButton: true,
+            // Only show action buttons when we have an ID (existing record)
+            showCreateButton: hasId && this.showCreateButton,
+            showSelectButton: hasId && this.showSelectButton,
+            showViewListButton: hasId,
+            hasId: hasId,
         };
     }
 
+    /**
+     * Override fetch to return empty object.
+     * This is a display-only view that shows relationship panels,
+     * it doesn't have actual field data to save to the model.
+     *
+     * @returns {Object}
+     */
+    fetch() {
+        return {};
+    }
+
+    /**
+     * No attributes to track for this display-only view.
+     *
+     * @returns {string[]}
+     */
+    getAttributeList() {
+        return [];
+    }
+
+    /**
+     * This field is always valid (nothing to validate).
+     *
+     * @returns {boolean}
+     */
+    validate() {
+        return false;
+    }
+
     setup() {
+        super.setup();
+
         this.link = this.options.link || this.options.defs?.params?.link;
 
         if (!this.link) {
@@ -161,7 +231,9 @@ class RelationshipListFieldView extends View {
     }
 
     afterRender() {
-        if (this.link) {
+        // Only setup relationship panel if we have a link AND the model has an ID
+        // (i.e., we're in detail/edit mode of an existing record, not create mode)
+        if (this.link && this.model.id) {
             this.setupRelationshipPanel();
         }
     }
@@ -396,6 +468,10 @@ class RelationshipListFieldView extends View {
 }
 
 export default RelationshipListFieldView;
+
+
+
+
 
 
 

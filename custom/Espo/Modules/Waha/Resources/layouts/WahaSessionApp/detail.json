@@ -1,0 +1,41 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "wahaAppId"
+                },
+                {
+                    "name": "appType"
+                }
+            ],
+            [
+                {
+                    "name": "enabled"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "sessionName"
+                },
+                {
+                    "name": "platformName"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Configuration",
+        "rows": [
+            [
+                {
+                    "name": "config",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]
+

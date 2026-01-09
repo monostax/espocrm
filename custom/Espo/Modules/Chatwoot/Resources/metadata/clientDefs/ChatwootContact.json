@@ -9,6 +9,15 @@
     "recordViews": {
         "list": "views/record/list"
     },
+    "filterList": [
+        "all",
+        "synced",
+        "pendingReview",
+        "merged",
+        "deleted",
+        "errors"
+    ],
+    "boolFilterList": ["onlyMy"],
     "bottomPanels": {
         "detail": [
             {

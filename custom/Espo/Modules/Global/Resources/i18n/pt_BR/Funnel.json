@@ -1,0 +1,19 @@
+{
+    "labels": {
+        "Create Funnel": "Criar Funil",
+        "Active": "Ativo",
+        "All": "Todos",
+        "Only Active": "Apenas Ativos"
+    },
+    "fields": {
+        "name": "Nome",
+        "description": "Descrição",
+        "team": "Conta / Time",
+        "isActive": "Ativo",
+        "isDefault": "É Padrão"
+    },
+    "boolFilters": {
+        "onlyMy": "Atribuído a Mim"
+    }
+}
+

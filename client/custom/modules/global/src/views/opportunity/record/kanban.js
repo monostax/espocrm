@@ -14,6 +14,16 @@ define("global:views/opportunity/record/kanban", [
     return Dep.extend({
         // Use opportunityStageId as the status field (the actual ID column)
         statusField: "opportunityStageId",
+        
+        // Custom kanban item view with conversation badges
+        itemViewName: "global:views/opportunity/record/kanban-item",
+        
+        // Include conversation attributes in the select list
+        mandatorySelectAttributeList: [
+            "chatwootConversationsIds",
+            "chatwootConversationsNames",
+            "chatwootConversationsColumns",
+        ],
 
         // Current funnel selection
         currentFunnelId: null,

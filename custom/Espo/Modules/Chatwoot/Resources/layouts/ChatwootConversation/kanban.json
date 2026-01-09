@@ -1,0 +1,15 @@
+[
+    {"name": "name", "link": true},
+    {"name": "chatwootConversationId"},
+    {"name": "contactDisplayName"},
+    {"name": "contactAvatarUrl"},
+    {"name": "lastMessageContent"},
+    {"name": "messagesCount"},
+    {"name": "lastActivityAt"},
+    {"name": "inboxChannelType"},
+    {"name": "inboxName"},
+    {"name": "status"},
+    {"name": "assigneeName"},
+    {"name": "opportunities"}
+]
+

@@ -1,0 +1,50 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "wahaAppId": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": false,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "enabled": {
+            "type": "bool",
+            "default": true
+        },
+        "appType": {
+            "type": "enum",
+            "options": ["chatwoot", "calls"],
+            "required": true,
+            "readOnlyAfterCreate": true
+        },
+        "config": {
+            "type": "jsonObject",
+            "view": "views/fields/json-object"
+        },
+        "sessionName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "platformId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "platformName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {}
+}
+

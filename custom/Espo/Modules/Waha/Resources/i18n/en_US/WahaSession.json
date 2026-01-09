@@ -1,0 +1,65 @@
+{
+    "fields": {
+        "name": "Session Name",
+        "status": "Status",
+        "waId": "WhatsApp ID",
+        "pushName": "Push Name",
+        "assignedWorker": "Assigned Worker",
+        "lastActivity": "Last Activity",
+        "config": "Configuration",
+        "platform": "Platform",
+        "platformId": "Platform ID",
+        "platformName": "Platform",
+        "qrCode": "QR Code"
+    },
+    "links": {
+        "platform": "Platform"
+    },
+    "labels": {
+        "Create WahaSession": "Create Session",
+        "Start Session": "Start Session",
+        "Stop Session": "Stop Session",
+        "Restart Session": "Restart Session",
+        "Logout Session": "Logout Session",
+        "Remove Session": "Remove Session",
+        "WhatsApp Connection": "WhatsApp Connection",
+        "Loading QR Code": "Loading QR Code",
+        "Scan QR Code with WhatsApp": "Scan this QR Code with WhatsApp",
+        "QR Code refreshes automatically": "QR Code refreshes automatically every 20 seconds",
+        "Session is connected": "Session is connected and working",
+        "Session is stopped": "Session is stopped. Start the session to connect.",
+        "Session is starting": "Session is starting...",
+        "Session failed": "Session failed to start",
+        "Starting...": "Starting...",
+        "Stopping...": "Stopping...",
+        "Restarting...": "Restarting...",
+        "Logging out...": "Logging out...",
+        "Removing...": "Removing..."
+    },
+    "options": {
+        "status": {
+            "STOPPED": "Stopped",
+            "STARTING": "Starting",
+            "SCAN_QR_CODE": "Scan QR Code",
+            "WORKING": "Working",
+            "FAILED": "Failed"
+        }
+    },
+    "tooltips": {
+        "waId": "The WhatsApp account ID (phone number format: 5511999999999@c.us)",
+        "name": "A unique name for this WhatsApp session"
+    },
+    "messages": {
+        "sessionStarted": "Session started successfully.",
+        "sessionStopped": "Session stopped successfully.",
+        "sessionRestarted": "Session restarted successfully.",
+        "sessionLoggedOut": "Session logged out successfully.",
+        "sessionRemoved": "Session removed successfully.",
+        "sessionCreated": "Session created successfully.",
+        "Platform is required": "Please select a platform.",
+        "confirmStopSession": "Are you sure you want to stop this session?",
+        "confirmRestartSession": "Are you sure you want to restart this session?",
+        "confirmLogoutSession": "Are you sure you want to logout from this session? This will disconnect the WhatsApp account.",
+        "confirmRemoveSession": "Are you sure you want to remove this session? This action cannot be undone."
+    }
+}

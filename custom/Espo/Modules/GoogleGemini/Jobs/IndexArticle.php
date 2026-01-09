@@ -615,3 +615,6 @@ class IndexArticle implements Job
         ]);
     }
 }
+
+
+

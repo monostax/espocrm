@@ -8,12 +8,12 @@
         "assignedUser": "Usuário Proprietário",
         "role": "Função",
         "chatwootUserId": "ID do Usuário Chatwoot",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "links": {
         "account": "Conta Chatwoot",
         "assignedUser": "Usuário Proprietário",
-        "teams": "Times"
+        "teams": "Times / Contas"
     },
     "labels": {
         "Create ChatwootUser": "Criar Usuário Chatwoot"

@@ -1,0 +1,8 @@
+{
+    "name": "Waha",
+    "description": "Waha integration module",
+    "version": "1.0.0",
+    "order": 26,
+    "jsTranspiled": true
+}
+

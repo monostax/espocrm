@@ -89,13 +89,17 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Get cursor for incremental sync
             $cursor = $account->get('conversationSyncCursor');
 
+            // Get teams from the ChatwootAccount
+            $teamsIds = $this->getAccountTeamsIds($account);
+
             // Sync conversations
             $result = $this->syncConversations(
                 $platformUrl,
                 $apiKey,
                 $chatwootAccountId,
                 $account->getId(),
-                $cursor
+                $cursor,
+                $teamsIds
             );
 
             // Update sync timestamps and cursor
@@ -126,6 +130,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
      * @param int $chatwootAccountId
      * @param string $espoAccountId
      * @param int|null $cursor Unix timestamp of last synced conversation's last_activity_at
+     * @param array<string> $teamsIds Team IDs to assign to synced entities
      * @return array{synced: int, skipped: int, errors: int, newCursor: int|null, hasMore: bool}
      */
     private function syncConversations(
@@ -133,7 +138,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
         string $apiKey,
         int $chatwootAccountId,
         string $espoAccountId,
-        ?int $cursor = null
+        ?int $cursor = null,
+        array $teamsIds = []
     ): array {
         $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0, 'newCursor' => $cursor, 'hasMore' => false];
         $page = 1;
@@ -183,7 +189,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
             foreach ($conversations as $chatwootConversation) {
                 try {
-                    $result = $this->syncSingleConversation($chatwootConversation, $espoAccountId);
+                    $result = $this->syncSingleConversation($chatwootConversation, $espoAccountId, $teamsIds);
 
                     if ($result === 'synced') {
                         $stats['synced']++;
@@ -230,33 +236,39 @@ class SyncConversationsFromChatwoot implements JobDataLess
     /**
      * Sync a single conversation from Chatwoot to EspoCRM.
      *
+     * @param array<string> $teamsIds Team IDs to assign to synced entities
      * @return string 'synced' or 'skipped'
      */
-    private function syncSingleConversation(array $chatwootConversation, string $espoAccountId): string
+    private function syncSingleConversation(array $chatwootConversation, string $espoAccountId, array $teamsIds = []): string
     {
-        $chatwootConversationId = $chatwootConversation['id'];
-        $inboxId = $chatwootConversation['inbox_id'] ?? null;
-        $contactId = $chatwootConversation['meta']['sender']['id'] ?? null;
+        $chatwootConversationId = (int) $chatwootConversation['id'];
+        $inboxId = isset($chatwootConversation['inbox_id']) ? (int) $chatwootConversation['inbox_id'] : null;
+        $contactId = isset($chatwootConversation['meta']['sender']['id']) ? (int) $chatwootConversation['meta']['sender']['id'] : null;
 
         if (!$inboxId || !$contactId) {
             $this->log->warning("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - missing inboxId or contactId");
             return 'skipped';
         }
 
-        // Find the ChatwootContact for this conversation
-        $cwtContact = $this->entityManager
-            ->getRDBRepository('ChatwootContact')
-            ->where([
-                'chatwootContactId' => $contactId,
-                'chatwootAccountId' => $espoAccountId,
-            ])
-            ->findOne();
+        // Find the ChatwootContact for this conversation (including soft-deleted records)
+        $cwtContact = $this->findEntityIncludingDeleted('ChatwootContact', [
+            'chatwootContactId' => $contactId,
+            'chatwootAccountId' => $espoAccountId,
+        ]);
 
         if (!$cwtContact) {
             // Contact hasn't been synced yet, skip this conversation
             $this->log->warning("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - ChatwootContact not found for Chatwoot contact ID {$contactId}");
             return 'skipped';
         }
+
+        // Restore soft-deleted contact using the proper EspoCRM method
+        $this->entityManager
+            ->getRDBRepository('ChatwootContact')
+            ->restoreDeleted($cwtContact->getId());
+        
+        // Re-fetch the entity after restoration
+        $cwtContact = $this->entityManager->getEntityById('ChatwootContact', $cwtContact->getId());
 
         // Find the ChatwootContactInbox for this conversation
         $contactInbox = $this->entityManager
@@ -277,23 +289,28 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ])
             ->findOne();
 
-        // Check if ChatwootConversation already exists
-        $existingConversation = $this->entityManager
-            ->getRDBRepository('ChatwootConversation')
-            ->where([
-                'chatwootConversationId' => $chatwootConversationId,
-                'chatwootAccountId' => $espoAccountId,
-            ])
-            ->findOne();
+        // Check if ChatwootConversation already exists (including soft-deleted)
+        $existingConversation = $this->findEntityIncludingDeleted('ChatwootConversation', [
+            'chatwootConversationId' => $chatwootConversationId,
+            'chatwootAccountId' => $espoAccountId,
+        ]);
 
         $conversation = null;
         $result = 'skipped';
 
         if ($existingConversation) {
-            $result = $this->updateExistingConversation($existingConversation, $chatwootConversation, $cwtContact, $contactInbox, $chatwootInbox);
+            // Restore soft-deleted conversation using the proper EspoCRM method
+            $this->entityManager
+                ->getRDBRepository('ChatwootConversation')
+                ->restoreDeleted($existingConversation->getId());
+            
+            // Re-fetch the entity after restoration
+            $existingConversation = $this->entityManager->getEntityById('ChatwootConversation', $existingConversation->getId());
+            
+            $result = $this->updateExistingConversation($existingConversation, $chatwootConversation, $cwtContact, $contactInbox, $chatwootInbox, $teamsIds);
             $conversation = $existingConversation;
         } else {
-            $result = $this->createNewConversation($chatwootConversation, $espoAccountId, $cwtContact, $contactInbox, $chatwootInbox);
+            $result = $this->createNewConversation($chatwootConversation, $espoAccountId, $cwtContact, $contactInbox, $chatwootInbox, $teamsIds);
             // Find the newly created conversation
             $conversation = $this->entityManager
                 ->getRDBRepository('ChatwootConversation')
@@ -308,7 +325,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         if ($conversation && $result === 'synced') {
             $messages = $chatwootConversation['messages'] ?? [];
             if (!empty($messages)) {
-                $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId);
+                $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId, $teamsIds);
             }
         }
 
@@ -317,23 +334,21 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
     /**
      * Update an existing ChatwootConversation from Chatwoot data.
+     *
+     * @param array<string> $teamsIds Team IDs to assign to synced entities
      */
     private function updateExistingConversation(
         Entity $conversation,
         array $chatwootConversation,
         Entity $cwtContact,
         ?Entity $contactInbox,
-        ?Entity $chatwootInbox
+        ?Entity $chatwootInbox,
+        array $teamsIds = []
     ): string {
         // Extract assignee info (can be null)
         $assignee = $chatwootConversation['meta']['assignee'] ?? null;
         $sender = $chatwootConversation['meta']['sender'] ?? null;
         $channel = $chatwootConversation['meta']['channel'] ?? null;
-        
-        // Count messages from the messages array
-        $messagesCount = isset($chatwootConversation['messages']) 
-            ? count($chatwootConversation['messages']) 
-            : 0;
 
         // Generate display name with date
         $contactName = $sender['name'] ?? $cwtContact->get('name') ?? '';
@@ -348,9 +363,6 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $nameParts[] = $contactName;
         }
         $name = implode(' - ', $nameParts);
-        if ($channel) {
-            $name .= ' (' . $channel . ')';
-        }
         if (!$name) {
             $name = 'Conversation #' . $chatwootConversation['id'];
         }
@@ -361,9 +373,25 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $conversation->set('inboxName', $channel);
         $conversation->set('assigneeId', $assignee['id'] ?? null);
         $conversation->set('assigneeName', $assignee['name'] ?? $assignee['available_name'] ?? null);
-        $conversation->set('messagesCount', $messagesCount);
         $conversation->set('lastActivityAt', $this->convertChatwootTimestamp($chatwootConversation['last_activity_at'] ?? null));
         $conversation->set('lastSyncedAt', date('Y-m-d H:i:s'));
+
+        // Set denormalized fields for kanban card display
+        $conversation->set('contactDisplayName', $contactName);
+        $conversation->set('contactAvatarUrl', $cwtContact->get('avatarUrl'));
+        
+        // Get last message content from messages array
+        $messages = $chatwootConversation['messages'] ?? [];
+        if (!empty($messages)) {
+            $lastMessage = end($messages);
+            $lastMessageContent = $lastMessage['content'] ?? '';
+            $conversation->set('lastMessageContent', mb_substr(strip_tags($lastMessageContent), 0, 200));
+        }
+        
+        // Get inbox channel type
+        if ($chatwootInbox) {
+            $conversation->set('inboxChannelType', $chatwootInbox->get('channelType'));
+        }
 
         // Update denormalized links
         $conversation->set('chatwootContactId', $cwtContact->getId());
@@ -377,6 +405,11 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $conversation->set('inboxId', $chatwootInbox->getId()); // Link to ChatwootInbox entity
         }
 
+        // Assign teams from ChatwootAccount
+        if (!empty($teamsIds)) {
+            $conversation->set('teamsIds', $teamsIds);
+        }
+
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
 
         return 'synced';
@@ -384,23 +417,21 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
     /**
      * Create a new ChatwootConversation from Chatwoot data.
+     *
+     * @param array<string> $teamsIds Team IDs to assign to synced entities
      */
     private function createNewConversation(
         array $chatwootConversation,
         string $espoAccountId,
         Entity $cwtContact,
         ?Entity $contactInbox,
-        ?Entity $chatwootInbox
+        ?Entity $chatwootInbox,
+        array $teamsIds = []
     ): string {
         // Extract assignee info (can be null)
         $assignee = $chatwootConversation['meta']['assignee'] ?? null;
         $sender = $chatwootConversation['meta']['sender'] ?? null;
         $channel = $chatwootConversation['meta']['channel'] ?? null;
-        
-        // Count messages from the messages array
-        $messagesCount = isset($chatwootConversation['messages']) 
-            ? count($chatwootConversation['messages']) 
-            : 0;
 
         // Generate display name with date
         $contactName = $sender['name'] ?? $cwtContact->get('name') ?? '';
@@ -415,14 +446,19 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $nameParts[] = $contactName;
         }
         $name = implode(' - ', $nameParts);
-        if ($channel) {
-            $name .= ' (' . $channel . ')';
-        }
         if (!$name) {
             $name = 'Conversation #' . $chatwootConversation['id'];
         }
 
-        $this->entityManager->createEntity('ChatwootConversation', [
+        // Get last message content from messages array
+        $messages = $chatwootConversation['messages'] ?? [];
+        $lastMessageContent = '';
+        if (!empty($messages)) {
+            $lastMessage = end($messages);
+            $lastMessageContent = mb_substr(strip_tags($lastMessage['content'] ?? ''), 0, 200);
+        }
+
+        $data = [
             'name' => $name,
             'chatwootConversationId' => $chatwootConversation['id'],
             'chatwootAccountId' => $espoAccountId,
@@ -435,23 +471,37 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'inboxName' => $channel,
             'assigneeId' => $assignee['id'] ?? null,
             'assigneeName' => $assignee['name'] ?? $assignee['available_name'] ?? null,
-            'messagesCount' => $messagesCount,
             'lastActivityAt' => $this->convertChatwootTimestamp($chatwootConversation['last_activity_at'] ?? null),
             'chatwootCreatedAt' => $this->convertChatwootTimestamp($chatwootConversation['created_at'] ?? null),
             'lastSyncedAt' => date('Y-m-d H:i:s'),
-        ], ['silent' => true]);
+            // Denormalized fields for kanban card display
+            'contactDisplayName' => $contactName,
+            'contactAvatarUrl' => $cwtContact->get('avatarUrl'),
+            'lastMessageContent' => $lastMessageContent,
+            'inboxChannelType' => $chatwootInbox?->get('channelType'),
+        ];
+
+        // Assign teams from ChatwootAccount
+        if (!empty($teamsIds)) {
+            $data['teamsIds'] = $teamsIds;
+        }
+
+        $this->entityManager->createEntity('ChatwootConversation', $data, ['silent' => true]);
 
         return 'synced';
     }
 
     /**
      * Sync messages for a conversation.
+     *
+     * @param array<string> $teamsIds Team IDs to assign to synced entities
      */
     private function syncMessages(
         array $messages,
         Entity $conversation,
         Entity $cwtContact,
-        string $espoAccountId
+        string $espoAccountId,
+        array $teamsIds = []
     ): void {
         foreach ($messages as $messageData) {
             $chatwootMessageId = $messageData['id'] ?? null;
@@ -520,8 +570,16 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     foreach ($data as $field => $value) {
                         $existingMessage->set($field, $value);
                     }
+                    // Assign teams from ChatwootAccount
+                    if (!empty($teamsIds)) {
+                        $existingMessage->set('teamsIds', $teamsIds);
+                    }
                     $this->entityManager->saveEntity($existingMessage, ['silent' => true]);
                 } else {
+                    // Assign teams from ChatwootAccount
+                    if (!empty($teamsIds)) {
+                        $data['teamsIds'] = $teamsIds;
+                    }
                     $this->entityManager->createEntity('ChatwootMessage', $data, ['silent' => true]);
                 }
             } catch (\Exception $e) {
@@ -530,6 +588,29 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 );
             }
         }
+
+        // Update the conversation's messagesCount and lastActivityAt from synced messages
+        $messageRepo = $this->entityManager->getRDBRepository('ChatwootMessage');
+        
+        $messagesCount = $messageRepo
+            ->where(['conversationId' => $conversation->getId()])
+            ->count();
+
+        // Get the most recent message to update lastActivityAt
+        $lastMessage = $messageRepo
+            ->where(['conversationId' => $conversation->getId()])
+            ->order('chatwootCreatedAt', 'DESC')
+            ->findOne();
+
+        $conversation->set('messagesCount', $messagesCount);
+        
+        if ($lastMessage && $lastMessage->get('chatwootCreatedAt')) {
+            $conversation->set('lastActivityAt', $lastMessage->get('chatwootCreatedAt'));
+            // Also update last message content for kanban preview
+            $conversation->set('lastMessageContent', mb_substr(strip_tags($lastMessage->get('content') ?? ''), 0, 200));
+        }
+        
+        $this->entityManager->saveEntity($conversation, ['silent' => true]);
     }
 
     /**
@@ -567,6 +648,49 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
         // Unix timestamp (int)
         return date('Y-m-d H:i:s', $timestamp);
+    }
+
+    /**
+     * Get team IDs from a ChatwootAccount.
+     *
+     * @return array<string>
+     */
+    private function getAccountTeamsIds(Entity $account): array
+    {
+        $teamsIds = [];
+        $teams = $this->entityManager
+            ->getRDBRepository('ChatwootAccount')
+            ->getRelation($account, 'teams')
+            ->find();
+
+        foreach ($teams as $team) {
+            $teamsIds[] = $team->getId();
+        }
+
+        return $teamsIds;
+    }
+
+    /**
+     * Find an entity by criteria, including soft-deleted records.
+     * 
+     * EspoCRM uses soft-deletion by default, so deleted records are marked with deleted=true
+     * but still exist in the database. This can cause issues when syncing data that was
+     * previously deleted.
+     */
+    private function findEntityIncludingDeleted(string $entityType, array $where): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from($entityType)
+            ->where($where)
+            ->withDeleted()
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository($entityType)
+            ->clone($query)
+            ->findOne();
     }
 }
 

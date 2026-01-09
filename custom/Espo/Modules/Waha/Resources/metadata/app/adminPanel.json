@@ -1,0 +1,20 @@
+{
+    "waha": {
+        "label": "Waha",
+        "itemList": [
+            {
+                "url": "#WahaPlatform",
+                "label": "Platforms",
+                "iconClass": "fas fa-server",
+                "description": "wahaPlatforms"
+            },
+            {
+                "url": "#WahaSession",
+                "label": "Sessions",
+                "iconClass": "fab fa-whatsapp",
+                "description": "wahaSessions"
+            }
+        ],
+        "order": 31
+    }
+}

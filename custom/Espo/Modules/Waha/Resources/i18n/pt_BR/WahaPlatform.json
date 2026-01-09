@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "name": "Nome",
+        "url": "URL",
+        "apiKey": "Chave API",
+        "teams": "Times / Contas"
+    },
+    "links": {
+        "sessions": "Sessões",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times / Contas"
+    },
+    "labels": {
+        "Create WahaPlatform": "Criar Plataforma Waha"
+    },
+    "tooltips": {
+        "url": "URL base da plataforma WAHA (ex: https://waha.exemplo.com)",
+        "apiKey": "Chave API da plataforma WAHA. Usada para autenticar requisições API."
+    }
+}
+

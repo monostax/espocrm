@@ -22,8 +22,39 @@
         "assigneeName": { "type": "varchar", "maxLength": 255 },
         "lastActivityAt": { "type": "datetime" },
         "chatwootCreatedAt": { "type": "datetime" },
-        "messagesCount": { "type": "int", "default": 0 },
-        "lastSyncedAt": { "type": "datetime", "readOnly": true }
+        "messagesCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "lastSyncedAt": { "type": "datetime", "readOnly": true },
+        "lastMessageContent": {
+            "type": "text",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "contactAvatarUrl": {
+            "type": "text",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "contactDisplayName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "inboxChannelType": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        },
+        "opportunities": {
+            "type": "linkMultiple"
+        }
     },
     "links": {
         "contactInbox": {
@@ -48,7 +79,8 @@
         "opportunities": {
             "type": "hasMany",
             "entity": "Opportunity",
-            "foreign": "chatwootConversation"
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationOpportunity"
         },
         "inbox": {
             "type": "belongsTo",
@@ -59,13 +91,26 @@
             "type": "hasMany",
             "entity": "ChatwootMessage",
             "foreign": "conversation"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     },
     "indexes": {
         "uniqueConversation": {
             "unique": true,
             "columns": ["chatwootConversationId", "chatwootAccountId"]
+        },
+        "lastActivityAt": {
+            "columns": ["lastActivityAt"]
         }
+    },
+    "collection": {
+        "orderBy": "lastActivityAt",
+        "order": "desc"
     }
 }
 

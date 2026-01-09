@@ -1,0 +1,12 @@
+{
+    "primaryFilterClassNameMap": {
+        "synced": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootContact\\PrimaryFilters\\Synced",
+        "pendingReview": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootContact\\PrimaryFilters\\PendingReview",
+        "merged": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootContact\\PrimaryFilters\\Merged",
+        "deleted": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootContact\\PrimaryFilters\\Deleted",
+        "errors": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootContact\\PrimaryFilters\\Errors"
+    }
+}
+
+
+

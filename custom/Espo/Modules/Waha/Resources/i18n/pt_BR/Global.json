@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "WahaPlatform": "Plataforma Waha",
+        "WahaSession": "Sessão Waha",
+        "WahaSessionApp": "App de Sessão",
+        "CommunicationChannel": "Canal de Comunicação"
+    },
+    "scopeNamesPlural": {
+        "WahaPlatform": "Plataformas Waha",
+        "WahaSession": "Sessões Waha",
+        "WahaSessionApp": "Apps de Sessão",
+        "CommunicationChannel": "Canais de Comunicação"
+    }
+}
+

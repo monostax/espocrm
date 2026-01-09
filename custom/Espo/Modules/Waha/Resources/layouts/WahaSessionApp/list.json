@@ -1,0 +1,23 @@
+[
+    {
+        "name": "wahaAppId",
+        "width": 25
+    },
+    {
+        "name": "appType",
+        "width": 15
+    },
+    {
+        "name": "enabled",
+        "width": 10
+    },
+    {
+        "name": "sessionName",
+        "width": 20
+    },
+    {
+        "name": "platformName",
+        "width": 15
+    }
+]
+

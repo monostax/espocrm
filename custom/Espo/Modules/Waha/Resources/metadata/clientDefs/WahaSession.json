@@ -1,0 +1,40 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fab fa-whatsapp",
+    "createDisabled": false,
+    "isExpandedByDefault": false,
+    "modalViews": {
+        "edit": "waha:views/waha-session/modals/edit"
+    },
+    "viewSetupHandlers": {
+        "record/detail": ["waha:handlers/waha-session/record-detail-setup"]
+    },
+    "detailActionList": [
+        {
+            "name": "logoutSession",
+            "label": "Logout Session",
+            "handler": "waha:handlers/waha-session/detail-actions",
+            "actionFunction": "logout",
+            "checkVisibilityFunction": "isLogoutAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "removeSession",
+            "label": "Remove Session",
+            "handler": "waha:handlers/waha-session/detail-actions",
+            "actionFunction": "remove",
+            "checkVisibilityFunction": "isRemoveAvailable",
+            "groupIndex": 2
+        }
+    ],
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "apps",
+                "label": "Apps",
+                "view": "waha:views/waha-session/panels/apps",
+                "order": 10
+            }
+        ]
+    }
+}

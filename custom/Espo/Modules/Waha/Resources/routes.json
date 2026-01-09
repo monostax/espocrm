@@ -1,0 +1,84 @@
+[
+    {
+        "route": "/WahaSession/:id/start",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "start",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/stop",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "stop",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/restart",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "restart",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/logout",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "logout",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/apps",
+        "method": "get",
+        "params": {
+            "controller": "WahaSession",
+            "action": "listApps",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/CommunicationChannel/:id/activate",
+        "method": "post",
+        "params": {
+            "controller": "CommunicationChannel",
+            "action": "activate",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/CommunicationChannel/:id/disconnect",
+        "method": "post",
+        "params": {
+            "controller": "CommunicationChannel",
+            "action": "disconnect",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/CommunicationChannel/:id/reconnect",
+        "method": "post",
+        "params": {
+            "controller": "CommunicationChannel",
+            "action": "reconnect",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/CommunicationChannel/:id/checkStatus",
+        "method": "post",
+        "params": {
+            "controller": "CommunicationChannel",
+            "action": "checkStatus",
+            "id": ":id"
+        }
+    }
+]
+

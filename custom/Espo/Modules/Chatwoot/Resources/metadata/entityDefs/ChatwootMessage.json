@@ -85,6 +85,10 @@
         "modifiedAt": {
             "type": "datetime",
             "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
         }
     },
     "links": {
@@ -105,6 +109,12 @@
         "chatwootAccount": {
             "type": "belongsTo",
             "entity": "ChatwootAccount"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     },
     "indexes": {
@@ -124,5 +134,8 @@
         "order": "desc"
     }
 }
+
+
+
 
 

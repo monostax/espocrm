@@ -1,7 +1,4 @@
 {
-    "recordViews": {
-        "detail": "global:views/account/record/detail"
-    },
     "sidePanels": {
         "detail": [
             {
@@ -45,6 +42,10 @@
         ]
     }
 }
+
+
+
+
 
 
 

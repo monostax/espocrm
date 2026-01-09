@@ -28,13 +28,27 @@
 
 import View from "view";
 
+// Session storage key for tracking SSO auth state globally
+const CHATWOOT_SSO_AUTH_KEY = "chatwoot_sso_authenticated";
+
 class ChatwootIndexView extends View {
     template = "chatwoot:chatwoot/index";
 
     chatwootBaseUrl = "https://chatwoot.am.monostax.dev.localhost";
 
-    // Track if SSO authentication has been completed this session
-    static hasSsoAuthenticated = false;
+    /**
+     * Check if SSO has been completed this session (shared across all views)
+     */
+    static hasSsoAuthenticated() {
+        return sessionStorage.getItem(CHATWOOT_SSO_AUTH_KEY) === "true";
+    }
+
+    /**
+     * Mark SSO as completed for this session
+     */
+    static setSsoAuthenticated() {
+        sessionStorage.setItem(CHATWOOT_SSO_AUTH_KEY, "true");
+    }
 
     setup() {
         // Get cwPath and SSO URL from options (passed from controller)
@@ -147,11 +161,11 @@ class ChatwootIndexView extends View {
 
         // For first load, use SSO URL to authenticate
         // SSO URLs are single-use, so we only use them once per session
-        if (this.chatwootSsoUrl && !ChatwootIndexView.hasSsoAuthenticated) {
+        if (this.chatwootSsoUrl && !ChatwootIndexView.hasSsoAuthenticated()) {
             // Use SSO URL for authentication
             // The SSO URL will authenticate and redirect to the Chatwoot dashboard
             chatwootUrl = this.chatwootSsoUrl;
-            ChatwootIndexView.hasSsoAuthenticated = true;
+            ChatwootIndexView.setSsoAuthenticated();
 
             // If we have a specific path to navigate to after auth,
             // we'll need to navigate there after the iframe loads
