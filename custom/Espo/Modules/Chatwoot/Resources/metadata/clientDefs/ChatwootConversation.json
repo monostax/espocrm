@@ -1,7 +1,6 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fas fa-comments",
-    "color": "#28a745",
+    "iconClass": "ti ti-messages",
     "createDisabled": true,
     "kanbanViewMode": true,
     "kanbanStatusField": "status",
@@ -10,31 +9,11 @@
     },
     "recordViews": {
         "list": "views/record/list",
+        "detail": "global:views/record/detail",
         "kanban": "chatwoot:views/chatwoot-conversation/record/kanban"
     },
     "bottomPanels": {
-        "detail": [
-            {
-                "name": "messages",
-                "label": "Messages",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 4,
-                "disabled": false
-            },
-            {
-                "name": "opportunities",
-                "label": "Opportunities",
-                "view": "views/record/panels/relationship",
-                "select": true,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship",
-                "order": 5,
-                "disabled": false
-            }
-        ]
+        "detail": []
     },
     "relationshipPanels": {
         "messages": {

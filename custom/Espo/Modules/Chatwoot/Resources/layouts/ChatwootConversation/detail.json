@@ -80,10 +80,26 @@
                 }
             ]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Opportunities",
+        "name": "opportunitiesTab",
+        "rows": [
+            [
+                {
+                    "name": "opportunitiesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "opportunities",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
     }
 ]
-
-
-
-
 
