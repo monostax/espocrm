@@ -52,6 +52,11 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'SyncConversationsFromChatwoot',
             'scheduling' => '* * * * *',
         ],
+        [
+            'name' => 'Auto-Pending Conversations',
+            'job' => 'AutoPendingConversations',
+            'scheduling' => '* * * * *',
+        ],
     ];
 
     public function __construct(

@@ -1,0 +1,9 @@
+[
+    "name",
+    "entityType",
+    "isActive",
+    "agentEnabled",
+    "agentAutonomyMode",
+    "assignedUser",
+    "teams"
+]

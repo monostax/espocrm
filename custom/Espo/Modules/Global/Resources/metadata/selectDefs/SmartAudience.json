@@ -1,0 +1,9 @@
+{
+    "primaryFilterClassNameMap": {
+        "active": "Espo\\Modules\\Global\\Classes\\Select\\SmartAudience\\PrimaryFilters\\Active",
+        "withAgent": "Espo\\Modules\\Global\\Classes\\Select\\SmartAudience\\PrimaryFilters\\WithAgent"
+    },
+    "boolFilterClassNameMap": {
+        "onlyActive": "Espo\\Modules\\Global\\Classes\\Select\\SmartAudience\\BoolFilters\\OnlyActive"
+    }
+}

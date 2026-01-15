@@ -33,6 +33,11 @@
             "readOnly": true,
             "tooltip": true
         },
+        "lastMessageType": {
+            "type": "enum",
+            "options": ["incoming", "outgoing", "activity", "template"],
+            "readOnly": true
+        },
         "contactAvatarUrl": {
             "type": "text",
             "readOnly": true,
@@ -68,6 +73,13 @@
         "assignedUser": {
             "type": "link",
             "view": "views/fields/assigned-user"
+        },
+        "smartAudiences": {
+            "type": "linkMultiple",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "noLoad": true
         }
     },
     "links": {
@@ -121,6 +133,43 @@
         "assignedUser": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "smartAudiences": {
+            "type": "hasMany",
+            "entity": "SmartAudience",
+            "relationName": "smartAudienceConversation",
+            "foreign": "conversations",
+            "additionalColumns": {
+                "isActive": {
+                    "type": "bool",
+                    "default": true
+                },
+                "reasoningMatches": {
+                    "type": "bool"
+                },
+                "reasoningConfidence": {
+                    "type": "float"
+                },
+                "reasoningExplanation": {
+                    "type": "text"
+                },
+                "addedAt": {
+                    "type": "datetime"
+                },
+                "removedAt": {
+                    "type": "datetime"
+                },
+                "lastEvaluatedAt": {
+                    "type": "datetime"
+                },
+                "userOverride": {
+                    "type": "varchar",
+                    "len": 20
+                },
+                "userOverrideReason": {
+                    "type": "text"
+                }
+            }
         }
     },
     "indexes": {

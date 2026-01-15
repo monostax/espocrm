@@ -151,16 +151,46 @@
     font-size: 13px;
     line-height: 1.4;
     margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    word-break: break-word;
+}
+
+.conversation-message-text {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    word-break: break-word;
+    flex: 1;
 }
 
 .conversation-message-empty {
     color: #9ca3af;
     font-style: italic;
+}
+
+/* Message Direction Indicator */
+.conversation-message-direction {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+.conversation-message-direction.incoming {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.conversation-message-direction.outgoing {
+    background: #d1fae5;
+    color: #059669;
 }
 
 /* Card Footer */
@@ -509,7 +539,14 @@
     
     <div class="conversation-message {{#unless hasMessage}}conversation-message-empty{{/unless}}">
         {{#if hasMessage}}
-        {{messagePreview}}
+        <span class="conversation-message-direction {{lastMessageType}}" title="{{#if isIncoming}}Customer sent last message{{else}}You sent last message{{/if}}">
+            {{#if isIncoming}}
+            <i class="fas fa-arrow-up"></i>
+            {{else}}
+            <i class="fas fa-arrow-down"></i>
+            {{/if}}
+        </span>
+        <span class="conversation-message-text">{{messagePreview}}</span>
         {{else}}
         No messages yet
         {{/if}}

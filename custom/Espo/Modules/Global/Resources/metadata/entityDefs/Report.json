@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "smartAudiences": {
+            "type": "linkMultiple",
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "noLoad": true
+        }
+    },
+    "links": {
+        "smartAudiences": {
+            "type": "hasMany",
+            "entity": "SmartAudience",
+            "foreign": "report"
+        }
+    }
+}

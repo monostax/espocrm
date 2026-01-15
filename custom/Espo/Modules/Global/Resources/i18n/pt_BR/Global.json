@@ -34,13 +34,15 @@
         "Activities": "Atividades",
         "Contact": "Pessoa",
         "Funnel": "Funil",
-        "OpportunityStage": "Estágio da Oportunidade"
+        "OpportunityStage": "Estágio da Oportunidade",
+        "SmartAudience": "Audiência Inteligente"
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
         "Contact": "Pessoas",
         "Funnel": "Funis",
-        "OpportunityStage": "Estágios da Oportunidade"
+        "OpportunityStage": "Estágios da Oportunidade",
+        "SmartAudience": "Audiências Inteligentes"
     },
     "labels": {
         "Home": "Dashboard"

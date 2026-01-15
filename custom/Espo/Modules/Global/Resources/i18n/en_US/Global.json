@@ -34,13 +34,15 @@
         "Activities": "Activities",
         "CAIPlaybook": "Playbook",
         "Funnel": "Funnel",
-        "OpportunityStage": "Opportunity Stage"
+        "OpportunityStage": "Opportunity Stage",
+        "SmartAudience": "Smart Audience"
     },
     "scopeNamesPlural": {
         "Activities": "Activities",
         "CAIPlaybook": "Playbooks",
         "Funnel": "Funnels",
-        "OpportunityStage": "Opportunity Stages"
+        "OpportunityStage": "Opportunity Stages",
+        "SmartAudience": "Smart Audiences"
     },
     "navbarTabs": {
         "Lists": "Lists"

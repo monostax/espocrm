@@ -380,12 +380,16 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $conversation->set('contactDisplayName', $contactName);
         $conversation->set('contactAvatarUrl', $cwtContact->get('avatarUrl'));
         
-        // Get last message content from messages array
+        // Get last message content and type from messages array
         $messages = $chatwootConversation['messages'] ?? [];
         if (!empty($messages)) {
             $lastMessage = end($messages);
             $lastMessageContent = $lastMessage['content'] ?? '';
             $conversation->set('lastMessageContent', mb_substr(strip_tags($lastMessageContent), 0, 200));
+            // Map message_type: 0=incoming, 1=outgoing, 2=activity, 3=template
+            $messageTypeMap = [0 => 'incoming', 1 => 'outgoing', 2 => 'activity', 3 => 'template'];
+            $lastMessageType = $messageTypeMap[$lastMessage['message_type'] ?? 0] ?? 'incoming';
+            $conversation->set('lastMessageType', $lastMessageType);
         }
         
         // Get inbox channel type
@@ -450,12 +454,16 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $name = 'Conversation #' . $chatwootConversation['id'];
         }
 
-        // Get last message content from messages array
+        // Get last message content and type from messages array
         $messages = $chatwootConversation['messages'] ?? [];
         $lastMessageContent = '';
+        $lastMessageType = 'incoming';
         if (!empty($messages)) {
             $lastMessage = end($messages);
             $lastMessageContent = mb_substr(strip_tags($lastMessage['content'] ?? ''), 0, 200);
+            // Map message_type: 0=incoming, 1=outgoing, 2=activity, 3=template
+            $messageTypeMap = [0 => 'incoming', 1 => 'outgoing', 2 => 'activity', 3 => 'template'];
+            $lastMessageType = $messageTypeMap[$lastMessage['message_type'] ?? 0] ?? 'incoming';
         }
 
         $data = [
@@ -478,6 +486,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'contactDisplayName' => $contactName,
             'contactAvatarUrl' => $cwtContact->get('avatarUrl'),
             'lastMessageContent' => $lastMessageContent,
+            'lastMessageType' => $lastMessageType,
             'inboxChannelType' => $chatwootInbox?->get('channelType'),
         ];
 
@@ -606,11 +615,98 @@ class SyncConversationsFromChatwoot implements JobDataLess
         
         if ($lastMessage && $lastMessage->get('chatwootCreatedAt')) {
             $conversation->set('lastActivityAt', $lastMessage->get('chatwootCreatedAt'));
-            // Also update last message content for kanban preview
+            // Also update last message content and type for kanban preview
             $conversation->set('lastMessageContent', mb_substr(strip_tags($lastMessage->get('content') ?? ''), 0, 200));
+            $conversation->set('lastMessageType', $lastMessage->get('messageType'));
+            
+            // Auto-pending logic: toggle status based on last message direction
+            $this->applyAutoPendingLogic($conversation, $espoAccountId);
         }
         
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
+    }
+
+    /**
+     * Apply auto-pending logic to toggle conversation status based on last message direction.
+     * 
+     * Rules:
+     * - If status is "open" and lastMessageType is "outgoing" → move to "pending"
+     * - If status is "pending" and lastMessageType is "incoming" → move to "open"
+     */
+    private function applyAutoPendingLogic(Entity $conversation, string $espoAccountId): void
+    {
+        $currentStatus = $conversation->get('status');
+        $lastMessageType = $conversation->get('lastMessageType');
+        
+        // Determine if we need to change status
+        $newStatus = null;
+        if ($currentStatus === 'open' && $lastMessageType === 'outgoing') {
+            $newStatus = 'pending';
+        } elseif ($currentStatus === 'pending' && $lastMessageType === 'incoming') {
+            $newStatus = 'open';
+        }
+        
+        if ($newStatus === null) {
+            return;
+        }
+        
+        // Get account and check if auto-pending is enabled
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $espoAccountId);
+        if (!$account) {
+            return;
+        }
+        
+        $autoPendingEnabled = $account->get('autoPendingEnabled') ?? true;
+        if (!$autoPendingEnabled) {
+            return;
+        }
+        
+        $chatwootAccountId = $account->get('chatwootAccountId');
+        $apiKey = $account->get('apiKey');
+        $platformId = $account->get('platformId');
+        
+        if (!$chatwootAccountId || !$apiKey || !$platformId) {
+            return;
+        }
+        
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
+        if (!$platform) {
+            return;
+        }
+        
+        $platformUrl = $platform->get('url');
+        if (!$platformUrl) {
+            return;
+        }
+        
+        $chatwootConversationId = $conversation->get('chatwootConversationId');
+        if (!$chatwootConversationId) {
+            return;
+        }
+        
+        try {
+            // Toggle status in Chatwoot
+            $this->apiClient->toggleConversationStatus(
+                $platformUrl,
+                $apiKey,
+                $chatwootAccountId,
+                $chatwootConversationId,
+                $newStatus
+            );
+            
+            // Update local status
+            $conversation->set('status', $newStatus);
+            
+            $this->log->info(
+                "SyncConversationsFromChatwoot: Auto-moved conversation {$chatwootConversationId} " .
+                "from {$currentStatus} to {$newStatus} (lastMessageType: {$lastMessageType})"
+            );
+        } catch (\Exception $e) {
+            $this->log->warning(
+                "SyncConversationsFromChatwoot: Failed to auto-toggle conversation {$chatwootConversationId} " .
+                "to {$newStatus}: " . $e->getMessage()
+            );
+        }
     }
 
     /**

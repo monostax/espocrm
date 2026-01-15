@@ -1,0 +1,31 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-users-cog",
+    "boolFilterList": ["onlyMy", "onlyActive"],
+    "filterList": ["active", "all", "withAgent"],
+    "defaultFilterData": {
+        "active": {
+            "isActive": true
+        }
+    },
+    "relationshipPanels": {
+        "conversations": {
+            "label": "Conversations",
+            "view": "views/record/panels/relationship",
+            "orderBy": "createdAt",
+            "orderDirection": "desc",
+            "createDisabled": true,
+            "unlinkDisabled": false
+        }
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "agentConfig",
+                "label": "Agent Configuration",
+                "view": "views/record/panels/side",
+                "isForm": true
+            }
+        ]
+    }
+}
