@@ -236,6 +236,39 @@
     font-size: 10px;
 }
 
+/* Related Entities Section */
+.conversation-related-section {
+    margin-bottom: 10px;
+}
+
+.conversation-related-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.conversation-related-header i {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.conversation-related-header span {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.conversation-related-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
 /* Opportunities Section */
 .conversation-opportunities {
     margin-bottom: 10px;
@@ -337,6 +370,80 @@
     color: #4b5563;
 }
 
+/* Agendamento Item Styles */
+.conversation-agendamento {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #e0f2fe;
+    color: #0369a1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.conversation-agendamento:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+.conversation-agendamento i {
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.conversation-agendamento-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Agendamento Status Styles */
+.conversation-agendamento.agendamento-status-planned {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.conversation-agendamento.agendamento-status-held {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.conversation-agendamento.agendamento-status-not-held {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Create Agendamento Button */
+.btn-create-agendamento {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px dashed #d1d5db;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.btn-create-agendamento:hover {
+    border-color: #0369a1;
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.btn-create-agendamento i {
+    font-size: 10px;
+}
+
 /* Menu Container Override */
 .conversation-card .item-menu-container {
     position: absolute;
@@ -408,17 +515,61 @@
         {{/if}}
     </div>
     
-    <div class="conversation-opportunities">
-        {{#each opportunities}}
-        <a href="#Opportunity/view/{{id}}" class="conversation-opportunity {{stageStyle}}" title="{{name}}{{#if stageLabel}} - {{stageLabel}}{{/if}}" data-id="{{id}}" onclick="event.stopPropagation();">
+    {{#if hasOpportunities}}
+    <div class="conversation-related-section">
+        <div class="conversation-related-header">
             <i class="ti ti-coin-filled"></i>
-            <span class="conversation-opportunity-name">{{name}}</span>
-        </a>
-        {{/each}}
-        <button type="button" class="btn-create-opportunity" title="Create Opportunity">
-            <i class="fas fa-plus"></i>
-        </button>
+            <span>{{opportunityLabel}}</span>
+        </div>
+        <div class="conversation-related-items">
+            {{#each opportunities}}
+            <a href="#Opportunity/view/{{id}}" class="conversation-opportunity {{stageStyle}}" title="{{name}}{{#if stageLabel}} - {{stageLabel}}{{/if}}" data-id="{{id}}" onclick="event.stopPropagation();">
+                <span class="conversation-opportunity-name">{{name}}</span>
+            </a>
+            {{/each}}
+            <button type="button" class="btn-create-opportunity" title="{{../createOpportunityLabel}}">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
     </div>
+    {{else}}
+    <div class="conversation-related-section">
+        <div class="conversation-related-items">
+            <button type="button" class="btn-create-opportunity" title="{{createOpportunityLabel}}">
+                <i class="ti ti-coin-filled"></i>
+                <i class="fas fa-plus" style="font-size: 8px; margin-left: 2px;"></i>
+            </button>
+        </div>
+    </div>
+    {{/if}}
+
+    {{#if hasAgendamentos}}
+    <div class="conversation-related-section">
+        <div class="conversation-related-header">
+            <i class="fas fa-calendar-plus"></i>
+            <span>{{agendamentoLabel}}</span>
+        </div>
+        <div class="conversation-related-items">
+            {{#each agendamentos}}
+            <a href="#CAgendamento/view/{{id}}" class="conversation-agendamento {{statusStyle}}" title="{{name}}{{#if statusLabel}} - {{statusLabel}}{{/if}}" data-id="{{id}}" onclick="event.stopPropagation();">
+                <span class="conversation-agendamento-name">{{name}}</span>
+            </a>
+            {{/each}}
+            <button type="button" class="btn-create-agendamento" title="{{../createAgendamentoLabel}}">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </div>
+    {{else}}
+    <div class="conversation-related-section">
+        <div class="conversation-related-items">
+            <button type="button" class="btn-create-agendamento" title="{{createAgendamentoLabel}}">
+                <i class="fas fa-calendar-plus"></i>
+                <i class="fas fa-plus" style="font-size: 8px; margin-left: 2px;"></i>
+            </button>
+        </div>
+    </div>
+    {{/if}}
     
     <div class="conversation-card-footer">
         <span class="conversation-status {{statusStyle}}">{{statusLabel}}</span>

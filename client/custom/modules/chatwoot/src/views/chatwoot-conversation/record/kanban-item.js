@@ -47,6 +47,9 @@ define('chatwoot:views/chatwoot-conversation/record/kanban-item', ['views/record
             // Get linked opportunities
             const opportunities = this.getOpportunitiesData();
             
+            // Get linked agendamentos
+            const agendamentos = this.getAgendamentosData();
+            
             return {
                 ...Dep.prototype.data.call(this),
                 contactName: contactName,
@@ -62,13 +65,20 @@ define('chatwoot:views/chatwoot-conversation/record/kanban-item', ['views/record
                 channelType: channelType,
                 status: status,
                 statusStyle: statusStyle,
-                statusLabel: this.translate(status, 'options', 'ChatwootConversation', 'status') || status,
+                statusLabel: this.getLanguage().translateOption(status, 'status', 'ChatwootConversation') || status,
                 assigneeName: assigneeName,
                 hasAssignee: !!assigneeName,
                 inboxName: inboxName,
                 id: this.model.id,
                 opportunities: opportunities,
                 hasOpportunities: opportunities.length > 0,
+                agendamentos: agendamentos,
+                hasAgendamentos: agendamentos.length > 0,
+                // Section labels
+                opportunityLabel: this.translate('Opportunity', 'scopeNamesPlural'),
+                agendamentoLabel: this.translate('CAgendamento', 'scopeNamesPlural'),
+                createOpportunityLabel: this.translate('Create Opportunity', 'labels', 'Opportunity'),
+                createAgendamentoLabel: this.translate('Create CAgendamento', 'labels', 'CAgendamento'),
             };
         },
 
@@ -189,7 +199,7 @@ define('chatwoot:views/chatwoot-conversation/record/kanban-item', ['views/record
                     id: id,
                     name: opportunitiesNames[id] || 'Opportunity',
                     stage: stage,
-                    stageLabel: stage ? this.translate(stage, 'options', 'Opportunity', 'stage') : null,
+                    stageLabel: stage ? this.getLanguage().translateOption(stage, 'stage', 'Opportunity') : null,
                     stageStyle: this.getOpportunityStageStyle(stage),
                 };
             });
@@ -208,6 +218,40 @@ define('chatwoot:views/chatwoot-conversation/record/kanban-item', ['views/record
                 'Closed Lost': 'opp-stage-lost',
             };
             return styleMap[stage] || 'opp-stage-default';
+        },
+
+        /**
+         * Get linked agendamentos data for display
+         */
+        getAgendamentosData: function () {
+            const agendamentosIds = this.model.get('cAgendamentosIds') || [];
+            const agendamentosNames = this.model.get('cAgendamentosNames') || {};
+            const agendamentosColumns = this.model.get('cAgendamentosColumns') || {};
+            
+            return agendamentosIds.map(id => {
+                const status = agendamentosColumns[id] ? agendamentosColumns[id].status : null;
+                const dateStart = agendamentosColumns[id] ? agendamentosColumns[id].dateStart : null;
+                return {
+                    id: id,
+                    name: agendamentosNames[id] || 'Agendamento',
+                    status: status,
+                    dateStart: dateStart,
+                    statusLabel: status ? this.getLanguage().translateOption(status, 'status', 'CAgendamento') : null,
+                    statusStyle: this.getAgendamentoStatusStyle(status),
+                };
+            });
+        },
+
+        /**
+         * Get CSS class for agendamento status
+         */
+        getAgendamentoStatusStyle: function (status) {
+            const styleMap = {
+                'Planned': 'agendamento-status-planned',
+                'Held': 'agendamento-status-held',
+                'Not Held': 'agendamento-status-not-held',
+            };
+            return styleMap[status] || 'agendamento-status-planned';
         },
 
         setup: function () {
@@ -240,20 +284,31 @@ define('chatwoot:views/chatwoot-conversation/record/kanban-item', ['views/record
                 });
             }
 
+            // Bind create opportunity button FIRST (before card click)
+            this.$el.find('.btn-create-opportunity').on('click', (e) => {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                this.actionCreateOpportunity();
+            });
+            
+            // Bind create agendamento button FIRST (before card click)
+            this.$el.find('.btn-create-agendamento').on('click', (e) => {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                this.actionCreateAgendamento();
+            });
+            
             // Make the card clickable to open detail view
             this.$el.find('.conversation-card').on('click', (e) => {
-                // Don't trigger if clicking on action buttons or create opportunity button
+                // Don't trigger if clicking on action buttons or create buttons
                 if ($(e.target).closest('.item-menu-container').length || 
-                    $(e.target).closest('.btn-create-opportunity').length) {
+                    $(e.target).closest('.btn-create-opportunity').length ||
+                    $(e.target).closest('.btn-create-agendamento').length ||
+                    $(e.target).closest('.conversation-opportunity').length ||
+                    $(e.target).closest('.conversation-agendamento').length) {
                     return;
                 }
                 this.actionQuickView();
-            });
-            
-            // Bind create opportunity button
-            this.$el.find('.btn-create-opportunity').on('click', (e) => {
-                e.stopPropagation();
-                this.actionCreateOpportunity();
             });
         },
 
@@ -328,6 +383,48 @@ define('chatwoot:views/chatwoot-conversation/record/kanban-item', ['views/record
                 attributes: attributes,
                 fullFormDisabled: true,
                 layoutName: 'detailSmallChatwoot',
+                sideDisabled: true,
+                bottomDisabled: true,
+            }, (view) => {
+                Espo.Ui.notify(false);
+                view.render();
+                
+                this.listenToOnce(view, 'after:save', () => {
+                    // Refresh the model and re-render the card
+                    this.model.fetch().then(() => {
+                        this.reRender();
+                    });
+                });
+            });
+        },
+
+        actionCreateAgendamento: function () {
+            // Get contact ID from the conversation's linked contact
+            const contactId = this.model.get('contactId');
+            const contactName = this.model.get('contactDisplayName');
+            
+            // Prepare attributes for the new CAgendamento
+            const attributes = {
+                chatwootConversationsIds: [this.model.id],
+                chatwootConversationsNames: {
+                    [this.model.id]: this.model.get('name')
+                }
+            };
+            
+            // If there's a linked contact, also link it to the CAgendamento
+            if (contactId) {
+                attributes.contactId = contactId;
+                attributes.contactName = contactName;
+            }
+            
+            // Open the CAgendamento create modal
+            Espo.Ui.notify(' ... ');
+            
+            this.createView('quickCreateAgendamento', 'views/modals/edit', {
+                scope: 'CAgendamento',
+                attributes: attributes,
+                fullFormDisabled: true,
+                layoutName: 'detailSmall',
                 sideDisabled: true,
                 bottomDisabled: true,
             }, (view) => {

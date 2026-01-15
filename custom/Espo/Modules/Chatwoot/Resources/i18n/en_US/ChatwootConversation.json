@@ -17,7 +17,8 @@
         "lastMessageContent": "Last Message",
         "contactAvatarUrl": "Contact Avatar",
         "contactDisplayName": "Contact Name",
-        "inboxChannelType": "Channel Type"
+        "inboxChannelType": "Channel Type",
+        "cAgendamentos": "Appointments"
     },
     "options": {
         "status": {

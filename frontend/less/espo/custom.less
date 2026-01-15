@@ -4807,3 +4807,45 @@ html.is-iframe {
     }
 }
 /* End Chatwoot Avatar Styles */
+
+/* Conversation Navbar Badge Styles */
+.navbar .conversation-badge-container {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+    padding-left: 8px;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.navbar .conversation-badge {
+    min-width: 14px;
+    text-align: center;
+    line-height: 1;
+}
+
+/* Left badge - mine (assigned to current user) - highlighted/bold */
+.navbar .conversation-badge.badge-mine {
+    color: var(--colors-info);
+    font-weight: 700;
+}
+
+/* Right badge - others - muted/lighter */
+.navbar .conversation-badge.badge-others {
+    color: var(--navbar-default-font-color);
+    opacity: 0.5;
+}
+
+.navbar .tab .nav-link .full-label {
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* Hide badges in collapsed/short mode */
+.navbar.minimized .conversation-badge-container,
+.navbar .short-label .conversation-badge-container {
+    display: none;
+}
+/* End Conversation Navbar Badge Styles */

@@ -20,7 +20,12 @@
         "Inbox": "Inbox",
         "All": "All",
         "Unattended": "Unattended",
-        "Mentions": "Mentions"
+        "Mentions": "Mentions",
+        "AllConversations": "All",
+        "OpenConversations": "Open",
+        "PendingConversations": "Pending",
+        "ResolvedConversations": "Resolved",
+        "SnoozedConversations": "Snoozed"
     }
 }
 

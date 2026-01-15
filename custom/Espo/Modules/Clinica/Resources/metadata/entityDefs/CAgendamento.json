@@ -120,6 +120,9 @@
             "additionalAttributeList": ["columns"],
             "orderBy": "name",
             "isCustom": true
+        },
+        "chatwootConversations": {
+            "type": "linkMultiple"
         }
     },
     "links": {
@@ -173,6 +176,12 @@
             "entity": "CLigacoesIA",
             "audited": false,
             "isCustom": true
+        },
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "cAgendamentos",
+            "relationName": "chatwootConversationCAgendamento"
         }
     },
     "collection": {

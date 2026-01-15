@@ -17,7 +17,8 @@
         "lastMessageContent": "Última Mensagem",
         "contactAvatarUrl": "Avatar do Contato",
         "contactDisplayName": "Nome do Contato",
-        "inboxChannelType": "Tipo de Canal"
+        "inboxChannelType": "Tipo de Canal",
+        "cAgendamentos": "Agendamentos"
     },
     "options": {
         "status": {
@@ -39,6 +40,13 @@
         "Your user is not linked to a Chatwoot account": "Seu usuário não está vinculado a uma conta Chatwoot",
         "No conversation ID available": "ID da conversa não disponível",
         "No conversation data available": "Dados da conversa não disponíveis"
+    },
+    "presetFilters": {
+        "all": "Todas",
+        "open": "Abertas",
+        "pending": "Pendentes",
+        "resolved": "Resolvidas",
+        "snoozed": "Adiadas"
     }
 }
 

@@ -1,0 +1,10 @@
+{
+    "primaryFilterClassNameMap": {
+        "open": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Open",
+        "pending": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Pending",
+        "resolved": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Resolved",
+        "snoozed": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Snoozed"
+    }
+}
+
+

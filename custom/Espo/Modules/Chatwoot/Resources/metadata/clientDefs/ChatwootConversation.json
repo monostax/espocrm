@@ -4,6 +4,24 @@
     "createDisabled": true,
     "kanbanViewMode": true,
     "kanbanStatusField": "status",
+    "views": {
+        "list": "chatwoot:views/chatwoot-conversation/list"
+    },
+    "filterList": [
+        {
+            "name": "open",
+            "style": "warning"
+        },
+        {
+            "name": "pending",
+            "style": "info"
+        },
+        {
+            "name": "resolved",
+            "style": "success"
+        },
+        "snoozed"
+    ],
     "modalViews": {
         "detail": "views/modals/detail"
     },
@@ -23,6 +41,11 @@
         },
         "opportunities": {
             "create": false,
+            "select": true,
+            "view": "views/record/panels/relationship"
+        },
+        "cAgendamentos": {
+            "create": true,
             "select": true,
             "view": "views/record/panels/relationship"
         }

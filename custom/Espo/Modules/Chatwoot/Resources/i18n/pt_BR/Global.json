@@ -1,28 +1,33 @@
 {
     "scopeNames": {
-        "ChatwootAccount": "Chatwoot / Conta",
-        "ChatwootPlatform": "Chatwoot / Plataforma",
-        "ChatwootUser": "Chatwoot / Usuário",
-        "ChatwootTeam": "Chatwoot / Equipe",
-        "ChatwootSyncState": "Chatwoot / Sync",
-        "ChatwootAccountWebhook": "Chatwoot / Webhook",
-        "ChatwootConversation": "Chatwoot / Conversa"
+        "ChatwootAccount": "Comunicação / Conta",
+        "ChatwootPlatform": "Comunicação / Plataforma",
+        "ChatwootUser": "Comunicação / Usuário",
+        "ChatwootTeam": "Comunicação / Equipe",
+        "ChatwootSyncState": "Comunicação / Sync",
+        "ChatwootAccountWebhook": "Comunicação / Webhook",
+        "ChatwootConversation": "Comunicação / Conversa"
     },
     "scopeNamesPlural": {
-        "ChatwootAccount": "Chatwoot / Contas",
-        "ChatwootPlatform": "Chatwoot / Plataformas",
-        "ChatwootUser": "Chatwoot / Usuários",
-        "ChatwootTeam": "Chatwoot / Equipes",
-        "ChatwootSyncState": "Chatwoot / Syncs",
-        "ChatwootAccountWebhook": "Chatwoot / Webhooks",
-        "ChatwootConversation": "Chatwoot / Conversas"
+        "ChatwootAccount": "Comunicação / Contas",
+        "ChatwootPlatform": "Comunicação / Plataformas",
+        "ChatwootUser": "Comunicação / Usuários",
+        "ChatwootTeam": "Comunicação / Equipes",
+        "ChatwootSyncState": "Comunicação / Syncs",
+        "ChatwootAccountWebhook": "Comunicação / Webhooks",
+        "ChatwootConversation": "Comunicação / Conversas"
     },
     "navbarTabs": {
         "Conversations": "Conversas",
         "Inbox": "Caixa de Entrada",
         "All": "Todas",
         "Unattended": "Não Atendidas",
-        "Mentions": "Mencionadas"
+        "Mentions": "Mencionadas",
+        "AllConversations": "Todas",
+        "OpenConversations": "Abertas",
+        "PendingConversations": "Pendentes",
+        "ResolvedConversations": "Resolvidas",
+        "SnoozedConversations": "Adiadas"
     }
 }
 

@@ -16,14 +16,16 @@
         "amountPaidCurrency": "Valor Pago (Moeda)",
         "amountPaidConverted": "Valor Pago (Convertido)",
         "participantUsers": "Participantes",
-        "users": "Usuários"
+        "users": "Usuários",
+        "chatwootConversations": "Chatwoot Conversations"
     },
     "links": {
         "parent": "Parent",
         "profissional": "Profissional",
         "paciente": "Pacientes",
         "ligacoesIAs": "Ligacoes IAs",
-        "participantUsers": "Participantes"
+        "participantUsers": "Participantes",
+        "chatwootConversations": "Chatwoot Conversations"
     },
     "options": {
         "status": {

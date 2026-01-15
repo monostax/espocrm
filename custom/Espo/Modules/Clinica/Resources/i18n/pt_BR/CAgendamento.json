@@ -11,7 +11,11 @@
         "amountPaidCurrency": "Valor Pago (Moeda)",
         "amountPaidConverted": "Valor Pago (Convertido)",
         "participantUsers": "Participantes",
-        "users": "Usuários"
+        "users": "Usuários",
+        "chatwootConversations": "Conversas Chatwoot"
+    },
+    "links": {
+        "chatwootConversations": "Conversas Chatwoot"
     },
     "options": {
         "status": {

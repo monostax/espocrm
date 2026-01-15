@@ -129,14 +129,15 @@ class App {
 
         this.appTimestamp = options.appTimestamp;
 
+        // DISABLED: Auth redirect logic
         // Store 'from' redirect parameter early so it survives OAuth redirects
-        const urlParams = new URLSearchParams(window.location.search);
-        const fromParam = urlParams.get('from');
-
-        if (fromParam) {
-            localStorage.setItem('espo_redirect_from', fromParam);
-            console.log('[Monostax] Stored redirect URL:', fromParam);
-        }
+        // const urlParams = new URLSearchParams(window.location.search);
+        // const fromParam = urlParams.get('from');
+        //
+        // if (fromParam) {
+        //     localStorage.setItem('espo_redirect_from', fromParam);
+        //     console.log('[Monostax] Stored redirect URL:', fromParam);
+        // }
 
         this.initCache(options).then(async () => {
             await this.init(options);
@@ -967,19 +968,20 @@ class App {
 
                 this.setCookieAuth(userName, token);
 
+                // DISABLED: Auth redirect logic
                 // Check for redirect URL in 'from' query parameter (or stored from earlier)
-                const urlParams = new URLSearchParams(window.location.search);
-                let redirectUrl = urlParams.get('from') || localStorage.getItem('espo_redirect_from');
-
-                // Clear stored redirect
-                localStorage.removeItem('espo_redirect_from');
-
-                if (redirectUrl) {
-                    console.log('[Monostax] Redirecting after login to:', redirectUrl);
-                    window.location.href = redirectUrl;
-
-                    return;
-                }
+                // const urlParams = new URLSearchParams(window.location.search);
+                // let redirectUrl = urlParams.get('from') || localStorage.getItem('espo_redirect_from');
+                //
+                // // Clear stored redirect
+                // localStorage.removeItem('espo_redirect_from');
+                //
+                // if (redirectUrl) {
+                //     console.log('[Monostax] Redirecting after login to:', redirectUrl);
+                //     window.location.href = redirectUrl;
+                //
+                //     return;
+                // }
 
                 this.initUserData(data, () => this.onAuth(true));
             }

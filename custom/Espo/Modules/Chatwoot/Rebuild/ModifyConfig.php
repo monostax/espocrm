@@ -67,87 +67,167 @@ class ModifyConfig implements RebuildAction
 
     private function addTabListSection(array $tabList): array
     {
-        // Define the Conversations group
-        $conversationsGroup = (object) [
-            'type' => 'group',
+        // Define the Conversations divider
+        $conversationsDivider = (object) [
+            'type' => 'divider',
             'text' => '$Conversations',
-            'iconClass' => 'ti ti-messages',
-            'color' => null,
-            'id' => '853524',
-            'itemList' => [
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Inbox',
-                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/inbox-view',
-                    'iconClass' => 'ti ti-inbox',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '906874'
-                ],
-                (object) [
-                    'type' => 'url',
-                    'text' => '$All',
-                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/dashboard',
-                    'iconClass' => 'ti ti-message-down',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '927132'
-                ],
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Unattended',
-                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/unattended/conversations',
-                    'iconClass' => 'ti ti-message-report',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '442501'
-                ],
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Mentions',
-                    'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/mentions/conversations',
-                    'iconClass' => 'ti ti-message-bolt',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '128471'
-                ]
-            ]
+            'id' => '853524'
         ];
+
+        // Conversation filter URL items with deep links
+        // Custom list view (chatwoot:views/chatwoot-conversation/list) keeps filter dropdown visible
+        // URL format: #EntityType/list/primaryFilter=value
+        // Note: "All" link removed to avoid double-active state in navbar
+        // Users can select "Todas" from the filter dropdown to see all conversations
+        $conversationItems = [
+            (object) [
+                'type' => 'url',
+                'text' => '$OpenConversations',
+                'url' => '#ChatwootConversation/list/primaryFilter=open',
+                // 'iconClass' => 'ti ti-message-exclamation',
+                'iconClass' => 'ti ti-circle-dashed',
+                'color' => null,
+                'aclScope' => 'ChatwootConversation',
+                'onlyAdmin' => false,
+                'id' => '853526'
+            ],
+            (object) [
+                'type' => 'url',
+                'text' => '$PendingConversations',
+                'url' => '#ChatwootConversation/list/primaryFilter=pending',
+                // 'iconClass' => 'ti ti-message-pause',
+                'iconClass' => 'ti ti-circle-half-2',
+                'color' => null,
+                'aclScope' => 'ChatwootConversation',
+                'onlyAdmin' => false,
+                'id' => '853527'
+            ],
+            (object) [
+                'type' => 'url',
+                'text' => '$SnoozedConversations',
+                'url' => '#ChatwootConversation/list/primaryFilter=snoozed',
+                // 'iconClass' => 'ti ti-message-off',
+                'iconClass' => 'ti ti-bell-off',
+                'color' => null,
+                'aclScope' => 'ChatwootConversation',
+                'onlyAdmin' => false,
+                'id' => '853529'
+            ],
+            (object) [
+                'type' => 'url',
+                'text' => '$ResolvedConversations',
+                'url' => '#ChatwootConversation/list/primaryFilter=resolved',
+                // 'iconClass' => 'ti ti-message-check',
+                'iconClass' => 'ti ti-circle-check-filled',
+                'color' => null,
+                'aclScope' => 'ChatwootConversation',
+                'onlyAdmin' => false,
+                'id' => '853528'
+            ],
+        ];
+
+        // Previous implementation using Chatwoot iframe paths (commented out):
+        // $conversationsGroup = (object) [
+        //     'type' => 'group',
+        //     'text' => '$Conversations',
+        //     'iconClass' => 'ti ti-messages',
+        //     'color' => null,
+        //     'id' => '853524',
+        //     'itemList' => [
+        //         (object) [
+        //             'type' => 'url',
+        //             'text' => '$Inbox',
+        //             'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/inbox-view',
+        //             'iconClass' => 'ti ti-inbox',
+        //             'color' => null,
+        //             'aclScope' => null,
+        //             'onlyAdmin' => false,
+        //             'id' => '906874'
+        //         ],
+        //         (object) [
+        //             'type' => 'url',
+        //             'text' => '$All',
+        //             'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/dashboard',
+        //             'iconClass' => 'ti ti-message-down',
+        //             'color' => null,
+        //             'aclScope' => null,
+        //             'onlyAdmin' => false,
+        //             'id' => '927132'
+        //         ],
+        //         (object) [
+        //             'type' => 'url',
+        //             'text' => '$Unattended',
+        //             'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/unattended/conversations',
+        //             'iconClass' => 'ti ti-message-report',
+        //             'color' => null,
+        //             'aclScope' => null,
+        //             'onlyAdmin' => false,
+        //             'id' => '442501'
+        //         ],
+        //         (object) [
+        //             'type' => 'url',
+        //             'text' => '$Mentions',
+        //             'url' => '#Chatwoot?cwPath=/app/accounts/{{chatwootAccountId}}/mentions/conversations',
+        //             'iconClass' => 'ti ti-message-bolt',
+        //             'color' => null,
+        //             'aclScope' => null,
+        //             'onlyAdmin' => false,
+        //             'id' => '128471'
+        //         ]
+        //     ]
+        // ];
         
-        // Find existing Conversations group
-        $existingIndex = null;
+        // Find and remove existing Conversations divider/group and its items
+        $indicesToRemove = [];
+        $dividerIndex = null;
         
         foreach ($tabList as $index => $item) {
             if ($item === null) {
+                $indicesToRemove[] = $index;
                 continue;
             }
             
-            // Convert object to array for comparison (EspoCRM may store as stdClass)
             $itemArray = is_object($item) ? (array) $item : $item;
             
-            // Check if we're at the Conversations group
-            if (is_array($itemArray) && 
-                isset($itemArray['type']) && 
-                $itemArray['type'] === 'group' && 
+            if (!is_array($itemArray) || !isset($itemArray['type'])) {
+                continue;
+            }
+            
+            // Check for Conversations divider
+            if ($itemArray['type'] === 'divider' && 
                 isset($itemArray['text']) && 
                 $itemArray['text'] === '$Conversations'
             ) {
-                $existingIndex = $index;
-                break;
+                $indicesToRemove[] = $index;
+                $dividerIndex = $index;
+            }
+            
+            // Check for old Conversations group (to remove it)
+            if ($itemArray['type'] === 'group' && 
+                isset($itemArray['text']) && 
+                $itemArray['text'] === '$Conversations'
+            ) {
+                $indicesToRemove[] = $index;
+                $dividerIndex = $index;
+            }
+            
+            // Check for conversation URL items (by id pattern 8535xx)
+            if ($itemArray['type'] === 'url' && 
+                isset($itemArray['id']) && 
+                preg_match('/^8535\d{2}$/', $itemArray['id'])
+            ) {
+                $indicesToRemove[] = $index;
             }
         }
         
-        // If Conversations group exists, replace it in-place
-        if ($existingIndex !== null) {
-            $tabList[$existingIndex] = $conversationsGroup;
-        } else {
-            // Group doesn't exist, add it at the beginning
-            array_unshift($tabList, $conversationsGroup);
+        // Remove in reverse order to preserve indices
+        rsort($indicesToRemove);
+        foreach ($indicesToRemove as $index) {
+            array_splice($tabList, $index, 1);
         }
+        
+        // Add Conversations divider and items at the beginning
+        array_unshift($tabList, $conversationsDivider, ...$conversationItems);
         
         return $tabList;
     }

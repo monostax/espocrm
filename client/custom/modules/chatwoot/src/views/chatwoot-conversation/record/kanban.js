@@ -16,6 +16,44 @@ define('chatwoot:views/chatwoot-conversation/record/kanban', ['views/record/kanb
         // Status field for kanban grouping
         statusField: 'status',
 
+        /**
+         * Override to include linkMultiple attributes for opportunities and cAgendamentos
+         */
+        getSelectAttributeList: async function (callback) {
+            const attributeList = await Dep.prototype.getSelectAttributeList.call(this);
+            
+            if (!attributeList) {
+                if (callback) callback(null);
+                return null;
+            }
+            
+            // Add opportunities linkMultiple attributes
+            if (!attributeList.includes('opportunitiesIds')) {
+                attributeList.push('opportunitiesIds');
+            }
+            if (!attributeList.includes('opportunitiesNames')) {
+                attributeList.push('opportunitiesNames');
+            }
+            if (!attributeList.includes('opportunitiesColumns')) {
+                attributeList.push('opportunitiesColumns');
+            }
+            
+            // Add cAgendamentos linkMultiple attributes
+            if (!attributeList.includes('cAgendamentosIds')) {
+                attributeList.push('cAgendamentosIds');
+            }
+            if (!attributeList.includes('cAgendamentosNames')) {
+                attributeList.push('cAgendamentosNames');
+            }
+            if (!attributeList.includes('cAgendamentosColumns')) {
+                attributeList.push('cAgendamentosColumns');
+            }
+            
+            if (callback) callback(attributeList);
+            
+            return attributeList;
+        },
+
         setup: function () {
             Dep.prototype.setup.call(this);
             

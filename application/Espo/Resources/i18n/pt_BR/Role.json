@@ -17,7 +17,7 @@
     },
     "tooltips": {
         "assignmentPermission": "Permite restringir a habilidade para usuários atribuírem registros para outros usuários.\n\ntudo - nenhuma restrição\n\ntime - pode atribuir para usuários do seu time\n\nnenhum - pode atribuir apenas para si mesmo",
-        "userPermission": "Permite restringir a habilidade para usuários visualizarem atividades, calendários e fluxos de outros usuários.\n\ntudo - nenhuma restrição\n\ntime - pode ver atividades dos colegas de time apenas\n\nnenhum - não pode visualizar",
+        "userPermission": "Permite restringir a habilidade para usuários visualizarem atividades, Agendas e fluxos de outros usuários.\n\ntudo - nenhuma restrição\n\ntime - pode ver atividades dos colegas de time apenas\n\nnenhum - não pode visualizar",
         "portalPermission": "Define um acesso às informações do portal, capacidade de postar mensagens para usuários do portal.",
         "groupEmailAccountPermission": "Define um acesso às contas de e-mail do grupo, uma capacidade de enviar e-mails do grupo SMTP.",
         "dataPrivacyPermission": "Permite visualizar e apagar dados pessoais.",

@@ -52,7 +52,7 @@
         "Mass Action": "Ação em massa",
         "Note": "Nota",
         "ImportError": "Erro de importação",
-        "WorkingTimeCalendar": "Calendário de tempo de trabalho"
+        "WorkingTimeCalendar": "Agenda de tempo de trabalho"
     },
     "scopeNamesPlural": {
         "Email": "emails",
@@ -97,7 +97,7 @@
         "LayoutSet": "Conjuntos de layout",
         "Note": "Notas",
         "ImportError": "Erro de importação",
-        "WorkingTimeCalendar": "Calendários de tempo de trabalho"
+        "WorkingTimeCalendar": "Agendas de tempo de trabalho"
     },
     "labels": {
         "Merge": "Unificar",

@@ -70,7 +70,7 @@
         "disabled": "Verifique se não precisa dessa entidade no sistema.",
         "linkAudited": "A criação de registos e links relacionados com registos existentes será registrada no fluxo.",
         "linkMultipleField": "Link Multiple field fornece uma maneira prática de editar relações. Não use se tem um grande número de registos relacionados.",
-        "entityType": "Base Plus - possui painéis Atividades, Histórico e Tarefas.\n\nEvento - disponível no painel Calendário e Atividades.",
+        "entityType": "Base Plus - possui painéis Atividades, Histórico e Tarefas.\n\nEvento - disponível no painel Agenda e Atividades.",
         "fullTextSearch": "A reconstrução em execução é necessária.",
         "countDisabled": "O nome total não será mostrado na vista de lista. Pode diminuir o tempo de carregamento quando a tabela da base de dados é grande.",
         "optimisticConcurrencyControl": "Previne conflitos de escrita."

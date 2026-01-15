@@ -36,7 +36,7 @@
         "dashboardTemplate": "Template do dashboard",
         "auth2FAEnable": "Ativar autenticação de 2 fatores",
         "auth2FAMethod": "Método 2FA",
-        "workingTimeCalendar": "Calendário de horário de trabalho"
+        "workingTimeCalendar": "Agenda de horário de trabalho"
     },
     "links": {
         "teams": "Equipas",
@@ -51,7 +51,7 @@
         "defaultTeam": "Equipa padrão",
         "dashboardTemplate": "Template do dashboard",
         "userData": "Dados do utilizador",
-        "workingTimeCalendar": "Calendário do horário de trabalho"
+        "workingTimeCalendar": "Agenda do horário de trabalho"
     },
     "labels": {
         "Create User": "Criar utilizador",

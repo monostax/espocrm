@@ -66,7 +66,7 @@
         "disabled": "Verifique se você não precisa dessa entidade em seu sistema.",
         "linkAudited": "Criar registro relacionado e vincular com registro existente será registrado no Stream.",
         "linkMultipleField": "O campo Link Múltiplo fornece uma maneira prática de editar relações. Não use se você tiver um grande número de registros relacionados.",
-        "entityType": "Base Plus - possui painéis de Atividades, Histórico e Tarefas.\n\nEvento - disponível nos painéis de Calendário e Atividades",
+        "entityType": "Base Plus - possui painéis de Atividades, Histórico e Tarefas.\n\nEvento - disponível nos painéis de Agenda e Atividades",
         "fullTextSearch": "A reconstrução em execução é necessária.",
         "countDisabled": "O número total não será exibido na list view. Pode diminuir o tempo de carregamento quando a tabela no DB é grande.",
         "optimisticConcurrencyControl": "Evita conflitos de escrita."

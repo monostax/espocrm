@@ -1,0 +1,12 @@
+{
+    "items": {
+        "conversationBadges": {
+            "view": "chatwoot:views/site/navbar/conversation-badges",
+            "class": "conversation-badges-container hidden",
+            "order": 100,
+            "disabled": false
+        }
+    }
+}
+
+
