@@ -1,0 +1,8 @@
+{
+    "categories": {
+        "chatwootConversationUpdate": {
+            "__comment": "Topic for real-time ChatwootConversation status updates (kanban, badges)",
+            "accessCheckCommand": "AclCheck --userId=:userId --scope=ChatwootConversation --action=read"
+        }
+    }
+}

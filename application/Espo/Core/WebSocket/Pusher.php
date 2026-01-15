@@ -60,6 +60,8 @@ class Pusher implements WampServerInterface
     protected $connections = [];
     /** @var array<string, Topic<object>> */
     protected $topicHash = [];
+    /** @var array<string, array{conn: ConnectionInterface, topic: Topic<object>}[]> */
+    protected $pendingSubscriptions = [];
     private string $phpExecutablePath;
 
     /**
@@ -111,6 +113,20 @@ class Pusher implements WampServerInterface
         $userId = $this->getUserIdByConnection($conn);
 
         if (!$userId) {
+            // User not authenticated yet - queue the subscription for later
+            if (!isset($this->pendingSubscriptions[$connectionId])) {
+                $this->pendingSubscriptions[$connectionId] = [];
+            }
+
+            $this->pendingSubscriptions[$connectionId][] = [
+                'conn' => $conn,
+                'topic' => $topic,
+            ];
+
+            if ($this->isDebugMode) {
+                $this->log("$connectionId: queued subscription for topic $topicId (auth pending)");
+            }
+
             return;
         }
 
@@ -336,6 +352,34 @@ class Pusher implements WampServerInterface
         if ($this->isDebugMode) {
             $this->log("$resourceId: user $userId subscribed");
         }
+
+        // Process any pending subscriptions for this connection
+        $this->processPendingSubscriptions($resourceId);
+    }
+
+    /**
+     * Process queued subscriptions after user authentication completes.
+     *
+     * @param string $connectionId
+     * @return void
+     */
+    private function processPendingSubscriptions(string $connectionId): void
+    {
+        if (!isset($this->pendingSubscriptions[$connectionId])) {
+            return;
+        }
+
+        $pending = $this->pendingSubscriptions[$connectionId];
+        unset($this->pendingSubscriptions[$connectionId]);
+
+        if ($this->isDebugMode && count($pending) > 0) {
+            $this->log("$connectionId: processing " . count($pending) . " pending subscriptions");
+        }
+
+        foreach ($pending as $item) {
+            // Re-call onSubscribe now that user is authenticated
+            $this->onSubscribe($item['conn'], $item['topic']);
+        }
     }
 
     /**
@@ -443,6 +487,7 @@ class Pusher implements WampServerInterface
         }
 
         unset($this->connections[$connectionId]);
+        unset($this->pendingSubscriptions[$connectionId]);
     }
 
     /**

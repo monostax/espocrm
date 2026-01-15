@@ -8,13 +8,16 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-define('chatwoot:views/chatwoot-conversation/record/kanban', ['views/record/kanban'], function (Dep) {
+define('chatwoot:views/chatwoot-conversation/record/kanban', ['views/record/kanban', 'web-socket-manager'], function (Dep, WebSocketManager) {
     return Dep.extend({
         // Use custom item view for conversation cards
         itemViewName: 'chatwoot:views/chatwoot-conversation/record/kanban-item',
         
         // Status field for kanban grouping
         statusField: 'status',
+
+        // WebSocket debounce interval (ms)
+        webSocketDebounceInterval: 500,
 
         /**
          * Override to include linkMultiple attributes for opportunities and cAgendamentos
@@ -57,9 +60,64 @@ define('chatwoot:views/chatwoot-conversation/record/kanban', ['views/record/kanb
         setup: function () {
             Dep.prototype.setup.call(this);
             
+            // Get WebSocket manager
+            this.webSocketManager = this.getHelper().webSocketManager;
+            
             // Listen for collection sync to update cards
             this.listenTo(this.collection, 'sync', () => {
                 this.scheduleRefresh();
+            });
+
+            // Setup WebSocket subscription
+            this.setupWebSocket();
+        },
+
+        /**
+         * Setup WebSocket subscription for real-time updates
+         */
+        setupWebSocket: function () {
+            if (!this.webSocketManager || !this.webSocketManager.isEnabled()) {
+                return;
+            }
+
+            this._webSocketDebounceTimeout = null;
+
+            // Subscribe to chatwootConversationUpdate topic (used by navbar badges too)
+            this.webSocketManager.subscribe('chatwootConversationUpdate', (topic, data) => {
+                this.handleWebSocketUpdate(data);
+            });
+
+            // Subscribe to generic recordUpdate for ChatwootConversation
+            this.webSocketManager.subscribe('recordUpdate.ChatwootConversation', (topic, data) => {
+                this.handleWebSocketUpdate(data);
+            });
+
+            this.isWebSocketSubscribed = true;
+        },
+
+        /**
+         * Handle WebSocket update with debouncing
+         */
+        handleWebSocketUpdate: function (data) {
+            // Debounce to prevent multiple rapid refreshes
+            if (this._webSocketDebounceTimeout) {
+                clearTimeout(this._webSocketDebounceTimeout);
+            }
+
+            this._webSocketDebounceTimeout = setTimeout(() => {
+                this.refreshKanban();
+            }, this.webSocketDebounceInterval);
+        },
+
+        /**
+         * Refresh the kanban board
+         */
+        refreshKanban: function () {
+            // Fetch new data for all groups
+            this.collection.fetch({
+                reset: true,
+            }).then(() => {
+                // Re-render will happen automatically via collection events
             });
         },
 
@@ -81,6 +139,27 @@ define('chatwoot:views/chatwoot-conversation/record/kanban', ['views/record/kanb
             
             // Add custom styling for conversation kanban
             this.$el.addClass('conversation-kanban');
+        },
+
+        /**
+         * Cleanup on view removal
+         */
+        onRemove: function () {
+            // Unsubscribe from WebSocket topics
+            if (this.isWebSocketSubscribed && this.webSocketManager) {
+                this.webSocketManager.unsubscribe('chatwootConversationUpdate');
+                this.webSocketManager.unsubscribe('recordUpdate.ChatwootConversation');
+            }
+
+            // Clear any pending timeouts
+            if (this._webSocketDebounceTimeout) {
+                clearTimeout(this._webSocketDebounceTimeout);
+            }
+            if (this._refreshTimeout) {
+                clearTimeout(this._refreshTimeout);
+            }
+
+            Dep.prototype.onRemove.call(this);
         },
     });
 });
