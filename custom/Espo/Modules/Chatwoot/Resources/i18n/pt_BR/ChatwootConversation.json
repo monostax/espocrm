@@ -30,7 +30,9 @@
     },
     "labels": {
         "Create ChatwootConversation": "Criar Conversa Chatwoot",
-        "View Details": "Ver Detalhes"
+        "View Details": "Ver Detalhes",
+        "Conversations": "Conversas",
+        "Chat": "Chat"
     },
     "tabs": {
         "Conversation": "Conversa",
@@ -39,7 +41,12 @@
     "messages": {
         "Your user is not linked to a Chatwoot account": "Seu usuário não está vinculado a uma conta Chatwoot",
         "No conversation ID available": "ID da conversa não disponível",
-        "No conversation data available": "Dados da conversa não disponíveis"
+        "No conversation data available": "Dados da conversa não disponíveis",
+        "Select a conversation to view": "Selecione uma conversa para visualizar",
+        "No conversations": "Nenhuma conversa",
+        "No messages yet": "Nenhuma mensagem ainda",
+        "Unable to load conversation": "Não foi possível carregar a conversa",
+        "conversations": "conversas"
     },
     "presetFilters": {
         "all": "Todas",

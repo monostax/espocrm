@@ -30,8 +30,9 @@ import ListRecordView from "views/record/list";
 
 class ActivitiesRecordListView extends ListRecordView {
     type = "list";
-    checkboxes = false;
-    massActionsDisabled = true;
+    checkboxes = true;
+    massActionsDisabled = false;
+    massActionList = ["remove"];
     rowActionsView = "views/record/row-actions/view-and-edit";
 
     setup() {
@@ -49,6 +50,120 @@ class ActivitiesRecordListView extends ListRecordView {
         }
 
         return null;
+    }
+
+    /**
+     * Custom mass remove for multi-collection (Activities).
+     * Groups selected records by entity type and deletes them separately.
+     */
+    massActionRemove() {
+        // Group selected IDs by entity type
+        const idsByEntityType = {};
+
+        this.checkedList.forEach((id) => {
+            const model = this.collection.get(id);
+
+            if (model) {
+                const entityType = model.entityType;
+
+                if (!idsByEntityType[entityType]) {
+                    idsByEntityType[entityType] = [];
+                }
+
+                idsByEntityType[entityType].push(id);
+            }
+        });
+
+        // Check if user has delete permission for all entity types
+        for (const entityType of Object.keys(idsByEntityType)) {
+            if (!this.getAcl().check(entityType, "delete")) {
+                Espo.Ui.error(
+                    this.translate("Access denied") + ": " + entityType
+                );
+                return false;
+            }
+        }
+
+        this.confirm(
+            {
+                message: this.translate(
+                    "removeSelectedRecordsConfirmation",
+                    "messages"
+                ),
+                confirmText: this.translate("Remove"),
+            },
+            () => {
+                Espo.Ui.notifyWait();
+
+                // Create delete promises for each entity type
+                const promises = Object.entries(idsByEntityType).map(
+                    ([entityType, ids]) => {
+                        return Espo.Ajax.postRequest("MassAction", {
+                            entityType: entityType,
+                            action: "delete",
+                            params: {
+                                ids: ids,
+                            },
+                        });
+                    }
+                );
+
+                // Execute all delete requests
+                Promise.all(promises)
+                    .then((results) => {
+                        // Sum up the total count of removed records
+                        let totalCount = 0;
+                        const allRemovedIds = [];
+
+                        results.forEach((result) => {
+                            if (result && result.count) {
+                                totalCount += result.count;
+                            }
+
+                            if (result && result.ids) {
+                                allRemovedIds.push(...result.ids);
+                            }
+                        });
+
+                        if (!totalCount) {
+                            Espo.Ui.warning(
+                                this.translate("noRecordsRemoved", "messages")
+                            );
+                            return;
+                        }
+
+                        this.unselectAllResult();
+
+                        // Remove deleted records from the list
+                        allRemovedIds.forEach((id) => {
+                            this.collection.trigger("model-removing", id);
+                            this.removeRecordFromList(id);
+                            this.uncheckRecord(id, null, true);
+                        });
+
+                        // Refresh the collection
+                        this.collection.fetch().then(() => {
+                            const msg =
+                                totalCount === 1
+                                    ? "massRemoveResultSingle"
+                                    : "massRemoveResult";
+
+                            Espo.Ui.success(
+                                this.translate(msg, "messages").replace(
+                                    "{count}",
+                                    totalCount
+                                )
+                            );
+                        });
+
+                        this.collection.trigger("after:mass-remove");
+                        Espo.Ui.notify(false);
+                    })
+                    .catch(() => {
+                        Espo.Ui.error(this.translate("Error"));
+                    });
+            }
+        );
     }
 }
 

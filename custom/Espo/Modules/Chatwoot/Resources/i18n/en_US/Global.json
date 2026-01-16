@@ -1,6 +1,7 @@
 {
     "scopeNames": {
         "ChatwootAccount": "Chatwoot - Account",
+        "ChatwootContact": "Chatwoot - Contact",
         "ChatwootPlatform": "Chatwoot - Platform",
         "ChatwootUser": "Chatwoot - User",
         "ChatwootTeam": "Chatwoot - Team",
@@ -9,6 +10,7 @@
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chatwoot - Accounts",
+        "ChatwootContact": "Chatwoot - Contacts",
         "ChatwootPlatform": "Chatwoot - Platforms",
         "ChatwootUser": "Chatwoot - Users",
         "ChatwootTeam": "Chatwoot - Teams",
@@ -26,6 +28,9 @@
         "PendingConversations": "Pending",
         "ResolvedConversations": "Resolved",
         "SnoozedConversations": "Snoozed"
+    },
+    "listViewModes": {
+        "inbox": "Inbox"
     }
 }
 

@@ -30,7 +30,7 @@ use Espo\Core\Utils\Log;
 
 /**
  * Rebuild action to configure system settings.
- * - Adds Cadastros section with CProfissional, CPaciente, and CAgendamento to the navbar.
+ * - Adds $Clinica section with CAgendamento, CPaciente, and CProfissional to the navbar (after $CRM section).
  * - Ensures CAgendamento is present in calendarEntityList, activitiesEntityList, and historyEntityList.
  * Runs automatically during system rebuild.
  */
@@ -57,12 +57,7 @@ class ModifyConfig implements RebuildAction
             return;
         }
 
-        $newTabList = $this->upsertToSection($tabList, '$Records', [
-            'CAgendamento',
-            'CPaciente',
-            'CProcedimento',
-            'CProfissional',
-        ], 'beginning');
+        $newTabList = $this->addClinicaSection($tabList);
 
         if ($newTabList !== $tabList) {
             $this->configWriter->set('tabList', $newTabList);
@@ -72,85 +67,75 @@ class ModifyConfig implements RebuildAction
     }
 
     /**
-     * Upsert items into a divider section.
-     * 
-     * @param array $tabList The current tab list
-     * @param string $sectionName The divider text to find/create
-     * @param array $items Items to upsert (strings for entity names, arrays for complex items)
-     * @param string $createPosition Where to create section if missing: 'beginning' or 'end'
-     * @return array Modified tab list
+     * Add $Clinica section with CAgendamento, CPaciente, and CProfissional after $CRM section.
      */
-    private function upsertToSection(array $tabList, string $sectionName, array $items, string $createPosition = 'beginning'): array
+    private function addClinicaSection(array $tabList): array
     {
-        // Find the divider position and section bounds
-        $dividerIndex = null;
-        $sectionEndIndex = null;
+        $items = ['CAgendamento', 'CPaciente', 'CProfissional'];
         
+        // Remove items from anywhere they exist
+        $tabList = array_values(array_filter($tabList, function($item) use ($items) {
+            return !is_string($item) || !in_array($item, $items);
+        }));
+        
+        // Find and remove existing $Clinica divider
         foreach ($tabList as $index => $item) {
             $itemArray = is_object($item) ? (array) $item : $item;
-            
             if (is_array($itemArray) && 
                 isset($itemArray['type']) && 
                 $itemArray['type'] === 'divider' && 
                 isset($itemArray['text']) && 
-                $itemArray['text'] === $sectionName
+                $itemArray['text'] === '$Clinica'
             ) {
-                $dividerIndex = $index;
-                // Find the end of this section (next divider or end of array)
-                for ($i = $index + 1; $i < count($tabList); $i++) {
-                    $nextItemArray = is_object($tabList[$i]) ? (array) $tabList[$i] : $tabList[$i];
-                    if (is_array($nextItemArray) && 
-                        isset($nextItemArray['type']) && 
-                        $nextItemArray['type'] === 'divider'
-                    ) {
-                        $sectionEndIndex = $i - 1;
-                        break;
-                    }
-                }
-                if ($sectionEndIndex === null) {
-                    $sectionEndIndex = count($tabList) - 1;
-                }
+                array_splice($tabList, $index, 1);
                 break;
             }
         }
         
-        // If divider doesn't exist, create it
-        if ($dividerIndex === null) {
-            $divider = [
-                'type' => 'divider',
-                'text' => $sectionName,
-            ];
-            if ($createPosition === 'beginning') {
-                array_unshift($tabList, $divider);
-                $dividerIndex = 0;
-            } else {
-                $tabList[] = $divider;
-                $dividerIndex = count($tabList) - 1;
-            }
-            $sectionEndIndex = $dividerIndex;
-        }
+        // Find where to insert: after $CRM section (before next divider)
+        $insertPosition = null;
+        $crmDividerIndex = null;
         
-        // Collect existing items in the section
-        $existingItems = [];
-        for ($i = $dividerIndex + 1; $i <= $sectionEndIndex; $i++) {
-            $item = $tabList[$i];
-            if (is_string($item)) {
-                $existingItems[] = $item;
+        foreach ($tabList as $index => $item) {
+            $itemArray = is_object($item) ? (array) $item : $item;
+            if (is_array($itemArray) && 
+                isset($itemArray['type']) && 
+                $itemArray['type'] === 'divider' && 
+                isset($itemArray['text']) && 
+                $itemArray['text'] === '$CRM'
+            ) {
+                $crmDividerIndex = $index;
+                break;
             }
         }
         
-        // Upsert: add items that don't exist yet
-        $insertPosition = $dividerIndex + 1;
-        foreach ($items as $itemToAdd) {
-            if (is_string($itemToAdd) && !in_array($itemToAdd, $existingItems)) {
-                array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
-                $insertPosition++;
-            } elseif (is_array($itemToAdd)) {
-                // For complex items (like groups), just add them
-                array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
-                $insertPosition++;
+        if ($crmDividerIndex !== null) {
+            // Find the next divider after $CRM
+            for ($i = $crmDividerIndex + 1; $i < count($tabList); $i++) {
+                $item = $tabList[$i];
+                $itemArray = is_object($item) ? (array) $item : $item;
+                if (is_array($itemArray) && 
+                    isset($itemArray['type']) && 
+                    $itemArray['type'] === 'divider'
+                ) {
+                    $insertPosition = $i;
+                    break;
+                }
             }
+            if ($insertPosition === null) {
+                $insertPosition = count($tabList);
+            }
+        } else {
+            // If no $CRM section found, insert at end
+            $insertPosition = count($tabList);
         }
+        
+        // Insert $Clinica divider and items
+        $divider = (object) [
+            'type' => 'divider',
+            'text' => '$Clinica',
+        ];
+        array_splice($tabList, $insertPosition, 0, [$divider, ...$items]);
         
         return $tabList;
     }

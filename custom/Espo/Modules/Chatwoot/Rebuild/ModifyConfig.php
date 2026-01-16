@@ -226,8 +226,30 @@ class ModifyConfig implements RebuildAction
             array_splice($tabList, $index, 1);
         }
         
-        // Add Conversations divider and items at the beginning
-        array_unshift($tabList, $conversationsDivider, ...$conversationItems);
+        // Find the insert position: after Calendar/Activities items, or after Home
+        $insertPosition = 1; // Default: after Home
+        
+        foreach ($tabList as $index => $item) {
+            if ($item === null) {
+                continue;
+            }
+            
+            $itemArray = is_object($item) ? (array) $item : $item;
+            
+            // Look for Calendar (id 906879) or Activities (id 906883) items from Global module
+            if (is_array($itemArray) && 
+                isset($itemArray['type']) && 
+                $itemArray['type'] === 'url' && 
+                isset($itemArray['id']) && 
+                ($itemArray['id'] === '906879' || $itemArray['id'] === '906883')
+            ) {
+                // Insert after the last Calendar/Activities item found
+                $insertPosition = $index + 1;
+            }
+        }
+        
+        // Add Conversations divider and items after Calendar/Activities (or after Home)
+        array_splice($tabList, $insertPosition, 0, [$conversationsDivider, ...$conversationItems]);
         
         return $tabList;
     }

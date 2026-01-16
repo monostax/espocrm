@@ -48,6 +48,11 @@
             "maxLength": 255,
             "readOnly": true
         },
+        "contactPhoneNumber": {
+            "type": "varchar",
+            "maxLength": 50,
+            "readOnly": true
+        },
         "inboxChannelType": {
             "type": "varchar",
             "maxLength": 100,
@@ -183,7 +188,8 @@
     },
     "collection": {
         "orderBy": "lastActivityAt",
-        "order": "desc"
+        "order": "desc",
+        "textFilterFields": ["name", "contactDisplayName", "contactPhoneNumber", "messages.content"]
     }
 }
 

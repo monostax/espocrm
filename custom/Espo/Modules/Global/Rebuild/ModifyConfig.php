@@ -130,8 +130,14 @@ class ModifyConfig implements RebuildAction
             return;
         }
 
-        $newTabList = $this->upsertToSection($tabList, '$Records', ['Contact', 'Account', 'Opportunity'], 'beginning');
-        $newTabList = $this->addCalendarItem($newTabList);
+        // First: add Calendar and Activities right after Home (before any dividers)
+        $newTabList = $this->addCalendarItem($tabList);
+        
+        // Then: add $CRM section after Calendar/Activities
+        $newTabList = $this->addCRMSection($newTabList);
+        
+        // Other sections
+        $newTabList = $this->upsertToSection($newTabList, '$Records', ['Account'], 'end');
         $newTabList = $this->addActivitiesSection($newTabList);
         $newTabList = $this->addConfigurationSection($newTabList);
         
@@ -146,6 +152,8 @@ class ModifyConfig implements RebuildAction
 
     /**
      * Upsert items into a divider section.
+     * Removes all existing occurrences of the items from the entire tabList first,
+     * then adds them to the target section.
      * 
      * @param array $tabList The current tab list
      * @param string $sectionName The divider text to find/create
@@ -155,9 +163,16 @@ class ModifyConfig implements RebuildAction
      */
     private function upsertToSection(array $tabList, string $sectionName, array $items, string $createPosition = 'beginning'): array
     {
-        // Find the divider position and section bounds
+        // First, remove ALL existing occurrences of the string items from the entire tabList
+        $stringItems = array_filter($items, 'is_string');
+        if (!empty($stringItems)) {
+            $tabList = array_values(array_filter($tabList, function($item) use ($stringItems) {
+                return !is_string($item) || !in_array($item, $stringItems);
+            }));
+        }
+        
+        // Find the divider position
         $dividerIndex = null;
-        $sectionEndIndex = null;
         
         foreach ($tabList as $index => $item) {
             if ($item === null) {
@@ -173,23 +188,6 @@ class ModifyConfig implements RebuildAction
                 $itemArray['text'] === $sectionName
             ) {
                 $dividerIndex = $index;
-                // Find the end of this section (next divider or end of array)
-                for ($i = $index + 1; $i < count($tabList); $i++) {
-                    if ($tabList[$i] === null) {
-                        continue;
-                    }
-                    $nextItemArray = is_object($tabList[$i]) ? (array) $tabList[$i] : $tabList[$i];
-                    if (is_array($nextItemArray) && 
-                        isset($nextItemArray['type']) && 
-                        $nextItemArray['type'] === 'divider'
-                    ) {
-                        $sectionEndIndex = $i - 1;
-                        break;
-                    }
-                }
-                if ($sectionEndIndex === null) {
-                    $sectionEndIndex = count($tabList) - 1;
-                }
                 break;
             }
         }
@@ -207,29 +205,13 @@ class ModifyConfig implements RebuildAction
                 $tabList[] = $divider;
                 $dividerIndex = count($tabList) - 1;
             }
-            $sectionEndIndex = $dividerIndex;
         }
         
-        // Collect existing items in the section
-        $existingItems = [];
-        for ($i = $dividerIndex + 1; $i <= $sectionEndIndex; $i++) {
-            $item = $tabList[$i];
-            if (is_string($item)) {
-                $existingItems[] = $item;
-            }
-        }
-        
-        // Upsert: add items that don't exist yet
+        // Insert all items right after the divider
         $insertPosition = $dividerIndex + 1;
         foreach ($items as $itemToAdd) {
-            if (is_string($itemToAdd) && !in_array($itemToAdd, $existingItems)) {
-                array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
-                $insertPosition++;
-            } elseif (is_array($itemToAdd)) {
-                // For complex items (like groups), just add them
-                array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
-                $insertPosition++;
-            }
+            array_splice($tabList, $insertPosition, 0, [$itemToAdd]);
+            $insertPosition++;
         }
         
         return $tabList;
@@ -288,34 +270,74 @@ class ModifyConfig implements RebuildAction
             array_splice($tabList, $index, 1);
         }
         
-        // Find the Conversations group and insert Calendar and My Activities before it
-        $conversationsIndex = null;
+        // Find Home position and insert Calendar/Activities right after it
+        $homeIndex = 0;
         
         foreach ($tabList as $index => $item) {
-            if ($item === null) {
-                continue;
-            }
-            
-            $itemArray = is_object($item) ? (array) $item : $item;
-            
-            if (is_array($itemArray) && 
-                isset($itemArray['type']) && 
-                $itemArray['type'] === 'group' && 
-                isset($itemArray['text']) && 
-                $itemArray['text'] === '$Conversations'
-            ) {
-                $conversationsIndex = $index;
+            if ($item === 'Home') {
+                $homeIndex = $index;
                 break;
             }
         }
         
-        if ($conversationsIndex !== null) {
-            // Insert Calendar and My Activities before Conversations
-            array_splice($tabList, $conversationsIndex, 0, [$calendarItem, $myActivitiesItem]);
-        } else {
-            // If Conversations doesn't exist, add Calendar and My Activities at position 1 (after Home)
-            array_splice($tabList, 1, 0, [$calendarItem, $myActivitiesItem]);
+        // Always insert Calendar and My Activities right after Home
+        array_splice($tabList, $homeIndex + 1, 0, [$calendarItem, $myActivitiesItem]);
+        
+        return $tabList;
+    }
+
+    private function addCRMSection(array $tabList): array
+    {
+        // Remove Contact and Opportunity from everywhere first
+        $tabList = array_values(array_filter($tabList, function($item) {
+            return !is_string($item) || !in_array($item, ['Contact', 'Opportunity']);
+        }));
+        
+        // Find the Activities URL item (inserted by addCalendarItem)
+        $activitiesIndex = null;
+        foreach ($tabList as $index => $item) {
+            $itemArray = is_object($item) ? (array) $item : $item;
+            if (is_array($itemArray) && 
+                isset($itemArray['type']) && 
+                $itemArray['type'] === 'url' && 
+                isset($itemArray['text']) && 
+                $itemArray['text'] === '$Activities'
+            ) {
+                $activitiesIndex = $index;
+                break;
+            }
         }
+        
+        // If Activities not found, insert at position 1 (after Home)
+        $insertPosition = ($activitiesIndex !== null) ? $activitiesIndex + 1 : 1;
+        
+        // Remove existing $CRM divider if found
+        foreach ($tabList as $index => $item) {
+            $itemArray = is_object($item) ? (array) $item : $item;
+            if (is_array($itemArray) && 
+                isset($itemArray['type']) && 
+                $itemArray['type'] === 'divider' && 
+                isset($itemArray['text']) && 
+                $itemArray['text'] === '$CRM'
+            ) {
+                array_splice($tabList, $index, 1);
+                if ($index < $insertPosition) {
+                    $insertPosition--;
+                }
+                break;
+            }
+        }
+        
+        // Create and insert $CRM divider
+        $crmDivider = (object) [
+            'type' => 'divider',
+            'text' => '$CRM',
+        ];
+        array_splice($tabList, $insertPosition, 0, [$crmDivider]);
+        $insertPosition++;
+        
+        // Insert Contact and Opportunity
+        array_splice($tabList, $insertPosition, 0, ['Contact', 'Opportunity']);
         
         return $tabList;
     }

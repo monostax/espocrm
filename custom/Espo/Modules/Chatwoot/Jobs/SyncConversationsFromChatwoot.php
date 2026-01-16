@@ -379,6 +379,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         // Set denormalized fields for kanban card display
         $conversation->set('contactDisplayName', $contactName);
         $conversation->set('contactAvatarUrl', $cwtContact->get('avatarUrl'));
+        $conversation->set('contactPhoneNumber', $cwtContact->get('phoneNumber'));
         
         // Get last message content and type from messages array
         $messages = $chatwootConversation['messages'] ?? [];
@@ -485,6 +486,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Denormalized fields for kanban card display
             'contactDisplayName' => $contactName,
             'contactAvatarUrl' => $cwtContact->get('avatarUrl'),
+            'contactPhoneNumber' => $cwtContact->get('phoneNumber'),
             'lastMessageContent' => $lastMessageContent,
             'lastMessageType' => $lastMessageType,
             'inboxChannelType' => $chatwootInbox?->get('channelType'),

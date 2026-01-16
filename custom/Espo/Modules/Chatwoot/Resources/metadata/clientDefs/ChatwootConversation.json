@@ -7,6 +7,13 @@
     "views": {
         "list": "chatwoot:views/chatwoot-conversation/list"
     },
+    "listViewModeList": ["list", "kanban", "inbox"],
+    "listDefaultViewMode": "inbox",
+    "viewModeIconClassMap": {
+        "list": "fas fa-th-list",
+        "kanban": "fas fa-columns",
+        "inbox": "fas fa-inbox"
+    },
     "filterList": [
         {
             "name": "open",
@@ -28,7 +35,8 @@
     "recordViews": {
         "list": "views/record/list",
         "detail": "global:views/record/detail",
-        "kanban": "chatwoot:views/chatwoot-conversation/record/kanban"
+        "kanban": "chatwoot:views/chatwoot-conversation/record/kanban",
+        "inbox": "chatwoot:views/chatwoot-conversation/record/inbox"
     },
     "bottomPanels": {
         "detail": []
