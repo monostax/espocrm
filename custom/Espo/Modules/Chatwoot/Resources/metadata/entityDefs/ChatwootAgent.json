@@ -35,6 +35,20 @@
             "type": "bool",
             "default": true
         },
+        "isAI": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "aiPrompt": {
+            "type": "text",
+            "rowsMin": 5,
+            "tooltip": true
+        },
+        "knowledgeBaseCategories": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
         "confirmed": {
             "type": "bool",
             "default": false,
@@ -113,6 +127,12 @@
             "type": "hasMany",
             "entity": "ChatwootTeam",
             "relationName": "chatwootAgentChatwootTeam",
+            "foreign": "chatwootAgents"
+        },
+        "knowledgeBaseCategories": {
+            "type": "hasMany",
+            "entity": "KnowledgeBaseCategory",
+            "relationName": "chatwootAgentKnowledgeBaseCategory",
             "foreign": "chatwootAgents"
         },
         "createdBy": {

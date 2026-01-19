@@ -11,7 +11,8 @@
     },
     "links": {
         "documents": "Documents",
-        "knowledgeBaseArticles": "Knowledge Base Articles"
+        "knowledgeBaseArticles": "Knowledge Base Articles",
+        "knowledgeBaseCategory": "Knowledge Base Category"
     },
     "fields": {
         "name": "Name",
@@ -24,7 +25,8 @@
         "sizeBytes": "Size (Bytes)",
         "lastSyncAt": "Last Sync At",
         "teams": "Teams",
-        "assignedUser": "Assigned User"
+        "assignedUser": "Assigned User",
+        "knowledgeBaseCategory": "Knowledge Base Category"
     },
     "options": {
         "status": {

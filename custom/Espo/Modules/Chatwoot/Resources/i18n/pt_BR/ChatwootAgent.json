@@ -7,6 +7,9 @@
         "role": "Função",
         "availabilityStatus": "Status de Disponibilidade",
         "autoOffline": "Offline Automático",
+        "isAI": "Agente IA",
+        "aiPrompt": "Prompt",
+        "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "confirmed": "Email Confirmado",
         "avatarUrl": "URL do Avatar",
         "customRoleId": "ID da Função Personalizada",
@@ -23,10 +26,12 @@
         "chatwootAccount": "Conta Chatwoot",
         "chatwootUser": "Usuário Chatwoot",
         "chatwootTeams": "Chatwoot / Times",
+        "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "teams": "Times / Contas"
     },
     "labels": {
-        "Create ChatwootAgent": "Criar Agente"
+        "Create ChatwootAgent": "Criar Agente",
+        "AI Configuration": "Configuração IA"
     },
     "options": {
         "role": {
@@ -48,6 +53,9 @@
         "password": "Opcional. Se fornecida, um ChatwootUser será criado com essas credenciais para que o agente possa fazer login no Chatwoot imediatamente. Requisitos: mínimo 6 caracteres e pelo menos 1 caractere especial (!@#$%^&*()_+-=[]{}). Se não fornecida, o agente receberá um email de confirmação para definir sua senha.",
         "chatwootAgentId": "O ID do agente no Chatwoot. Este campo é preenchido automaticamente após a sincronização.",
         "autoOffline": "Se o status de disponibilidade do agente está configurado para ficar offline automaticamente quando ausente.",
+        "isAI": "Habilite para configurar este agente como um agente com inteligência artificial.",
+        "aiPrompt": "O prompt do sistema que define o comportamento e as capacidades do agente IA.",
+        "knowledgeBaseCategories": "Selecione categorias da base de conhecimento. Artigos nessas categorias (e suas subcategorias) estarão disponíveis para respostas com IA.",
         "confirmed": "Se o agente confirmou seu endereço de email no Chatwoot.",
         "chatwootUser": "Link para o Usuário Chatwoot no nível da plataforma, se este agente corresponder a um.",
         "customRoleId": "O ID da função personalizada atribuída a este agente no Chatwoot, se houver."

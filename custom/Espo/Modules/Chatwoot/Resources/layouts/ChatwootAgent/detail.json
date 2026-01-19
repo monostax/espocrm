@@ -33,6 +33,12 @@
                 {
                     "name": "confirmed"
                 }
+            ],
+            [
+                {
+                    "name": "isAI"
+                },
+                false
             ]
         ]
     },
@@ -86,6 +92,34 @@
                 },
                 {
                     "name": "modifiedAt"
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "AI Configuration",
+        "label": "AI Configuration",
+        "name": "aiConfiguration",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isTrue",
+                    "attribute": "isAI"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "knowledgeBaseCategories",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "aiPrompt",
+                    "fullWidth": true
                 }
             ]
         ]

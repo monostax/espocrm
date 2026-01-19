@@ -1890,5 +1890,71 @@ public function deleteAgent(
         $this->log->info("Chatwoot: Deleted agent {$agentId} from account {$accountId}");
     }
 }
+
+/**
+ * Assign a conversation to an agent or team in Chatwoot.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $conversationId The Chatwoot conversation ID
+ * @param int|null $assigneeId The agent ID to assign (null to unassign)
+ * @param int|null $teamId The team ID to assign (ignored if assigneeId is present)
+ * @return array<string, mixed> The assigned agent data
+ * @throws Error
+ */
+public function assignConversation(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $conversationId,
+    ?int $assigneeId = null,
+    ?int $teamId = null
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId . '/assignments';
+
+    // Always include assignee_id in the payload - set to 0 to unassign
+    // Chatwoot API requires explicit assignee_id: 0 to remove an assignment
+    $data = [
+        'assignee_id' => $assigneeId ?? 0
+    ];
+    
+    // Add team_id if specified (for team assignment without specific agent)
+    if ($teamId !== null) {
+        $data['team_id'] = $teamId;
+    }
+
+    $payload = json_encode($data);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode assignment data to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to assign conversation in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (assignConversation): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    $assigneeInfo = $assigneeId !== null ? "agent {$assigneeId}" : ($teamId !== null ? "team {$teamId}" : "unassigned");
+    $this->log->info("Chatwoot: Assigned conversation {$conversationId} to {$assigneeInfo} in account {$accountId}");
+
+    return $response['body'];
+}
 }
 

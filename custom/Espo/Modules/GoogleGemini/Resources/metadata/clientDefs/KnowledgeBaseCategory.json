@@ -1,0 +1,16 @@
+{
+    "dynamicLogic": {
+        "fields": {
+            "geminiFileSearchStore": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "aiIndexEnabled"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

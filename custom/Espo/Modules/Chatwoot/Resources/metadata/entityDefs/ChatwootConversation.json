@@ -119,6 +119,11 @@
             "foreign": "chatwootConversations",
             "relationName": "chatwootConversationCAgendamento"
         },
+        "tasks": {
+            "type": "hasChildren",
+            "entity": "Task",
+            "foreign": "parent"
+        },
         "inbox": {
             "type": "belongsTo",
             "entity": "ChatwootInbox",

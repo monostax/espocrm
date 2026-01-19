@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "aiIndexEnabled": "AI Indexing Enabled",
+        "geminiFileSearchStore": "AI Knowledge Store"
+    },
+    "links": {
+        "geminiFileSearchStore": "AI Knowledge Store",
+        "chatwootAgents": "AI Agents"
+    },
+    "labels": {
+        "AI Indexing": "AI Indexing"
+    },
+    "tooltips": {
+        "aiIndexEnabled": "Enable to index all articles in this category for AI-powered search. When enabled, a dedicated knowledge store will be created automatically.",
+        "geminiFileSearchStore": "The AI knowledge store that indexes articles in this category for semantic search."
+    }
+}

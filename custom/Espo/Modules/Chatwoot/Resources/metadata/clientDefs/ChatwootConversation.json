@@ -29,6 +29,7 @@
         },
         "snoozed"
     ],
+    "boolFilterList": ["assignedToMe"],
     "modalViews": {
         "detail": "views/modals/detail"
     },

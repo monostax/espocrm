@@ -32,7 +32,9 @@
         "Create ChatwootConversation": "Create Chatwoot Conversation",
         "View Details": "View Details",
         "Conversations": "Conversations",
-        "Chat": "Chat"
+        "Chat": "Chat",
+        "Assign Agent": "Assign Agent",
+        "Unassigned": "Unassigned"
     },
     "tabs": {
         "Conversation": "Conversation",
@@ -47,6 +49,9 @@
         "No messages yet": "No messages yet",
         "Unable to load conversation": "Unable to load conversation",
         "conversations": "conversations"
+    },
+    "boolFilters": {
+        "assignedToMe": "Assigned (to me)"
     }
 }
 

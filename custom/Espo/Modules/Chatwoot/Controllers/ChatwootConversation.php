@@ -11,6 +11,8 @@ namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Select\SelectBuilderFactory;
 
 class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
@@ -82,8 +84,66 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
 
         return $counts;
     }
+
+    /**
+     * GET ChatwootConversation/action/agentsForAssignment?id={conversationId}
+     * Returns the list of agents available for assignment in the conversation's account.
+     */
+    public function getActionAgentsForAssignment(Request $request): object
+    {
+        $id = $request->getQueryParam('id');
+        
+        if (!$id) {
+            throw new BadRequest('Conversation ID is required.');
+        }
+
+        if (!$this->acl->check('ChatwootConversation', 'read')) {
+            throw new Forbidden();
+        }
+
+        // Get the conversation
+        $conversation = $this->entityManager->getEntityById('ChatwootConversation', $id);
+        
+        if (!$conversation) {
+            throw new NotFound('Conversation not found.');
+        }
+
+        // Check entity-level read permission
+        if (!$this->acl->check($conversation, 'read')) {
+            throw new Forbidden('Access denied.');
+        }
+
+        // Get the account ID from the conversation
+        $accountId = $conversation->get('chatwootAccountId');
+        
+        if (!$accountId) {
+            return (object) ['list' => []];
+        }
+
+        // Fetch agents for this account
+        $agents = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->where(['chatwootAccountId' => $accountId])
+            ->order('name')
+            ->find();
+
+        $list = [];
+        foreach ($agents as $agent) {
+            $list[] = (object) [
+                'id' => $agent->get('chatwootAgentId'),
+                'name' => $agent->get('name'),
+                'availableName' => $agent->get('availableName'),
+                'email' => $agent->get('email'),
+                'availabilityStatus' => $agent->get('availabilityStatus'),
+                'avatarUrl' => $agent->get('avatarUrl'),
+                'role' => $agent->get('role'),
+            ];
+        }
+
+        return (object) [
+            'list' => $list,
+            'currentAssigneeId' => $conversation->get('assigneeId'),
+            'currentAssigneeName' => $conversation->get('assigneeName'),
+        ];
+    }
 }
-
-
-
-

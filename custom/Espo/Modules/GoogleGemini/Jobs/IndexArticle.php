@@ -22,8 +22,8 @@ use Espo\Modules\GoogleGemini\Services\GeminiFileSearchService;
 
 /**
  * Job to index a KnowledgeBaseArticle to Gemini File Search.
- * Uses a per-team File Search Store. Stores are created on-demand and 
- * their Google-generated names are saved in the GeminiFileSearchStore entity.
+ * Uses a per-category File Search Store. Each KnowledgeBaseCategory with
+ * aiIndexEnabled=true has its own GeminiFileSearchStore.
  * 
  * This job is NON-BLOCKING: it uploads content to Gemini and creates
  * GeminiFileSearchStoreUploadOperation entities to track the async operations.
@@ -82,23 +82,21 @@ class IndexArticle implements Job
     /**
      * Index or update an article in Gemini File Search.
      * This method is NON-BLOCKING: it uploads and creates operation tracking entities.
+     * 
+     * Articles are indexed to all KnowledgeBaseCategories that have aiIndexEnabled=true.
      */
     private function indexArticle(Entity $article): void
     {
         $articleId = $article->getId();
-        $teamIds = $article->getLinkMultipleIdList('teams');
+        
+        // Get all categories for this article that have AI indexing enabled
+        $storeInfo = $this->getStoresForArticleCategories($article);
 
-        if (empty($teamIds)) {
-            $this->log->warning("GoogleGemini IndexArticle: Article {$articleId} has no teams, skipping");
-            $this->updateArticleStatus($article, 'Failed', 'Article has no teams assigned');
+        if (empty($storeInfo)) {
+            $this->log->warning("GoogleGemini IndexArticle: Article {$articleId} has no AI-enabled categories, skipping");
+            $this->updateArticleStatus($article, 'NotIndexed', 'No AI-enabled categories');
             return;
         }
-
-        // Use the first team ID as the store
-        $teamId = $teamIds[0];
-
-        // Get or create the store for this team (returns actual Gemini store name)
-        $storeName = $this->getOrCreateStoreForTeam($teamId);
 
         // Delete all previously indexed documents (article body + attachments)
         $this->deleteExistingDocuments($article);
@@ -110,68 +108,79 @@ class IndexArticle implements Job
         $content = $this->buildArticleContent($article);
         $displayName = 'KB: ' . $article->get('name');
 
-        // Prepare metadata
-        $metadata = [
-            'articleId' => $articleId,
-            'articleName' => $article->get('name'),
-            'entityType' => 'KnowledgeBaseArticle',
-            'documentType' => 'articleBody',
-            'teamId' => $teamId,
-        ];
+        // Track the first store for linking (for backwards compatibility)
+        $firstStoreId = null;
 
-        if ($article->get('language')) {
-            $metadata['language'] = $article->get('language');
+        // Upload to each category's store
+        foreach ($storeInfo as $info) {
+            $storeName = $info['storeName'];
+            $categoryId = $info['categoryId'];
+            $storeId = $info['storeId'];
+
+            if ($firstStoreId === null) {
+                $firstStoreId = $storeId;
+            }
+
+            // Prepare metadata
+            $metadata = [
+                'articleId' => $articleId,
+                'articleName' => $article->get('name'),
+                'entityType' => 'KnowledgeBaseArticle',
+                'documentType' => 'articleBody',
+                'categoryId' => $categoryId,
+            ];
+
+            if ($article->get('language')) {
+                $metadata['language'] = $article->get('language');
+            }
+
+            // Upload article body to Gemini
+            $result = $this->geminiService->uploadToFileSearchStore(
+                $content,
+                $displayName,
+                $metadata,
+                'text/plain',
+                null,
+                $storeName
+            );
+
+            if ($result === null) {
+                $this->log->error("GoogleGemini IndexArticle: Upload to store {$storeName} failed for article {$articleId}");
+                continue;
+            }
+
+            if (!isset($result['name'])) {
+                $this->log->error("GoogleGemini IndexArticle: No operation name in response for store {$storeName}");
+                continue;
+            }
+
+            // Create operation entity for article body (NON-BLOCKING)
+            $this->createUploadOperation(
+                $result['name'],
+                $articleId,
+                'ArticleBody',
+                null,
+                null,
+                $article->get('name')
+            );
+
+            // Upload attachments to this store
+            $this->uploadAttachments($article, $storeName, $categoryId);
+
+            $this->log->debug("GoogleGemini IndexArticle: Uploaded {$articleId} to store {$storeName} (category {$categoryId})");
         }
-
-        // Upload article body to Gemini
-        $result = $this->geminiService->uploadToFileSearchStore(
-            $content,
-            $displayName,
-            $metadata,
-            'text/plain',
-            null,
-            $storeName
-        );
-
-        if ($result === null) {
-            throw new \Exception('Upload to Gemini failed');
-        }
-
-        if (!isset($result['name'])) {
-            throw new \Exception('No operation name in response');
-        }
-
-        // Create operation entity for article body (NON-BLOCKING)
-        $this->createUploadOperation(
-            $result['name'],
-            $articleId,
-            'ArticleBody',
-            null,
-            null,
-            $article->get('name')
-        );
-
-        // Upload attachments and create operation entities for each
-        $this->uploadAttachments($article, $storeName, $teamId);
-
-        // Get the local FileSearchStore ID for linking
-        $localStore = $this->entityManager
-            ->getRDBRepository('GeminiFileSearchStore')
-            ->where(['geminiStoreName' => $storeName])
-            ->findOne();
-        $storeId = $localStore ? $localStore->getId() : null;
 
         // Set article status to Pending - ProcessUploadOperations will update to Indexed
-        $this->updateArticleStatus($article, 'Pending', null, null, $storeId);
+        $this->updateArticleStatus($article, 'Pending', null, null, $firstStoreId);
 
-        $this->log->info("GoogleGemini IndexArticle: Uploaded {$articleId}, operations created for async processing");
+        $this->log->info("GoogleGemini IndexArticle: Uploaded {$articleId} to " . count($storeInfo) . " store(s), operations created for async processing");
     }
 
     /**
      * Upload all attachments for an article and create operation entities.
      * NON-BLOCKING: creates operation entities instead of waiting.
      */
-    private function uploadAttachments(Entity $article, string $storeName, string $teamId): void
+    private function uploadAttachments(Entity $article, string $storeName, string $categoryId): void
     {
         $articleId = $article->getId();
 
@@ -184,7 +193,7 @@ class IndexArticle implements Job
         foreach ($attachments as $attachment) {
             /** @var Attachment $attachment */
             try {
-                $this->uploadSingleAttachment($attachment, $article, $storeName, $teamId);
+                $this->uploadSingleAttachment($attachment, $article, $storeName, $categoryId);
             } catch (\Exception $e) {
                 $this->log->error(
                     "GoogleGemini IndexArticle: Failed to upload attachment {$attachment->getId()} " .
@@ -199,7 +208,7 @@ class IndexArticle implements Job
      * Upload a single attachment file and create an operation entity.
      * NON-BLOCKING: creates operation entity instead of waiting.
      */
-    private function uploadSingleAttachment(Attachment $attachment, Entity $article, string $storeName, string $teamId): void
+    private function uploadSingleAttachment(Attachment $attachment, Entity $article, string $storeName, string $categoryId): void
     {
         $attachmentId = $attachment->getId();
         $attachmentName = $attachment->getName() ?? 'unnamed';
@@ -229,7 +238,7 @@ class IndexArticle implements Job
             'attachmentName' => $attachmentName,
             'entityType' => 'KnowledgeBaseArticle',
             'documentType' => 'attachment',
-            'teamId' => $teamId,
+            'categoryId' => $categoryId,
         ];
 
         if ($article->get('language')) {
@@ -277,10 +286,7 @@ class IndexArticle implements Job
         ?string $attachmentName,
         string $displayName
     ): void {
-        $article = $this->entityManager->getEntityById('KnowledgeBaseArticle', $articleId);
-        $teamIds = $article ? $article->getLinkMultipleIdList('teams') : [];
-
-        $operation = $this->entityManager->createEntity('GeminiFileSearchStoreUploadOperation', [
+        $this->entityManager->createEntity('GeminiFileSearchStoreUploadOperation', [
             'name' => $displayName,
             'operationName' => $operationName,
             'status' => 'Pending',
@@ -293,16 +299,6 @@ class IndexArticle implements Job
             'silent' => true,
             'skipCreatedBy' => true,
         ]);
-
-        // Link to same teams as the article
-        if (!empty($teamIds)) {
-            foreach ($teamIds as $teamId) {
-                $this->entityManager
-                    ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
-                    ->getRelation($operation, 'teams')
-                    ->relateById($teamId);
-            }
-        }
 
         $this->log->debug("GoogleGemini IndexArticle: Created operation entity for {$operationName}");
     }
@@ -461,121 +457,53 @@ class IndexArticle implements Job
     }
 
     /**
-     * Get or create a File Search Store for the team.
-     * Returns the actual Gemini store name (e.g., "fileSearchStores/knowledge-base-teamname-abc123def456").
+     * Get all stores for the article's categories that have AI indexing enabled.
+     * Returns array of ['storeName' => string, 'storeId' => string, 'categoryId' => string].
      */
-    private function getOrCreateStoreForTeam(string $teamId): string
+    private function getStoresForArticleCategories(Entity $article): array
     {
-        $apiKey = getenv('GOOGLE_GENERATIVE_AI_API_KEY');
-        
-        if (!$apiKey) {
-            throw new \Exception('GOOGLE_GENERATIVE_AI_API_KEY not set');
-        }
+        $articleId = $article->getId();
+        $storeInfo = [];
 
-        // First, check if we already have a store for this team in our database
-        $existingStore = $this->entityManager
-            ->getRDBRepository('GeminiFileSearchStore')
-            ->join('teams')
-            ->where(['teams.id' => $teamId])
-            ->findOne();
+        // Get all categories for this article
+        $categories = $this->entityManager
+            ->getRDBRepository('KnowledgeBaseArticle')
+            ->getRelation($article, 'categories')
+            ->find();
 
-        if ($existingStore) {
-            $storeName = $existingStore->get('geminiStoreName');
-            if ($storeName) {
-                // Verify the store actually exists in Gemini
-                if ($this->verifyStoreExists($storeName, $apiKey)) {
-                    return $storeName;
-                }
-                
-                // Store doesn't exist in Gemini, delete the stale record
-                $this->log->warning("GoogleGemini: Store {$storeName} not found in Gemini, removing stale record");
-                $this->entityManager->removeEntity($existingStore);
+        foreach ($categories as $category) {
+            // Check if this category has AI indexing enabled
+            if (!$category->get('aiIndexEnabled')) {
+                continue;
             }
+
+            // Get the linked GeminiFileSearchStore
+            $storeId = $category->get('geminiFileSearchStoreId');
+            if (!$storeId) {
+                $this->log->warning("GoogleGemini IndexArticle: Category {$category->getId()} has aiIndexEnabled but no store");
+                continue;
+            }
+
+            $store = $this->entityManager->getEntityById('GeminiFileSearchStore', $storeId);
+            if (!$store) {
+                $this->log->warning("GoogleGemini IndexArticle: Store {$storeId} not found for category {$category->getId()}");
+                continue;
+            }
+
+            $storeName = $store->get('geminiStoreName');
+            if (!$storeName) {
+                $this->log->warning("GoogleGemini IndexArticle: Store {$storeId} has no geminiStoreName");
+                continue;
+            }
+
+            $storeInfo[] = [
+                'storeName' => $storeName,
+                'storeId' => $storeId,
+                'categoryId' => $category->getId(),
+            ];
         }
 
-        // No valid store exists, create a new one via Gemini API
-        // Use team-{teamId} as displayName so the generated store name is predictable
-        $createUrl = self::API_BASE . '/fileSearchStores?key=' . $apiKey;
-        
-        $ch = curl_init($createUrl);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'displayName' => "team-{$teamId}",
-        ]));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 && $httpCode !== 201) {
-            $this->log->error("GoogleGemini: Failed to create store for team {$teamId}: HTTP {$httpCode}: {$response}");
-            throw new \Exception("Failed to create store: HTTP {$httpCode}");
-        }
-
-        $result = json_decode($response, true);
-        
-        if (!$result || !isset($result['name'])) {
-            $this->log->error("GoogleGemini: Invalid response when creating store: {$response}");
-            throw new \Exception('Invalid response from Gemini API - no store name returned');
-        }
-
-        $storeName = $result['name'];
-        $this->log->info("GoogleGemini: Created store {$storeName} for team {$teamId}");
-
-        // Save the store to our database
-        $this->syncLocalStore($teamId, $storeName);
-
-        return $storeName;
-    }
-
-    /**
-     * Verify a File Search Store exists in Gemini.
-     */
-    private function verifyStoreExists(string $storeName, string $apiKey): bool
-    {
-        $url = self::API_BASE . '/' . $storeName . '?key=' . $apiKey;
-        
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        return $httpCode === 200;
-    }
-
-    /**
-     * Create or update local GeminiFileSearchStore entity.
-     */
-    private function syncLocalStore(string $teamId, string $storeName): void
-    {
-        $existing = $this->entityManager
-            ->getRDBRepository('GeminiFileSearchStore')
-            ->where(['geminiStoreName' => $storeName])
-            ->findOne();
-
-        if ($existing) {
-            return;
-        }
-
-        $entity = $this->entityManager->createEntity('GeminiFileSearchStore', [
-            'name' => "team-{$teamId}",
-            'geminiStoreName' => $storeName,
-            'status' => 'Active',
-            'createdById' => 'system',
-        ], [
-            'silent' => true,
-            'skipCreatedBy' => true,
-            'skipStream' => true,
-        ]);
-
-        // Link to team
-        $this->entityManager
-            ->getRDBRepository('GeminiFileSearchStore')
-            ->getRelation($entity, 'teams')
-            ->relateById($teamId);
+        return $storeInfo;
     }
 
     /**

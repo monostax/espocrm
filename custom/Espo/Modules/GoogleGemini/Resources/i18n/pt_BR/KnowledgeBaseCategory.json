@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "aiIndexEnabled": "Indexação IA Habilitada",
+        "geminiFileSearchStore": "Base de Conhecimento IA"
+    },
+    "links": {
+        "geminiFileSearchStore": "Base de Conhecimento IA",
+        "chatwootAgents": "Agentes IA"
+    },
+    "labels": {
+        "AI Indexing": "Indexação IA"
+    },
+    "tooltips": {
+        "aiIndexEnabled": "Habilite para indexar todos os artigos desta categoria para busca com IA. Quando habilitado, uma base de conhecimento dedicada será criada automaticamente.",
+        "geminiFileSearchStore": "A base de conhecimento IA que indexa artigos desta categoria para busca semântica."
+    }
+}

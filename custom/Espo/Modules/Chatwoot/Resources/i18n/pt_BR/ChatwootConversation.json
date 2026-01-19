@@ -44,7 +44,9 @@
         "Create ChatwootConversation": "Criar Conversa Chatwoot",
         "View Details": "Ver Detalhes",
         "Conversations": "Conversas",
-        "Chat": "Chat"
+        "Chat": "Chat",
+        "Assign Agent": "Atribuir Agente",
+        "Unassigned": "Não Atribuído"
     },
     "tabs": {
         "Conversation": "Conversa",
@@ -66,6 +68,9 @@
         "pending": "Pendentes",
         "resolved": "Resolvidas",
         "snoozed": "Adiadas"
+    },
+    "boolFilters": {
+        "assignedToMe": "Atribuídas (a mim)"
     }
 }
 

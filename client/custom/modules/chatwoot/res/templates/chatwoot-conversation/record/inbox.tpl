@@ -374,12 +374,70 @@
     display: flex;
 }
 
-.inbox-status-dropdown .btn {
+.inbox-status-dropdown .btn,
+.inbox-agent-dropdown .btn {
     font-size: 13px;
 }
 
-.inbox-status-dropdown .dropdown-menu a {
+.inbox-status-dropdown .dropdown-menu a,
+.inbox-agent-dropdown .dropdown-menu a {
     cursor: pointer;
+}
+
+/* Agent dropdown styles */
+.inbox-agent-dropdown .btn i {
+    margin-right: 6px;
+}
+
+.inbox-agent-menu {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.inbox-agent-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+}
+
+.inbox-agent-menu li a.active {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+.inbox-agent-menu li a:hover {
+    background: #f9fafb;
+}
+
+.inbox-agent-menu .agent-availability {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.inbox-agent-menu .agent-availability.available { background-color: #6fc374; }
+.inbox-agent-menu .agent-availability.busy { background-color: #e4a133; }
+.inbox-agent-menu .agent-availability.offline { background-color: #9ca3af; }
+
+.inbox-agent-menu .agent-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inbox-agent-menu .agent-role {
+    font-size: 10px;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.inbox-agent-menu .divider {
+    margin: 4px 0;
+    border-top: 1px solid #e5e7eb;
 }
 
 .inbox-status-indicator {
@@ -558,10 +616,27 @@
                 <span>{{translate 'CAgendamento' category='scopeNamesPlural'}}</span>
                 <span class="inbox-tab-count" data-scope="agendamentos"></span>
             </div>
+            <div class="inbox-tab" data-tab="tasks">
+                <i class="far fa-check-square"></i>
+                <span>{{translate 'Task' category='scopeNamesPlural'}}</span>
+                <span class="inbox-tab-count" data-scope="tasks"></span>
+            </div>
         </div>
         
         <div class="inbox-tab-content active" data-tab="chat">
             <div class="inbox-chat-toolbar">
+                <div class="inbox-agent-dropdown btn-group">
+                    <button class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                        <i class="fas fa-user"></i>
+                        <span class="inbox-agent-label">{{translate 'Unassigned' scope='ChatwootConversation' category='labels'}}</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu inbox-agent-menu">
+                        <li class="inbox-agent-loading">
+                            <a role="button"><i class="fas fa-spinner fa-spin"></i> {{translate 'Loading...' scope='Global'}}</a>
+                        </li>
+                    </ul>
+                </div>
                 <div class="inbox-status-dropdown btn-group">
                     <button class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
                         <span class="inbox-status-label">{{translate 'Status'}}</span>
@@ -601,6 +676,18 @@
                 <div class="inbox-entity-search-container"></div>
                 <div class="inbox-entity-create-btn">
                     <button class="btn btn-default btn-create-agendamento" title="{{translate 'Create'}}">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="inbox-entity-list-container"></div>
+        </div>
+        
+        <div class="inbox-tab-content" data-tab="tasks">
+            <div class="inbox-entity-search-wrapper">
+                <div class="inbox-entity-search-container"></div>
+                <div class="inbox-entity-create-btn">
+                    <button class="btn btn-default btn-create-task" title="{{translate 'Create'}}">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>

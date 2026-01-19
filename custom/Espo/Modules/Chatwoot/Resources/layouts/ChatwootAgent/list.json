@@ -10,7 +10,11 @@
     },
     {
         "name": "role",
-        "width": 12
+        "width": 10
+    },
+    {
+        "name": "isAI",
+        "width": 6
     },
     {
         "name": "availabilityStatus",

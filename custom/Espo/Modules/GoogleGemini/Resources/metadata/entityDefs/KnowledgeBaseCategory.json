@@ -1,0 +1,27 @@
+{
+    "fields": {
+        "aiIndexEnabled": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "geminiFileSearchStore": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/link"
+        }
+    },
+    "links": {
+        "geminiFileSearchStore": {
+            "type": "belongsTo",
+            "entity": "GeminiFileSearchStore",
+            "foreign": "knowledgeBaseCategory"
+        },
+        "chatwootAgents": {
+            "type": "hasMany",
+            "entity": "ChatwootAgent",
+            "relationName": "chatwootAgentKnowledgeBaseCategory",
+            "foreign": "knowledgeBaseCategories"
+        }
+    }
+}

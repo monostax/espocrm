@@ -203,6 +203,8 @@ class SyncAgentsFromChatwoot implements JobDataLess
         }
     }
 
+    private const AI_PREFIX = '✦ ';
+
     /**
      * Update an existing ChatwootAgent from Chatwoot data.
      *
@@ -210,7 +212,14 @@ class SyncAgentsFromChatwoot implements JobDataLess
      */
     private function updateExistingAgent(Entity $agent, array $chatwootAgent, string $platformId, array $teamsIds = []): void
     {
-        $agent->set('name', $chatwootAgent['name'] ?? 'Agent #' . $chatwootAgent['id']);
+        $name = $chatwootAgent['name'] ?? 'Agent #' . $chatwootAgent['id'];
+        
+        // Preserve AI prefix if agent is configured as AI
+        if ($agent->get('isAI')) {
+            $name = self::AI_PREFIX . $name;
+        }
+        
+        $agent->set('name', $name);
         $agent->set('email', $chatwootAgent['email'] ?? null);
         $agent->set('availableName', $chatwootAgent['available_name'] ?? null);
         $agent->set('role', $chatwootAgent['role'] ?? 'agent');

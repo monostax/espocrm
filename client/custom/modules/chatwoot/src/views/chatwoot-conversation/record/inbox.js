@@ -62,10 +62,24 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 e.preventDefault();
                 this.actionCreateAgendamento();
             },
+            "click .btn-create-task": function (e) {
+                e.preventDefault();
+                this.actionCreateTask();
+            },
             'click [data-action="changeStatus"]': function (e) {
                 e.preventDefault();
                 const status = $(e.currentTarget).data("status");
                 this.actionChangeStatus(status);
+            },
+            'click [data-action="changeAgent"]': function (e) {
+                e.preventDefault();
+                const agentId = $(e.currentTarget).data("agent-id");
+                const agentName = $(e.currentTarget).data("agent-name");
+                this.actionChangeAgent(agentId, agentName);
+            },
+            'click .inbox-agent-dropdown .dropdown-toggle': function (e) {
+                // Load agents when dropdown is opened
+                this.loadAgentsForDropdown();
             },
         },
 
@@ -89,6 +103,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 "chatwootConversationId",
                 "chatwootAccountId",
                 "messagesCount",
+                "assigneeId",
                 "assigneeName",
             ];
 
@@ -372,15 +387,140 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
         /**
          * Show/hide the chat toolbar
          */
-        updateChatToolbar: function (show, status) {
+        updateChatToolbar: function (show, status, assigneeName) {
             const $toolbar = this.$el.find(".inbox-chat-toolbar");
 
             if (show) {
                 $toolbar.addClass("visible");
                 this.updateStatusLabel(status);
+                this.updateAgentLabel(assigneeName);
             } else {
                 $toolbar.removeClass("visible");
             }
+        },
+
+        /**
+         * Update the agent label in the toolbar
+         */
+        updateAgentLabel: function (agentName) {
+            const $label = this.$el.find(".inbox-agent-dropdown .inbox-agent-label");
+            if (agentName) {
+                $label.text(agentName);
+            } else {
+                $label.text(this.translate("Unassigned", "labels", "ChatwootConversation"));
+            }
+        },
+
+        /**
+         * Load agents for the dropdown when it's opened
+         */
+        loadAgentsForDropdown: function () {
+            const model = this.getSelectedModel();
+            if (!model) return;
+
+            const $menu = this.$el.find(".inbox-agent-menu");
+            const currentAssigneeId = model.get("assigneeId");
+
+            // Show loading state
+            $menu.html(
+                '<li class="inbox-agent-loading"><a role="button"><i class="fas fa-spinner fa-spin"></i> ' +
+                this.translate("Loading...", "messages") +
+                '</a></li>'
+            );
+
+            // Fetch agents from server
+            const url = "ChatwootConversation/action/agentsForAssignment?id=" + model.id;
+            
+            Espo.Ajax.getRequest(url)
+                .then((response) => {
+                    this.populateAgentDropdown(response.list || [], currentAssigneeId);
+                })
+                .catch(() => {
+                    $menu.html(
+                        '<li><a role="button" class="text-danger">' +
+                        this.translate("Error") +
+                        '</a></li>'
+                    );
+                });
+        },
+
+        /**
+         * Populate the agent dropdown with available agents
+         */
+        populateAgentDropdown: function (agents, currentAssigneeId) {
+            const $menu = this.$el.find(".inbox-agent-menu");
+            let html = "";
+
+            // Add "Unassigned" option
+            const unassignedClass = !currentAssigneeId ? "active" : "";
+            html += '<li><a role="button" class="action ' + unassignedClass + '" data-action="changeAgent" data-agent-id="" data-agent-name="">';
+            html += '<span class="agent-availability offline"></span>';
+            html += '<span class="agent-name">' + this.translate("Unassigned", "labels", "ChatwootConversation") + '</span>';
+            html += '</a></li>';
+
+            if (agents.length > 0) {
+                html += '<li class="divider"></li>';
+            }
+
+            // Add agents
+            agents.forEach((agent) => {
+                const isActive = agent.id === currentAssigneeId;
+                const activeClass = isActive ? "active" : "";
+                const displayName = agent.availableName || agent.name;
+                const status = agent.availabilityStatus || "offline";
+
+                html += '<li><a role="button" class="action ' + activeClass + '" data-action="changeAgent" data-agent-id="' + agent.id + '" data-agent-name="' + this.escapeHtml(displayName) + '">';
+                html += '<span class="agent-availability ' + status + '"></span>';
+                html += '<span class="agent-name">' + this.escapeHtml(displayName) + '</span>';
+                if (agent.role === "administrator") {
+                    html += '<span class="agent-role">Admin</span>';
+                }
+                html += '</a></li>';
+            });
+
+            $menu.html(html);
+        },
+
+        /**
+         * Escape HTML special characters
+         */
+        escapeHtml: function (text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        },
+
+        /**
+         * Change the assigned agent for the selected conversation
+         */
+        actionChangeAgent: function (agentId, agentName) {
+            const model = this.getSelectedModel();
+            if (!model) return;
+
+            const currentAssigneeId = model.get("assigneeId");
+            const newAssigneeId = agentId ? parseInt(agentId, 10) : null;
+
+            // Skip if same agent
+            if (currentAssigneeId === newAssigneeId) return;
+
+            Espo.Ui.notify(this.translate("Saving..."));
+
+            model
+                .save(
+                    { 
+                        assigneeId: newAssigneeId,
+                        assigneeName: agentName || null
+                    }, 
+                    { patch: true }
+                )
+                .then(() => {
+                    Espo.Ui.success(this.translate("Saved"));
+                    this.updateAgentLabel(agentName);
+                })
+                .catch((error) => {
+                    Espo.Ui.error(this.translate("Error"));
+                });
         },
 
         /**
@@ -392,13 +532,16 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             // Clear entity list views
             this.clearView("opportunitiesList");
             this.clearView("agendamentosList");
+            this.clearView("tasksList");
             this.clearView("opportunitiesSearch");
             this.clearView("agendamentosSearch");
+            this.clearView("tasksSearch");
             this.currentListModelId = {};
 
             // Reset tab counts
             this.setTabCount("opportunities", 0);
             this.setTabCount("agendamentos", 0);
+            this.setTabCount("tasks", 0);
 
             // Hide chat toolbar
             this.updateChatToolbar(false);
@@ -518,6 +661,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             // Clear entity list views (they'll be re-created when tab is opened)
             this.clearView("opportunitiesList");
             this.clearView("agendamentosList");
+            this.clearView("tasksList");
             this.currentListModelId = {};
 
             // Update visual selection
@@ -531,8 +675,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             if (model) {
                 this.loadConversationInIframe(model);
 
-                // Update chat toolbar with current status
-                this.updateChatToolbar(true, model.get("status"));
+                // Update chat toolbar with current status and assignee
+                this.updateChatToolbar(true, model.get("status"), model.get("assigneeName"));
 
                 // Update tab counts
                 this.updateTabCounts(model);
@@ -542,6 +686,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     this.renderEntityListView("opportunities", "Opportunity");
                 } else if (this.activeTab === "agendamentos") {
                     this.renderEntityListView("agendamentos", "CAgendamento");
+                } else if (this.activeTab === "tasks") {
+                    this.renderEntityListView("tasks", "Task");
                 }
             }
         },
@@ -567,6 +713,16 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 model.id,
                 (count) => {
                     this.setTabCount("agendamentos", count);
+                }
+            );
+
+            // Fetch counts for tasks
+            this.fetchRelatedCount(
+                "tasks",
+                "Task",
+                model.id,
+                (count) => {
+                    this.setTabCount("tasks", count);
                 }
             );
         },
@@ -917,6 +1073,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 this.renderEntityListView("opportunities", "Opportunity");
             } else if (tab === "agendamentos") {
                 this.renderEntityListView("agendamentos", "CAgendamento");
+            } else if (tab === "tasks") {
+                this.renderEntityListView("tasks", "Task");
             }
         },
 
@@ -955,7 +1113,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             // Get the link name based on scope
             const linkName =
-                scope === "Opportunity" ? "opportunities" : "cAgendamentos";
+                scope === "Opportunity" ? "opportunities" : 
+                scope === "CAgendamento" ? "cAgendamentos" : "tasks";
 
             // Use the relationship URL to fetch related records
             // URL format: ChatwootConversation/{id}/{link}
@@ -1055,7 +1214,9 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                         const countKey =
                                             viewKey === "opportunities"
                                                 ? "opportunities"
-                                                : "cAgendamentos";
+                                                : viewKey === "agendamentos"
+                                                ? "cAgendamentos"
+                                                : "tasks";
                                         this.fetchRelatedCount(
                                             countKey,
                                             scope,
@@ -1200,6 +1361,52 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             model.id,
                             (count) => {
                                 this.setTabCount("agendamentos", count);
+                            }
+                        );
+                    });
+                }
+            );
+        },
+
+        /**
+         * Create a new Task linked to the selected conversation
+         */
+        actionCreateTask: function () {
+            const model = this.getSelectedModel();
+            if (!model) return;
+
+            const attributes = {
+                parentType: "ChatwootConversation",
+                parentId: model.id,
+                parentName: model.get("name"),
+            };
+
+            Espo.Ui.notify(" ... ");
+
+            this.createView(
+                "quickCreateTask",
+                "views/modals/edit",
+                {
+                    scope: "Task",
+                    attributes: attributes,
+                    fullFormDisabled: true,
+                    layoutName: "detailSmall",
+                    sideDisabled: true,
+                    bottomDisabled: true,
+                },
+                (view) => {
+                    Espo.Ui.notify(false);
+                    view.render();
+
+                    this.listenToOnce(view, "after:save", () => {
+                        // Refresh the list view and count
+                        this.refreshEntityListView("tasks");
+                        this.fetchRelatedCount(
+                            "tasks",
+                            "Task",
+                            model.id,
+                            (count) => {
+                                this.setTabCount("tasks", count);
                             }
                         );
                     });

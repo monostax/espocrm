@@ -17,5 +17,29 @@
     ],
     "boolFilterList": [
         "onlyMy"
-    ]
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "aiPrompt": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
+            "knowledgeBaseCategories": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            }
+        }
+    }
 }

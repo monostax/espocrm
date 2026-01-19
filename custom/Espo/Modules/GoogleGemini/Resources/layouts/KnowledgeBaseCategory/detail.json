@@ -1,0 +1,32 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "parent"
+                }
+            ],
+            [
+                {
+                    "name": "description"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "AI Indexing",
+        "rows": [
+            [
+                {
+                    "name": "aiIndexEnabled"
+                },
+                {
+                    "name": "geminiFileSearchStore"
+                }
+            ]
+        ]
+    }
+]

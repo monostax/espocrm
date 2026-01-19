@@ -5,6 +5,9 @@
         "resolved": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Resolved",
         "snoozed": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Snoozed"
     },
+    "boolFilterClassNameMap": {
+        "assignedToMe": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\BoolFilters\\AssignedToMe"
+    },
     "textFilterUseContainsAttributeList": ["name", "contactDisplayName", "contactPhoneNumber", "messages.content"]
 }
 
