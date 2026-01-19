@@ -8,25 +8,15 @@
         "width": 25
     },
     {
-        "name": "account",
+        "name": "platform",
         "width": 20
     },
     {
-        "name": "role",
-        "width": 10
-    },
-    {
         "name": "chatwootUserId",
-        "width": 10
+        "width": 15
     },
     {
         "name": "createdAt",
-        "width": 15
+        "width": 20
     }
 ]
-
-
-
-
-
-

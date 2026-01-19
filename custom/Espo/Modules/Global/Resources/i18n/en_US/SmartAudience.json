@@ -58,7 +58,7 @@
         }
     },
     "tooltips": {
-        "report": "Select a Report to use as pre-filters. The Report must be of type 'List' and target the same entity type.",
+        "report": "Select a List Report to use as pre-filters. Only 'List' type reports are supported (not Grid). The report must target the same entity type (e.g., Conversation).",
         "classificationPrompt": "Describe in natural language who belongs to this audience. The AI will evaluate each candidate from the Report.",
         "exitRule": "When should a conversation exit this audience automatically.",
         "agentEnabled": "Enable autonomous agent to take actions on conversations in this audience.",

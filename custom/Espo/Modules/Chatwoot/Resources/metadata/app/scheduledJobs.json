@@ -16,6 +16,18 @@
         "isSystem": false,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncConversationsFromChatwoot"
+    },
+    "SyncAgentsFromChatwoot": {
+        "name": "Sync Agents from Chatwoot",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAgentsFromChatwoot"
+    },
+    "SyncTeamsFromChatwoot": {
+        "name": "Sync Teams from Chatwoot",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncTeamsFromChatwoot"
     }
 }
 

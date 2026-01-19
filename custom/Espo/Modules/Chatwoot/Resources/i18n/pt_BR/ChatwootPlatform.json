@@ -6,7 +6,8 @@
         "teams": "Times / Contas"
     },
     "links": {
-        "accounts": "Contas",
+        "accounts": "Chatwoot / Contas",
+        "users": "Chatwoot / Usuários",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"

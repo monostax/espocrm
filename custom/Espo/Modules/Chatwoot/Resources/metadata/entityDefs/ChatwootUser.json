@@ -19,7 +19,7 @@
             "required": true,
             "tooltip": true
         },
-        "account": {
+        "platform": {
             "type": "link",
             "required": true
         },
@@ -28,12 +28,6 @@
             "required": false,
             "view": "views/fields/assigned-user",
             "tooltip": true
-        },
-        "role": {
-            "type": "enum",
-            "options": ["agent", "administrator"],
-            "default": "agent",
-            "required": true
         },
         "chatwootUserId": {
             "type": "int",
@@ -64,10 +58,15 @@
         }
     },
     "links": {
-        "account": {
+        "platform": {
             "type": "belongsTo",
-            "entity": "ChatwootAccount",
+            "entity": "ChatwootPlatform",
             "foreign": "users"
+        },
+        "agents": {
+            "type": "hasMany",
+            "entity": "ChatwootAgent",
+            "foreign": "chatwootUser"
         },
         "assignedUser": {
             "type": "belongsTo",
@@ -96,11 +95,11 @@
         "name": {
             "columns": ["name", "deleted"]
         },
-        "email": {
-            "columns": ["deleted"]
-        },
         "assignedUser": {
             "columns": ["assignedUserId", "deleted"]
+        },
+        "platformId": {
+            "columns": ["platformId", "deleted"]
         },
         "createdAt": {
             "columns": ["createdAt"]
@@ -111,4 +110,3 @@
         }
     }
 }
-

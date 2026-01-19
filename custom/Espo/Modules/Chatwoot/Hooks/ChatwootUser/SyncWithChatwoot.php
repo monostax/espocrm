@@ -33,7 +33,8 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
  * Hook to synchronize ChatwootUser with Chatwoot Platform API.
- * Creates user on Chatwoot AND attaches to account BEFORE saving to database.
+ * Creates user on Chatwoot BEFORE saving to database.
+ * ChatwootUser is now platform-level - attaching to accounts is done via ChatwootAgent.
  * This ensures the database only contains users that fully exist in Chatwoot.
  */
 class SyncWithChatwoot implements CreateHook
@@ -47,9 +48,9 @@ class SyncWithChatwoot implements CreateHook
     ) {}
 
     /**
-     * Create user on Chatwoot AND attach to account BEFORE entity is saved to database.
+     * Create user on Chatwoot BEFORE entity is saved to database.
      * The entity will be populated with chatwootUserId before the INSERT.
-     * If either operation fails, an exception is thrown and nothing is saved.
+     * Account attachment is now handled by ChatwootAgent creation.
      * 
      * @throws Error
      */
@@ -60,29 +61,16 @@ class SyncWithChatwoot implements CreateHook
             return;
         }
 
-        // Skip if no account is linked (should have been caught by validation)
-        $accountId = $entity->get('accountId');
-        if (!$accountId) {
-            throw new Error('Account is required for ChatwootUser.');
+        // Skip if no platform is linked (should have been caught by validation)
+        $platformId = $entity->get('platformId');
+        if (!$platformId) {
+            throw new Error('Platform is required for ChatwootUser.');
         }
 
         $createdUserId = null;
 
         try {
-            // Get the account entity
-            $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-            
-            if (!$account) {
-                throw new Error('ChatwootAccount not found: ' . $accountId);
-            }
-
-            $chatwootAccountId = $account->get('chatwootAccountId');
-            if (!$chatwootAccountId) {
-                throw new Error('ChatwootAccount has not been synchronized with Chatwoot.');
-            }
-
-            // Get platform from account
-            $platformId = $account->get('platformId');
+            // Get the platform entity
             $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
             
             if (!$platform) {
@@ -101,7 +89,7 @@ class SyncWithChatwoot implements CreateHook
                 throw new Error('ChatwootPlatform does not have an access token.');
             }
 
-            // STEP 1: Create user on Chatwoot
+            // Create user on Chatwoot Platform API
             $this->log->info('Creating Chatwoot user: ' . $entity->get('email'));
             
             $userData = $this->prepareUserData($entity);
@@ -116,27 +104,11 @@ class SyncWithChatwoot implements CreateHook
             
             $this->log->info('Chatwoot user created successfully with ID: ' . $chatwootUserId);
 
-            // STEP 2: Attach user to account
-            $this->log->info("Attaching user $chatwootUserId to account $chatwootAccountId");
-            
-            $role = $entity->get('role') ?? 'agent';
-            $this->apiClient->attachUserToAccount(
-                $platformUrl,
-                $accessToken,
-                $chatwootAccountId,
-                $chatwootUserId,
-                $role
-            );
-
-            $this->log->info('User successfully attached to account');
-
-            // STEP 3: Set chatwootUserId on entity BEFORE database insert
+            // Set chatwootUserId on entity BEFORE database insert
             $entity->set('chatwootUserId', $chatwootUserId);
 
             $this->log->info(
-                'Successfully prepared Chatwoot user ' . 
-                $chatwootUserId . ' attached to account ' . $chatwootAccountId .
-                ' for database insert'
+                'Successfully prepared Chatwoot user ' . $chatwootUserId . ' for database insert'
             );
 
         } catch (\Exception $e) {

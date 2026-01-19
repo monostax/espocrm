@@ -1,0 +1,93 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "email"
+                }
+            ],
+            [
+                {
+                    "name": "password"
+                },
+                {
+                    "name": "chatwootAccount"
+                }
+            ],
+            [
+                {
+                    "name": "role"
+                },
+                {
+                    "name": "availabilityStatus"
+                }
+            ],
+            [
+                {
+                    "name": "autoOffline"
+                },
+                {
+                    "name": "confirmed"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Links",
+        "rows": [
+            [
+                {
+                    "name": "chatwootUser"
+                },
+                {
+                    "name": "avatarUrl"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootTeams"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "chatwootAgentId"
+                },
+                {
+                    "name": "customRoleId"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Sync",
+        "rows": [
+            [
+                {
+                    "name": "syncStatus"
+                },
+                {
+                    "name": "lastSyncedAt"
+                }
+            ],
+            [
+                {
+                    "name": "lastSyncError",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
+                }
+            ]
+        ]
+    }
+]

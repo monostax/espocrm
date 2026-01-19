@@ -9,21 +9,18 @@
     },
     {
         "name": "allowAutoAssign",
-        "width": 15
+        "width": 12
     },
     {
         "name": "chatwootTeamId",
-        "width": 15
+        "width": 12
     },
     {
-        "name": "isMember",
+        "name": "syncStatus",
         "width": 10
     },
     {
         "name": "createdAt",
-        "width": 15
+        "width": 21
     }
 ]
-
-
-

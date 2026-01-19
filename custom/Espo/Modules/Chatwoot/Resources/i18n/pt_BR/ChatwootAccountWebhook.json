@@ -8,7 +8,9 @@
         "teams": "Times / Contas"
     },
     "links": {
-        "account": "Conta Chatwoot",
+        "account": "Chatwoot / Conta",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {

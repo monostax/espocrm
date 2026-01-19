@@ -747,6 +747,45 @@ class ChatwootApiClient
     /* -------------------------------------------------------------------------- */
 
     /**
+     * List all teams in a Chatwoot account.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @return array<int, array<string, mixed>> List of teams
+     * @throws Error
+     */
+    public function listTeams(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/teams';
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to list teams from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (listTeams): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
      * Create a team in a Chatwoot account.
      *
      * @param string $platformUrl The base URL of the Chatwoot platform
@@ -927,6 +966,145 @@ class ChatwootApiClient
         // Log if team was already deleted
         if ($response['code'] === 404) {
             $this->log->info("Team $teamId was already deleted from account $accountId or doesn't exist");
+        }
+    }
+
+    /**
+     * List all members of a team.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $teamId The Chatwoot team ID
+     * @return array<int, array<string, mixed>> List of team members
+     * @throws Error
+     */
+    public function listTeamMembers(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $teamId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/teams/' . $teamId . '/team_members';
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to list team members from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (listTeamMembers): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Add agents to a team.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $teamId The Chatwoot team ID
+     * @param array<int> $userIds Array of Chatwoot user IDs to add
+     * @return array<int, array<string, mixed>> List of added team members
+     * @throws Error
+     */
+    public function addTeamMembers(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $teamId,
+        array $userIds
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/teams/' . $teamId . '/team_members';
+
+        $payload = json_encode(['user_ids' => $userIds]);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode user IDs to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to add team members in Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (addTeamMembers): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Remove agents from a team.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $teamId The Chatwoot team ID
+     * @param array<int> $userIds Array of Chatwoot user IDs to remove
+     * @return void
+     * @throws Error
+     */
+    public function removeTeamMembers(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $teamId,
+        array $userIds
+    ): void {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/teams/' . $teamId . '/team_members';
+
+        $payload = json_encode(['user_ids' => $userIds]);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode user IDs to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'DELETE', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to remove team members from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (removeTeamMembers): ' . json_encode($response));
+            throw new Error($errorMsg);
         }
     }
 
@@ -1519,6 +1697,198 @@ public function toggleConversationStatus(
     $this->log->info("Chatwoot: Toggled conversation {$conversationId} status to '{$status}' for account {$accountId}");
 
     return $response['body'];
+}
+
+/* -------------------------------------------------------------------------- */
+/*                    Agent API Methods (Account-level API)                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * List all agents in a Chatwoot account.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @return array<int, array<string, mixed>> List of agents
+ * @throws Error
+ */
+public function listAgents(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/agents';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to list agents from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (listAgents): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
+ * Create an agent in a Chatwoot account.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param array<string, mixed> $agentData Agent data (name, email, role, availability_status, auto_offline)
+ * @return array<string, mixed> Response data from Chatwoot API
+ * @throws Error
+ */
+public function createAgent(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    array $agentData
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/agents';
+
+    $payload = json_encode($agentData);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode agent data to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (createAgent): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    $this->log->info("Chatwoot: Created agent '{$agentData['email']}' in account {$accountId}");
+
+    return $response['body'];
+}
+
+/**
+ * Update an agent in a Chatwoot account.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $agentId The Chatwoot agent ID
+ * @param array<string, mixed> $agentData Agent data to update (role, availability_status, auto_offline)
+ * @return array<string, mixed> Response data from Chatwoot API
+ * @throws Error
+ */
+public function updateAgent(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $agentId,
+    array $agentData
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/agents/' . $agentId;
+
+    $payload = json_encode($agentData);
+
+    if ($payload === false) {
+        throw new Error('Failed to encode agent data to JSON.');
+    }
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ];
+
+    $response = $this->executeRequest($url, 'PATCH', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (updateAgent): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    $this->log->info("Chatwoot: Updated agent {$agentId} in account {$accountId}");
+
+    return $response['body'];
+}
+
+/**
+ * Delete an agent from a Chatwoot account.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $agentId The Chatwoot agent ID
+ * @return void
+ * @throws Error
+ */
+public function deleteAgent(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $agentId
+): void {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/agents/' . $agentId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+    // Accept 204 No Content, 200 OK, or 404 (already deleted) as success
+    if ($response['code'] !== 200 && $response['code'] !== 204 && $response['code'] !== 404) {
+        $errorMsg = 'Failed to delete agent from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (deleteAgent): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    // Log if agent was already deleted
+    if ($response['code'] === 404) {
+        $this->log->info("Agent {$agentId} was already deleted from account {$accountId} or doesn't exist");
+    } else {
+        $this->log->info("Chatwoot: Deleted agent {$agentId} from account {$accountId}");
+    }
 }
 }
 

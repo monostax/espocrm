@@ -1,0 +1,60 @@
+{
+    "fields": {
+        "name": "Nome",
+        "email": "Email",
+        "password": "Senha",
+        "availableName": "Nome Disponível",
+        "role": "Função",
+        "availabilityStatus": "Status de Disponibilidade",
+        "autoOffline": "Offline Automático",
+        "confirmed": "Email Confirmado",
+        "avatarUrl": "URL do Avatar",
+        "customRoleId": "ID da Função Personalizada",
+        "chatwootAgentId": "ID do Agente Chatwoot",
+        "chatwootAccount": "Conta Chatwoot",
+        "chatwootUser": "Usuário Chatwoot",
+        "chatwootTeams": "Chatwoot / Times",
+        "syncStatus": "Status de Sincronização",
+        "lastSyncedAt": "Última Sincronização",
+        "lastSyncError": "Último Erro de Sincronização",
+        "teams": "Times / Contas"
+    },
+    "links": {
+        "chatwootAccount": "Conta Chatwoot",
+        "chatwootUser": "Usuário Chatwoot",
+        "chatwootTeams": "Chatwoot / Times",
+        "teams": "Times / Contas"
+    },
+    "labels": {
+        "Create ChatwootAgent": "Criar Agente"
+    },
+    "options": {
+        "role": {
+            "agent": "Agente",
+            "administrator": "Administrador"
+        },
+        "availabilityStatus": {
+            "available": "Disponível",
+            "busy": "Ocupado",
+            "offline": "Offline"
+        },
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    },
+    "tooltips": {
+        "password": "Opcional. Se fornecida, um ChatwootUser será criado com essas credenciais para que o agente possa fazer login no Chatwoot imediatamente. Requisitos: mínimo 6 caracteres e pelo menos 1 caractere especial (!@#$%^&*()_+-=[]{}). Se não fornecida, o agente receberá um email de confirmação para definir sua senha.",
+        "chatwootAgentId": "O ID do agente no Chatwoot. Este campo é preenchido automaticamente após a sincronização.",
+        "autoOffline": "Se o status de disponibilidade do agente está configurado para ficar offline automaticamente quando ausente.",
+        "confirmed": "Se o agente confirmou seu endereço de email no Chatwoot.",
+        "chatwootUser": "Link para o Usuário Chatwoot no nível da plataforma, se este agente corresponder a um.",
+        "customRoleId": "O ID da função personalizada atribuída a este agente no Chatwoot, se houver."
+    },
+    "presetFilters": {
+        "available": "Disponíveis",
+        "offline": "Offline",
+        "administrators": "Administradores"
+    }
+}

@@ -58,7 +58,7 @@
         }
     },
     "tooltips": {
-        "report": "Selecione um Relatório para usar como pré-filtros. O Relatório deve ser do tipo 'Lista' e ter o mesmo tipo de entidade.",
+        "report": "Selecione um Relatório de Lista para usar como pré-filtros. Apenas relatórios do tipo 'Lista' são suportados (não Grid). O relatório deve ter o mesmo tipo de entidade (ex: Conversa).",
         "classificationPrompt": "Descreva em linguagem natural quem pertence a essa audiência. A IA avaliará cada candidato do Relatório.",
         "exitRule": "Quando uma conversa deve sair automaticamente desta audiência.",
         "agentEnabled": "Habilitar agente autônomo para executar ações nas conversas desta audiência.",

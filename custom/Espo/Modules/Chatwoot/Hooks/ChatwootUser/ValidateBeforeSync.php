@@ -31,8 +31,8 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Validates that the ChatwootAccount and ChatwootPlatform are configured
- * before creating a ChatwootUser.
+ * Validates that the ChatwootPlatform is configured before creating a ChatwootUser.
+ * ChatwootUser is now platform-level (not account-level).
  * Runs BEFORE the entity is saved to the database.
  */
 class ValidateBeforeSync implements CreateHook
@@ -44,42 +44,24 @@ class ValidateBeforeSync implements CreateHook
     ) {}
 
     /**
-     * Validate account and platform are set and configured before create.
+     * Validate platform is set and configured before create.
      * 
      * @throws BadRequest
      * @throws Error
      */
     public function process(Entity $entity, CreateParams $params): void
     {
-        // Ensure account is set
-        $accountId = $entity->get('accountId');
-        if (!$accountId) {
-            throw new BadRequest('Account is required for ChatwootUser.');
-        }
-
-        // Validate that the account exists
-        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-        
-        if (!$account) {
-            throw new Error('Selected ChatwootAccount does not exist.');
-        }
-
-        // Validate account has a chatwootAccountId (has been synced to Chatwoot)
-        $chatwootAccountId = $account->get('chatwootAccountId');
-        if (!$chatwootAccountId) {
-            throw new Error('ChatwootAccount has not been synchronized with Chatwoot yet. Please wait for the account to be created on Chatwoot first.');
-        }
-
-        // Get platform from account
-        $platformId = $account->get('platformId');
+        // Ensure platform is set
+        $platformId = $entity->get('platformId');
         if (!$platformId) {
-            throw new Error('ChatwootAccount does not have a platform configured.');
+            throw new BadRequest('Platform is required for ChatwootUser.');
         }
 
+        // Validate that the platform exists
         $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
         
         if (!$platform) {
-            throw new Error('ChatwootPlatform not found.');
+            throw new Error('Selected ChatwootPlatform does not exist.');
         }
 
         // Validate platform has URL
@@ -108,8 +90,18 @@ class ValidateBeforeSync implements CreateHook
         if (!$entity->get('name')) {
             throw new BadRequest('Name is required for ChatwootUser.');
         }
+
+        // Check for duplicate email in the same platform
+        $existingUser = $this->entityManager
+            ->getRDBRepository('ChatwootUser')
+            ->where([
+                'email' => $entity->get('email'),
+                'platformId' => $platformId,
+            ])
+            ->findOne();
+
+        if ($existingUser) {
+            throw new BadRequest('A ChatwootUser with this email already exists on this platform.');
+        }
     }
 }
-
-
-

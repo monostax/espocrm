@@ -20,6 +20,18 @@
         "inboxChannelType": "Tipo de Canal",
         "cAgendamentos": "Agendamentos"
     },
+    "links": {
+        "contactInbox": "Chatwoot / Contato / Canal",
+        "chatwootContact": "Chatwoot / Contato",
+        "contact": "Contato",
+        "chatwootAccount": "Chatwoot / Conta",
+        "opportunities": "Oportunidades",
+        "cAgendamentos": "Agendamentos",
+        "inbox": "Chatwoot / Inbox",
+        "messages": "Chatwoot / Mensagens",
+        "assignedUser": "Usuário Atribuído",
+        "teams": "Times / Contas"
+    },
     "options": {
         "status": {
             "open": "Aberta",

@@ -1,0 +1,21 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-user-tie",
+    "color": "#17a2b8",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    },
+    "filterList": [
+        "all",
+        "available",
+        "offline",
+        "administrators"
+    ],
+    "boolFilterList": [
+        "onlyMy"
+    ]
+}

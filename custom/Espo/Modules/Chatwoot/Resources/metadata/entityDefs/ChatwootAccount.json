@@ -105,11 +105,6 @@
             "entity": "ChatwootPlatform",
             "foreign": "accounts"
         },
-        "users": {
-            "type": "hasMany",
-            "entity": "ChatwootUser",
-            "foreign": "account"
-        },
         "chatwootTeams": {
             "type": "hasMany",
             "entity": "ChatwootTeam",
@@ -142,6 +137,11 @@
         "inboxes": {
             "type": "hasMany",
             "entity": "ChatwootInbox",
+            "foreign": "chatwootAccount"
+        },
+        "agents": {
+            "type": "hasMany",
+            "entity": "ChatwootAgent",
             "foreign": "chatwootAccount"
         },
         "communicationChannels": {

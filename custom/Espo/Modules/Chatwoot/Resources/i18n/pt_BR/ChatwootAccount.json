@@ -12,6 +12,14 @@
     },
     "links": {
         "platform": "Plataforma",
+        "chatwootTeams": "Chatwoot / Times",
+        "contacts": "Chatwoot / Contatos",
+        "syncStates": "Estados de Sincronização",
+        "inboxes": "Chatwoot / Inboxes",
+        "agents": "Chatwoot / Agentes",
+        "webhooks": "Chatwoot / Webhooks",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {

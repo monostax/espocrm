@@ -11,8 +11,12 @@
         "teams": "Times / Contas"
     },
     "links": {
-        "account": "Conta Chatwoot",
+        "platform": "Chatwoot / Plataforma",
+        "account": "Chatwoot / Conta",
         "assignedUser": "Usuário Proprietário",
+        "chatwootAgents": "Chatwoot / Agentes",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {

@@ -12,10 +12,11 @@
         "conversations": {
             "label": "Conversations",
             "view": "views/record/panels/relationship",
-            "orderBy": "createdAt",
+            "orderBy": "lastActivityAt",
             "orderDirection": "desc",
             "createDisabled": true,
-            "unlinkDisabled": false
+            "unlinkDisabled": false,
+            "selectDisabled": true
         }
     },
     "sidePanels": {

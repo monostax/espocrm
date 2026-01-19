@@ -30,9 +30,10 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
- * Legacy hook to delete ChatwootUser from Chatwoot Platform API.
+ * Hook to delete ChatwootUser from Chatwoot Platform API.
  * This hook works for BOTH regular delete AND mass delete.
  * Deletes the user from Chatwoot BEFORE deleting from EspoCRM.
+ * Also cascade deletes all linked ChatwootAgent records.
  */
 class DeleteFromChatwootLegacy
 {
@@ -45,7 +46,7 @@ class DeleteFromChatwootLegacy
     ) {}
 
     /**
-     * Delete user from Chatwoot BEFORE entity is removed from database.
+     * Delete user from Chatwoot and cascade delete linked agents BEFORE entity is removed from database.
      * 
      * @param Entity $entity
      * @param array<string, mixed> $options
@@ -53,13 +54,10 @@ class DeleteFromChatwootLegacy
      */
     public function beforeRemove(Entity $entity, array $options)
     {
-        file_put_contents('/tmp/chatwoot-delete-hook-test.log', 
-            date('Y-m-d H:i:s') . " - LEGACY DELETE HOOK CALLED for ChatwootUser: " . $entity->getId() . "\n", 
-            FILE_APPEND
-        );
+        $this->log->info('DELETE HOOK CALLED for ChatwootUser: ' . $entity->getId());
         
-
-        $this->log->info('LEGACY DELETE HOOK CALLED for ChatwootUser: ' . $entity->getId());
+        // First, cascade delete all linked ChatwootAgents
+        $this->cascadeDeleteAgents($entity);
         
         $chatwootUserId = $entity->get('chatwootUserId');
         
@@ -72,60 +70,30 @@ class DeleteFromChatwootLegacy
         
         $this->log->info('Attempting to delete Chatwoot user with ID: ' . $chatwootUserId);
 
-        $accountId = $entity->get('accountId');
-        if (!$accountId) {
-            $this->log->warning('ChatwootUser ' . $entity->getId() . ' has no accountId, cannot delete from Chatwoot');
-            throw new Error('Cannot delete user from Chatwoot: account not configured.');
+        $platformId = $entity->get('platformId');
+        if (!$platformId) {
+            $this->log->warning('ChatwootUser ' . $entity->getId() . ' has no platformId, cannot delete from Chatwoot');
+            // Allow deletion from EspoCRM anyway
+            return;
         }
 
         try {
-            // Get the account entity
-            $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-            
-            if (!$account) {
-                throw new Error('ChatwootAccount not found: ' . $accountId);
-            }
-
-            $chatwootAccountId = $account->get('chatwootAccountId');
-            if (!$chatwootAccountId) {
-                throw new Error('ChatwootAccount has no chatwootAccountId.');
-            }
-
-            $platformId = $account->get('platformId');
-            if (!$platformId) {
-                throw new Error('ChatwootAccount has no platformId.');
-            }
-
             $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
             
             if (!$platform) {
-                throw new Error('ChatwootPlatform not found: ' . $platformId);
+                $this->log->warning('ChatwootPlatform not found: ' . $platformId . '. Allowing local deletion.');
+                return;
             }
 
             $platformUrl = $platform->get('url');
             $accessToken = $platform->get('accessToken');
 
             if (!$platformUrl || !$accessToken) {
-                throw new Error('ChatwootPlatform missing URL or access token.');
+                $this->log->warning('ChatwootPlatform missing URL or access token. Allowing local deletion.');
+                return;
             }
 
-            // STEP 1: Detach user from account (optional, but good practice)
-            $this->log->info("Detaching user $chatwootUserId from account $chatwootAccountId");
-            
-            try {
-                $this->apiClient->detachUserFromAccount(
-                    $platformUrl,
-                    $accessToken,
-                    $chatwootAccountId,
-                    $chatwootUserId
-                );
-            } catch (\Exception $e) {
-                // Detach might fail if user is already detached or doesn't exist
-                // Log but continue to deletion
-                $this->log->warning('Failed to detach user from account: ' . $e->getMessage());
-            }
-
-            // STEP 2: Delete user from Chatwoot
+            // Delete user from Chatwoot Platform API
             $this->log->info('Deleting Chatwoot user: ' . $chatwootUserId);
             
             $this->apiClient->deleteUser($platformUrl, $accessToken, $chatwootUserId);
@@ -155,5 +123,46 @@ class DeleteFromChatwootLegacy
             );
         }
     }
-}
 
+    /**
+     * Cascade delete all ChatwootAgents linked to this ChatwootUser.
+     * This will trigger the ChatwootAgent delete hooks which will also
+     * remove the agents from Chatwoot.
+     */
+    private function cascadeDeleteAgents(Entity $entity): void
+    {
+        $userId = $entity->getId();
+        
+        // Find all ChatwootAgents linked to this user
+        $agents = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->where(['chatwootUserId' => $userId])
+            ->find();
+
+        $count = 0;
+        foreach ($agents as $agent) {
+            try {
+                $this->log->info(
+                    'Cascade deleting ChatwootAgent ' . $agent->getId() . 
+                    ' (linked to ChatwootUser ' . $userId . ')'
+                );
+                
+                // This will trigger the ChatwootAgent delete hook
+                // which handles deleting from Chatwoot
+                $this->entityManager->removeEntity($agent);
+                $count++;
+            } catch (\Exception $e) {
+                $this->log->error(
+                    'Failed to cascade delete ChatwootAgent ' . $agent->getId() . ': ' . $e->getMessage()
+                );
+                // Continue with other agents even if one fails
+            }
+        }
+
+        if ($count > 0) {
+            $this->log->info(
+                'Cascade deleted ' . $count . ' ChatwootAgent(s) linked to ChatwootUser ' . $userId
+            );
+        }
+    }
+}

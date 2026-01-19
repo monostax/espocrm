@@ -2,30 +2,65 @@
     "fields": {
         "name": {
             "type": "varchar",
-            "required": true,
-            "maxLength": 255
-        },
-        "description": {
-            "type": "text"
-        },
-        "allowAutoAssign": {
-            "type": "bool",
-            "default": true,
-            "tooltip": true
-        },
-        "account": {
-            "type": "link",
+            "maxLength": 255,
             "required": true
         },
-        "chatwootTeamId": {
+        "email": {
+            "type": "email",
+            "required": true
+        },
+        "password": {
+            "type": "password",
+            "dbType": "text",
+            "required": false,
+            "tooltip": true,
+            "notStorable": true
+        },
+        "availableName": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "role": {
+            "type": "enum",
+            "options": ["agent", "administrator"],
+            "default": "agent",
+            "required": true
+        },
+        "availabilityStatus": {
+            "type": "enum",
+            "options": ["available", "busy", "offline"],
+            "default": "offline"
+        },
+        "autoOffline": {
+            "type": "bool",
+            "default": true
+        },
+        "confirmed": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true
+        },
+        "avatarUrl": {
+            "type": "url"
+        },
+        "customRoleId": {
+            "type": "int",
+            "readOnly": true
+        },
+        "chatwootAgentId": {
             "type": "int",
             "readOnly": true,
             "tooltip": true
         },
-        "isMember": {
-            "type": "bool",
-            "readOnly": true,
-            "tooltip": true
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootUser": {
+            "type": "link"
+        },
+        "chatwootTeams": {
+            "type": "linkMultiple"
         },
         "syncStatus": {
             "type": "enum",
@@ -61,16 +96,24 @@
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams"
-        },
-        "chatwootAgents": {
-            "type": "linkMultiple"
         }
     },
     "links": {
-        "account": {
+        "chatwootAccount": {
             "type": "belongsTo",
             "entity": "ChatwootAccount",
-            "foreign": "chatwootTeams"
+            "foreign": "agents"
+        },
+        "chatwootUser": {
+            "type": "belongsTo",
+            "entity": "ChatwootUser",
+            "foreign": "agents"
+        },
+        "chatwootTeams": {
+            "type": "hasMany",
+            "entity": "ChatwootTeam",
+            "relationName": "chatwootAgentChatwootTeam",
+            "foreign": "chatwootAgents"
         },
         "createdBy": {
             "type": "belongsTo",
@@ -85,12 +128,6 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
-        },
-        "chatwootAgents": {
-            "type": "hasMany",
-            "entity": "ChatwootAgent",
-            "relationName": "chatwootAgentChatwootTeam",
-            "foreign": "chatwootTeams"
         }
     },
     "collection": {
@@ -98,15 +135,15 @@
         "order": "desc"
     },
     "indexes": {
-        "name": {
-            "columns": ["name", "deleted"]
-        },
-        "account": {
-            "columns": ["accountId", "deleted"]
-        },
-        "uniqueTeam": {
+        "uniqueAgent": {
             "unique": true,
-            "columns": ["chatwootTeamId", "accountId"]
+            "columns": ["chatwootAgentId", "chatwootAccountId"]
+        },
+        "chatwootAccountId": {
+            "columns": ["chatwootAccountId"]
+        },
+        "email": {
+            "columns": ["deleted"]
         },
         "createdAt": {
             "columns": ["createdAt"]

@@ -1,8 +1,36 @@
 {
     "fields": {
-        "mergedIntoChatwootContactId": "Mesclado em Contato ID",
+        "name": "Nome",
+        "contactName": "Nome do Contato",
+        "email": "Email",
+        "identifier": "Identificador",
+        "chatwootInboxId": "ID da Inbox Chatwoot",
+        "chatwootCreatedAt": "Criado no Chatwoot",
+        "chatwootLastActivityAt": "Última Atividade no Chatwoot",
+        "availabilityStatus": "Status de Disponibilidade",
+        "blocked": "Bloqueado",
+        "avatarUrl": "URL do Avatar",
+        "contact": "Contato",
+        "phoneNumber": "Telefone",
+        "chatwootContactId": "ID do Contato Chatwoot",
+        "chatwootAccount": "Conta Chatwoot",
+        "lastSyncedAt": "Última Sincronização",
         "syncStatus": "Status de Sincronização",
-        "avatarUrl": "URL do Avatar"
+        "mergedIntoChatwootContactId": "Mesclado em Contato ID",
+        "syncError": "Erro de Sincronização",
+        "teams": "Times / Contas"
+    },
+    "links": {
+        "contact": "Contato",
+        "chatwootAccount": "Chatwoot / Conta",
+        "contactInboxes": "Chatwoot / Contato / Canais",
+        "conversations": "Chatwoot / Conversas",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times / Contas"
+    },
+    "labels": {
+        "Create ChatwootContact": "Criar Contato Chatwoot"
     },
     "options": {
         "syncStatus": {
@@ -11,6 +39,10 @@
             "error": "Erro",
             "merged": "Mesclado",
             "deleted": "Excluído"
+        },
+        "availabilityStatus": {
+            "online": "Online",
+            "offline": "Offline"
         }
     },
     "tooltips": {

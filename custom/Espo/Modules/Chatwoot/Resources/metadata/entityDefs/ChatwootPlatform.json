@@ -45,6 +45,11 @@
             "entity": "ChatwootAccount",
             "foreign": "platform"
         },
+        "users": {
+            "type": "hasMany",
+            "entity": "ChatwootUser",
+            "foreign": "platform"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

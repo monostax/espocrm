@@ -21,6 +21,12 @@
                 "description": "chatwootUsers"
             },
             {
+                "url": "#ChatwootAgent",
+                "label": "Agents",
+                "iconClass": "fas fa-user-tie",
+                "description": "chatwootAgents"
+            },
+            {
                 "url": "#ChatwootTeam",
                 "label": "Teams",
                 "iconClass": "fas fa-users",

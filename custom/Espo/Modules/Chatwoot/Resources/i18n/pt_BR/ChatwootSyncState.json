@@ -2,6 +2,12 @@
     "labels": {
         "Create ChatwootSyncState": "Criar Estado de Sincronização"
     },
+    "links": {
+        "chatwootAccount": "Chatwoot / Conta",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times / Contas"
+    },
     "fields": {
         "name": "Nome",
         "syncType": "Tipo de Sincronização",

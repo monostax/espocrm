@@ -26,13 +26,26 @@
             ],
             [
                 {
-                    "name": "isMember"
+                    "name": "chatwootAgents"
                 },
                 false
+            ],
+            [
+                {
+                    "name": "isMember"
+                },
+                {
+                    "name": "syncStatus"
+                }
+            ],
+            [
+                {
+                    "name": "lastSyncedAt"
+                },
+                {
+                    "name": "lastSyncError"
+                }
             ]
         ]
     }
 ]
-
-
-
