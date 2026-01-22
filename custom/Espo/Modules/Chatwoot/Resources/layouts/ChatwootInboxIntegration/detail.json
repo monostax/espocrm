@@ -1,0 +1,122 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "channelType"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "team"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "WhatsApp Connection",
+        "name": "whatsappConnection",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "qrCode",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Error",
+        "name": "error",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "errorMessage"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "errorMessage",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "WhatsApp Metadata",
+        "label": "WhatsApp Metadata",
+        "name": "whatsappMetadata",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                },
+                {
+                    "type": "equals",
+                    "attribute": "channelType",
+                    "value": "whatsappQrcode"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "whatsappName"
+                },
+                {
+                    "name": "whatsappId"
+                }
+            ],
+            [
+                {
+                    "name": "connectedAt"
+                },
+                {
+                    "name": "lastActivityAt"
+                }
+            ],
+            [
+                {
+                    "name": "wahaSessionName"
+                },
+                {
+                    "name": "wahaAppId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootInboxId"
+                },
+                {
+                    "name": "chatwootInboxIdentifier"
+                }
+            ]
+        ]
+    }
+]

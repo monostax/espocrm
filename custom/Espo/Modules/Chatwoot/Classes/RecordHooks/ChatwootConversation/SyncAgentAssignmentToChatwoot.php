@@ -145,7 +145,7 @@ class SyncAgentAssignmentToChatwoot implements UpdateHook
             }
 
             // Get platform URL
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             if (!$platformUrl) {
                 throw new Error('ChatwootPlatform does not have a URL.');
             }

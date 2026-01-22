@@ -26,11 +26,12 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootAccount;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Hooks\ChatwootAccount\SyncWithChatwoot;
 
 /**
  * Creates the ChatwootUser entity in EspoCRM after the ChatwootAccount is saved.
  * The actual Chatwoot user was already created in the beforeSave phase.
- * This hook just creates the corresponding EspoCRM entity for record-keeping and access control.
+ * This hook creates the corresponding EspoCRM entity and links it to the ChatwootAccount.
  */
 class CreateAutomationUser
 {
@@ -43,6 +44,7 @@ class CreateAutomationUser
 
     /**
      * Create ChatwootUser entity in EspoCRM after the ChatwootAccount is saved.
+     * Links the ChatwootUser to the ChatwootAccount via the automationUser relationship.
      * Only runs on entity creation.
      * 
      * @param Entity $entity
@@ -50,31 +52,40 @@ class CreateAutomationUser
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        // Only run for new ChatwootAccount records (not updates)
-        if (!$entity->isNew()) {
-            return;
-        }
-        // Check if we have automation user data from the beforeCreate hook
-        $automationUserData = $entity->get('_automationUserData');
+        // Check if we have automation user data from the beforeSave hook (via static cache)
+        // Using static cache because entity transient data may be lost when EspoCRM
+        // refreshes the entity from database after insert
+        $entityId = $entity->getId();
+        $automationUserData = SyncWithChatwoot::$automationUserDataCache[$entityId] ?? null;
+        
+        // Clean up the cache entry regardless of outcome
+        unset(SyncWithChatwoot::$automationUserDataCache[$entityId]);
         
         if (!$automationUserData) {
-            $this->log->debug('No automation user data found, skipping ChatwootUser entity creation');
+            // No data means this is an update or the automation user wasn't created
             return;
         }
 
         try {
             // Create corresponding ChatwootUser entity in EspoCRM
+            // Using cached teamId and platformId since entity may have been refreshed
             $chatwootUser = $this->createChatwootUserEntity(
                 $entity,
                 $automationUserData['user_id'],
                 $automationUserData['name'],
                 $automationUserData['email'],
-                $automationUserData['password']
+                $automationUserData['password'],
+                $automationUserData['_teamId'] ?? null,
+                $automationUserData['_platformId'] ?? null
             );
 
             if ($chatwootUser) {
+                // Link the ChatwootUser to the ChatwootAccount
+                $entity->set('automationUserId', $chatwootUser->getId());
+                $this->entityManager->saveEntity($entity, ['silent' => true, 'skipHooks' => true]);
+                
                 $this->log->info(
-                    'Created ChatwootUser entity for automation user: ' . 
+                    'Created and linked ChatwootUser entity for automation user: ' . 
                     $chatwootUser->getId()
                 );
             }
@@ -88,13 +99,15 @@ class CreateAutomationUser
 
     /**
      * Create ChatwootUser entity in EspoCRM for the automation user.
-     * This ensures the user inherits the proper Teams for tenant isolation.
+     * This ensures the user inherits the proper Team and Platform for tenant isolation.
      *
      * @param Entity $chatwootAccount
      * @param int $chatwootUserId
      * @param string $name
      * @param string $email
      * @param string $password
+     * @param string|null $teamId
+     * @param string|null $platformId
      * @return Entity|null
      */
     private function createChatwootUserEntity(
@@ -102,19 +115,13 @@ class CreateAutomationUser
         int $chatwootUserId,
         string $name,
         string $email,
-        string $password
+        string $password,
+        ?string $teamId,
+        ?string $platformId
     ): ?Entity {
         try {
-            // Get Teams from the ChatwootAccount for tenant isolation
-            $teams = $this->entityManager
-                ->getRDBRepository('ChatwootAccount')
-                ->getRelation($chatwootAccount, 'teams')
-                ->find();
-
-            $teamIds = [];
-            foreach ($teams as $team) {
-                $teamIds[] = $team->getId();
-            }
+            // teamId and platformId are passed from cached data captured in beforeSave
+            // because after entity refresh, the in-memory data may be lost
 
             // Create the ChatwootUser entity
             // Note: assignedUser is NOT set for automation users to avoid unique constraint violation
@@ -124,10 +131,10 @@ class CreateAutomationUser
                 'email' => $email,
                 'password' => $password,
                 'displayName' => $name,
-                'accountId' => $chatwootAccount->getId(),
-                'role' => 'administrator',
+                'platformId' => $platformId,
+                'chatwootAccountId' => $chatwootAccount->getId(),
                 'chatwootUserId' => $chatwootUserId,
-                'teamsIds' => $teamIds // Inherit Teams from ChatwootAccount
+                'teamsIds' => $teamId ? [$teamId] : [] // Inherit Team from ChatwootAccount
             ], [
                 'skipHooks' => true, // Skip hooks to avoid recursive creation
                 'silent' => true
@@ -136,7 +143,7 @@ class CreateAutomationUser
             $this->log->info(
                 'Created ChatwootUser entity for automation user: ' . 
                 $chatwootUser->getId() . 
-                ' with Teams: ' . implode(', ', $teamIds)
+                ' with Team: ' . ($teamId ?? 'none')
             );
 
             return $chatwootUser;

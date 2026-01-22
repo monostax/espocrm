@@ -65,7 +65,7 @@ class ValidateBeforeSync implements CreateHook
         }
 
         // Validate platform has URL
-        $url = $platform->get('url');
+        $url = $platform->get('backendUrl');
         if (!$url) {
             throw new Error('ChatwootPlatform does not have a URL configured.');
         }

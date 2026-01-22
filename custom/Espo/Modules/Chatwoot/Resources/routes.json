@@ -1,0 +1,38 @@
+[
+    {
+        "route": "/ChatwootInboxIntegration/:id/activate",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootInboxIntegration",
+            "action": "activate",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/ChatwootInboxIntegration/:id/disconnect",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootInboxIntegration",
+            "action": "disconnect",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/ChatwootInboxIntegration/:id/reconnect",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootInboxIntegration",
+            "action": "reconnect",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/ChatwootInboxIntegration/:id/checkStatus",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootInboxIntegration",
+            "action": "checkStatus",
+            "id": ":id"
+        }
+    }
+]

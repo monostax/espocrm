@@ -94,7 +94,7 @@ class SyncWithChatwoot
                 throw new Error('ChatwootPlatform not found: ' . $platformId);
             }
 
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             if (!$platformUrl) {
                 throw new Error('ChatwootPlatform does not have a URL.');
             }

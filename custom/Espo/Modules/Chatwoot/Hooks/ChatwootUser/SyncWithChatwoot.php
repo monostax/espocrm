@@ -78,7 +78,7 @@ class SyncWithChatwoot implements CreateHook
             }
 
             // Get platform URL and access token
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $accessToken = $platform->get('accessToken');
 
             if (!$platformUrl) {

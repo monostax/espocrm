@@ -3,6 +3,9 @@
     "beforeUpdateHookClassNameList": [
         "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ChatwootConversation\\SyncStatusToChatwoot",
         "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ChatwootConversation\\SyncAgentAssignmentToChatwoot"
+    ],
+    "listLoaderClassNameList": [
+        "Espo\\Modules\\Chatwoot\\Classes\\FieldProcessing\\ChatwootConversation\\TasksLoader"
     ]
 }
 

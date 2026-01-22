@@ -87,7 +87,7 @@ class DeleteFromChatwootLegacy
                 throw new Error('ChatwootPlatform not found: ' . $platformId);
             }
 
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $accessToken = $platform->get('accessToken');
 
             if (!$platformUrl || !$accessToken) {

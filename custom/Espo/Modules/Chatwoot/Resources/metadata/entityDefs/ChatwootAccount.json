@@ -19,15 +19,9 @@
             "tooltip": true,
             "required": false
         },
-        "automationUserId": {
-            "type": "int",
-            "readOnly": true,
-            "tooltip": true
-        },
-        "automationUserEmail": {
-            "type": "varchar",
-            "readOnly": true,
-            "tooltip": true
+        "automationUser": {
+            "type": "link",
+            "readOnly": true
         },
         "locale": {
             "type": "enum",
@@ -94,9 +88,9 @@
             "readOnly": true,
             "view": "views/fields/user"
         },
-        "teams": {
-            "type": "linkMultiple",
-            "view": "views/fields/teams"
+        "team": {
+            "type": "link",
+            "required": true
         }
     },
     "links": {
@@ -104,6 +98,11 @@
             "type": "belongsTo",
             "entity": "ChatwootPlatform",
             "foreign": "accounts"
+        },
+        "automationUser": {
+            "type": "belongsTo",
+            "entity": "ChatwootUser",
+            "foreign": "automationForAccount"
         },
         "chatwootTeams": {
             "type": "hasMany",
@@ -123,11 +122,9 @@
             "type": "belongsTo",
             "entity": "User"
         },
-        "teams": {
-            "type": "hasMany",
-            "entity": "Team",
-            "relationName": "entityTeam",
-            "layoutRelationshipsDisabled": true
+        "team": {
+            "type": "belongsTo",
+            "entity": "Team"
         },
         "syncStates": {
             "type": "hasMany",
@@ -144,9 +141,14 @@
             "entity": "ChatwootAgent",
             "foreign": "chatwootAccount"
         },
-        "communicationChannels": {
+        "chatwootUsers": {
             "type": "hasMany",
-            "entity": "CommunicationChannel",
+            "entity": "ChatwootUser",
+            "foreign": "chatwootAccount"
+        },
+        "chatwootInboxIntegrations": {
+            "type": "hasMany",
+            "entity": "ChatwootInboxIntegration",
             "foreign": "chatwootAccount"
         }
     },

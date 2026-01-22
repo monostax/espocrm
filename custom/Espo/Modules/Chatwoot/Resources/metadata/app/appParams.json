@@ -4,6 +4,9 @@
     },
     "chatwootAccountId": {
         "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootAccountId"
+    },
+    "chatwootFrontendUrl": {
+        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootFrontendUrl"
     }
 }
 

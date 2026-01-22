@@ -85,7 +85,7 @@ class DeleteFromChatwootLegacy
                 return;
             }
 
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $accessToken = $platform->get('accessToken');
 
             if (!$platformUrl || !$accessToken) {

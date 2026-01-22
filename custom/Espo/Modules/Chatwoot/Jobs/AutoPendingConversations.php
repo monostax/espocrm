@@ -191,7 +191,7 @@ class AutoPendingConversations implements JobDataLess
             return false;
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         if (!$platformUrl) {
             $this->log->warning(
                 "AutoPendingConversations: Platform {$platformId} has no URL"

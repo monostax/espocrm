@@ -5,7 +5,16 @@
             "required": true,
             "maxLength": 255
         },
-        "url": {
+        "isDefault": {
+            "type": "bool",
+            "default": false
+        },
+        "frontendUrl": {
+            "type": "url",
+            "required": true,
+            "tooltip": true
+        },
+        "backendUrl": {
             "type": "url",
             "required": true,
             "tooltip": true
@@ -45,9 +54,9 @@
             "entity": "WahaSession",
             "foreign": "platform"
         },
-        "communicationChannels": {
+        "chatwootInboxIntegrations": {
             "type": "hasMany",
-            "entity": "CommunicationChannel",
+            "entity": "ChatwootInboxIntegration",
             "foreign": "wahaPlatform"
         },
         "createdBy": {

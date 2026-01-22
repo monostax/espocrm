@@ -1,7 +1,9 @@
 {
     "fields": {
         "name": "Nome",
-        "url": "URL",
+        "isDefault": "Padrão",
+        "frontendUrl": "URL do Frontend",
+        "backendUrl": "URL do Backend",
         "accessToken": "Token de Acesso",
         "teams": "Times / Contas"
     },
@@ -16,7 +18,8 @@
         "Create ChatwootPlatform": "Criar Plataforma Chatwoot"
     },
     "tooltips": {
-        "url": "URL base da plataforma Chatwoot",
+        "frontendUrl": "URL da plataforma Chatwoot voltada para o usuário (ex: https://chatwoot.exemplo.com). Usada para redirecionamentos SSO e incorporação em iframe.",
+        "backendUrl": "URL do endpoint da API da plataforma Chatwoot (ex: https://chatwoot-api.exemplo.com). Usada para todas as chamadas de API.",
         "accessToken": "Token de acesso da API da plataforma Chatwoot. Usado para criar e gerenciar contas."
     }
 }

@@ -43,42 +43,6 @@
             "action": "listApps",
             "id": ":id"
         }
-    },
-    {
-        "route": "/CommunicationChannel/:id/activate",
-        "method": "post",
-        "params": {
-            "controller": "CommunicationChannel",
-            "action": "activate",
-            "id": ":id"
-        }
-    },
-    {
-        "route": "/CommunicationChannel/:id/disconnect",
-        "method": "post",
-        "params": {
-            "controller": "CommunicationChannel",
-            "action": "disconnect",
-            "id": ":id"
-        }
-    },
-    {
-        "route": "/CommunicationChannel/:id/reconnect",
-        "method": "post",
-        "params": {
-            "controller": "CommunicationChannel",
-            "action": "reconnect",
-            "id": ":id"
-        }
-    },
-    {
-        "route": "/CommunicationChannel/:id/checkStatus",
-        "method": "post",
-        "params": {
-            "controller": "CommunicationChannel",
-            "action": "checkStatus",
-            "id": ":id"
-        }
     }
 ]
 

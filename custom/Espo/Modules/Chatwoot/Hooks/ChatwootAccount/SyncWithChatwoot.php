@@ -38,6 +38,15 @@ class SyncWithChatwoot
 {
     public static int $order = 10; // Run after ValidateBeforeSync
 
+    /**
+     * Static cache to pass automation user data between beforeSave and afterSave hooks.
+     * Using static cache because entity transient data may be lost when EspoCRM
+     * refreshes the entity from database after insert.
+     * 
+     * @var array<string, array<string, mixed>>
+     */
+    public static array $automationUserDataCache = [];
+
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
@@ -86,7 +95,7 @@ class SyncWithChatwoot
             }
 
             // Get platform URL and access token
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $accessToken = $platform->get('accessToken');
 
             if (!$platformUrl) {
@@ -130,8 +139,6 @@ class SyncWithChatwoot
 
             // STEP 3: Set all data on entity BEFORE database insert
             $entity->set('chatwootAccountId', $chatwootAccountId);
-            $entity->set('automationUserId', $automationUser['user_id']);
-            $entity->set('automationUserEmail', $automationUser['email']);
             
             if (isset($automationUser['access_token'])) {
                 $entity->set('apiKey', $automationUser['access_token']);
@@ -143,13 +150,18 @@ class SyncWithChatwoot
                 );
             }
 
-            // Store data for afterCreate hook to create ChatwootUser entity
-            $entity->set('_automationUserData', $automationUser);
+            // Store data for afterSave hook to create ChatwootUser entity and link it
+            // Using static cache because entity transient data may be lost when EspoCRM
+            // refreshes the entity from database after insert
+            // Include teamId and platformId since they may not be available after refresh
+            $automationUser['_teamId'] = $entity->get('teamId');
+            $automationUser['_platformId'] = $entity->get('platformId');
+            self::$automationUserDataCache[$entity->getId()] = $automationUser;
 
             $this->log->info('Successfully prepared Chatwoot account and user for database insert');
             
             // FINAL SAFEGUARD: Ensure the entity has the required Chatwoot data
-            if (!$entity->get('chatwootAccountId') || !$entity->get('automationUserId')) {
+            if (!$entity->get('chatwootAccountId') || !$automationUser['user_id']) {
                 throw new Error(
                     'Critical error: Chatwoot account created but entity data not set properly. ' .
                     'Preventing database save to maintain data integrity.'
@@ -280,6 +292,8 @@ class SyncWithChatwoot
      * Generate a secure password meeting Chatwoot requirements.
      * Requirements:
      * - At least 1 uppercase character (A-Z)
+     * - At least 1 lowercase character (a-z)
+     * - At least 1 number character (0-9)
      * - At least 1 special character
      * - Minimum 6 characters
      *
@@ -299,13 +313,21 @@ class SyncWithChatwoot
         $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
         $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
         
+        // At least 2 numbers (required by Chatwoot)
+        $password .= $numbers[random_int(0, strlen($numbers) - 1)];
+        $password .= $numbers[random_int(0, strlen($numbers) - 1)];
+        
         // At least 2 special characters
         $password .= $special[random_int(0, strlen($special) - 1)];
         $password .= $special[random_int(0, strlen($special) - 1)];
         
+        // At least 2 lowercase
+        $password .= $lowercase[random_int(0, strlen($lowercase) - 1)];
+        $password .= $lowercase[random_int(0, strlen($lowercase) - 1)];
+        
         // Fill rest with random mix (total 20 characters)
         $allChars = $lowercase . $uppercase . $numbers . $special;
-        for ($i = 0; $i < 16; $i++) {
+        for ($i = 0; $i < 12; $i++) {
             $password .= $allChars[random_int(0, strlen($allChars) - 1)];
         }
         

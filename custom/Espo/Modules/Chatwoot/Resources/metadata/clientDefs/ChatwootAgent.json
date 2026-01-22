@@ -41,5 +41,13 @@
                 }
             }
         }
+    },
+    "viewSetupHandlers": {
+        "record/detail": [
+            "chatwoot:handlers/chatwoot-agent/record-detail-setup"
+        ],
+        "record/edit": [
+            "chatwoot:handlers/chatwoot-agent/record-detail-setup"
+        ]
     }
 }

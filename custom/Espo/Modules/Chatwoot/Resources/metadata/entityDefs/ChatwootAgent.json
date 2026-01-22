@@ -107,9 +107,9 @@
             "readOnly": true,
             "view": "views/fields/user"
         },
-        "teams": {
-            "type": "linkMultiple",
-            "view": "views/fields/teams"
+        "team": {
+            "type": "link",
+            "readOnly": true
         }
     },
     "links": {
@@ -143,11 +143,9 @@
             "type": "belongsTo",
             "entity": "User"
         },
-        "teams": {
-            "type": "hasMany",
-            "entity": "Team",
-            "relationName": "entityTeam",
-            "layoutRelationshipsDisabled": true
+        "team": {
+            "type": "belongsTo",
+            "entity": "Team"
         }
     },
     "collection": {

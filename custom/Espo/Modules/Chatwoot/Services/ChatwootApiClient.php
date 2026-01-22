@@ -1892,6 +1892,53 @@ public function deleteAgent(
 }
 
 /**
+ * Get a conversation from Chatwoot.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $conversationId The Chatwoot conversation ID
+ * @return array<string, mixed>|null The conversation data, or null if not found (404)
+ * @throws Error
+ */
+public function getConversation(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $conversationId
+): ?array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    // Return null for 404 (conversation not found)
+    if ($response['code'] === 404) {
+        $this->log->info("Chatwoot: Conversation {$conversationId} not found in account {$accountId} (404)");
+        return null;
+    }
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to get conversation from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (getConversation): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
  * Assign a conversation to an agent or team in Chatwoot.
  *
  * @param string $platformUrl The Chatwoot platform URL

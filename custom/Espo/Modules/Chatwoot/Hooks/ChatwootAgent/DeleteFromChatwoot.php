@@ -107,7 +107,7 @@ class DeleteFromChatwoot
                 return;
             }
 
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
 
             if (!$platformUrl) {
                 $this->log->warning('ChatwootPlatform missing URL. Allowing local deletion.');

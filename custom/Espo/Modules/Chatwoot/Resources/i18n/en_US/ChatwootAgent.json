@@ -19,13 +19,13 @@
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
         "lastSyncError": "Last Sync Error",
-        "teams": "Teams / Accounts"
+        "team": "Team"
     },
     "links": {
         "chatwootAccount": "Chatwoot Account",
         "chatwootUser": "Chatwoot User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
-        "teams": "Teams / Accounts"
+        "team": "Team"
     },
     "labels": {
         "Create ChatwootAgent": "Create Agent",

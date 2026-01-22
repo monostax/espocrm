@@ -23,6 +23,10 @@
             "type": "link",
             "required": true
         },
+        "chatwootAccount": {
+            "type": "link",
+            "required": false
+        },
         "assignedUser": {
             "type": "link",
             "required": false,
@@ -54,7 +58,8 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "view": "views/fields/teams"
+            "view": "views/fields/teams",
+            "required": true
         }
     },
     "links": {
@@ -62,6 +67,16 @@
             "type": "belongsTo",
             "entity": "ChatwootPlatform",
             "foreign": "users"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "chatwootUsers"
+        },
+        "automationForAccount": {
+            "type": "hasOne",
+            "entity": "ChatwootAccount",
+            "foreign": "automationUser"
         },
         "agents": {
             "type": "hasMany",
@@ -100,6 +115,9 @@
         },
         "platformId": {
             "columns": ["platformId", "deleted"]
+        },
+        "chatwootAccountId": {
+            "columns": ["chatwootAccountId", "deleted"]
         },
         "createdAt": {
             "columns": ["createdAt"]

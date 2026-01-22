@@ -36,11 +36,9 @@
             ],
             [
                 {
-                    "name": "automationUserId"
+                    "name": "automationUser"
                 },
-                {
-                    "name": "automationUserEmail"
-                }
+                false
             ]
         ]
     },

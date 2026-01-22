@@ -1,0 +1,32 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "channelType"
+                }
+            ],
+            [
+                {
+                    "name": "whatsappName"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                }
+            ]
+        ]
+    }
+]

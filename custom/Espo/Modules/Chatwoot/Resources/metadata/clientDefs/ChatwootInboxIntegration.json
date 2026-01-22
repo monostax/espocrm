@@ -1,0 +1,67 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fab fa-whatsapp",
+    "createDisabled": false,
+    "color": "#25D366",
+    "modalViews": {
+        "edit": "chatwoot:views/chatwoot-inbox-integration/modals/edit"
+    },
+    "dynamicLogic": {
+        "fields": {
+            "status": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "team": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "viewSetupHandlers": {
+        "record/detail": [
+            "chatwoot:handlers/chatwoot-inbox-integration/record-detail-setup"
+        ],
+        "record/edit": [
+            "chatwoot:handlers/chatwoot-inbox-integration/record-detail-setup"
+        ]
+    },
+    "detailActionList": [
+        {
+            "name": "activate",
+            "label": "Activate",
+            "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
+            "actionFunction": "activate",
+            "checkVisibilityFunction": "isActivateAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "disconnect",
+            "label": "Disconnect",
+            "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
+            "actionFunction": "disconnect",
+            "checkVisibilityFunction": "isDisconnectAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "reconnect",
+            "label": "Reconnect",
+            "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
+            "actionFunction": "reconnect",
+            "checkVisibilityFunction": "isReconnectAvailable",
+            "groupIndex": 1
+        }
+    ]
+}

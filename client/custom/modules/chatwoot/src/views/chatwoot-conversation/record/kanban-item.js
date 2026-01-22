@@ -55,6 +55,9 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
             // Get linked agendamentos
             const agendamentos = this.getAgendamentosData();
 
+            // Get linked tasks
+            const tasks = this.getTasksData();
+
             return {
                 ...Dep.prototype.data.call(this),
                 contactName: contactName,
@@ -87,6 +90,8 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 hasOpportunities: opportunities.length > 0,
                 agendamentos: agendamentos,
                 hasAgendamentos: agendamentos.length > 0,
+                tasks: tasks,
+                hasTasks: tasks.length > 0,
                 // Section labels
                 opportunityLabel: this.translate(
                     "Opportunity",
@@ -94,6 +99,10 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 ),
                 agendamentoLabel: this.translate(
                     "CAgendamento",
+                    "scopeNamesPlural"
+                ),
+                taskLabel: this.translate(
+                    "Task",
                     "scopeNamesPlural"
                 ),
                 createOpportunityLabel: this.translate(
@@ -105,6 +114,11 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                     "Create CAgendamento",
                     "labels",
                     "CAgendamento"
+                ),
+                createTaskLabel: this.translate(
+                    "Create Task",
+                    "labels",
+                    "Task"
                 ),
             };
         },
@@ -305,6 +319,52 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
             return styleMap[status] || "agendamento-status-planned";
         },
 
+        /**
+         * Get linked tasks data for display
+         */
+        getTasksData: function () {
+            const tasksIds = this.model.get("tasksIds") || [];
+            const tasksNames = this.model.get("tasksNames") || {};
+            const tasksColumns = this.model.get("tasksColumns") || {};
+
+            return tasksIds.map((id) => {
+                const status = tasksColumns[id]
+                    ? tasksColumns[id].status
+                    : null;
+                const dateEnd = tasksColumns[id]
+                    ? tasksColumns[id].dateEnd
+                    : null;
+                return {
+                    id: id,
+                    name: tasksNames[id] || "Task",
+                    status: status,
+                    dateEnd: dateEnd,
+                    statusLabel: status
+                        ? this.getLanguage().translateOption(
+                              status,
+                              "status",
+                              "Task"
+                          )
+                        : null,
+                    statusStyle: this.getTaskStatusStyle(status),
+                };
+            });
+        },
+
+        /**
+         * Get CSS class for task status
+         */
+        getTaskStatusStyle: function (status) {
+            const styleMap = {
+                "Not Started": "task-status-not-started",
+                "Started": "task-status-started",
+                "Completed": "task-status-completed",
+                "Canceled": "task-status-canceled",
+                "Deferred": "task-status-deferred",
+            };
+            return styleMap[status] || "task-status-not-started";
+        },
+
         setup: function () {
             Dep.prototype.setup.call(this);
 
@@ -349,6 +409,13 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 this.actionCreateAgendamento();
             });
 
+            // Bind create task button FIRST (before card click)
+            this.$el.find(".btn-create-task").on("click", (e) => {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                this.actionCreateTask();
+            });
+
             // Make the card clickable to open detail view
             this.$el.find(".conversation-card").on("click", (e) => {
                 // Don't trigger if clicking on action buttons or create buttons
@@ -356,8 +423,10 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                     $(e.target).closest(".item-menu-container").length ||
                     $(e.target).closest(".btn-create-opportunity").length ||
                     $(e.target).closest(".btn-create-agendamento").length ||
+                    $(e.target).closest(".btn-create-task").length ||
                     $(e.target).closest(".conversation-opportunity").length ||
-                    $(e.target).closest(".conversation-agendamento").length
+                    $(e.target).closest(".conversation-agendamento").length ||
+                    $(e.target).closest(".conversation-task").length
                 ) {
                     return;
                 }
@@ -492,6 +561,53 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 "views/modals/edit",
                 {
                     scope: "CAgendamento",
+                    attributes: attributes,
+                    fullFormDisabled: true,
+                    layoutName: "detailSmall",
+                    sideDisabled: true,
+                    bottomDisabled: true,
+                },
+                (view) => {
+                    Espo.Ui.notify(false);
+                    view.render();
+
+                    this.listenToOnce(view, "after:save", () => {
+                        // Refresh the model and re-render the card
+                        this.model.fetch().then(() => {
+                            this.reRender();
+                        });
+                    });
+                }
+            );
+        },
+
+        actionCreateTask: function () {
+            // Get contact ID from the conversation's linked contact
+            const contactId = this.model.get("contactId");
+            const contactName = this.model.get("contactDisplayName");
+
+            // Prepare attributes for the new Task
+            // Tasks use parent relationship, not linkMultiple
+            const attributes = {
+                parentType: "ChatwootConversation",
+                parentId: this.model.id,
+                parentName: this.model.get("name"),
+            };
+
+            // If there's a linked contact, also link it to the Task
+            if (contactId) {
+                attributes.contactId = contactId;
+                attributes.contactName = contactName;
+            }
+
+            // Open the Task create modal
+            Espo.Ui.notify(" ... ");
+
+            this.createView(
+                "quickCreateTask",
+                "views/modals/edit",
+                {
+                    scope: "Task",
                     attributes: attributes,
                     fullFormDisabled: true,
                     layoutName: "detailSmall",

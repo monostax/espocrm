@@ -4,7 +4,8 @@
         "displayName": "Nome de Exibição",
         "email": "Email",
         "password": "Senha",
-        "account": "Conta",
+        "platform": "Plataforma",
+        "chatwootAccount": "Conta Chatwoot",
         "assignedUser": "Usuário Proprietário",
         "role": "Função",
         "chatwootUserId": "ID do Usuário Chatwoot",
@@ -12,9 +13,9 @@
     },
     "links": {
         "platform": "Chatwoot / Plataforma",
-        "account": "Chatwoot / Conta",
+        "chatwootAccount": "Chatwoot / Conta",
         "assignedUser": "Usuário Proprietário",
-        "chatwootAgents": "Chatwoot / Agentes",
+        "agents": "Chatwoot / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"

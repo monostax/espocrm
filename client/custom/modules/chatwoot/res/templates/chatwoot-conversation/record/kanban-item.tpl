@@ -474,6 +474,90 @@
     font-size: 10px;
 }
 
+/* Task Item Styles */
+.conversation-task {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.conversation-task:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+.conversation-task i {
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.conversation-task-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Task Status Styles */
+.conversation-task.task-status-not-started {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.conversation-task.task-status-started {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.conversation-task.task-status-completed {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.conversation-task.task-status-canceled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.conversation-task.task-status-deferred {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+/* Create Task Button */
+.btn-create-task {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px dashed #d1d5db;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.btn-create-task:hover {
+    border-color: #4b5563;
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.btn-create-task i {
+    font-size: 10px;
+}
+
 /* Menu Container Override */
 .conversation-card .item-menu-container {
     position: absolute;
@@ -602,6 +686,34 @@
         <div class="conversation-related-items">
             <button type="button" class="btn-create-agendamento" title="{{createAgendamentoLabel}}">
                 <i class="fas fa-calendar-plus"></i>
+                <i class="fas fa-plus" style="font-size: 8px; margin-left: 2px;"></i>
+            </button>
+        </div>
+    </div>
+    {{/if}}
+
+    {{#if hasTasks}}
+    <div class="conversation-related-section">
+        <div class="conversation-related-header">
+            <i class="fas fa-tasks"></i>
+            <span>{{taskLabel}}</span>
+        </div>
+        <div class="conversation-related-items">
+            {{#each tasks}}
+            <a href="#Task/view/{{id}}" class="conversation-task {{statusStyle}}" title="{{name}}{{#if statusLabel}} - {{statusLabel}}{{/if}}" data-id="{{id}}" onclick="event.stopPropagation();">
+                <span class="conversation-task-name">{{name}}</span>
+            </a>
+            {{/each}}
+            <button type="button" class="btn-create-task" title="{{../createTaskLabel}}">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </div>
+    {{else}}
+    <div class="conversation-related-section">
+        <div class="conversation-related-items">
+            <button type="button" class="btn-create-task" title="{{createTaskLabel}}">
+                <i class="fas fa-tasks"></i>
                 <i class="fas fa-plus" style="font-size: 8px; margin-left: 2px;"></i>
             </button>
         </div>

@@ -16,18 +16,16 @@
         "chatwootAgentId": "ID do Agente Chatwoot",
         "chatwootAccount": "Conta Chatwoot",
         "chatwootUser": "Usuário Chatwoot",
-        "chatwootTeams": "Chatwoot / Times",
         "syncStatus": "Status de Sincronização",
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
-        "teams": "Times / Contas"
+        "team": "Time"
     },
     "links": {
         "chatwootAccount": "Conta Chatwoot",
         "chatwootUser": "Usuário Chatwoot",
-        "chatwootTeams": "Chatwoot / Times",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
-        "teams": "Times / Contas"
+        "team": "Time"
     },
     "labels": {
         "Create ChatwootAgent": "Criar Agente",

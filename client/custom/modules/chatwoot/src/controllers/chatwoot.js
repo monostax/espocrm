@@ -81,6 +81,7 @@ class ChatwootController extends Controller {
 
         // Get SSO URL for authentication (required for first load)
         const chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+        const chatwootFrontendUrl = this.appParams.get("chatwootFrontendUrl");
         console.log(
             "Chatwoot Controller: SSO URL available:",
             !!chatwootSsoUrl
@@ -89,6 +90,7 @@ class ChatwootController extends Controller {
         this.main("chatwoot:views/chatwoot/index", {
             cwPath: cwPath,
             chatwootSsoUrl: chatwootSsoUrl,
+            chatwootFrontendUrl: chatwootFrontendUrl,
         });
     }
 
@@ -129,11 +131,13 @@ class ChatwootController extends Controller {
         // AppParams are user-specific values returned from /api/v1/App/user
         const chatwootAccountId = this.appParams.get("chatwootAccountId");
         const chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+        const chatwootFrontendUrl = this.appParams.get("chatwootFrontendUrl");
 
         // Debug: Show what values we have
         console.log("Chatwoot Controller: AppParam values:", {
             chatwootAccountId: chatwootAccountId,
             chatwootSsoUrl: chatwootSsoUrl,
+            chatwootFrontendUrl: chatwootFrontendUrl,
             hasSsoUrl: !!chatwootSsoUrl,
             typeOfAccountId: typeof chatwootAccountId,
             typeOfSsoUrl: typeof chatwootSsoUrl,
@@ -166,6 +170,7 @@ class ChatwootController extends Controller {
             this.main("chatwoot:views/chatwoot/index", {
                 cwPath: "",
                 chatwootSsoUrl: chatwootSsoUrl,
+                chatwootFrontendUrl: chatwootFrontendUrl,
             });
             return;
         }
@@ -181,6 +186,7 @@ class ChatwootController extends Controller {
         this.main("chatwoot:views/chatwoot/index", {
             cwPath: cwPath,
             chatwootSsoUrl: chatwootSsoUrl,
+            chatwootFrontendUrl: chatwootFrontendUrl,
         });
     }
 }

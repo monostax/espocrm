@@ -1,7 +1,9 @@
 {
     "fields": {
         "name": "Name",
-        "url": "URL",
+        "isDefault": "Is Default",
+        "frontendUrl": "Frontend URL",
+        "backendUrl": "Backend URL",
         "accessToken": "Access Token",
         "teams": "Teams"
     },
@@ -15,7 +17,8 @@
         "Create ChatwootPlatform": "Create Chatwoot Platform"
     },
     "tooltips": {
-        "url": "Base URL of the Chatwoot platform (e.g., https://chatwoot.am.monostax.dev.localhost)",
+        "frontendUrl": "User-facing URL of the Chatwoot platform (e.g., https://chatwoot.example.com). Used for SSO redirects and iframe embedding.",
+        "backendUrl": "API endpoint URL of the Chatwoot platform (e.g., https://chatwoot-api.example.com). Used for all API calls.",
         "accessToken": "Platform API access token for Chatwoot. Used to create and manage accounts."
     }
 }

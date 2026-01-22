@@ -11,7 +11,8 @@
         "ChatwootUser": "Chatwoot / Usuário",
         "ChatwootTeam": "Chatwoot / Time",
         "ChatwootSyncState": "Chatwoot / Sync",
-        "ChatwootAccountWebhook": "Chatwoot / Webhook"
+        "ChatwootAccountWebhook": "Chatwoot / Webhook",
+        "ChatwootInboxIntegration": "Chatwoot / Inbox (Contas)"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chatwoot / Contas",
@@ -25,7 +26,8 @@
         "ChatwootUser": "Chatwoot / Usuários",
         "ChatwootTeam": "Chatwoot / Times",
         "ChatwootSyncState": "Chatwoot / Syncs",
-        "ChatwootAccountWebhook": "Chatwoot / Webhooks"
+        "ChatwootAccountWebhook": "Chatwoot / Webhooks",
+        "ChatwootInboxIntegration": "Chatwoot / Inboxes (Contas)"
     },
     "navbarTabs": {
         "Conversations": "Conversas",

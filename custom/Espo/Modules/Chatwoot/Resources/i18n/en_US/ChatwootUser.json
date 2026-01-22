@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "name": "Name",
+        "displayName": "Display Name",
+        "email": "Email",
+        "password": "Password",
+        "platform": "Platform",
+        "chatwootAccount": "Chatwoot Account",
+        "assignedUser": "Assigned User",
+        "chatwootUserId": "Chatwoot User ID",
+        "teams": "Teams / Accounts"
+    },
+    "links": {
+        "platform": "Chatwoot Platform",
+        "chatwootAccount": "Chatwoot Account",
+        "assignedUser": "Assigned User",
+        "agents": "Chatwoot Agents",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams / Accounts"
+    },
+    "labels": {
+        "Create ChatwootUser": "Create Chatwoot User"
+    },
+    "tooltips": {
+        "assignedUser": "CRM user linked to this Chatwoot user. Each CRM user can only have one Chatwoot user.",
+        "chatwootUserId": "User ID created in Chatwoot. This field is automatically populated after creation.",
+        "password": "User password for Chatwoot access. Minimum 6 characters."
+    }
+}

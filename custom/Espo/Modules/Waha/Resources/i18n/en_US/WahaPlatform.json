@@ -1,11 +1,15 @@
 {
     "fields": {
         "name": "Name",
-        "url": "URL",
+        "isDefault": "Is Default",
+        "frontendUrl": "Frontend URL",
+        "backendUrl": "Backend URL",
         "apiKey": "API Key",
         "teams": "Teams"
     },
     "links": {
+        "platform": "Waha / Platform",
+        "platforms": "Waha / Platforms",
         "sessions": "Sessions",
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
@@ -15,7 +19,8 @@
         "Create WahaPlatform": "Create Waha Platform"
     },
     "tooltips": {
-        "url": "Base URL of the WAHA platform (e.g., https://waha.example.com)",
+        "frontendUrl": "User-facing URL of the WAHA platform (e.g., https://waha.example.com). Used for external access.",
+        "backendUrl": "API endpoint URL of the WAHA platform (e.g., http://waha-service:3000). Used for all API calls.",
         "apiKey": "API Key for the WAHA platform. Used to authenticate API requests."
     }
 }

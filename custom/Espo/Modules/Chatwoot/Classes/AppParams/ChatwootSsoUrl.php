@@ -52,7 +52,7 @@ class ChatwootSsoUrl implements AppParam
     {
         try {
             $userId = $this->user->getId();
-            $this->log->debug("ChatwootSsoUrl: Getting SSO URL for user {$userId}");
+            $this->log->warning("ChatwootSsoUrl: Getting SSO URL for user {$userId}");
 
             // Find ChatwootUser linked to current EspoCRM user via assignedUser
             $chatwootUser = $this->entityManager
@@ -61,45 +61,36 @@ class ChatwootSsoUrl implements AppParam
                 ->findOne();
 
             if (!$chatwootUser) {
-                $this->log->debug("ChatwootSsoUrl: No ChatwootUser found for user {$userId}");
+                $this->log->warning("ChatwootSsoUrl: No ChatwootUser found for user {$userId}");
                 return null;
             }
+
+            $this->log->warning("ChatwootSsoUrl: Found ChatwootUser: " . $chatwootUser->getId());
 
             // Check if user has been synced with Chatwoot
             $chatwootUserId = $chatwootUser->get('chatwootUserId');
+            $this->log->warning("ChatwootSsoUrl: chatwootUserId = " . ($chatwootUserId ?? 'NULL'));
             if (!$chatwootUserId) {
-                $this->log->debug("ChatwootSsoUrl: ChatwootUser has no chatwootUserId");
+                $this->log->warning("ChatwootSsoUrl: ChatwootUser has no chatwootUserId");
                 return null;
             }
 
-            // Get the account to access platform config
-            $accountId = $chatwootUser->get('accountId');
-            if (!$accountId) {
-                $this->log->debug("ChatwootSsoUrl: ChatwootUser has no accountId");
-                return null;
-            }
-
-            $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-            if (!$account) {
-                $this->log->debug("ChatwootSsoUrl: ChatwootAccount not found: {$accountId}");
-                return null;
-            }
-
-            // Get platform from account
-            $platformId = $account->get('platformId');
+            // Get platform directly from ChatwootUser (it has a direct link to platform)
+            $platformId = $chatwootUser->get('platformId');
+            $this->log->warning("ChatwootSsoUrl: platformId = " . ($platformId ?? 'NULL'));
             if (!$platformId) {
-                $this->log->debug("ChatwootSsoUrl: ChatwootAccount has no platformId");
+                $this->log->warning("ChatwootSsoUrl: ChatwootUser has no platformId");
                 return null;
             }
 
             $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
             if (!$platform) {
-                $this->log->debug("ChatwootSsoUrl: ChatwootPlatform not found: {$platformId}");
+                $this->log->warning("ChatwootSsoUrl: ChatwootPlatform not found: {$platformId}");
                 return null;
             }
 
             // Get platform URL and access token
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $accessToken = $platform->get('accessToken');
 
             if (!$platformUrl || !$accessToken) {

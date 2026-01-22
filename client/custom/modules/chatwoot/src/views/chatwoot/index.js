@@ -34,7 +34,7 @@ const CHATWOOT_SSO_AUTH_KEY = "chatwoot_sso_authenticated";
 class ChatwootIndexView extends View {
     template = "chatwoot:chatwoot/index";
 
-    chatwootBaseUrl = "https://chatwoot.am.monostax.dev.localhost";
+    chatwootBaseUrl = null;
 
     /**
      * Check if SSO has been completed this session (shared across all views)
@@ -51,9 +51,10 @@ class ChatwootIndexView extends View {
     }
 
     setup() {
-        // Get cwPath and SSO URL from options (passed from controller)
+        // Get cwPath, SSO URL and frontend URL from options (passed from controller)
         this.cwPath = this.options.cwPath || "";
         this.chatwootSsoUrl = this.options.chatwootSsoUrl || "";
+        this.chatwootBaseUrl = this.options.chatwootFrontendUrl || "https://chatwoot.am.monostax.dev.localhost";
 
         // Notify parent to switch to Chatwoot mode when this view is loaded
         this.notifyParentToChatwoot();

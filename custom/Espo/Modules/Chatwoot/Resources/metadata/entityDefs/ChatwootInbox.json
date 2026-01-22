@@ -62,7 +62,8 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "view": "views/fields/teams"
+            "view": "views/fields/teams",
+            "required": true
         }
     },
     "links": {

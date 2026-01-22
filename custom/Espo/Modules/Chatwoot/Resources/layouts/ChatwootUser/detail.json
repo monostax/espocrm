@@ -23,14 +23,16 @@
                     "name": "platform"
                 },
                 {
-                    "name": "chatwootUserId"
+                    "name": "chatwootAccount"
                 }
             ],
             [
                 {
-                    "name": "assignedUser"
+                    "name": "chatwootUserId"
                 },
-                false
+                {
+                    "name": "assignedUser"
+                }
             ]
         ]
     }

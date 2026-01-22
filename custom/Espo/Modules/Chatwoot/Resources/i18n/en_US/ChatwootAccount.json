@@ -1,14 +1,17 @@
 {
     "fields": {
         "apiKey": "Account API Key",
-        "automationUserId": "Automation User ID",
-        "automationUserEmail": "Automation User Email",
-        "autoPendingEnabled": "Auto-Pending Enabled"
+        "automationUser": "Automation User",
+        "autoPendingEnabled": "Auto-Pending Enabled",
+        "team": "Team"
+    },
+    "links": {
+        "automationUser": "Automation User",
+        "team": "Team"
     },
     "tooltips": {
         "apiKey": "Account-level API token from Chatwoot. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chatwoot → Profile Settings → Access Token.",
-        "automationUserId": "The Chatwoot user ID of the automation user created for this account.",
-        "automationUserEmail": "The email address of the automation user. Use this to login to Chatwoot if needed.",
+        "automationUser": "The ChatwootUser entity representing the automation user for this account. Used for API operations.",
         "autoPendingEnabled": "When enabled, conversations will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
     }
 }

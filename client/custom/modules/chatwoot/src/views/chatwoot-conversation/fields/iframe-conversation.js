@@ -52,7 +52,7 @@ class IframeConversationFieldView extends BaseFieldView {
     @inject(AppParams)
     appParams;
 
-    chatwootBaseUrl = "https://chatwoot.am.monostax.dev.localhost";
+    chatwootBaseUrl = null;
 
     /**
      * Check if SSO has been completed this session (shared across all Chatwoot views)
@@ -120,6 +120,9 @@ class IframeConversationFieldView extends BaseFieldView {
 
         // Get SSO URL for authentication
         this.chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+
+        // Get frontend URL from AppParams (from ChatwootPlatform)
+        this.chatwootBaseUrl = this.appParams.get("chatwootFrontendUrl") || "https://chatwoot.am.monostax.dev.localhost";
 
         // Setup listener for chatwoot route changes
         this.setupChatwootListener();

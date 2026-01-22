@@ -75,7 +75,7 @@ class SyncWithChatwoot
             throw new Error('ChatwootPlatform not found: ' . $platformId);
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
 
         if (!$platformUrl) {
             throw new Error('ChatwootPlatform does not have a URL.');
@@ -209,7 +209,7 @@ class SyncWithChatwoot
                 return;
             }
 
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
 
             if (!$apiKey || !$platformUrl) {
                 $this->log->warning('Cannot delete webhook from Chatwoot: Missing credentials');

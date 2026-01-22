@@ -50,7 +50,7 @@ define('chatwoot:views/chatwoot-conversation/modals/conversation-drawer', ['view
             const chatwootConversationId = this.options.chatwootConversationId;
             const chatwootAccountId = this.getHelper().getAppParam('chatwootAccountId');
             const chatwootSsoUrl = this.getHelper().getAppParam('chatwootSsoUrl');
-            const chatwootBaseUrl = this.getConfig().get('chatwootUrl') || 'https://chatwoot.am.monostax.dev.localhost';
+            const chatwootBaseUrl = this.getHelper().getAppParam('chatwootFrontendUrl') || 'https://chatwoot.am.monostax.dev.localhost';
             
             this.hasConversation = chatwootConversationId && chatwootAccountId;
             

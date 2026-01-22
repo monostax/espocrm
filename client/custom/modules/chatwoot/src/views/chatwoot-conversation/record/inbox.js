@@ -155,7 +155,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             this.chatwootSsoUrl =
                 this.getHelper().getAppParam("chatwootSsoUrl");
             this.chatwootBaseUrl =
-                this.getConfig().get("chatwootUrl") ||
+                this.getHelper().getAppParam("chatwootFrontendUrl") ||
                 "https://chatwoot.am.monostax.dev.localhost";
 
             // Get WebSocket manager

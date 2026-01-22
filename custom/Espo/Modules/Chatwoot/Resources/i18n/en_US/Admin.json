@@ -5,6 +5,7 @@
     "descriptions": {
         "chatwootPlatforms": "Manage Chatwoot platforms",
         "chatwootAccounts": "Manage Chatwoot accounts",
+        "chatwootInboxIntegrations": "Manage inbox integrations",
         "chatwootUsers": "Manage Chatwoot users",
         "chatwootTeams": "Manage Chatwoot teams",
         "chatwootWebhooks": "Manage Chatwoot webhooks",

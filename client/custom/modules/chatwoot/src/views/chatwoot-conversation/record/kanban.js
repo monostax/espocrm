@@ -52,6 +52,17 @@ define('chatwoot:views/chatwoot-conversation/record/kanban', ['views/record/kanb
                 attributeList.push('cAgendamentosColumns');
             }
             
+            // Add tasks attributes (loaded via backend TasksLoader)
+            if (!attributeList.includes('tasksIds')) {
+                attributeList.push('tasksIds');
+            }
+            if (!attributeList.includes('tasksNames')) {
+                attributeList.push('tasksNames');
+            }
+            if (!attributeList.includes('tasksColumns')) {
+                attributeList.push('tasksColumns');
+            }
+            
             if (callback) callback(attributeList);
             
             return attributeList;

@@ -6,12 +6,16 @@
                 {
                     "name": "name"
                 },
-                false
+                {
+                    "name": "isDefault"
+                }
             ],
             [
                 {
-                    "name": "url",
-                    "fullWidth": true
+                    "name": "frontendUrl"
+                },
+                {
+                    "name": "backendUrl"
                 }
             ],
             [

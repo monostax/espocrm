@@ -7,8 +7,9 @@
         "domain": "Domínio",
         "supportEmail": "Email de Suporte",
         "status": "Status",
-        "teams": "Times / Contas",
-        "autoPendingEnabled": "Auto-Pendente Habilitado"
+        "team": "Equipe",
+        "autoPendingEnabled": "Auto-Pendente Habilitado",
+        "automationUser": "Usuário de Automação"
     },
     "links": {
         "platform": "Plataforma",
@@ -20,7 +21,8 @@
         "webhooks": "Chatwoot / Webhooks",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times / Contas"
+        "team": "Equipe",
+        "automationUser": "Usuário de Automação"
     },
     "labels": {
         "Create ChatwootAccount": "Criar Conta Chatwoot"
@@ -41,7 +43,8 @@
     },
     "tooltips": {
         "chatwootAccountId": "ID da conta criada no Chatwoot. Este campo é preenchido automaticamente após a criação.",
-        "autoPendingEnabled": "Quando habilitado, as conversas serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente."
+        "autoPendingEnabled": "Quando habilitado, as conversas serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente.",
+        "automationUser": "A entidade ChatwootUser que representa o usuário de automação para esta conta. Usado para operações de API."
     }
 }
 

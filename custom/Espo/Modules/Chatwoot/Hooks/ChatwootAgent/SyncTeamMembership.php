@@ -204,7 +204,7 @@ class SyncTeamMembership
             return null;
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         if (!$platformUrl) {
             $this->log->warning('SyncTeamMembership: Platform has no URL');
             return null;

@@ -96,7 +96,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
                 throw new \Exception('ChatwootPlatform not found');
             }
 
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $apiKey = $account->get('apiKey');
             $chatwootAccountId = $account->get('chatwootAccountId');
 
@@ -104,8 +104,9 @@ class SyncTeamsFromChatwoot implements JobDataLess
                 throw new \Exception('Missing platform URL, API key, or Chatwoot account ID');
             }
 
-            // Get EspoCRM teams from the ChatwootAccount for assignment
-            $espoTeamsIds = $this->getAccountTeamsIds($account);
+            // Get EspoCRM team from the ChatwootAccount for assignment
+            $espoTeamId = $this->getAccountTeamId($account);
+            $espoTeamsIds = $espoTeamId ? [$espoTeamId] : [];
 
             // Sync teams
             $stats = $this->syncTeams(
@@ -284,22 +285,12 @@ class SyncTeamsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Get EspoCRM team IDs from a ChatwootAccount.
+     * Get EspoCRM team ID from a ChatwootAccount.
      *
-     * @return array<string>
+     * @return string|null
      */
-    private function getAccountTeamsIds(Entity $account): array
+    private function getAccountTeamId(Entity $account): ?string
     {
-        $teamsIds = [];
-        $teams = $this->entityManager
-            ->getRDBRepository('ChatwootAccount')
-            ->getRelation($account, 'teams')
-            ->find();
-
-        foreach ($teams as $team) {
-            $teamsIds[] = $team->getId();
-        }
-
-        return $teamsIds;
+        return $account->get('teamId');
     }
 }

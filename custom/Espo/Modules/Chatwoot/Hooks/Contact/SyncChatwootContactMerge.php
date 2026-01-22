@@ -152,7 +152,7 @@ class SyncChatwootContactMerge
             return;
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $account->get('apiKey');
         $chatwootAccountId = $account->get('chatwootAccountId');
 

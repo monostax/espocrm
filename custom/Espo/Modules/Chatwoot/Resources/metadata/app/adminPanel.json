@@ -8,14 +8,20 @@
                 "iconClass": "fas fa-server",
                 "description": "chatwootPlatforms"
             },
-            {
-                "url": "#ChatwootAccount",
-                "label": "Accounts",
-                "iconClass": "fas fa-building",
-                "description": "chatwootAccounts"
-            },
-            {
-                "url": "#ChatwootUser",
+{
+            "url": "#ChatwootAccount",
+            "label": "Accounts",
+            "iconClass": "fas fa-building",
+            "description": "chatwootAccounts"
+        },
+        {
+            "url": "#ChatwootInboxIntegration",
+            "label": "Inbox Integrations",
+            "iconClass": "fab fa-whatsapp",
+            "description": "chatwootInboxIntegrations"
+        },
+        {
+            "url": "#ChatwootUser",
                 "label": "Users",
                 "iconClass": "fas fa-user",
                 "description": "chatwootUsers"
