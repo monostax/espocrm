@@ -649,6 +649,15 @@
                         <li><a role="button" class="action" data-action="changeStatus" data-status="snoozed">{{translateOption 'snoozed' field='status' scope='ChatwootConversation'}}</a></li>
                     </ul>
                 </div>
+                <div class="inbox-more-dropdown btn-group">
+                    <button class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" title="{{translate 'More'}}">
+                        <span class="fas fa-ellipsis-h"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        <li><a role="button" class="action" data-action="viewConversation"><i class="fas fa-eye"></i> {{translate 'View'}}</a></li>
+                        <li><a role="button" class="action" data-action="removeConversation"><i class="fas fa-trash"></i> {{translate 'Remove'}}</a></li>
+                    </ul>
+                </div>
             </div>
             <div class="inbox-iframe-wrapper">
                 <iframe class="inbox-iframe" src="" frameborder="0" allowfullscreen></iframe>

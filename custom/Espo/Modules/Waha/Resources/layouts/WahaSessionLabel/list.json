@@ -1,0 +1,22 @@
+[
+    {
+        "name": "name",
+        "width": 25
+    },
+    {
+        "name": "agent",
+        "width": 20
+    },
+    {
+        "name": "inboxIntegration",
+        "width": 20
+    },
+    {
+        "name": "syncStatus",
+        "width": 15
+    },
+    {
+        "name": "createdAt",
+        "width": 20
+    }
+]

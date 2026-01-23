@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "maxLength": 255,
@@ -167,7 +174,7 @@
     "indexes": {
         "chatwootContactIdAccount": {
             "unique": true,
-            "columns": ["chatwootContactId", "chatwootAccountId"]
+            "columns": ["chatwootContactId", "chatwootAccountId", "deleteId"]
         },
         "phoneNumberAccount": {
             "columns": ["phoneNumber", "chatwootAccountId"]
@@ -178,6 +185,9 @@
         "createdAt": {
             "columns": ["createdAt"]
         }
+    },
+    "cascadeDelete": {
+        "links": ["contactInboxes", "conversations"]
     }
 }
 

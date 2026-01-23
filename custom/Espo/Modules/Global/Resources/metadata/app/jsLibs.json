@@ -1,0 +1,8 @@
+{
+    "fullcalendar-scheduler": {
+        "path": "client/custom/modules/global/lib/fullcalendar-scheduler-bundle.js",
+        "devPath": "client/custom/modules/global/lib/original/fullcalendar-scheduler-bundle.js",
+        "exportsTo": "FullCalendar",
+        "exportsAs": "ResourceTimeGrid"
+    }
+}

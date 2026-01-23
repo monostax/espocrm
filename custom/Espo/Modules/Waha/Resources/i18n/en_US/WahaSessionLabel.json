@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "name": "Name",
+        "wahaLabelId": "WAHA Label ID",
+        "color": "Color",
+        "colorHex": "Color Hex",
+        "agent": "Agent",
+        "inboxIntegration": "Inbox Integration",
+        "syncStatus": "Sync Status",
+        "lastSyncError": "Last Sync Error"
+    },
+    "links": {
+        "agent": "Agent",
+        "inboxIntegration": "Inbox Integration"
+    },
+    "labels": {
+        "Create WahaSessionLabel": "Create Session Label"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    },
+    "tooltips": {
+        "wahaLabelId": "The label ID in WAHA (WhatsApp Business). Auto-generated when synced."
+    }
+}

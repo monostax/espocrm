@@ -175,6 +175,9 @@
         "type": "hasMany",
         "entity": "ChatwootAccountWebhook",
         "foreign": "account"
+    },
+    "cascadeDelete": {
+        "links": ["chatwootInboxIntegrations", "inboxes", "contacts", "agents", "chatwootTeams", "syncStates", "chatwootUsers"]
     }
 }
 

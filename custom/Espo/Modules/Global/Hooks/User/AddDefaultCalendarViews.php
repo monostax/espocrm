@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\Clinica\Hooks\User;
+namespace Espo\Modules\Global\Hooks\User;
 
 use Espo\Core\Hook\Hook\AfterSave;
 use Espo\Entities\User;
@@ -135,4 +135,3 @@ class AddDefaultCalendarViews implements AfterSave
         return $id;
     }
 }
-

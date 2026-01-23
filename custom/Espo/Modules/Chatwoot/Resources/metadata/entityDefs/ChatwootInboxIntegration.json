@@ -60,6 +60,15 @@
             "maxLength": 255,
             "readOnly": true
         },
+        "wahaWebhookSecret": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "utility": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
         "chatwootInboxId": {
             "type": "int",
             "readOnly": true
@@ -146,6 +155,16 @@
         "team": {
             "type": "belongsTo",
             "entity": "Team"
+        },
+        "chatwootInbox": {
+            "type": "hasOne",
+            "entity": "ChatwootInbox",
+            "foreign": "chatwootInboxIntegration"
+        },
+        "wahaSessionLabels": {
+            "type": "hasMany",
+            "entity": "WahaSessionLabel",
+            "foreign": "inboxIntegration"
         }
     },
     "collection": {
@@ -166,5 +185,8 @@
             "unique": true,
             "columns": ["createdAt", "id"]
         }
+    },
+    "cascadeDelete": {
+        "links": ["chatwootInbox", "wahaSessionLabels"]
     }
 }

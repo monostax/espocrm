@@ -18,6 +18,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
+use Espo\Core\Utils\Config;
 use Espo\Core\Acl;
 use Espo\Modules\Waha\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
@@ -36,7 +37,8 @@ class ChatwootInboxIntegration
         private WahaApiClient $wahaApiClient,
         private ChatwootApiClient $chatwootApiClient,
         private Log $log,
-        private Acl $acl
+        private Acl $acl,
+        private Config $config
     ) {}
 
     /**
@@ -147,6 +149,29 @@ class ChatwootInboxIntegration
 
             $channel->set('wahaSessionName', $sessionName);
             $channel->set('wahaAppId', $appId);
+
+            // Step 5b: Generate webhook secret and register label webhook
+            $webhookSecret = bin2hex(random_bytes(32));
+            $channel->set('wahaWebhookSecret', $webhookSecret);
+
+            $siteUrl = $this->config->get('siteUrl');
+            if ($siteUrl) {
+                $labelWebhookUrl = rtrim($siteUrl, '/') . '/api/v1/WahaLabelWebhook/' . $channelId;
+
+                $this->wahaApiClient->updateSession($wahaUrl, $wahaApiKey, $sessionName, [
+                    'config' => [
+                        'webhooks' => [[
+                            'url' => $labelWebhookUrl,
+                            'events' => ['label.chat.added', 'label.chat.deleted'],
+                            'hmac' => ['key' => $webhookSecret],
+                        ]],
+                    ],
+                ]);
+
+                $this->log->info("ChatwootInboxIntegration: Registered label webhook at {$labelWebhookUrl}");
+            } else {
+                $this->log->warning("ChatwootInboxIntegration: siteUrl not configured, skipping label webhook registration");
+            }
 
             // Step 6: Create WAHA Chatwoot App
             $appConfig = [

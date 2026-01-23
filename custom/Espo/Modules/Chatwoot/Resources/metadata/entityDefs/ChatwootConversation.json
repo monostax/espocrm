@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "maxLength": 255,
@@ -186,7 +193,7 @@
     "indexes": {
         "uniqueConversation": {
             "unique": true,
-            "columns": ["chatwootConversationId", "chatwootAccountId"]
+            "columns": ["chatwootConversationId", "chatwootAccountId", "deleteId"]
         },
         "lastActivityAt": {
             "columns": ["lastActivityAt"]
@@ -196,6 +203,14 @@
         "orderBy": "lastActivityAt",
         "order": "desc",
         "textFilterFields": ["name", "contactDisplayName", "contactPhoneNumber", "messages.content"]
+    },
+    "cascadeDelete": {
+        "links": ["messages"],
+        "junctionTables": [
+            {"table": "SmartAudienceConversation", "column": "chatwootConversationId"},
+            {"table": "ChatwootConversationOpportunity", "column": "chatwootConversationId"},
+            {"table": "ChatwootConversationCAgendamento", "column": "chatwootConversationId"}
+        ]
     }
 }
 

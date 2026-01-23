@@ -1892,6 +1892,48 @@ public function deleteAgent(
 }
 
 /**
+ * List all agents (members) in an inbox.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @return array<int, array<string, mixed>> List of agents in the inbox
+ * @throws Error
+ */
+public function listInboxMembers(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inbox_members/' . $inboxId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to list inbox members from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (listInboxMembers): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    // Response format: { "payload": [agents...] }
+    return $response['body']['payload'] ?? $response['body'];
+}
+
+/**
  * Get a conversation from Chatwoot.
  *
  * @param string $platformUrl The Chatwoot platform URL
@@ -2002,6 +2044,65 @@ public function assignConversation(
     $this->log->info("Chatwoot: Assigned conversation {$conversationId} to {$assigneeInfo} in account {$accountId}");
 
     return $response['body'];
+}
+
+/**
+ * Delete a conversation from Chatwoot.
+ * Note: Only administrators can delete conversations.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key (must be from an administrator)
+ * @param int $accountId The Chatwoot account ID
+ * @param int $conversationId The Chatwoot conversation ID (display_id)
+ * @return bool True if deleted successfully
+ * @throws Error
+ */
+public function deleteConversation(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $conversationId
+): bool {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+    // 404 means already deleted - treat as success
+    if ($response['code'] === 404) {
+        $this->log->info("Chatwoot: Conversation {$conversationId} not found in account {$accountId} (already deleted)");
+        return true;
+    }
+
+    // 401/403 means unauthorized - agent API key used instead of administrator
+    if ($response['code'] === 401 || $response['code'] === 403) {
+        $errorMsg = 'Unauthorized to delete conversation. Only administrators can delete conversations.';
+        if (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+        $this->log->error('Chatwoot API Error (deleteConversation): ' . $errorMsg);
+        throw new Error($errorMsg);
+    }
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to delete conversation from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (deleteConversation): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    $this->log->info("Chatwoot: Deleted conversation {$conversationId} from account {$accountId}");
+    return true;
 }
 }
 

@@ -62,6 +62,11 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'SyncAgentsFromChatwoot',
             'scheduling' => '* * * * *',
         ],
+        [
+            'name' => 'Sync Inbox Members from Chatwoot',
+            'job' => 'SyncInboxMembersFromChatwoot',
+            'scheduling' => '*/5 * * * *',
+        ],
     ];
 
     public function __construct(

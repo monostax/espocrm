@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "maxLength": 255,
@@ -74,9 +81,13 @@
             "columns": [
                 "chatwootContactId",
                 "chatwootInboxId",
-                "chatwootAccountId"
+                "chatwootAccountId",
+                "deleteId"
             ]
         }
+    },
+    "cascadeDelete": {
+        "links": ["conversations"]
     }
 }
 

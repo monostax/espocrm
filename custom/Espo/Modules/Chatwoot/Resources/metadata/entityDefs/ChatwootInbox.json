@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "maxLength": 255,
@@ -64,6 +71,12 @@
             "type": "linkMultiple",
             "view": "views/fields/teams",
             "required": true
+        },
+        "chatwootAgents": {
+            "type": "linkMultiple"
+        },
+        "chatwootInboxIntegration": {
+            "type": "link"
         }
     },
     "links": {
@@ -87,16 +100,33 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "chatwootAgents": {
+            "type": "hasMany",
+            "entity": "ChatwootAgent",
+            "relationName": "chatwootAgentChatwootInbox",
+            "foreign": "chatwootInboxes"
+        },
+        "chatwootInboxIntegration": {
+            "type": "belongsTo",
+            "entity": "ChatwootInboxIntegration",
+            "foreign": "chatwootInbox"
         }
     },
     "indexes": {
         "uniqueInbox": {
             "unique": true,
-            "columns": ["chatwootInboxId", "chatwootAccountId"]
+            "columns": ["chatwootInboxId", "chatwootAccountId", "deleteId"]
         },
         "chatwootAccountId": {
             "columns": ["chatwootAccountId"]
         }
+    },
+    "cascadeDelete": {
+        "links": ["conversations", "contactInboxes"],
+        "junctionTables": [
+            {"table": "ChatwootAgentChatwootInbox", "column": "chatwootInboxId"}
+        ]
     }
 }
 

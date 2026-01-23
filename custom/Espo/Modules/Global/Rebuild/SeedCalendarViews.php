@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\Clinica\Rebuild;
+namespace Espo\Modules\Global\Rebuild;
 
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Metadata;
@@ -45,7 +45,7 @@ class SeedCalendarViews implements RebuildAction
 
     public function process(): void
     {
-        $this->log->info('Clinica Module: Starting to seed Calendar Shared Views...');
+        $this->log->info('Global Module: Starting to seed Calendar Shared Views...');
 
         // Check if UUID mode is enabled
         $toHash = $this->metadata->get(['app', 'recordId', 'type']) === 'uuid4' ||
@@ -61,11 +61,11 @@ class SeedCalendarViews implements RebuildAction
             ->find();
 
         if (!count($users)) {
-            $this->log->warning('Clinica Module: No active users found, skipping calendar view seeding.');
+            $this->log->warning('Global Module: No active users found, skipping calendar view seeding.');
             return;
         }
 
-        $this->log->info("Clinica Module: Found " . count($users) . " active users to seed calendar views.");
+        $this->log->info("Global Module: Found " . count($users) . " active users to seed calendar views.");
         
         $totalAdded = 0;
         $totalSkipped = 0;
@@ -160,7 +160,7 @@ class SeedCalendarViews implements RebuildAction
             $preferences = $this->entityManager->getEntityById(Preferences::ENTITY_TYPE, $user->getId());
             
             if (!$preferences) {
-                $this->log->warning("Clinica Module: Could not load preferences for user '{$user->getUserName()}', skipping.");
+                $this->log->warning("Global Module: Could not load preferences for user '{$user->getUserName()}', skipping.");
                 continue;
             }
 
@@ -192,14 +192,14 @@ class SeedCalendarViews implements RebuildAction
                     $preferences->set('calendarViewDataList', $existingViews);
                     $this->entityManager->saveEntity($preferences);
                     $userCount++;
-                    $this->log->info("Clinica Module: Added {$addedCount} calendar view(s) to user '{$user->getUserName()}'");
+                    $this->log->info("Global Module: Added {$addedCount} calendar view(s) to user '{$user->getUserName()}'");
                 } catch (\Exception $e) {
-                    $this->log->error("Clinica Module: Failed to save calendar views for user '{$user->getUserName()}': " . $e->getMessage());
+                    $this->log->error("Global Module: Failed to save calendar views for user '{$user->getUserName()}': " . $e->getMessage());
                 }
             }
         }
 
-        $this->log->info("Clinica Module: Calendar view seeding complete. Updated {$userCount} users, Added {$totalAdded} views total, Skipped {$totalSkipped} existing views.");
+        $this->log->info("Global Module: Calendar view seeding complete. Updated {$userCount} users, Added {$totalAdded} views total, Skipped {$totalSkipped} existing views.");
     }
 
     /**
@@ -216,4 +216,3 @@ class SeedCalendarViews implements RebuildAction
         return $id;
     }
 }
-

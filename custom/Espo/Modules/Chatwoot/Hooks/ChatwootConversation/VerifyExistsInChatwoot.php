@@ -23,21 +23,20 @@
 
 namespace Espo\Modules\Chatwoot\Hooks\ChatwootConversation;
 
+use Espo\Core\Exceptions\Error;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
- * Hook to verify ChatwootConversation exists in Chatwoot before removal.
+ * Hook to delete ChatwootConversation from Chatwoot before removal from EspoCRM.
  * 
- * This hook checks if the conversation exists on Chatwoot before deleting from EspoCRM.
+ * This hook deletes the conversation on Chatwoot before deleting from EspoCRM.
  * If Chatwoot returns 404 (conversation doesn't exist), the deletion proceeds normally.
- * This allows cleanup of orphaned records where the conversation was deleted externally
- * from Chatwoot.
  * 
- * Note: Chatwoot API does not support deleting conversations, so we only verify
- * existence and allow local deletion regardless of whether it exists on Chatwoot.
+ * Note: Only administrators can delete conversations in Chatwoot. The account API key
+ * must be from an administrator user.
  */
 class VerifyExistsInChatwoot
 {
@@ -50,11 +49,11 @@ class VerifyExistsInChatwoot
     ) {}
 
     /**
-     * Verify conversation exists on Chatwoot before removal.
-     * If 404, log and allow deletion. If exists, also allow deletion.
+     * Delete conversation from Chatwoot BEFORE entity is removed from database.
      * 
      * @param Entity $entity
      * @param array<string, mixed> $options
+     * @throws Error
      */
     public function beforeRemove(Entity $entity, array $options): void
     {
@@ -67,17 +66,20 @@ class VerifyExistsInChatwoot
         if (!$chatwootConversationId) {
             $this->log->info(
                 'ChatwootConversation ' . $entity->getId() . 
-                ' has no chatwootConversationId, skipping Chatwoot verification'
+                ' has no chatwootConversationId, skipping Chatwoot deletion'
             );
             return;
         }
+        
+        $this->log->info('Attempting to delete Chatwoot conversation with ID: ' . $chatwootConversationId);
         
         $accountId = $entity->get('chatwootAccountId');
         if (!$accountId) {
             $this->log->warning(
                 'ChatwootConversation ' . $entity->getId() . 
-                ' has no chatwootAccountId, allowing local deletion'
+                ' has no chatwootAccountId, cannot delete from Chatwoot'
             );
+            // Allow deletion from EspoCRM anyway - we can't sync
             return;
         }
 
@@ -128,37 +130,24 @@ class VerifyExistsInChatwoot
                 return;
             }
 
-            // Check if conversation exists on Chatwoot
+            // Delete conversation from Chatwoot
             $this->log->info(
-                'Verifying Chatwoot conversation ' . $chatwootConversationId . 
-                ' exists in account ' . $chatwootAccountId
+                'Deleting Chatwoot conversation: ' . $chatwootConversationId . 
+                ' from account ' . $chatwootAccountId
             );
             
-            $conversation = $this->apiClient->getConversation(
+            $this->apiClient->deleteConversation(
                 $platformUrl,
                 $apiKey,
                 $chatwootAccountId,
                 $chatwootConversationId
             );
             
-            if ($conversation === null) {
-                // 404 - conversation doesn't exist on Chatwoot
-                $this->log->info(
-                    'Chatwoot conversation ' . $chatwootConversationId . 
-                    ' not found in Chatwoot (404). Allowing deletion from EspoCRM.'
-                );
-            } else {
-                // Conversation exists on Chatwoot, but we can't delete it via API
-                // Allow local deletion anyway
-                $this->log->info(
-                    'Chatwoot conversation ' . $chatwootConversationId . 
-                    ' exists in Chatwoot. Allowing deletion from EspoCRM ' .
-                    '(note: conversation will remain in Chatwoot as API does not support deletion).'
-                );
-            }
+            $this->log->info('Successfully deleted Chatwoot conversation: ' . $chatwootConversationId);
 
         } catch (\Exception $e) {
-            // If we get a 404-like error message, allow deletion
+            // If the resource doesn't exist (404), allow deletion from EspoCRM
+            // The conversation is already gone from Chatwoot
             if (str_contains($e->getMessage(), '404') || str_contains($e->getMessage(), 'not found')) {
                 $this->log->warning(
                     'Chatwoot conversation ' . $chatwootConversationId . 
@@ -167,11 +156,28 @@ class VerifyExistsInChatwoot
                 return;
             }
             
-            // For other errors, log but still allow deletion
-            // We don't want to block EspoCRM cleanup due to API issues
-            $this->log->warning(
-                'Could not verify Chatwoot conversation ' . $chatwootConversationId . 
-                ' existence: ' . $e->getMessage() . '. Allowing deletion from EspoCRM anyway.'
+            // For authorization errors, log but allow local deletion
+            // The API key might be from an agent, not an administrator
+            if (str_contains($e->getMessage(), 'Unauthorized') || 
+                str_contains($e->getMessage(), '401') || 
+                str_contains($e->getMessage(), '403')) {
+                $this->log->warning(
+                    'Not authorized to delete Chatwoot conversation ' . $chatwootConversationId . 
+                    '. The API key might not be from an administrator. ' .
+                    'Conversation will remain in Chatwoot. Error: ' . $e->getMessage()
+                );
+                return;
+            }
+            
+            $this->log->error(
+                'Failed to delete Chatwoot conversation ' . $chatwootConversationId . ': ' . $e->getMessage()
+            );
+            
+            // Re-throw - this will prevent the database DELETE from happening
+            throw new Error(
+                'Failed to delete conversation from Chatwoot: ' . $e->getMessage() . 
+                '. The conversation was not deleted from EspoCRM to maintain synchronization. ' .
+                'Please check if the conversation still exists in Chatwoot or try again.'
             );
         }
     }

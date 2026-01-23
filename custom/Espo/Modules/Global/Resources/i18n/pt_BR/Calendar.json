@@ -1,0 +1,16 @@
+{
+    "modes": {
+        "resourceDay": "Recursos (Dia)",
+        "resourceWeek": "Recursos (Semana)"
+    },
+    "labels": {
+        "Resource Calendar": "Calendário por Recursos",
+        "Select Resources": "Selecionar Recursos",
+        "Users": "Usuários",
+        "Entity Types": "Tipos de Entidade",
+        "Manage Users": "Gerenciar Usuários",
+        "Manage Calendar Users": "Gerenciar Usuários do Calendário",
+        "Change Color": "Alterar cor",
+        "Custom Color": "Cor personalizada..."
+    }
+}

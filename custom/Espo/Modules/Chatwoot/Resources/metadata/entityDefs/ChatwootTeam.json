@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "required": true,
@@ -100,14 +107,14 @@
     },
     "indexes": {
         "name": {
-            "columns": ["name", "deleted"]
+            "columns": ["name", "deleteId"]
         },
         "account": {
-            "columns": ["accountId", "deleted"]
+            "columns": ["accountId", "deleteId"]
         },
         "uniqueTeam": {
             "unique": true,
-            "columns": ["chatwootTeamId", "accountId"]
+            "columns": ["chatwootTeamId", "accountId", "deleteId"]
         },
         "createdAt": {
             "columns": ["createdAt"]

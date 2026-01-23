@@ -98,7 +98,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
             $this->log->warning(
                 "SyncInboxesFromChatwoot: Account {$accountName} - " .
-                "{$stats['synced']} synced, {$stats['errors']} errors"
+                "{$stats['synced']} synced, {$stats['deleted']} deleted, {$stats['errors']} errors"
             );
 
         } catch (\Exception $e) {
@@ -112,7 +112,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
      * Sync inboxes from Chatwoot to EspoCRM.
      *
      * @param array<string> $teamsIds Team IDs to assign to synced entities
-     * @return array{synced: int, errors: int}
+     * @return array{synced: int, errors: int, deleted: int}
      */
     private function syncInboxes(
         string $platformUrl,
@@ -121,7 +121,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
         string $espoAccountId,
         array $teamsIds = []
     ): array {
-        $stats = ['synced' => 0, 'errors' => 0];
+        $stats = ['synced' => 0, 'errors' => 0, 'deleted' => 0];
 
         $response = $this->apiClient->listInboxes(
             $platformUrl,
@@ -135,10 +135,14 @@ class SyncInboxesFromChatwoot implements JobDataLess
             "SyncInboxesFromChatwoot: Found " . count($inboxes) . " inboxes"
         );
 
+        // Collect Chatwoot inbox IDs that exist
+        $chatwootInboxIds = [];
+        
         foreach ($inboxes as $chatwootInbox) {
             try {
                 $this->syncSingleInbox($chatwootInbox, $espoAccountId, $teamsIds);
                 $stats['synced']++;
+                $chatwootInboxIds[] = $chatwootInbox['id'];
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $inboxId = $chatwootInbox['id'] ?? 'unknown';
@@ -148,7 +152,54 @@ class SyncInboxesFromChatwoot implements JobDataLess
             }
         }
 
+        // Remove orphaned inboxes (exist in EspoCRM but not in Chatwoot)
+        $deleted = $this->removeOrphanedInboxes($espoAccountId, $chatwootInboxIds);
+        $stats['deleted'] = $deleted;
+
         return $stats;
+    }
+
+    /**
+     * Remove ChatwootInbox records that no longer exist in Chatwoot.
+     *
+     * @param string $espoAccountId
+     * @param array<int> $chatwootInboxIds Valid Chatwoot inbox IDs
+     * @return int Number of deleted records
+     */
+    private function removeOrphanedInboxes(string $espoAccountId, array $chatwootInboxIds): int
+    {
+        $deleted = 0;
+
+        // Get all existing inboxes for this account in EspoCRM
+        $existingInboxes = $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->where(['chatwootAccountId' => $espoAccountId])
+            ->find();
+
+        foreach ($existingInboxes as $inbox) {
+            $inboxChatwootId = $inbox->get('chatwootInboxId');
+            
+            // If this inbox's chatwootInboxId is not in the list from Chatwoot, delete it
+            if (!in_array($inboxChatwootId, $chatwootInboxIds, true)) {
+                $this->log->info(
+                    "SyncInboxesFromChatwoot: Removing orphaned inbox {$inbox->getId()} " .
+                    "(chatwootInboxId: {$inboxChatwootId}) - no longer exists in Chatwoot"
+                );
+                
+                try {
+                    // Use cascadeParent to enable local cascade delete while skipping remote API calls
+                    $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
+                    $deleted++;
+                } catch (\Exception $e) {
+                    $this->log->warning(
+                        "SyncInboxesFromChatwoot: Failed to remove orphaned inbox {$inbox->getId()}: " .
+                        $e->getMessage()
+                    );
+                }
+            }
+        }
+
+        return $deleted;
     }
 
     /**
@@ -195,6 +246,22 @@ class SyncInboxesFromChatwoot implements JobDataLess
         $inbox->set('inboxIdentifier', $chatwootInbox['inbox_identifier'] ?? null);
         $inbox->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
+        // Auto-link to ChatwootInboxIntegration if not already linked
+        if (!$inbox->get('chatwootInboxIntegrationId') && $chatwootInbox['inbox_identifier']) {
+            $integration = $this->findIntegrationByIdentifier($chatwootInbox['inbox_identifier']);
+            if ($integration) {
+                $inbox->set('chatwootInboxIntegrationId', $integration->getId());
+                // Also update the integration with the chatwootInboxId
+                if (!$integration->get('chatwootInboxId')) {
+                    $integration->set('chatwootInboxId', $chatwootInbox['id']);
+                    $this->entityManager->saveEntity($integration, ['silent' => true]);
+                }
+                $this->log->info(
+                    "SyncInboxesFromChatwoot: Linked inbox {$inbox->getId()} to integration {$integration->getId()}"
+                );
+            }
+        }
+
         // Assign teams from ChatwootAccount
         if (!empty($teamsIds)) {
             $inbox->set('teamsIds', $teamsIds);
@@ -226,12 +293,39 @@ class SyncInboxesFromChatwoot implements JobDataLess
             'lastSyncedAt' => date('Y-m-d H:i:s'),
         ];
 
+        // Try to find and link ChatwootInboxIntegration
+        if ($chatwootInbox['inbox_identifier']) {
+            $integration = $this->findIntegrationByIdentifier($chatwootInbox['inbox_identifier']);
+            if ($integration) {
+                $data['chatwootInboxIntegrationId'] = $integration->getId();
+                // Also update the integration with the chatwootInboxId
+                if (!$integration->get('chatwootInboxId')) {
+                    $integration->set('chatwootInboxId', $chatwootInbox['id']);
+                    $this->entityManager->saveEntity($integration, ['silent' => true]);
+                }
+                $this->log->info(
+                    "SyncInboxesFromChatwoot: Auto-linked new inbox to integration {$integration->getId()}"
+                );
+            }
+        }
+
         // Assign teams from ChatwootAccount
         if (!empty($teamsIds)) {
             $data['teamsIds'] = $teamsIds;
         }
 
         $this->entityManager->createEntity('ChatwootInbox', $data, ['silent' => true]);
+    }
+
+    /**
+     * Find ChatwootInboxIntegration by inbox identifier.
+     */
+    private function findIntegrationByIdentifier(string $identifier): ?Entity
+    {
+        return $this->entityManager
+            ->getRDBRepository('ChatwootInboxIntegration')
+            ->where(['chatwootInboxIdentifier' => $identifier])
+            ->findOne();
     }
 
     /**

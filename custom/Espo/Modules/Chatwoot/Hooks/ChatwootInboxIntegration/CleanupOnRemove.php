@@ -11,7 +11,6 @@
 
 namespace Espo\Modules\Chatwoot\Hooks\ChatwootInboxIntegration;
 
-use Espo\Core\Exceptions\Error;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
@@ -19,7 +18,12 @@ use Espo\Modules\Waha\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
- * Hook to clean up WAHA session and Chatwoot inbox when ChatwootInboxIntegration is deleted.
+ * Hook to clean up external WAHA session and Chatwoot inbox resources
+ * when ChatwootInboxIntegration is deleted.
+ * 
+ * Note: Database cascade deletion of related entities (ChatwootInbox, ChatwootConversation,
+ * ChatwootMessage, WahaSessionLabel, etc.) is handled by the generic CascadeDelete hook
+ * via metadata configuration in entityDefs.
  */
 class CleanupOnRemove
 {
@@ -33,30 +37,36 @@ class CleanupOnRemove
     ) {}
 
     /**
-     * Before removing a ChatwootInboxIntegration, clean up the WAHA session and Chatwoot inbox.
+     * Before removing a ChatwootInboxIntegration, clean up external WAHA session
+     * and Chatwoot inbox resources via their respective APIs.
      *
      * @param Entity $entity
      * @param array<string, mixed> $options
      */
     public function beforeRemove(Entity $entity, array $options): void
     {
-        // Skip if this is a silent remove (internal operation)
+        // Skip if this is a silent remove (internal operation / cascade from parent)
         if (!empty($options['silent'])) {
             return;
         }
 
-        $channelId = $entity->getId();
-        $this->log->info("ChatwootInboxIntegration cleanup: Starting cleanup for channel {$channelId}");
+        // Skip if this is a cascade delete from parent (external cleanup already handled)
+        if (!empty($options['cascadeParent'])) {
+            return;
+        }
 
-        // Clean up WAHA Session
+        $channelId = $entity->getId();
+        $this->log->info("ChatwootInboxIntegration cleanup: Starting external API cleanup for channel {$channelId}");
+
+        // Clean up WAHA Session (external API)
         $this->cleanupWahaSession($entity);
 
-        // Clean up Chatwoot Inbox
+        // Clean up Chatwoot Inbox (external API)
         $this->cleanupChatwootInbox($entity);
     }
 
     /**
-     * Clean up WAHA session.
+     * Clean up WAHA session via external API.
      *
      * @param Entity $entity
      */
@@ -99,6 +109,7 @@ class CleanupOnRemove
             }
 
             // Then, delete the WAHA Session
+            // Note: This also cleans up the label webhook since webhooks are part of session config
             $this->log->info("ChatwootInboxIntegration cleanup: Deleting WAHA session {$sessionName}");
             $this->wahaApiClient->deleteSession($wahaUrl, $wahaApiKey, $sessionName);
             $this->log->info("ChatwootInboxIntegration cleanup: WAHA session {$sessionName} deleted successfully");
@@ -110,7 +121,7 @@ class CleanupOnRemove
     }
 
     /**
-     * Clean up Chatwoot inbox.
+     * Clean up Chatwoot inbox via external API.
      *
      * @param Entity $entity
      */

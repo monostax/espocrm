@@ -81,6 +81,14 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 // Load agents when dropdown is opened
                 this.loadAgentsForDropdown();
             },
+            'click [data-action="viewConversation"]': function (e) {
+                e.preventDefault();
+                this.actionViewConversation();
+            },
+            'click [data-action="removeConversation"]': function (e) {
+                e.preventDefault();
+                this.actionRemoveConversation();
+            },
         },
 
         /**
@@ -1410,6 +1418,69 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             }
                         );
                     });
+                }
+            );
+        },
+
+        /**
+         * Navigate to the detail view of the selected conversation
+         */
+        actionViewConversation: function () {
+            const model = this.getSelectedModel();
+            if (!model) return;
+
+            this.getRouter().navigate("#ChatwootConversation/view/" + model.id, { trigger: true });
+        },
+
+        /**
+         * Remove the selected conversation with confirmation
+         */
+        actionRemoveConversation: function () {
+            const model = this.getSelectedModel();
+            if (!model) return;
+
+            // Capture status before deletion for optimistic UI update
+            const status = model.get("status");
+
+            this.confirm(
+                {
+                    message: this.translate("removeRecordConfirmation", "messages"),
+                    confirmText: this.translate("Remove"),
+                },
+                () => {
+                    Espo.Ui.notify(this.translate("Removing..."));
+
+                    // Trigger optimistic UI update for navbar badges
+                    $(document).trigger("chatwoot:conversation:removed", { status: status });
+
+                    model.destroy({
+                        wait: true,
+                    })
+                        .then(() => {
+                            Espo.Ui.success(this.translate("Removed"));
+
+                            // Remove from collection
+                            this.collection.remove(model);
+
+                            // Clear selected conversation
+                            this.selectedConversationId = null;
+
+                            // Select next available conversation or show placeholder
+                            if (this.collection.length > 0) {
+                                const nextModel = this.collection.at(0);
+                                this.selectConversation(nextModel.id);
+                            } else {
+                                this.clearConversationView();
+                            }
+
+                            // Re-render the list
+                            this.reRender();
+                        })
+                        .catch(() => {
+                            Espo.Ui.error(this.translate("Error"));
+                            // Revert optimistic update on error by refreshing badges
+                            $(document).trigger("chatwoot:conversation:badges:refresh");
+                        });
                 }
             );
         },

@@ -486,6 +486,163 @@ class WahaApiClient
     }
 
     /**
+     * List all labels for a session.
+     *
+     * @param string $platformUrl The base URL of the WAHA platform
+     * @param string $apiKey The API key for authentication
+     * @param string $sessionName The session name
+     * @return array<int, array<string, mixed>> List of labels
+     * @throws Error
+     */
+    public function listLabels(string $platformUrl, string $apiKey, string $sessionName): array
+    {
+        $url = rtrim($platformUrl, '/') . '/api/' . urlencode($sessionName) . '/labels';
+
+        $headers = $this->buildHeaders($apiKey);
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $this->handleError('listLabels', $response);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Create a new label.
+     *
+     * @param string $platformUrl The base URL of the WAHA platform
+     * @param string $apiKey The API key for authentication
+     * @param string $sessionName The session name
+     * @param array<string, mixed> $labelData Label data (name, color or colorHex)
+     * @return array<string, mixed> Created label data
+     * @throws Error
+     */
+    public function createLabel(
+        string $platformUrl,
+        string $apiKey,
+        string $sessionName,
+        array $labelData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/' . urlencode($sessionName) . '/labels';
+
+        $payload = json_encode($labelData);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode label data to JSON.');
+        }
+
+        $headers = $this->buildHeaders($apiKey, strlen($payload));
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $this->handleError('createLabel', $response);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Update an existing label.
+     *
+     * @param string $platformUrl The base URL of the WAHA platform
+     * @param string $apiKey The API key for authentication
+     * @param string $sessionName The session name
+     * @param string $labelId The label ID
+     * @param array<string, mixed> $labelData Label data to update (name, color or colorHex)
+     * @return array<string, mixed> Updated label data
+     * @throws Error
+     */
+    public function updateLabel(
+        string $platformUrl,
+        string $apiKey,
+        string $sessionName,
+        string $labelId,
+        array $labelData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/' . urlencode($sessionName) . '/labels/' . urlencode($labelId);
+
+        $payload = json_encode($labelData);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode label data to JSON.');
+        }
+
+        $headers = $this->buildHeaders($apiKey, strlen($payload));
+        $response = $this->executeRequest($url, 'PUT', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $this->handleError('updateLabel', $response);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Delete a label.
+     *
+     * @param string $platformUrl The base URL of the WAHA platform
+     * @param string $apiKey The API key for authentication
+     * @param string $sessionName The session name
+     * @param string $labelId The label ID
+     * @return void
+     * @throws Error
+     */
+    public function deleteLabel(
+        string $platformUrl,
+        string $apiKey,
+        string $sessionName,
+        string $labelId
+    ): void {
+        $url = rtrim($platformUrl, '/') . '/api/' . urlencode($sessionName) . '/labels/' . urlencode($labelId);
+
+        $headers = $this->buildHeaders($apiKey);
+        $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+        // Accept 200, 204 as success
+        if ($response['code'] !== 200 && $response['code'] !== 204) {
+            $this->handleError('deleteLabel', $response);
+        }
+    }
+
+    /**
+     * Update labels for a chat.
+     * Note: This sets the full list of labels for the chat. All other labels will be removed.
+     *
+     * @param string $platformUrl The base URL of the WAHA platform
+     * @param string $apiKey The API key for authentication
+     * @param string $sessionName The session name
+     * @param string $chatId The chat ID (e.g., "5511999999999@c.us")
+     * @param array<int, array{id: string}> $labels Array of label objects with 'id' key
+     * @return array<string, mixed> Response data
+     * @throws Error
+     */
+    public function updateChatLabels(
+        string $platformUrl,
+        string $apiKey,
+        string $sessionName,
+        string $chatId,
+        array $labels
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/' . urlencode($sessionName) . '/labels/chats/' . urlencode($chatId) . '/';
+
+        $payload = json_encode(['labels' => $labels]);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode labels data to JSON.');
+        }
+
+        $headers = $this->buildHeaders($apiKey, strlen($payload));
+        $response = $this->executeRequest($url, 'PUT', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $this->handleError('updateChatLabels', $response);
+        }
+
+        return $response['body'];
+    }
+
+    /**
      * Build request headers.
      *
      * @param string $apiKey

@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "name": "Nome",
+        "wahaLabelId": "ID da Etiqueta WAHA",
+        "color": "Cor",
+        "colorHex": "Cor Hex",
+        "agent": "Agente",
+        "inboxIntegration": "Integração Inbox",
+        "syncStatus": "Status Sincronização",
+        "lastSyncError": "Último Erro de Sinc."
+    },
+    "links": {
+        "agent": "Agente",
+        "inboxIntegration": "Integração Inbox"
+    },
+    "labels": {
+        "Create WahaSessionLabel": "Criar Etiqueta de Sessão"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    },
+    "tooltips": {
+        "wahaLabelId": "O ID da etiqueta no WAHA (WhatsApp Business). Gerado automaticamente quando sincronizado."
+    }
+}

@@ -1,0 +1,98 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "wahaLabelId": {
+            "type": "varchar",
+            "maxLength": 50,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "color": {
+            "type": "int",
+            "min": 0,
+            "max": 19,
+            "default": 1
+        },
+        "colorHex": {
+            "type": "varchar",
+            "maxLength": 7,
+            "readOnly": true
+        },
+        "agent": {
+            "type": "link",
+            "required": true
+        },
+        "inboxIntegration": {
+            "type": "link",
+            "required": true
+        },
+        "team": {
+            "type": "link",
+            "required": true
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "lastSyncError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "agent": {
+            "type": "belongsTo",
+            "entity": "ChatwootAgent",
+            "foreign": "wahaSessionLabels"
+        },
+        "inboxIntegration": {
+            "type": "belongsTo",
+            "entity": "ChatwootInboxIntegration",
+            "foreign": "wahaSessionLabels"
+        },
+        "team": {
+            "type": "belongsTo",
+            "entity": "Team"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "uniqueAgentIntegration": {
+            "unique": true,
+            "columns": ["agentId", "inboxIntegrationId", "deleted"]
+        },
+        "wahaLabelId": {
+            "columns": ["wahaLabelId"]
+        },
+        "teamId": {
+            "columns": ["teamId"]
+        },
+        "wahaLabelIdTeamId": {
+            "columns": ["wahaLabelId", "teamId"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}

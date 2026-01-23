@@ -89,6 +89,9 @@
             "unique": true,
             "columns": ["createdAt", "id"]
         }
+    },
+    "cascadeDelete": {
+        "links": ["accounts", "users"]
     }
 }
 

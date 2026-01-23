@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "maxLength": 255,
@@ -121,7 +128,7 @@
     "indexes": {
         "uniqueMessage": {
             "unique": true,
-            "columns": ["chatwootMessageId", "chatwootAccountId"]
+            "columns": ["chatwootMessageId", "chatwootAccountId", "deleteId"]
         },
         "conversationId": {
             "columns": ["conversationId"]

@@ -53,6 +53,11 @@ class DeleteFromChatwoot
      */
     public function beforeRemove(Entity $entity, array $options)
     {
+        // Skip if this is a cascade delete from parent (remote cleanup already handled by parent)
+        if (!empty($options['cascadeParent'])) {
+            return;
+        }
+
         $this->log->info('DELETE HOOK CALLED for ChatwootTeam: ' . $entity->getId());
         
         $chatwootTeamId = $entity->get('chatwootTeamId');

@@ -422,13 +422,21 @@ class Service
         }
 
         try {
+            // Build user condition: user is either an attendee (not declined) OR the assigned user
+            $userCondition = Cond::or(
+                Cond::and(
+                    Cond::equal(Expr::column('usersMiddle.userId'), $userId),
+                    Cond::notEqual(Expr::column('usersMiddle.status'), Meeting::ATTENDEE_STATUS_DECLINED)
+                ),
+                Cond::equal(Expr::column('assignedUserId'), $userId)
+            );
+
             return $builder
                 ->buildQueryBuilder()
                 ->select($select)
                 ->leftJoin('users')
+                ->where($userCondition)
                 ->where([
-                    'usersMiddle.userId' => $userId,
-                    'usersMiddle.status!=' => Meeting::ATTENDEE_STATUS_DECLINED,
                     'OR' => [
                         [
                             'dateStart>=' => $from,
@@ -487,13 +495,21 @@ class Service
         }
 
         try {
+            // Build user condition: user is either an attendee (not declined) OR the assigned user
+            $userCondition = Cond::or(
+                Cond::and(
+                    Cond::equal(Expr::column('usersMiddle.userId'), $userId),
+                    Cond::notEqual(Expr::column('usersMiddle.status'), Meeting::ATTENDEE_STATUS_DECLINED)
+                ),
+                Cond::equal(Expr::column('assignedUserId'), $userId)
+            );
+
             return $builder
                 ->buildQueryBuilder()
                 ->select($select)
                 ->leftJoin('users')
+                ->where($userCondition)
                 ->where([
-                    'usersMiddle.userId' => $userId,
-                    'usersMiddle.status!=' => Meeting::ATTENDEE_STATUS_DECLINED,
                     'OR' => [
                         [
                             'dateStart>=' => $from,

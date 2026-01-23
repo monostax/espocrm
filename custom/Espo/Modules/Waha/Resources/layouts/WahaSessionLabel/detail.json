@@ -1,0 +1,43 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "syncStatus"
+                }
+            ],
+            [
+                {
+                    "name": "agent"
+                },
+                {
+                    "name": "inboxIntegration"
+                }
+            ],
+            [
+                {
+                    "name": "wahaLabelId"
+                },
+                {
+                    "name": "color"
+                }
+            ],
+            [
+                {
+                    "name": "colorHex"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "lastSyncError",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

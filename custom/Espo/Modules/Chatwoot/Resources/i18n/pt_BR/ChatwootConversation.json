@@ -46,7 +46,8 @@
         "Conversations": "Conversas",
         "Chat": "Chat",
         "Assign Agent": "Atribuir Agente",
-        "Unassigned": "Não Atribuído"
+        "Unassigned": "Não Atribuído",
+        "More Options": "Mais Opções"
     },
     "tabs": {
         "Conversation": "Conversa",

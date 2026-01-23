@@ -1,5 +1,15 @@
 [
     {
+        "route": "/WahaLabelWebhook/:channelId",
+        "method": "post",
+        "params": {
+            "controller": "WahaLabelWebhook",
+            "action": "receive",
+            "channelId": ":channelId"
+        },
+        "noAuth": true
+    },
+    {
         "route": "/WahaSession/:id/start",
         "method": "post",
         "params": {

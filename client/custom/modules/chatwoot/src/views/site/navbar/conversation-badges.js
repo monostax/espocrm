@@ -136,10 +136,20 @@ class ConversationBadgesView extends View {
 
         // Sync after completion as backup
         $(document).ajaxComplete(function(event, xhr, settings) {
-            if ((settings.type === 'PUT' || settings.type === 'PATCH') && 
+            if ((settings.type === 'PUT' || settings.type === 'PATCH' || settings.type === 'DELETE') && 
                 settings.url && settings.url.includes('ChatwootConversation')) {
                 setTimeout(() => self.updateBadges(), 1000);
             }
+        });
+
+        // Listen for optimistic removal events
+        $(document).on('chatwoot:conversation:removed', (event, data) => {
+            self.applyOptimisticRemoval(data.status);
+        });
+
+        // Listen for badge refresh events (e.g., on error to revert optimistic updates)
+        $(document).on('chatwoot:conversation:badges:refresh', () => {
+            self.updateBadges();
         });
     }
 
@@ -165,6 +175,27 @@ class ConversationBadgesView extends View {
             this.currentCounts[toStatus] = { mine: 0, others: 0 };
         }
         this.currentCounts[toStatus].others++;
+
+        // Re-render badges immediately
+        this.renderBadgesFromCache();
+    }
+
+    /**
+     * Apply optimistic removal - decrement count for a status.
+     * @param {string} status - The status of the removed conversation
+     */
+    applyOptimisticRemoval(status) {
+        if (!this.currentCounts) return;
+        if (!status || !this.validStatuses.includes(status)) return;
+
+        // Decrement from the status
+        if (this.currentCounts[status]) {
+            if (this.currentCounts[status].others > 0) {
+                this.currentCounts[status].others--;
+            } else if (this.currentCounts[status].mine > 0) {
+                this.currentCounts[status].mine--;
+            }
+        }
 
         // Re-render badges immediately
         this.renderBadgesFromCache();
@@ -295,6 +326,10 @@ class ConversationBadgesView extends View {
         if (this.isWebSocketSubscribed && this.webSocketManager) {
             this.webSocketManager.unsubscribe('chatwootConversationUpdate');
         }
+
+        // Clean up document event listeners
+        $(document).off('chatwoot:conversation:removed');
+        $(document).off('chatwoot:conversation:badges:refresh');
     }
 }
 

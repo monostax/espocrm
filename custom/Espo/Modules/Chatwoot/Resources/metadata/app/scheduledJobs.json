@@ -28,6 +28,12 @@
         "isSystem": false,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncTeamsFromChatwoot"
+    },
+    "SyncInboxMembersFromChatwoot": {
+        "name": "Sync Inbox Members from Chatwoot",
+        "isSystem": false,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxMembersFromChatwoot"
     }
 }
 

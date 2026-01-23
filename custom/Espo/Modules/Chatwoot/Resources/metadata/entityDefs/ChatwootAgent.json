@@ -1,5 +1,12 @@
 {
+    "deleteId": true,
     "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
         "name": {
             "type": "varchar",
             "maxLength": 255,
@@ -76,6 +83,9 @@
         "chatwootTeams": {
             "type": "linkMultiple"
         },
+        "chatwootInboxes": {
+            "type": "linkMultiple"
+        },
         "syncStatus": {
             "type": "enum",
             "options": ["pending", "synced", "error"],
@@ -135,6 +145,17 @@
             "relationName": "chatwootAgentKnowledgeBaseCategory",
             "foreign": "chatwootAgents"
         },
+        "chatwootInboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootInbox",
+            "relationName": "chatwootAgentChatwootInbox",
+            "foreign": "chatwootAgents"
+        },
+        "wahaSessionLabels": {
+            "type": "hasMany",
+            "entity": "WahaSessionLabel",
+            "foreign": "agent"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
@@ -155,7 +176,7 @@
     "indexes": {
         "uniqueAgent": {
             "unique": true,
-            "columns": ["chatwootAgentId", "chatwootAccountId"]
+            "columns": ["chatwootAgentId", "chatwootAccountId", "deleteId"]
         },
         "chatwootAccountId": {
             "columns": ["chatwootAccountId"]

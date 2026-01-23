@@ -1,0 +1,6 @@
+{
+    "controller": "global:controllers/calendar",
+    "calendarView": "global:views/calendar/calendar",
+    "modeList": ["month", "agendaWeek", "timeline", "agendaDay", "resourceDay", "resourceWeek"],
+    "sharedViewModeList": ["agendaWeek", "basicWeek", "month", "agendaDay", "basicDay"]
+}
