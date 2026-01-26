@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 
 namespace tests\unit\Espo\Core\Htmlizer;
 
+use Espo\Core\Currency\PrecisionProvider;
 use Espo\Core\Htmlizer\Htmlizer;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilderFactory;
@@ -92,7 +93,7 @@ class HtmlizerTest extends TestCase
 
         $this->entityManager = $this->createMock(EntityManager::class);
 
-        $this->dateTime = new DateTime('MM/DD/YYYY', 'hh:mm A', 'Europe/Kiev');
+        $this->dateTime = new DateTime('MM/DD/YYYY', 'hh:mm A', 'Europe/Kyiv');
         $this->number = new NumberUtil('.', ',');
         $this->htmlizer = new Htmlizer(
             $this->dateTime,
@@ -104,7 +105,8 @@ class HtmlizerTest extends TestCase
             $this->createMock(Language::class),
             $this->createMock(Config::class),
             $this->createMock(Log::class),
-            $this->createMock(InjectableFactory::class)
+            $this->createMock(InjectableFactory::class),
+            $this->createMock(PrecisionProvider::class)
         );
     }
 

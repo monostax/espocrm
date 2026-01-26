@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -121,6 +121,11 @@ Espo.Utils = {
             });
         }
         else if (typeof view[method] === 'function') {
+            if (view?.events[`click [data-action="${action}"]`]) {
+                // Prevents from firing if a handler is already assigned. Important.
+                return false;
+            }
+
             view[method].call(view, data, event);
 
             event.preventDefault();

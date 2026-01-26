@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -254,6 +254,10 @@ class ArrayFieldView extends BaseFieldView {
 
         if (this.params.allowCustomOptions || !this.params.options) {
             this.allowCustomOptions = true;
+        }
+
+        if (this.params.allowCustomOptions === false) {
+            this.allowCustomOptions = false;
         }
 
         if (this.type === 'array') {

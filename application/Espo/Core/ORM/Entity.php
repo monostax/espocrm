@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -95,7 +95,7 @@ class Entity extends BaseEntity
             throw new LogicException("No entity-manager.");
         }
 
-        $toSetFetched = !$this->isNew() && !$this->hasFetched($idAttribute);
+        $toSetFetched = !$this->isNew() && !$this->isAttributeChanged($idAttribute);
 
         if (!$parentId || !$parentType) {
             /** @noinspection PhpRedundantOptionalArgumentInspection */

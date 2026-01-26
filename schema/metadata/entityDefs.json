@@ -131,7 +131,8 @@
                                     {"const": "multiEnum"},
                                     {"const": "array"},
                                     {"const": "checklist"},
-                                    {"const": "urlMultiple"}
+                                    {"const": "urlMultiple"},
+                                    {"const": "decimal"}
                                 ]
                             }
                         }
@@ -161,7 +162,8 @@
                                     {"const": "multiEnum"},
                                     {"const": "array"},
                                     {"const": "checklist"},
-                                    {"const": "urlMultiple"}
+                                    {"const": "urlMultiple"},
+                                    {"const": "decimal"}
                                 ]
                             }
                         }
@@ -320,7 +322,12 @@
                             "rows": {
                                 "type": "integer",
                                 "minimum": 1,
-                                "description": "Max number of rows."
+                                "description": "Maximum number of rows."
+                            },
+                            "rowsMin": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "Minimum number of rows the textarea can shrink to."
                             },
                             "seeMoreDisabled": {
                                 "type": "boolean",
@@ -535,7 +542,8 @@
                                     {"const": "checklist"},
                                     {"const": "file"},
                                     {"const": "image"},
-                                    {"const": "enum"}
+                                    {"const": "enum"},
+                                    {"const": "decimal"}
                                 ]
                             }
                         }
@@ -545,6 +553,33 @@
                             "audited": {
                                 "type": "boolean",
                                 "description": "Changes of audited fields are logged in the stream."
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
+                                    {"const": "number"}
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "prefix": {
+                                "type": "string",
+                                "description": "Prefix."
+                            },
+                            "padLength": {
+                                "type": "integer",
+                                "description": "Pad length."
+                            },
+                            "suppressHook": {
+                                "type": "boolean",
+                                "description": "Suppress the default hook. Useful when a custom hook needs to be used. As of v9.3.0."
                             }
                         }
                     }
@@ -600,6 +635,15 @@
                                         ]
                                     }
                                 }
+                            },
+                            {
+                                "properties": {
+                                    "type": {
+                                        "anyOf": [
+                                            {"const": "decimal"}
+                                        ]
+                                    }
+                                }
                             }
                         ]
                     },
@@ -648,7 +692,8 @@
                         "properties": {
                             "type": {
                                 "anyOf": [
-                                    {"const": "float"}
+                                    {"const": "float"},
+                                    {"const": "decimal"}
                                 ]
                             }
                         }
@@ -668,7 +713,8 @@
                             "type": {
                                 "anyOf": [
                                     {"const": "float"},
-                                    {"const": "currency"}
+                                    {"const": "currency"},
+                                    {"const": "decimal"}
                                 ]
                             }
                         }
@@ -740,6 +786,28 @@
                         "properties": {
                             "type": {
                                 "anyOf": [
+                                    {"const": "linkParent"}
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "entityList": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Entity types supported by the link."
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
                                     {"const": "link"},
                                     {"const": "linkMultiple"},
                                     {"const": "linkOne"}
@@ -756,6 +824,26 @@
                             "createButton": {
                                 "type": "boolean",
                                 "description": "To display the create button."
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
+                                    {"const": "linkMultiple"},
+                                    {"const": "linkOne"}
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "noLoad": {
+                                "type": "boolean",
+                                "description": "Do not load the field."
                             }
                         }
                     }
@@ -842,7 +930,8 @@
                                 "url",
                                 "urlMultiple",
                                 "varchar",
-                                "wysiwyg"
+                                "wysiwyg",
+                                "decimal"
                             ]
                         }
                     ]
@@ -966,12 +1055,36 @@
                     "type": "boolean",
                     "description": "Disables the ability to customize the field in the Entity Manager tool."
                 },
+                "dynamicLogicDisabled": {
+                    "type": "boolean",
+                    "description": "Dynamic logic cannot be customized."
+                },
                 "fieldManagerParamList": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
                     "description": "Parameters available in the Entity Manager tool when editing the field. Specify an empty array to disable all parameters."
+                },
+                "fieldManagerAdditionalParamList": {
+                    "type": "array",
+                    "items": {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "A parameter name."
+                                    }
+                                }
+                            },
+                            {
+                                "$ref": "entityDefs.json#/definitions/fieldDefs"
+                            }
+                        ]
+                    },
+                    "description": "Additional field parameters available in the Entity Manager."
                 },
                 "layoutAvailabilityList": {
                     "type": "array",
@@ -1019,19 +1132,35 @@
                 },
                 "directAccessDisabled": {
                     "type": "boolean",
-                    "description": "Indicates that the field value is not accessed directly but through some additional logic. The filed won't be available in PDF Templates, Email Templates and some other tools."
+                    "description": "Indicates that the field value is not accessed or written directly but through some additional logic. The field won't be available in PDF Templates, Email Templates, and some other tools."
                 },
                 "directUpdateDisabled": {
                     "type": "boolean",
                     "description": "Indicates that updating the field directly is not possible."
                 },
+                "directUpdateEnabled": {
+                    "type": "boolean",
+                    "description": "Indicates that updating the field directly is possible. To be used if directAccessDisabled is true to indicate that update is possible. As of v9.3.0."
+                },
                 "foreignAccessDisabled": {
                     "type": "boolean",
                     "description": "Indicates that access to the field through a link is not feasible."
                 },
+                "filtersEnabled": {
+                    "type": "boolean",
+                    "description": "Indicates that the field can be used in filters regardless of directAccessDisabled being set to true. To be used only with directAccessDisabled."
+                },
+                "listColumnEnabled": {
+                    "type": "boolean",
+                    "description": "Indicated that the field can be used in list columns regardless of directAccessDisabled being set to true."
+                },
                 "importDisabled": {
                     "type": "boolean",
                     "description": "Disables the ability to import the field."
+                },
+                "importEnabled": {
+                    "type": "boolean",
+                    "description": "Indicates that import for the field is allowed even if directAccessDisabled or directUpdateDisabled are true. As of v9.3.0."
                 },
                 "exportDisabled": {
                     "type": "boolean",
@@ -1040,6 +1169,10 @@
                 "massUpdateDisabled": {
                     "type": "boolean",
                     "description": "Disables the ability perform mass-update on the field. As of v8.4."
+                },
+                "apiSpecDisabled": {
+                    "type": "boolean",
+                    "description": "Do not print the field in the API specification. As of v9.3."
                 },
                 "isPersonalData": {
                     "type": "boolean",
@@ -1235,6 +1368,10 @@
                     "type": "boolean",
                     "description": "Linking and unlinking will be logged in the Stream. Available for hasMany."
                 },
+                "auditView": {
+                    "type": "string",
+                    "description": "A view used for audit. If not specified, the ordinary view is used. As of v9.2.3."
+                },
                 "readOnly": {
                     "type": "boolean",
                     "description": "Read-only links cannot be edited via link and unlink requests. But they can be edited via link and link-multiple fields."
@@ -1334,7 +1471,11 @@
                 },
                 "utility": {
                     "type": "boolean",
-                    "description": "The link will be hidden from a user on the UI but not disabled."
+                    "description": "The link will be hidden from the user on the UI but not disabled."
+                },
+                "apiSpecDisabled": {
+                    "type": "boolean",
+                    "description": "Do not print the link in the API specification. As of v9.3."
                 }
             },
             "allOf": [

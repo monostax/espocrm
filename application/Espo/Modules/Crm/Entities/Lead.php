@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -196,5 +196,13 @@ class Lead extends Person
     public function setCampaign(Link|Campaign|null $campaign): self
     {
         return $this->setRelatedLinkOrEntity('campaign', $campaign);
+    }
+
+    /**
+     * @since 9.3.0
+     */
+    public function getTitle(): ?string
+    {
+        return $this->get('title');
     }
 }

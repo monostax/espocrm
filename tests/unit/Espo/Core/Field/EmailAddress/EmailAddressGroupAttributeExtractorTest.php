@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,13 +29,12 @@
 
 namespace tests\unit\Espo\Core\Field\EmailAddress;
 
-use Espo\Core\{
-    Field\EmailAddress,
-    Field\EmailAddressGroup,
-    Field\EmailAddress\EmailAddressGroupAttributeExtractor,
-};
+use Espo\Core\Field\EmailAddress;
+use Espo\Core\Field\EmailAddress\EmailAddressGroupAttributeExtractor;
+use Espo\Core\Field\EmailAddressGroup;
+use PHPUnit\Framework\TestCase;
 
-class EmailAddressGroupAttributeExtractorTest extends \PHPUnit\Framework\TestCase
+class EmailAddressGroupAttributeExtractorTest extends TestCase
 {
     public function testExtract()
     {

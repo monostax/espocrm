@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -122,6 +122,7 @@ class MasterSiteView extends View {
 
         body.dataset.isDark =
             this.getThemeManager().getParam("isDark") ?? false;
+        body.dataset.themeName = this.getThemeManager().getName();
 
         this.$content = this.$el.find("> #content");
 

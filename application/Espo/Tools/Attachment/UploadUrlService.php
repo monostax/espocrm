@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -66,6 +66,7 @@ class UploadUrlService
     /**
      * Upload an image from and URL and store as attachment.
      *
+     * @param non-empty-string $url
      * @throws Forbidden
      * @throws Error
      */
@@ -111,7 +112,7 @@ class UploadUrlService
     }
 
     /**
-     * @param string $url
+     * @param non-empty-string $url
      * @return ?array{string, string} A type and contents.
      */
     private function getImageDataByUrl(string $url): ?array
@@ -127,7 +128,7 @@ class UploadUrlService
         $httpHeaders = [];
         $httpHeaders[] = 'Expect:';
 
-        $opts[\CURLOPT_URL]  = $url;
+        $opts[\CURLOPT_URL] = $url;
         $opts[\CURLOPT_HTTPHEADER] = $httpHeaders;
         $opts[\CURLOPT_CONNECTTIMEOUT] = 10;
         $opts[\CURLOPT_TIMEOUT] = 10;

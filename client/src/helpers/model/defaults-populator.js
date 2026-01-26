@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -85,7 +85,7 @@ class DefaultsPopulator {
      * Populate default values.
      *
      * @param {module:model} model A model.
-     * @return {Promise|undefined}
+     * @return {Promise}
      */
     populate(model) {
         model.populateDefaults();
@@ -113,7 +113,7 @@ class DefaultsPopulator {
         const preparatorClass = this.metadata.get(`clientDefs.${model.entityType}.modelDefaultsPreparator`);
 
         if (!preparatorClass) {
-            return undefined;
+            return Promise.resolve();
         }
 
         return Espo.loader.requirePromise(preparatorClass)

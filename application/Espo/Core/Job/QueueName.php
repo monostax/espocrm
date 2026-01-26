@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,6 +51,8 @@ class QueueName
      * A portion is always picked for a queue iteration, even if there are no-queue
      * jobs ordered before. E.g. if the portion size is 100, and there are 200 empty-queue
      * jobs and 5 m0 jobs, 95 and 5 will be picked respectfully.
+     *
+     * @since 9.2.0
      */
     const M0 = 'm0';
 }

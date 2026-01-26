@@ -123,7 +123,8 @@
             "isPersonalData": true
         },
         "doNotCall": {
-            "type": "bool"
+            "type": "bool",
+            "audited": true
         },
         "description": {
             "type": "text"
@@ -180,6 +181,8 @@
             "notStorable": true,
             "orderDisabled": true,
             "directUpdateDisabled": true,
+            "directAccessDisabled": true,
+            "filtersEnabled": true,
             "layoutAvailabilityList": ["filters"],
             "importDisabled": true,
             "exportDisabled": true,
@@ -193,6 +196,8 @@
             "notStorable": true,
             "orderDisabled": true,
             "directUpdateDisabled": true,
+            "directAccessDisabled": true,
+            "filtersEnabled": true,
             "layoutAvailabilityList": ["filters"],
             "importDisabled": true,
             "exportDisabled": true,
@@ -230,6 +235,9 @@
             "layoutDetailDisabled": true,
             "layoutListDisabled": true,
             "importDisabled": true,
+            "directAccessDisabled": true,
+            "directUpdateEnabled": true,
+            "filtersEnabled": true,
             "noLoad": true
         },
         "targetList": {
@@ -241,7 +249,8 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true,
             "entity": "TargetList",
-            "directAccessDisabled": true
+            "directAccessDisabled": true,
+            "importEnabled": true
         },
         "targetListIsOptedOut": {
             "type": "bool",

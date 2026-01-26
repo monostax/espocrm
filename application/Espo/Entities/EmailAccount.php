@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -115,6 +115,20 @@ class EmailAccount extends Entity
     {
         /** @var ?Link */
         return $this->getValueObject('emailFolder');
+    }
+
+    public function getMappedEmailFolder(string $folder): ?Link
+    {
+        /** @var stdClass $map */
+        $map = $this->get('folderMap') ?? (object) [];
+
+        $folderId = $map->$folder ?? null;
+
+        if (!$folderId) {
+            return null;
+        }
+
+        return Link::create($folderId);
     }
 
     /**

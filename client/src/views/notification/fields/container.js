@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,6 +36,10 @@ class NotificationContainerFieldView extends BaseFieldView {
     listTemplate = 'notification/fields/container'
     detailTemplate = 'notification/fields/container'
 
+    /**
+     * @private
+     * @type {string[]}
+     */
     types = [
         'Assign',
         'EmailReceived',
@@ -43,6 +47,7 @@ class NotificationContainerFieldView extends BaseFieldView {
         'Message',
         'System',
         'UserReaction',
+        'Collaborating',
     ]
 
     inlineEditDisabled = true

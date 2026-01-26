@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -44,8 +44,8 @@ export default class extends EnumFieldView {
         const entityTypeList = Object.keys(this.getMetadata().get(['entityDefs']))
             .filter(item => this.getMetadata().get(['scopes', item, 'object']))
             .sort((s1, s2) => {
-                return this.getLanguage().translate(s1, 'scopesName')
-                    .localeCompare(this.getLanguage().translate(s2, 'scopesName'));
+                return this.getLanguage().translate(s1, 'scopeNames')
+                    .localeCompare(this.getLanguage().translate(s2, 'scopeNames'));
             });
 
         this.translatedOptions = {};

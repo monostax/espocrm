@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,7 +37,7 @@ use Espo\ORM\Defs;
 use Espo\ORM\Name\Attribute;
 use Espo\ORM\Query\Part\Condition as Cond;
 use Espo\ORM\Query\Part\Where\OrGroupBuilder;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 /**
  * @noinspection PhpUnused
@@ -53,7 +53,7 @@ class Shared implements Filter
         private Defs $defs
     ) {}
 
-    public function apply(QueryBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void
+    public function apply(SelectBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void
     {
         if (!$this->fieldHelper->hasCollaboratorsField()) {
             return;
@@ -67,7 +67,7 @@ class Shared implements Filter
         $key1 = $relationDefs->getMidKey();
         $key2 = $relationDefs->getForeignMidKey();
 
-        $subQuery = QueryBuilder::create()
+        $subQuery = SelectBuilder::create()
             ->select(Attribute::ID)
             ->from($this->entityType)
             ->leftJoin($middleEntityType, 'collaboratorsMiddle', [

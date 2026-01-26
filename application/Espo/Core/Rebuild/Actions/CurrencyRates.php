@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,6 +32,9 @@ namespace Espo\Core\Rebuild\Actions;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Currency\DatabasePopulator;
 
+/**
+ * @noinspection PhpUnused
+ */
 class CurrencyRates implements RebuildAction
 {
     public function __construct(private DatabasePopulator $databasePopulator) {}

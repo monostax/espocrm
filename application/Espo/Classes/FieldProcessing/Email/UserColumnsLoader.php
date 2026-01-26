@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -73,12 +73,18 @@ class UserColumnsLoader implements Loader
             return;
         }
 
-        $entity->set([
+        $values = [
             Email::USERS_COLUMN_IS_READ => $emailUser->get(Email::USERS_COLUMN_IS_READ),
             Email::USERS_COLUMN_IS_IMPORTANT => $emailUser->get(Email::USERS_COLUMN_IS_IMPORTANT),
             Email::USERS_COLUMN_IN_TRASH => $emailUser->get(Email::USERS_COLUMN_IN_TRASH),
             Email::USERS_COLUMN_IN_ARCHIVE => $emailUser->get(Email::USERS_COLUMN_IN_ARCHIVE),
             'isUsersSent' => $entity->getSentBy()?->getId() === $this->user->getId(),
-        ]);
+        ];
+
+        $entity->setMultiple($values);
+
+        foreach ($values as $key => $value) {
+            $entity->setFetched($key, $value);
+        }
     }
 }

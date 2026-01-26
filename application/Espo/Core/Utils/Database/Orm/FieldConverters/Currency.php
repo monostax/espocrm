@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -82,6 +82,14 @@ class Currency implements FieldConverter
                 ->withDbType($dbType)
                 ->withParam(AttributeParam::PRECISION, $precision)
                 ->withParam(AttributeParam::SCALE, $scale);
+
+            $defaultValue = $fieldDefs->getParam(AttributeParam::DEFAULT);
+
+            if (is_int($defaultValue) || is_float($defaultValue)) {
+                $defaultValue = number_format($defaultValue, $scale, '.', '');
+
+                $amountDefs = $amountDefs->withParam(AttributeParam::DEFAULT, $defaultValue);
+            }
         }
 
         if ($fieldDefs->isNotStorable()) {
@@ -255,7 +263,7 @@ class Currency implements FieldConverter
     {
         $name = $fieldDefs->getName();
 
-        $alias = $name . 'CurrencyRate';
+        $alias = $name . 'CurrencyRecordRate';
         $leftJoins = [
             [
                 'Currency',

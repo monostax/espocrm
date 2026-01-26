@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,8 +31,8 @@ import RecordController from 'controllers/record';
 class LeadController extends RecordController {
 
     // noinspection JSUnusedGlobalSymbols
-    actionConvert(id) {
-        this.main('crm:views/lead/convert', {id: id});
+    actionConvert(options) {
+        this.main('crm:views/lead/convert', {id: options.id});
     }
 }
 

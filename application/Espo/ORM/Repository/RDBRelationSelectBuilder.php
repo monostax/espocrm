@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -53,7 +53,7 @@ use InvalidArgumentException;
 /**
  * Builds select parameters for related records for RDB repository.
  *
- * @template TEntity of Entity
+ * @template TEntity of Entity = Entity
  */
 class RDBRelationSelectBuilder
 {

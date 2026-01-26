@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -69,7 +69,6 @@
      * @property {string|null} exportsAs
      * @property {string} [url]
      * @property {boolean} [useCache]
-     * @property {boolean} [suppressAmd]
      */
 
     /**
@@ -351,9 +350,9 @@
             }
 
             if (!id) {
-                console.error(value);
+                console.warn(`Lib without id.`);
                 // Libs can define w/o id and set to the root.
-                // Not supposed to happen as should be suppressed by require.amd = false;
+                // Not supposed to happen as should be suppressed by define.amd = false;
                 return;
             }
 
@@ -570,7 +569,6 @@
             let dataType, type, path, exportsTo, exportsAs;
 
             let realName = id;
-            let suppressAmd = false;
 
             if (id.indexOf('lib!') === 0) {
                 dataType = 'script';
@@ -599,14 +597,6 @@
 
                 if (isDefinedLib && !exportsTo) {
                     type = 'amd';
-                }
-
-                if (!isDefinedLib && id.slice(-3) === '.js') {
-                    suppressAmd = true;
-                }
-
-                if (exportsAs) {
-                    suppressAmd = true;
                 }
 
                 if (path.indexOf(':') !== -1) {
@@ -698,7 +688,6 @@
                 errorCallback: errorCallback,
                 exportsAs: exportsAs,
                 exportsTo: exportsTo,
-                suppressAmd: suppressAmd,
             };
 
             if (path in this._pathsBeingLoaded) {
@@ -736,19 +725,11 @@
 
                 const fullUrl = urlObj.toString();
 
-                if (suppressAmd) {
-                    define.amd = false;
-                }
-
                 if (type === 'amd') {
                     this._urlIdMap[fullUrl] = id;
                 }
 
                 this._addScript(fullUrl, () => {
-                    if (suppressAmd) {
-                        define.amd = true;
-                    }
-
                     let value;
 
                     if (type === 'amd') {
@@ -782,7 +763,7 @@
                     }
 
                     console.warn(`Could not obtain ${id}.`);
-                });
+                }, errorCallback);
 
                 return;
             }
@@ -811,9 +792,10 @@
          * @private
          * @param {string} url
          * @param {function} callback
+         * @param {function|null} [errorCallback]
          * @return {Promise}
          */
-        _addScript(url, callback) {
+        _addScript(url, callback, errorCallback = null) {
             const script = document.createElement('script');
 
             script.src = url;
@@ -821,6 +803,10 @@
 
             script.addEventListener('error', e => {
                 console.error(`Could not load script '${url}'.`, e);
+
+                if (errorCallback) {
+                    errorCallback();
+                }
             });
 
             document.head.appendChild(script);

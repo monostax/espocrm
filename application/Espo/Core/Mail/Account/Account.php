@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -164,4 +164,12 @@ interface Account
      * Get the last connection time;
      */
     public function getConnectedAt(): ?DateTime;
+
+
+    /**
+     * Get an email folder mapped to the email folder.
+     *
+     * @since 9.3.0
+     */
+    public function getMappedEmailFolder(string $folder): ?Link;
 }

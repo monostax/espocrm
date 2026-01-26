@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,22 +30,25 @@
 namespace tests\integration\Espo\Currency;
 
 use Espo\Core\Exceptions\Error;
+use Espo\Core\Field\Date;
 use Espo\Core\Formula\Manager as FormulaManager;
 use Espo\Modules\Crm\Entities\Lead;
+use Espo\Tools\Currency\RateEntryProvider;
 use Espo\Tools\Currency\RateService;
 use Espo\Core\Currency\Rates;
 use Espo\Core\Field\Currency;
-use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Config\ConfigWriter;
+use Espo\Tools\Currency\SyncManager;
+use tests\integration\Core\BaseTestCase;
 
-class CurrencyTest extends \tests\integration\Core\BaseTestCase
+class CurrencyTest extends BaseTestCase
 {
+    /**
+     * @noinspection PhpUnhandledExceptionInspection
+     */
     public function testSetCurrencyRates(): void
     {
-        $app = $this->createApplication();
-
-        /** @var InjectableFactory $factory */
-        $factory = $app->getContainer()->get('injectableFactory');
+        $factory = $this->getInjectableFactory();
 
         $configWriter = $factory->create(ConfigWriter::class);
 
@@ -55,7 +58,10 @@ class CurrencyTest extends \tests\integration\Core\BaseTestCase
         $configWriter->set('currencyRates', [
             'EUR' => 1.2,
         ]);
+
         $configWriter->save();
+
+        $this->getInjectableFactory()->create(SyncManager::class)->sync();
 
         $service = $factory->create(RateService::class);
 
@@ -135,19 +141,34 @@ class CurrencyTest extends \tests\integration\Core\BaseTestCase
         $this->assertEquals(null, $value);
     }
 
+    /**
+     * @noinspection PhpUnhandledExceptionInspection
+     */
     public function testFormulaConvert(): void
     {
         $formulaManager = $this->getContainer()->getByClass(FormulaManager::class);
+        $em = $this->getEntityManager();
 
         $configWriter = $this->getInjectableFactory()->create(ConfigWriter::class);
 
         $configWriter->set('currencyList', ['USD', 'EUR']);
         $configWriter->set('defaultCurrency', 'USD');
         $configWriter->set('baseCurrency', 'USD');
-        $configWriter->set('currencyRates', [
-            'EUR' => 2.0,
-        ]);
-        $configWriter->save();
+        $configWriter->save();;
+
+        $syncManager = $this->getInjectableFactory()->create(SyncManager::class);
+
+        $syncManager->sync();
+
+        $rate = $this->getInjectableFactory()->create(RateEntryProvider::class)
+            ->prepareNew('EUR', Date::createToday()->addDays(-2));
+
+        $rate->setRate('2.0');
+
+        $em->saveEntity($rate);
+
+
+        $syncManager->refreshCache();
 
         $script = "ext\\currency\\convert('0.5', 'EUR')";
         $value = $formulaManager->run($script);

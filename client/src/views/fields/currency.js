@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -100,6 +100,13 @@ class CurrencyFieldView extends FloatFieldView {
         'range',
     ]
 
+    /**
+     * @protected
+     * @type {string}
+     * @since 9.2.6
+     */
+    currencyAttribute
+
     /** @inheritDoc */
     data() {
         const currencyValue = this.model.get(this.currencyFieldName) ||
@@ -123,7 +130,7 @@ class CurrencyFieldView extends FloatFieldView {
     setup() {
         super.setup();
 
-        this.currencyFieldName = this.name + 'Currency';
+        this.currencyFieldName = this.currencyAttribute ?? this.name + 'Currency';
         this.defaultCurrency = this.getConfig().get('defaultCurrency');
         this.currencyList = this.getConfig().get('currencyList') || [this.defaultCurrency];
         this.decimalPlaces = this.getConfig().get('currencyDecimalPlaces');

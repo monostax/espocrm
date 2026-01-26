@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,6 +34,7 @@ use Espo\Core\Acl;
 use Espo\Core\Currency\ConfigDataProvider as CurrencyConfigDataProvider;
 use Espo\Core\Currency\Rates as CurrencyRates;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\MassAction\Data;
 use Espo\Core\MassAction\MassAction;
@@ -48,6 +49,7 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Tools\Currency\Conversion\EntityConverterFactory;
 use RuntimeException;
+use Throwable;
 
 /**
  * @noinspection PhpUnused
@@ -123,7 +125,7 @@ class MassConvertCurrency implements MassAction
 
             try {
                 $converter->convert($entity, $targetCurrency, $rates);
-            } catch (Forbidden $e) {
+            } catch (Forbidden|BadRequest|Conflict $e) {
                 $this->log->info("Could not convert currency for {id}.", [
                     'id' => $entity->getId(),
                     'exception' => $e,

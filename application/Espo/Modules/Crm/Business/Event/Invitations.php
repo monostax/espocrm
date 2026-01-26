@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -121,10 +121,10 @@ class Invitations
 
         $data = $this->prepareData($entity, $uid, $invitee);
 
-        $subjectTpl = $this->templateFileManager->getTemplate($type, 'subject', $entity->getEntityType(), 'Crm');
+        $subjectTpl = $this->templateFileManager->getTemplate($type, 'subject', $entity->getEntityType());
         $subjectTpl = str_replace(["\n", "\r"], '', $subjectTpl);
 
-        $bodyTpl = $this->templateFileManager->getTemplate($type, 'body', $entity->getEntityType(), 'Crm');
+        $bodyTpl = $this->templateFileManager->getTemplate($type, 'body', $entity->getEntityType());
 
         $subject = $htmlizer->render(
             $entity,

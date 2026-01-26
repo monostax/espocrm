@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,6 +39,9 @@ use Espo\ORM\EntityCollection;
 class Contact extends Person
 {
     public const ENTITY_TYPE = 'Contact';
+
+    /** @since v9.3.0. */
+    public const string COLUMN_ACCOUNTS_ROLE = 'role';
 
     /**
      * An assigned user.

@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -44,7 +44,8 @@ export default class extends TabListFieldView {
                 return true;
             }
 
-            return !!this.getMetadata().get(`scopes.${tab}.aclPortal`);
+            return this.getMetadata().get(`scopes.${tab}.aclPortal`) ||
+                this.getMetadata().get(`scopes.${tab}.tabPortal`);
         });
     }
 }

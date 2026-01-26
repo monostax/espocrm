@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -253,7 +253,7 @@ class RelatedListModalView extends ModalView {
         this.$header.append(
             title ||
             $('<span>').text(
-                this.getLanguage().translate(this.link, 'links', this.entityType)
+                this.getLanguage().translate(this.link, 'links', this.scope)
             )
         );
 
@@ -671,7 +671,7 @@ class RelatedListModalView extends ModalView {
             return;
         }
 
-        if (this.buttonList.findIndex(item => item.name === 'createRelated' && !item.hidden) === -1) {
+        if (this.buttonList.findIndex(item => item.name === 'createRelated' && !item.hidden && !item.disabled) === -1) {
             return;
         }
 

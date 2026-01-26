@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,6 +34,7 @@ use DOMDocument;
 use DOMElement;
 use DOMException;
 use DOMXPath;
+use Espo\Core\Currency\PrecisionProvider;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\ORM\Entity as CoreEntity;
@@ -42,6 +43,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\Attachment;
 use Espo\Entities\User;
 use Espo\ORM\Name\Attribute;
+use Espo\ORM\Query\Part\Order;
 use Espo\Repositories\Attachment as AttachmentRepository;
 use Espo\Core\Utils\Json;
 use Espo\Core\Acl;
@@ -73,7 +75,7 @@ use const JSON_PRESERVE_ZERO_FRACTION;
  */
 class Htmlizer
 {
-    private const LINK_LIMIT = 100;
+    private const int LINK_LIMIT = 100;
 
     public function __construct(
         private DateTime $dateTime,
@@ -86,6 +88,7 @@ class Htmlizer
         private Config $config,
         private Log $log,
         private InjectableFactory $injectableFactory,
+        private PrecisionProvider $precisionProvider,
         private ?Acl $acl = null,
         private ?ServiceFactory $serviceFactory = null,
     ) {}
@@ -138,12 +141,12 @@ class Htmlizer
 
         if (!array_key_exists('today', $data)) {
             $data['today'] = $this->dateTime->getTodayString();
-            $data['today_RAW'] = date('Y-m-d');
+            $data['today_RAW'] = $this->dateTime->getTodayString(null, DateTime::SYSTEM_DATE_FORMAT);
         }
 
         if (!array_key_exists('now', $data)) {
             $data['now'] = $this->dateTime->getNowString();
-            $data['now_RAW'] = date('Y-m-d H:i:s');
+            $data['now_RAW'] = date(DateTime::SYSTEM_DATE_TIME_FORMAT);
         }
 
         $data['__injectableFactory'] = $this->injectableFactory;
@@ -218,219 +221,25 @@ class Htmlizer
         bool $skipLinks = false,
         int $level = 0,
         ?string $template = null,
-        ?array $additionalData = null
+        ?array $additionalData = null,
     ): array {
 
-        $entityType = $entity->getEntityType();
+        $data = $this->prepareData($entity, $additionalData);
 
-        $data = get_object_vars($entity->getValueMap());
+        if (!$skipLinks && $level === 0 && $entity->hasId()) {
+            $additionalDataKeys = is_array($additionalData) ? array_keys($additionalData) : [];
 
-        if ($additionalData) {
-            foreach ($additionalData as $k => $value) {
-                $data[$k] = $value;
-            }
+            $this->loadRelatedCollections($entity, $template, $data, $additionalDataKeys);
         }
 
-        $attributeList = $entity->getAttributeList();
-
-        $forbiddenAttributeList = [];
         $skipAttributeList = [];
-        $forbiddenLinkList = [];
 
-        if ($this->acl) {
-            $forbiddenAttributeList = array_merge(
-                $this->acl->getScopeForbiddenAttributeList($entityType),
-                $this->acl->getScopeRestrictedAttributeList(
-                    $entityType,
-                    ['forbidden', 'internal', 'onlyAdmin']
-                )
-            );
+        $this->applyCollections($data, $skipAttributeList, $skipLinks, $level);
 
-            $forbiddenLinkList = $this->acl->getScopeRestrictedLinkList(
-                $entity->getEntityType(),
-                ['forbidden', 'internal', 'onlyAdmin']
-            );
-        }
-
-        if (
-            !$skipLinks &&
-            $level === 0 &&
-            $entity->hasId()
-        ) {
-            $this->loadRelatedCollections($entity, $template, $data);
-        }
-
-        foreach ($data as $key => $value) {
-            if ($value instanceof Collection) {
-                $skipAttributeList[] = $key;
-
-                /** @var iterable<Entity> $collection */
-                $collection = $value;
-
-                $list = [];
-
-                foreach ($collection as $item) {
-                    $list[] = $this->getDataFromEntity($item, $skipLinks, $level + 1);
-                }
-
-                $data[$key] = $list;
-            }
-        }
-
-        foreach ($attributeList as $attribute) {
-            if (in_array($attribute, $forbiddenAttributeList)) {
-                unset($data[$attribute]);
-
-                continue;
-            }
-
-            if (in_array($attribute, $skipAttributeList)) {
-                continue;
-            }
-
-            if ($additionalData && array_key_exists($attribute, $additionalData)) {
-                continue;
-            }
-
-            $type = $entity->getAttributeType($attribute);
-
-            $fieldType = null;
-
-            if ($entity instanceof CoreEntity) {
-                $fieldType = $entity->getAttributeParam($attribute, 'fieldType');
-            }
-
-            if ($type == Entity::DATETIME) {
-                if (!empty($data[$attribute])) {
-                    $data[$attribute . '_RAW'] = $data[$attribute];
-                    $data[$attribute] = $this->dateTime->convertSystemDateTime($data[$attribute]);
-                }
-            } else if ($type == Entity::DATE) {
-                if (!empty($data[$attribute])) {
-                    $data[$attribute . '_RAW'] = $data[$attribute];
-                    $data[$attribute] = $this->dateTime->convertSystemDate($data[$attribute]);
-                }
-            } else if ($type == Entity::JSON_ARRAY) {
-                if (!empty($data[$attribute])) {
-                    $list = $data[$attribute];
-
-                    $newList = [];
-
-                    foreach ($list as $item) {
-                        $v = $item;
-
-                        if ($item instanceof stdClass) {
-                            $v = json_decode(
-                                Json::encode($v, JSON_PRESERVE_ZERO_FRACTION),
-                                true
-                            );
-                        }
-
-                        if (is_array($v)) {
-                            foreach ($v as $k => $w) {
-                                $keyRaw = $k . '_RAW';
-                                $v[$keyRaw] = $v[$k];
-                                $v[$k] = $this->format($v[$k]);
-                            }
-                        }
-
-                        $newList[] = $v;
-                    }
-                    $data[$attribute] = $newList;
-                }
-            } else if ($type == Entity::JSON_OBJECT) {
-                if (!empty($data[$attribute])) {
-                    $value = $data[$attribute];
-
-                    if ($value instanceof stdClass) {
-                        $data[$attribute] = json_decode(
-                            Json::encode($value, JSON_PRESERVE_ZERO_FRACTION),
-                            true
-                        );
-                    }
-
-                    foreach ($data[$attribute] as $k => $w) {
-                        $keyRaw = $k . '_RAW';
-
-                        $data[$attribute][$keyRaw] = $data[$attribute][$k];
-                        $data[$attribute][$k] = $this->format($data[$attribute][$k]);
-                    }
-                }
-            } else if ($type === Entity::PASSWORD) {
-                unset($data[$attribute]);
-            }
-
-            if (
-                $fieldType === FieldType::CURRENCY &&
-                $entity instanceof CoreEntity &&
-                $entity->getAttributeParam($attribute, 'attributeRole') === 'currency'
-            ) {
-                $currencyValue = $data[$attribute] ?? null;
-
-                if ($currencyValue) {
-                    $data[$attribute . 'Symbol'] =
-                        $this->metadata->get(['app', 'currency', 'symbolMap', $currencyValue]);
-                }
-            }
-
-            if (array_key_exists($attribute, $data)) {
-                $keyRaw = $attribute . '_RAW';
-
-                if (!isset($data[$keyRaw])) {
-                    $data[$keyRaw] = $data[$attribute];
-                }
-
-                $fieldType = $this->getFieldType($entity->getEntityType(), $attribute);
-
-                if ($fieldType === FieldType::ENUM) {
-                    $data[$attribute] = $this->language->translateOption(
-                        $data[$attribute], $attribute, $entity->getEntityType()
-                    );
-
-                    $translationPath = $this->metadata
-                        ->get(['entityDefs', $entity->getEntityType(), 'fields', $attribute, 'translation']);
-
-                    if ($translationPath && $data[$keyRaw] !== null) {
-                        $path = $translationPath . '.' . $data[$keyRaw];
-
-                        $data[$attribute] = $this->language->get($path, $data[$keyRaw]);
-                    }
-                }
-
-                $data[$attribute] = $this->format($data[$attribute]);
-            }
-        }
+        $this->applyValues($entity, $data, $skipAttributeList, $additionalData);
 
         if (!$skipLinks) {
-            foreach ($entity->getRelationList() as $relation) {
-                if (in_array($relation, $forbiddenLinkList)) {
-                    continue;
-                }
-
-                $relationType = $entity->getRelationType($relation);
-
-                if (
-                    $relationType !== Entity::BELONGS_TO &&
-                    $relationType !== Entity::BELONGS_TO_PARENT
-                ) {
-                    continue;
-                }
-
-                $relatedEntity = $this->entityManager
-                    ->getRDBRepository($entity->getEntityType())
-                    ->getRelation($entity, $relation)
-                    ->findOne();
-
-                if (!$relatedEntity) {
-                    continue;
-                }
-
-                if ($this->acl && !$this->acl->checkEntityRead($relatedEntity)) {
-                    continue;
-                }
-
-                $data[$relation] = $this->getDataFromEntity($relatedEntity, true, $level + 1);
-            }
+            $this->applyOneLinks($entity, $level, $data);
         }
 
         return $data;
@@ -438,10 +247,15 @@ class Htmlizer
 
     /**
      * @param array<string, mixed> $data
+     * @param string[] $skipList
      */
-    private function loadRelatedCollections(Entity $entity, ?string $template, array &$data): void
+    private function loadRelatedCollections(Entity $entity, ?string $template, array &$data, array $skipList): void
     {
         foreach ($entity->getRelationList() as $relation) {
+            if (in_array($relation, $skipList)) {
+                continue;
+            }
+
             $collection = $this->loadRelatedCollection($entity, $relation, $template);
 
             if ($collection) {
@@ -832,7 +646,6 @@ class Htmlizer
                 $rootData,
                 $context['fn'] ?? null,
                 $context['inverse'] ?? null,
-                //$context['fn.blockParams'],
             );
 
             $helper = $injectableFactory->create($className);
@@ -888,6 +701,13 @@ class Htmlizer
             ->getDefs()
             ->getEntity($entityType)
             ->getRelation($relation);
+
+        if ($relationDefs->getParam('orderBy')) {
+            $orderBy = $relationDefs->getParam('orderBy');
+            $order = $relationDefs->getParam('order') ?? Order::ASC;
+
+            return [[$orderBy, $order]];
+        }
 
         if (!$relationDefs->hasForeignEntityType()) {
             return [];
@@ -1044,5 +864,288 @@ class Htmlizer
         $template = $this->handleAttributeHelper($template, 'x-if', 'if', $helpers);
 
         return $template;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getForbiddenAttributes(string $entityType): array
+    {
+        if (!$this->acl) {
+            return [];
+        }
+
+        return array_merge(
+            $this->acl->getScopeForbiddenAttributeList($entityType),
+            $this->acl->getScopeRestrictedAttributeList(
+                $entityType,
+                [
+                    Acl\GlobalRestriction::TYPE_FORBIDDEN,
+                    Acl\GlobalRestriction::TYPE_INTERNAL,
+                    Acl\GlobalRestriction::TYPE_ONLY_ADMIN,
+                ]
+            )
+        );
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getRestrictedLinks(Entity $entity): array
+    {
+        if (!$this->acl) {
+            return [];
+        }
+
+        return $this->acl->getScopeRestrictedLinkList(
+            $entity->getEntityType(),
+            [
+                Acl\GlobalRestriction::TYPE_FORBIDDEN,
+                Acl\GlobalRestriction::TYPE_INTERNAL,
+                Acl\GlobalRestriction::TYPE_ONLY_ADMIN,
+            ]
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function applyOneLinks(Entity $entity, int $level, array &$data): void
+    {
+        $forbiddenLinkList = $this->getRestrictedLinks($entity);
+
+        foreach ($entity->getRelationList() as $relation) {
+            if (in_array($relation, $forbiddenLinkList)) {
+                continue;
+            }
+
+            $relationType = $entity->getRelationType($relation);
+
+            if (
+                $relationType !== Entity::BELONGS_TO &&
+                $relationType !== Entity::BELONGS_TO_PARENT &&
+                $relationType !== Entity::HAS_ONE
+            ) {
+                continue;
+            }
+
+            $relatedEntity = $this->entityManager
+                ->getRelation($entity, $relation)
+                ->findOne();
+
+            if (!$relatedEntity) {
+                continue;
+            }
+
+            if ($this->acl && !$this->acl->tryCheck($relatedEntity, Acl\Table::ACTION_READ)) {
+                continue;
+            }
+
+            $data[$relation] = $this->getDataFromEntity($relatedEntity, true, $level + 1);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param string[] $skipAttributeList
+     * @param ?array<string, mixed> $additionalData
+     */
+    private function applyValues(Entity $entity, array &$data, array $skipAttributeList, ?array $additionalData): void
+    {
+        $forbiddenAttributeList = $this->getForbiddenAttributes($entity->getEntityType());
+
+        foreach ($entity->getAttributeList() as $attribute) {
+            if (in_array($attribute, $forbiddenAttributeList)) {
+                unset($data[$attribute]);
+
+                continue;
+            }
+
+            if (in_array($attribute, $skipAttributeList)) {
+                continue;
+            }
+
+            if ($additionalData && array_key_exists($attribute, $additionalData)) {
+                continue;
+            }
+
+            $type = $entity->getAttributeType($attribute);
+
+            $fieldType = null;
+
+            if ($entity instanceof CoreEntity) {
+                $fieldType = $entity->getAttributeParam($attribute, 'fieldType');
+            }
+
+            if ($type == Entity::DATETIME) {
+                if (!empty($data[$attribute])) {
+                    $data[$attribute . '_RAW'] = $data[$attribute];
+                    $data[$attribute] = $this->dateTime->convertSystemDateTime($data[$attribute]);
+                }
+            } else if ($type == Entity::DATE) {
+                if (!empty($data[$attribute])) {
+                    $data[$attribute . '_RAW'] = $data[$attribute];
+                    $data[$attribute] = $this->dateTime->convertSystemDate($data[$attribute]);
+                }
+            } else if ($type == Entity::JSON_ARRAY) {
+                if (!empty($data[$attribute])) {
+                    $list = $data[$attribute];
+
+                    $newList = [];
+
+                    foreach ($list as $item) {
+                        $v = $item;
+
+                        if ($item instanceof stdClass) {
+                            $v = json_decode(
+                                Json::encode($v, JSON_PRESERVE_ZERO_FRACTION),
+                                true
+                            );
+                        }
+
+                        if (is_array($v)) {
+                            foreach ($v as $k => $w) {
+                                $keyRaw = $k . '_RAW';
+                                $v[$keyRaw] = $v[$k];
+                                $v[$k] = $this->format($v[$k]);
+                            }
+                        }
+
+                        $newList[] = $v;
+                    }
+                    $data[$attribute] = $newList;
+                }
+            } else if ($type == Entity::JSON_OBJECT) {
+                if (!empty($data[$attribute])) {
+                    $value = $data[$attribute];
+
+                    if ($value instanceof stdClass) {
+                        $data[$attribute] = json_decode(
+                            Json::encode($value, JSON_PRESERVE_ZERO_FRACTION),
+                            true
+                        );
+                    }
+
+                    foreach ($data[$attribute] as $k => $w) {
+                        $keyRaw = $k . '_RAW';
+
+                        $data[$attribute][$keyRaw] = $data[$attribute][$k];
+                        $data[$attribute][$k] = $this->format($data[$attribute][$k]);
+                    }
+                }
+            } else if ($type === Entity::PASSWORD) {
+                unset($data[$attribute]);
+            }
+
+            if (
+                $fieldType === FieldType::CURRENCY &&
+                $entity instanceof CoreEntity &&
+                $entity->getAttributeParam($attribute, 'attributeRole') === 'currency'
+            ) {
+                $currencyValue = $data[$attribute] ?? null;
+
+                if ($currencyValue) {
+                    $data[$attribute . 'Symbol'] =
+                        $this->metadata->get(['app', 'currency', 'symbolMap', $currencyValue]);
+                }
+            }
+
+            if (!array_key_exists($attribute, $data)) {
+                continue;
+            }
+
+            $keyRaw = $attribute . '_RAW';
+
+            if (!isset($data[$keyRaw])) {
+                $data[$keyRaw] = $data[$attribute];
+            }
+
+            $fieldType = $this->getFieldType($entity->getEntityType(), $attribute);
+
+            if ($fieldType === FieldType::ENUM) {
+                $data[$attribute] = $this->language->translateOption(
+                    $data[$attribute], $attribute, $entity->getEntityType()
+                );
+
+                $translationPath = $this->metadata
+                    ->get(['entityDefs', $entity->getEntityType(), 'fields', $attribute, 'translation']);
+
+                if ($translationPath && $data[$keyRaw] !== null) {
+                    $path = $translationPath . '.' . $data[$keyRaw];
+
+                    $data[$attribute] = $this->language->get($path, $data[$keyRaw]);
+                }
+            }
+
+            if ($fieldType === FieldType::CURRENCY) {
+                $code = $data[$attribute . 'Currency'] ?? null;
+
+                if (!is_string($code)) {
+                    $code = null;
+                }
+
+                $data[$attribute] = $this->formatCurrencyValue($data[$attribute], $code);
+            }
+
+            $data[$attribute] = $this->format($data[$attribute]);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param string[] $skipAttributeList
+     */
+    private function applyCollections(array &$data, array &$skipAttributeList, bool $skipLinks, int $level): void
+    {
+        foreach ($data as $key => $value) {
+            if (!$value instanceof Collection) {
+                continue;
+            }
+
+            $skipAttributeList[] = $key;
+
+            /** @var iterable<Entity> $collection */
+            $collection = $value;
+
+            $list = [];
+
+            foreach ($collection as $item) {
+                $list[] = $this->getDataFromEntity($item, $skipLinks, $level + 1);
+            }
+
+            $data[$key] = $list;
+        }
+    }
+
+    /**
+     * @param ?array<string, mixed> $additionalData
+     * @return array<string, mixed>
+     */
+    private function prepareData(Entity $entity, ?array $additionalData): array
+    {
+        $data = get_object_vars($entity->getValueMap());
+
+        if ($additionalData) {
+            foreach ($additionalData as $k => $value) {
+                $data[$k] = $value;
+            }
+        }
+
+        return $data;
+    }
+
+    private function formatCurrencyValue(mixed $value, ?string $code): ?string
+    {
+        if (!is_string($value) && !is_int($value) && !is_float($value)) {
+            return null;
+        }
+
+        if (is_string($value) && !is_numeric($value)) {
+            return null;
+        }
+
+        $precision = $this->precisionProvider->get($code);
+
+        return $this->number->format($value, $precision);
     }
 }

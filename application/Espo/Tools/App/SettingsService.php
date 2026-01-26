@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,7 +35,6 @@ use Espo\Entities\Email;
 use Espo\Entities\Settings;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
-
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
@@ -50,10 +49,9 @@ use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Core\Utils\Config\Access;
-
 use Espo\Entities\Portal;
 use Espo\Repositories\Portal as PortalRepository;
-
+use Espo\Tools\Currency\SyncManager as CurrencySyncManager;
 use stdClass;
 
 class SettingsService
@@ -74,6 +72,8 @@ class SettingsService
         private Config\SystemConfig $systemConfig,
         private EmailConfigDataProvider $emailConfigDataProvider,
         private Acl\Cache\Clearer $aclCacheClearer,
+        private CurrencySyncManager $currencySyncManager,
+        private CurrencyDatabasePopulator $currencyDatabasePopulator,
     ) {}
 
     /**
@@ -243,8 +243,9 @@ class SettingsService
             $this->aclCacheClearer->clearForAllInternalUsers();
         }
 
-        if (isset($data->defaultCurrency) || isset($data->baseCurrency) || isset($data->currencyRates)) {
-            $this->populateDatabaseWithCurrencyRates();
+        if (isset($data->baseCurrency) || isset($data->currencyList) || isset($data->defaultCurrency)) {
+            $this->currencySyncManager->sync();
+            $this->currencyDatabasePopulator->process();
         }
     }
 
@@ -338,11 +339,6 @@ class SettingsService
                 $data->$param = array_values($list);
             }
         }
-    }
-
-    private function populateDatabaseWithCurrencyRates(): void
-    {
-        $this->injectableFactory->create(CurrencyDatabasePopulator::class)->process();
     }
 
     private function filterData(stdClass $data): void

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,6 +34,7 @@ use Espo\Core\AclManager;
 use Espo\Core\Api\ControllerActionProcessor;
 use Espo\Core\Api\ResponseWrapper;
 use Espo\Core\DataManager;
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Field\Date;
 use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\ServiceContainer;
@@ -621,7 +622,7 @@ class AclTest extends \tests\integration\Core\BaseTestCase
             ->getByClass(ServiceContainer::class)
             ->getByClass(User::class);
 
-        $this->expectException(Forbidden::class);
+        $this->expectException(BadRequest::class);
 
         $searchParams = SearchParams
             ::create()

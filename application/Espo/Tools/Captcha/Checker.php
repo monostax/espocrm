@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -80,11 +80,19 @@ class Checker
 
         $response = curl_exec($ch);
 
-        curl_close($ch);
-
         if (!is_string($response)) {
-            throw new RuntimeException("Bad CURL response.");
+            $message = "CURL failure.";
+
+            $curlError = curl_error($ch);
+
+            if ($curlError) {
+                $message .= " " . $curlError;
+            }
+
+            throw new RuntimeException($message);
         }
+
+        curl_close($ch);
 
         $responseData = Json::decode($response, true);
 

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -695,6 +695,29 @@ class FormulaTest extends BaseTestCase
         $value = $em->getRelation($a, 'contacts')->getColumnById($c->getId(), 'role');
 
         $this->assertEquals('test', $value);
+    }
+
+    /** @noinspection PhpUnhandledExceptionInspection */
+    public function testRecordRelateWithColumnData(): void
+    {
+        $fm = $this->getContainer()->getByClass(Manager::class);
+        $em = $this->getContainer()->getByClass(EntityManager::class);
+
+        $a = $em->createEntity('Account');
+        $c = $em->createEntity('Contact');
+
+        $script = "
+            \$data = object\\create();
+            \$data['role'] = 'Tester';
+
+            record\\relate('Account', '{$a->getId()}', 'contacts', '{$c->getId()}', \$data);
+        ";
+
+        $fm->run($script);
+
+        $value = $em->getRelation($a, 'contacts')->getColumnById($c->getId(), 'role');
+
+        $this->assertEquals('Tester', $value);
     }
 
     public function testExtAccountFindByEmailAddress()

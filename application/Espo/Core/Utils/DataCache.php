@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Utils;
 
+use Espo\Core\Utils\File\Exceptions\FileError;
 use Espo\Core\Utils\File\Manager as FileManager;
 
 use InvalidArgumentException;
@@ -56,12 +57,34 @@ class DataCache
      * Get a stored value.
      *
      * @return array<int|string, mixed>|stdClass
+     * @throws FileError
      */
     public function get(string $key)
     {
         $cacheFile = $this->getCacheFile($key);
 
         return $this->fileManager->getPhpSafeContents($cacheFile);
+    }
+
+    /**
+     * Try to get a stored value. Returns null if does not exist.
+     *
+     * @return array<int|string, mixed>|stdClass|null
+     * @since 9.3.0
+     */
+    public function tryGet(string $key)
+    {
+        if (!$this->has($key)) {
+            return null;
+        }
+
+        $cacheFile = $this->getCacheFile($key);
+
+        try {
+            return $this->fileManager->getPhpSafeContents($cacheFile);
+        } catch (FileError) {
+            return null;
+        }
     }
 
     /**

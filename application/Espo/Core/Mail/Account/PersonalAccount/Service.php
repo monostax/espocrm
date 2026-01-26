@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -42,8 +42,6 @@ use Espo\Core\Mail\Account\Storage\Params;
 use Espo\Core\Mail\Account\StorageFactory;
 use Espo\Entities\User;
 use Espo\Core\Mail\Sender\Message;
-
-use Laminas\Mail\Exception\ExceptionInterface;
 
 use Exception;
 
@@ -154,7 +152,7 @@ class Service
                 'message' => $e->getMessage(),
             ]);
 
-            $message = $e instanceof ExceptionInterface || $e instanceof ImapError ?
+            $message = $e instanceof ImapError ?
                 $e->getMessage() : '';
 
             throw new ErrorSilent($message);

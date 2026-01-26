@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -213,9 +213,9 @@ class Client
     }
 
     /**
-     * @param string $url
+     * @param non-empty-string $url
      * @param array<string, mixed>|string|null $params
-     * @param string $httpMethod
+     * @param non-empty-string $httpMethod
      * @param array<string, string> $httpHeaders
      * @return array{
      *   result: array<string, mixed>|string,
@@ -262,9 +262,9 @@ class Client
     }
 
     /**
-     * @param string $url
+     * @param non-empty-string $url
      * @param array<string, mixed>|string|null $params
-     * @param string $httpMethod
+     * @param non-empty-string $httpMethod
      * @param array<string, string> $httpHeaders
      * @return array{
      *   result: array<string, mixed>|string,
@@ -302,7 +302,9 @@ class Client
                     $postFields = $params;
                 }
 
-                $curlOptions[CURLOPT_POSTFIELDS] = $postFields;
+                if ($postFields !== '' && $postFields !== null) {
+                    $curlOptions[CURLOPT_POSTFIELDS] = $postFields;
+                }
 
                 break;
 
@@ -363,7 +365,15 @@ class Client
         $response = curl_exec($ch);
 
         if ($response === false) {
-            throw new Exception("Curl failure.");
+            $message = "Curl failure.";
+
+            $curlError = curl_error($ch);
+
+            if ($curlError) {
+                $message .= " " . $curlError;
+            }
+
+            throw new Exception($message);
         }
 
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -395,7 +405,7 @@ class Client
     }
 
     /**
-     * @param string $url
+     * @param non-empty-string $url
      * @param string $grantType
      * @param array{
      *     client_id?: string,

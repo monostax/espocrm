@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,16 +27,14 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-// To add aliases for backward compatibility.
+// Aliases for backward compatibility or patches.
 $map = [
-    'Espo\\Core\\Hook\\Deprecations\\BaseHook' => 'Espo\\Core\\Hooks\\Base',
+    'Espo\\Core\\Hooks\\Base' => 'Espo\\Core\\Hook\\Deprecations\\BaseHook',
+    'Doctrine\\DBAL\\Platforms\\Keywords\\MariaDb102Keywords' => 'Espo\\Core\\Utils\\Database\\Dbal\\Platforms\\Keywords\\MariaDb102Keywords',
 ];
 
 /** @phpstan-ignore-next-line  */
-foreach ($map as $item) {
-    $className = $item[0];
-    $alias = $item[1];
-
+foreach ($map as $alias => $className) {
     if (!class_exists($className)) {
         continue;
     }

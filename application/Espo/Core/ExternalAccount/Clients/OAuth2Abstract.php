@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -258,7 +258,7 @@ abstract class OAuth2Abstract implements IClient
     }
 
     /**
-     * @return string
+     * @return non-empty-string
      */
     protected function getPingUrl()
     {
@@ -404,9 +404,9 @@ abstract class OAuth2Abstract implements IClient
     }
 
     /**
-     * @param string $url
+     * @param non-empty-string $url
      * @param array<string, mixed>|string|null $params
-     * @param string $httpMethod
+     * @param non-empty-string $httpMethod
      * @param ?string $contentType
      * @param bool $allowRenew
      * @return mixed

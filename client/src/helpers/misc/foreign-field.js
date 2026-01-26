@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,12 @@
 export default class {
 
     /**
+     * @private
+     * @type {string}
+     */
+    entityType
+
+    /**
      * @param {module:views/fields/base} view A field view.
      */
     constructor(view) {
@@ -47,6 +53,8 @@ export default class {
 
         const entityType = metadata.get(['entityDefs', model.entityType, 'links', link, 'entity']) ||
             model.entityType;
+
+        this.entityType = entityType;
 
         const fieldDefs = metadata.get(['entityDefs', entityType, 'fields', field]) || {};
         const type = fieldDefs.type;
@@ -77,5 +85,12 @@ export default class {
      */
     getForeignParams() {
         return Espo.Utils.cloneDeep(this.foreignParams);
+    }
+
+    /**
+     * @return {string}
+     */
+    getEntityType() {
+        return this.entityType;
     }
 }

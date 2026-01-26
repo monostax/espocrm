@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 
 namespace Espo\Tools\EntityManager;
 
+use Espo\Core\Exceptions\Error;
 use Espo\Core\Name\Field;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Metadata;
@@ -378,5 +379,21 @@ class NameUtil
     public function linkExists(string $entityType, string $name): bool
     {
         return (bool) $this->metadata->get("entityDefs.$entityType.links.$name");
+    }
+
+    /**
+     * @since 9.2.4
+     */
+    public function linkNameIsBad(string $name): bool
+    {
+        if ($name === '') {
+            return true;
+        }
+
+        if (preg_match('/[^a-z]/', $name[0])) {
+            return true;
+        }
+
+        return $this->nameIsBad(ucfirst($name));
     }
 }

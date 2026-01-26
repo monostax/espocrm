@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,22 +33,12 @@ class LinkCategoryTreeFieldView extends LinkFieldView {
     selectRecordsView = 'views/modals/select-category-tree-records'
     autocompleteDisabled = false
 
-    fetchSearch() {
-        const data = super.fetchSearch();
-
-        if (!data) {
-            return data;
-        }
-
-        if (data.typeFront === 'is') {
-            data.field = this.name;
-            data.type = 'inCategory';
-        }
-
-        return data;
-    }
-
     getUrl() {
+        if (this.getMetadata().get(`scopes.${this.entityType}.type`) === 'CategoryTree') {
+            // Can be used for the 'parent' field of the category entity type.
+            return super.getUrl();
+        }
+
         const id = this.model.get(this.idName);
 
         if (!id) {

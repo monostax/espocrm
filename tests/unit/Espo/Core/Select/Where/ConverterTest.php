@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -239,7 +239,7 @@ class ConverterTest extends TestCase
                     'attribute' => 'test',
                     'value' => '2020-12-20',
                     'dateTime' => true,
-                    'timeZone' => 'Europe/Kiev',
+                    'timeZone' => 'Europe/Kyiv',
                 ],
             ],
         ]);
@@ -372,9 +372,8 @@ class ConverterTest extends TestCase
                     [
                         'test',
                         $alias,
-                        [$alias . '.localId=:' => 'id'],
+                        null,
                         [
-                            'noLeftAlias' => true,
                             'onlyMiddle' => true,
                             'type' => JoinType::left,
                         ],

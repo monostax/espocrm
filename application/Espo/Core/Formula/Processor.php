@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -177,7 +177,7 @@ class Processor
             $evaluatedArguments = new EvaluatedArgumentList($rawEvaluatedArguments);
 
             if ($function instanceof FuncVariablesAware) {
-                $variables = new Variables($this->variables ?? (object) []);
+                $variables = new Variables($this->variables);
 
                 return $function->process($evaluatedArguments, $variables);
             }

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -308,7 +308,7 @@ class PhpSpreadsheetProcessor implements ProcessorInterface
 
         if ($isForeignReference && $fieldData && $fieldData->getLink()) {
             $label =
-                $this->language->translateLabel($fieldData->getLink(), 'links', $entityType) . '.' .
+                $this->language->translateLabel($fieldData->getLink(), 'links', $entityType) . ' . ' .
                 $this->language->translateLabel($fieldData->getField(), 'fields', $fieldData->getEntityType());
         }
 

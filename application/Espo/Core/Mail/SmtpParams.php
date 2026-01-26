@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -56,6 +56,9 @@ class SmtpParams
     public const AUTH_MECHANISM_CRAMMD5 = 'crammd5';
     public const AUTH_MECHANISM_PLAIN = 'plain';
     public const AUTH_MECHANISM_XOAUTH = 'xoauth';
+
+    public const string SECURITY_SSL_TLS = 'SSL';
+    public const string SECURITY_START_TLS = 'TLS';
 
     /** @var string[] */
     private array $paramList = [

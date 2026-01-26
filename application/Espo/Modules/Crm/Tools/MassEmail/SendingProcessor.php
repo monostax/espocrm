@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,8 +30,6 @@
 namespace Espo\Modules\Crm\Tools\MassEmail;
 
 use Espo\Modules\Crm\Tools\MassEmail\MessagePreparator\Headers;
-use Laminas\Mail\Message;
-
 use Espo\Core\Field\DateTime;
 use Espo\Core\Mail\ConfigDataProvider;
 use Espo\ORM\EntityCollection;

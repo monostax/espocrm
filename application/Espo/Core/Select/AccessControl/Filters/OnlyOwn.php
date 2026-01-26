@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,7 +37,7 @@ use Espo\ORM\Name\Attribute;
 use Espo\ORM\Query\Part\Where\OrGroup;
 use Espo\ORM\Query\Part\WhereClause;
 use Espo\ORM\Query\Part\WhereItem;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 class OnlyOwn implements Filter
 {
@@ -48,7 +48,7 @@ class OnlyOwn implements Filter
         private RelationQueryHelper $relationQueryHelper,
     ) {}
 
-    public function apply(QueryBuilder $queryBuilder): void
+    public function apply(SelectBuilder $queryBuilder): void
     {
         $ownItem = $this->getOwnWhereItem();
 
@@ -67,7 +67,7 @@ class OnlyOwn implements Filter
         $queryBuilder->where($ownItem);
     }
 
-    private function applyCollaborators(QueryBuilder $queryBuilder, ?WhereItem $ownItem): void
+    private function applyCollaborators(SelectBuilder $queryBuilder, ?WhereItem $ownItem): void
     {
         $sharedItem = $this->relationQueryHelper->prepareCollaboratorsWhere($this->entityType, $this->user->getId());
 

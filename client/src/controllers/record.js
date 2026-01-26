@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 /** @module controllers/record */
 
 import Controller from 'controller';
+import DefaultsPopulator from 'helpers/model/defaults-populator';
 
 /**
  * A record controller.
@@ -328,6 +329,8 @@ class RecordController extends Controller {
         for (const k in optionsOptions) {
             o[k] = optionsOptions[k];
         }
+
+        await new DefaultsPopulator().populate(model);
 
         if (options.attributes) {
             model.set(options.attributes);

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,7 +34,13 @@ use Espo\Tools\Pdf\Params;
 
 use stdClass;
 
+/**
+ * @template TEntity of Entity = Entity
+ */
 interface DataLoader
 {
+    /**
+     * @param TEntity $entity
+     */
     public function load(Entity $entity, Params $params): stdClass;
 }

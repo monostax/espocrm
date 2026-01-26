@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,12 +30,12 @@
 namespace Espo\Core\Select\Bool;
 
 use Espo\ORM\Query\Part\Where\OrGroupBuilder;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 /**
  * Applies a bool filter. A where item should be added to OrGroupBuilder.
  */
 interface Filter
 {
-    public function apply(QueryBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void;
+    public function apply(SelectBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void;
 }

@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -43,6 +43,12 @@ class EntityManagerEditView extends View {
      */
     additionalParams
     defaultParamLocation = 'scopes'
+
+    /**
+     * @private
+     * @type {string[]}
+     */
+    enumFieldList
 
     data() {
         return {
@@ -131,7 +137,8 @@ class EntityManagerEditView extends View {
         }
 
         if (scope) {
-            const fieldDefs = this.getMetadata().get('entityDefs.' + scope + '.fields') || {};
+            /** @type {Record.<string, Record>} */
+            const fieldDefs = this.getMetadata().get(`entityDefs.${scope}.fields`) || {};
 
             this.orderableFieldList = Object.keys(fieldDefs)
                 .filter(item => {
@@ -180,13 +187,20 @@ class EntityManagerEditView extends View {
 
             this.enumFieldList = Object.keys(fieldDefs)
                 .filter(item => {
-                    if (fieldDefs[item].disabled) {
-                        return;
+                    if (
+                        fieldDefs[item].disabled ||
+                        fieldDefs[item].utility ||
+                        (fieldDefs[item].directAccessDisabled && !fieldDefs[item].directUpdateEnabled) ||
+                        fieldDefs[item].directUpdateDisabled
+                    ) {
+                        return false;
                     }
 
                     if (fieldDefs[item].type === 'enum') {
                         return true;
                     }
+
+                    return false;
                 })
                 .sort((v1, v2) => {
                     return this.translate(v1, 'fields', scope)

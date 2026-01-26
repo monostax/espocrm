@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,6 +36,7 @@ use Espo\Tools\WorkingTime\Calendar\HavingRanges;
 
 use Espo\Core\Field\DateTime;
 use Espo\Core\Field\Date;
+use LogicException;
 
 class Extractor
 {
@@ -108,7 +109,7 @@ class Extractor
         }
 
         for ($i = count($list) - 1; $i >= 0; $i--) {
-            $pair = $list[$i];
+            $pair = $list[$i] ?? throw new LogicException();
 
             if ($to->isGreaterThan($pair[1]) || $to->isEqualTo($pair[1])) {
                 break;

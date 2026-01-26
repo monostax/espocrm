@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -89,7 +89,7 @@ class BuilderHelper
         /** @var ?array<string, mixed> $fields */
         $fields = $typeDefs['fields'] ?? null;
         /** @var string $naming */
-        $naming = $typeDefs['naming'] ?? $this->defaultFieldNaming;;
+        $naming = $typeDefs['naming'] ?? $this->defaultFieldNaming;
 
         if (!is_array($fields)) {
             return null;

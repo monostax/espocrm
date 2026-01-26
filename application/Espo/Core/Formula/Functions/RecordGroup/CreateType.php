@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,8 +32,8 @@ namespace Espo\Core\Formula\Functions\RecordGroup;
 use Espo\Core\Formula\ArgumentList;
 use Espo\Core\Formula\Exceptions\BadArgumentType;
 use Espo\Core\Formula\Functions\BaseFunction;
-
 use Espo\Core\Di;
+use Espo\Core\Formula\Utils\EntityUtil;
 use RuntimeException;
 use stdClass;
 
@@ -65,7 +65,12 @@ class CreateType extends BaseFunction implements
 
         $data = $this->getData($args, $entityType);
 
-        $entity = $this->entityManager->createEntity($entityType, $data);
+        $entity = $this->entityManager->getNewEntity($entityType);
+        $entity->setMultiple($data);
+
+        EntityUtil::checkUpdateAccess($entity);
+
+        $this->entityManager->saveEntity($entity);
 
         return $entity->getId();
     }

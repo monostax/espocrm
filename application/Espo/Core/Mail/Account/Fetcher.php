@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,6 @@
 namespace Espo\Core\Mail\Account;
 
 use Espo\Core\Exceptions\Error;
-
 use Espo\Core\Mail\Account\Storage\Flag;
 use Espo\Core\Mail\Exceptions\ImapError;
 use Espo\Core\Mail\Exceptions\NoImap;
@@ -41,7 +40,6 @@ use Espo\Core\Mail\MessageWrapper;
 use Espo\Core\Mail\Account\Hook\BeforeFetch as BeforeFetchHook;
 use Espo\Core\Mail\Account\Hook\AfterFetch as AfterFetchHook;
 use Espo\Core\Mail\Account\Hook\BeforeFetchResult as BeforeFetchHookResult;
-
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Core\Field\DateTime as DateTimeField;
@@ -52,7 +50,6 @@ use Espo\ORM\Collection;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression;
 use Espo\ORM\Query\Part\Order;
-
 use Throwable;
 use DateTime;
 
@@ -105,7 +102,7 @@ class Fetcher
         Account $account,
         string $folderOriginal,
         Storage $storage,
-        Collection $filterList
+        Collection $filterList,
     ): void {
 
         $fetchData = $account->getFetchData();
@@ -115,60 +112,59 @@ class Fetcher
         try {
             $storage->selectFolder($folderOriginal);
         } catch (Throwable $e) {
-            $this->log->error(
-                "{$account->getEntityType()} {$account->getId()}, " .
-                "could not select folder '$folder'; [{$e->getCode()}] {$e->getMessage()}"
-            );
+            $message = "{$account->getEntityType()} {$account->getId()}, " .
+                "could not select folder '$folder'; {$e->getMessage()}";
+
+            $this->log->error($message, ['exception' => $e]);
 
             return;
         }
 
-        $lastUniqueId = $fetchData->getLastUniqueId($folder);
+        $lastId = $fetchData->getLastUid($folder);
         $lastDate = $fetchData->getLastDate($folder);
         $forceByDate = $fetchData->getForceByDate($folder);
-
         $portionLimit = $forceByDate ? 0 : $account->getPortionLimit();
 
-        $previousLastUniqueId = $lastUniqueId;
+        $previousLastId = $lastId;
 
-        $idList = $this->getIdList(
-            $account,
-            $storage,
-            $lastUniqueId,
-            $lastDate,
-            $forceByDate
+        $ids = $this->fetchIds(
+            account: $account,
+            storage: $storage,
+            lastUid: $lastId,
+            lastDate: $lastDate,
+            forceByDate: $forceByDate,
         );
 
-        if (count($idList) === 1 && $lastUniqueId) {
-            if ($storage->getUniqueId($idList[0]) === $lastUniqueId) {
-                return;
-            }
+        if (count($ids) === 1 && $ids[0] === $lastId) {
+            return;
         }
 
         $counter = 0;
 
-        foreach ($idList as $id) {
-            if ($counter == count($idList) - 1) {
-                $lastUniqueId = $storage->getUniqueId($id);
+        foreach ($ids as $id) {
+            if ($counter === count($ids) - 1) {
+                $lastId = $id;
             }
 
-            if ($forceByDate && $previousLastUniqueId) {
-                $uid = $storage->getUniqueId($id);
+            if ($forceByDate && $previousLastId && $id <= $previousLastId) {
+                $counter++;
 
-                if ((int) $uid <= (int) $previousLastUniqueId) {
-                    $counter++;
-
-                    continue;
-                }
+                continue;
             }
 
-            $email = $this->fetchEmail($account, $storage, $id, $filterList);
+            $email = $this->fetchEmail(
+                account: $account,
+                storage: $storage,
+                id: $id,
+                filterList: $filterList,
+                mappedEmailFolderId: $account->getMappedEmailFolder($folderOriginal)?->getId(),
+            );
 
-            $isLast = $counter === count($idList) - 1;
+            $isLast = $counter === count($ids) - 1;
             $isLastInPortion = $counter === $portionLimit - 1;
 
             if ($isLast || $isLastInPortion) {
-                $lastUniqueId = $storage->getUniqueId($id);
+                $lastId = $id;
 
                 if ($email && $email->getDateSent()) {
                     $lastDate = $email->getDateSent();
@@ -181,7 +177,7 @@ class Fetcher
                 break;
             }
 
-            $counter++;
+            $counter ++;
         }
 
         if ($forceByDate) {
@@ -189,25 +185,21 @@ class Fetcher
         }
 
         $fetchData->setLastDate($folder, $lastDate);
-        $fetchData->setLastUniqueId($folder, $lastUniqueId);
+        $fetchData->setLastUid($folder, $lastId);
 
-        if ($forceByDate && $previousLastUniqueId) {
-            $idList = $storage->getIdsFromUniqueId($previousLastUniqueId);
+        if ($forceByDate && $previousLastId) {
+            $ids = $storage->getUidsFromUid($previousLastId);
 
-            if (count($idList)) {
-                $uid1 = $storage->getUniqueId($idList[0]);
-
-                if ((int) $uid1 > (int) $previousLastUniqueId) {
-                    $fetchData->setForceByDate($folder, false);
-                }
+            if (count($ids) && $ids[0] > $previousLastId) {
+                $fetchData->setForceByDate($folder, false);
             }
         }
 
         if (
             !$forceByDate &&
-            $previousLastUniqueId &&
-            count($idList) &&
-            (int) $previousLastUniqueId >= (int) $lastUniqueId
+            count($ids) &&
+            $previousLastId &&
+            $previousLastId >= $lastId
         ) {
             // Handling broken numbering. Next time fetch since the last date rather than the last UID.
             $fetchData->setForceByDate($folder, true);
@@ -220,20 +212,20 @@ class Fetcher
      * @return int[]
      * @throws Error
      */
-    private function getIdList(
+    private function fetchIds(
         Account $account,
         Storage $storage,
-        ?string $lastUID,
+        ?int $lastUid,
         ?DateTimeField $lastDate,
-        bool $forceByDate
+        bool $forceByDate,
     ): array {
 
-        if (!empty($lastUID) && !$forceByDate) {
-            return $storage->getIdsFromUniqueId($lastUID);
+        if ($lastUid !== null && !$forceByDate) {
+            return $storage->getUidsFromUid($lastUid);
         }
 
         if ($lastDate) {
-            return $storage->getIdsSinceDate($lastDate);
+            return $storage->getUidsSinceDate($lastDate);
         }
 
         if (!$account->getFetchSince()) {
@@ -242,7 +234,7 @@ class Fetcher
 
         $fetchSince = $account->getFetchSince()->toDateTime();
 
-        return $storage->getIdsSinceDate(
+        return $storage->getUidsSinceDate(
             DateTimeField::fromDateTime($fetchSince)
         );
     }
@@ -254,7 +246,8 @@ class Fetcher
         Account $account,
         Storage $storage,
         int $id,
-        Collection $filterList
+        Collection $filterList,
+        ?string $mappedEmailFolderId,
     ): ?Email {
 
         $teamIdList = $account->getTeams()->getIdList();
@@ -265,11 +258,7 @@ class Fetcher
 
         $fetchOnlyHeader = $this->checkFetchOnlyHeader($storage, $id);
 
-        $folderData = [];
-
-        if ($userId && $account->getEmailFolder()) {
-            $folderData[$userId] = $account->getEmailFolder()->getId();
-        }
+        $folderData = $this->prepareFolderData($userId, $mappedEmailFolderId, $account);
 
         $flags = null;
 
@@ -313,7 +302,7 @@ class Fetcher
                 $flags !== null &&
                 !in_array(Flag::SEEN, $flags)
             ) {
-                $storage->setFlags($id, self::flagsWithoutRecent($flags));
+                $storage->unmarkSeen($id);
             }
         } catch (Throwable $e) {
             $this->log->error(
@@ -433,10 +422,10 @@ class Fetcher
         try {
             return $this->importer->import($message, $data);
         } catch (Throwable $e) {
-            $this->log->error(
-                "{$account->getEntityType()} {$account->getId()}, import message; " .
-                "{$e->getCode()} {$e->getMessage()}"
-            );
+            $message = "{$account->getEntityType()} {$account->getId()}, import message; " .
+                "{$e->getCode()} {$e->getMessage()}";
+
+            $this->log->error($message, ['exception' => $e]);
 
             if ($this->entityManager->getLocker()->isLocked()) {
                 $this->entityManager->getLocker()->rollback();
@@ -447,13 +436,22 @@ class Fetcher
     }
 
     /**
-     * @param string[] $flags
-     * @return string[]
+     * @return array<string, string>
      */
-    private static function flagsWithoutRecent(array $flags): array
+    private function prepareFolderData(?string $userId, ?string $mappedEmailFolderId, Account $account): array
     {
-        return array_values(
-            array_diff($flags, [Flag::RECENT])
-        );
+        if (!$userId) {
+            return [];
+        }
+
+        $folderData = [];
+
+        if ($mappedEmailFolderId) {
+            $folderData[$userId] = $mappedEmailFolderId;
+        } else if ($account->getEmailFolder()) {
+            $folderData[$userId] = $account->getEmailFolder()->getId();
+        }
+
+        return $folderData;
     }
 }

@@ -114,7 +114,7 @@ img.image-preview {
 
 .preset {
     text-overflow: ellipsis;
-    overflow: hidden !important;
+    //overflow: hidden !important;
 }
 
 .preset > div {
@@ -451,10 +451,6 @@ input.numeric-text {
     font-variant-numeric: tabular-nums;
 }
 
-.filter .selectize-input {
-    min-height: var(--input-height-small);
-}
-
 .btn.active {
     box-shadow: none;
 }
@@ -645,60 +641,6 @@ input.global-search-input {
     margin-right: var(--panel-padding);
 }
 
-.cell > .field {
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-}
-
-.field .row {
-    margin-left: calc(var(--3px) * -1) !important;
-    margin-right: calc(var(--3px) * -1) !important;
-
-    > div {
-        padding-left: var(--3px) !important;
-        padding-right: var(--3px) !important;
-    }
-}
-
-.field .form-control,
-.field .btn {
-    margin-bottom: var(--3px);
-}
-
-.field .input-group .form-control,
-.field .input-group .btn {
-    margin-bottom: 0;
-}
-
-.field .input-group {
-    margin-bottom: var(--3px);
-}
-
-.field .link-container {
-    margin-bottom: 0;
-
-    &:not(.no-input) {
-        > .list-group-item:last-child {
-            border-bottom-width: 0;
-        }
-
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-
-        > .list-group-item:last-child {
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
-            border-bottom-width: 0;
-        }
-    }
-
-    > .list-group-item {
-        .text:empty:before {
-            content: "\200b";
-        }
-    }
-}
-
 .list-group {
     border-radius: var(--border-radius);
 
@@ -799,20 +741,6 @@ input.global-search-input {
             border-bottom-right-radius: 0;
         }
     }
-}
-
-.field {
-    .list-group .list-group-item {
-        background-color: var(--panel-bg);
-    }
-
-    .list-group {
-        background-color: var(--default-border-color);
-    }
-}
-
-.panel-body .field > .link-container > .list-group-item {
-    background-color: @panel-bg;
 }
 
 .panel-body .list-group-item {
@@ -1265,14 +1193,6 @@ input.global-search-input {
             display: block;
         }
     }
-}
-
-.filter a.remove-filter {
-    display: none;
-}
-
-.filter:hover a.remove-filter {
-    display: block;
 }
 
 optgroup {
@@ -3477,7 +3397,7 @@ table.table td.cell .html-container {
 .post-container {
     .internal-mode-switcher {
         color: var(--text-muted-color);
-        margin-left: var(--10px);
+        margin-left: var(--14px);
         display: inline-block;
         position: relative;
         top: var(--2px);
@@ -3920,6 +3840,14 @@ table.table-admin-panel {
         border-right: 0;
         padding-left: var(--20px);
         padding-right: var(--20px);
+    }
+}
+
+.advanced-filters {
+    .filter {
+        .control-label {
+            font-size: var(--font-size-small);
+        }
     }
 }
 
@@ -4408,10 +4336,12 @@ body > .autocomplete-suggestions.text-search-suggestions {
             padding: 0;
         }
 
-        > .list > table {
+        > .list:has(> table) {
             margin-left: var(--minus-1px);
             margin-right: var(--minus-1px);
+        }
 
+        > .list > table {
             > tbody {
                 > tr {
                     > td:first-child {
@@ -4623,6 +4553,7 @@ body > .autocomplete-suggestions.text-search-suggestions {
 @import "elements/grid.less";
 @import "elements/animation.less";
 
+<<<<<<< HEAD
 // Conditional styling for scope icons in breadcrumbs
 .breadcrumb-item {
     display: inline-flex !important;
@@ -4849,3 +4780,17 @@ html.is-iframe {
     display: none;
 }
 /* End Conversation Navbar Badge Styles */
+
+.compact-form {
+    --input-height-base: var(--input-height-small);
+    --line-height-computed: var(--line-height-small);
+    --line-height-base: var(--line-height-small);
+    --font-size-base: var(--font-size-small);
+    --padding-base-vertical: var(--padding-small-vertical);
+    --padding-base-horizontal: var(--padding-small-horizontal);
+
+    --icon-size-base: var(--icon-size-small);
+    --icon-line-height-base: var(--icon-line-height-small);
+
+    --btn-icon-width: var(--btn-icon-width-small);
+}

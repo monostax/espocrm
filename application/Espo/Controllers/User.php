@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,14 +29,26 @@
 
 namespace Espo\Controllers;
 
+use Espo\Core\Api\Response;
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Api\Request;
 use Espo\Core\Controllers\Record;
 use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\Where\Item as WhereItem;
+use stdClass;
 
 class User extends Record
 {
+    public function postActionCreate(Request $request, Response $response): stdClass
+    {
+        if ($request->getHeader('Content-Type') !== 'application/json') {
+            throw new BadRequest("Not supported content type.");
+        }
+
+        return parent::postActionCreate($request, $response);
+    }
+
     public function postActionCreateLink(Request $request): bool
     {
         if (!$this->user->isAdmin()) {

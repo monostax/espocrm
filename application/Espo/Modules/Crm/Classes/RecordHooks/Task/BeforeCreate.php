@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -67,6 +67,7 @@ class BeforeCreate implements SaveHook
             throw new Forbidden("No access to email.");
         }
 
+        // As the record hook is processed after the LinkCheck, no forbidden error will be produced.
         $entity->set('emailId', $emailId);
     }
 }

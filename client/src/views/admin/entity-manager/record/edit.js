@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -168,8 +168,18 @@ export default class EntityManagerEditRecordView extends EditRecordView {
     setKanbanStatusIgnoreListOptions() {
         const statusField = this.model.get('statusField');
 
-        const optionList =
-            this.getMetadata().get(['entityDefs', this.subjectEntityType, 'fields', statusField, 'options']) || [];
+        let optionList = this.getMetadata()
+            .get(`entityDefs.${this.subjectEntityType}.fields.${statusField}.options`) ?? [];
+
+        const optionsReference = this.getMetadata()
+            .get(`entityDefs.${this.subjectEntityType}.fields.${statusField}.optionsReference`);
+
+        if (optionsReference) {
+            const [entityType, field] = optionsReference.split('.');
+
+            optionList = this.getMetadata()
+                .get(`entityDefs.${entityType}.fields.${field}.options`) ?? [];
+        }
 
         this.setFieldOptionList('kanbanStatusIgnoreList', optionList);
 

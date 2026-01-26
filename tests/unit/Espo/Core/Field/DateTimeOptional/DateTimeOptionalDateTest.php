@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,16 +29,15 @@
 
 namespace tests\unit\Espo\Core\Field\DateTimeOptional;
 
-use Espo\Core\{
-    Field\DateTimeOptional,
-};
+use Espo\Core\Field\DateTimeOptional;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
+use InvalidArgumentException;
 use DateInterval;
 
-class DateTimeOptionalDateTest extends \PHPUnit\Framework\TestCase
+class DateTimeOptionalDateTest extends TestCase
 {
     public function testFromString()
     {
@@ -60,21 +59,21 @@ class DateTimeOptionalDateTest extends \PHPUnit\Framework\TestCase
 
     public function testBad1()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTimeOptional::fromString('2021-05-A');
     }
 
     public function testBad2()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTimeOptional::fromString('2021-05-1');
     }
 
     public function testEmpty()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTimeOptional::fromString('');
     }
@@ -144,11 +143,11 @@ class DateTimeOptionalDateTest extends \PHPUnit\Framework\TestCase
     {
         $value = DateTimeOptional
             ::fromString('2021-05-01')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertEquals('2021-05-01 00:00:00', $value->toString());
 
-        $this->assertEquals(new DateTimeZone('Europe/Kiev'), $value->getTimezone());
+        $this->assertEquals(new DateTimeZone('Europe/Kyiv'), $value->getTimezone());
 
         $this->assertFalse($value->isAllDay());
     }
@@ -165,7 +164,7 @@ class DateTimeOptionalDateTest extends \PHPUnit\Framework\TestCase
     public function testToday(): void
     {
         $value1 = DateTimeOptional::createToday();
-        $value2 = DateTimeOptional::createToday(new DateTimeZone('Europe/Kiev'));
+        $value2 = DateTimeOptional::createToday(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertEquals(0, $value1->diff($value2)->invert);
     }

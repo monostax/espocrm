@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,22 +33,16 @@ use Espo\Core\Name\Field;
 use Espo\Core\ORM\Entity;
 use Espo\Core\Field\DateTime;
 use Espo\Core\Field\Link;
-
 use Espo\Tools\Export\Params;
-
 use RuntimeException;
 
 class Export extends Entity
 {
-    public const ENTITY_TYPE = 'Export';
-
-    public const STATUS_PENDING = 'Pending';
-
-    public const STATUS_RUNNING = 'Running';
-
-    public const STATUS_SUCCESS = 'Success';
-
-    public const STATUS_FAILED = 'Failed';
+    public const string ENTITY_TYPE = 'Export';
+    public const string STATUS_PENDING = 'Pending';
+    public const string STATUS_RUNNING = 'Running';
+    public const string STATUS_SUCCESS = 'Success';
+    public const string STATUS_FAILED = 'Failed';
 
     public function getParams(): Params
     {

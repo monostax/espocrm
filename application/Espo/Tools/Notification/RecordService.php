@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,6 +37,7 @@ use Espo\Core\Name\Field;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\Note;
 use Espo\Entities\Notification;
@@ -59,6 +60,7 @@ class RecordService
         private Metadata $metadata,
         private NoteAccessControl $noteAccessControl,
         private SelectBuilderFactory $selectBuilderFactory,
+        private Config $config,
     ) {}
 
     /**
@@ -82,40 +84,6 @@ class RecordService
         if ($this->isGroupingEnabled()) {
             $queryBuilder->where($this->getActionIdWhere($user->getId()));
         }
-
-        /*$queryBuilder
-            ->leftJoin(
-                Join
-                    ::createWithSubQuery(
-                        SelectBuilder::create()
-                            ->from(Notification::ENTITY_TYPE)
-                            ->select('actionId')
-                            ->select(
-                                Selection::create(
-                                    Expr::max(Expr::column('number')),
-                                    'maxNumber'
-                                )
-                            )
-                            ->where(
-                                Expr::isNotNull(Expr::column('actionId'))
-                            )
-                            ->group('actionId')
-                            ->build(),
-                        'subLatest'
-                    )
-                    ->withConditions(
-                        Cond::and(
-                            Cond::equal(
-                                Expr::column('notification.actionId'),
-                                Expr::alias('subLatest.actionId')
-                            ),
-                            Cond::equal(
-                                Expr::column('notification.number'),
-                                Expr::alias('subLatest.maxNumber')
-                            ),
-                        )
-                    )
-            );*/
 
         $offset = $searchParams->getOffset();
         $limit = $searchParams->getMaxSize();
@@ -153,7 +121,11 @@ class RecordService
         $ids = [];
         $actionIds = [];
 
-        foreach ($collection as  $entity) {
+        foreach ($collection as $i => $entity) {
+            if ($i === $limit) {
+                break;
+            }
+
             $ids[] = $entity->getId();
 
             $groupedCount = null;
@@ -164,7 +136,7 @@ class RecordService
                 $groupedCount = $groupedCountMap[$entity->getActionId()] ?? 0;
             }
 
-            $entity->set('groupedCount', $groupedCount);
+            $entity->setGroupedCount($groupedCount);
         }
 
         $collection = new EntityCollection([...$collection], Notification::ENTITY_TYPE);
@@ -241,6 +213,8 @@ class RecordService
         ?int &$count,
         User $user
     ): void {
+
+        $this->prepareSetFields($entity);
 
         $noteId = $this->getNoteId($entity);
 
@@ -492,6 +466,18 @@ class RecordService
 
     private function isGroupingEnabled(): bool
     {
-        return true;
+        // @todo Param in preferences?
+        return (bool) ($this->config->get('notificationGrouping') ?? true);
+    }
+
+    private function prepareSetFields(Notification $entity): void
+    {
+        if ($entity->getRelated() && $entity->getData()?->relatedName) {
+            $entity->set('relatedName', $entity->getData()->relatedName);
+        }
+
+        if ($entity->getCreatedBy() && $entity->getData()?->createdByName) {
+            $entity->set('createdByName', $entity->getData()->createdByName);
+        }
     }
 }

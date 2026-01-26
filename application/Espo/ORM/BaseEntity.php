@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -818,7 +818,7 @@ class BaseEntity implements Entity
     }
 
     /**
-     * Whether an attribute was written (since syncing with DB) regardless being changed.
+     * Whether an attribute was written (since syncing with DB) regardless of being changed.
      */
     public function isAttributeWritten(string $name): bool
     {

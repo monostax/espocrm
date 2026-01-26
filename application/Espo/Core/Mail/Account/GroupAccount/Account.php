@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -380,5 +380,10 @@ class Account implements AccountInterface
     {
         /** @var DateTime */
         return $this->entity->getValueObject('connectedAt');
+    }
+
+    public function getMappedEmailFolder(string $folder): ?Link
+    {
+        return null;
     }
 }

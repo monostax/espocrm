@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -61,7 +61,8 @@ class HookProcessor
         private EntityManager $entityManager,
         private StreamService $streamService,
         private AssignmentNotificatorFactory $notificatorFactory,
-        private User $user
+        private User $user,
+        private CollaboratorsNotificator $collaboratorsNotificator,
     ) {}
 
     /**
@@ -69,11 +70,21 @@ class HookProcessor
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        $entityType = $entity->getEntityType();
-
         if (!$entity instanceof CoreEntity) {
             return;
         }
+
+        $this->processAssignment($entity, $options);
+        $this->processCollaborating($entity, $options);
+
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function processAssignment(CoreEntity $entity, array $options): void
+    {
+        $entityType = $entity->getEntityType();
 
         $hasStream = $this->checkHasStream($entityType);
         $force = $this->forceAssignmentNotificator($entityType);
@@ -86,24 +97,16 @@ class HookProcessor
             return;
         }
 
-        $assignmentNotificationsEntityList = $this->config->get('assignmentNotificationsEntityList') ?? [];
-
         if (
             (!$force || !$hasStream) &&
-            !in_array($entityType, $assignmentNotificationsEntityList)
+            !in_array($entityType, $this->getAssignmentEnabledEntityTypeList())
         ) {
             return;
         }
 
         $notificator = $this->getNotificator($entityType);
 
-        $params = AssignmentNotificatorParams::create()->withRawOptions($options);
-
-        $saveContext = SaveContext::obtainFromRawOptions($options);
-
-        if ($saveContext) {
-            $params = $params->withActionId($saveContext->getActionId());
-        }
+        $params = $this->createParams($options);
 
         $notificator->process($entity, $params);
     }
@@ -213,5 +216,45 @@ class HookProcessor
     private function forceAssignmentNotificator(string $entityType): bool
     {
         return (bool) $this->metadata->get(['notificationDefs', $entityType, 'forceAssignmentNotificator']);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function createParams(array $options): AssignmentNotificatorParams
+    {
+        $params = AssignmentNotificatorParams::create()->withRawOptions($options);
+
+        $saveContext = SaveContext::obtainFromRawOptions($options);
+
+        if ($saveContext) {
+            $params = $params->withActionId($saveContext->getActionId());
+        }
+
+        return $params;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getAssignmentEnabledEntityTypeList(): array
+    {
+        return $this->config->get('assignmentNotificationsEntityList') ?? [];
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function processCollaborating(CoreEntity $entity, array $options): void
+    {
+        // If stream is enabled, then always process. Otherwise, use the parameter for 'assignment'.
+        if (
+            !$this->checkHasStream($entity->getEntityType()) &&
+            !in_array($entity->getEntityType(), $this->getAssignmentEnabledEntityTypeList())
+        ) {
+            return;
+        }
+
+        $this->collaboratorsNotificator->process($entity, $this->createParams($options));
     }
 }

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,16 +29,15 @@
 
 namespace tests\unit\Espo\Core\Field\DateTimeOptionalTest;
 
-use Espo\Core\{
-    Field\DateTime,
-    Field\DateTimeOptional};
+use Espo\Core\Field\DateTimeOptional;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
+use InvalidArgumentException;
 use DateInterval;
 
-class DateTimeOptionalTest extends \PHPUnit\Framework\TestCase
+class DateTimeOptionalTest extends TestCase
 {
     public function testFromString1()
     {
@@ -69,7 +68,7 @@ class DateTimeOptionalTest extends \PHPUnit\Framework\TestCase
 
     public function testFromDateTime2()
     {
-        $dt = new DateTimeImmutable('2021-05-01 10:20:30', new DateTimeZone('Europe/Kiev'));
+        $dt = new DateTimeImmutable('2021-05-01 10:20:30', new DateTimeZone('Europe/Kyiv'));
 
         $value = DateTimeOptional::fromDateTime($dt);
 
@@ -78,21 +77,21 @@ class DateTimeOptionalTest extends \PHPUnit\Framework\TestCase
 
     public function testBad1()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTimeOptional::fromString('2021-05-A 10:20:30');
     }
 
     public function testBad2()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTimeOptional::fromString('2021-05-1 10:20:30');
     }
 
     public function testEmpty()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTimeOptional::fromString('');
     }
@@ -158,7 +157,7 @@ class DateTimeOptionalTest extends \PHPUnit\Framework\TestCase
     {
         $value = DateTimeOptional
             ::fromString('2021-05-01 10:20:30')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertEquals('2021-05-01 10:20:30', $value->toString());
 
@@ -169,9 +168,9 @@ class DateTimeOptionalTest extends \PHPUnit\Framework\TestCase
     {
         $value = DateTimeOptional
             ::fromString('2021-05-01 10:20:30')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
-        $this->assertEquals(new DateTimeZone('Europe/Kiev'), $value->getTimezone());
+        $this->assertEquals(new DateTimeZone('Europe/Kyiv'), $value->getTimezone());
     }
 
     public function testDiff(): void
@@ -244,7 +243,7 @@ class DateTimeOptionalTest extends \PHPUnit\Framework\TestCase
     public function testComparison(): void
     {
         $value = DateTimeOptional::fromString('2021-05-01 10:10:30')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertTrue(
             $value->isEqualTo(

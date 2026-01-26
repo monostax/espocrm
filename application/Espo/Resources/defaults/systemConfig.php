@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -263,7 +263,7 @@ return [
         'aclAllowDeleteCreated',
     ],
     'isInstalled' => false,
-    'requiredPhpVersion' => '8.2.0',
+    'requiredPhpVersion' => '8.3.0',
     'requiredPhpLibs' => [
         'json',
         'openssl',
@@ -277,6 +277,7 @@ return [
         'xml',
         'xmlwriter',
         'exif',
+        'bcmath',
     ],
     'recommendedPhpParams' => [
         'max_execution_time' => 180,

@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -581,6 +581,8 @@ class App {
         this.acl.implementationClassMap = aclImplementationClassMap;
 
         this.initRouter();
+
+        this.webSocketManager.subscribe('appParamsUpdate', () => this.appParams.load());
     }
 
     /**
@@ -721,6 +723,14 @@ class App {
 
             if (!className) {
                 const module = this.metadata.get(`scopes.${name}.module`);
+
+                if (!/^[A-Za-z0-9]+$/.test(name)) {
+                    console.error(`Bad controller name ${name}.`);
+
+                    this.baseController.error404();
+
+                    return;
+                }
 
                 className = Utils.composeClassName(module, name, "controllers");
             }
@@ -1450,6 +1460,9 @@ class App {
         if (!label) {
             if (xhr.status === 0) {
                 msg += this.language.translate("Network error");
+            } else if (xhr.status === 500) {
+                msg += this.language.translate("Internal server error") + "\n\n" +
+                    this.language.translate("checkLogsForDetails", "messages");
             } else {
                 msg += this.language.translate("Error") + " " + xhr.status;
             }

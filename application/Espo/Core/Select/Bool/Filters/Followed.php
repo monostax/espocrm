@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,14 +35,14 @@ use Espo\Entities\User;
 use Espo\ORM\Name\Attribute;
 use Espo\ORM\Query\Part\Where\OrGroupBuilder;
 use Espo\ORM\Query\Part\WhereClause;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 class Followed implements Filter
 {
     public function __construct(private string $entityType, private User $user)
     {}
 
-    public function apply(QueryBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void
+    public function apply(SelectBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void
     {
         $alias = 'subscriptionFollowedBoolFilter';
 

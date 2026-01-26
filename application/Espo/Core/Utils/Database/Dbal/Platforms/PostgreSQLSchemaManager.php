@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -43,6 +43,10 @@ class PostgreSQLSchemaManager extends BasePostgreSQLSchemaManager
 
         foreach ($tableIndexes as $row) {
             $key = $row['relname'];
+
+            if (is_string($tableName) && str_starts_with($tableName, '"') && str_ends_with($tableName, '"')) {
+                $tableName = substr($tableName, 1, -1);
+            }
 
             if ($key === "idx_{$tableName}_system_full_text_search") {
                 $sql = "SELECT indexdef FROM pg_indexes WHERE indexname = '{$key}'";

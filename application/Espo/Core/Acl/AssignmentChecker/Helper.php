@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -316,6 +316,21 @@ class Helper
             $entityDefs->getField(self::FIELD_ASSIGNED_USERS)->getType() === FieldType::LINK_MULTIPLE &&
             $entityDefs->hasRelation(self::FIELD_ASSIGNED_USERS) &&
             $entityDefs->getRelation(self::FIELD_ASSIGNED_USERS)->getForeignEntityType() === User::ENTITY_TYPE;
+    }
+
+    public function hasAssignedUserField(string $entityType): bool
+    {
+        $entityDefs = $this->ormDefs->getEntity($entityType);
+
+        $fieldDefs = $entityDefs->tryGetField(Field::ASSIGNED_USER);
+
+        if (!$fieldDefs) {
+            return false;
+        }
+
+        return $fieldDefs->getType() === FieldType::LINK &&
+            $entityDefs->hasRelation(Field::ASSIGNED_USER) &&
+            $entityDefs->getRelation(Field::ASSIGNED_USER)->getForeignEntityType() === User::ENTITY_TYPE;
     }
 
     public function hasCollaboratorsField(string $entityType): bool

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,14 +29,13 @@
 
 namespace tests\unit\Espo\Core\Field\EmailAddress;
 
-use Espo\Core\{
-    Field\EmailAddress,
-    Field\EmailAddressGroup,
-};
+use Espo\Core\Field\EmailAddress;
+use Espo\Core\Field\EmailAddressGroup;
 
-use RuntimeException;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 
-class EmailAddressGroupTest extends \PHPUnit\Framework\TestCase
+class EmailAddressGroupTest extends TestCase
 {
     public function testEmpty()
     {
@@ -53,7 +52,7 @@ class EmailAddressGroupTest extends \PHPUnit\Framework\TestCase
 
     public function testDuplicate1()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         EmailAddressGroup
             ::create([
@@ -64,7 +63,7 @@ class EmailAddressGroupTest extends \PHPUnit\Framework\TestCase
 
     public function testDuplicate2()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         EmailAddressGroup
             ::create([

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@
 namespace Espo\Core\Field;
 
 use Espo\ORM\Entity;
-use RuntimeException;
+use InvalidArgumentException;
 
 /**
  * A link-parent value object. Immutable.
@@ -44,11 +44,11 @@ class LinkParent
     public function __construct(string $entityType, string $id)
     {
         if (!$entityType) {
-            throw new RuntimeException("Empty entity type.");
+            throw new InvalidArgumentException("Empty entity type.");
         }
 
         if (!$id) {
-            throw new RuntimeException("Empty ID.");
+            throw new InvalidArgumentException("Empty ID.");
         }
 
         $this->entityType = $entityType;
@@ -93,6 +93,8 @@ class LinkParent
 
     /**
      * Create.
+     *
+     * @throws InvalidArgumentException
      */
     public static function create(string $entityType, string $id): self
     {

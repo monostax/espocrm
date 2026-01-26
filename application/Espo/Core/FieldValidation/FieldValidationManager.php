@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -196,12 +196,6 @@ class FieldValidationManager
         $data ??= (object) [];
         $entityType = $entity->getEntityType();
 
-        $result = $this->processValidator($entity, $field, $type, new Data($data));
-
-        if (!$result) {
-            return false;
-        }
-
         $validationValue = $value ?? $this->fieldUtil->getEntityTypeFieldParam($entityType, $field, $type);
         $isMandatory = in_array($type, $this->getMandatoryValidationList($entityType, $field));
 
@@ -213,10 +207,17 @@ class FieldValidationManager
             $validationValue = true;
         }
 
-        $skip = !$isMandatory && (is_null($validationValue) || $validationValue === false);
-
-        if ($skip) {
+        if (
+            !$isMandatory &&
+            ($validationValue === null || $validationValue === false)
+        ) {
             return true;
+        }
+
+        $result = $this->processTypeValidator($entity, $field, $type, new Data($data));
+
+        if (!$result) {
+            return false;
         }
 
         $result1 = $this->processFieldCheck($entityType, $type, $entity, $field, $validationValue);
@@ -234,7 +235,7 @@ class FieldValidationManager
         return true;
     }
 
-    private function processValidator(Entity $entity, string $field, string $type, Data $data): bool
+    private function processTypeValidator(Entity $entity, string $field, string $type, Data $data): bool
     {
         $validator = $this->getValidator($entity->getEntityType(), $field, $type);
 

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,7 +51,7 @@ use RuntimeException;
 /**
  * An access point for a specific relation of a record.
  *
- * @template TEntity of Entity
+ * @template TEntity of Entity = Entity
  */
 class RDBRelation
 {
@@ -93,6 +93,18 @@ class RDBRelation
         if ($this->isBelongsToParentType()) {
             $this->noBuilder = true;
         }
+    }
+
+    /**
+     * Create a select builder.
+     *
+     * @return Builder<TEntity>
+     *
+     * @since 9.2.5
+     */
+    public function createBuilder(): Builder
+    {
+        return $this->createSelectBuilder();
     }
 
     /**

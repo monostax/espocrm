@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,8 +34,23 @@ use Espo\Core\Utils\Metadata;
 
 class InternalConfigHelper
 {
+    /** @var string[]  */
+    private array $stateParamList = [
+        'appTimestamp',
+        'cacheTimestamp',
+        'version',
+        'latestVersion',
+        'latestExtensionVersions',
+        'currencyRates',
+    ];
+
     public function __construct(private Config $config, private Metadata $metadata)
     {}
+
+    public function isParamForStateConfig(string $name): bool
+    {
+        return in_array($name, $this->stateParamList);
+    }
 
     public function isParamForInternalConfig(string $name): bool
     {

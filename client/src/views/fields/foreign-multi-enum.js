@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -28,10 +28,30 @@
 
 import MultiEnumFieldView from 'views/fields/multi-enum';
 import ForeignArrayFieldView from 'views/fields/foreign-array';
+import Helper from 'helpers/misc/foreign-field';
 
 class ForeignMultiEnumFieldView extends MultiEnumFieldView {
 
     type = 'foreign'
+
+    /**
+     * @private
+     * @type {string}
+     */
+    foreignEntityType
+
+    setup() {
+        const helper = new Helper(this);
+        const foreignParams = helper.getForeignParams();
+
+        for (const param in foreignParams) {
+            this.params[param] = foreignParams[param];
+        }
+
+        this.foreignEntityType = helper.getEntityType();
+
+        super.setup();
+    }
 
     setupOptions() {
         ForeignArrayFieldView.prototype.setupOptions.call(this);

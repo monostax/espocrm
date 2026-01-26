@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,21 +29,19 @@
 
 namespace tests\unit\Espo\Core\Field\PhoneNumber;
 
-use Espo\Core\{
-    Field\PhoneNumber\PhoneNumberGroupFactory,
-    Utils\Metadata,
-};
+use Espo\Core\Field\PhoneNumber\PhoneNumberGroupFactory;
+use Espo\Core\Utils\Metadata;
 
-use Espo\ORM\{
-    EntityManager,
-    Entity,
-};
+use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
 
 use Espo\Repositories\PhoneNumber as PhoneNumberRepository;
 
+use PHPUnit\Framework\TestCase;
+use InvalidArgumentException;
 use RuntimeException;
 
-class PhoneNumberGroupFactoryTest extends \PHPUnit\Framework\TestCase
+class PhoneNumberGroupFactoryTest extends TestCase
 {
     /**
      * @var Metadata

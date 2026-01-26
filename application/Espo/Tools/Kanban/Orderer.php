@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,8 @@ class Orderer
     public function __construct(
         private EntityManager $entityManager,
         private Metadata $metadata,
-        private RecordIdGenerator $idGenerator
+        private RecordIdGenerator $idGenerator,
+        private MetadataProvider $metadataProvider,
     ) {}
 
     public function setEntityType(string $entityType): OrdererProcessor
@@ -64,9 +65,10 @@ class Orderer
     public function createProcessor(): OrdererProcessor
     {
         return new OrdererProcessor(
-            $this->entityManager,
-            $this->metadata,
-            $this->idGenerator
+            entityManager: $this->entityManager,
+            metadata: $this->metadata,
+            idGenerator: $this->idGenerator,
+            metadataProvider: $this->metadataProvider,
         );
     }
 }

@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -108,10 +108,10 @@ class EmailReminder
     private function getTemplates(CoreEntity $entity): array
     {
         $subjectTpl = $this->templateFileManager
-            ->getTemplate('reminder', 'subject', $entity->getEntityType(), 'Crm');
+            ->getTemplate('reminder', 'subject', $entity->getEntityType());
 
         $bodyTpl = $this->templateFileManager
-            ->getTemplate('reminder', 'body', $entity->getEntityType(), 'Crm');
+            ->getTemplate('reminder', 'body', $entity->getEntityType());
 
         return [$subjectTpl, $bodyTpl];
     }

@@ -40,7 +40,7 @@
     "userThemesDisabled": "Benutzerdesigns deaktivieren",
     "emailMessageMaxSize": "Max. E-Mail Größe (Mb)",
     "personalEmailMaxPortionSize": "Max. E-Mail Größe für das Holen persönlicher Konten",
-    "inboundEmailMaxPortionSize": "Max. E-Mail Größe für das Holen von Gruppenkonten",
+    "inboundEmailMaxPortionSize": "Max. E-Mail-Größe für das Holen von Gruppenkonten",
     "authTokenLifetime": "Gültigkeitsdauer des Auth Token (Stunden)",
     "authTokenMaxIdleTime": "Automatische Abmeldung bei Untätigkeit (Stunden)",
     "dashboardLayout": "Dashboard Übersicht (Standard)",
@@ -75,7 +75,7 @@
     "currencyFormat": "Währungsformat",
     "currencyDecimalPlaces": "Dezimalstellen der Währung",
     "followCreatedEntities": "Eigene Einträge abonnieren",
-    "aclAllowDeleteCreated": "Erlauben, erstellte Einträge zu löschen",
+    "aclAllowDeleteCreated": "Selbsterstellte Datensätze dürfen gelöscht werden",
     "adminNotifications": "Systembenachrichtigungen im Administrationspanel",
     "adminNotificationsNewVersion": "Benachrichtigung anzeigen, wenn eine neue EspoCRM-Version verfügbar ist",
     "massEmailMaxPerHourCount": "Max. Anzahl E-Mails pro Stunde",
@@ -166,7 +166,8 @@
     "passwordStrengthSpecialCharacterCount": "Anzahl der erforderlichen Sonderzeichen im Passwort",
     "availableReactions": "Verfügbare Reaktionen",
     "outboundEmailFromAddress": "System-E-Mail-Adresse",
-    "oidcUserInfoEndpoint": "OIDC-UserInfo-Endpunkt"
+    "oidcUserInfoEndpoint": "OIDC-UserInfo-Endpunkt",
+    "baselineRole": "Baseline-Rolle"
   },
   "tooltips": {
     "recordsPerPage": "Anzahl Sätze In Listenansichten (Standard) ",
@@ -226,7 +227,7 @@
     "addressStateList": "Vorschläge für Adressfeld: Bundesland",
     "addressCityList": "Vorschläge für Adressfeld: Stadt",
     "addressCountryList": "Vorschläge für Adresssfeld: Land",
-    "exportDisabled": "Benutzer können keine Datensätze exportieren. Nur der Administrator erhält die Erlaubnis.",
+    "exportDisabled": "Benutzer können keine Datensätze exportieren. Nur der Administrator ist dazu berechtigt.",
     "globalSearchEntityList": "Welche Datensätze können mit der Globalen Suche durchsucht werden.",
     "siteUrl": "Eine URL dieser EspoCRM-Instanz. Sie müssen sie ändern, wenn Sie in eine andere Domäne umziehen.",
     "useCache": "Eine Deaktivierung wird nicht empfohlen, es sei denn zu Entwicklungszwecken.",
@@ -253,7 +254,8 @@
     "emailAddressIsOptedOutByDefault": "Beim Erstellen eines neuen Datensatzes wird die E-Mail-Adresse als Opted-Out markiert.",
     "oidcGroupClaim": "Ein Claim, der für die Teamzuordnung genutzt wird.",
     "quickSearchFullTextAppendWildcard": "Fügen Sie einen Platzhalter an eine Autovervollständigung-Suchanfrage an, wenn die Volltextsuche aktiviert ist. Verringert die Suchleistung.",
-    "outboundEmailFromAddress": "System-E-Mails werden von dieser E-Mail-Adresse aus versandt. Ein [Gruppen-E-Mail-Konto](#InboundEmail) mit der gleichen E-Mail-Adresse muss eingerichtet und ordnungsgemäß konfiguriert sein, um E-Mails zu versenden."
+    "outboundEmailFromAddress": "System-E-Mails werden von dieser E-Mail-Adresse aus versandt. Ein [Gruppen-E-Mail-Konto](#InboundEmail) mit der gleichen E-Mail-Adresse muss eingerichtet und ordnungsgemäß konfiguriert sein, um E-Mails zu versenden.",
+    "baselineRole": "Die Standardrolle, die für alle Benutzer gilt. Alle zusätzlichen Rollen, die einem Benutzer zugewiesen werden, gewähren zusätzlich zu dieser Basisberechtigung weitere Berechtigungen.\n\n**Wichtig**. Eine Änderung dieser Rolle wirkt sich auf alle Benutzer aus – überprüfen Sie die Änderung sorgfältig, um zu vermeiden, dass unbeabsichtigte Berechtigungen erteilt werden."
   },
   "labels": {
     "Locale": "Lokale Einstellungen",
@@ -284,7 +286,8 @@
     "Scheduled Send": "Geplanter Versand"
   },
   "messages": {
-    "ldapTestConnection": "Die Verbindung wurde erfolgreich hergestellt."
+    "ldapTestConnection": "Die Verbindung wurde erfolgreich hergestellt.",
+    "confirmBaselineRoleChange": "Sind Sie sicher, dass Sie die Baseline-Rolle ändern möchten? Eine unüberlegte Änderung kann allen Benutzern unbeabsichtigte Berechtigungen gewähren."
   },
   "options": {
     "streamEmailNotificationsTypeList": {

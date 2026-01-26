@@ -18,7 +18,7 @@
         "Stream": "Stream",
         "Import": "Import",
         "ImportError": "Import Error",
-        "Template": "Template",
+        "Template": "PDF Template",
         "Job": "Job",
         "EmailFilter": "Email Filter",
         "Portal": "Portal",
@@ -67,7 +67,10 @@
         "AddressCountry": "Address Country",
         "AppSecret": "App Secret",
         "OAuthProvider": "OAuth Provider",
-        "OAuthAccount": "OAuth Account"
+        "OAuthAccount": "OAuth Account",
+        "OpenApi": "OpenAPI",
+        "CurrencyRecord": "Currency Record",
+        "CurrencyRecordRate": "Currency Rate"
     },
     "scopeNamesPlural": {
         "Note": "Notes",
@@ -90,7 +93,7 @@
         "Stream": "Stream",
         "Import": "Import",
         "ImportError": "Import Errors",
-        "Template": "Templates",
+        "Template": "PDF Templates",
         "Job": "Jobs",
         "EmailFilter": "Email Filters",
         "Portal": "Portals",
@@ -125,7 +128,10 @@
         "AddressCountry": "Address Countries",
         "AppSecret": "App Secrets",
         "OAuthProvider": "OAuth Providers",
-        "OAuthAccount": "OAuth Accounts"
+        "OAuthAccount": "OAuth Accounts",
+        "OpenApi": "OpenAPI",
+        "CurrencyRecord": "Currencies",
+        "CurrencyRecordRate": "Currency Rates"
     },
     "labels": {
         "Previous Page": "Previous Page",
@@ -161,6 +167,7 @@
         "Done": "Done",
         "Access denied": "Access denied",
         "Not found": "Not found",
+        "Internal server error": "Internal server error",
         "Access": "Access",
         "Timeout": "Timeout",
         "No internet": "No internet",
@@ -330,6 +337,7 @@
         "Reactions": "Reactions"
     },
     "messages": {
+        "checkLogsForDetails": "Check logs for details",
         "pleaseWait": "Please wait...",
         "loading": "Loading...",
         "saving": "Saving...",
@@ -541,6 +549,7 @@
         "entityRemoved": "{user} removed {entityType} {entity}",
         "emailInbox": "{user} added email {entity} to your inbox",
         "userPostReaction": "{user} reacted to your {post}",
+        "addedToCollaborators": "{user} added you as a collaborator to {entityType} {entity}",
         "userPostInParentReaction": "{user} reacted to your {post} in {entityType} {entity}"
     },
     "streamMessages": {

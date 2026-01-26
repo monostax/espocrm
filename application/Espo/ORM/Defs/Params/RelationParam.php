@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -93,4 +93,18 @@ class RelationParam
      * Deferred load.
      */
     public const DEFERRED_LOAD = 'deferredLoad';
+
+    /**
+     * Default order by. Applied on the entity level.
+     *
+     * @since 9.2.5
+     */
+    public const ORDER_BY = 'orderBy';
+
+    /**
+     * Default order. Applied on the entity level.
+     *
+     * @since 9.2.5
+     */
+    public const ORDER = 'order';
 }

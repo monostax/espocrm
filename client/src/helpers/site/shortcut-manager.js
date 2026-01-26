@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,6 +27,7 @@
  ************************************************************************/
 
 import {register} from 'di';
+import Ui from 'ui';
 
 /** @typedef {import('view').default} View */
 /** @typedef {string|function(KeyboardEvent): void} Key */
@@ -113,6 +114,10 @@ export default class ShortcutManager {
         const items = this.items.filter(it => it.level === this.level);
 
         if (items.length === 0) {
+            return;
+        }
+
+        if (Ui.getConfirmCount()) {
             return;
         }
 

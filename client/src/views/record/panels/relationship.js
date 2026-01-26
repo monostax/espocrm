@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -218,6 +218,8 @@ class RelationshipPanelView extends BottomPanelView {
             this.defs.view = false;
         }
 
+        const unlinkDisabled = this.defs.unlinkDisabled || this.model.getLinkParam(this.link, 'readOnly');
+
         let hasCreate = false;
 
         if (this.defs.create) {
@@ -363,50 +365,50 @@ class RelationshipPanelView extends BottomPanelView {
             this.listViewName = viewName;
             this.rowActionsView = this.defs.readOnly ? false : (this.defs.rowActionsView || this.rowActionsView);
 
-            this.once('after:render', () => {
-                this.createView('list', viewName, {
-                    collection: collection,
-                    layoutName: layoutName,
-                    listLayout: listLayout,
-                    checkboxes: false,
-                    rowActionsView: this.rowActionsView,
-                    buttonsDisabled: true,
-                    selector: '.list-container',
-                    skipBuildRows: true,
-                    rowActionsOptions: {
-                        unlinkDisabled: this.defs.unlinkDisabled,
-                        editDisabled: this.defs.editDisabled,
-                        removeDisabled: this.defs.removeDisabled,
-                    },
-                    displayTotalCount: false,
-                    additionalRowActionList: this.defs.rowActionList,
-                }, view => {
-                    view.getSelectAttributeList(selectAttributeList => {
-                        if (selectAttributeList) {
-                            if (this.defs.mandatoryAttributeList) {
-                                selectAttributeList = [...selectAttributeList, ...this.defs.mandatoryAttributeList];
-
-                                selectAttributeList = selectAttributeList
-                                    .filter((it, i) => selectAttributeList.indexOf(it) === i);
-
-                            }
-
-                            collection.data.select = selectAttributeList.join(',');
-                        }
-
-                        if (!this.defs.hidden) {
-                            collection.fetch();
-
-                            return;
-                        }
-
-                        this.once('show', () => collection.fetch());
+            this.once('after:render', async () => {
+                const view = /** @type {import('views/record/list').default} */
+                    await this.createView('list', viewName, {
+                        collection: collection,
+                        layoutName: layoutName,
+                        listLayout: listLayout,
+                        checkboxes: false,
+                        rowActionsView: this.rowActionsView,
+                        buttonsDisabled: true,
+                        selector: '.list-container',
+                        skipBuildRows: true,
+                        rowActionsOptions: {
+                            unlinkDisabled: unlinkDisabled,
+                            editDisabled: this.defs.editDisabled,
+                            removeDisabled: this.defs.removeDisabled,
+                        },
+                        displayTotalCount: false,
+                        additionalRowActionList: this.defs.rowActionList,
                     });
 
-                    if (this.defs.syncBackWithModel) {
-                        this.listenTo(view, 'after:save after:delete', () => this.processSyncBack());
+                let selectAttributeList = await view.getSelectAttributeList();
+
+                if (selectAttributeList) {
+                    if (this.defs.mandatoryAttributeList) {
+                        selectAttributeList = [...selectAttributeList, ...this.defs.mandatoryAttributeList];
+
+                        selectAttributeList = selectAttributeList
+                            .filter((it, i) => selectAttributeList.indexOf(it) === i);
                     }
-                });
+
+                    collection.data.select = selectAttributeList.join(',');
+                }
+
+                if (!this.defs.hidden) {
+                    collection.fetch();
+
+                    return;
+                }
+
+                this.once('show', () => collection.fetch());
+
+                if (this.defs.syncBackWithModel) {
+                    this.listenTo(view, 'after:save after:delete', () => this.processSyncBack());
+                }
             });
 
             this.wait(false);

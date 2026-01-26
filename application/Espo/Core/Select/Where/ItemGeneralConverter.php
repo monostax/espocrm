@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -49,7 +49,7 @@ use Espo\ORM\Query\Part\Join;
 use Espo\ORM\Query\Part\WhereClause;
 use Espo\ORM\Query\Part\WhereItem as WhereClauseItem;
 use Espo\ORM\Query\Select;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 use Exception;
 use RuntimeException;
@@ -75,7 +75,7 @@ class ItemGeneralConverter implements ItemConverter
     /**
      * @throws BadRequest
      */
-    public function convert(QueryBuilder $queryBuilder, Item $item): WhereClauseItem
+    public function convert(SelectBuilder $queryBuilder, Item $item): WhereClauseItem
     {
         $type = $item->getType();
         $value = $item->getValue();
@@ -360,7 +360,7 @@ class ItemGeneralConverter implements ItemConverter
      * @return array<string|int, mixed>
      * @throws BadRequest
      */
-    private function groupProcessAndOr(QueryBuilder $queryBuilder, string $type, $value): array
+    private function groupProcessAndOr(SelectBuilder $queryBuilder, string $type, $value): array
     {
         if (!is_array($value)) {
             throw new BadRequest("Bad where item.");
@@ -396,7 +396,7 @@ class ItemGeneralConverter implements ItemConverter
             throw new BadRequest("Bad where item.");
         }
 
-        $sqQueryBuilder = QueryBuilder::create()
+        $sqQueryBuilder = SelectBuilder::create()
             ->from($this->entityType);
 
         $whereItem = Item::fromRaw([
@@ -440,7 +440,7 @@ class ItemGeneralConverter implements ItemConverter
             throw new BadRequest("Bad where item 'column'.");
         }
 
-        $subQueryBuilder = QueryBuilder::create()
+        $subQueryBuilder = SelectBuilder::create()
             ->from($this->entityType)
             ->select(Attribute::ID)
             ->leftJoin($link);
@@ -480,7 +480,7 @@ class ItemGeneralConverter implements ItemConverter
      * @throws BadRequest
      */
     private function groupProcessArray(
-        QueryBuilder $queryBuilder,
+        SelectBuilder $queryBuilder,
         string $type,
         string $attribute,
         $value
@@ -540,7 +540,7 @@ class ItemGeneralConverter implements ItemConverter
                 throw new BadRequest("Bad where item. No value.");
             }
 
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select('entityId')
                 ->from(ArrayValue::ENTITY_TYPE)
                 ->where([
@@ -560,7 +560,7 @@ class ItemGeneralConverter implements ItemConverter
 
             return Cond::not(
                 Cond::exists(
-                    QueryBuilder::create()
+                    SelectBuilder::create()
                         ->select('entityId')
                         ->from(ArrayValue::ENTITY_TYPE)
                         ->where([
@@ -577,7 +577,7 @@ class ItemGeneralConverter implements ItemConverter
         if ($type === Type::ARRAY_IS_EMPTY) {
             return Cond::not(
                 Cond::exists(
-                    QueryBuilder::create()
+                    SelectBuilder::create()
                         ->select('entityId')
                         ->from(ArrayValue::ENTITY_TYPE)
                         ->where([
@@ -591,7 +591,7 @@ class ItemGeneralConverter implements ItemConverter
         }
 
         if ($type === Type::ARRAY_IS_NOT_EMPTY) {
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select('entityId')
                 ->from(ArrayValue::ENTITY_TYPE)
                 ->where([
@@ -616,7 +616,7 @@ class ItemGeneralConverter implements ItemConverter
 
             foreach ($value as $arrayValue) {
                 $whereList[] = [
-                    $idPart .'=s' => QueryBuilder::create()
+                    $idPart .'=s' => SelectBuilder::create()
                         ->from(ArrayValue::ENTITY_TYPE)
                         ->select('entityId')
                         ->where([
@@ -1358,16 +1358,22 @@ class ItemGeneralConverter implements ItemConverter
             $nearKey = $defs->getMidKey();
             $middleEntityType = ucfirst($defs->getRelationshipName());
 
+            $conditions = [
+                "$alias.$nearKey:" => Attribute::ID,
+                "$alias.deleted" => false,
+            ];
+
+            foreach ($defs->getConditions() as $k => $v) {
+                $conditions["$alias.$k"] = $v;
+            }
+
             // The foreign table is not joined as it would perform much slower.
             // Trade off is that if a foreign record is deleted but the middle table
             // is not yet deleted, it will give a non-actual result.
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select(Attribute::ID)
                 ->from($this->entityType)
-                ->leftJoin($middleEntityType, $alias, [
-                    "$alias.$nearKey:" => Attribute::ID,
-                    "$alias.deleted" => false,
-                ])
+                ->leftJoin($middleEntityType, $alias, $conditions)
                 ->where(["$alias.$key" => null])
                 ->build();
 
@@ -1380,7 +1386,7 @@ class ItemGeneralConverter implements ItemConverter
             $relationType == Entity::BELONGS_TO ||
             $relationType === Entity::HAS_CHILDREN
         ) {
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select(Attribute::ID)
                 ->from($this->entityType)
                 ->leftJoin($link, $alias)
@@ -1410,16 +1416,22 @@ class ItemGeneralConverter implements ItemConverter
             $nearKey = $defs->getMidKey();
             $middleEntityType = ucfirst($defs->getRelationshipName());
 
+            $conditions = [
+                "$alias.$nearKey:" => Attribute::ID,
+                "$alias.deleted" => false,
+            ];
+
+            foreach ($defs->getConditions() as $k => $v) {
+                $conditions["$alias.$k"] = $v;
+            }
+
             // The foreign table is not joined as it would perform much slower.
             // Trade off is that if a foreign record is deleted but the middle table
             // is not yet deleted, it will give a non-actual result.
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select(Attribute::ID)
                 ->from($this->entityType)
-                ->leftJoin($middleEntityType, $alias, [
-                    "$alias.$nearKey:" => Attribute::ID,
-                    "$alias.deleted" => false,
-                ])
+                ->leftJoin($middleEntityType, $alias, $conditions)
                 ->where(["$alias.$key!=" => null])
                 ->build();
 
@@ -1432,7 +1444,7 @@ class ItemGeneralConverter implements ItemConverter
             $relationType == Entity::BELONGS_TO ||
             $relationType == Entity::HAS_CHILDREN
         ) {
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select(Attribute::ID)
                 ->from($this->entityType)
                 ->leftJoin($link, $alias)
@@ -1476,7 +1488,6 @@ class ItemGeneralConverter implements ItemConverter
 
         if ($relationType == Entity::MANY_MANY) {
             $key = $defs->getForeignMidKey();
-            $nearKey = $defs->getMidKey();
 
             // IN-sub-query performs faster than EXISTS on MariaDB when multiple IDs.
             // Left-join performs faster than inner-join.
@@ -1484,17 +1495,11 @@ class ItemGeneralConverter implements ItemConverter
             // MariaDB and PostgreSQL perform fast, MySQL – slow.
             return Cond::in(
                 Cond::column(Attribute::ID),
-                QueryBuilder::create()
+                SelectBuilder::create()
                     ->select(Attribute::ID)
                     ->from($this->entityType)
                     ->leftJoin(
                         Join::create($link, $alias)
-                            ->withConditions(
-                                Cond::equal(
-                                    Cond::column("$alias.$nearKey"),
-                                    Cond::column(Attribute::ID)
-                                )
-                            )
                             ->withOnlyMiddle()
                     )
                     ->where(["$alias.$key" => $value])
@@ -1506,7 +1511,7 @@ class ItemGeneralConverter implements ItemConverter
             $relationType == Entity::HAS_MANY ||
             $relationType == Entity::HAS_ONE
         ) {
-            $subQuery = QueryBuilder::create()
+            $subQuery = SelectBuilder::create()
                 ->select(Attribute::ID)
                 ->from($this->entityType)
                 ->leftJoin($link, $alias)
@@ -1560,7 +1565,7 @@ class ItemGeneralConverter implements ItemConverter
             // MariaDB and MySQL perform slow, PostgreSQL – fast.
             return Cond::not(
                 Cond::exists(
-                    QueryBuilder::create()
+                    SelectBuilder::create()
                         ->from($this->entityType, 'sq')
                         ->join(
                             Join::create($link, $alias)
@@ -1584,7 +1589,7 @@ class ItemGeneralConverter implements ItemConverter
         ) {
             return Cond::not(
                 Cond::exists(
-                    QueryBuilder::create()
+                    SelectBuilder::create()
                         ->select(Attribute::ID)
                         ->from($this->entityType, 'sq')
                         ->join($link, $alias)
@@ -1642,7 +1647,7 @@ class ItemGeneralConverter implements ItemConverter
 
             foreach ($value as $targetId) {
                 // Only-middle join performs slower on MariaDB.
-                $sq = QueryBuilder::create()
+                $sq = SelectBuilder::create()
                     ->from($this->entityType)
                     ->select(Attribute::ID)
                     ->leftJoin($link)
@@ -1661,7 +1666,7 @@ class ItemGeneralConverter implements ItemConverter
             $whereList = [];
 
             foreach ($value as $targetId) {
-                $sq = QueryBuilder::create()
+                $sq = SelectBuilder::create()
                     ->from($this->entityType)
                     ->select(Attribute::ID)
                     ->leftJoin($link)

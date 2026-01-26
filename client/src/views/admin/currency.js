@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,6 +27,7 @@
  ************************************************************************/
 
 import SettingsEditRecordView from 'views/settings/record/edit';
+import EditView from 'views/edit';
 
 export default class extends SettingsEditRecordView {
 
@@ -46,34 +47,22 @@ export default class extends SettingsEditRecordView {
 
             this.setFieldOptionList('defaultCurrency', currencyList);
             this.setFieldOptionList('baseCurrency', currencyList);
-
-            this.controlCurrencyRatesVisibility();
         });
 
-        this.listenTo(this.model, 'change', (model, o) => {
-            if (!o.ui) {
+        this.whenReady().then(() => {
+            const view = /** @type {EditView} view */
+                this.getParentView();
+
+            if (!view instanceof EditView) {
                 return;
             }
 
-            if (model.hasChanged('currencyList') || model.hasChanged('baseCurrency')) {
-                const currencyRatesField = this.getFieldView('currencyRates');
-
-                if (currencyRatesField) {
-                    currencyRatesField.reRender();
-                }
-            }
+            view.addMenuItem('buttons', {
+                name: 'currencyRecords',
+                link: '#CurrencyRecord',
+                labelTranslation: 'Settings.labels.Currency Rates',
+                iconClass: 'fas fa-euro-sign',
+            });
         });
-
-        this.controlCurrencyRatesVisibility();
-    }
-
-    controlCurrencyRatesVisibility() {
-        const currencyList = this.model.get('currencyList');
-
-        if (currencyList.length < 2) {
-            this.hideField('currencyRates');
-        } else {
-            this.showField('currencyRates');
-        }
     }
 }

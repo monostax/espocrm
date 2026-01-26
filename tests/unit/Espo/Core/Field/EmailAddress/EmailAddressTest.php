@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,24 +29,23 @@
 
 namespace tests\unit\Espo\Core\Field\EmailAddress;
 
-use Espo\Core\{
-    Field\EmailAddress,
-};
+use Espo\Core\Field\EmailAddress;
 
-use RuntimeException;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 
-class EmailAddressTest extends \PHPUnit\Framework\TestCase
+class EmailAddressTest extends TestCase
 {
     public function testInvalidAddress()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         EmailAddress::create('one');
     }
 
     public function testInvalidEmpty()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         EmailAddress::create('');
     }

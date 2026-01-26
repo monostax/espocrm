@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -174,7 +174,7 @@ class Collection {
     parentModel
 
     /**
-     * @param {Model[]|null} [models] Models.
+     * @param {Model[]|Record<string, *>[]|null} [models] Models.
      * @param {{
      *     entityType?: string,
      *     model?: Model.prototype,

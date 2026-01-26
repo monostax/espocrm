@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -981,6 +981,8 @@ Espo.Ui = {
             message = Handlebars.Utils.escapeExpression(message);
         }
 
+        confirmCount ++;
+
         return new Promise(resolve => {
             const dialog = new Dialog({
                 backdrop: backdrop,
@@ -1025,6 +1027,8 @@ Espo.Ui = {
                     }
                 ],
                 onClose: () => {
+                    confirmCount --;
+
                     if (isResolved) {
                         return;
                     }
@@ -1366,8 +1370,19 @@ Espo.Ui = {
     info: function (message, options) {
         Espo.Ui.notify(message, 'info', 2000, options);
     },
+
+    /**
+     * Get the number of opened confirmation dialogues.
+     *
+     * @return {number}
+     * @internal
+     */
+    getConfirmCount() {
+        return confirmCount;
+    }
 };
 
+let confirmCount = 0;
 let notifySuppressed = false;
 
 /**

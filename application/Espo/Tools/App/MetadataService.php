@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -178,20 +178,32 @@ class MetadataService
         foreach ($this->aclDependencyProvider->get() as $dependencyItem) {
             $aclScope = $dependencyItem->getScope();
             $aclField = $dependencyItem->getField();
+            $anyScopeList = $dependencyItem->getAnyScopeList();
 
-            if (!$aclScope) {
-                continue;
+            if ($anyScopeList) {
+                $skip = true;
+
+                foreach ($anyScopeList as $itemScope) {
+                    if ($this->acl->tryCheck($itemScope)) {
+                        $skip = false;
+
+                        break;
+                    }
+                }
+
+                if ($skip) {
+                    continue;
+                }
             }
 
-            if (!$this->acl->tryCheck($aclScope)) {
-                continue;
-            }
+            if ($aclScope) {
+                if (!$this->acl->tryCheck($aclScope)) {
+                    continue;
+                }
 
-            if (
-                $aclField &&
-                in_array($aclField, $this->acl->getScopeForbiddenFieldList($aclScope))
-            ) {
-                continue;
+                if ($aclField && in_array($aclField, $this->acl->getScopeForbiddenFieldList($aclScope))) {
+                    continue;
+                }
             }
 
             $targetArr = explode('.', $dependencyItem->getTarget());

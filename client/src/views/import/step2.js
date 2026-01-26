@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -282,8 +282,6 @@ class Step2ImportView extends View {
         text = text.trim();
         text = text.toLowerCase();
 
-        console.log(text);
-
         /** @type {JQuery} */
         const $li = this.$defaultFieldList.find('li.item');
 
@@ -339,22 +337,32 @@ class Step2ImportView extends View {
     }
 
     /**
+     * @private
      * @return {string[]}
      */
     getFieldList() {
-        const defs = this.getMetadata().get('entityDefs.' + this.scope + '.fields');
+        const defs = this.getMetadata().get(`entityDefs.${this.scope}.fields`);
         const forbiddenFieldList = this.getAcl().getScopeForbiddenFieldList(this.scope, 'edit');
 
         let fieldList = [];
 
         for (const field in defs) {
-            if (~forbiddenFieldList.indexOf(field)) {
+            if (forbiddenFieldList.includes(field)) {
                 continue;
             }
 
             const d = /** @type {Object.<string, *>} */defs[field];
 
-            if (!~this.allowedFieldList.indexOf(field) && (d.disabled || d.importDisabled)) {
+            if (
+                !this.allowedFieldList.includes(field) &&
+                (
+                    d.disabled ||
+                    d.importDisabled ||
+                    d.utility ||
+                    d.directAccessDisabled && !d.importEnabled ||
+                    d.directUpdateDisabled && !d.importEnabled && !d.directUpdateEnabled
+                )
+            ) {
                 continue;
             }
 
@@ -369,6 +377,10 @@ class Step2ImportView extends View {
         return fieldList;
     }
 
+    /**
+     * @private
+     * @returns {string[]}
+     */
     getAttributeList() {
         const fields = this.getMetadata().get(['entityDefs', this.scope, 'fields']) || {};
         const forbiddenFieldList = this.getAcl().getScopeForbiddenFieldList(this.scope, 'edit');
@@ -378,7 +390,7 @@ class Step2ImportView extends View {
         attributeList.push('id');
 
         for (const field in fields) {
-            if (~forbiddenFieldList.indexOf(field)) {
+            if (forbiddenFieldList.includes(field)) {
                 continue;
             }
 
@@ -386,7 +398,13 @@ class Step2ImportView extends View {
 
             if (
                 !this.allowedFieldList.includes(field) &&
-                (defs.disabled && !defs.importNotDisabled || defs.importDisabled)
+                (
+                    defs.disabled ||
+                    defs.importDisabled ||
+                    defs.utility ||
+                    defs.directAccessDisabled && !defs.importEnabled ||
+                    defs.directUpdateDisabled && !defs.importEnabled && !defs.directUpdateEnabled
+                )
             ) {
                 continue;
             }

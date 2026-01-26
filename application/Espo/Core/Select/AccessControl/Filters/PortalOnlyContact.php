@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -40,7 +40,7 @@ use Espo\ORM\Name\Attribute;
 use Espo\ORM\Query\Part\Where\OrGroup;
 use Espo\ORM\Query\Part\WhereClause;
 use Espo\ORM\Query\Part\WhereItem;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 class PortalOnlyContact implements Filter
 {
@@ -52,7 +52,7 @@ class PortalOnlyContact implements Filter
         private RelationQueryHelper $relationQueryHelper,
     ) {}
 
-    public function apply(QueryBuilder $queryBuilder): void
+    public function apply(SelectBuilder $queryBuilder): void
     {
         $orBuilder = OrGroup::createBuilder();
 
@@ -83,7 +83,7 @@ class PortalOnlyContact implements Filter
         $queryBuilder->where($orGroup);
     }
 
-    private function prepareContactWhere(QueryBuilder $queryBuilder, string $id): ?WhereItem
+    private function prepareContactWhere(SelectBuilder $queryBuilder, string $id): ?WhereItem
     {
         $defs = $this->metadataProvider->getContactLink($this->entityType);
 

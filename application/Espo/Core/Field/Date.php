@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,6 +35,7 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use DateInterval;
 use DateTimeZone;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -45,12 +46,15 @@ class Date implements DateTimeable
     private string $value;
     private DateTimeImmutable $dateTime;
 
-    private const SYSTEM_FORMAT = 'Y-m-d';
+    private const string SYSTEM_FORMAT = 'Y-m-d';
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public function __construct(string $value)
     {
         if (!$value) {
-            throw new RuntimeException("Empty value.");
+            throw new InvalidArgumentException("Empty value.");
         }
 
         $this->value = $value;
@@ -62,13 +66,13 @@ class Date implements DateTimeable
         );
 
         if ($parsedValue === false) {
-            throw new RuntimeException("Bad value.");
+            throw new InvalidArgumentException("Bad value.");
         }
 
         $this->dateTime = $parsedValue;
 
         if ($this->value !== $this->dateTime->format(self::SYSTEM_FORMAT)) {
-            throw new RuntimeException("Bad value.");
+            throw new InvalidArgumentException("Bad value.");
         }
     }
 
@@ -259,6 +263,8 @@ class Date implements DateTimeable
 
     /**
      * Create from a string with a date in `Y-m-d` format.
+     *
+     * @throws InvalidArgumentException
      */
     public static function fromString(string $value): self
     {

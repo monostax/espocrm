@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -54,9 +54,16 @@ class FetchData
         return ObjectUtil::clone($this->data);
     }
 
-    public function getLastUniqueId(string $folder): ?string
+    public function getLastUid(string $folder): ?int
     {
-        return $this->data->lastUID->$folder ?? null;
+        $id = $this->data->lastUID->$folder ?? null;
+
+        if ($id === null) {
+            return null;
+        }
+
+        // To int for bc. It used to be string.
+        return (int) $id;
     }
 
     public function getLastDate(string $folder): ?DateTime
@@ -84,7 +91,7 @@ class FetchData
         return $this->data->byDate->$folder ?? false;
     }
 
-    public function setLastUniqueId(string $folder, ?string $uniqueId): void
+    public function setLastUid(string $folder, ?int $uniqueId): void
     {
         if (!property_exists($this->data, 'lastUID')) {
             $this->data->lastUID = (object) [];

@@ -10,9 +10,8 @@
     "ScheduledJob": "Geplante Aufgabe",
     "ExternalAccount": "Externes Konto",
     "Extension": "Erweiterung",
-    "InboundEmail": "Gruppen E-Mail Konto",
+    "InboundEmail": "Gruppen-E-Mail-Konto",
     "Stream": "Ereignisse",
-    "Template": "Vorlage",
     "EmailFilter": "E-Mail Filter",
     "PortalRole": "Portal Rolle",
     "Attachment": "Anhang",
@@ -41,7 +40,7 @@
     "ApiUser": "API Benutzer",
     "DashboardTemplate": "Dashboard-Vorlage",
     "Currency": "Währung",
-    "LayoutSet": "Layout-Set",
+    "LayoutSet": "Layout-Satz",
     "Mass Action": "Massenaktionen",
     "Note": "Notiz",
     "ImportError": "Fehler beim Importieren",
@@ -55,7 +54,8 @@
     "AddressCountry": "Adresse Land",
     "AppSecret": "App-Geheimnis",
     "OAuthProvider": "OAuth-Anbieter",
-    "OAuthAccount": "OAuth-Konto"
+    "OAuthAccount": "OAuth-Konto",
+    "WebhookEventQueueItem": "Webhook-Ereigniswarteschlange-Element"
   },
   "scopeNamesPlural": {
     "Email": "E-Mails",
@@ -68,9 +68,8 @@
     "ScheduledJob": "Geplante Jobs",
     "ExternalAccount": "Externe Konten",
     "Extension": "Erweiterungen",
-    "InboundEmail": "Gruppen E-Mail Konten",
+    "InboundEmail": "Gruppen-E-Mail-Konten",
     "Stream": "Ereignisse",
-    "Template": "Vorlagen",
     "EmailFilter": "E-Mail Filter",
     "Portal": "Portale",
     "PortalRole": "Portal Rollen",
@@ -105,7 +104,8 @@
     "AddressCountry": "Adresse Länder",
     "AppSecret": "App-Geheimnisse",
     "OAuthProvider": "OAuth-Anbieter",
-    "OAuthAccount": "OAuth-Konten"
+    "OAuthAccount": "OAuth-Konten",
+    "WebhookEventQueueItem": "Webhook-Ereigniswarteschlange-Elemente"
   },
   "labels": {
     "Misc": "Verschiedenes",
@@ -137,7 +137,7 @@
     "Username can not be empty!": "Der Benutzername darf nicht leer sein!",
     "Cache is not enabled": "Cache ist nicht aktiviert",
     "Cache has been cleared": "Der Cache wurde geleert",
-    "Rebuild has been done": "Wiederherstellen wurde durchgeführt",
+    "Rebuild has been done": "Neuaufbau wurde durchgeführt",
     "Modified": "Verändert",
     "Created": "Erstellt",
     "Create": "Erstellen",
@@ -234,7 +234,7 @@
     "Skip": "überspringen",
     "Attribute": "Attribut",
     "Function": "Funktion",
-    "Self-Assign": "sich selbst zuweisen",
+    "Self-Assign": "Sich selbst zuweisen",
     "Self-Assigned": "Selbst zugewiesen",
     "Return to Application": "Zurück zur Applikation",
     "Select All Results": "Alle auswählen",
@@ -297,7 +297,9 @@
     "View User Access": "Benutzerzugriff anzeigen",
     "Reacted": "Reagierte",
     "Reaction Removed": "Reaktion entfernt",
-    "Reactions": "Reaktionen"
+    "Reactions": "Reaktionen",
+    "Network error": "Netzwerkfehler",
+    "Edit Item": "Element editieren"
   },
   "messages": {
     "pleaseWait": "Bitte warten...",
@@ -413,7 +415,8 @@
     "cannotRemoveNotEmptyCategory": "Eine nicht leere Kategorie kann nicht entfernt werden.",
     "arrayInputNotEmpty": "Artikel wird eingegeben, aber nicht hinzugefügt",
     "error403": "Sie haben keinen Zugang zu diesem Bereich.",
-    "sameRecordIsAlreadyBeingEdited": "Der Datensatz wird bereits bearbeitet."
+    "sameRecordIsAlreadyBeingEdited": "Der Datensatz wird bereits bearbeitet.",
+    "changesLossConfirmation": "Nicht gespeicherte Änderungen gehen verloren. Sind Sie sicher?"
   },
   "boolFilters": {
     "onlyMy": "Nur meine",
@@ -424,7 +427,8 @@
   "presetFilters": {
     "followed": "Abonniert",
     "all": "Alle",
-    "starred": "Mit Stern markiert"
+    "starred": "Mit Stern markiert",
+    "active": "Aktiv"
   },
   "massActions": {
     "remove": "Löschen",

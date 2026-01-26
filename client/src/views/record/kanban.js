@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -89,6 +89,12 @@ class KanbanRecordView extends ListRecordView {
      * @type {import('collection').default}
      */
     seedCollection
+
+    /**
+     * @private
+     * @type {Record.<string, string>}
+     */
+    styleMap
 
     /**
      * Layout item definitions.
@@ -364,12 +370,7 @@ class KanbanRecordView extends ListRecordView {
                 this.orderDisabled = true;
             }
         }
-
-        this.statusField = this.options.statusField || this.getMetadata().get(['scopes', this.scope, 'statusField']);
-
-        if (!this.statusField) {
-            throw new Error(`No status field for entity type '${this.scope}'.`);
-        }
+        this.setupStatusField();
 
         this.seedCollection = this.collection.clone();
         this.seedCollection.reset();
@@ -439,6 +440,30 @@ class KanbanRecordView extends ListRecordView {
          * @type {boolean}
          */
         this.hasStars = this.getMetadata().get(`scopes.${this.entityType}.stars`) || false;
+    }
+
+    /**
+     * @private
+     */
+    setupStatusField() {
+        this.statusField = this.options.statusField || this.getMetadata().get(['scopes', this.scope, 'statusField']);
+
+        if (!this.statusField) {
+            throw new Error(`No status field for entity type '${this.scope}'.`);
+        }
+
+        this.styleMap = /** @type {Record.<string, string>} */
+            this.getMetadata().get(`entityDefs.${this.scope}.fields.${this.statusField}.style`) ?? {};
+
+        const optionsReference =
+            this.getMetadata().get(`entityDefs.${this.scope}.fields.${this.statusField}.optionsReference`);
+
+        if (optionsReference) {
+            const [entityType, field] = optionsReference.split('.');
+
+            this.styleMap = /** @type {Record.<string, string>} */
+                this.getMetadata().get(`entityDefs.${entityType}.fields.${field}.style`) ?? {};
+        }
     }
 
     afterRender() {
@@ -955,8 +980,7 @@ class KanbanRecordView extends ListRecordView {
                     });
                 });
 
-                const style = item.style ||
-                    this.getMetadata().get(`entityDefs.${this.scope}.fields.${this.statusField}.style.${item.name}`);
+                const style = item.style || this.styleMap[item.name];
 
                 const label = item.label ||
                     this.getLanguage().translateOption(item.name, this.statusField, this.scope);
@@ -1098,6 +1122,10 @@ class KanbanRecordView extends ListRecordView {
      * @param {Record} o Options.
      */
     onChangeGroup(model, value, o) {
+        if (o.action === 'fetch') {
+            return;
+        }
+
         const id = model.id;
         const group = model.get(this.statusField);
 

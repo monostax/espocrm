@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -67,8 +67,8 @@ class TokensProvider
         if (
             $account->getRefreshToken() &&
             $account->getExpiresAt() &&
-            $account->getExpiresAt()->isGreaterThan(
-                DateTime::createNow()->addSeconds(- self::EXPIRATION_LEAD_TIME)
+            $account->getExpiresAt()->isLessThan(
+                DateTime::createNow()->addSeconds(self::EXPIRATION_LEAD_TIME)
             )
         ) {
             $this->refresh($account);

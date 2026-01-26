@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,16 +29,15 @@
 
 namespace tests\unit\Espo\Core\Field\Date;
 
-use Espo\Core\{
-    Field\Date,
-};
+use Espo\Core\Field\Date;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use RuntimeException;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 use DateInterval;
 
-class DateTest extends \PHPUnit\Framework\TestCase
+class DateTest extends TestCase
 {
     public function testFromString()
     {
@@ -58,21 +57,21 @@ class DateTest extends \PHPUnit\Framework\TestCase
 
     public function testBad1()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         Date::fromString('2021-05-A');
     }
 
     public function testBad2()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         Date::fromString('2021-05-1');
     }
 
     public function testEmpty()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         Date::fromString('');
     }
@@ -143,7 +142,7 @@ class DateTest extends \PHPUnit\Framework\TestCase
     public function testToday(): void
     {
         $value1 = Date::createToday();
-        $value2 = Date::createToday(new DateTimeZone('Europe/Kiev'));
+        $value2 = Date::createToday(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertEquals(0, $value1->diff($value2)->invert);
     }

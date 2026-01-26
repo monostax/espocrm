@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,6 +39,7 @@ use Espo\Core\Exceptions\NotFoundSilent;
 use Espo\Core\Utils\SystemUser;
 use Espo\Entities\User;
 
+use GuzzleHttp\Psr7\Utils;
 use LasseRafn\InitialAvatarGenerator\InitialAvatar;
 use LasseRafn\StringScript;
 
@@ -202,7 +203,11 @@ class Avatar extends Image
             ->setHeader('Content-Type', 'image/png')
             ->setHeader('Etag', $etag);
 
-        $response->writeBody($image->stream('png', 100));
+        $pointer = $image->toPng()->toFilePointer();
+
+        $stream = Utils::streamFor($pointer);
+
+        $response->writeBody($stream);
     }
 
     private function composeCacheControlHeader(): string

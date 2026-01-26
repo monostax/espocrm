@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,6 +36,7 @@ use Espo\Core\Formula\Exceptions\Error;
 use Espo\Core\Formula\Functions\BaseFunction;
 use Espo\Core\Di;
 use Espo\Core\Formula\Functions\RecordGroup\Util\FindQueryUtil;
+use Espo\Core\Select\Primary\Filters\All;
 use Espo\Core\Select\SelectBuilderFactory;
 
 /**
@@ -68,6 +69,7 @@ class ExistsType extends BaseFunction implements
             $builder = $this->injectableFactory->create(SelectBuilderFactory::class)
                 ->create()
                 ->forUser($this->user)
+                ->withPrimaryFilter(All::NAME)
                 ->from($entityType);
 
             (new FindQueryUtil())->applyFilter($builder, $filter, 2);

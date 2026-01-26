@@ -2,7 +2,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -239,6 +239,10 @@ export default class ViewDetailsModalView extends ModalView {
         }
 
         if (this.fieldType === 'currency') {
+            /** @type {string[]} */
+            const codes = this.getConfig().get('currencyList') ?? [];
+            const codesString = codes.map(it => `"${it}"`).join('|');
+
             return [
                 {
                     name: this.field,
@@ -248,7 +252,7 @@ export default class ViewDetailsModalView extends ModalView {
                 },
                 {
                     name: this.field + 'Currency',
-                    type: 'string',
+                    type: codesString,
                     notStorable: this.fieldDefs.notStorable || false || this.fieldDefs.onlyDefaultCurrency,
                     readOnly: this.fieldDefs.readOnly || false,
                 },
@@ -483,6 +487,10 @@ export default class ViewDetailsModalView extends ModalView {
         }
 
         if (this.fieldType === 'phone') {
+            /** @type {string[]} */
+            const types = this.fieldDefs.typeList ?? [];
+            const typesString = types.map(it => `"${it}"`).join('|');
+
             return [
                 {
                     name: this.field,
@@ -492,7 +500,9 @@ export default class ViewDetailsModalView extends ModalView {
                 },
                 {
                     name: this.field + 'Data',
-                    type: '{phoneNumber: string, primary: boolean, optOut: boolean, invalid: boolean}[]',
+                    type: '{phoneNumber: string, primary: boolean, ' +
+                        `type: ${typesString}, ` +
+                        'optOut: boolean, invalid: boolean}[]',
                     notStorable: this.fieldDefs.notStorable || false,
                     readOnly: this.fieldDefs.readOnly || false,
                 },

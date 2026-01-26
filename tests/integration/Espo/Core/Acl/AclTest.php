@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,11 +32,13 @@ namespace tests\integration\Espo\Core\Acl;
 use Espo\Core\AclManager;
 use Espo\Core\Acl;
 use Espo\Entities\User;
+use Espo\Modules\Crm\Entities\Account;
 use Espo\Modules\Crm\Entities\Call;
 use Espo\Modules\Crm\Entities\Meeting;
 use Espo\Modules\Crm\Entities\Task;
+use tests\integration\Core\BaseTestCase;
 
-class AclTest extends \tests\integration\Core\BaseTestCase
+class AclTest extends BaseTestCase
 {
     public function testGetReadOwnerUserField()
     {
@@ -132,5 +134,26 @@ class AclTest extends \tests\integration\Core\BaseTestCase
         $this->assertFalse($aclManager->checkField($user, 'Call', 'direction'));
         $this->assertTrue($aclManager->checkField($user, 'Call', 'contacts'));
         $this->assertFalse($aclManager->checkField($user, 'Call', 'contacts', Acl\Table::ACTION_EDIT));
+    }
+
+    public function testDisabledField(): void
+    {
+        $metadata = $this->getMetadata();
+
+        $metadata->set('entityDefs', 'Account', [
+            'fields' => [
+                'assignedUser' => [
+                    'disabled' => true,
+                ]
+            ]
+        ]);
+        $metadata->save();
+
+        $this->reCreateApplication();
+
+        $acl = $this->getContainer()->getByClass(Acl::class);
+
+        $this->assertFalse($acl->checkField(Account::ENTITY_TYPE, 'assignedUser'));
+        $this->assertTrue($acl->checkField(Account::ENTITY_TYPE, 'name'));
     }
 }

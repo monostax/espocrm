@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,6 +33,7 @@ use Espo\Core\Formula\EvaluatedArgumentList;
 use Espo\Core\Formula\Exceptions\BadArgumentType;
 use Espo\Core\Formula\Exceptions\TooFewArguments;
 use Espo\Core\Formula\Func;
+use Espo\Core\Formula\Utils\EntityUtil;
 use Espo\ORM\EntityManager;
 
 class DeleteType implements Func
@@ -61,6 +62,8 @@ class DeleteType implements Func
         if (!$entity) {
             return null;
         }
+
+        EntityUtil::checkRemoveAccess($entity);
 
         $this->entityManager->removeEntity($entity);
 

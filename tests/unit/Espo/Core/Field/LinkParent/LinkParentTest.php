@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,13 +29,12 @@
 
 namespace tests\unit\Espo\Core\Field\LinkParent;
 
-use Espo\Core\{
-    Field\LinkParent,
-};
+use Espo\Core\Field\LinkParent;
 
-use RuntimeException;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 
-class LinkParentTest extends \PHPUnit\Framework\TestCase
+class LinkParentTest extends TestCase
 {
     public function testCreate()
     {
@@ -48,14 +47,14 @@ class LinkParentTest extends \PHPUnit\Framework\TestCase
 
     public function testBad1()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         LinkParent::create('Test', '');
     }
 
     public function testBad2()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         LinkParent::create('', 'id');
     }

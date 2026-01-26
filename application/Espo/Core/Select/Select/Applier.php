@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,7 +35,7 @@ use Espo\Core\Utils\FieldUtil;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\Name\Attribute;
-use Espo\ORM\Query\SelectBuilder as QueryBuilder;
+use Espo\ORM\Query\SelectBuilder;
 
 class Applier
 {
@@ -60,7 +60,7 @@ class Applier
         private MetadataProvider $metadataProvider
     ) {}
 
-    public function apply(QueryBuilder $queryBuilder, SearchParams $searchParams): void
+    public function apply(SelectBuilder $queryBuilder, SearchParams $searchParams): void
     {
         $attributeList = $this->getSelectAttributeList($searchParams);
 

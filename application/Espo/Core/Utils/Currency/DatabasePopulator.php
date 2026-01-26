@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,32 +29,34 @@
 
 namespace Espo\Core\Utils\Currency;
 
+use Espo\Core\Currency\ConfigDataProvider;
 use Espo\Entities\Currency;
 use Espo\ORM\EntityManager;
-use Espo\Core\Utils\Config;
 use Espo\ORM\Name\Attribute;
+use Espo\Tools\Currency\RateEntryProvider;
+use Espo\Tools\Currency\Exceptions\NotEnabled;
 
 /**
  * Populates currency rates into database.
  */
 class DatabasePopulator
 {
+    private const int PRECISION = 6;
+
     public function __construct(
-        private Config $config,
-        private EntityManager $entityManager)
-    {}
+        private EntityManager $entityManager,
+        private ConfigDataProvider $configDataProvider,
+        private RateEntryProvider $rateEntryProvider,
+    ) {}
 
     public function process(): void
     {
-        $defaultCurrency = $this->config->get('defaultCurrency');
-        $baseCurrency = $this->config->get('baseCurrency');
-        $currencyRates = $this->config->get('currencyRates');
+        $defaultCurrency = $this->configDataProvider->getDefaultCurrency();
+        $baseCurrency = $this->configDataProvider->getBaseCurrency();
 
-        if ($defaultCurrency !== $baseCurrency) {
-            $currencyRates = $this->exchangeRates($baseCurrency, $defaultCurrency, $currencyRates);
-        }
+        $currencyRates = $this->prepareRates($defaultCurrency, $baseCurrency);
 
-        $currencyRates[$defaultCurrency] = 1.00;
+        $this->entityManager->getTransactionManager()->start();
 
         $delete = $this->entityManager->getQueryBuilder()
             ->delete()
@@ -66,9 +68,11 @@ class DatabasePopulator
         foreach ($currencyRates as $currencyName => $rate) {
             $this->entityManager->createEntity(Currency::ENTITY_TYPE, [
                 Attribute::ID => $currencyName,
-                'rate' => $rate,
+                Currency::FIELD_RATE => $rate,
             ]);
         }
+
+        $this->entityManager->getTransactionManager()->commit();
     }
 
     /**
@@ -77,8 +81,7 @@ class DatabasePopulator
      */
     private function exchangeRates(string $baseCurrency, string $defaultCurrency, array $currencyRates): array
     {
-        $precision = 5;
-        $defaultCurrencyRate = round(1 / $currencyRates[$defaultCurrency], $precision);
+        $defaultCurrencyRate = round(1 / $currencyRates[$defaultCurrency], self::PRECISION);
 
         $exchangedRates = [];
         $exchangedRates[$baseCurrency] = $defaultCurrencyRate;
@@ -86,9 +89,33 @@ class DatabasePopulator
         unset($currencyRates[$baseCurrency], $currencyRates[$defaultCurrency]);
 
         foreach ($currencyRates as $currencyName => $rate) {
-            $exchangedRates[$currencyName] = round($rate * $defaultCurrencyRate, $precision);
+            $exchangedRates[$currencyName] = round($rate * $defaultCurrencyRate, self::PRECISION);
         }
 
         return $exchangedRates;
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private function prepareRates(string $defaultCurrency, string $baseCurrency): array
+    {
+        $currencyRates = [];
+
+        foreach ($this->configDataProvider->getCurrencyList() as $itCode) {
+            try {
+                $currencyRates[$itCode] = (float) ($this->rateEntryProvider->getRate($itCode) ?? 1);
+            } catch (NotEnabled) {
+                continue;
+            }
+        }
+
+        if ($defaultCurrency !== $baseCurrency) {
+            $currencyRates = $this->exchangeRates($baseCurrency, $defaultCurrency, $currencyRates);
+        }
+
+        $currencyRates[$defaultCurrency] = 1.00;
+
+        return $currencyRates;
     }
 }

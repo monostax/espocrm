@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -153,6 +153,13 @@ class GlobalRestriction
                         $value = $this->metadata->get(['entityDefs', $scope, 'fields', $field, $type]);
                     }
 
+                    if (
+                        $type === self::TYPE_FORBIDDEN &&
+                        $this->metadata->get("entityDefs.$scope.fields.$field.disabled")
+                    ) {
+                        $value = true;
+                    }
+
                     if (!$value) {
                         continue;
                     }
@@ -161,9 +168,7 @@ class GlobalRestriction
 
                     $resultFieldList[] = $field;
 
-                    $fieldAttributeList = $this->fieldUtil->getAttributeList($scope, $field);
-
-                    foreach ($fieldAttributeList as $attribute) {
+                    foreach ($this->fieldUtil->getAttributeList($scope, $field) as $attribute) {
                         $resultAttributeList[] = $attribute;
                     }
                 }

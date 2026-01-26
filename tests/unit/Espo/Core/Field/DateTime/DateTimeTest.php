@@ -3,7 +3,7 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
- * Copyright (C) 2014-2025 EspoCRM, Inc.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
  * Website: https://www.espocrm.com
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,10 +33,11 @@ use Espo\Core\Field\DateTime;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
+use InvalidArgumentException;
 use DateInterval;
 
-class DateTimeTest extends \PHPUnit\Framework\TestCase
+class DateTimeTest extends TestCase
 {
     public function testFromString1()
     {
@@ -63,7 +64,7 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
 
     public function testFromDateTime2()
     {
-        $dt = new DateTimeImmutable('2021-05-01 10:20:30', new DateTimeZone('Europe/Kiev'));
+        $dt = new DateTimeImmutable('2021-05-01 10:20:30', new DateTimeZone('Europe/Kyiv'));
 
         $value = DateTime::fromDateTime($dt);
 
@@ -72,21 +73,21 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
 
     public function testBad1()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTime::fromString('2021-05-A 10:20:30');
     }
 
     public function testBad2()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTime::fromString('2021-05-1 10:20:30');
     }
 
     public function testEmpty()
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         DateTime::fromString('');
     }
@@ -152,7 +153,7 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
     {
         $value = DateTime
             ::fromString('2021-05-01 10:20:30')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertEquals('2021-05-01 10:20:30', $value->toString());
 
@@ -163,9 +164,9 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
     {
         $value = DateTime
             ::fromString('2021-05-01 10:20:30')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
-        $this->assertEquals(new DateTimeZone('Europe/Kiev'), $value->getTimezone());
+        $this->assertEquals(new DateTimeZone('Europe/Kyiv'), $value->getTimezone());
     }
 
     public function testDiff(): void
@@ -212,7 +213,7 @@ class DateTimeTest extends \PHPUnit\Framework\TestCase
     public function testComparison(): void
     {
         $value = DateTime::fromString('2021-05-01 10:10:30')
-            ->withTimezone(new DateTimeZone('Europe/Kiev'));
+            ->withTimezone(new DateTimeZone('Europe/Kyiv'));
 
         $this->assertTrue(
             $value->isEqualTo(

@@ -23,7 +23,8 @@
         "type": {
             "type": "enum",
             "options": ["", "Customer", "Investor", "Partner", "Reseller"],
-            "customizationOptionsReferenceDisabled": true
+            "customizationOptionsReferenceDisabled": true,
+            "audited": true
         },
         "industry": {
             "type": "enum",
@@ -199,6 +200,9 @@
             "layoutListDisabled": true,
             "importDisabled": true,
             "exportDisabled": true,
+            "directAccessDisabled": true,
+            "directUpdateEnabled": true,
+            "filtersEnabled": true,
             "noLoad": true
         },
         "targetList": {
@@ -210,7 +214,8 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true,
             "entity": "TargetList",
-            "directAccessDisabled": true
+            "directAccessDisabled": true,
+            "importEnabled": true
         },
         "originalLead": {
             "type": "linkOne",
