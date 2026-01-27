@@ -34,6 +34,9 @@
   ],
   "license": "AGPL-3.0-or-later",
   "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.28.0",
+    "@babel/plugin-transform-modules-amd": "^7.27.1",
+    "@babel/preset-env": "^7.28.5",
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "archiver": "^7",
