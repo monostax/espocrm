@@ -13,6 +13,12 @@
             "readOnly": true
         },
         "chatwootConversationId": { "type": "int", "required": true },
+        "chatwootAccountIdExternal": {
+            "type": "foreign",
+            "link": "chatwootAccount",
+            "field": "chatwootAccountId",
+            "readOnly": true
+        },
         "contactInbox": { "type": "link" },
         "inbox": { "type": "link" },
         "chatwootContact": { "type": "link" },
@@ -65,11 +71,6 @@
             "maxLength": 100,
             "readOnly": true
         },
-        "teams": {
-            "type": "linkMultiple",
-            "view": "views/fields/teams",
-            "required": true
-        },
         "opportunities": {
             "type": "linkMultiple",
             "columns": {
@@ -93,6 +94,10 @@
             "layoutDetailDisabled": true,
             "layoutMassUpdateDisabled": true,
             "noLoad": true
+        },
+        "team": {
+            "type": "link",
+            "tooltip": true
         }
     },
     "links": {
@@ -113,7 +118,8 @@
         },
         "chatwootAccount": {
             "type": "belongsTo",
-            "entity": "ChatwootAccount"
+            "entity": "ChatwootAccount",
+            "foreign": "conversations"
         },
         "opportunities": {
             "type": "hasMany",
@@ -142,15 +148,13 @@
             "entity": "ChatwootMessage",
             "foreign": "conversation"
         },
-        "teams": {
-            "type": "hasMany",
-            "entity": "Team",
-            "relationName": "entityTeam",
-            "layoutRelationshipsDisabled": true
-        },
         "assignedUser": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "team": {
+            "type": "belongsTo",
+            "entity": "Team"
         },
         "smartAudiences": {
             "type": "hasMany",

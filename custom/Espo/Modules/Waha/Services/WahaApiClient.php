@@ -606,6 +606,53 @@ class WahaApiClient
     }
 
     /**
+     * Get phone number by LID (Linked Identifier).
+     * Resolves a WhatsApp Business linked ID to the actual phone number.
+     *
+     * @param string $platformUrl The base URL of the WAHA platform
+     * @param string $apiKey The API key for authentication
+     * @param string $sessionName The session name
+     * @param string $lid The LID to resolve (e.g., "228144418136240@lid" or just "228144418136240")
+     * @return string|null The phone number in @c.us format, or null if not found
+     */
+    public function getPhoneByLid(
+        string $platformUrl,
+        string $apiKey,
+        string $sessionName,
+        string $lid
+    ): ?string {
+        // Extract numeric part from LID if it includes @lid suffix
+        $lidNumber = preg_replace('/@lid$/', '', $lid);
+        
+        // URL encode the @ symbol if present
+        $encodedLid = str_replace('@', '%40', $lidNumber);
+        
+        $url = rtrim($platformUrl, '/') . '/api/' . urlencode($sessionName) . '/lids/' . $encodedLid;
+
+        $headers = $this->buildHeaders($apiKey);
+        
+        try {
+            $response = $this->executeRequest($url, 'GET', null, $headers);
+
+            if ($response['code'] === 404) {
+                // LID not found in mapping
+                return null;
+            }
+
+            if ($response['code'] < 200 || $response['code'] >= 300) {
+                $this->log->warning("WAHA API: Failed to resolve LID {$lid}: HTTP {$response['code']}");
+                return null;
+            }
+
+            // Response format: { "lid": "123123123@lid", "pn": "123456789@c.us" }
+            return $response['body']['pn'] ?? null;
+        } catch (\Exception $e) {
+            $this->log->warning("WAHA API: Exception resolving LID {$lid}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Update labels for a chat.
      * Note: This sets the full list of labels for the chat. All other labels will be removed.
      *

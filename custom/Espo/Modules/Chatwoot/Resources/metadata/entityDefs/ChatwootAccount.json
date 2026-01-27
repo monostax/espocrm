@@ -150,6 +150,11 @@
             "type": "hasMany",
             "entity": "ChatwootInboxIntegration",
             "foreign": "chatwootAccount"
+        },
+        "conversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "chatwootAccount"
         }
     },
     "collection": {
@@ -177,7 +182,7 @@
         "foreign": "account"
     },
     "cascadeDelete": {
-        "links": ["chatwootInboxIntegrations", "inboxes", "contacts", "agents", "chatwootTeams", "syncStates", "chatwootUsers"]
+        "links": ["chatwootInboxIntegrations", "inboxes", "contacts", "agents", "chatwootTeams", "syncStates", "chatwootUsers", "conversations"]
     }
 }
 

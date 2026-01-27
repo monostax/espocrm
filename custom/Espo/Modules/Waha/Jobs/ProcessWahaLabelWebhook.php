@@ -17,6 +17,7 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Waha\Services\WahaApiClient;
 
 /**
  * Job to process WAHA label webhook events.
@@ -32,6 +33,7 @@ class ProcessWahaLabelWebhook implements Job
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $chatwootApiClient,
+        private WahaApiClient $wahaApiClient,
         private Log $log
     ) {}
 
@@ -47,7 +49,7 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        $this->log->info("ProcessWahaLabelWebhook: Processing {$event} for channel {$channelId}");
+        $this->log->warning("ProcessWahaLabelWebhook: Processing {$event} for channel {$channelId}");
 
         // Get the channel to access teamId for ACL
         $channel = $this->entityManager->getEntityById('ChatwootInboxIntegration', $channelId);
@@ -84,15 +86,19 @@ class ProcessWahaLabelWebhook implements Job
      */
     private function handleLabelAdded(object $payload, Entity $channel, ?string $teamId): void
     {
-        $labelId = $payload->label->id ?? ($payload->id ?? null);
+        // WAHA payload format: { labelId: "6", chatId: "123@c.us", label: { id: "6", ... } }
+        // Note: label can be null right after scanning QR code
+        $labelId = $payload->labelId ?? ($payload->label->id ?? null);
         $chatId = $payload->chatId ?? null;
 
         if (!$labelId || !$chatId) {
-            $this->log->warning('ProcessWahaLabelWebhook: label.chat.added missing labelId or chatId');
+            $this->log->warning('ProcessWahaLabelWebhook: label.chat.added missing labelId or chatId', [
+                'payload' => json_encode($payload),
+            ]);
             return;
         }
 
-        $this->log->info("ProcessWahaLabelWebhook: Label {$labelId} added to chat {$chatId}");
+        $this->log->warning("ProcessWahaLabelWebhook: Label {$labelId} added to chat {$chatId}");
 
         // Find WahaSessionLabel by wahaLabelId and teamId
         $wahaSessionLabelQuery = $this->entityManager
@@ -109,7 +115,7 @@ class ProcessWahaLabelWebhook implements Job
         $wahaSessionLabel = $wahaSessionLabelQuery->findOne();
 
         if (!$wahaSessionLabel) {
-            $this->log->info("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not an agent label, ignoring");
+            $this->log->warning("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not an agent label, ignoring");
             return;
         }
 
@@ -122,25 +128,30 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        $chatwootAgentId = $agent->get('chatwootAgentId');
-        $this->log->info("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (chatwootAgentId: {$chatwootAgentId})");
+        $chatwootAgentId = $agent->get('chatwootAgentId') ? (int) $agent->get('chatwootAgentId') : null;
+        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (chatwootAgentId: {$chatwootAgentId})");
 
-        // Find the conversation by phone number
-        $phoneNumber = $this->extractPhoneFromChatId($chatId);
+        // Find the conversation by phone number and inbox (with LID resolution if needed)
+        $phoneNumber = $this->extractPhoneFromChatId($chatId, $channel);
         if (!$phoneNumber) {
             $this->log->warning("ProcessWahaLabelWebhook: Could not extract phone number from chatId {$chatId}");
             return;
         }
 
-        $conversation = $this->findConversationByPhone($phoneNumber, $teamId);
+        // Get chatwootInboxId from the related chatwootInbox entity
+        $chatwootInboxId = $this->getChatwootInboxIdFromChannel($channel);
+        $this->log->warning("ProcessWahaLabelWebhook: Looking for conversation with phone {$phoneNumber} in inbox {$chatwootInboxId}");
+        
+        $conversation = $this->findConversationByPhone($phoneNumber, $chatwootInboxId, $teamId);
         if (!$conversation) {
-            $this->log->info("ProcessWahaLabelWebhook: No conversation found for phone {$phoneNumber}");
+            $this->log->warning("ProcessWahaLabelWebhook: No conversation found for phone {$phoneNumber} in inbox {$chatwootInboxId}");
             return;
         }
 
-        // Check if already assigned to this agent
-        if ($conversation->get('assigneeId') === $chatwootAgentId) {
-            $this->log->info("ProcessWahaLabelWebhook: Conversation already assigned to agent {$chatwootAgentId}");
+        // Check if already assigned to this agent (cast to int for proper comparison)
+        $currentAssigneeId = $conversation->get('assigneeId') ? (int) $conversation->get('assigneeId') : null;
+        if ($currentAssigneeId === $chatwootAgentId) {
+            $this->log->warning("ProcessWahaLabelWebhook: Conversation already assigned to agent {$chatwootAgentId}");
             return;
         }
 
@@ -148,7 +159,7 @@ class ProcessWahaLabelWebhook implements Job
         $conversation->set('assigneeId', $chatwootAgentId);
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
 
-        $this->log->info("ProcessWahaLabelWebhook: Updated conversation {$conversation->getId()} assignee to {$chatwootAgentId}");
+        $this->log->warning("ProcessWahaLabelWebhook: Updated conversation {$conversation->getId()} assignee to {$chatwootAgentId}");
 
         // Sync to Chatwoot
         $this->syncAssignmentToChatwoot($conversation, $chatwootAgentId);
@@ -164,15 +175,19 @@ class ProcessWahaLabelWebhook implements Job
      */
     private function handleLabelDeleted(object $payload, Entity $channel, ?string $teamId): void
     {
-        $labelId = $payload->label->id ?? ($payload->id ?? null);
+        // WAHA payload format: { labelId: "6", chatId: "123@c.us", label: null }
+        // Note: label can be null, so we must use labelId field directly
+        $labelId = $payload->labelId ?? ($payload->label->id ?? null);
         $chatId = $payload->chatId ?? null;
 
         if (!$labelId || !$chatId) {
-            $this->log->warning('ProcessWahaLabelWebhook: label.chat.deleted missing labelId or chatId');
+            $this->log->warning('ProcessWahaLabelWebhook: label.chat.deleted missing labelId or chatId', [
+                'payload' => json_encode($payload),
+            ]);
             return;
         }
 
-        $this->log->info("ProcessWahaLabelWebhook: Label {$labelId} removed from chat {$chatId}");
+        $this->log->warning("ProcessWahaLabelWebhook: Label {$labelId} removed from chat {$chatId}");
 
         // Find WahaSessionLabel by wahaLabelId
         $wahaSessionLabelQuery = $this->entityManager
@@ -189,7 +204,7 @@ class ProcessWahaLabelWebhook implements Job
         $wahaSessionLabel = $wahaSessionLabelQuery->findOne();
 
         if (!$wahaSessionLabel) {
-            $this->log->info("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not an agent label, ignoring");
+            $this->log->warning("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not an agent label, ignoring");
             return;
         }
 
@@ -202,24 +217,32 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        $chatwootAgentId = $agent->get('chatwootAgentId');
+        $chatwootAgentId = $agent->get('chatwootAgentId') ? (int) $agent->get('chatwootAgentId') : null;
+        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (chatwootAgentId: {$chatwootAgentId})");
 
-        // Find the conversation by phone number
-        $phoneNumber = $this->extractPhoneFromChatId($chatId);
+        // Find the conversation by phone number and inbox (with LID resolution if needed)
+        $phoneNumber = $this->extractPhoneFromChatId($chatId, $channel);
         if (!$phoneNumber) {
             $this->log->warning("ProcessWahaLabelWebhook: Could not extract phone number from chatId {$chatId}");
             return;
         }
 
-        $conversation = $this->findConversationByPhone($phoneNumber, $teamId);
+        // Get chatwootInboxId from the related chatwootInbox entity
+        $chatwootInboxId = $this->getChatwootInboxIdFromChannel($channel);
+        $this->log->warning("ProcessWahaLabelWebhook: Looking for conversation with phone {$phoneNumber} in inbox {$chatwootInboxId}");
+        
+        $conversation = $this->findConversationByPhone($phoneNumber, $chatwootInboxId, $teamId);
         if (!$conversation) {
-            $this->log->info("ProcessWahaLabelWebhook: No conversation found for phone {$phoneNumber}");
+            $this->log->warning("ProcessWahaLabelWebhook: No conversation found for phone {$phoneNumber} in inbox {$chatwootInboxId}");
             return;
         }
 
-        // Only unassign if currently assigned to this agent
-        if ($conversation->get('assigneeId') !== $chatwootAgentId) {
-            $this->log->info("ProcessWahaLabelWebhook: Conversation not assigned to agent {$chatwootAgentId}, not unassigning");
+        // Only unassign if currently assigned to this agent (cast to int for proper comparison)
+        $currentAssigneeId = $conversation->get('assigneeId') ? (int) $conversation->get('assigneeId') : null;
+        $this->log->warning("ProcessWahaLabelWebhook: Conversation {$conversation->getId()} currentAssigneeId={$currentAssigneeId}, chatwootAgentId={$chatwootAgentId}");
+        
+        if ($currentAssigneeId !== $chatwootAgentId) {
+            $this->log->warning("ProcessWahaLabelWebhook: Conversation not assigned to agent {$chatwootAgentId} (current: {$currentAssigneeId}), not unassigning");
             return;
         }
 
@@ -227,7 +250,7 @@ class ProcessWahaLabelWebhook implements Job
         $conversation->set('assigneeId', null);
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
 
-        $this->log->info("ProcessWahaLabelWebhook: Unassigned conversation {$conversation->getId()}");
+        $this->log->warning("ProcessWahaLabelWebhook: Unassigned conversation {$conversation->getId()}");
 
         // Sync to Chatwoot
         $this->syncAssignmentToChatwoot($conversation, null);
@@ -235,13 +258,54 @@ class ProcessWahaLabelWebhook implements Job
 
     /**
      * Extract phone number from WhatsApp chatId.
+     * Handles both @c.us format (direct phone) and @lid format (requires API lookup).
      * Format: "5511999999999@c.us" -> "5511999999999"
+     *         "228144418136240@lid" -> resolved via WAHA API -> "5511999999999"
      *
      * @param string $chatId
+     * @param Entity $channel The ChatwootInboxIntegration entity for WAHA API access
      * @return string|null
      */
-    private function extractPhoneFromChatId(string $chatId): ?string
+    private function extractPhoneFromChatId(string $chatId, Entity $channel): ?string
     {
+        // Check if this is a LID format
+        if (str_ends_with($chatId, '@lid')) {
+            $this->log->warning("ProcessWahaLabelWebhook: Resolving LID {$chatId} via WAHA API");
+            
+            // Get WAHA platform credentials from channel
+            $platformId = $channel->get('wahaPlatformId');
+            if (!$platformId) {
+                $this->log->warning("ProcessWahaLabelWebhook: Channel has no wahaPlatformId, cannot resolve LID");
+                return null;
+            }
+
+            $platform = $this->entityManager->getEntityById('WahaPlatform', $platformId);
+            if (!$platform) {
+                $this->log->warning("ProcessWahaLabelWebhook: WahaPlatform {$platformId} not found");
+                return null;
+            }
+
+            $platformUrl = $platform->get('backendUrl');
+            $apiKey = $platform->get('apiKey');
+            $sessionName = $channel->get('wahaSessionName');
+
+            if (!$platformUrl || !$apiKey || !$sessionName) {
+                $this->log->warning("ProcessWahaLabelWebhook: Missing WAHA credentials for LID resolution");
+                return null;
+            }
+
+            // Resolve LID to phone number via WAHA API
+            $phoneChatId = $this->wahaApiClient->getPhoneByLid($platformUrl, $apiKey, $sessionName, $chatId);
+            
+            if (!$phoneChatId) {
+                $this->log->warning("ProcessWahaLabelWebhook: Could not resolve LID {$chatId} to phone number");
+                return null;
+            }
+
+            $this->log->warning("ProcessWahaLabelWebhook: Resolved LID {$chatId} to {$phoneChatId}");
+            $chatId = $phoneChatId;
+        }
+
         // Remove @c.us or @s.whatsapp.net suffix
         $phone = preg_replace('/@.*$/', '', $chatId);
         
@@ -253,31 +317,64 @@ class ProcessWahaLabelWebhook implements Job
     }
 
     /**
-     * Find a ChatwootConversation by contact phone number.
+     * Get the Chatwoot inbox ID from the channel's related chatwootInbox entity.
      *
-     * @param string $phoneNumber
-     * @param string|null $teamId
-     * @return Entity|null
+     * @param Entity $channel
+     * @return int|null
      */
-    private function findConversationByPhone(string $phoneNumber, ?string $teamId): ?Entity
+    private function getChatwootInboxIdFromChannel(Entity $channel): ?int
     {
-        // Try to find by contactPhoneNumber
-        $query = $this->entityManager
-            ->getRDBRepository('ChatwootConversation')
-            ->where([
-                'OR' => [
-                    ['contactPhoneNumber' => $phoneNumber],
-                    ['contactPhoneNumber' => '+' . $phoneNumber],
-                    ['contactPhoneNumber*' => '%' . $phoneNumber],
-                ],
-            ])
-            ->order('createdAt', 'DESC');
+        // Load the related chatwootInbox entity to get the actual Chatwoot inbox ID
+        $inbox = $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->where(['chatwootInboxIntegrationId' => $channel->getId()])
+            ->findOne();
 
-        if ($teamId) {
-            $query->where(['teamId' => $teamId]);
+        if ($inbox) {
+            $inboxId = $inbox->get('chatwootInboxId');
+            $this->log->warning("ProcessWahaLabelWebhook: Found ChatwootInbox with chatwootInboxId={$inboxId}");
+            if ($inboxId && is_numeric($inboxId)) {
+                return (int) $inboxId;
+            }
         }
 
-        return $query->findOne();
+        $this->log->warning("ProcessWahaLabelWebhook: Could not find chatwootInboxId for channel {$channel->getId()}");
+        return null;
+    }
+
+    /**
+     * Find a ChatwootConversation by contact phone number and inbox.
+     *
+     * @param string $phoneNumber
+     * @param int|null $chatwootInboxId Filter by specific inbox (session)
+     * @param string|null $teamId Filter by team for ACL
+     * @return Entity|null
+     */
+    private function findConversationByPhone(string $phoneNumber, ?int $chatwootInboxId, ?string $teamId): ?Entity
+    {
+        // Try to find by contactPhoneNumber
+        $whereConditions = [
+            'OR' => [
+                ['contactPhoneNumber' => $phoneNumber],
+                ['contactPhoneNumber' => '+' . $phoneNumber],
+                ['contactPhoneNumber*' => '%' . $phoneNumber],
+            ],
+        ];
+
+        // Filter by inbox to ensure we get the conversation from the correct session
+        if ($chatwootInboxId) {
+            $whereConditions['chatwootInboxId'] = $chatwootInboxId;
+        }
+
+        // Filter by team for ACL
+        if ($teamId) {
+            $whereConditions['teamId'] = $teamId;
+        }
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->where($whereConditions)
+            ->findOne();
     }
 
     /**
@@ -326,7 +423,7 @@ class ProcessWahaLabelWebhook implements Job
                 $assigneeId
             );
 
-            $this->log->info("ProcessWahaLabelWebhook: Synced assignment to Chatwoot for conversation {$chatwootConversationId}");
+            $this->log->warning("ProcessWahaLabelWebhook: Synced assignment to Chatwoot for conversation {$chatwootConversationId}");
 
         } catch (\Exception $e) {
             $this->log->error("ProcessWahaLabelWebhook: Failed to sync to Chatwoot: " . $e->getMessage());

@@ -104,7 +104,6 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
             // Get team from the ChatwootAccount
             $teamId = $this->getAccountTeamId($account);
-            $teamsIds = $teamId ? [$teamId] : [];
 
             // Sync conversations
             $result = $this->syncConversations(
@@ -113,7 +112,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 $chatwootAccountId,
                 $account->getId(),
                 $cursor,
-                $teamsIds
+                $teamId
             );
 
             // Update sync timestamps and cursor
@@ -155,7 +154,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
      * @param int $chatwootAccountId
      * @param string $espoAccountId
      * @param int|null $cursor Unix timestamp of last synced conversation's last_activity_at
-     * @param array<string> $teamsIds Team IDs to assign to synced entities
+     * @param string|null $teamId Team ID to assign to synced entities
      * @return array{synced: int, skipped: int, errors: int, newCursor: int|null, hasMore: bool}
      */
     private function syncConversations(
@@ -164,7 +163,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         int $chatwootAccountId,
         string $espoAccountId,
         ?int $cursor = null,
-        array $teamsIds = []
+        ?string $teamId = null
     ): array {
         $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0, 'newCursor' => $cursor, 'hasMore' => false];
         $page = 1;
@@ -214,7 +213,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
             foreach ($conversations as $chatwootConversation) {
                 try {
-                    $result = $this->syncSingleConversation($chatwootConversation, $espoAccountId, $teamsIds);
+                    $result = $this->syncSingleConversation($chatwootConversation, $espoAccountId, $teamId);
 
                     if ($result === 'synced') {
                         $stats['synced']++;
@@ -261,10 +260,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
     /**
      * Sync a single conversation from Chatwoot to EspoCRM.
      *
-     * @param array<string> $teamsIds Team IDs to assign to synced entities
+     * @param string|null $teamId Team ID to assign to synced entities
      * @return string 'synced' or 'skipped'
      */
-    private function syncSingleConversation(array $chatwootConversation, string $espoAccountId, array $teamsIds = []): string
+    private function syncSingleConversation(array $chatwootConversation, string $espoAccountId, ?string $teamId = null): string
     {
         $chatwootConversationId = (int) $chatwootConversation['id'];
         $inboxId = isset($chatwootConversation['inbox_id']) ? (int) $chatwootConversation['inbox_id'] : null;
@@ -332,10 +331,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Re-fetch the entity after restoration
             $existingConversation = $this->entityManager->getEntityById('ChatwootConversation', $existingConversation->getId());
             
-            $result = $this->updateExistingConversation($existingConversation, $chatwootConversation, $cwtContact, $contactInbox, $chatwootInbox, $teamsIds);
+            $result = $this->updateExistingConversation($existingConversation, $chatwootConversation, $cwtContact, $contactInbox, $chatwootInbox, $teamId);
             $conversation = $existingConversation;
         } else {
-            $result = $this->createNewConversation($chatwootConversation, $espoAccountId, $cwtContact, $contactInbox, $chatwootInbox, $teamsIds);
+            $result = $this->createNewConversation($chatwootConversation, $espoAccountId, $cwtContact, $contactInbox, $chatwootInbox, $teamId);
             // Find the newly created conversation
             $conversation = $this->entityManager
                 ->getRDBRepository('ChatwootConversation')
@@ -350,7 +349,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         if ($conversation && $result === 'synced') {
             $messages = $chatwootConversation['messages'] ?? [];
             if (!empty($messages)) {
-                $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId, $teamsIds);
+                $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId, $teamId);
             }
         }
 
@@ -360,7 +359,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
     /**
      * Update an existing ChatwootConversation from Chatwoot data.
      *
-     * @param array<string> $teamsIds Team IDs to assign to synced entities
+     * @param string|null $teamId Team ID to assign to synced entities
      */
     private function updateExistingConversation(
         Entity $conversation,
@@ -368,7 +367,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         Entity $cwtContact,
         ?Entity $contactInbox,
         ?Entity $chatwootInbox,
-        array $teamsIds = []
+        ?string $teamId = null
     ): string {
         // Extract assignee info (can be null)
         $assignee = $chatwootConversation['meta']['assignee'] ?? null;
@@ -440,9 +439,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $conversation->set('inboxId', $chatwootInbox->getId()); // Link to ChatwootInbox entity
         }
 
-        // Assign teams from ChatwootAccount
-        if (!empty($teamsIds)) {
-            $conversation->set('teamsIds', $teamsIds);
+        // Assign team from ChatwootAccount
+        if ($teamId) {
+            $conversation->set('teamId', $teamId);
         }
 
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
@@ -458,7 +457,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
     /**
      * Create a new ChatwootConversation from Chatwoot data.
      *
-     * @param array<string> $teamsIds Team IDs to assign to synced entities
+     * @param string|null $teamId Team ID to assign to synced entities
      */
     private function createNewConversation(
         array $chatwootConversation,
@@ -466,7 +465,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         Entity $cwtContact,
         ?Entity $contactInbox,
         ?Entity $chatwootInbox,
-        array $teamsIds = []
+        ?string $teamId = null
     ): string {
         // Extract assignee info (can be null)
         $assignee = $chatwootConversation['meta']['assignee'] ?? null;
@@ -527,9 +526,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'inboxChannelType' => $chatwootInbox?->get('channelType'),
         ];
 
-        // Assign teams from ChatwootAccount
-        if (!empty($teamsIds)) {
-            $data['teamsIds'] = $teamsIds;
+        // Assign team from ChatwootAccount
+        if ($teamId) {
+            $data['teamId'] = $teamId;
         }
 
         $this->entityManager->createEntity('ChatwootConversation', $data, ['silent' => true]);
@@ -540,14 +539,14 @@ class SyncConversationsFromChatwoot implements JobDataLess
     /**
      * Sync messages for a conversation.
      *
-     * @param array<string> $teamsIds Team IDs to assign to synced entities
+     * @param string|null $teamId Team ID to assign to synced entities
      */
     private function syncMessages(
         array $messages,
         Entity $conversation,
         Entity $cwtContact,
         string $espoAccountId,
-        array $teamsIds = []
+        ?string $teamId = null
     ): void {
         foreach ($messages as $messageData) {
             $chatwootMessageId = $messageData['id'] ?? null;
@@ -616,15 +615,15 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     foreach ($data as $field => $value) {
                         $existingMessage->set($field, $value);
                     }
-                    // Assign teams from ChatwootAccount
-                    if (!empty($teamsIds)) {
-                        $existingMessage->set('teamsIds', $teamsIds);
+                    // Assign teams from ChatwootAccount (messages use teams linkMultiple)
+                    if ($teamId) {
+                        $existingMessage->set('teamsIds', [$teamId]);
                     }
                     $this->entityManager->saveEntity($existingMessage, ['silent' => true]);
                 } else {
-                    // Assign teams from ChatwootAccount
-                    if (!empty($teamsIds)) {
-                        $data['teamsIds'] = $teamsIds;
+                    // Assign teams from ChatwootAccount (messages use teams linkMultiple)
+                    if ($teamId) {
+                        $data['teamsIds'] = [$teamId];
                     }
                     $this->entityManager->createEntity('ChatwootMessage', $data, ['silent' => true]);
                 }

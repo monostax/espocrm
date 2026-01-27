@@ -110,6 +110,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 "inboxChannelType",
                 "chatwootConversationId",
                 "chatwootAccountId",
+                "chatwootAccountIdExternal",
                 "messagesCount",
                 "assigneeId",
                 "assigneeName",
@@ -158,8 +159,6 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             Dep.prototype.setup.call(this);
 
             // Get Chatwoot params
-            this.chatwootAccountId =
-                this.getHelper().getAppParam("chatwootAccountId");
             this.chatwootSsoUrl =
                 this.getHelper().getAppParam("chatwootSsoUrl");
             this.chatwootBaseUrl =
@@ -771,19 +770,20 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
          */
         loadConversationInIframe: function (model) {
             const chatwootConversationId = model.get("chatwootConversationId");
+            const chatwootAccountId = model.get("chatwootAccountIdExternal");
 
             // Debug logging
             console.log("loadConversationInIframe:", {
                 chatwootConversationId: chatwootConversationId,
-                chatwootAccountId: this.chatwootAccountId,
+                chatwootAccountId: chatwootAccountId,
                 chatwootSsoUrl: this.chatwootSsoUrl,
                 modelId: model.id,
             });
 
-            if (!chatwootConversationId || !this.chatwootAccountId) {
+            if (!chatwootConversationId || !chatwootAccountId) {
                 console.error("Missing required data:", {
                     chatwootConversationId: chatwootConversationId,
-                    chatwootAccountId: this.chatwootAccountId,
+                    chatwootAccountId: chatwootAccountId,
                 });
                 this.showIframeError();
                 return;
@@ -791,7 +791,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             const cwPath =
                 "/app/accounts/" +
-                this.chatwootAccountId +
+                chatwootAccountId +
                 "/inbox-view/conversation/" +
                 chatwootConversationId;
             const hasSsoAuthenticated =
@@ -912,24 +912,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     "ChatwootConversation"
                 );
 
-            let detailMsg = "";
-            if (!this.chatwootAccountId) {
-                detailMsg =
-                    '<br><small style="color: #9ca3af;">' +
-                    this.translate(
-                        "Your user is not linked to a Chatwoot account",
-                        "messages",
-                        "ChatwootConversation"
-                    ) +
-                    "</small>";
-            }
-
             $placeholder
                 .html(
                     '<i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px;"></i>' +
                         '<p style="color: #6b7280;">' +
                         message +
-                        detailMsg +
                         "</p>"
                 )
                 .show();

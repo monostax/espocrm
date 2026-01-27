@@ -45,7 +45,7 @@ class ChatwootAccountId implements AppParam
      * Get the Chatwoot Account ID for the current user.
      *
      * The relationship chain is:
-     * EspoCRM User -> ChatwootUser (via assignedUserId) -> ChatwootAgent (via chatwootUser) -> ChatwootAccount
+     * EspoCRM User -> ChatwootUser (via assignedUserId) -> ChatwootAccount (via chatwootAccountId)
      *
      * @return int|null The Chatwoot account ID or null if user has no Chatwoot account
      */
@@ -69,21 +69,10 @@ class ChatwootAccountId implements AppParam
             $chatwootUserId = $chatwootUser->getId();
             $this->log->debug("ChatwootAccountId: Found ChatwootUser: {$chatwootUserId}");
 
-            // Find ChatwootAgent linked to this ChatwootUser
-            $chatwootAgent = $this->entityManager
-                ->getRDBRepository('ChatwootAgent')
-                ->where(['chatwootUserId' => $chatwootUserId])
-                ->findOne();
-
-            if (!$chatwootAgent) {
-                $this->log->debug("ChatwootAccountId: No ChatwootAgent found for ChatwootUser {$chatwootUserId}");
-                return null;
-            }
-
-            // Get the ChatwootAccount from the agent
-            $accountId = $chatwootAgent->get('chatwootAccountId');
+            // Get the ChatwootAccount directly from ChatwootUser
+            $accountId = $chatwootUser->get('chatwootAccountId');
             if (!$accountId) {
-                $this->log->debug("ChatwootAccountId: ChatwootAgent has no chatwootAccountId");
+                $this->log->debug("ChatwootAccountId: ChatwootUser has no chatwootAccountId");
                 return null;
             }
 

@@ -154,9 +154,10 @@ class ChatwootInboxIntegration
             $webhookSecret = bin2hex(random_bytes(32));
             $channel->set('wahaWebhookSecret', $webhookSecret);
 
-            $siteUrl = $this->config->get('siteUrl');
-            if ($siteUrl) {
-                $labelWebhookUrl = rtrim($siteUrl, '/') . '/api/v1/WahaLabelWebhook/' . $channelId;
+            // Use CRM_BACKEND_URL env var for external webhook URL, fallback to siteUrl
+            $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
+            if ($crmBackendUrl) {
+                $labelWebhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/WahaLabelWebhook/' . $channelId;
 
                 $this->wahaApiClient->updateSession($wahaUrl, $wahaApiKey, $sessionName, [
                     'config' => [
@@ -170,7 +171,7 @@ class ChatwootInboxIntegration
 
                 $this->log->info("ChatwootInboxIntegration: Registered label webhook at {$labelWebhookUrl}");
             } else {
-                $this->log->warning("ChatwootInboxIntegration: siteUrl not configured, skipping label webhook registration");
+                $this->log->warning("ChatwootInboxIntegration: CRM_BACKEND_URL and siteUrl not configured, skipping label webhook registration");
             }
 
             // Step 6: Create WAHA Chatwoot App

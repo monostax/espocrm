@@ -1,7 +1,7 @@
 {
     "entity": true,
     "layouts": true,
-    "tab": true,
+    "tab": false,
     "acl": true,
     "aclPortal": true,
     "aclPortalLevelList": ["all", "account", "contact", "own", "no"],

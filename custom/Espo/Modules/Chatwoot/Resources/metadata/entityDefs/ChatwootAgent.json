@@ -120,6 +120,11 @@
         "team": {
             "type": "link",
             "readOnly": true
+        },
+        "assignedUser": {
+            "type": "link",
+            "view": "views/fields/assigned-user",
+            "tooltip": true
         }
     },
     "links": {
@@ -167,6 +172,10 @@
         "team": {
             "type": "belongsTo",
             "entity": "Team"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
         }
     },
     "collection": {

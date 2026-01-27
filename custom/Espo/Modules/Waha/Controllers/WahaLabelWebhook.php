@@ -122,17 +122,16 @@ class WahaLabelWebhook
 
     /**
      * Get HMAC signature from request headers.
-     * WAHA sends the signature in the X-Waha-Signature header.
+     * WAHA sends the signature in the X-Webhook-Hmac header.
      *
      * @return string|null
      */
     private function getSignatureFromHeaders(): ?string
     {
-        // Check common signature header names
+        // WAHA sends signature in X-Webhook-Hmac header
         $headerNames = [
-            'HTTP_X_WAHA_SIGNATURE',
-            'HTTP_X_SIGNATURE',
-            'HTTP_X_HUB_SIGNATURE_256',
+            'HTTP_X_WEBHOOK_HMAC',
+            'HTTP_X_WAHA_SIGNATURE',  // fallback for older versions
         ];
 
         foreach ($headerNames as $headerName) {
@@ -158,14 +157,14 @@ class WahaLabelWebhook
             return false;
         }
 
-        // Remove algorithm prefix if present (e.g., "sha256=...")
+        // Remove algorithm prefix if present (e.g., "sha512=...")
         if (strpos($signature, '=') !== false) {
             $parts = explode('=', $signature, 2);
             $signature = $parts[1] ?? $signature;
         }
 
-        // Calculate expected signature
-        $expectedSignature = hash_hmac('sha256', $rawBody, $secret);
+        // WAHA uses sha512 algorithm
+        $expectedSignature = hash_hmac('sha512', $rawBody, $secret);
 
         // Use timing-safe comparison
         return hash_equals($expectedSignature, $signature);

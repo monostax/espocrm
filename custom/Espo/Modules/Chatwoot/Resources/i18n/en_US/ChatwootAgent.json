@@ -19,13 +19,15 @@
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
         "lastSyncError": "Last Sync Error",
-        "team": "Team"
+        "team": "Team",
+        "assignedUser": "Assigned User"
     },
     "links": {
         "chatwootAccount": "Chatwoot Account",
         "chatwootUser": "Chatwoot User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
-        "team": "Team"
+        "team": "Team",
+        "assignedUser": "Assigned User"
     },
     "labels": {
         "Create ChatwootAgent": "Create Agent",
@@ -56,7 +58,8 @@
         "knowledgeBaseCategories": "Select knowledge base categories. Articles in these categories (and their sub-categories) will be available for AI-powered responses.",
         "confirmed": "Whether the agent has confirmed their email address in Chatwoot.",
         "chatwootUser": "Link to the platform-level Chatwoot User if this agent corresponds to one.",
-        "customRoleId": "The custom role ID assigned to this agent in Chatwoot, if any."
+        "customRoleId": "The custom role ID assigned to this agent in Chatwoot, if any.",
+        "assignedUser": "The EspoCRM user who will access Chatwoot as this agent. This enables Single Sign-On (SSO) for the assigned user. The user must be in the same team as the Chatwoot Account."
     },
     "presetFilters": {
         "available": "Available",

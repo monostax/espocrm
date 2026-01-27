@@ -33,6 +33,9 @@ use Espo\Core\Utils\Log;
  * AppParam that provides the Chatwoot SSO login URL for the current user.
  * 
  * This is returned as part of the /api/v1/App/user response.
+ * 
+ * Lookup chain: EspoCRM User → ChatwootAgent → ChatwootUser → Platform User ID
+ * This supports the simplified architecture where User is linked to Agent directly.
  */
 class ChatwootSsoUrl implements AppParam
 {
@@ -52,40 +55,44 @@ class ChatwootSsoUrl implements AppParam
     {
         try {
             $userId = $this->user->getId();
-            $this->log->warning("ChatwootSsoUrl: Getting SSO URL for user {$userId}");
+            $this->log->debug("ChatwootSsoUrl: Getting SSO URL for user {$userId}");
 
-            // Find ChatwootUser linked to current EspoCRM user via assignedUser
-            $chatwootUser = $this->entityManager
-                ->getRDBRepository('ChatwootUser')
-                ->where(['assignedUserId' => $userId])
-                ->findOne();
+            // First try: Find ChatwootAgent linked to current EspoCRM user via assignedUser
+            $chatwootUser = $this->findChatwootUserViaAgent($userId);
+
+            // Fallback: Find ChatwootUser linked directly to current EspoCRM user
+            // (for backward compatibility with existing setups)
+            if (!$chatwootUser) {
+                $chatwootUser = $this->entityManager
+                    ->getRDBRepository('ChatwootUser')
+                    ->where(['assignedUserId' => $userId])
+                    ->findOne();
+            }
 
             if (!$chatwootUser) {
-                $this->log->warning("ChatwootSsoUrl: No ChatwootUser found for user {$userId}");
+                $this->log->debug("ChatwootSsoUrl: No ChatwootUser found for user {$userId}");
                 return null;
             }
 
-            $this->log->warning("ChatwootSsoUrl: Found ChatwootUser: " . $chatwootUser->getId());
+            $this->log->debug("ChatwootSsoUrl: Found ChatwootUser: " . $chatwootUser->getId());
 
             // Check if user has been synced with Chatwoot
             $chatwootUserId = $chatwootUser->get('chatwootUserId');
-            $this->log->warning("ChatwootSsoUrl: chatwootUserId = " . ($chatwootUserId ?? 'NULL'));
             if (!$chatwootUserId) {
-                $this->log->warning("ChatwootSsoUrl: ChatwootUser has no chatwootUserId");
+                $this->log->debug("ChatwootSsoUrl: ChatwootUser has no chatwootUserId");
                 return null;
             }
 
             // Get platform directly from ChatwootUser (it has a direct link to platform)
             $platformId = $chatwootUser->get('platformId');
-            $this->log->warning("ChatwootSsoUrl: platformId = " . ($platformId ?? 'NULL'));
             if (!$platformId) {
-                $this->log->warning("ChatwootSsoUrl: ChatwootUser has no platformId");
+                $this->log->debug("ChatwootSsoUrl: ChatwootUser has no platformId");
                 return null;
             }
 
             $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
             if (!$platform) {
-                $this->log->warning("ChatwootSsoUrl: ChatwootPlatform not found: {$platformId}");
+                $this->log->debug("ChatwootSsoUrl: ChatwootPlatform not found: {$platformId}");
                 return null;
             }
 
@@ -110,6 +117,46 @@ class ChatwootSsoUrl implements AppParam
             );
             return null;
         }
+    }
+
+    /**
+     * Find ChatwootUser via ChatwootAgent linkage.
+     * 
+     * This is the primary lookup path in the simplified architecture:
+     * EspoCRM User → ChatwootAgent (via assignedUser) → ChatwootUser (via chatwootUser link)
+     * 
+     * @param string $userId The EspoCRM user ID
+     * @return \Espo\ORM\Entity|null The ChatwootUser entity if found
+     */
+    private function findChatwootUserViaAgent(string $userId): ?\Espo\ORM\Entity
+    {
+        // Find any ChatwootAgent assigned to this user
+        $agent = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->where(['assignedUserId' => $userId])
+            ->findOne();
+
+        if (!$agent) {
+            $this->log->debug("ChatwootSsoUrl: No ChatwootAgent found for user {$userId}");
+            return null;
+        }
+
+        $this->log->debug("ChatwootSsoUrl: Found ChatwootAgent: " . $agent->getId());
+
+        // Get the linked ChatwootUser
+        $chatwootUserId = $agent->get('chatwootUserId');
+        if (!$chatwootUserId) {
+            $this->log->debug("ChatwootSsoUrl: ChatwootAgent has no linked ChatwootUser");
+            return null;
+        }
+
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+        if (!$chatwootUser) {
+            $this->log->debug("ChatwootSsoUrl: ChatwootUser {$chatwootUserId} not found");
+            return null;
+        }
+
+        return $chatwootUser;
     }
 }
 
