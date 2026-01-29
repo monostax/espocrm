@@ -1,14 +1,14 @@
 {
     "labels": {
-        "Chatwoot": "Chatwoot"
+        "Chatwoot": "Chat"
     },
     "descriptions": {
-        "chatwootPlatforms": "Manage Chatwoot platforms",
-        "chatwootAccounts": "Manage Chatwoot accounts",
+        "chatwootPlatforms": "Manage chat platforms",
+        "chatwootAccounts": "Manage chat accounts",
         "chatwootInboxIntegrations": "Manage inbox integrations",
-        "chatwootUsers": "Manage Chatwoot users",
-        "chatwootTeams": "Manage Chatwoot teams",
-        "chatwootWebhooks": "Manage Chatwoot webhooks",
-        "chatwootSyncState": "View synchronization state"
+        "chatwootUsers": "Manage chat users",
+        "chatwootTeams": "Manage chat teams",
+        "chatwootWebhooks": "Manage chat webhooks",
+        "chatwootSyncState": "View chat synchronization state"
     }
 }

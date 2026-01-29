@@ -15,94 +15,90 @@
  * @module custom/modules/global/views/calendar/resource-calendar
  */
 
-import View from 'view';
-import moment from 'moment';
-import * as FullCalendar from 'fullcalendar';
-import RecordModal from 'helpers/record-modal';
+import View from "view";
+import moment from "moment";
+import * as FullCalendar from "fullcalendar";
+import RecordModal from "helpers/record-modal";
 
 class ResourceCalendarView extends View {
+    template = "global:calendar/resource-calendar";
 
-    template = 'global:calendar/resource-calendar'
-
-    eventAttributes = []
-    colors = {}
-
-    /** @private @type {string[]} */
-    allDayScopeList
+    eventAttributes = [];
+    colors = {};
 
     /** @private @type {string[]} */
-    scopeList = ['Meeting', 'Call', 'Task']
+    allDayScopeList;
 
     /** @private @type {string[]} */
-    onlyDateScopeList
+    scopeList = ["Meeting", "Call", "Task"];
 
     /** @private @type {string[]} */
-    enabledScopeList
+    onlyDateScopeList;
 
-    header = true
-    modeList = []
+    /** @private @type {string[]} */
+    enabledScopeList;
 
-    fullCalendarModeList = [
-        'resourceTimeGridDay',
-        'resourceTimeGridWeek',
-    ]
+    header = true;
+    modeList = [];
 
-    defaultMode = 'resourceTimeGridDay'
-    slotDuration = 30
-    scrollToNowSlots = 6
-    scrollHour = 6
+    fullCalendarModeList = ["resourceTimeGridDay", "resourceTimeGridWeek"];
+
+    defaultMode = "resourceTimeGridDay";
+    slotDuration = 30;
+    scrollToNowSlots = 6;
+    scrollHour = 6;
 
     titleFormat = {
-        day: 'dddd, MMMM D, YYYY',
-        week: 'MMMM YYYY',
-    }
+        day: "dddd, MMMM D, YYYY",
+        week: "MMMM YYYY",
+    };
 
-    rangeSeparator = ' – '
+    rangeSeparator = " – ";
 
     /** @private */
-    fetching = false
+    fetching = false;
 
     modeViewMap = {
-        resourceTimeGridDay: 'resourceTimeGridDay',
-        resourceTimeGridWeek: 'resourceTimeGridWeek',
-    }
+        resourceTimeGridDay: "resourceTimeGridDay",
+        resourceTimeGridWeek: "resourceTimeGridWeek",
+    };
 
     extendedProps = [
-        'scope',
-        'recordId',
-        'dateStart',
-        'dateEnd',
-        'dateStartDate',
-        'dateEndDate',
-        'status',
-        'originalColor',
-        'duration',
-        'allDayCopy',
-        'resourceId',
-    ]
+        "scope",
+        "recordId",
+        "dateStart",
+        "dateEnd",
+        "dateStartDate",
+        "dateEndDate",
+        "status",
+        "originalColor",
+        "duration",
+        "allDayCopy",
+        "resourceId",
+    ];
 
     /** @type {FullCalendar.Calendar} */
-    calendar
+    calendar;
 
     /** @private @type {Array<{id: string, name: string}>} */
-    userList = []
+    userList = [];
 
     /**
      * Currently enabled user IDs (visible in calendar)
      * @private @type {string[]}
      */
-    enabledUserIdList = []
+    enabledUserIdList = [];
 
     /**
      * User colors for event styling
      * @private @type {Object<string, string>}
      */
-    userColors = {}
+    userColors = {};
 
     /**
      * @private @type {import('./color-picker-popover').default|null}
      */
-    colorPickerView = null
+    colorPickerView = null;
 
     events = {
         /** @this ResourceCalendarView */
@@ -119,7 +115,7 @@ class ResourceCalendarView extends View {
         },
         /** @this ResourceCalendarView */
         'click [data-action="mode"]': function (e) {
-            const mode = $(e.currentTarget).data('mode');
+            const mode = $(e.currentTarget).data("mode");
             this.selectMode(mode);
         },
         /** @this ResourceCalendarView */
@@ -129,47 +125,22 @@ class ResourceCalendarView extends View {
         /** @this ResourceCalendarView */
         'click [data-action="toggleScopeFilter"]': function (e) {
             const $target = $(e.currentTarget);
-            const filterName = $target.data('name');
-            const $check = $target.find('.filter-check-icon');
+            const filterName = $target.data("name");
+            const $check = $target.find(".filter-check-icon");
 
-            if ($check.hasClass('hidden')) {
-                $check.removeClass('hidden');
+            if ($check.hasClass("hidden")) {
+                $check.removeClass("hidden");
             } else {
-                $check.addClass('hidden');
+                $check.addClass("hidden");
             }
 
             e.stopPropagation(e);
             this.toggleScopeFilter(filterName);
         },
-        /** @this ResourceCalendarView */
-        'click [data-action="toggleUserFilter"]': function (e) {
-            const $target = $(e.currentTarget);
-            const userId = $target.data('user-id');
-            const $check = $target.find('.filter-check-icon');
-
-            if ($check.hasClass('hidden')) {
-                $check.removeClass('hidden');
-            } else {
-                // Don't hide if it's the last enabled user
-                if (this.enabledUserIdList.length > 1) {
-                    $check.addClass('hidden');
-                }
-            }
-
-            e.stopPropagation();
-            this.toggleUserFilter(userId);
-        },
-        /** @this ResourceCalendarView */
-        'click [data-action="changeUserColor"]': function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            this.actionChangeUserColor(e);
-        },
-        /** @this ResourceCalendarView */
-        'click [data-action="showResourceOptions"]': function () {
-            this.actionShowResourceOptions();
-        },
-    }
+        // Note: toggleUserFilter, changeUserColor, and manageUsers are now handled
+        // by the mode-buttons view which communicates via onUserFilterChange,
+        // onUserColorChange callbacks and manageUsers event
+    };
 
     /**
      * @param {{
@@ -202,8 +173,12 @@ class ResourceCalendarView extends View {
             header: this.header,
             isCustomViewAvailable: this.isCustomViewAvailable,
             isCustomView: this.isCustomView,
-            todayLabel: this.translate('Today', 'labels', 'Calendar'),
-            todayLabelShort: this.translate('Today', 'labels', 'Calendar').slice(0, 2),
+            todayLabel: this.translate("Today", "labels", "Calendar"),
+            todayLabelShort: this.translate(
+                "Today",
+                "labels",
+                "Calendar",
+            ).slice(0, 2),
             userFilterDataList: this.getUserFilterDataList(),
             hasUserFilter: this.userList.length > 0,
             scopeFilterDataList: this.getScopeFilterDataList(),
@@ -216,7 +191,7 @@ class ResourceCalendarView extends View {
      * @return {Array<{id: string, name: string, disabled: boolean, color: string}>}
      */
     getUserFilterDataList() {
-        return this.userList.map(user => ({
+        return this.userList.map((user) => ({
             id: user.id,
             name: user.name,
             disabled: !this.enabledUserIdList.includes(user.id),
@@ -230,7 +205,7 @@ class ResourceCalendarView extends View {
      * @return {Array<{scope: string, disabled: boolean}>}
      */
     getScopeFilterDataList() {
-        return this.scopeList.map(scope => ({
+        return this.scopeList.map((scope) => ({
             scope: scope,
             disabled: !this.enabledScopeList.includes(scope),
         }));
@@ -239,12 +214,21 @@ class ResourceCalendarView extends View {
     setup() {
         // Load moment plugins (required for base calendar functionality)
         this.wait(
-            Espo.loader.requirePromise('lib!@fullcalendar/moment')
-                .catch(e => console.warn('Failed to load @fullcalendar/moment:', e))
+            Espo.loader
+                .requirePromise("lib!@fullcalendar/moment")
+                .catch((e) =>
+                    console.warn("Failed to load @fullcalendar/moment:", e),
+                ),
         );
         this.wait(
-            Espo.loader.requirePromise('lib!@fullcalendar/moment-timezone')
-                .catch(e => console.warn('Failed to load @fullcalendar/moment-timezone:', e))
+            Espo.loader
+                .requirePromise("lib!@fullcalendar/moment-timezone")
+                .catch((e) =>
+                    console.warn(
+                        "Failed to load @fullcalendar/moment-timezone:",
+                        e,
+                    ),
+                ),
         );
 
         // Load resource plugins (optional - view will show fallback if unavailable)
@@ -253,27 +237,34 @@ class ResourceCalendarView extends View {
         this.suppressLoadingAlert = this.options.suppressLoadingAlert;
         this.date = this.options.date || null;
         this.mode = this.options.mode || this.defaultMode;
-        this.header = ('header' in this.options) ? this.options.header : this.header;
+        this.header =
+            "header" in this.options ? this.options.header : this.header;
 
-        this.scrollToNowSlots = this.options.scrollToNowSlots !== undefined ?
-            this.options.scrollToNowSlots : this.scrollToNowSlots;
+        this.scrollToNowSlots =
+            this.options.scrollToNowSlots !== undefined
+                ? this.options.scrollToNowSlots
+                : this.scrollToNowSlots;
 
         this.setupMode();
 
         this.$container = this.options.$container;
 
         this.colors = Espo.Utils.clone(
-            this.getMetadata().get('clientDefs.Calendar.colors') || this.colors
+            this.getMetadata().get("clientDefs.Calendar.colors") || this.colors,
         );
 
-        this.modeList = this.getMetadata().get('clientDefs.Calendar.modeList') || this.modeList;
+        this.modeList =
+            this.getMetadata().get("clientDefs.Calendar.modeList") ||
+            this.modeList;
 
-        this.scopeList = this.getConfig().get('calendarEntityList') ||
+        this.scopeList =
+            this.getConfig().get("calendarEntityList") ||
             Espo.Utils.clone(this.scopeList);
 
-        this.allDayScopeList = this.getMetadata().get('clientDefs.Calendar.allDayScopeList') ?? [];
+        this.allDayScopeList =
+            this.getMetadata().get("clientDefs.Calendar.allDayScopeList") ?? [];
 
-        this.scopeList.forEach(scope => {
+        this.scopeList.forEach((scope) => {
             if (
                 this.getMetadata().get(`scopes.${scope}.calendarOneDay`) &&
                 !this.allDayScopeList.includes(scope)
@@ -282,20 +273,29 @@ class ResourceCalendarView extends View {
             }
         });
 
-        this.onlyDateScopeList = this.scopeList.filter(scope => {
-            return this.getMetadata().get(`entityDefs.${scope}.fields.dateStart.type`) === 'date';
+        this.onlyDateScopeList = this.scopeList.filter((scope) => {
+            return (
+                this.getMetadata().get(
+                    `entityDefs.${scope}.fields.dateStart.type`,
+                ) === "date"
+            );
         });
 
-        this.slotDuration = this.options.slotDuration ||
-            this.getPreferences().get('calendarSlotDuration') ||
-            this.getMetadata().get('clientDefs.Calendar.slotDuration') ||
+        this.slotDuration =
+            this.options.slotDuration ||
+            this.getPreferences().get("calendarSlotDuration") ||
+            this.getMetadata().get("clientDefs.Calendar.slotDuration") ||
             this.slotDuration;
 
         this.setupScrollHour();
 
-        this.colors = {...this.colors, ...this.getHelper().themeManager.getParam('calendarColors')};
+        this.colors = {
+            ...this.colors,
+            ...this.getHelper().themeManager.getParam("calendarColors"),
+        };
 
-        this.isCustomViewAvailable = this.getAcl().getPermissionLevel('userCalendar') !== 'no';
+        this.isCustomViewAvailable =
+            this.getAcl().getPermissionLevel("userCalendar") !== "no";
 
         if (this.options.userId) {
             this.isCustomViewAvailable = false;
@@ -303,7 +303,7 @@ class ResourceCalendarView extends View {
 
         const scopeList = [];
 
-        this.scopeList.forEach(scope => {
+        this.scopeList.forEach((scope) => {
             if (this.getAcl().check(scope)) {
                 scopeList.push(scope);
             }
@@ -312,19 +312,24 @@ class ResourceCalendarView extends View {
         this.scopeList = scopeList;
 
         if (this.header) {
-            this.enabledScopeList = this.getStoredEnabledScopeList() ||
+            this.enabledScopeList =
+                this.getStoredEnabledScopeList() ||
                 Espo.Utils.clone(this.scopeList);
         } else {
-            this.enabledScopeList = this.options.enabledScopeList ||
+            this.enabledScopeList =
+                this.options.enabledScopeList ||
                 Espo.Utils.clone(this.scopeList);
         }
 
-        if (Object.prototype.toString.call(this.enabledScopeList) !== '[object Array]') {
+        if (
+            Object.prototype.toString.call(this.enabledScopeList) !==
+            "[object Array]"
+        ) {
             this.enabledScopeList = [];
         }
 
-        this.enabledScopeList.forEach(item => {
-            const color = this.getMetadata().get(['clientDefs', item, 'color']);
+        this.enabledScopeList.forEach((item) => {
+            const color = this.getMetadata().get(["clientDefs", item, "color"]);
 
             if (color) {
                 this.colors[item] = color;
@@ -338,14 +343,31 @@ class ResourceCalendarView extends View {
         this.enabledUserIdList = this.getStoredEnabledUserIdList();
         this.userColors = this.getUserColors();
 
+        // Expose userFilterList for mode-buttons view (same pattern as agendaWeek calendar)
+        this.userFilterList = this.userList;
+
         if (this.header) {
-            this.createView('modeButtons', 'crm:views/calendar/mode-buttons', {
-                selector: '.mode-buttons',
-                isCustomViewAvailable: this.isCustomViewAvailable,
-                modeList: this.modeList,
-                scopeList: this.scopeList,
-                mode: this.mode,
-            });
+            this.createView(
+                "modeButtons",
+                "global:views/calendar/mode-buttons",
+                {
+                    selector: ".mode-buttons",
+                    isCustomViewAvailable: this.isCustomViewAvailable,
+                    modeList: this.modeList,
+                    scopeList: this.scopeList,
+                    mode: this.mode,
+                },
+                (view) => {
+                    // Pass user filter list to mode buttons
+                    view.userFilterList = this.userFilterList;
+                    view.enabledUserIdList = this.enabledUserIdList;
+
+                    // Listen for manage users action
+                    this.listenTo(view, "manageUsers", () => {
+                        this.actionShowResourceOptions();
+                    });
+                },
+            );
         }
     }
 
@@ -357,43 +379,51 @@ class ResourceCalendarView extends View {
     async loadResourcePlugins() {
         this.resourcePluginsLoaded = false;
         this.pluginLoadError = null;
-        
+
         try {
             // Ensure base FullCalendar is loaded and window.FullCalendar is set up
             // The scheduler plugins are IIFE builds that require window.FullCalendar.Internal
-            await Espo.loader.requirePromise('lib!fullcalendar');
-            
+            await Espo.loader.requirePromise("lib!fullcalendar");
+
             // Verify FullCalendar is available with Internal API
-            if (typeof window.FullCalendar === 'undefined') {
-                throw new Error('FullCalendar not loaded on window object');
+            if (typeof window.FullCalendar === "undefined") {
+                throw new Error("FullCalendar not loaded on window object");
             }
-            
+
             if (!window.FullCalendar.Internal) {
                 // Debug: list available properties on FullCalendar
-                const props = Object.keys(window.FullCalendar).join(', ');
-                throw new Error(`FullCalendar.Internal not available. Available props: ${props}`);
+                const props = Object.keys(window.FullCalendar).join(", ");
+                throw new Error(
+                    `FullCalendar.Internal not available. Available props: ${props}`,
+                );
             }
-            
+
             // Load the scheduler plugins bundle via EspoCRM loader
             // The bundle contains: premium-common, resource, resource-daygrid, resource-timegrid
-            await Espo.loader.requirePromise('lib!fullcalendar-scheduler');
-            
+            await Espo.loader.requirePromise("lib!fullcalendar-scheduler");
+
             // Verify plugins are working by checking for the view
-            const testCal = document.createElement('div');
+            const testCal = document.createElement("div");
             try {
                 const cal = new FullCalendar.Calendar(testCal, {
-                    initialView: 'resourceTimeGridDay',
+                    initialView: "resourceTimeGridDay",
                     resources: [],
-                    schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+                    schedulerLicenseKey: "GPL-My-Project-Is-Open-Source",
                 });
                 this.resourcePluginsLoaded = true;
                 cal.destroy();
             } catch (e) {
-                console.warn('FullCalendar Scheduler plugins loaded but not functional:', e.message);
+                console.warn(
+                    "FullCalendar Scheduler plugins loaded but not functional:",
+                    e.message,
+                );
                 this.pluginLoadError = e.message;
             }
         } catch (e) {
-            console.error('FullCalendar Scheduler plugins not available:', e.message);
+            console.error(
+                "FullCalendar Scheduler plugins not available:",
+                e.message,
+            );
             this.pluginLoadError = e.message;
         }
     }
@@ -430,7 +460,7 @@ class ResourceCalendarView extends View {
                 // Default to current user
                 this.userList.push({
                     id: this.getUser().id,
-                    name: this.getUser().get('name'),
+                    name: this.getUser().get("name"),
                 });
             }
         }
@@ -442,13 +472,15 @@ class ResourceCalendarView extends View {
      * @return {Array<{id: string, name: string}>}
      */
     getSharedCalendarUserList() {
-        const list = Espo.Utils.clone(this.getPreferences().get('sharedCalendarUserList'));
+        const list = Espo.Utils.clone(
+            this.getPreferences().get("sharedCalendarUserList"),
+        );
 
         if (list && list.length) {
             let isBad = false;
 
-            list.forEach(item => {
-                if (typeof item !== 'object' || !item.id || !item.name) {
+            list.forEach((item) => {
+                if (typeof item !== "object" || !item.id || !item.name) {
                     isBad = true;
                 }
             });
@@ -458,10 +490,12 @@ class ResourceCalendarView extends View {
             }
         }
 
-        return [{
-            id: this.getUser().id,
-            name: this.getUser().get('name'),
-        }];
+        return [
+            {
+                id: this.getUser().id,
+                name: this.getUser().get("name"),
+            },
+        ];
     }
 
     /**
@@ -469,9 +503,12 @@ class ResourceCalendarView extends View {
      * @private
      */
     storeUserList() {
-        this.getPreferences().save({
-            'sharedCalendarUserList': Espo.Utils.clone(this.userList),
-        }, {patch: true});
+        this.getPreferences().save(
+            {
+                sharedCalendarUserList: Espo.Utils.clone(this.userList),
+            },
+            { patch: true },
+        );
     }
 
     /**
@@ -480,17 +517,20 @@ class ResourceCalendarView extends View {
      * @return {string[]}
      */
     getStoredEnabledUserIdList() {
-        const stored = this.getStorage().get('state', 'resourceCalendarEnabledUserIdList');
+        const stored = this.getStorage().get(
+            "state",
+            "resourceCalendarEnabledUserIdList",
+        );
 
         if (stored && stored.length) {
             // Filter to only include users in the user list
-            return stored.filter(id =>
-                this.userList.some(u => u.id === id)
+            return stored.filter((id) =>
+                this.userList.some((u) => u.id === id),
             );
         }
 
         // Default: all users enabled
-        return this.userList.map(u => u.id);
+        return this.userList.map((u) => u.id);
     }
 
     /**
@@ -499,7 +539,11 @@ class ResourceCalendarView extends View {
      * @param {string[]} list
      */
     storeEnabledUserIdList(list) {
-        this.getStorage().set('state', 'resourceCalendarEnabledUserIdList', list);
+        this.getStorage().set(
+            "state",
+            "resourceCalendarEnabledUserIdList",
+            list,
+        );
     }
 
     /**
@@ -508,7 +552,7 @@ class ResourceCalendarView extends View {
      * @return {Object<string, string>}
      */
     getUserColors() {
-        return this.getPreferences().get('resourceCalendarUserColors') || {};
+        return this.getPreferences().get("resourceCalendarUserColors") || {};
     }
 
     /**
@@ -517,9 +561,12 @@ class ResourceCalendarView extends View {
      * @param {Object<string, string>} colors
      */
     storeUserColors(colors) {
-        this.getPreferences().save({
-            'resourceCalendarUserColors': colors,
-        }, {patch: true});
+        this.getPreferences().save(
+            {
+                resourceCalendarUserColors: colors,
+            },
+            { patch: true },
+        );
     }
 
     /**
@@ -545,24 +592,24 @@ class ResourceCalendarView extends View {
     getColorForUser(userId) {
         // Predefined color palette (Google Calendar style)
         const palette = [
-            '#4285f4', // Blue
-            '#0f9d58', // Green
-            '#f4b400', // Yellow
-            '#db4437', // Red
-            '#ab47bc', // Purple
-            '#00acc1', // Cyan
-            '#ff7043', // Orange
-            '#9e9e9e', // Gray
-            '#5c6bc0', // Indigo
-            '#26a69a', // Teal
-            '#ec407a', // Pink
-            '#8d6e63', // Brown
+            "#4285f4", // Blue
+            "#0f9d58", // Green
+            "#f4b400", // Yellow
+            "#db4437", // Red
+            "#ab47bc", // Purple
+            "#00acc1", // Cyan
+            "#ff7043", // Orange
+            "#9e9e9e", // Gray
+            "#5c6bc0", // Indigo
+            "#26a69a", // Teal
+            "#ec407a", // Pink
+            "#8d6e63", // Brown
         ];
 
         // Generate a consistent index based on user ID
         let hash = 0;
         for (let i = 0; i < userId.length; i++) {
-            hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+            hash = (hash << 5) - hash + userId.charCodeAt(i);
             hash = hash & hash;
         }
 
@@ -586,7 +633,7 @@ class ResourceCalendarView extends View {
             return;
         }
 
-        const scrollHour = this.getPreferences().get('calendarScrollHour');
+        const scrollHour = this.getPreferences().get("calendarScrollHour");
 
         if (scrollHour !== null) {
             this.scrollHour = scrollHour;
@@ -607,13 +654,14 @@ class ResourceCalendarView extends View {
             this.teamIdList = null;
         }
 
-        if (~this.mode.indexOf('view-')) {
+        if (~this.mode.indexOf("view-")) {
             this.viewId = this.mode.slice(5);
             this.isCustomView = true;
 
-            const calendarViewDataList = this.getPreferences().get('calendarViewDataList') || [];
+            const calendarViewDataList =
+                this.getPreferences().get("calendarViewDataList") || [];
 
-            calendarViewDataList.forEach(item => {
+            calendarViewDataList.forEach((item) => {
                 if (item.id === this.viewId) {
                     this.viewMode = item.mode;
                     this.teamIdList = item.teamIdList;
@@ -629,20 +677,24 @@ class ResourceCalendarView extends View {
     selectMode(mode) {
         // Map external mode names to FullCalendar view names
         const externalToFcModeMap = {
-            'resourceDay': 'resourceTimeGridDay',
-            'resourceWeek': 'resourceTimeGridWeek',
+            resourceDay: "resourceTimeGridDay",
+            resourceWeek: "resourceTimeGridWeek",
         };
 
         const fcMode = externalToFcModeMap[mode] || mode;
 
-        if (this.fullCalendarModeList.includes(fcMode) || mode.indexOf('view-') === 0) {
+        if (
+            this.fullCalendarModeList.includes(fcMode) ||
+            mode.indexOf("view-") === 0
+        ) {
             const previousMode = this.mode;
 
             if (
-                mode.indexOf('view-') === 0 ||
-                mode.indexOf('view-') !== 0 && previousMode.indexOf('view-') === 0
+                mode.indexOf("view-") === 0 ||
+                (mode.indexOf("view-") !== 0 &&
+                    previousMode.indexOf("view-") === 0)
             ) {
-                this.trigger('change:mode', mode, true);
+                this.trigger("change:mode", mode, true);
                 return;
             }
 
@@ -651,16 +703,22 @@ class ResourceCalendarView extends View {
             this.setupMode();
 
             if (this.isCustomView) {
-                this.$el.find('button[data-action="editCustomView"]').removeClass('hidden');
+                this.$el
+                    .find('button[data-action="editCustomView"]')
+                    .removeClass("hidden");
             } else {
-                this.$el.find('button[data-action="editCustomView"]').addClass('hidden');
+                this.$el
+                    .find('button[data-action="editCustomView"]')
+                    .addClass("hidden");
             }
 
-            this.$el.find('[data-action="mode"]').removeClass('active');
+            this.$el.find('[data-action="mode"]').removeClass("active");
             // Highlight button using the original mode name (matches data-mode attribute)
-            this.$el.find('[data-mode="' + mode + '"]').addClass('active');
+            this.$el.find('[data-mode="' + mode + '"]').addClass("active");
 
-            this.calendar.changeView(this.modeViewMap[this.viewMode] || this.viewMode);
+            this.calendar.changeView(
+                this.modeViewMap[this.viewMode] || this.viewMode,
+            );
 
             if (!this.fetching) {
                 this.calendar.refetchEvents();
@@ -668,18 +726,18 @@ class ResourceCalendarView extends View {
 
             this.updateDate();
 
-            if (this.hasView('modeButtons')) {
+            if (this.hasView("modeButtons")) {
                 this.getModeButtonsView().mode = mode;
                 this.getModeButtonsView().reRender();
             }
         }
 
-        this.trigger('change:mode', mode);
+        this.trigger("change:mode", mode);
     }
 
     /** @return {import('modules/crm/views/calendar/mode-buttons').default} */
     getModeButtonsView() {
-        return this.getView('modeButtons');
+        return this.getView("modeButtons");
     }
 
     /** @private @param {string} name */
@@ -698,14 +756,14 @@ class ResourceCalendarView extends View {
 
     /** @private @return {string[]|null} */
     getStoredEnabledScopeList() {
-        const key = 'calendarEnabledScopeList';
-        return this.getStorage().get('state', key) || null;
+        const key = "calendarEnabledScopeList";
+        return this.getStorage().get("state", key) || null;
     }
 
     /** @private @param {string[]} enabledScopeList */
     storeEnabledScopeList(enabledScopeList) {
-        const key = 'calendarEnabledScopeList';
-        this.getStorage().set('state', key, enabledScopeList);
+        const key = "calendarEnabledScopeList";
+        this.getStorage().set("state", key, enabledScopeList);
     }
 
     /**
@@ -730,14 +788,55 @@ class ResourceCalendarView extends View {
         if (this.calendar) {
             // Get current resources and remove them
             const currentResources = this.calendar.getResources();
-            currentResources.forEach(r => r.remove());
+            currentResources.forEach((r) => r.remove());
 
             // Add new resources (only enabled users)
-            this.getResources().forEach(resource => {
+            this.getResources().forEach((resource) => {
                 this.calendar.addResource(resource);
             });
 
             // Refetch events
+            this.calendar.refetchEvents();
+        }
+    }
+
+    /**
+     * Handle user filter change from mode buttons
+     * Called by mode-buttons view when user toggles filters
+     * @param {string[]} enabledUserIdList
+     */
+    onUserFilterChange(enabledUserIdList) {
+        this.enabledUserIdList = enabledUserIdList;
+        this.storeEnabledUserIdList(this.enabledUserIdList);
+
+        // Update calendar resources
+        if (this.calendar) {
+            // Get current resources and remove them
+            const currentResources = this.calendar.getResources();
+            currentResources.forEach((r) => r.remove());
+
+            // Add new resources (only enabled users)
+            this.getResources().forEach((resource) => {
+                this.calendar.addResource(resource);
+            });
+
+            // Refetch events
+            this.calendar.refetchEvents();
+        }
+    }
+
+    /**
+     * Handle user color change from mode buttons
+     * Called by mode-buttons view when user changes color
+     * @param {string} userId
+     * @param {string} color
+     */
+    onUserColorChange(userId, color) {
+        // Update local cache
+        this.userColors[userId] = color;
+
+        // Refetch events to apply new color
+        if (this.calendar) {
             this.calendar.refetchEvents();
         }
     }
@@ -748,8 +847,9 @@ class ResourceCalendarView extends View {
      */
     async actionChangeUserColor(e) {
         const $target = $(e.currentTarget);
-        const userId = $target.data('user-id');
-        const currentColor = this.userColors[userId] || this.getColorForUser(userId);
+        const userId = $target.data("user-id");
+        const currentColor =
+            this.userColors[userId] || this.getColorForUser(userId);
 
         // Close any existing color picker
         if (this.colorPickerView) {
@@ -758,22 +858,32 @@ class ResourceCalendarView extends View {
         }
 
         // Create a container for the color picker in body
-        const $container = $('<div class="color-picker-container">').appendTo('body');
+        const $container = $('<div class="color-picker-container">').appendTo(
+            "body",
+        );
 
         // Create and show color picker popover
-        this.colorPickerView = await this.createView('colorPicker', 'global:views/calendar/color-picker-popover', {
-            fullSelector: '.color-picker-container',
-            userId: userId,
-            currentColor: currentColor,
-            targetEl: e.currentTarget,
-        });
+        this.colorPickerView = await this.createView(
+            "colorPicker",
+            "global:views/calendar/color-picker-popover",
+            {
+                fullSelector: ".color-picker-container",
+                userId: userId,
+                currentColor: currentColor,
+                targetEl: e.currentTarget,
+            },
+        );
 
-        this.listenTo(this.colorPickerView, 'select', (color, selectedUserId) => {
-            this.setUserColor(selectedUserId, color);
-        });
+        this.listenTo(
+            this.colorPickerView,
+            "select",
+            (color, selectedUserId) => {
+                this.setUserColor(selectedUserId, color);
+            },
+        );
 
-        this.listenTo(this.colorPickerView, 'close', () => {
-            this.clearView('colorPicker');
+        this.listenTo(this.colorPickerView, "close", () => {
+            this.clearView("colorPicker");
             this.colorPickerView = null;
             $container.remove();
         });
@@ -791,8 +901,9 @@ class ResourceCalendarView extends View {
         this.storeUserColors(this.userColors);
 
         // Update the color swatch in the UI
-        this.$el.find(`[data-action="changeUserColor"][data-user-id="${userId}"]`)
-            .css('background-color', color);
+        this.$el
+            .find(`[data-action="changeUserColor"][data-user-id="${userId}"]`)
+            .css("background-color", color);
 
         // Refetch events to apply new color
         if (this.calendar) {
@@ -807,13 +918,13 @@ class ResourceCalendarView extends View {
         }
 
         if (this.isToday()) {
-            this.$el.find('button[data-action="today"]').addClass('active');
+            this.$el.find('button[data-action="today"]').addClass("active");
         } else {
-            this.$el.find('button[data-action="today"]').removeClass('active');
+            this.$el.find('button[data-action="today"]').removeClass("active");
         }
 
         const title = this.getTitle();
-        this.$el.find('.date-title h4 span').text(title);
+        this.$el.find(".date-title h4 span").text(title);
     }
 
     /** @private @return {boolean} */
@@ -831,22 +942,22 @@ class ResourceCalendarView extends View {
         const view = this.calendar.view;
 
         const map = {
-            resourceTimeGridWeek: 'week',
-            resourceTimeGridDay: 'day',
+            resourceTimeGridWeek: "week",
+            resourceTimeGridDay: "day",
         };
 
-        const viewName = map[view.type] || 'day';
+        const viewName = map[view.type] || "day";
 
         let title;
         const format = this.titleFormat[viewName];
 
-        if (viewName === 'week') {
+        if (viewName === "week") {
             const start = this.dateToMoment(view.currentStart).format(format);
-            const end = this.dateToMoment(view.currentEnd).subtract(1, 'minute').format(format);
+            const end = this.dateToMoment(view.currentEnd)
+                .subtract(1, "minute")
+                .format(format);
 
-            title = start !== end ?
-                start + this.rangeSeparator + end :
-                start;
+            title = start !== end ? start + this.rangeSeparator + end : start;
         } else {
             title = this.dateToMoment(view.currentStart).format(format);
         }
@@ -864,9 +975,9 @@ class ResourceCalendarView extends View {
      */
     convertToFcEvent(o) {
         const event = {
-            title: o.name || '',
+            title: o.name || "",
             scope: o.scope,
-            id: o.scope + '-' + o.id,
+            id: o.scope + "-" + o.id,
             recordId: o.id,
             dateStart: o.dateStart,
             dateEnd: o.dateEnd,
@@ -874,17 +985,17 @@ class ResourceCalendarView extends View {
             dateEndDate: o.dateEndDate,
             status: o.status,
             originalColor: o.color,
-            display: 'block',
+            display: "block",
             resourceId: o.userId || o.assignedUserId || this.getUser().id,
         };
 
         if (o.isWorkingRange) {
-            event.display = 'inverse-background';
-            event.groupId = 'nonWorking';
-            event.color = this.colors['bg'];
+            event.display = "inverse-background";
+            event.groupId = "nonWorking";
+            event.color = this.colors["bg"];
         }
 
-        this.eventAttributes.forEach(attr => {
+        this.eventAttributes.forEach((attr) => {
             event[attr] = o[attr];
         });
 
@@ -892,15 +1003,15 @@ class ResourceCalendarView extends View {
         let end;
 
         if (o.dateStart || o.dateStartDate) {
-            start = !o.dateStartDate ?
-                this.getDateTime().toMoment(o.dateStart) :
-                this.dateToMoment(o.dateStartDate);
+            start = !o.dateStartDate
+                ? this.getDateTime().toMoment(o.dateStart)
+                : this.dateToMoment(o.dateStartDate);
         }
 
         if (o.dateEnd || o.dateEndDate) {
-            end = !o.dateEndDate ?
-                this.getDateTime().toMoment(o.dateEnd) :
-                this.dateToMoment(o.dateEndDate);
+            end = !o.dateEndDate
+                ? this.getDateTime().toMoment(o.dateEnd)
+                : this.dateToMoment(o.dateEndDate);
         }
 
         if (end && start) {
@@ -933,12 +1044,18 @@ class ResourceCalendarView extends View {
 
     /** @private @param {string} scope @return {string[]} */
     getEventTypeCompletedStatusList(scope) {
-        return this.getMetadata().get(['scopes', scope, 'completedStatusList']) || [];
+        return (
+            this.getMetadata().get(["scopes", scope, "completedStatusList"]) ||
+            []
+        );
     }
 
     /** @private @param {string} scope @return {string[]} */
     getEventTypeCanceledStatusList(scope) {
-        return this.getMetadata().get(['scopes', scope, 'canceledStatusList']) || [];
+        return (
+            this.getMetadata().get(["scopes", scope, "canceledStatusList"]) ||
+            []
+        );
     }
 
     /** @private @param {Record} event */
@@ -947,7 +1064,9 @@ class ResourceCalendarView extends View {
 
         // Apply user color if multiple users are displayed
         if (this.enabledUserIdList.length > 1 && event.resourceId) {
-            const userColor = this.userColors[event.resourceId] || this.getColorForUser(event.resourceId);
+            const userColor =
+                this.userColors[event.resourceId] ||
+                this.getColorForUser(event.resourceId);
             if (userColor && !event.originalColor) {
                 color = userColor;
             }
@@ -963,10 +1082,12 @@ class ResourceCalendarView extends View {
 
         if (
             color &&
-            (
-                this.getEventTypeCompletedStatusList(event.scope).includes(event.status) ||
-                this.getEventTypeCanceledStatusList(event.scope).includes(event.status)
-            )
+            (this.getEventTypeCompletedStatusList(event.scope).includes(
+                event.status,
+            ) ||
+                this.getEventTypeCanceledStatusList(event.scope).includes(
+                    event.status,
+                ))
         ) {
             color = this.shadeColor(color, 0.4);
         }
@@ -976,8 +1097,12 @@ class ResourceCalendarView extends View {
 
     /** @private @param {Object} event */
     handleStatus(event) {
-        if (this.getEventTypeCanceledStatusList(event.scope).includes(event.status)) {
-            event.className = ['event-canceled'];
+        if (
+            this.getEventTypeCanceledStatusList(event.scope).includes(
+                event.status,
+            )
+        ) {
+            event.className = ["event-canceled"];
         } else {
             event.className = [];
         }
@@ -985,11 +1110,11 @@ class ResourceCalendarView extends View {
 
     /** @private @param {string} color @param {number} percent @return {string} */
     shadeColor(color, percent) {
-        if (color === 'transparent') {
+        if (color === "transparent") {
             return color;
         }
 
-        if (this.getThemeManager().getParam('isDark')) {
+        if (this.getThemeManager().getParam("isDark")) {
             percent *= -1;
         }
 
@@ -998,15 +1123,21 @@ class ResourceCalendarView extends View {
             t = percent < 0 ? 0 : 255,
             p = percent < 0 ? percent * -1 : percent,
             R = f >> 16,
-            G = f >> 8 & 0x00FF,
-            B = f & 0x0000FF;
+            G = (f >> 8) & 0x00ff,
+            B = f & 0x0000ff;
 
-        return "#" + (
-            0x1000000 + (
-                Math.round((t - R) * p) + R) * 0x10000 +
-            (Math.round((t - G) * p) + G) * 0x100 +
-            (Math.round((t - B) * p) + B)
-        ).toString(16).slice(1) + alpha;
+        return (
+            "#" +
+            (
+                0x1000000 +
+                (Math.round((t - R) * p) + R) * 0x10000 +
+                (Math.round((t - G) * p) + G) * 0x100 +
+                (Math.round((t - B) * p) + B)
+            )
+                .toString(16)
+                .slice(1) +
+            alpha
+        );
     }
 
     /** @private @param {EventImpl} event @param {boolean} [afterDrop] */
@@ -1025,12 +1156,12 @@ class ResourceCalendarView extends View {
                     end.hours() === 0 &&
                     end.minutes() === 0
                 ) {
-                    start.add(-1, 'days');
+                    start.add(-1, "days");
                 }
             }
 
             if (start && end && start.isSame(end)) {
-                end.add(1, 'days');
+                end.add(1, "days");
             }
 
             if (start) {
@@ -1049,7 +1180,7 @@ class ResourceCalendarView extends View {
             event.allDayCopy = event.allDay;
 
             if (!afterDrop && end) {
-                end.add(1, 'days')
+                end.add(1, "days");
             }
 
             if (start) {
@@ -1070,13 +1201,13 @@ class ResourceCalendarView extends View {
                 start = end;
             }
         } else if (
-            start.format('YYYY-DD') !== end.format('YYYY-DD') &&
+            start.format("YYYY-DD") !== end.format("YYYY-DD") &&
             end.unix() - start.unix() >= 86400
         ) {
             event.allDay = true;
 
             if (end.hours() !== 0 || end.minutes() !== 0) {
-                end.add(1, 'days');
+                end.add(1, "days");
             }
         } else {
             event.allDay = false;
@@ -1099,7 +1230,7 @@ class ResourceCalendarView extends View {
 
         const events = [];
 
-        list.forEach(o => {
+        list.forEach((o) => {
             const event = this.convertToFcEvent(o);
             events.push(event);
         });
@@ -1112,11 +1243,11 @@ class ResourceCalendarView extends View {
         const format = this.getDateTime().internalDateTimeFormat;
         const timeZone = this.getDateTime().timeZone;
 
-        const m = timeZone ?
-            moment.tz(date, null, timeZone).utc() :
-            moment.utc(date, null);
+        const m = timeZone
+            ? moment.tz(date, null, timeZone).utc()
+            : moment.utc(date, null);
 
-        return m.format(format) + ':00';
+        return m.format(format) + ":00";
     }
 
     /** @private @return {number} */
@@ -1125,7 +1256,9 @@ class ResourceCalendarView extends View {
             return this.$container.height();
         }
 
-        return this.getHelper().calculateContentContainerHeight(this.$el.find('.calendar'));
+        return this.getHelper().calculateContentContainerHeight(
+            this.$el.find(".calendar"),
+        );
     }
 
     /** @private */
@@ -1136,7 +1269,7 @@ class ResourceCalendarView extends View {
 
         const height = this.getCalculatedHeight();
 
-        this.calendar.setOption('contentHeight', height);
+        this.calendar.setOption("contentHeight", height);
         this.calendar.updateSize();
     }
 
@@ -1147,8 +1280,8 @@ class ResourceCalendarView extends View {
      */
     getResources() {
         return this.userList
-            .filter(user => this.enabledUserIdList.includes(user.id))
-            .map(user => ({
+            .filter((user) => this.enabledUserIdList.includes(user.id))
+            .map((user) => ({
                 id: user.id,
                 title: user.name,
             }));
@@ -1159,14 +1292,14 @@ class ResourceCalendarView extends View {
             this.$container = $(this.options.containerSelector);
         }
 
-        this.$calendar = this.$el.find('div.calendar');
+        this.$calendar = this.$el.find("div.calendar");
 
         // Check if resource plugins are available
         if (!this.resourcePluginsLoaded) {
-            const errorDetail = this.pluginLoadError 
-                ? `<p class="text-danger"><strong>Error:</strong> ${this.getHelper().escapeString(this.pluginLoadError)}</p>` 
-                : '';
-            
+            const errorDetail = this.pluginLoadError
+                ? `<p class="text-danger"><strong>Error:</strong> ${this.getHelper().escapeString(this.pluginLoadError)}</p>`
+                : "";
+
             this.$calendar.html(`
                 <div class="alert alert-warning" style="margin: 20px;">
                     <h4><span class="fas fa-exclamation-triangle"></span> Resource Calendar Not Available</h4>
@@ -1184,28 +1317,29 @@ class ResourceCalendarView extends View {
             return;
         }
 
-        const slotDuration = '00:' + this.slotDuration + ':00';
+        const slotDuration = "00:" + this.slotDuration + ":00";
         const timeFormat = this.getDateTime().timeFormat;
 
         let slotLabelFormat = timeFormat;
 
-        if (~timeFormat.indexOf('a')) {
-            slotLabelFormat = 'h:mma';
-        } else if (~timeFormat.indexOf('A')) {
-            slotLabelFormat = 'h:mmA';
+        if (~timeFormat.indexOf("a")) {
+            slotLabelFormat = "h:mma";
+        } else if (~timeFormat.indexOf("A")) {
+            slotLabelFormat = "h:mmA";
         }
 
         /** @type {CalendarOptions & Object.<string, *>} */
         const options = {
-            schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
-            scrollTime: this.scrollHour + ':00',
+            schedulerLicenseKey: "GPL-My-Project-Is-Open-Source",
+            scrollTime: this.scrollHour + ":00",
             headerToolbar: false,
             slotLabelFormat: slotLabelFormat,
             eventTimeFormat: timeFormat,
-            initialView: this.modeViewMap[this.viewMode] || 'resourceTimeGridDay',
+            initialView:
+                this.modeViewMap[this.viewMode] || "resourceTimeGridDay",
             defaultRangeSeparator: this.rangeSeparator,
             weekNumbers: true,
-            weekNumberCalculation: 'ISO',
+            weekNumberCalculation: "ISO",
             editable: true,
             selectable: true,
             selectMirror: true,
@@ -1213,35 +1347,37 @@ class ResourceCalendarView extends View {
             firstDay: this.getDateTime().weekStart,
             slotEventOverlap: true,
             slotDuration: slotDuration,
-            slotLabelInterval: '01:00',
+            slotLabelInterval: "01:00",
             snapDuration: this.slotDuration * 60 * 1000,
             timeZone: this.getDateTime().timeZone || undefined,
             longPressDelay: 300,
-            eventColor: this.colors[''],
+            eventColor: this.colors[""],
             nowIndicator: true,
-            allDayText: '',
-            weekText: '',
+            allDayText: "",
+            weekText: "",
             resources: this.getResources(),
             resourceLabelContent: (arg) => {
                 const resource = arg.resource;
-                const avatarHtml = this.getHelper().getAvatarHtml(resource.id, 'small', 14) || '';
+                const avatarHtml =
+                    this.getHelper().getAvatarHtml(resource.id, "small", 14) ||
+                    "";
 
                 return {
-                    html: `<span class="resource-label">${avatarHtml} ${this.getHelper().escapeString(resource.title)}</span>`
+                    html: `<span class="resource-label">${avatarHtml} ${this.getHelper().escapeString(resource.title)}</span>`,
                 };
             },
             views: {
                 resourceTimeGridDay: {
-                    dayHeaderFormat: 'ddd DD',
+                    dayHeaderFormat: "ddd DD",
                 },
                 resourceTimeGridWeek: {
-                    dayHeaderFormat: 'ddd DD',
+                    dayHeaderFormat: "ddd DD",
                 },
             },
             windowResize: () => {
                 this.adjustSize();
             },
-            select: info => {
+            select: (info) => {
                 const start = info.startStr;
                 const end = info.endStr;
                 const allDay = info.allDay;
@@ -1254,8 +1390,11 @@ class ResourceCalendarView extends View {
                 const dateEnd = this.convertDateTime(end);
 
                 if (allDay) {
-                    dateStartDate = moment(start).format('YYYY-MM-DD');
-                    dateEndDate = moment(end).clone().add(-1, 'days').format('YYYY-MM-DD');
+                    dateStartDate = moment(start).format("YYYY-MM-DD");
+                    dateEndDate = moment(end)
+                        .clone()
+                        .add(-1, "days")
+                        .format("YYYY-MM-DD");
                 }
 
                 this.createEvent({
@@ -1269,7 +1408,7 @@ class ResourceCalendarView extends View {
 
                 this.calendar.unselect();
             },
-            eventClick: async info => {
+            eventClick: async (info) => {
                 const event = info.event;
                 const scope = event.extendedProps.scope;
                 const recordId = event.extendedProps.recordId;
@@ -1298,17 +1437,20 @@ class ResourceCalendarView extends View {
                         }
                         this.updateModel(model);
                     },
-                    afterDestroy: model => {
+                    afterDestroy: (model) => {
                         this.removeModel(model);
                     },
                 });
             },
             datesSet: () => {
-                this.date = this.dateToMoment(this.calendar.getDate()).format('YYYY-MM-DD');
-                this.trigger('view', this.date, this.mode);
+                this.date = this.dateToMoment(this.calendar.getDate()).format(
+                    "YYYY-MM-DD",
+                );
+                this.trigger("view", this.date, this.mode);
             },
             events: (info, callback) => {
-                const dateTimeFormat = this.getDateTime().internalDateTimeFormat;
+                const dateTimeFormat =
+                    this.getDateTime().internalDateTimeFormat;
 
                 const from = moment.tz(info.startStr, info.timeZone);
                 const to = moment.tz(info.endStr, info.timeZone);
@@ -1318,7 +1460,7 @@ class ResourceCalendarView extends View {
 
                 this.fetchEvents(fromStr, toStr, callback);
             },
-            eventDrop: async info => {
+            eventDrop: async (info) => {
                 const event = info.event;
                 const delta = info.delta;
                 const newResource = info.newResource;
@@ -1367,12 +1509,16 @@ class ResourceCalendarView extends View {
 
                 if (dateStartDate) {
                     const m = this.dateToMoment(dateStartDate).add(delta);
-                    attributes.dateStartDate = m.format(this.getDateTime().internalDateFormat);
+                    attributes.dateStartDate = m.format(
+                        this.getDateTime().internalDateFormat,
+                    );
                 }
 
                 if (dateEndDate) {
                     const m = this.dateToMoment(dateEndDate).add(delta);
-                    attributes.dateEndDate = m.format(this.getDateTime().internalDateFormat);
+                    attributes.dateEndDate = m.format(
+                        this.getDateTime().internalDateFormat,
+                    );
                 }
 
                 // Handle resource change (user reassignment)
@@ -1380,7 +1526,7 @@ class ResourceCalendarView extends View {
                     attributes.assignedUserId = newResource.id;
                 }
 
-                Espo.Ui.notify(this.translate('saving', 'messages'));
+                Espo.Ui.notify(this.translate("saving", "messages"));
 
                 const model = await this.getModelFactory().create(scope);
                 model.id = event.extendedProps.recordId;
@@ -1390,7 +1536,7 @@ class ResourceCalendarView extends View {
                 }
 
                 try {
-                    await model.save(attributes, {patch: true});
+                    await model.save(attributes, { patch: true });
                 } catch (e) {
                     info.revert();
                     return;
@@ -1399,21 +1545,27 @@ class ResourceCalendarView extends View {
                 Espo.Ui.notify();
 
                 // Update event properties
-                event.setExtendedProp('dateStart', attributes.dateStart || dateStart);
-                event.setExtendedProp('dateEnd', attributes.dateEnd || dateEnd);
+                event.setExtendedProp(
+                    "dateStart",
+                    attributes.dateStart || dateStart,
+                );
+                event.setExtendedProp("dateEnd", attributes.dateEnd || dateEnd);
             },
-            eventResize: async info => {
+            eventResize: async (info) => {
                 const event = info.event;
 
                 const attributes = {
                     dateEnd: this.convertDateTime(event.endStr),
                 };
 
-                const duration = moment(event.end).unix() - moment(event.start).unix();
+                const duration =
+                    moment(event.end).unix() - moment(event.start).unix();
 
-                Espo.Ui.notify(this.translate('saving', 'messages'));
+                Espo.Ui.notify(this.translate("saving", "messages"));
 
-                const model = await this.getModelFactory().create(event.extendedProps.scope);
+                const model = await this.getModelFactory().create(
+                    event.extendedProps.scope,
+                );
                 model.id = event.extendedProps.recordId;
 
                 if (this.options.onSave) {
@@ -1421,7 +1573,7 @@ class ResourceCalendarView extends View {
                 }
 
                 try {
-                    await model.save(attributes, {patch: true});
+                    await model.save(attributes, { patch: true });
                 } catch (e) {
                     info.revert();
                     return;
@@ -1429,8 +1581,8 @@ class ResourceCalendarView extends View {
 
                 Espo.Ui.notify();
 
-                event.setExtendedProp('dateEnd', attributes.dateEnd);
-                event.setExtendedProp('duration', duration);
+                event.setExtendedProp("dateEnd", attributes.dateEnd);
+                event.setExtendedProp("duration", duration);
             },
             eventAllow: (info, event) => {
                 if (event.allDay && !info.allDay) {
@@ -1442,7 +1594,7 @@ class ResourceCalendarView extends View {
                 }
 
                 return true;
-            }
+            },
         };
 
         if (!this.options.height) {
@@ -1454,11 +1606,14 @@ class ResourceCalendarView extends View {
         if (this.date) {
             options.initialDate = this.date;
         } else {
-            this.$el.find('button[data-action="today"]').addClass('active');
+            this.$el.find('button[data-action="today"]').addClass("active");
         }
 
         setTimeout(() => {
-            this.calendar = new FullCalendar.Calendar(this.$calendar.get(0), options);
+            this.calendar = new FullCalendar.Calendar(
+                this.$calendar.get(0),
+                options,
+            );
             this.calendar.render();
 
             this.handleScrollToNow();
@@ -1472,7 +1627,12 @@ class ResourceCalendarView extends View {
 
     /** @private */
     handleScrollToNow() {
-        if (!(this.mode === 'resourceTimeGridWeek' || this.mode === 'resourceTimeGridDay')) {
+        if (
+            !(
+                this.mode === "resourceTimeGridWeek" ||
+                this.mode === "resourceTimeGridDay"
+            )
+        ) {
             return;
         }
 
@@ -1480,14 +1640,15 @@ class ResourceCalendarView extends View {
             return;
         }
 
-        const scrollHour = this.getDateTime().getNowMoment().hours() -
-            Math.floor(this.slotDuration * this.scrollToNowSlots / 60);
+        const scrollHour =
+            this.getDateTime().getNowMoment().hours() -
+            Math.floor((this.slotDuration * this.scrollToNowSlots) / 60);
 
         if (scrollHour < 0) {
             return;
         }
 
-        this.calendar.scrollToTime(scrollHour + ':00');
+        this.calendar.scrollToTime(scrollHour + ":00");
     }
 
     /**
@@ -1506,7 +1667,7 @@ class ResourceCalendarView extends View {
         if (
             !values.dateStart &&
             this.date !== this.getDateTime().getToday() &&
-            (this.mode === 'resourceTimeGridDay')
+            this.mode === "resourceTimeGridDay"
         ) {
             values.allDay = true;
             values.dateStartDate = this.date;
@@ -1519,39 +1680,48 @@ class ResourceCalendarView extends View {
             attributes.assignedUserId = values.assignedUserId;
 
             // Find user name from userList
-            const user = this.userList.find(u => u.id === values.assignedUserId);
+            const user = this.userList.find(
+                (u) => u.id === values.assignedUserId,
+            );
             if (user) {
                 attributes.assignedUserName = user.name;
             }
         } else if (this.options.userId) {
             attributes.assignedUserId = this.options.userId;
-            attributes.assignedUserName = this.options.userName || this.options.userId;
+            attributes.assignedUserName =
+                this.options.userName || this.options.userId;
         }
 
-        const scopeList = this.enabledScopeList.filter(it => !this.onlyDateScopeList.includes(it));
+        const scopeList = this.enabledScopeList.filter(
+            (it) => !this.onlyDateScopeList.includes(it),
+        );
 
         Espo.Ui.notifyWait();
 
-        const view = await this.createView('dialog', 'crm:views/calendar/modals/edit', {
-            attributes: attributes,
-            enabledScopeList: scopeList,
-            scopeList: this.scopeList,
-            allDay: values.allDay,
-            dateStartDate: values.dateStartDate,
-            dateEndDate: values.dateEndDate,
-            dateStart: values.dateStart,
-            dateEnd: values.dateEnd,
-        });
+        const view = await this.createView(
+            "dialog",
+            "crm:views/calendar/modals/edit",
+            {
+                attributes: attributes,
+                enabledScopeList: scopeList,
+                scopeList: this.scopeList,
+                allDay: values.allDay,
+                dateStartDate: values.dateStartDate,
+                dateEndDate: values.dateEndDate,
+                dateStart: values.dateStart,
+                dateEnd: values.dateEnd,
+            },
+        );
 
         let added = false;
 
-        this.listenTo(view, 'before:save', () => {
+        this.listenTo(view, "before:save", () => {
             if (this.options.onSave) {
                 this.options.onSave();
             }
         });
 
-        this.listenTo(view, 'after:save', model => {
+        this.listenTo(view, "after:save", (model) => {
             if (!added) {
                 this.addModel(model);
                 added = true;
@@ -1580,24 +1750,25 @@ class ResourceCalendarView extends View {
         const userIdList = this.enabledUserIdList;
 
         if (userIdList.length === 1) {
-            url += '&userId=' + userIdList[0];
+            url += "&userId=" + userIdList[0];
         } else if (userIdList.length > 1) {
-            url += '&userIdList=' + encodeURIComponent(userIdList.join(','));
+            url += "&userIdList=" + encodeURIComponent(userIdList.join(","));
         }
 
-        url += '&scopeList=' + encodeURIComponent(this.enabledScopeList.join(','));
+        url +=
+            "&scopeList=" + encodeURIComponent(this.enabledScopeList.join(","));
 
         // Note: Don't send teamIdList when userIdList is present, as the backend
         // prioritizes teamIdList and ignores userIdList when both are provided.
         // The resource calendar needs specific users, not all team members.
 
-        url += '&agenda=true';
+        url += "&agenda=true";
 
         if (!this.suppressLoadingAlert) {
             Espo.Ui.notifyWait();
         }
 
-        Espo.Ajax.getRequest(url).then(data => {
+        Espo.Ajax.getRequest(url).then((data) => {
             const events = this.convertToFcEvents(data);
 
             callback(events);
@@ -1608,7 +1779,7 @@ class ResourceCalendarView extends View {
         this.fetching = true;
         this.suppressLoadingAlert = false;
 
-        setTimeout(() => this.fetching = false, 50);
+        setTimeout(() => (this.fetching = false), 50);
     }
 
     /** @private @param {import('model').default} model */
@@ -1624,7 +1795,7 @@ class ResourceCalendarView extends View {
 
     /** @private @param {import('model').default} model */
     updateModel(model) {
-        const eventId = model.entityType + '-' + model.id;
+        const eventId = model.entityType + "-" + model.id;
 
         const event = this.calendar.getEventById(eventId);
 
@@ -1642,11 +1813,11 @@ class ResourceCalendarView extends View {
         for (const key in data) {
             if (this.extendedProps.includes(key)) {
                 event.setExtendedProp(key, data[key]);
-            } else if (key === 'start' || key === 'end') {
+            } else if (key === "start" || key === "end") {
                 // Handle start/end separately
-            } else if (key === 'className') {
-                event.setProp('classNames', data[key]);
-            } else if (key === 'resourceId') {
+            } else if (key === "className") {
+                event.setProp("classNames", data[key]);
+            } else if (key === "resourceId") {
                 // Handle resource change
                 const resources = event.getResources();
                 if (resources.length && resources[0].id !== data[key]) {
@@ -1662,13 +1833,15 @@ class ResourceCalendarView extends View {
         }
 
         if (data.start || data.end) {
-            event.setDates(data.start, data.end, {allDay: data.allDay});
+            event.setDates(data.start, data.end, { allDay: data.allDay });
         }
     }
 
     /** @private @param {import('model').default} model */
     removeModel(model) {
-        const event = this.calendar.getEventById(model.entityType + '-' + model.id);
+        const event = this.calendar.getEventById(
+            model.entityType + "-" + model.id,
+        );
 
         if (!event) {
             return;
@@ -1700,14 +1873,17 @@ class ResourceCalendarView extends View {
 
     /** @private @param {string} scope @return {string|undefined} */
     getColorFromScopeName(scope) {
-        const additionalColorList = this.getMetadata().get('clientDefs.Calendar.additionalColorList') || [];
+        const additionalColorList =
+            this.getMetadata().get("clientDefs.Calendar.additionalColorList") ||
+            [];
 
         if (!additionalColorList.length) {
             return;
         }
 
-        const colors = this.getMetadata().get('clientDefs.Calendar.colors') || {};
-        const scopeList = this.getConfig().get('calendarEntityList') || [];
+        const colors =
+            this.getMetadata().get("clientDefs.Calendar.colors") || {};
+        const scopeList = this.getConfig().get("calendarEntityList") || [];
 
         let index = 0;
         let j = 0;
@@ -1743,27 +1919,28 @@ class ResourceCalendarView extends View {
     }
 
     /**
-     * Show resource options modal to select users
+     * Show manage users modal to select users (same as agendaWeek)
      */
     async actionShowResourceOptions() {
-        const viewName = 'global:views/calendar/modals/resource-options';
+        const viewName = "global:views/calendar/modals/manage-users";
 
-        const view = await this.createView('resourceOptions', viewName, {
+        const view = await this.createView("manageUsers", viewName, {
             users: this.userList,
         });
 
-        this.listenTo(view, 'apply', data => {
+        this.listenTo(view, "apply", (data) => {
             this.userList = data.users;
+            this.userFilterList = data.users;
 
             this.storeUserList();
 
             // Update enabled user list - only keep users that are still in the list
-            this.enabledUserIdList = this.enabledUserIdList.filter(id =>
-                data.users.some(u => u.id === id)
+            this.enabledUserIdList = this.enabledUserIdList.filter((id) =>
+                data.users.some((u) => u.id === id),
             );
 
             // Add new users to enabled list
-            data.users.forEach(user => {
+            data.users.forEach((user) => {
                 if (!this.enabledUserIdList.includes(user.id)) {
                     this.enabledUserIdList.push(user.id);
                 }
@@ -1780,10 +1957,10 @@ class ResourceCalendarView extends View {
             if (this.calendar) {
                 // Get current resources and remove them
                 const currentResources = this.calendar.getResources();
-                currentResources.forEach(r => r.remove());
+                currentResources.forEach((r) => r.remove());
 
                 // Add new resources
-                this.getResources().forEach(resource => {
+                this.getResources().forEach((resource) => {
                     this.calendar.addResource(resource);
                 });
 
@@ -1791,8 +1968,11 @@ class ResourceCalendarView extends View {
                 this.calendar.refetchEvents();
             }
 
-            // Re-render to update the dropdown
-            this.reRender();
+            // Update mode buttons with new user list
+            if (this.hasView("modeButtons")) {
+                const modeButtons = this.getModeButtonsView();
+                modeButtons.updateUserFilterList(data.users);
+            }
         });
 
         await view.render();
@@ -1800,3 +1980,4 @@ class ResourceCalendarView extends View {
 }
 
 export default ResourceCalendarView;
+

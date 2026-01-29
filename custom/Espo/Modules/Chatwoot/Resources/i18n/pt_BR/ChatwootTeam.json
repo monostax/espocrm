@@ -3,27 +3,24 @@
         "name": "Nome do Time",
         "description": "Descrição",
         "allowAutoAssign": "Permitir Atribuição Automática",
-        "account": "Conta Chatwoot",
-        "chatwootTeamId": "ID do Time Chatwoot",
+        "account": "Chat / Conta",
+        "chatwootTeamId": "Chat / Time (ID)",
         "isMember": "É Membro",
-        "chatwootAgents": "Chatwoot / Agentes"
+        "chatwootAgents": "Chat / Agentes"
     },
     "links": {
-        "account": "Chatwoot / Conta",
-        "chatwootAgents": "Chatwoot / Agentes",
+        "account": "Chat / Conta",
+        "chatwootAgents": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {
-        "Create ChatwootTeam": "Criar Time Chatwoot"
+        "Create ChatwootTeam": "Criar Chat / Time"
     },
     "tooltips": {
         "allowAutoAssign": "Se esta configuração estiver ativada, o sistema atribuirá automaticamente a conversa a um agente do time ao atribuir a conversa ao time.",
-        "chatwootTeamId": "O ID do time no Chatwoot. Isso é definido automaticamente quando o time é sincronizado.",
-        "isMember": "Indica se o usuário atual é membro deste time no Chatwoot."
+        "chatwootTeamId": "O ID do time no Chat. Isso é definido automaticamente quando o time é sincronizado.",
+        "isMember": "Indica se o usuário atual é membro deste time no Chat."
     }
 }
-
-
-

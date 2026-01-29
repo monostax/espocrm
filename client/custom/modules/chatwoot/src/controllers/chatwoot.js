@@ -37,16 +37,16 @@ class ChatwootController extends Controller {
     actionIndex(options) {
         console.log(
             "Chatwoot Controller: actionIndex called with options:",
-            options
+            options,
         );
         console.log(
             "Chatwoot Controller: All option keys:",
-            Object.keys(options || {})
+            Object.keys(options || {}),
         );
         console.log("Chatwoot Controller: options.cwPath:", options?.cwPath);
         console.log(
             "Chatwoot Controller: Full window.location.hash:",
-            window.location.hash
+            window.location.hash,
         );
 
         // Parse cwPath directly from the hash since EspoCRM router has issues with slashes
@@ -64,7 +64,7 @@ class ChatwootController extends Controller {
                 } catch (e) {
                     console.warn(
                         "Chatwoot Controller: Failed to decode cwPath:",
-                        e
+                        e,
                     );
                 }
             }
@@ -80,23 +80,20 @@ class ChatwootController extends Controller {
         }
 
         // Get SSO URL for authentication (required for first load)
-        const chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+        const chatSsoUrl = this.appParams.get("chatSsoUrl");
         const chatwootFrontendUrl = this.appParams.get("chatwootFrontendUrl");
-        console.log(
-            "Chatwoot Controller: SSO URL available:",
-            !!chatwootSsoUrl
-        );
+        console.log("Chatwoot Controller: SSO URL available:", !!chatSsoUrl);
 
         this.main("chatwoot:views/chatwoot/index", {
             cwPath: cwPath,
-            chatwootSsoUrl: chatwootSsoUrl,
+            chatSsoUrl: chatSsoUrl,
             chatwootFrontendUrl: chatwootFrontendUrl,
         });
     }
 
     /**
      * Resolve template variables in a path string.
-     * Supports variables like {{chatwootAccountId}} and {{chatwootSsoUrl}}
+     * Supports variables like {{chatwootAccountId}} and {{chatSsoUrl}}
      *
      * @param {string} path - The path with template variables
      * @returns {string} - The resolved path
@@ -111,14 +108,14 @@ class ChatwootController extends Controller {
 
             if (value === null || value === undefined) {
                 console.warn(
-                    `Chatwoot Controller: Template variable {{${variableName}}} not found in AppParams`
+                    `Chatwoot Controller: Template variable {{${variableName}}} not found in AppParams`,
                 );
                 return match; // Keep the original {{variableName}} if not found
             }
 
             console.log(
                 `Chatwoot Controller: Resolved {{${variableName}}} to:`,
-                value
+                value,
             );
             return value;
         });
@@ -130,46 +127,46 @@ class ChatwootController extends Controller {
         // Get the Chatwoot account ID from AppParams (NOT config!)
         // AppParams are user-specific values returned from /api/v1/App/user
         const chatwootAccountId = this.appParams.get("chatwootAccountId");
-        const chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+        const chatSsoUrl = this.appParams.get("chatSsoUrl");
         const chatwootFrontendUrl = this.appParams.get("chatwootFrontendUrl");
 
         // Debug: Show what values we have
         console.log("Chatwoot Controller: AppParam values:", {
             chatwootAccountId: chatwootAccountId,
-            chatwootSsoUrl: chatwootSsoUrl,
+            chatSsoUrl: chatSsoUrl,
             chatwootFrontendUrl: chatwootFrontendUrl,
-            hasSsoUrl: !!chatwootSsoUrl,
+            hasSsoUrl: !!chatSsoUrl,
             typeOfAccountId: typeof chatwootAccountId,
-            typeOfSsoUrl: typeof chatwootSsoUrl,
+            typeOfSsoUrl: typeof chatSsoUrl,
         });
 
         if (!chatwootAccountId) {
             console.error(
-                "Chatwoot Controller: No chatwootAccountId found in AppParams"
+                "Chatwoot Controller: No chatwootAccountId found in AppParams",
             );
             console.error(
-                "Chatwoot Controller: This means one of the following:"
+                "Chatwoot Controller: This means one of the following:",
             );
             console.error(
-                "  1. Your EspoCRM user is not linked to a ChatwootUser record"
+                "  1. Your EspoCRM user is not linked to a ChatwootUser record",
             );
             console.error(
-                "  2. The ChatwootUser record doesn't have an accountId"
+                "  2. The ChatwootUser record doesn't have an accountId",
             );
             console.error(
-                "  3. The ChatwootAccount record doesn't have chatwootAccountId field set"
+                "  3. The ChatwootAccount record doesn't have chatwootAccountId field set",
             );
             console.error(
-                "Chatwoot Controller: Check the EspoCRM logs for more details from ChatwootAccountId AppParam"
+                "Chatwoot Controller: Check the EspoCRM logs for more details from ChatwootAccountId AppParam",
             );
             console.error(
-                "Chatwoot Controller: Make sure you've rebuilt EspoCRM after fixing data (Administration → Rebuild)"
+                "Chatwoot Controller: Make sure you've rebuilt EspoCRM after fixing data (Administration → Rebuild)",
             );
 
             // Fallback: Load with SSO URL only
             this.main("chatwoot:views/chatwoot/index", {
                 cwPath: "",
-                chatwootSsoUrl: chatwootSsoUrl,
+                chatSsoUrl: chatSsoUrl,
                 chatwootFrontendUrl: chatwootFrontendUrl,
             });
             return;
@@ -179,17 +176,16 @@ class ChatwootController extends Controller {
         const cwPath = `/app/accounts/${chatwootAccountId}/inbox-view`;
         console.log(
             "Chatwoot Controller: Navigating to inbox with account ID:",
-            chatwootAccountId
+            chatwootAccountId,
         );
         console.log("Chatwoot Controller: Full path:", cwPath);
 
         this.main("chatwoot:views/chatwoot/index", {
             cwPath: cwPath,
-            chatwootSsoUrl: chatwootSsoUrl,
+            chatSsoUrl: chatSsoUrl,
             chatwootFrontendUrl: chatwootFrontendUrl,
         });
     }
 }
 
 export default ChatwootController;
-

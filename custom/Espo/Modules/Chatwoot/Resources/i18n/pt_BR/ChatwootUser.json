@@ -5,23 +5,23 @@
         "email": "Email",
         "password": "Senha",
         "platform": "Plataforma",
-        "chatwootAccount": "Conta Chatwoot",
+        "chatwootAccount": "Chat / Conta",
         "assignedUser": "Usuário Proprietário",
         "role": "Função",
-        "chatwootUserId": "ID do Usuário Chatwoot",
+        "chatwootUserId": "Chat / Usuário (ID)",
         "teams": "Times / Contas"
     },
     "links": {
-        "platform": "Chatwoot / Plataforma",
-        "chatwootAccount": "Chatwoot / Conta",
+        "platform": "Chat / Plataforma",
+        "chatwootAccount": "Chat / Conta",
         "assignedUser": "Usuário Proprietário",
-        "agents": "Chatwoot / Agentes",
+        "agents": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {
-        "Create ChatwootUser": "Criar Usuário Chatwoot"
+        "Create ChatwootUser": "Criar Chat / Usuário"
     },
     "options": {
         "role": {
@@ -30,9 +30,8 @@
         }
     },
     "tooltips": {
-        "assignedUser": "Usuário do CRM que será vinculado a este usuário Chatwoot. Cada usuário CRM pode ter apenas um usuário Chatwoot.",
-        "chatwootUserId": "ID do usuário criado no Chatwoot. Este campo é preenchido automaticamente após a criação.",
-        "password": "Senha do usuário para acesso ao Chatwoot. Mínimo 6 caracteres."
+        "assignedUser": "Usuário do CRM que será vinculado a este usuário de Chat. Cada usuário CRM pode ter apenas um usuário de Chat.",
+        "chatwootUserId": "ID do usuário criado no Chat. Este campo é preenchido automaticamente após a criação.",
+        "password": "Senha do usuário para acesso ao Chat. Mínimo 6 caracteres."
     }
 }
-

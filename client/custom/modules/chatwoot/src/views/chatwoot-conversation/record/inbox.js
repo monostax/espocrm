@@ -77,7 +77,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 const agentName = $(e.currentTarget).data("agent-name");
                 this.actionChangeAgent(agentId, agentName);
             },
-            'click .inbox-agent-dropdown .dropdown-toggle': function (e) {
+            "click .inbox-agent-dropdown .dropdown-toggle": function (e) {
                 // Load agents when dropdown is opened
                 this.loadAgentsForDropdown();
             },
@@ -137,17 +137,17 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 noSelectionMessage: this.translate(
                     "Select a conversation to view",
                     "messages",
-                    "ChatwootConversation"
+                    "ChatwootConversation",
                 ),
                 noConversationsMessage: this.translate(
                     "No conversations",
                     "messages",
-                    "ChatwootConversation"
+                    "ChatwootConversation",
                 ),
                 conversationsLabel: this.translate(
                     "Conversations",
                     "labels",
-                    "ChatwootConversation"
+                    "ChatwootConversation",
                 ),
             };
         },
@@ -159,11 +159,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             Dep.prototype.setup.call(this);
 
             // Get Chatwoot params
-            this.chatwootSsoUrl =
-                this.getHelper().getAppParam("chatwootSsoUrl");
-            this.chatwootBaseUrl =
-                this.getHelper().getAppParam("chatwootFrontendUrl") ||
-                "https://chatwoot.am.monostax.dev.localhost";
+            this.chatSsoUrl = this.getHelper().getAppParam("chatSsoUrl");
+            this.chatwootBaseUrl = this.getHelper().getAppParam(
+                "chatwootFrontendUrl",
+            );
 
             // Get WebSocket manager
             this.webSocketManager = this.getHelper().webSocketManager;
@@ -192,9 +191,9 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     this.chatwootBaseUrl &&
                     !event.origin.includes(
                         new URL(this.chatwootBaseUrl).hostname.replace(
-                            "chatwoot.",
-                            ""
-                        )
+                            "chat.",
+                            "",
+                        ),
                     )
                 ) {
                     return;
@@ -205,17 +204,17 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 // Handle request for intended URL
                 if (event.data.type === "CHATWOOT_REQUEST_INTENDED_URL") {
                     console.log(
-                        "Inbox: Received CHATWOOT_REQUEST_INTENDED_URL from Chatwoot"
+                        "Inbox: Received CHATWOOT_REQUEST_INTENDED_URL from Chatwoot",
                     );
 
                     // Check for backup intended URL
                     const backupUrl = localStorage.getItem(
-                        "chatwoot_intended_url_backup"
+                        "chatwoot_intended_url_backup",
                     );
                     if (backupUrl) {
                         console.log(
                             "Inbox: Sending intended URL to Chatwoot:",
-                            backupUrl
+                            backupUrl,
                         );
 
                         const $iframe = this.$el.find(".inbox-iframe")[0];
@@ -227,12 +226,12 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                         path: backupUrl,
                                         timestamp: Date.now(),
                                     },
-                                    this.chatwootBaseUrl
+                                    this.chatwootBaseUrl,
                                 );
                             } catch (e) {
                                 console.error(
                                     "Inbox: Failed to send intended URL:",
-                                    e
+                                    e,
                                 );
                             }
                         }
@@ -249,7 +248,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 if (this._chatwootMessageHandler) {
                     window.removeEventListener(
                         "message",
-                        this._chatwootMessageHandler
+                        this._chatwootMessageHandler,
                     );
                 }
             });
@@ -272,10 +271,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 (topic, data) => {
                     console.log(
                         "Inbox: Received chatwootConversationUpdate",
-                        data
+                        data,
                     );
                     this.handleWebSocketUpdate(data);
-                }
+                },
             );
 
             // Subscribe to generic recordUpdate for ChatwootConversation
@@ -284,10 +283,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 (topic, data) => {
                     console.log(
                         "Inbox: Received recordUpdate.ChatwootConversation",
-                        data
+                        data,
                     );
                     this.handleWebSocketUpdate(data);
-                }
+                },
             );
 
             this.isWebSocketSubscribed = true;
@@ -378,16 +377,16 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             const label = this.translateOption(
                 status,
                 "status",
-                "ChatwootConversation"
+                "ChatwootConversation",
             );
             const $btn = this.$el.find(
-                ".inbox-status-dropdown .inbox-status-label"
+                ".inbox-status-dropdown .inbox-status-label",
             );
             $btn.html(
                 '<span class="inbox-status-indicator status-' +
                     status +
                     '"></span>' +
-                    label
+                    label,
             );
         },
 
@@ -410,11 +409,19 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
          * Update the agent label in the toolbar
          */
         updateAgentLabel: function (agentName) {
-            const $label = this.$el.find(".inbox-agent-dropdown .inbox-agent-label");
+            const $label = this.$el.find(
+                ".inbox-agent-dropdown .inbox-agent-label",
+            );
             if (agentName) {
                 $label.text(agentName);
             } else {
-                $label.text(this.translate("Unassigned", "labels", "ChatwootConversation"));
+                $label.text(
+                    this.translate(
+                        "Unassigned",
+                        "labels",
+                        "ChatwootConversation",
+                    ),
+                );
             }
         },
 
@@ -431,22 +438,27 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             // Show loading state
             $menu.html(
                 '<li class="inbox-agent-loading"><a role="button"><i class="fas fa-spinner fa-spin"></i> ' +
-                this.translate("Loading...", "messages") +
-                '</a></li>'
+                    this.translate("Loading...", "messages") +
+                    "</a></li>",
             );
 
             // Fetch agents from server
-            const url = "ChatwootConversation/action/agentsForAssignment?id=" + model.id;
-            
+            const url =
+                "ChatwootConversation/action/agentsForAssignment?id=" +
+                model.id;
+
             Espo.Ajax.getRequest(url)
                 .then((response) => {
-                    this.populateAgentDropdown(response.list || [], currentAssigneeId);
+                    this.populateAgentDropdown(
+                        response.list || [],
+                        currentAssigneeId,
+                    );
                 })
                 .catch(() => {
                     $menu.html(
                         '<li><a role="button" class="text-danger">' +
-                        this.translate("Error") +
-                        '</a></li>'
+                            this.translate("Error") +
+                            "</a></li>",
                     );
                 });
         },
@@ -460,10 +472,16 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             // Add "Unassigned" option
             const unassignedClass = !currentAssigneeId ? "active" : "";
-            html += '<li><a role="button" class="action ' + unassignedClass + '" data-action="changeAgent" data-agent-id="" data-agent-name="">';
+            html +=
+                '<li><a role="button" class="action ' +
+                unassignedClass +
+                '" data-action="changeAgent" data-agent-id="" data-agent-name="">';
             html += '<span class="agent-availability offline"></span>';
-            html += '<span class="agent-name">' + this.translate("Unassigned", "labels", "ChatwootConversation") + '</span>';
-            html += '</a></li>';
+            html +=
+                '<span class="agent-name">' +
+                this.translate("Unassigned", "labels", "ChatwootConversation") +
+                "</span>";
+            html += "</a></li>";
 
             if (agents.length > 0) {
                 html += '<li class="divider"></li>';
@@ -476,13 +494,24 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 const displayName = agent.availableName || agent.name;
                 const status = agent.availabilityStatus || "offline";
 
-                html += '<li><a role="button" class="action ' + activeClass + '" data-action="changeAgent" data-agent-id="' + agent.id + '" data-agent-name="' + this.escapeHtml(displayName) + '">';
-                html += '<span class="agent-availability ' + status + '"></span>';
-                html += '<span class="agent-name">' + this.escapeHtml(displayName) + '</span>';
+                html +=
+                    '<li><a role="button" class="action ' +
+                    activeClass +
+                    '" data-action="changeAgent" data-agent-id="' +
+                    agent.id +
+                    '" data-agent-name="' +
+                    this.escapeHtml(displayName) +
+                    '">';
+                html +=
+                    '<span class="agent-availability ' + status + '"></span>';
+                html +=
+                    '<span class="agent-name">' +
+                    this.escapeHtml(displayName) +
+                    "</span>";
                 if (agent.role === "administrator") {
                     html += '<span class="agent-role">Admin</span>';
                 }
-                html += '</a></li>';
+                html += "</a></li>";
             });
 
             $menu.html(html);
@@ -515,11 +544,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             model
                 .save(
-                    { 
+                    {
                         assigneeId: newAssigneeId,
-                        assigneeName: agentName || null
-                    }, 
-                    { patch: true }
+                        assigneeName: agentName || null,
+                    },
+                    { patch: true },
                 )
                 .then(() => {
                     Espo.Ui.success(this.translate("Saved"));
@@ -581,7 +610,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             // Update iframe height
             this.updateHeight();
             $(window).on("resize.inboxView" + this.cid, () =>
-                this.updateHeight()
+                this.updateHeight(),
             );
         },
 
@@ -618,7 +647,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 const inboxName = model.get("inboxName") || "";
                 const channelType = this.normalizeChannelType(
                     model.get("inboxChannelType"),
-                    inboxName
+                    inboxName,
                 );
                 const lastMessageContent =
                     model.get("lastMessageContent") || "";
@@ -637,7 +666,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     hasMessage: !!lastMessageContent,
                     messagePreview: this.truncateMessage(
                         lastMessageContent,
-                        60
+                        60,
                     ),
                     lastMessageType: lastMessageType,
                     isIncoming: lastMessageType === "incoming",
@@ -646,7 +675,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     statusLabel: this.translateOption(
                         status,
                         "status",
-                        "ChatwootConversation"
+                        "ChatwootConversation",
                     ),
                     inboxName: model.get("inboxName"),
                     chatwootConversationId: model.get("chatwootConversationId"),
@@ -683,7 +712,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 this.loadConversationInIframe(model);
 
                 // Update chat toolbar with current status and assignee
-                this.updateChatToolbar(true, model.get("status"), model.get("assigneeName"));
+                this.updateChatToolbar(
+                    true,
+                    model.get("status"),
+                    model.get("assigneeName"),
+                );
 
                 // Update tab counts
                 this.updateTabCounts(model);
@@ -710,7 +743,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 model.id,
                 (count) => {
                     this.setTabCount("opportunities", count);
-                }
+                },
             );
 
             // Fetch counts for agendamentos
@@ -720,18 +753,13 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 model.id,
                 (count) => {
                     this.setTabCount("agendamentos", count);
-                }
+                },
             );
 
             // Fetch counts for tasks
-            this.fetchRelatedCount(
-                "tasks",
-                "Task",
-                model.id,
-                (count) => {
-                    this.setTabCount("tasks", count);
-                }
-            );
+            this.fetchRelatedCount("tasks", "Task", model.id, (count) => {
+                this.setTabCount("tasks", count);
+            });
         },
 
         /**
@@ -755,7 +783,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
          */
         setTabCount: function (tabKey, count) {
             const $badge = this.$el.find(
-                '.inbox-tab-count[data-scope="' + tabKey + '"]'
+                '.inbox-tab-count[data-scope="' + tabKey + '"]',
             );
 
             if (count > 0) {
@@ -776,7 +804,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             console.log("loadConversationInIframe:", {
                 chatwootConversationId: chatwootConversationId,
                 chatwootAccountId: chatwootAccountId,
-                chatwootSsoUrl: this.chatwootSsoUrl,
+                chatSsoUrl: this.chatSsoUrl,
                 modelId: model.id,
             });
 
@@ -799,8 +827,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             let chatwootUrl;
 
-            if (this.chatwootSsoUrl && !hasSsoAuthenticated) {
-                chatwootUrl = this.chatwootSsoUrl;
+            if (this.chatSsoUrl && !hasSsoAuthenticated) {
+                chatwootUrl = this.chatSsoUrl;
                 sessionStorage.setItem(this.CHATWOOT_SSO_AUTH_KEY, "true");
                 this.pendingNavigation = cwPath;
 
@@ -864,16 +892,16 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                     path: pendingPath,
                                     timestamp: Date.now(),
                                 },
-                                this.chatwootBaseUrl
+                                this.chatwootBaseUrl,
                             );
                             console.log(
                                 "Inbox: Sent SAVE_INTENDED_URL to Chatwoot:",
-                                pendingPath
+                                pendingPath,
                             );
                         } catch (e) {
                             console.error(
                                 "Inbox: Failed to send SAVE_INTENDED_URL:",
-                                e
+                                e,
                             );
                         }
                     }
@@ -909,7 +937,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 this.translate(
                     "Unable to load conversation",
                     "messages",
-                    "ChatwootConversation"
+                    "ChatwootConversation",
                 );
 
             $placeholder
@@ -917,7 +945,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     '<i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px;"></i>' +
                         '<p style="color: #6b7280;">' +
                         message +
-                        "</p>"
+                        "</p>",
                 )
                 .show();
             this.$el.find(".inbox-iframe").hide();
@@ -1108,8 +1136,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             // Get the link name based on scope
             const linkName =
-                scope === "Opportunity" ? "opportunities" : 
-                scope === "CAgendamento" ? "cAgendamentos" : "tasks";
+                scope === "Opportunity"
+                    ? "opportunities"
+                    : scope === "CAgendamento"
+                      ? "cAgendamentos"
+                      : "tasks";
 
             // Use the relationship URL to fetch related records
             // URL format: ChatwootConversation/{id}/{link}
@@ -1127,7 +1158,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 const searchManager = new SearchManager(collection, {
                     defaultData:
                         this.getMetadata().get(
-                            "clientDefs." + scope + ".defaultFilterData"
+                            "clientDefs." + scope + ".defaultFilterData",
                         ) || {},
                 });
                 searchManager.scope = scope;
@@ -1156,7 +1187,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             collection.reset();
                             collection.fetch();
                         });
-                    }
+                    },
                 );
 
                 // Create the list view
@@ -1190,7 +1221,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                 {
                                     message: this.translate(
                                         "unlinkRecordConfirmation",
-                                        "messages"
+                                        "messages",
                                     ),
                                     confirmText: this.translate("Unlink"),
                                 },
@@ -1201,7 +1232,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                         id: id,
                                     }).then(() => {
                                         Espo.Ui.success(
-                                            this.translate("Unlinked")
+                                            this.translate("Unlinked"),
                                         );
                                         collection.fetch();
 
@@ -1210,8 +1241,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                             viewKey === "opportunities"
                                                 ? "opportunities"
                                                 : viewKey === "agendamentos"
-                                                ? "cAgendamentos"
-                                                : "tasks";
+                                                  ? "cAgendamentos"
+                                                  : "tasks";
                                         this.fetchRelatedCount(
                                             countKey,
                                             scope,
@@ -1219,18 +1250,18 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                             (count) => {
                                                 this.setTabCount(
                                                     viewKey,
-                                                    count
+                                                    count,
                                                 );
-                                            }
+                                            },
                                         );
                                     });
-                                }
+                                },
                             );
                         };
 
                         view.render();
                         collection.fetch();
-                    }
+                    },
                 );
             });
         },
@@ -1301,10 +1332,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             model.id,
                             (count) => {
                                 this.setTabCount("opportunities", count);
-                            }
+                            },
                         );
                     });
-                }
+                },
             );
         },
 
@@ -1356,10 +1387,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             model.id,
                             (count) => {
                                 this.setTabCount("agendamentos", count);
-                            }
+                            },
                         );
                     });
-                }
+                },
             );
         },
 
@@ -1402,10 +1433,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             model.id,
                             (count) => {
                                 this.setTabCount("tasks", count);
-                            }
+                            },
                         );
                     });
-                }
+                },
             );
         },
 
@@ -1416,7 +1447,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             const model = this.getSelectedModel();
             if (!model) return;
 
-            this.getRouter().navigate("#ChatwootConversation/view/" + model.id, { trigger: true });
+            this.getRouter().navigate(
+                "#ChatwootConversation/view/" + model.id,
+                { trigger: true },
+            );
         },
 
         /**
@@ -1431,18 +1465,24 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             this.confirm(
                 {
-                    message: this.translate("removeRecordConfirmation", "messages"),
+                    message: this.translate(
+                        "removeRecordConfirmation",
+                        "messages",
+                    ),
                     confirmText: this.translate("Remove"),
                 },
                 () => {
                     Espo.Ui.notify(this.translate("Removing..."));
 
                     // Trigger optimistic UI update for navbar badges
-                    $(document).trigger("chatwoot:conversation:removed", { status: status });
+                    $(document).trigger("chatwoot:conversation:removed", {
+                        status: status,
+                    });
 
-                    model.destroy({
-                        wait: true,
-                    })
+                    model
+                        .destroy({
+                            wait: true,
+                        })
                         .then(() => {
                             Espo.Ui.success(this.translate("Removed"));
 
@@ -1466,9 +1506,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                         .catch(() => {
                             Espo.Ui.error(this.translate("Error"));
                             // Revert optimistic update on error by refreshing badges
-                            $(document).trigger("chatwoot:conversation:badges:refresh");
+                            $(document).trigger(
+                                "chatwoot:conversation:badges:refresh",
+                            );
                         });
-                }
+                },
             );
         },
 
@@ -1480,7 +1522,7 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             if (this.isWebSocketSubscribed && this.webSocketManager) {
                 this.webSocketManager.unsubscribe("chatwootConversationUpdate");
                 this.webSocketManager.unsubscribe(
-                    "recordUpdate.ChatwootConversation"
+                    "recordUpdate.ChatwootConversation",
                 );
                 console.log("Inbox: WebSocket subscriptions removed");
             }

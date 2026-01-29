@@ -5,12 +5,12 @@
         "status": "Status",
         "channelType": "Channel Type",
         "wahaPlatform": "WAHA Platform",
-        "chatwootAccount": "Chatwoot Account",
+        "chatwootAccount": "Chat / Account",
         "wahaSessionName": "WAHA Session",
         "wahaSessionId": "WAHA Session ID",
         "wahaAppId": "WAHA App ID",
-        "chatwootInboxId": "Chatwoot Inbox ID",
-        "chatwootInboxIdentifier": "Chatwoot Inbox Identifier",
+        "chatwootInboxId": "Chat / Inbox ID",
+        "chatwootInboxIdentifier": "Chat / Inbox Identifier",
         "whatsappId": "WhatsApp ID",
         "whatsappName": "WhatsApp Name",
         "errorMessage": "Error Message",
@@ -21,11 +21,11 @@
     },
     "links": {
         "wahaPlatform": "WAHA Platform",
-        "chatwootAccount": "Chatwoot Account",
+        "chatwootAccount": "Chat / Account",
         "team": "Team"
     },
     "labels": {
-        "Create ChatwootInboxIntegration": "Create Inbox Integration",
+        "Create ChatwootInboxIntegration": "Create Chat / Connection",
         "WhatsApp Connection": "WhatsApp Connection",
         "Connection Details": "Connection Details",
         "Error": "Error",
@@ -37,7 +37,7 @@
         "Channel is disconnected": "Channel is disconnected. Click Reconnect to connect again.",
         "Channel failed": "Channel setup failed. Check error message below.",
         "Waiting for QR scan": "Scan the QR Code with WhatsApp to connect",
-        "Creating resources": "Creating WhatsApp session and Chatwoot inbox...",
+        "Creating resources": "Creating WhatsApp session and Chat / Connection...",
         "Connecting": "Connecting to WhatsApp...",
         "Loading QR Code": "Loading QR Code...",
         "Scan QR Code with WhatsApp": "Scan QR Code with WhatsApp"
@@ -70,8 +70,9 @@
         "channelDisconnected": "Channel disconnected.",
         "channelFailed": "Channel setup failed.",
         "confirmDisconnect": "Are you sure you want to disconnect this channel? The WhatsApp session will be stopped.",
-        "confirmActivate": "This will create a WAHA session and Chatwoot inbox. Continue?",
+        "confirmActivate": "This will create a WAHA session and Chat / Inbox. Continue?",
         "noWahaPlatform": "Please select a WAHA Platform.",
-        "noChatwootAccount": "Please select a Chatwoot Account."
+        "noChatwootAccount": "Please select a Chat / Account."
     }
 }
+

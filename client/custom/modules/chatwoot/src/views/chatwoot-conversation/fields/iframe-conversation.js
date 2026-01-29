@@ -119,10 +119,10 @@ class IframeConversationFieldView extends BaseFieldView {
         this.chatwootAccountId = this.appParams.get("chatwootAccountId");
 
         // Get SSO URL for authentication
-        this.chatwootSsoUrl = this.appParams.get("chatwootSsoUrl");
+        this.chatSsoUrl = this.appParams.get("chatSsoUrl");
 
         // Get frontend URL from AppParams (from ChatwootPlatform)
-        this.chatwootBaseUrl = this.appParams.get("chatwootFrontendUrl") || "https://chatwoot.am.monostax.dev.localhost";
+        this.chatwootBaseUrl = this.appParams.get("chatwootFrontendUrl");
 
         // Setup listener for chatwoot route changes
         this.setupChatwootListener();
@@ -167,11 +167,11 @@ class IframeConversationFieldView extends BaseFieldView {
                 hasConversation: false,
                 errorMessage: !this.chatwootAccountId
                     ? this.translate(
-                          "Your user is not linked to a Chatwoot account"
+                          "Your user is not linked to a Chat / Account",
                       )
                     : !chatwootConversationId
-                    ? this.translate("No conversation ID available")
-                    : null,
+                      ? this.translate("No conversation ID available")
+                      : null,
             };
         }
 
@@ -182,11 +182,11 @@ class IframeConversationFieldView extends BaseFieldView {
 
         // For first load, use SSO URL to authenticate
         if (
-            this.chatwootSsoUrl &&
+            this.chatSsoUrl &&
             !IframeConversationFieldView.hasSsoAuthenticated()
         ) {
             // Use SSO URL for authentication
-            chatwootUrl = this.chatwootSsoUrl;
+            chatwootUrl = this.chatSsoUrl;
             IframeConversationFieldView.setSsoAuthenticated();
 
             // Store pending navigation for after auth
@@ -219,7 +219,7 @@ class IframeConversationFieldView extends BaseFieldView {
                 const padding = 40; // Some padding from bottom
                 const availableHeight = Math.max(
                     400,
-                    windowHeight - containerOffset - padding
+                    windowHeight - containerOffset - padding,
                 );
                 $iframe.css("height", availableHeight + "px");
             }
@@ -259,4 +259,3 @@ class IframeConversationFieldView extends BaseFieldView {
 }
 
 export default IframeConversationFieldView;
-

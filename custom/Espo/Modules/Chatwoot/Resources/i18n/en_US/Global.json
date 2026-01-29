@@ -1,29 +1,29 @@
 {
     "scopeNames": {
-        "ChatwootAccount": "Chatwoot / Account",
-        "ChatwootContact": "Chatwoot - Contact",
-        "ChatwootPlatform": "Chatwoot / Platform",
-        "ChatwootUser": "Chatwoot / User",
-        "ChatwootTeam": "Chatwoot - Team",
+        "ChatwootAccount": "Chat / Account",
+        "ChatwootContact": "Chat / Contact",
+        "ChatwootPlatform": "Chat / Platform",
+        "ChatwootUser": "Chat / User",
+        "ChatwootTeam": "Chat / Team",
         "ChatwootSyncState": "Sync State",
-        "ChatwootConversation": "Chatwoot / Conversation",
-        "ChatwootInboxIntegration": "Chatwoot / Inbox Integration",
-        "ChatwootAgent": "Chatwoot / Agent",
-        "ChatwootAccountWebhook": "Chatwoot / Account Webhook",
-        "ChatwootMessage": "Chatwoot / Message"
+        "ChatwootConversation": "Chat / Conversation",
+        "ChatwootInboxIntegration": "Chat / Connection",
+        "ChatwootAgent": "Chat / Agent",
+        "ChatwootAccountWebhook": "Chat / Account Webhook",
+        "ChatwootMessage": "Chat / Message"
     },
     "scopeNamesPlural": {
-        "ChatwootAccount": "Chatwoot / Accounts",
-        "ChatwootContact": "Chatwoot - Contacts",
-        "ChatwootPlatform": "Chatwoot / Platforms",
-        "ChatwootUser": "Chatwoot / Users",
-        "ChatwootTeam": "Chatwoot - Teams",
+        "ChatwootAccount": "Chat / Accounts",
+        "ChatwootContact": "Chat / Contacts",
+        "ChatwootPlatform": "Chat / Platforms",
+        "ChatwootUser": "Chat / Users",
+        "ChatwootTeam": "Chat / Teams",
         "ChatwootSyncState": "Sync States",
-        "ChatwootConversation": "Chatwoot / Conversations",
-        "ChatwootInboxIntegration": "Chatwoot / Inbox Integrations",
-        "ChatwootAgent": "Chatwoot / Agents",
-        "ChatwootAccountWebhook": "Chatwoot / Account Webhooks",
-        "ChatwootMessage": "Chatwoot / Messages"
+        "ChatwootConversation": "Chat / Conversations",
+        "ChatwootInboxIntegration": "Chat / Connections",
+        "ChatwootAgent": "Chat / Agents",
+        "ChatwootAccountWebhook": "Chat / Account Webhooks",
+        "ChatwootMessage": "Chat / Messages"
     },
     "navbarTabs": {
         "Conversations": "Conversations",
@@ -41,4 +41,3 @@
         "inbox": "Inbox"
     }
 }
-

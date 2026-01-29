@@ -14,12 +14,11 @@
         "teams": "Teams"
     },
     "labels": {
-        "Create ChatwootPlatform": "Create Chatwoot Platform"
+        "Create ChatwootPlatform": "Create Chat / Platform"
     },
     "tooltips": {
-        "frontendUrl": "User-facing URL of the Chatwoot platform (e.g., https://chatwoot.example.com). Used for SSO redirects and iframe embedding.",
-        "backendUrl": "API endpoint URL of the Chatwoot platform (e.g., https://chatwoot-api.example.com). Used for all API calls.",
-        "accessToken": "Platform API access token for Chatwoot. Used to create and manage accounts."
+        "frontendUrl": "User-facing URL of the Chat / Platform (e.g., https://chat.example.com). Used for SSO redirects and iframe embedding.",
+        "backendUrl": "API endpoint URL of the Chat / Platform (e.g., https://chat-api.example.com). Used for all API calls.",
+        "accessToken": "Platform API access token for Chat / Platform. Used to create and manage accounts."
     }
 }
-

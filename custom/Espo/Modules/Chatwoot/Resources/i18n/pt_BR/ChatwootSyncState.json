@@ -3,7 +3,7 @@
         "Create ChatwootSyncState": "Criar Estado de Sincronização"
     },
     "links": {
-        "chatwootAccount": "Chatwoot / Conta",
+        "chatwootAccount": "Chat / Conta",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
@@ -11,15 +11,15 @@
     "fields": {
         "name": "Nome",
         "syncType": "Tipo de Sincronização",
-        "chatwootAccount": "Conta Chatwoot",
-        "lastChatwootCursor": "Último Cursor Chatwoot",
-        "lastEspocrmCursor": "Último Cursor EspoCRM",
+        "chatwootAccount": "Chat / Conta",
+        "lastChatwootCursor": "Último Cursor de Chat",
+        "lastEspocrmCursor": "Último Cursor CRM",
         "lastRunAt": "Última Execução",
         "lastRunDurationMs": "Duração da Última Execução (ms)",
         "lastRunStatus": "Status da Última Execução",
         "lastRunError": "Erro da Última Execução",
-        "totalSyncedToEspocrm": "Total Sincronizado → EspoCRM",
-        "totalSyncedToChatwoot": "Total Sincronizado → Chatwoot",
+        "totalSyncedToEspocrm": "Total Sincronizado → CRM",
+        "totalSyncedToChatwoot": "Total Sincronizado → Chat",
         "totalConflictsResolved": "Total de Conflitos Resolvidos",
         "isEnabled": "Habilitado",
         "syncIntervalSeconds": "Intervalo de Sincronização (segundos)",
@@ -28,18 +28,18 @@
     "tooltips": {
         "name": "Nome descritivo para esta configuração de sincronização",
         "syncType": "Tipo de dados sendo sincronizados",
-        "lastChatwootCursor": "Timestamp do último registro Chatwoot processado. Apenas registros modificados após este tempo serão sincronizados.",
-        "lastEspocrmCursor": "Timestamp do último registro EspoCRM processado. Apenas registros modificados após este tempo serão sincronizados.",
+        "lastChatwootCursor": "Timestamp do último registro de Chat processado. Apenas registros modificados após este tempo serão sincronizados.",
+        "lastEspocrmCursor": "Timestamp do último registro de CRM processado. Apenas registros modificados após este tempo serão sincronizados.",
         "lastRunAt": "Quando o workflow de sincronização foi executado pela última vez",
         "lastRunDurationMs": "Quanto tempo a última sincronização levou em milissegundos",
         "lastRunStatus": "Resultado da última execução de sincronização",
         "lastRunError": "Mensagem de erro se a última sincronização falhou",
-        "totalSyncedToEspocrm": "Total de registros sincronizados do Chatwoot para EspoCRM",
-        "totalSyncedToChatwoot": "Total de registros sincronizados do EspoCRM para Chatwoot",
+        "totalSyncedToEspocrm": "Total de registros sincronizados do Chat para CRM",
+        "totalSyncedToChatwoot": "Total de registros sincronizados do CRM para Chat",
         "totalConflictsResolved": "Total de conflitos que foram resolvidos automaticamente",
         "isEnabled": "Se esta sincronização está ativa",
         "syncIntervalSeconds": "Com que frequência executar a sincronização (mínimo 5 segundos)",
-        "conflictResolution": "Estratégia quando ambos sistemas têm alterações: chatwoot_wins, espocrm_wins ou most_recent"
+        "conflictResolution": "Estratégia quando ambos sistemas têm alterações: chat_wins, crm_wins ou most_recent"
     },
     "options": {
         "syncType": {
@@ -54,10 +54,9 @@
             "running": "Executando"
         },
         "conflictResolution": {
-            "chatwoot_wins": "Chatwoot Vence",
-            "espocrm_wins": "EspoCRM Vence",
+            "chat_wins": "Chat Vence",
+            "espocrm_wins": "CRM Vence",
             "most_recent": "Mais Recente"
         }
     }
 }
-

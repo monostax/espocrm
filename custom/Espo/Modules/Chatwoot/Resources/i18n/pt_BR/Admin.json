@@ -1,14 +1,14 @@
 {
     "labels": {
-        "Chatwoot": "Chatwoot"
+        "Chatwoot": "Chat"
     },
     "descriptions": {
-        "chatwootPlatforms": "Gerenciar plataformas Chatwoot",
-        "chatwootAccounts": "Gerenciar contas Chatwoot",
-        "chatwootInboxIntegrations": "Gerenciar caixas de entrada",
-        "chatwootUsers": "Gerenciar usuários Chatwoot",
-        "chatwootTeams": "Gerenciar times Chatwoot",
-        "chatwootWebhooks": "Gerenciar webhooks Chatwoot",
-        "chatwootSyncState": "Visualizar estado de sincronização"
+        "chatwootPlatforms": "Gerenciar plataformas de chat",
+        "chatwootAccounts": "Gerenciar contas de chat",
+        "chatwootInboxIntegrations": "Gerenciar caixas de entrada de chat",
+        "chatwootUsers": "Gerenciar usuários de chat",
+        "chatwootTeams": "Gerenciar times de chat",
+        "chatwootWebhooks": "Gerenciar webhooks de chat",
+        "chatwootSyncState": "Visualizar estado de sincronização de chat"
     }
 }

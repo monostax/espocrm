@@ -5,15 +5,15 @@
     "fields": {
         "name": "Name",
         "syncType": "Sync Type",
-        "chatwootAccount": "Chatwoot Account",
-        "lastChatwootCursor": "Last Chatwoot Cursor",
-        "lastEspocrmCursor": "Last EspoCRM Cursor",
+        "chatwootAccount": "Chat / Account",
+        "lastChatwootCursor": "Last Synced Cursor",
+        "lastEspocrmCursor": "Last Synced Cursor",
         "lastRunAt": "Last Run At",
         "lastRunDurationMs": "Last Run Duration (ms)",
         "lastRunStatus": "Last Run Status",
         "lastRunError": "Last Run Error",
-        "totalSyncedToEspocrm": "Total Synced → EspoCRM",
-        "totalSyncedToChatwoot": "Total Synced → Chatwoot",
+        "totalSyncedToEspocrm": "Total Synced → CRM",
+        "totalSyncedToChatwoot": "Total Synced → Chat",
         "totalConflictsResolved": "Total Conflicts Resolved",
         "isEnabled": "Enabled",
         "syncIntervalSeconds": "Sync Interval (seconds)",
@@ -22,18 +22,18 @@
     "tooltips": {
         "name": "A descriptive name for this sync configuration",
         "syncType": "Type of data being synchronized",
-        "lastChatwootCursor": "Timestamp of the last processed Chatwoot record. Only records modified after this time will be synced.",
-        "lastEspocrmCursor": "Timestamp of the last processed EspoCRM record. Only records modified after this time will be synced.",
+        "lastChatwootCursor": "Timestamp of the last processed Chat record. Only records modified after this time will be synced.",
+        "lastEspocrmCursor": "Timestamp of the last processed CRM record. Only records modified after this time will be synced.",
         "lastRunAt": "When the sync workflow last executed",
         "lastRunDurationMs": "How long the last sync took in milliseconds",
         "lastRunStatus": "Result of the last sync run",
         "lastRunError": "Error message if the last sync failed",
-        "totalSyncedToEspocrm": "Total records synced from Chatwoot to EspoCRM",
-        "totalSyncedToChatwoot": "Total records synced from EspoCRM to Chatwoot",
+        "totalSyncedToEspocrm": "Total records synced from Chat to CRM",
+        "totalSyncedToChatwoot": "Total records synced from CRM to Chat",
         "totalConflictsResolved": "Total conflicts that were automatically resolved",
         "isEnabled": "Whether this sync is active",
         "syncIntervalSeconds": "How often to run the sync (minimum 5 seconds)",
-        "conflictResolution": "Strategy when both systems have changes: chatwoot_wins, espocrm_wins, or most_recent timestamp"
+        "conflictResolution": "Strategy when both systems have changes: chat_wins, crm_wins, or most_recent timestamp"
     },
     "options": {
         "syncType": {
@@ -48,8 +48,8 @@
             "running": "Running"
         },
         "conflictResolution": {
-            "chatwoot_wins": "Chatwoot Wins",
-            "espocrm_wins": "EspoCRM Wins",
+            "chatwoot_wins": "Chat Wins",
+            "espocrm_wins": "CRM Wins",
             "most_recent": "Most Recent"
         }
     }

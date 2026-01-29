@@ -10,8 +10,9 @@
         "team": "Team"
     },
     "tooltips": {
-        "apiKey": "Account-level API token from Chatwoot. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chatwoot → Profile Settings → Access Token.",
-        "automationUser": "The ChatwootUser entity representing the automation user for this account. Used for API operations.",
+        "apiKey": "Account-level API token from Chat. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",
+        "automationUser": "The chat user entity representing the automation user for this account. Used for API operations.",
         "autoPendingEnabled": "When enabled, conversations will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
     }
 }
+

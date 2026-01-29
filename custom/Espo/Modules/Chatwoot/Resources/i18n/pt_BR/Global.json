@@ -1,33 +1,33 @@
 {
     "scopeNames": {
-        "ChatwootAccount": "Chatwoot / Conta",
-        "ChatwootAgent": "Chatwoot / Agente",
-        "ChatwootContact": "Chatwoot / Contato",
-        "ChatwootContactInbox": "Chatwoot / Contato / Canal",
-        "ChatwootConversation": "Chatwoot / Conversa",
-        "ChatwootInbox": "Chatwoot / Inbox",
-        "ChatwootMessage": "Chatwoot / Mensagem",
-        "ChatwootPlatform": "Chatwoot / Plataforma",
-        "ChatwootUser": "Chatwoot / Usuário",
-        "ChatwootTeam": "Chatwoot / Time",
-        "ChatwootSyncState": "Chatwoot / Sync",
-        "ChatwootAccountWebhook": "Chatwoot / Webhook",
-        "ChatwootInboxIntegration": "Chatwoot / Inbox (Contas)"
+        "ChatwootAccount": "Chat / Conta",
+        "ChatwootAgent": "Chat / Agente",
+        "ChatwootContact": "Chat / Contato",
+        "ChatwootContactInbox": "Chat / Contato / Canal",
+        "ChatwootConversation": "Chat / Conversa",
+        "ChatwootInbox": "Chat / Inbox",
+        "ChatwootMessage": "Chat / Mensagem",
+        "ChatwootPlatform": "Chat / Plataforma",
+        "ChatwootUser": "Chat / Usuário",
+        "ChatwootTeam": "Chat / Time",
+        "ChatwootSyncState": "Chat / Sync",
+        "ChatwootAccountWebhook": "Chat / Webhook",
+        "ChatwootInboxIntegration": "Chat / Conexão"
     },
     "scopeNamesPlural": {
-        "ChatwootAccount": "Chatwoot / Contas",
-        "ChatwootAgent": "Chatwoot / Agentes",
-        "ChatwootContact": "Chatwoot / Contatos",
-        "ChatwootContactInbox": "Chatwoot / Contato / Canais",
-        "ChatwootConversation": "Chatwoot / Conversas",
-        "ChatwootInbox": "Chatwoot / Inboxes",
-        "ChatwootMessage": "Chatwoot / Mensagens",
-        "ChatwootPlatform": "Chatwoot / Plataformas",
-        "ChatwootUser": "Chatwoot / Usuários",
-        "ChatwootTeam": "Chatwoot / Times",
-        "ChatwootSyncState": "Chatwoot / Syncs",
-        "ChatwootAccountWebhook": "Chatwoot / Webhooks",
-        "ChatwootInboxIntegration": "Chatwoot / Inboxes (Contas)"
+        "ChatwootAccount": "Chat / Contas",
+        "ChatwootAgent": "Chat / Agentes",
+        "ChatwootContact": "Chat / Contatos",
+        "ChatwootContactInbox": "Chat / Contato / Canais",
+        "ChatwootConversation": "Chat / Conversas",
+        "ChatwootInbox": "Chat / Inboxes",
+        "ChatwootMessage": "Chat / Mensagens",
+        "ChatwootPlatform": "Chat / Plataformas",
+        "ChatwootUser": "Chat / Usuários",
+        "ChatwootTeam": "Chat / Times",
+        "ChatwootSyncState": "Chat / Syncs",
+        "ChatwootAccountWebhook": "Chat / Webhooks",
+        "ChatwootInboxIntegration": "Chat / Conexões"
     },
     "navbarTabs": {
         "Conversations": "Conversas",
@@ -45,4 +45,3 @@
         "inbox": "Caixa de Entrada"
     }
 }
-

@@ -8,19 +8,18 @@
         "teams": "Times / Contas"
     },
     "links": {
-        "accounts": "Chatwoot / Contas",
-        "users": "Chatwoot / Usuários",
+        "accounts": "Chat / Contas",
+        "users": "Chat / Usuários",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {
-        "Create ChatwootPlatform": "Criar Plataforma Chatwoot"
+        "Create ChatwootPlatform": "Criar Plataforma de Chat"
     },
     "tooltips": {
-        "frontendUrl": "URL da plataforma Chatwoot voltada para o usuário (ex: https://chatwoot.exemplo.com). Usada para redirecionamentos SSO e incorporação em iframe.",
-        "backendUrl": "URL do endpoint da API da plataforma Chatwoot (ex: https://chatwoot-api.exemplo.com). Usada para todas as chamadas de API.",
-        "accessToken": "Token de acesso da API da plataforma Chatwoot. Usado para criar e gerenciar contas."
+        "frontendUrl": "URL da plataforma de Chat voltada para o usuário (ex: https://chat.exemplo.com). Usada para redirecionamentos SSO e incorporação em iframe.",
+        "backendUrl": "URL do endpoint da API da plataforma de Chat (ex: https://chat-api.exemplo.com). Usada para todas as chamadas de API.",
+        "accessToken": "Token de acesso da API da plataforma de Chat. Usado para criar e gerenciar contas."
     }
 }
-

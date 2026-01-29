@@ -1,8 +1,8 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fab fa-whatsapp",
+    "iconClass": "ti ti-messages",
     "createDisabled": false,
-    "color": "#25D366",
+    "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-inbox-integration/defaults-preparator",
     "modalViews": {
         "edit": "chatwoot:views/chatwoot-inbox-integration/modals/edit"
     },

@@ -14,8 +14,8 @@
         }
     },
     "tooltips": {
-        "mergedIntoChatwootContactId": "The Chatwoot Contact ID this contact was merged into",
-        "avatarUrl": "Profile image URL from Chatwoot"
+        "mergedIntoChatwootContactId": "The Chat / Contact ID this contact was merged into",
+        "avatarUrl": "Profile image URL from Chat"
     },
     "presetFilters": {
         "all": "All",
@@ -26,6 +26,3 @@
         "errors": "Errors"
     }
 }
-
-
-

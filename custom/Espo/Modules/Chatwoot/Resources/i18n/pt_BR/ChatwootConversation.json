@@ -5,14 +5,14 @@
         "lastActivityAt": "Última Atividade",
         "messagesCount": "Qtd. Mensagens",
         "assigneeName": "Atribuído a",
-        "inboxName": "Caixa de Entrada",
-        "chatwootCreatedAt": "Criado no Chatwoot",
-        "chatwootConversationId": "ID da Conversa",
+        "inboxName": "Chat / Caixa de Entrada",
+        "chatwootCreatedAt": "Criado no Chat",
+        "chatwootConversationId": "ID da Conversa de Chat",
         "contactInbox": "Canal do Contato",
-        "inbox": "Caixa de Entrada",
-        "chatwootContact": "Contato Chatwoot",
-        "contact": "Contato",
-        "chatwootAccount": "Conta Chatwoot",
+        "inbox": "Chat / Caixa de Entrada",
+        "chatwootContact": "Chat / Contato",
+        "contact": "CRM / Contato",
+        "chatwootAccount": "Chat / Conta",
         "lastSyncedAt": "Última Sincronização",
         "lastMessageContent": "Última Mensagem",
         "contactAvatarUrl": "Avatar do Contato",
@@ -21,14 +21,14 @@
         "cAgendamentos": "Agendamentos"
     },
     "links": {
-        "contactInbox": "Chatwoot / Contato / Canal",
-        "chatwootContact": "Chatwoot / Contato",
-        "contact": "Contato",
-        "chatwootAccount": "Chatwoot / Conta",
+        "contactInbox": "Chat / Contato / Canal",
+        "chatwootContact": "Chat / Contato",
+        "contact": "CRM / Contato",
+        "chatwootAccount": "Chat / Conta",
         "opportunities": "Oportunidades",
         "cAgendamentos": "Agendamentos",
-        "inbox": "Chatwoot / Inbox",
-        "messages": "Chatwoot / Mensagens",
+        "inbox": "Chat / Caixa de Entrada",
+        "messages": "Chat / Mensagens",
         "assignedUser": "Usuário Atribuído",
         "teams": "Times / Contas"
     },
@@ -41,7 +41,7 @@
         }
     },
     "labels": {
-        "Create ChatwootConversation": "Criar Conversa Chatwoot",
+        "Create ChatwootConversation": "Criar Conversa de Chat",
         "View Details": "Ver Detalhes",
         "Conversations": "Conversas",
         "Chat": "Chat",
@@ -54,7 +54,7 @@
         "Overview": "Visão Geral"
     },
     "messages": {
-        "Your user is not linked to a Chatwoot account": "Seu usuário não está vinculado a uma conta Chatwoot",
+        "Your user is not linked to a Chat / Account": "Seu usuário não está vinculado a uma conta de Chat",
         "No conversation ID available": "ID da conversa não disponível",
         "No conversation data available": "Dados da conversa não disponíveis",
         "Select a conversation to view": "Selecione uma conversa para visualizar",
@@ -74,4 +74,3 @@
         "assignedToMe": "Atribuídas (a mim)"
     }
 }
-

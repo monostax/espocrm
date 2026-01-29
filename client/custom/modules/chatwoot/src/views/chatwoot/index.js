@@ -53,8 +53,8 @@ class ChatwootIndexView extends View {
     setup() {
         // Get cwPath, SSO URL and frontend URL from options (passed from controller)
         this.cwPath = this.options.cwPath || "";
-        this.chatwootSsoUrl = this.options.chatwootSsoUrl || "";
-        this.chatwootBaseUrl = this.options.chatwootFrontendUrl || "https://chatwoot.am.monostax.dev.localhost";
+        this.chatSsoUrl = this.options.chatSsoUrl || "";
+        this.chatwootBaseUrl = this.options.chatwootFrontendUrl;
 
         // Notify parent to switch to Chatwoot mode when this view is loaded
         this.notifyParentToChatwoot();
@@ -92,7 +92,7 @@ class ChatwootIndexView extends View {
                     cwPath: this.cwPath || "",
                     timestamp: Date.now(),
                 },
-                parentOrigin
+                parentOrigin,
             );
         } catch (e) {
             // Failed to notify parent
@@ -129,7 +129,7 @@ class ChatwootIndexView extends View {
                                     path: chatwootPath,
                                     timestamp: Date.now(),
                                 },
-                                parentOrigin
+                                parentOrigin,
                             );
                         } catch (e) {
                             // Failed to forward path change
@@ -162,10 +162,10 @@ class ChatwootIndexView extends View {
 
         // For first load, use SSO URL to authenticate
         // SSO URLs are single-use, so we only use them once per session
-        if (this.chatwootSsoUrl && !ChatwootIndexView.hasSsoAuthenticated()) {
+        if (this.chatSsoUrl && !ChatwootIndexView.hasSsoAuthenticated()) {
             // Use SSO URL for authentication
             // The SSO URL will authenticate and redirect to the Chatwoot dashboard
-            chatwootUrl = this.chatwootSsoUrl;
+            chatwootUrl = this.chatSsoUrl;
             ChatwootIndexView.setSsoAuthenticated();
 
             // If we have a specific path to navigate to after auth,
@@ -234,4 +234,3 @@ class ChatwootIndexView extends View {
 }
 
 export default ChatwootIndexView;
-

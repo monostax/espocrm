@@ -110,6 +110,24 @@ class SeedRole implements RebuildAction
                 'userCalendarPermission' => 'team',
                 'data' => [
                     'Import' => true,
+                    'ChatwootConversation' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'ChatwootAgent' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'ChatwootInboxIntegration' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
                     'User' => [
                         'create' => 'yes',
                         'read' => 'team',
@@ -123,13 +141,7 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                         'stream' => 'team',
                     ],
-                    'Case' => [
-                        'create' => 'yes',
-                        'read' => 'team',
-                        'edit' => 'team',
-                        'delete' => 'team',
-                        'stream' => 'team',
-                    ],
+                    'Calendar' => true,
                     'Contact' => [
                         'create' => 'yes',
                         'read' => 'team',

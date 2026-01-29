@@ -1,6 +1,6 @@
 {
-    "chatwootSsoUrl": {
-        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootSsoUrl"
+    "chatSsoUrl": {
+        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\chatSsoUrl"
     },
     "chatwootAccountId": {
         "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootAccountId"
@@ -9,4 +9,3 @@
         "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootFrontendUrl"
     }
 }
-

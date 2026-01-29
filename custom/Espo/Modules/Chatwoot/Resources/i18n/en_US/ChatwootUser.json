@@ -5,26 +5,26 @@
         "email": "Email",
         "password": "Password",
         "platform": "Platform",
-        "chatwootAccount": "Chatwoot Account",
+        "chatwootAccount": "Chat / Account",
         "assignedUser": "Assigned User",
-        "chatwootUserId": "Chatwoot User ID",
+        "chatwootUserId": "Chat / User ID",
         "teams": "Teams / Accounts"
     },
     "links": {
-        "platform": "Chatwoot Platform",
-        "chatwootAccount": "Chatwoot Account",
+        "platform": "Chat / Platform",
+        "chatwootAccount": "Chat / Account",
         "assignedUser": "Assigned User",
-        "agents": "Chatwoot Agents",
+        "agents": "Chat / Agents",
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
         "teams": "Teams / Accounts"
     },
     "labels": {
-        "Create ChatwootUser": "Create Chatwoot User"
+        "Create ChatwootUser": "Create Chat / User"
     },
     "tooltips": {
-        "assignedUser": "CRM user linked to this Chatwoot user. Each CRM user can only have one Chatwoot user.",
-        "chatwootUserId": "User ID created in Chatwoot. This field is automatically populated after creation.",
-        "password": "User password for Chatwoot access. Minimum 6 characters."
+        "assignedUser": "CRM user linked to this Chat / User. Each CRM user can only have one Chat / User.",
+        "chatwootUserId": "User ID created in Chat. This field is automatically populated after creation.",
+        "password": "User password for Chat access. Minimum 6 characters."
     }
 }

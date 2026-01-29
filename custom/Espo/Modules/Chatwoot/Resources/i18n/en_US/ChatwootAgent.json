@@ -13,9 +13,9 @@
         "confirmed": "Email Confirmed",
         "avatarUrl": "Avatar URL",
         "customRoleId": "Custom Role ID",
-        "chatwootAgentId": "Chatwoot Agent ID",
-        "chatwootAccount": "Chatwoot Account",
-        "chatwootUser": "Chatwoot User",
+        "chatwootAgentId": "Chat Agent ID",
+        "chatwootAccount": "Chat Account",
+        "chatwootUser": "Chat User",
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
         "lastSyncError": "Last Sync Error",
@@ -23,8 +23,8 @@
         "assignedUser": "Assigned User"
     },
     "links": {
-        "chatwootAccount": "Chatwoot Account",
-        "chatwootUser": "Chatwoot User",
+        "chatwootAccount": "Chat / Account",
+        "chatwootUser": "Chat / User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "team": "Team",
         "assignedUser": "Assigned User"
@@ -50,16 +50,16 @@
         }
     },
     "tooltips": {
-        "password": "Optional. If provided, a ChatwootUser will be created with these credentials so the agent can login to Chatwoot immediately. Requirements: minimum 6 characters and at least 1 special character (!@#$%^&*()_+-=[]{}). If not provided, the agent will receive a confirmation email to set their password.",
-        "chatwootAgentId": "The agent ID in Chatwoot. This field is automatically populated after sync.",
+        "password": "Optional. If provided, a Chat / User will be created with these credentials so the agent can login to Chat immediately. Requirements: minimum 6 characters and at least 1 special character (!@#$%^&*()_+-=[]{}). If not provided, the agent will receive a confirmation email to set their password.",
+        "chatwootAgentId": "The agent ID in Chat. This field is automatically populated after sync.",
         "autoOffline": "Whether the agent's availability status is configured to go offline automatically when away.",
         "isAI": "Enable to configure this agent as an AI-powered agent.",
         "aiPrompt": "The system prompt that defines the AI agent's behavior and capabilities.",
         "knowledgeBaseCategories": "Select knowledge base categories. Articles in these categories (and their sub-categories) will be available for AI-powered responses.",
-        "confirmed": "Whether the agent has confirmed their email address in Chatwoot.",
-        "chatwootUser": "Link to the platform-level Chatwoot User if this agent corresponds to one.",
-        "customRoleId": "The custom role ID assigned to this agent in Chatwoot, if any.",
-        "assignedUser": "The EspoCRM user who will access Chatwoot as this agent. This enables Single Sign-On (SSO) for the assigned user. The user must be in the same team as the Chatwoot Account."
+        "confirmed": "Whether the agent has confirmed their email address in Chat.",
+        "chatwootUser": "Link to the platform-level Chat / User if this agent corresponds to one.",
+        "customRoleId": "The custom role ID assigned to this agent in Chat, if any.",
+        "assignedUser": "The EspoCRM user who will access Chat as this agent. This enables Single Sign-On (SSO) for the assigned user. The user must be in the same team as the Chat / Account."
     },
     "presetFilters": {
         "available": "Available",
@@ -67,3 +67,4 @@
         "administrators": "Administrators"
     }
 }
+

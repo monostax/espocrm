@@ -16,12 +16,12 @@
     },
     "options": {
         "appType": {
-            "chatwoot": "ChatWoot",
+            "chatwoot": "Chat",
             "calls": "Calls"
         }
     },
     "tooltips": {
-        "wahaAppId": "Unique identifier for this app in WAHA (e.g., app_UUID for chatwoot, or session name for calls)"
+        "wahaAppId": "Unique identifier for this app in WAHA (e.g., app_UUID for Chat, or session name for calls)"
     },
     "messages": {
         "appCreated": "App created successfully.",
@@ -30,4 +30,3 @@
         "confirmDeleteApp": "Are you sure you want to delete this app?"
     }
 }
-

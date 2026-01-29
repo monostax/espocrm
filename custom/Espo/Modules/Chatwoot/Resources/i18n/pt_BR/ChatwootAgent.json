@@ -13,22 +13,22 @@
         "confirmed": "Email Confirmado",
         "avatarUrl": "URL do Avatar",
         "customRoleId": "ID da Função Personalizada",
-        "chatwootAgentId": "ID do Agente Chatwoot",
-        "chatwootAccount": "Conta Chatwoot",
-        "chatwootUser": "Usuário Chatwoot",
+        "chatwootAgentId": "ID do Agente de Chat",
+        "chatwootAccount": "Chat / Conta",
+        "chatwootUser": "Chat / Usuário",
         "syncStatus": "Status de Sincronização",
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
-        "team": "Time"
+        "team": "Equipe"
     },
     "links": {
-        "chatwootAccount": "Conta Chatwoot",
-        "chatwootUser": "Usuário Chatwoot",
+        "chatwootAccount": "Chat / Conta",
+        "chatwootUser": "Chat / Usuário",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "team": "Time"
     },
     "labels": {
-        "Create ChatwootAgent": "Criar Agente",
+        "Create ChatwootAgent": "Criar Agente de Chat",
         "AI Configuration": "Configuração IA"
     },
     "options": {
@@ -48,15 +48,15 @@
         }
     },
     "tooltips": {
-        "password": "Opcional. Se fornecida, um ChatwootUser será criado com essas credenciais para que o agente possa fazer login no Chatwoot imediatamente. Requisitos: mínimo 6 caracteres e pelo menos 1 caractere especial (!@#$%^&*()_+-=[]{}). Se não fornecida, o agente receberá um email de confirmação para definir sua senha.",
-        "chatwootAgentId": "O ID do agente no Chatwoot. Este campo é preenchido automaticamente após a sincronização.",
+        "password": "Opcional. Se fornecida, um usuário do Chat será criado com essas credenciais para que o agente possa fazer login no Chat imediatamente. Requisitos: mínimo 6 caracteres e pelo menos 1 caractere especial (!@#$%^&*()_+-=[]{}). Se não fornecida, o agente receberá um email de confirmação para definir sua senha.",
+        "chatwootAgentId": "O ID do agente no Chat. Este campo é preenchido automaticamente após a sincronização.",
         "autoOffline": "Se o status de disponibilidade do agente está configurado para ficar offline automaticamente quando ausente.",
         "isAI": "Habilite para configurar este agente como um agente com inteligência artificial.",
         "aiPrompt": "O prompt do sistema que define o comportamento e as capacidades do agente IA.",
         "knowledgeBaseCategories": "Selecione categorias da base de conhecimento. Artigos nessas categorias (e suas subcategorias) estarão disponíveis para respostas com IA.",
-        "confirmed": "Se o agente confirmou seu endereço de email no Chatwoot.",
-        "chatwootUser": "Link para o Usuário Chatwoot no nível da plataforma, se este agente corresponder a um.",
-        "customRoleId": "O ID da função personalizada atribuída a este agente no Chatwoot, se houver."
+        "confirmed": "Se o agente confirmou seu endereço de email no Chat.",
+        "chatwootUser": "Link para o Usuário de Chat no nível da plataforma, se este agente corresponder a um.",
+        "customRoleId": "O ID da função personalizada atribuída a este agente no Chat, se houver."
     },
     "presetFilters": {
         "available": "Disponíveis",

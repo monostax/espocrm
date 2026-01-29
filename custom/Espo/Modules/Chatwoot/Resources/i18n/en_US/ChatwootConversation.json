@@ -6,13 +6,13 @@
         "messagesCount": "Messages Count",
         "assigneeName": "Assignee",
         "inboxName": "Inbox Name",
-        "chatwootCreatedAt": "Created at Chatwoot",
+        "chatwootCreatedAt": "Created at (Chat)",
         "chatwootConversationId": "Conversation ID",
         "contactInbox": "Contact Inbox",
         "inbox": "Inbox",
-        "chatwootContact": "Chatwoot Contact",
+        "chatwootContact": "Chat / Contact",
         "contact": "Contact",
-        "chatwootAccount": "Chatwoot Account",
+        "chatwootAccount": "Chat / Account",
         "lastSyncedAt": "Last Synced At",
         "lastMessageContent": "Last Message",
         "contactAvatarUrl": "Contact Avatar",
@@ -29,7 +29,7 @@
         }
     },
     "labels": {
-        "Create ChatwootConversation": "Create Chatwoot Conversation",
+        "Create ChatwootConversation": "Create Chat / Conversation",
         "View Details": "View Details",
         "Conversations": "Conversations",
         "Chat": "Chat",
@@ -42,7 +42,7 @@
         "Overview": "Overview"
     },
     "messages": {
-        "Your user is not linked to a Chatwoot account": "Your user is not linked to a Chatwoot account",
+        "Your user is not linked to a Chat / Account": "Your user is not linked to a Chat / Account",
         "No conversation ID available": "No conversation ID available",
         "No conversation data available": "No conversation data available",
         "Select a conversation to view": "Select a conversation to view",
@@ -55,4 +55,3 @@
         "assignedToMe": "Assigned (to me)"
     }
 }
-

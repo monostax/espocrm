@@ -12,10 +12,7 @@
         "amountPaidConverted": "Valor Pago (Convertido)",
         "participantUsers": "Participantes",
         "users": "Usuários",
-        "chatwootConversations": "Conversas Chatwoot"
-    },
-    "links": {
-        "chatwootConversations": "Conversas Chatwoot"
+        "chatwootConversations": "Chat / Conversas"
     },
     "options": {
         "status": {
@@ -41,6 +38,7 @@
     },
     "links": {
         "ligacoesIAs": "Ligacoes IAs",
-        "participantUsers": "Participantes"
+        "participantUsers": "Participantes",
+        "chatwootConversations": "Chat / Conversas"
     }
 }

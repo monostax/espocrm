@@ -5,12 +5,12 @@
         "status": "Status",
         "channelType": "Tipo de Canal",
         "wahaPlatform": "Plataforma WAHA",
-        "chatwootAccount": "Conta Chatwoot",
+        "chatwootAccount": "Chat / Conta",
         "wahaSessionName": "Sessão WAHA",
         "wahaSessionId": "ID da Sessão WAHA",
         "wahaAppId": "ID do App WAHA",
-        "chatwootInboxId": "ID da Caixa Chatwoot",
-        "chatwootInboxIdentifier": "Identificador da Caixa Chatwoot",
+        "chatwootInboxId": "ID da Caixa de Chat",
+        "chatwootInboxIdentifier": "Identificador da Caixa de Chat",
         "whatsappId": "ID WhatsApp",
         "whatsappName": "Nome WhatsApp",
         "errorMessage": "Mensagem de Erro",
@@ -21,11 +21,11 @@
     },
     "links": {
         "wahaPlatform": "Plataforma WAHA",
-        "chatwootAccount": "Conta Chatwoot",
+        "chatwootAccount": "Chat / Conta",
         "team": "Equipe"
     },
     "labels": {
-        "Create ChatwootInboxIntegration": "Criar Integração de Inbox",
+        "Create ChatwootInboxIntegration": "Criar Conexão de Chat",
         "WhatsApp Connection": "Conexão WhatsApp",
         "Connection Details": "Detalhes da Conexão",
         "Error": "Erro",
@@ -37,7 +37,7 @@
         "Channel is disconnected": "Canal está desconectado. Clique em Reconectar para conectar novamente.",
         "Channel failed": "Falha na configuração do canal. Verifique a mensagem de erro abaixo.",
         "Waiting for QR scan": "Escaneie o QR Code com o WhatsApp para conectar",
-        "Creating resources": "Criando sessão WhatsApp e caixa de entrada Chatwoot...",
+        "Creating resources": "Criando sessão WhatsApp e conexão de Chat...",
         "Connecting": "Conectando ao WhatsApp...",
         "Loading QR Code": "Carregando QR Code...",
         "Scan QR Code with WhatsApp": "Escaneie o QR Code com o WhatsApp"
@@ -70,8 +70,9 @@
         "channelDisconnected": "Canal desconectado.",
         "channelFailed": "Falha na configuração do canal.",
         "confirmDisconnect": "Tem certeza que deseja desconectar este canal? A sessão WhatsApp será parada.",
-        "confirmActivate": "Isso criará uma sessão WAHA e uma caixa de entrada Chatwoot. Continuar?",
+        "confirmActivate": "Isso criará uma sessão WAHA e uma caixa de entrada de Chat. Continuar?",
         "noWahaPlatform": "Por favor, selecione uma Plataforma WAHA.",
-        "noChatwootAccount": "Por favor, selecione uma Conta Chatwoot."
+        "noChatwootAccount": "Por favor, selecione uma Conta de Chat."
     }
 }
+

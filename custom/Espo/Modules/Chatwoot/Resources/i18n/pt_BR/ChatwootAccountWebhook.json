@@ -1,37 +1,36 @@
 {
     "fields": {
         "name": "Nome",
-        "account": "Conta Chatwoot",
-        "chatwootWebhookId": "ID do Webhook Chatwoot",
+        "account": "Chat / Conta",
+        "chatwootWebhookId": "ID do Webhook de Chat",
         "url": "URL",
         "subscriptions": "Assinaturas",
         "teams": "Times / Contas"
     },
     "links": {
-        "account": "Chatwoot / Conta",
+        "account": "Chat / Conta",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {
-        "Create ChatwootAccountWebhook": "Criar Webhook da Conta Chatwoot"
+        "Create ChatwootAccountWebhook": "Criar Webhook de Chat / Conta"
     },
     "options": {
         "subscriptions": {
-            "conversation_created": "Conversa Criada",
-            "conversation_status_changed": "Status da Conversa Alterado",
-            "conversation_updated": "Conversa Atualizada",
-            "contact_created": "Contato Criado",
-            "contact_updated": "Contato Atualizado",
-            "message_created": "Mensagem Criada",
-            "message_updated": "Mensagem Atualizada",
+            "conversation_created": "Conversa de Chat Criada",
+            "conversation_status_changed": "Status da Conversa de Chat Alterado",
+            "conversation_updated": "Conversa de Chat Atualizada",
+            "contact_created": "Contato de Chat Criado",
+            "contact_updated": "Contato de Chat Atualizado",
+            "message_created": "Mensagem de Chat Criada",
+            "message_updated": "Mensagem de Chat Atualizada",
             "webwidget_triggered": "Widget Web Acionado"
         }
     },
     "tooltips": {
-        "chatwootWebhookId": "ID do webhook criado no Chatwoot. Este campo é preenchido automaticamente após a criação.",
+        "chatwootWebhookId": "ID do webhook criado no Chat. Este campo é preenchido automaticamente após a criação.",
         "url": "URL para onde os eventos serão enviados",
-        "subscriptions": "Eventos que você deseja assinar"
+        "subscriptions": "Eventos que você deseja assinar no Chat"
     }
 }
-

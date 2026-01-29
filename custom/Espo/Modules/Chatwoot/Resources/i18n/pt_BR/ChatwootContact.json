@@ -4,33 +4,33 @@
         "contactName": "Nome do Contato",
         "email": "Email",
         "identifier": "Identificador",
-        "chatwootInboxId": "ID da Inbox Chatwoot",
-        "chatwootCreatedAt": "Criado no Chatwoot",
-        "chatwootLastActivityAt": "Última Atividade no Chatwoot",
+        "chatwootInboxId": "ID da Inbox de Chat",
+        "chatwootCreatedAt": "Criado no Chat",
+        "chatwootLastActivityAt": "Última Atividade no Chat",
         "availabilityStatus": "Status de Disponibilidade",
         "blocked": "Bloqueado",
         "avatarUrl": "URL do Avatar",
         "contact": "Contato",
         "phoneNumber": "Telefone",
-        "chatwootContactId": "ID do Contato Chatwoot",
-        "chatwootAccount": "Conta Chatwoot",
+        "chatwootContactId": "ID do Contato de Chat",
+        "chatwootAccount": "Chat / Conta",
         "lastSyncedAt": "Última Sincronização",
         "syncStatus": "Status de Sincronização",
-        "mergedIntoChatwootContactId": "Mesclado em Contato ID",
+        "mergedIntoChatwootContactId": "Mesclado em Contato de Chat ID",
         "syncError": "Erro de Sincronização",
         "teams": "Times / Contas"
     },
     "links": {
         "contact": "Contato",
-        "chatwootAccount": "Chatwoot / Conta",
-        "contactInboxes": "Chatwoot / Contato / Canais",
-        "conversations": "Chatwoot / Conversas",
+        "chatwootAccount": "Chat / Conta",
+        "contactInboxes": "Chat / Contato / Canais",
+        "conversations": "Chat / Conversas",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times / Contas"
     },
     "labels": {
-        "Create ChatwootContact": "Criar Contato Chatwoot"
+        "Create ChatwootContact": "Criar Contato de Chat"
     },
     "options": {
         "syncStatus": {
@@ -46,8 +46,8 @@
         }
     },
     "tooltips": {
-        "mergedIntoChatwootContactId": "O ID do Contato do Chatwoot para o qual este contato foi mesclado",
-        "avatarUrl": "URL da imagem de perfil do Chatwoot"
+        "mergedIntoChatwootContactId": "O ID do Contato de Chat para o qual este contato foi mesclado",
+        "avatarUrl": "URL da imagem de perfil do Chat"
     },
     "presetFilters": {
         "all": "Todos",
@@ -58,6 +58,3 @@
         "errors": "Erros"
     }
 }
-
-
-

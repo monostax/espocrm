@@ -2,7 +2,7 @@
     "fields": {
         "name": "Nome",
         "platform": "Plataforma",
-        "chatwootAccountId": "ID da Conta Chatwoot",
+        "chatwootAccountId": "ID da Conta de Chat",
         "locale": "Idioma",
         "domain": "Domínio",
         "supportEmail": "Email de Suporte",
@@ -13,19 +13,19 @@
     },
     "links": {
         "platform": "Plataforma",
-        "chatwootTeams": "Chatwoot / Times",
-        "contacts": "Chatwoot / Contatos",
+        "chatwootTeams": "Chat / Times",
+        "contacts": "Chat / Contatos",
         "syncStates": "Estados de Sincronização",
-        "inboxes": "Chatwoot / Inboxes",
-        "agents": "Chatwoot / Agentes",
-        "webhooks": "Chatwoot / Webhooks",
+        "inboxes": "Chat / Inboxes",
+        "agents": "Chat / Agentes",
+        "webhooks": "Chat / Webhooks",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "team": "Equipe",
         "automationUser": "Usuário de Automação"
     },
     "labels": {
-        "Create ChatwootAccount": "Criar Conta Chatwoot"
+        "Create ChatwootAccount": "Criar Conta de Chat"
     },
     "options": {
         "locale": {
@@ -42,9 +42,9 @@
         }
     },
     "tooltips": {
-        "chatwootAccountId": "ID da conta criada no Chatwoot. Este campo é preenchido automaticamente após a criação.",
+        "chatwootAccountId": "ID da conta criada no Chat. Este campo é preenchido automaticamente após a criação.",
         "autoPendingEnabled": "Quando habilitado, as conversas serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente.",
-        "automationUser": "A entidade ChatwootUser que representa o usuário de automação para esta conta. Usado para operações de API."
+        "automationUser": "O usuário da plataforma de chat que representa o usuário de automação para esta conta. Usado para operações de API."
     }
 }
 
