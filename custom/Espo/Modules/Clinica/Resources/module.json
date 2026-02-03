@@ -1,7 +1,0 @@
-{
-    "name": "Clinica",
-    "description": "Clínica - Módulo de gerenciamento de pacientes, consultas médicas, médicos e integração com agente IA",
-    "version": "1.0.0",
-    "order": 15,
-    "jsTranspiled": true
-}
