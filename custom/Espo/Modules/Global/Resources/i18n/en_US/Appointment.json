@@ -8,12 +8,15 @@
         "description": "Description",
         "chatwootConversations": "Chat / Conversations",
         "customer": "Customer",
-        "assignedUser": "Professional / Location"
+        "assignedUsers": "Participants",
+        "location": "Location",
+        "professionals": "Professionals"
     },
     "links": {
         "chatwootConversations": "Chat / Conversations",
         "customer": "Customer",
-        "assignedUser": "Professional / Location",
+        "assignedUsers": "Participants",
+        "professionals": "Professionals",
         "createdBy": "Created By",
         "modifiedBy": "Modified By"
     },

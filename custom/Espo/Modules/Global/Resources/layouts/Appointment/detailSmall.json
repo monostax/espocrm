@@ -3,8 +3,7 @@
     "label": "Overview",
     "rows": [
       [{"name": "name"}],
-      [{"name": "status"}, {"name": "duration"}],
-      [{"name": "dateStart"}, {"name": "dateEnd"}],
+      [{"name": "dateStart"}, {"name": "dateEnd"}, {"name": "duration"}],
       [{"name": "description"}]
     ]
   }

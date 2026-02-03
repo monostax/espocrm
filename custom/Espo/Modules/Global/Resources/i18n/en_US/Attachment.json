@@ -1,0 +1,9 @@
+{
+    "fields": {
+        "isPublic": "Is Public"
+    },
+    "labels": {
+        "Make Public": "Make Public",
+        "Make Private": "Make Private"
+    }
+}

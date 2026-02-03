@@ -44,12 +44,23 @@
             "view": "views/fields/link-multiple"
         },
         "customer": {
-            "type": "link"
-        },
-        "assignedUser": {
             "type": "link",
-            "required": true,
-            "view": "views/fields/assigned-user"
+            "required": true
+        },
+        "assignedUsers": {
+            "type": "linkMultiple",
+            "required": false,
+            "view": "views/fields/link-multiple",
+            "readOnly": true
+        },
+        "location": {
+            "type": "link",
+            "view": "views/fields/user",
+            "required": true
+        },
+        "professionals": {
+            "type": "linkMultiple",
+            "view": "views/fields/link-multiple"
         },
         "createdAt": {
             "type": "datetime",
@@ -78,9 +89,20 @@
             "type": "belongsTo",
             "entity": "Contact"
         },
-        "assignedUser": {
+        "assignedUsers": {
+            "type": "hasMany",
+            "entity": "User",
+            "foreign": "appointments"
+        },
+        "location": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "professionals": {
+            "type": "hasMany",
+            "entity": "User",
+            "foreign": "appointmentsViaProfessionals",
+            "relationName": "appointmentProfessional"
         },
         "createdBy": {
             "type": "belongsTo",

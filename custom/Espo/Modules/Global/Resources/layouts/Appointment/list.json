@@ -5,6 +5,7 @@
     },
     {"name": "status"},
     {"name": "dateStart"},
+    {"name": "location"},
     {"name": "customer"},
-    {"name": "assignedUser"}
+    {"name": "professionals"}
 ]

@@ -1377,9 +1377,15 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 },
             };
 
+            // Pre-populate customer field (link to Contact)
             if (contactId) {
-                attributes.contactId = contactId;
-                attributes.contactName = contactName;
+                attributes.customerId = contactId;
+                attributes.customerName = contactName;
+            }
+
+            // Pre-populate name with customer name
+            if (contactName) {
+                attributes.name = contactName;
             }
 
             Espo.Ui.notify(" ... ");

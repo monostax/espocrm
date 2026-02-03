@@ -1,5 +1,7 @@
 {
     "controller": "controllers/record",
+    "defaultSidePanelFieldList": [],
+    "defaultSidePanelDisabled": true,
     "boolFilterList": ["onlyMy"],
     "recordViews": {
         "list": "views/record/list",
@@ -29,24 +31,68 @@
         "dateEnd": ["dateStart"]
     },
     "iconClass": "fas fa-calendar-check",
-    "relationshipPanels": {
-        "assignments": {
-            "layout": null
-        }
-    },
+    "relationshipPanels": {},
     "sidePanels": {
         "detail": [
             {
-                "name": "chatwootConversations",
-                "label": "Chatwoot Conversations",
-                "view": "global:views/record/panels/relationship"
+                "name": "defaultSide",
+                "label": false,
+                "view": "views/record/panels/side",
+                "options": {
+                    "fieldList": [
+                        {"name": "status"},
+                        {"name": "customer"},
+                        {"name": "location"},
+                        {"name": "professionals"},
+                        {"name": "createdAt"},
+                        {"name": "modifiedAt"}
+                    ]
+                }
             }
         ],
         "detailSmall": [
             {
-                "name": "chatwootConversations",
-                "label": "Chatwoot Conversations",
-                "view": "global:views/record/panels/relationship"
+                "name": "defaultSide",
+                "label": false,
+                "view": "views/record/panels/side",
+                "options": {
+                    "fieldList": [
+                        {"name": "status"},
+                        {"name": "customer"},
+                        {"name": "location"},
+                        {"name": "professionals"},
+                        {"name": "createdAt"},
+                        {"name": "modifiedAt"}
+                    ]
+                }
+            }
+        ],
+        "edit": [
+            {
+                "name": "defaultSide",
+                "label": false,
+                "view": "views/record/panels/side",
+                "options": {
+                    "fieldList": [
+                        {"name": "customer"},
+                        {"name": "location"},
+                        {"name": "professionals"}
+                    ]
+                }
+            }
+        ],
+        "editSmall": [
+            {
+                "name": "defaultSide",
+                "label": false,
+                "view": "views/record/panels/side",
+                "options": {
+                    "fieldList": [
+                        {"name": "customer"},
+                        {"name": "location"},
+                        {"name": "professionals"}
+                    ]
+                }
             }
         ]
     },

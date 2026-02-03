@@ -14,6 +14,7 @@ namespace Espo\Modules\Global\Tools\Kanban;
 use Espo\Core\ORM\EntityManager;
 use Espo\Core\Utils\Id\RecordIdGenerator;
 use Espo\Core\Utils\Metadata;
+use Espo\Tools\Kanban\MetadataProvider;
 use Espo\Tools\Kanban\Orderer as BaseOrderer;
 use Espo\Tools\Kanban\OrdererProcessor;
 
@@ -26,9 +27,10 @@ class CustomOrderer extends BaseOrderer
     public function __construct(
         private EntityManager $entityManager,
         private Metadata $metadata,
-        private RecordIdGenerator $idGenerator
+        private RecordIdGenerator $idGenerator,
+        private MetadataProvider $metadataProvider,
     ) {
-        parent::__construct($entityManager, $metadata, $idGenerator);
+        parent::__construct($entityManager, $metadata, $idGenerator, $metadataProvider);
     }
 
     public function setEntityType(string $entityType): OrdererProcessor
@@ -41,7 +43,8 @@ class CustomOrderer extends BaseOrderer
         return new OrdererProcessor(
             $this->entityManager,
             $this->metadata,
-            $this->idGenerator
+            $this->idGenerator,
+            $this->metadataProvider
         );
     }
 
@@ -51,7 +54,8 @@ class CustomOrderer extends BaseOrderer
             return new OpportunityOrdererProcessor(
                 $this->entityManager,
                 $this->metadata,
-                $this->idGenerator
+                $this->idGenerator,
+                $this->metadataProvider
             );
         }
 

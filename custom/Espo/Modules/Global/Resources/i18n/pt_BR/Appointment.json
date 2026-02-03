@@ -1,18 +1,22 @@
 {
     "fields": {
         "customer": "Cliente",
-        "assignedUser": "Profissional / Unidade",
         "name": "Nome",
         "status": "Status",
         "dateStart": "Data/Hora (Início)",
         "dateEnd": "Data/Hora (Fim)",
         "duration": "Duração",
         "description": "Observação",
+        "assignedUsers": "Participantes",
+        "location": "Unidade",
+        "professionals": "Profissionais",
         "chatwootConversations": "Chat / Conversas"
     },
     "links": {
         "customer": "Cliente",
-        "assignedUser": "Profissional / Unidade"
+        "assignedUsers": "Participantes",
+        "professionals": "Profissionais",
+        "location": "Unidade"
     },
     "options": {
         "status": {

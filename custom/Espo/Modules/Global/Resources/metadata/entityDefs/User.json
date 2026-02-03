@@ -1,0 +1,20 @@
+{
+    "links": {
+        "appointmentsLocation": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "location"
+        },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "assignedUsers"
+        },
+        "appointmentsViaProfessionals": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "professionals",
+            "relationName": "appointmentProfessional"
+        }
+    }
+}

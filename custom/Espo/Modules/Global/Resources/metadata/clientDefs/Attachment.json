@@ -1,0 +1,20 @@
+{
+    "detailActionList": [
+        {
+            "name": "makePublic",
+            "label": "Make Public",
+            "actionFunction": "makePublic",
+            "checkVisibilityFunction": "isPublicActionAvailable",
+            "handler": "global:handlers/attachment/toggle-public",
+            "groupIndex": 0
+        },
+        {
+            "name": "makePrivate",
+            "label": "Make Private",
+            "actionFunction": "makePrivate",
+            "checkVisibilityFunction": "isPrivateActionAvailable",
+            "handler": "global:handlers/attachment/toggle-public",
+            "groupIndex": 0
+        }
+    ]
+}

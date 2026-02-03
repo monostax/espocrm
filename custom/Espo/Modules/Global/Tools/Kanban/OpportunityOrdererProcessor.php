@@ -16,6 +16,7 @@ use Espo\Entities\KanbanOrder;
 use Espo\Core\ORM\EntityManager;
 use Espo\Core\Utils\Metadata;
 use Espo\ORM\Name\Attribute;
+use Espo\Tools\Kanban\MetadataProvider;
 use Espo\Tools\Kanban\OrdererProcessor;
 use LogicException;
 
@@ -39,9 +40,10 @@ class OpportunityOrdererProcessor extends OrdererProcessor
     public function __construct(
         private EntityManager $entityManager,
         private Metadata $metadata,
-        private RecordIdGenerator $idGenerator
+        private RecordIdGenerator $idGenerator,
+        private MetadataProvider $metadataProvider,
     ) {
-        parent::__construct($entityManager, $metadata, $idGenerator);
+        parent::__construct($entityManager, $metadata, $idGenerator, $metadataProvider);
     }
 
     public function setEntityType(string $entityType): self
