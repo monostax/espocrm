@@ -34,5 +34,60 @@
             "action": "checkStatus",
             "id": ":id"
         }
+    },
+    {
+        "route": "/WahaLabelWebhook/:channelId",
+        "method": "post",
+        "params": {
+            "controller": "WahaLabelWebhook",
+            "action": "receive",
+            "channelId": ":channelId"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/WahaSession/:id/start",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "start",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/stop",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "stop",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/restart",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "restart",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/logout",
+        "method": "post",
+        "params": {
+            "controller": "WahaSession",
+            "action": "logout",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WahaSession/:id/apps",
+        "method": "get",
+        "params": {
+            "controller": "WahaSession",
+            "action": "listApps",
+            "id": ":id"
+        }
     }
 ]

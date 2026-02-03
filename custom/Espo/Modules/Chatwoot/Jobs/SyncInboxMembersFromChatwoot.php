@@ -16,7 +16,7 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
-use Espo\Modules\Waha\Services\WahaApiClient;
+use Espo\Modules\Chatwoot\Services\WahaApiClient;
 
 /**
  * Scheduled job to sync inbox members (agents) from Chatwoot to EspoCRM.

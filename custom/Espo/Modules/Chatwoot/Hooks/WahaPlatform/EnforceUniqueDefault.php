@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Hooks\WahaPlatform;
+namespace Espo\Modules\Chatwoot\Hooks\WahaPlatform;
 
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\ORM\Entity;

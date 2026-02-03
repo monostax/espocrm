@@ -14,7 +14,7 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootInboxIntegration;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
-use Espo\Modules\Waha\Services\WahaApiClient;
+use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**

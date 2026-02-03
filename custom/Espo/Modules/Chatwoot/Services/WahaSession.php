@@ -9,7 +9,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Services;
+namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
@@ -487,4 +487,3 @@ class WahaSession
         return $entity;
     }
 }
-

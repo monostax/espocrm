@@ -13,7 +13,11 @@
         "ChatwootSyncState": "Chat / Sync",
         "ChatwootAccountWebhook": "Chat / Webhook",
         "ChatwootInboxIntegration": "Chat / Conexão",
-        "ChatwootLabel": "Chat / Etiqueta"
+        "ChatwootLabel": "Chat / Etiqueta",
+        "WahaPlatform": "Plataforma Waha",
+        "WahaSession": "Sessão Waha",
+        "WahaSessionApp": "App de Sessão",
+        "WahaSessionLabel": "Etiqueta de Sessão"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Contas",
@@ -29,7 +33,11 @@
         "ChatwootSyncState": "Chat / Syncs",
         "ChatwootAccountWebhook": "Chat / Webhooks",
         "ChatwootInboxIntegration": "Chat / Conexões",
-        "ChatwootLabel": "Chat / Etiquetas"
+        "ChatwootLabel": "Chat / Etiquetas",
+        "WahaPlatform": "Plataformas Waha",
+        "WahaSession": "Sessões Waha",
+        "WahaSessionApp": "Apps de Sessão",
+        "WahaSessionLabel": "Etiquetas de Sessão"
     },
     "navbarTabs": {
         "Conversations": "Conversas",

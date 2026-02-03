@@ -9,7 +9,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Controllers;
+namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
@@ -18,8 +18,8 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
-use Espo\Modules\Waha\Services\WahaSession as WahaSessionService;
-use Espo\Modules\Waha\Services\WahaSessionApp as WahaSessionAppService;
+use Espo\Modules\Chatwoot\Services\WahaSession as WahaSessionService;
+use Espo\Modules\Chatwoot\Services\WahaSessionApp as WahaSessionAppService;
 use stdClass;
 
 /**

@@ -20,7 +20,7 @@ use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Config;
 use Espo\Core\Acl;
-use Espo\Modules\Waha\Services\WahaApiClient;
+use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use stdClass;
 

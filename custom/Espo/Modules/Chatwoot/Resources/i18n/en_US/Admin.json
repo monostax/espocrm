@@ -1,6 +1,7 @@
 {
     "labels": {
-        "Chatwoot": "Chat"
+        "Chatwoot": "Chat",
+        "Waha": "Waha"
     },
     "descriptions": {
         "chatwootPlatforms": "Manage chat platforms",
@@ -9,6 +10,8 @@
         "chatwootUsers": "Manage chat users",
         "chatwootTeams": "Manage chat teams",
         "chatwootWebhooks": "Manage chat webhooks",
-        "chatwootSyncState": "View chat synchronization state"
+        "chatwootSyncState": "View chat synchronization state",
+        "wahaPlatforms": "Manage Waha platforms",
+        "wahaSessions": "Manage WhatsApp sessions"
     }
 }

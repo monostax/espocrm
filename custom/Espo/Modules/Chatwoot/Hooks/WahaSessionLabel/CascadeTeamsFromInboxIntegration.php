@@ -9,7 +9,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Hooks\WahaSessionLabel;
+namespace Espo\Modules\Chatwoot\Hooks\WahaSessionLabel;
 
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;

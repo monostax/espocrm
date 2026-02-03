@@ -9,7 +9,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Controllers;
+namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
@@ -103,7 +103,7 @@ class WahaLabelWebhook
         $jobScheduler = $this->jobSchedulerFactory->create();
         
         $jobScheduler
-            ->setClassName('Espo\\Modules\\Waha\\Jobs\\ProcessWahaLabelWebhook')
+            ->setClassName('Espo\\Modules\\Chatwoot\\Jobs\\ProcessWahaLabelWebhook')
             ->setData([
                 'channelId' => $channelId,
                 'event' => $event,

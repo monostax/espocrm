@@ -9,7 +9,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Jobs;
+namespace Espo\Modules\Chatwoot\Jobs;
 
 use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
@@ -17,7 +17,7 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
-use Espo\Modules\Waha\Services\WahaApiClient;
+use Espo\Modules\Chatwoot\Services\WahaApiClient;
 
 /**
  * Job to process WAHA label webhook events.

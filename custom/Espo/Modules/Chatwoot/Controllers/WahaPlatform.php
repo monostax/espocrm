@@ -1,8 +1,7 @@
 <?php
 
-namespace Espo\Modules\Waha\Controllers;
+namespace Espo\Modules\Chatwoot\Controllers;
 
 class WahaPlatform extends \Espo\Core\Templates\Controllers\Base
 {
 }
-

@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\Waha\Rebuild;
+namespace Espo\Modules\Chatwoot\Rebuild;
 
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Rebuild\RebuildAction;

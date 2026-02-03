@@ -14,7 +14,7 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootAgent;
 use Espo\Core\Utils\Log;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
-use Espo\Modules\Waha\Services\WahaApiClient;
+use Espo\Modules\Chatwoot\Services\WahaApiClient;
 
 /**
  * Hook to synchronize WahaSessionLabel when ChatwootAgent is linked/unlinked to/from ChatwootInbox.

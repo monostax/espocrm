@@ -3,7 +3,8 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\ModifyConfig",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedScheduledJobs",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootPlatform",
-        "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootAccount"
+        "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootAccount",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\SeedWahaPlatform"
     ]
 }
 

@@ -11,7 +11,11 @@
         "ChatwootAgent": "Chat / Agent",
         "ChatwootAccountWebhook": "Chat / Account Webhook",
         "ChatwootMessage": "Chat / Message",
-        "ChatwootLabel": "Chat / Label"
+        "ChatwootLabel": "Chat / Label",
+        "WahaPlatform": "Waha Platform",
+        "WahaSession": "Waha Session",
+        "WahaSessionApp": "Session App",
+        "WahaSessionLabel": "Session Label"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Accounts",
@@ -25,7 +29,11 @@
         "ChatwootAgent": "Chat / Agents",
         "ChatwootAccountWebhook": "Chat / Account Webhooks",
         "ChatwootMessage": "Chat / Messages",
-        "ChatwootLabel": "Chat / Labels"
+        "ChatwootLabel": "Chat / Labels",
+        "WahaPlatform": "Waha Platforms",
+        "WahaSession": "Waha Sessions",
+        "WahaSessionApp": "Session Apps",
+        "WahaSessionLabel": "Session Labels"
     },
     "navbarTabs": {
         "Conversations": "Conversations",
