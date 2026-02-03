@@ -110,6 +110,8 @@ class SeedRole implements RebuildAction
                 'userCalendarPermission' => 'team',
                 'data' => [
                     'Import' => true,
+                    'GoogleCalendar' => true,
+                    'ExternalAccount' => true,
                     'ChatwootConversation' => [
                         'create' => 'no',
                         'read' => 'team',

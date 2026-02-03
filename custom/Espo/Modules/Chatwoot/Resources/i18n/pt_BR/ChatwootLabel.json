@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "name": "Nome",
+        "description": "Descrição",
+        "color": "Cor",
+        "showOnSidebar": "Mostrar na Barra Lateral",
+        "chatwootLabelId": "Chat / ID da Etiqueta",
+        "chatwootAccount": "Chat / Conta",
+        "syncStatus": "Status de Sincronização",
+        "lastSyncedAt": "Última Sincronização",
+        "lastSyncError": "Último Erro de Sincronização"
+    },
+    "tooltips": {
+        "chatwootLabelId": "O ID da etiqueta no Chat. Este campo é preenchido automaticamente após a sincronização.",
+        "showOnSidebar": "Mostrar esta etiqueta na barra lateral do Chat."
+    },
+    "labels": {
+        "Create ChatwootLabel": "Criar Etiqueta"
+    }
+}

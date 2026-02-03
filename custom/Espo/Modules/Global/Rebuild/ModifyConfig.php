@@ -56,8 +56,8 @@ class ModifyConfig implements RebuildAction
     private function configureActivitiesEntityList(): void
     {
         // Valid entity types for activities/history panels
-        $validActivityEntities = ['Meeting', 'Call', 'Email', 'Task'];
-        $validHistoryEntities = ['Meeting', 'Call', 'Email'];
+        $validActivityEntities = ['Meeting', 'Call', 'Email', 'Task', 'Appointment'];
+        $validHistoryEntities = ['Meeting', 'Call', 'Email', 'Appointment'];
 
         $modified = false;
 
@@ -74,6 +74,11 @@ class ModifyConfig implements RebuildAction
         // Ensure Task is included
         if (!in_array('Task', $newActivitiesEntityList)) {
             $newActivitiesEntityList[] = 'Task';
+        }
+
+        // Ensure Appointment is included
+        if (!in_array('Appointment', $newActivitiesEntityList)) {
+            $newActivitiesEntityList[] = 'Appointment';
         }
 
         // Ensure core entities are included
@@ -105,15 +110,20 @@ class ModifyConfig implements RebuildAction
             }
         }
 
+        // Ensure Appointment is included
+        if (!in_array('Appointment', $newHistoryEntityList)) {
+            $newHistoryEntityList[] = 'Appointment';
+        }
+
         if ($newHistoryEntityList !== $historyEntityList) {
             $this->configWriter->set('historyEntityList', $newHistoryEntityList);
             $modified = true;
         }
 
-        // Set activitiesCreateButtonMaxCount to 4 to include Task icon button
+        // Set activitiesCreateButtonMaxCount to 5 to include Task and Appointment icon button
         $currentButtonMaxCount = $this->config->get('activitiesCreateButtonMaxCount');
-        if ($currentButtonMaxCount !== 4) {
-            $this->configWriter->set('activitiesCreateButtonMaxCount', 4);
+        if ($currentButtonMaxCount !== 5) {
+            $this->configWriter->set('activitiesCreateButtonMaxCount', 5);
             $modified = true;
         }
 
@@ -344,8 +354,8 @@ class ModifyConfig implements RebuildAction
 
     private function addActivitiesSection(array $tabList): array
     {
-        // Use upsertToSection to add/update the $Activities divider with Task, Call, Meeting
-        return $this->upsertToSection($tabList, '$Activities', ['Task', 'Call', 'Meeting'], 'end');
+        // Use upsertToSection to add/update the $Activities divider with Task, Call, Meeting, Appointment
+        return $this->upsertToSection($tabList, '$Activities', ['Task', 'Appointment', 'Call', 'Meeting'], 'end');
     }
 
     private function addConfigurationSection(array $tabList): array

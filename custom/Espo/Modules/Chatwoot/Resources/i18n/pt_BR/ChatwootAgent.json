@@ -10,6 +10,8 @@
         "isAI": "Agente IA",
         "aiPrompt": "Prompt",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
+        "contextualTransferIsEnabled": "Habilitar Transferência Contextual (IA)",
+        "transferScenarios": "Cenários de Transferência",
         "confirmed": "Email Confirmado",
         "avatarUrl": "URL do Avatar",
         "customRoleId": "ID da Função Personalizada",

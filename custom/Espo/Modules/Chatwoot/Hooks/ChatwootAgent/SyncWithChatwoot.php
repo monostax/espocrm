@@ -106,24 +106,32 @@ class SyncWithChatwoot
             $platformAccessToken = $platform->get('accessToken');
 
             if ($isNew && !$chatwootAgentId) {
-                // Check if password is provided - if so, create ChatwootUser first
+                // Password is required for new agents to create ChatwootUser for SSO
                 $password = $entity->get('password');
                 
-                if ($password && $platformAccessToken) {
-                    // Create ChatwootUser first via Platform API
-                    $chatwootUser = $this->createChatwootUserFirst(
-                        $entity,
-                        $platformUrl,
-                        $platformAccessToken,
-                        $platformId,
-                        $chatwootAccountId,
-                        $password
-                    );
-                    
-                    if ($chatwootUser) {
-                        $entity->set('chatwootUserId', $chatwootUser->getId());
-                    }
+                if (!$password) {
+                    throw new Error('Password is required to create a new agent.');
                 }
+                
+                if (!$platformAccessToken) {
+                    throw new Error('ChatwootPlatform does not have an access token configured.');
+                }
+                
+                // Create ChatwootUser first via Platform API (required for SSO)
+                $chatwootUser = $this->createChatwootUserFirst(
+                    $entity,
+                    $platformUrl,
+                    $platformAccessToken,
+                    $platformId,
+                    $chatwootAccountId,
+                    $password
+                );
+                
+                if (!$chatwootUser) {
+                    throw new Error('Failed to create ChatwootUser. Agent cannot be created without a linked user.');
+                }
+                
+                $entity->set('chatwootUserId', $chatwootUser->getId());
                 
                 // Create new agent on Chatwoot
                 $this->createAgentOnChatwoot($entity, $platformUrl, $apiKey, $chatwootAccountId);
@@ -162,7 +170,8 @@ class SyncWithChatwoot
      * This ensures the user has credentials and can login immediately.
      * ChatwootUser is platform-level, not account-level.
      * 
-     * @return Entity|null The created ChatwootUser entity, or null if creation failed
+     * @return Entity The created ChatwootUser entity
+     * @throws Error If ChatwootUser creation fails
      */
     private function createChatwootUserFirst(
         Entity $agentEntity,
@@ -171,7 +180,7 @@ class SyncWithChatwoot
         string $platformId,
         int $chatwootAccountId,
         string $password
-    ): ?Entity {
+    ): Entity {
         $email = $agentEntity->get('email');
         $name = $agentEntity->get('name');
         $role = $agentEntity->get('role') ?? 'agent';
@@ -252,11 +261,10 @@ class SyncWithChatwoot
             return $chatwootUser;
 
         } catch (\Exception $e) {
-            $this->log->warning(
-                'Failed to create ChatwootUser for agent ' . $email . ': ' . $e->getMessage() .
-                '. Agent will be created without linked user (confirmation email will be sent).'
+            $this->log->error(
+                'Failed to create ChatwootUser for agent ' . $email . ': ' . $e->getMessage()
             );
-            return null;
+            throw new Error('Failed to create ChatwootUser: ' . $e->getMessage());
         }
     }
 

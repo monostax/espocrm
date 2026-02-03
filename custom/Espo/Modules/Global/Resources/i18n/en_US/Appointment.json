@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "name": "Subject",
+        "status": "Status",
+        "dateStart": "Start Date",
+        "dateEnd": "End Date",
+        "duration": "Duration",
+        "description": "Description",
+        "chatwootConversations": "Chat / Conversations",
+        "customer": "Customer",
+        "assignedUser": "Professional / Location"
+    },
+    "links": {
+        "chatwootConversations": "Chat / Conversations",
+        "customer": "Customer",
+        "assignedUser": "Professional / Location",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "options": {
+        "status": {
+            "Planned": "Planned",
+            "Held": "Held",
+            "Not Held": "Not Held",
+            "Canceled": "Canceled"
+        }
+    },
+    "labels": {
+        "Create Appointment": "Create Appointment"
+    }
+}

@@ -188,6 +188,34 @@ class SyncLabelWithWaha
                 return;
             }
 
+            // Get the ChatwootAccount for this inbox
+            $chatwootAccount = $this->entityManager->getEntityById(
+                'ChatwootAccount',
+                $inboxIntegration->get('chatwootAccountId')
+            );
+
+            $chatwootLabelId = null;
+
+            // Create linked ChatwootLabel if we have a ChatwootAccount
+            if ($chatwootAccount) {
+                try {
+                    $chatwootLabel = $this->entityManager->createEntity('ChatwootLabel', [
+                        'name' => $labelName,
+                        'description' => 'Auto-created label for agent ' . $agent->get('name'),
+                        'color' => $colorHex,
+                        'showOnSidebar' => true,
+                        'chatwootAccountId' => $chatwootAccount->getId(),
+                        'teamId' => $inboxIntegration->get('teamId'),
+                    ]);
+                    
+                    $chatwootLabelId = $chatwootLabel->getId();
+                    $this->log->info("SyncLabelWithWaha: Created linked ChatwootLabel {$chatwootLabelId} for agent {$agent->getId()}");
+                } catch (\Exception $e) {
+                    // Log but continue - WahaSessionLabel can exist without ChatwootLabel
+                    $this->log->warning("SyncLabelWithWaha: Failed to create ChatwootLabel: " . $e->getMessage());
+                }
+            }
+
             // Create WahaSessionLabel record
             $this->entityManager->createEntity('WahaSessionLabel', [
                 'name' => $labelName,
@@ -197,6 +225,7 @@ class SyncLabelWithWaha
                 'agentId' => $agent->getId(),
                 'inboxIntegrationId' => $inboxIntegration->getId(),
                 'teamId' => $inboxIntegration->get('teamId'),
+                'chatwootLabelId' => $chatwootLabelId,
                 'syncStatus' => 'synced',
             ], ['silent' => true]);
 

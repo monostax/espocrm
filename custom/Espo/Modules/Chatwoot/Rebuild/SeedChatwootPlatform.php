@@ -47,13 +47,13 @@ class SeedChatwootPlatform implements RebuildAction
     {
         $frontendUrl = getenv('CHATWOOT_PLATFORM_FRONTEND_URL');
         $backendUrl = getenv('CHATWOOT_PLATFORM_BACKEND_URL');
-        $apiToken = getenv('CHATWOOT_PLATFORM_API_TOKEN');
+        $apiToken = "WE_NEED_TO_UPDATE_ON_UI";
 
         // Skip if environment variables are not configured
         if (!$frontendUrl || !$backendUrl || !$apiToken) {
             $this->log->debug(
                 'SeedChatwootPlatform: Skipping - environment variables not configured ' .
-                '(CHATWOOT_PLATFORM_FRONTEND_URL, CHATWOOT_PLATFORM_BACKEND_URL, CHATWOOT_PLATFORM_API_TOKEN)'
+                '(CHATWOOT_PLATFORM_FRONTEND_URL, CHATWOOT_PLATFORM_BACKEND_URL)'
             );
             return;
         }

@@ -39,6 +39,24 @@
                         }
                     ]
                 }
+            },
+            "transferScenarios": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "contextualTransferIsEnabled"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "contextualTransferIsEnabled"
+                        }
+                    ]
+                }
             }
         }
     },

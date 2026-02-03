@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 25
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 20
+    },
+    {
+        "name": "color",
+        "width": 10
+    },
+    {
+        "name": "chatwootLabelId",
+        "width": 12
+    },
+    {
+        "name": "syncStatus",
+        "width": 10
+    },
+    {
+        "name": "createdAt",
+        "width": 20
+    }
+]

@@ -39,20 +39,20 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
     public function run(): void
     {
-        $this->log->warning('SyncConversationsFromChatwoot: Job started');
+        $this->log->debug('SyncConversationsFromChatwoot: Job started');
 
         try {
             $accounts = $this->getEnabledAccounts();
             $accountList = iterator_to_array($accounts);
             $accountCount = count($accountList);
 
-            $this->log->warning("SyncConversationsFromChatwoot: Found {$accountCount} account(s) to sync");
+            $this->log->debug("SyncConversationsFromChatwoot: Found {$accountCount} account(s) to sync");
 
             foreach ($accountList as $account) {
                 $this->syncAccountConversations($account);
             }
 
-            $this->log->warning("SyncConversationsFromChatwoot: Job completed - processed {$accountCount} account(s)");
+            $this->log->debug("SyncConversationsFromChatwoot: Job completed - processed {$accountCount} account(s)");
         } catch (\Throwable $e) {
             $this->log->error('SyncConversationsFromChatwoot: Job failed - ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         }
@@ -122,7 +122,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             }
             $this->entityManager->saveEntity($account, ['silent' => true]);
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncConversationsFromChatwoot: Account {$accountName} - " .
                 "{$result['synced']} synced, {$result['skipped']} skipped, {$result['errors']} errors" .
                 ($result['hasMore'] ? " (more pages remaining)" : " (complete)")
@@ -185,7 +185,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ];
         }
 
-        $this->log->warning(
+        $this->log->debug(
             "SyncConversationsFromChatwoot: Starting sync with cursor=" .
             ($cursor !== null ? date('Y-m-d H:i:s', $cursor) . " ({$cursor})" : 'null')
         );
@@ -206,7 +206,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Get counts for pagination
             $allCount = $meta['all_count'] ?? count($conversations);
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncConversationsFromChatwoot: Page {$page} - " . count($conversations) .
                 " conversations, total: {$allCount}"
             );
@@ -231,7 +231,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 } catch (\Exception $e) {
                     $stats['errors']++;
                     $conversationId = $chatwootConversation['id'] ?? 'unknown';
-                    $this->log->warning(
+                    $this->log->debug(
                         "Failed to sync Chatwoot conversation {$conversationId}: " . $e->getMessage()
                     );
                 }
@@ -270,7 +270,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $contactId = isset($chatwootConversation['meta']['sender']['id']) ? (int) $chatwootConversation['meta']['sender']['id'] : null;
 
         if (!$inboxId || !$contactId) {
-            $this->log->warning("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - missing inboxId or contactId");
+            $this->log->debug("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - missing inboxId or contactId");
             return 'skipped';
         }
 
@@ -282,7 +282,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
         if (!$cwtContact) {
             // Contact hasn't been synced yet, skip this conversation
-            $this->log->warning("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - ChatwootContact not found for Chatwoot contact ID {$contactId}");
+            $this->log->debug("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - ChatwootContact not found for Chatwoot contact ID {$contactId}");
             return 'skipped';
         }
 
@@ -628,7 +628,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     $this->entityManager->createEntity('ChatwootMessage', $data, ['silent' => true]);
                 }
             } catch (\Exception $e) {
-                $this->log->warning(
+                $this->log->debug(
                     "SyncConversationsFromChatwoot: Failed to sync message {$chatwootMessageId}: " . $e->getMessage()
                 );
             }
@@ -738,7 +738,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 "from {$currentStatus} to {$newStatus} (lastMessageType: {$lastMessageType})"
             );
         } catch (\Exception $e) {
-            $this->log->warning(
+            $this->log->debug(
                 "SyncConversationsFromChatwoot: Failed to auto-toggle conversation {$chatwootConversationId} " .
                 "to {$newStatus}: " . $e->getMessage()
             );
@@ -883,7 +883,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     $deletedCount++;
                 } else {
                     // Other error (API issue, etc) - log but don't mark as deleted
-                    $this->log->warning(
+                    $this->log->debug(
                         "SyncConversationsFromChatwoot: Error checking conversation {$chatwootConversationId}: " . 
                         $e->getMessage()
                     );
@@ -941,7 +941,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             );
 
             if (!$wahaPlatform) {
-                $this->log->warning("SyncConversationsFromChatwoot: WahaPlatform not found for integration {$inboxIntegration->getId()}");
+                $this->log->debug("SyncConversationsFromChatwoot: WahaPlatform not found for integration {$inboxIntegration->getId()}");
                 return;
             }
 
@@ -950,7 +950,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $sessionName = $inboxIntegration->get('wahaSessionName');
 
             if (!$platformUrl || !$apiKey || !$sessionName) {
-                $this->log->warning("SyncConversationsFromChatwoot: Missing WAHA credentials or session name");
+                $this->log->debug("SyncConversationsFromChatwoot: Missing WAHA credentials or session name");
                 return;
             }
 
@@ -963,7 +963,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
             $chatId = $this->buildChatId($phoneNumber);
             if (!$chatId) {
-                $this->log->warning("SyncConversationsFromChatwoot: Could not build chatId from phone number {$phoneNumber}");
+                $this->log->debug("SyncConversationsFromChatwoot: Could not build chatId from phone number {$phoneNumber}");
                 return;
             }
 
@@ -1156,7 +1156,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             }
 
             // Label doesn't exist in WAHA, need to recreate it
-            $this->log->warning(
+            $this->log->debug(
                 "SyncConversationsFromChatwoot: Label {$storedLabelId} not found in WAHA session {$sessionName}, recreating..."
             );
 
@@ -1200,7 +1200,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Check if this is a session not ready error (422)
             $message = $e->getMessage();
             if (strpos($message, '422') !== false || strpos($message, 'STARTING') !== false || strpos($message, 'not as expected') !== false) {
-                $this->log->warning(
+                $this->log->debug(
                     "SyncConversationsFromChatwoot: Session {$sessionName} not ready, using stored label ID {$storedLabelId} (best effort)"
                 );
                 // Return stored ID - the updateChatLabels call may still work or fail gracefully

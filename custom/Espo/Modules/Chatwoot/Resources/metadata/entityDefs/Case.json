@@ -1,0 +1,10 @@
+{
+    "links": {
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "cases",
+            "relationName": "chatwootConversationCase"
+        }
+    }
+}

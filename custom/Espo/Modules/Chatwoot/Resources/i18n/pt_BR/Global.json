@@ -12,7 +12,8 @@
         "ChatwootTeam": "Chat / Time",
         "ChatwootSyncState": "Chat / Sync",
         "ChatwootAccountWebhook": "Chat / Webhook",
-        "ChatwootInboxIntegration": "Chat / Conexão"
+        "ChatwootInboxIntegration": "Chat / Conexão",
+        "ChatwootLabel": "Chat / Etiqueta"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Contas",
@@ -27,7 +28,8 @@
         "ChatwootTeam": "Chat / Times",
         "ChatwootSyncState": "Chat / Syncs",
         "ChatwootAccountWebhook": "Chat / Webhooks",
-        "ChatwootInboxIntegration": "Chat / Conexões"
+        "ChatwootInboxIntegration": "Chat / Conexões",
+        "ChatwootLabel": "Chat / Etiquetas"
     },
     "navbarTabs": {
         "Conversations": "Conversas",

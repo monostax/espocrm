@@ -19,7 +19,7 @@
         "password": {
             "type": "password",
             "dbType": "text",
-            "required": false,
+            "required": true,
             "tooltip": true,
             "notStorable": true
         },
@@ -46,6 +46,14 @@
             "type": "bool",
             "default": false,
             "tooltip": true
+        },
+        "contextualTransferIsEnabled": {
+            "type": "bool",
+            "default": false
+        },
+        "transferScenarios": {
+            "type": "text",
+            "rowsMin": 10
         },
         "aiPrompt": {
             "type": "text",

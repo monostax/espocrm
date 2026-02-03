@@ -242,7 +242,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                     }
                 } catch (\Exception $e) {
                     $stats['errors']++;
-                    $this->log->warning(
+                    $this->log->debug(
                         "SyncInboxMembersFromChatwoot: Failed to link agent {$agentId} to inbox: " . $e->getMessage()
                     );
                 }
@@ -265,7 +265,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                     }
                 } catch (\Exception $e) {
                     $stats['errors']++;
-                    $this->log->warning(
+                    $this->log->debug(
                         "SyncInboxMembersFromChatwoot: Failed to unlink agent {$agentId} from inbox: " . $e->getMessage()
                     );
                 }
@@ -273,7 +273,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
         } catch (\Exception $e) {
             $stats['errors']++;
-            $this->log->warning(
+            $this->log->debug(
                 "SyncInboxMembersFromChatwoot: Failed to sync inbox {$chatwootInboxId}: " . $e->getMessage()
             );
         }
@@ -391,7 +391,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             );
 
             if (!$wahaPlatform) {
-                $this->log->warning("SyncInboxMembersFromChatwoot: WahaPlatform not found for integration {$inboxIntegration->getId()}");
+                $this->log->debug("SyncInboxMembersFromChatwoot: WahaPlatform not found for integration {$inboxIntegration->getId()}");
                 return;
             }
 
@@ -400,7 +400,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             $sessionName = $inboxIntegration->get('wahaSessionName');
 
             if (!$platformUrl || !$apiKey || !$sessionName) {
-                $this->log->warning("SyncInboxMembersFromChatwoot: Missing WAHA credentials or session name");
+                $this->log->debug("SyncInboxMembersFromChatwoot: Missing WAHA credentials or session name");
                 return;
             }
 
@@ -494,7 +494,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                                 $wahaLabelId
                             );
                         } catch (\Exception $e) {
-                            $this->log->warning("SyncInboxMembersFromChatwoot: Failed to delete label from WAHA: " . $e->getMessage());
+                            $this->log->debug("SyncInboxMembersFromChatwoot: Failed to delete label from WAHA: " . $e->getMessage());
                         }
                     }
                 }

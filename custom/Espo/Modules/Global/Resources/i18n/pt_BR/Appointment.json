@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "customer": "Cliente",
+        "assignedUser": "Profissional / Unidade",
+        "name": "Nome",
+        "status": "Status",
+        "dateStart": "Data/Hora (Início)",
+        "dateEnd": "Data/Hora (Fim)",
+        "duration": "Duração",
+        "description": "Observação",
+        "chatwootConversations": "Chat / Conversas"
+    },
+    "links": {
+        "customer": "Cliente",
+        "assignedUser": "Profissional / Unidade"
+    },
+    "options": {
+        "status": {
+            "Planned": "Planejado",
+            "Held": "Realizado",
+            "Not Held": "Não Comparecimento",
+            "Canceled": "Cancelado"
+        }
+        },
+        "labels": {
+            "Create Appointment": "Criar Agendamento"
+        }
+}

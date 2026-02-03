@@ -1,0 +1,107 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "trim": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Planned", "Held", "Not Held", "Canceled"],
+            "default": "Planned",
+            "style": {
+                "Planned": "primary",
+                "Held": "success",
+                "Not Held": "warning",
+                "Canceled": "danger"
+            },
+            "audited": true
+        },
+        "dateStart": {
+            "type": "datetimeOptional",
+            "view": "crm:views/meeting/fields/date-start",
+            "required": true,
+            "audited": true
+        },
+        "dateEnd": {
+            "type": "datetimeOptional",
+            "view": "crm:views/meeting/fields/date-end",
+            "required": true,
+            "after": "dateStart"
+        },
+        "duration": {
+            "type": "duration",
+            "start": "dateStart",
+            "end": "dateEnd",
+            "options": [900, 1800, 3600, 7200],
+            "default": 1800
+        },
+        "description": {
+            "type": "text"
+        },
+        "chatwootConversations": {
+            "type": "linkMultiple",
+            "view": "views/fields/link-multiple"
+        },
+        "customer": {
+            "type": "link"
+        },
+        "assignedUser": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/assigned-user"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "appointments"
+        },
+        "customer": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "dateStart",
+        "order": "desc",
+        "textFilterFields": ["name"]
+    },
+    "indexes": {
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "dateStart": {
+            "columns": ["dateStart", "deleted"]
+        }
+    }
+}

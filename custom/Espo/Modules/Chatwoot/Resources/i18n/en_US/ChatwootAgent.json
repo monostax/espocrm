@@ -10,6 +10,8 @@
         "isAI": "AI Agent",
         "aiPrompt": "Prompt",
         "knowledgeBaseCategories": "Knowledge Base Categories",
+        "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",
+        "transferScenarios": "Transfer Scenarios",
         "confirmed": "Email Confirmed",
         "avatarUrl": "Avatar URL",
         "customRoleId": "Custom Role ID",

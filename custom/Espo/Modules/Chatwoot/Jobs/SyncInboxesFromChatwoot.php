@@ -23,20 +23,20 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
     public function run(): void
     {
-        $this->log->warning('SyncInboxesFromChatwoot: Job started');
+        $this->log->debug('SyncInboxesFromChatwoot: Job started');
 
         try {
             $accounts = $this->getEnabledAccounts();
             $accountList = iterator_to_array($accounts);
             $accountCount = count($accountList);
 
-            $this->log->warning("SyncInboxesFromChatwoot: Found {$accountCount} account(s) to sync");
+            $this->log->debug("SyncInboxesFromChatwoot: Found {$accountCount} account(s) to sync");
 
             foreach ($accountList as $account) {
                 $this->syncAccountInboxes($account);
             }
 
-            $this->log->warning("SyncInboxesFromChatwoot: Job completed - processed {$accountCount} account(s)");
+            $this->log->debug("SyncInboxesFromChatwoot: Job completed - processed {$accountCount} account(s)");
         } catch (\Throwable $e) {
             $this->log->error('SyncInboxesFromChatwoot: Job failed - ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         }
@@ -96,7 +96,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
                 $teamsIds
             );
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncInboxesFromChatwoot: Account {$accountName} - " .
                 "{$stats['synced']} synced, {$stats['deleted']} deleted, {$stats['errors']} errors"
             );
@@ -131,7 +131,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
         $inboxes = $response['payload'] ?? [];
 
-        $this->log->warning(
+        $this->log->debug(
             "SyncInboxesFromChatwoot: Found " . count($inboxes) . " inboxes"
         );
 
@@ -146,7 +146,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $inboxId = $chatwootInbox['id'] ?? 'unknown';
-                $this->log->warning(
+                $this->log->debug(
                     "SyncInboxesFromChatwoot: Failed to sync inbox {$inboxId}: " . $e->getMessage()
                 );
             }
@@ -191,7 +191,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
                     $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
                     $deleted++;
                 } catch (\Exception $e) {
-                    $this->log->warning(
+                    $this->log->debug(
                         "SyncInboxesFromChatwoot: Failed to remove orphaned inbox {$inbox->getId()}: " .
                         $e->getMessage()
                     );

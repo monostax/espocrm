@@ -74,7 +74,7 @@ class AutoPendingConversations implements JobDataLess
                     }
                 } catch (\Exception $e) {
                     $errors++;
-                    $this->log->warning(
+                    $this->log->debug(
                         'AutoPendingConversations: Failed to move conversation ' . 
                         $conversation->getId() . ' to pending: ' . $e->getMessage()
                     );
@@ -97,7 +97,7 @@ class AutoPendingConversations implements JobDataLess
                     }
                 } catch (\Exception $e) {
                     $errors++;
-                    $this->log->warning(
+                    $this->log->debug(
                         'AutoPendingConversations: Failed to move conversation ' . 
                         $conversation->getId() . ' to open: ' . $e->getMessage()
                     );
@@ -133,7 +133,7 @@ class AutoPendingConversations implements JobDataLess
         $chatwootConversationId = $conversation->get('chatwootConversationId');
 
         if (!$chatwootConversationId) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: Conversation {$conversationId} has no chatwootConversationId"
             );
             return false;
@@ -142,7 +142,7 @@ class AutoPendingConversations implements JobDataLess
         // Get the ChatwootAccount
         $accountId = $conversation->get('chatwootAccountId');
         if (!$accountId) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: Conversation {$conversationId} has no chatwootAccountId"
             );
             return false;
@@ -150,7 +150,7 @@ class AutoPendingConversations implements JobDataLess
 
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
         if (!$account) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: ChatwootAccount {$accountId} not found"
             );
             return false;
@@ -167,7 +167,7 @@ class AutoPendingConversations implements JobDataLess
 
         $chatwootAccountId = $account->get('chatwootAccountId');
         if (!$chatwootAccountId) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: Account {$accountId} has no chatwootAccountId"
             );
             return false;
@@ -175,7 +175,7 @@ class AutoPendingConversations implements JobDataLess
 
         $accountApiKey = $account->get('apiKey');
         if (!$accountApiKey) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: Account {$accountId} has no API key"
             );
             return false;
@@ -185,7 +185,7 @@ class AutoPendingConversations implements JobDataLess
         $platformId = $account->get('platformId');
         $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
         if (!$platform) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: Platform {$platformId} not found"
             );
             return false;
@@ -193,7 +193,7 @@ class AutoPendingConversations implements JobDataLess
 
         $platformUrl = $platform->get('backendUrl');
         if (!$platformUrl) {
-            $this->log->warning(
+            $this->log->debug(
                 "AutoPendingConversations: Platform {$platformId} has no URL"
             );
             return false;

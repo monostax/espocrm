@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Detail",
+    "rows": [
+      [{"name": "assignedUser"}],
+      [{"name": "customer"}],
+      [{"name": "createdAt"}, {"name": "modifiedAt"}]
+    ]
+  }
+]

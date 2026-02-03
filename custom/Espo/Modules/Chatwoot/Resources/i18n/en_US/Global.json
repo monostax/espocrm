@@ -10,7 +10,8 @@
         "ChatwootInboxIntegration": "Chat / Connection",
         "ChatwootAgent": "Chat / Agent",
         "ChatwootAccountWebhook": "Chat / Account Webhook",
-        "ChatwootMessage": "Chat / Message"
+        "ChatwootMessage": "Chat / Message",
+        "ChatwootLabel": "Chat / Label"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Accounts",
@@ -23,7 +24,8 @@
         "ChatwootInboxIntegration": "Chat / Connections",
         "ChatwootAgent": "Chat / Agents",
         "ChatwootAccountWebhook": "Chat / Account Webhooks",
-        "ChatwootMessage": "Chat / Messages"
+        "ChatwootMessage": "Chat / Messages",
+        "ChatwootLabel": "Chat / Labels"
     },
     "navbarTabs": {
         "Conversations": "Conversations",

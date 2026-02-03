@@ -26,6 +26,17 @@
                 {
                     "name": "chatwootAccount"
                 }
+            ],
+            [
+                {
+                    "name": "contextualTransferIsEnabled"
+                }
+            ],
+            [
+                {
+                    "name": "transferScenarios",
+                    "fullWidth": true
+                }
             ]
         ]
     }

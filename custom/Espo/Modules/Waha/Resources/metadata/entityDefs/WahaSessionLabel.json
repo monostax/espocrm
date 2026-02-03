@@ -35,6 +35,9 @@
             "type": "link",
             "required": true
         },
+        "chatwootLabel": {
+            "type": "link"
+        },
         "syncStatus": {
             "type": "enum",
             "options": ["pending", "synced", "error"],
@@ -67,6 +70,11 @@
         "team": {
             "type": "belongsTo",
             "entity": "Team"
+        },
+        "chatwootLabel": {
+            "type": "belongsTo",
+            "entity": "ChatwootLabel",
+            "foreign": "wahaSessionLabels"
         }
     },
     "collection": {

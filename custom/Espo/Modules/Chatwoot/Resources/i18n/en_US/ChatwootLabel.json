@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "name": "Name",
+        "description": "Description",
+        "color": "Color",
+        "showOnSidebar": "Show on Sidebar",
+        "chatwootLabelId": "Chat / Label ID",
+        "chatwootAccount": "Chat / Account",
+        "syncStatus": "Sync Status",
+        "lastSyncedAt": "Last Synced At",
+        "lastSyncError": "Last Sync Error"
+    },
+    "tooltips": {
+        "chatwootLabelId": "The label ID in Chat. This is automatically set when synced.",
+        "showOnSidebar": "Show this label in the Chat sidebar."
+    },
+    "labels": {
+        "Create ChatwootLabel": "Create Label"
+    }
+}

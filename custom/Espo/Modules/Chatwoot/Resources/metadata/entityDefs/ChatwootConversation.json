@@ -88,6 +88,20 @@
             "type": "link",
             "view": "views/fields/assigned-user"
         },
+        "cases": {
+            "type": "linkMultiple",
+            "columns": {
+                "status": "status",
+                "priority": "priority"
+            }
+        },
+        "appointments": {
+            "type": "linkMultiple",
+            "columns": {
+                "status": "status",
+                "dateStart": "dateStart"
+            }
+        },
         "smartAudiences": {
             "type": "linkMultiple",
             "layoutListDisabled": true,
@@ -132,6 +146,18 @@
             "entity": "CAgendamento",
             "foreign": "chatwootConversations",
             "relationName": "chatwootConversationCAgendamento"
+        },
+        "cases": {
+            "type": "hasMany",
+            "entity": "Case",
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationCase"
+        },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationAppointment"
         },
         "tasks": {
             "type": "hasChildren",
@@ -213,7 +239,10 @@
         "junctionTables": [
             {"table": "SmartAudienceConversation", "column": "chatwootConversationId"},
             {"table": "ChatwootConversationOpportunity", "column": "chatwootConversationId"},
-            {"table": "ChatwootConversationCAgendamento", "column": "chatwootConversationId"}
+            {"table": "ChatwootConversationOpportunity", "column": "chatwootConversationId"},
+            {"table": "ChatwootConversationCAgendamento", "column": "chatwootConversationId"},
+            {"table": "ChatwootConversationCase", "column": "chatwootConversationId"},
+            {"table": "ChatwootConversationAppointment", "column": "chatwootConversationId"}
         ]
     }
 }

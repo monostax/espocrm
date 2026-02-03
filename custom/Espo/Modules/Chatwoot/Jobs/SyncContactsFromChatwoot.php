@@ -27,20 +27,20 @@ class SyncContactsFromChatwoot implements JobDataLess
     public function run(): void
     {
         // Use WARNING level to ensure it's always logged
-        $this->log->warning('SyncContactsFromChatwoot: Job started');
+        $this->log->debug('SyncContactsFromChatwoot: Job started');
 
         try {
             $accounts = $this->getEnabledAccounts();
             $accountList = iterator_to_array($accounts);
             $accountCount = count($accountList);
 
-            $this->log->warning("SyncContactsFromChatwoot: Found {$accountCount} account(s) to sync");
+            $this->log->debug("SyncContactsFromChatwoot: Found {$accountCount} account(s) to sync");
 
             foreach ($accountList as $account) {
                 $this->syncAccountContacts($account);
             }
 
-            $this->log->warning("SyncContactsFromChatwoot: Job completed - processed {$accountCount} account(s)");
+            $this->log->debug("SyncContactsFromChatwoot: Job completed - processed {$accountCount} account(s)");
         } catch (\Throwable $e) {
             $this->log->error('SyncContactsFromChatwoot: Job failed - ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         }
@@ -111,7 +111,7 @@ class SyncContactsFromChatwoot implements JobDataLess
             }
             $this->entityManager->saveEntity($account, ['silent' => true]);
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncContactsFromChatwoot: Account {$accountName} - " .
                 "{$result['synced']} synced, {$result['skipped']} skipped, {$result['errors']} errors" .
                 ($result['hasMore'] ? " (more pages remaining)" : " (complete)")
@@ -174,7 +174,7 @@ class SyncContactsFromChatwoot implements JobDataLess
             ];
         }
 
-        $this->log->warning(
+        $this->log->debug(
             "SyncContactsFromChatwoot: Starting sync with cursor=" .
             ($cursor !== null ? date('Y-m-d H:i:s', $cursor) . " ({$cursor})" : 'null')
         );
@@ -192,7 +192,7 @@ class SyncContactsFromChatwoot implements JobDataLess
             $totalCount = $response['meta']['count'] ?? 0;
             $currentPage = (int) ($response['meta']['current_page'] ?? $page);
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncContactsFromChatwoot: Page {$page} - " . count($contacts) .
                 " contacts, total: {$totalCount}"
             );
@@ -216,7 +216,7 @@ class SyncContactsFromChatwoot implements JobDataLess
                     }
                 } catch (\Exception $e) {
                     $stats['errors']++;
-                    $this->log->warning(
+                    $this->log->debug(
                         "Failed to sync Chatwoot contact {$chatwootContact['id']}: " . $e->getMessage()
                     );
                 }
@@ -726,7 +726,7 @@ class SyncContactsFromChatwoot implements JobDataLess
                     $deletedCount++;
                 } else {
                     // Other error (API issue, etc) - log but don't mark as deleted
-                    $this->log->warning(
+                    $this->log->debug(
                         "SyncContactsFromChatwoot: Error checking contact {$chatwootContactId}: " . 
                         $e->getMessage()
                     );
@@ -818,7 +818,7 @@ class SyncContactsFromChatwoot implements JobDataLess
                 // This triggers the Contact afterSave hook which may trigger EspoCRM merge
                 $cwtContact->set('contactId', $survivingContactId);
                 
-                $this->log->warning(
+                $this->log->debug(
                     "SyncContactsFromChatwoot: ChatwootContact {$chatwootContactId} was linked to " .
                     "Contact {$deletedContactId}, now re-linked to {$survivingContactId}. " .
                     "Consider merging these EspoCRM Contacts manually."

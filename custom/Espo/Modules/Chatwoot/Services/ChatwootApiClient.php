@@ -2104,5 +2104,191 @@ public function deleteConversation(
     $this->log->info("Chatwoot: Deleted conversation {$conversationId} from account {$accountId}");
     return true;
 }
+
+    /* -------------------------------------------------------------------------- */
+    /*                    Label API Methods (Account-level API)                   */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * List all labels in a Chatwoot account.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @return array<int, array<string, mixed>> List of labels
+     * @throws Error
+     */
+    public function listLabels(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/labels';
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to list labels from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (listLabels): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        // Response may have 'payload' key or be a direct array
+        return $response['body']['payload'] ?? $response['body'] ?? [];
+    }
+
+    /**
+     * Create a label in a Chatwoot account.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param array<string, mixed> $labelData Label data (title, description, color, show_on_sidebar)
+     * @return array<string, mixed> Response data from Chatwoot API
+     * @throws Error
+     */
+    public function createLabel(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        array $labelData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/labels';
+
+        $payload = json_encode($labelData);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode label data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (createLabel): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Update a label in a Chatwoot account.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $labelId The Chatwoot label ID
+     * @param array<string, mixed> $labelData Label data to update
+     * @return array<string, mixed> Response data from Chatwoot API
+     * @throws Error
+     */
+    public function updateLabel(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $labelId,
+        array $labelData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/labels/' . $labelId;
+
+        $payload = json_encode($labelData);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode label data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'PATCH', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (updateLabel): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Delete a label from a Chatwoot account.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $labelId The Chatwoot label ID
+     * @return void
+     * @throws Error
+     */
+    public function deleteLabel(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $labelId
+    ): void {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/labels/' . $labelId;
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+        // Accept 204 No Content, 200 OK, or 404 (already deleted) as success
+        if ($response['code'] !== 200 && $response['code'] !== 204 && $response['code'] !== 404) {
+            $errorMsg = 'Failed to delete label from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (deleteLabel): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        if ($response['code'] === 404) {
+            $this->log->info("Chatwoot: Label {$labelId} not found in account {$accountId} (already deleted)");
+        }
+    }
 }
 

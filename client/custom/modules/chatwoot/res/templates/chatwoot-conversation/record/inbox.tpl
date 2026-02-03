@@ -611,15 +611,20 @@
                 <span>{{translate 'Opportunity' category='scopeNamesPlural'}}</span>
                 <span class="inbox-tab-count" data-scope="opportunities"></span>
             </div>
-            <div class="inbox-tab" data-tab="agendamentos">
+            <div class="inbox-tab" data-tab="appointments">
                 <i class="far fa-calendar-check"></i>
-                <span>{{translate 'CAgendamento' category='scopeNamesPlural'}}</span>
-                <span class="inbox-tab-count" data-scope="agendamentos"></span>
+                <span>{{translate 'Appointment' category='scopeNamesPlural'}}</span>
+                <span class="inbox-tab-count" data-scope="appointments"></span>
             </div>
             <div class="inbox-tab" data-tab="tasks">
                 <i class="far fa-check-square"></i>
                 <span>{{translate 'Task' category='scopeNamesPlural'}}</span>
                 <span class="inbox-tab-count" data-scope="tasks"></span>
+            </div>
+            <div class="inbox-tab" data-tab="cases">
+                <i class="fas fa-briefcase"></i>
+                <span>{{translate 'Case' category='scopeNamesPlural'}}</span>
+                <span class="inbox-tab-count" data-scope="cases"></span>
             </div>
         </div>
         
@@ -680,11 +685,11 @@
             <div class="inbox-entity-list-container"></div>
         </div>
         
-        <div class="inbox-tab-content" data-tab="agendamentos">
+        <div class="inbox-tab-content" data-tab="appointments">
             <div class="inbox-entity-search-wrapper">
                 <div class="inbox-entity-search-container"></div>
                 <div class="inbox-entity-create-btn">
-                    <button class="btn btn-default btn-create-agendamento" title="{{translate 'Create'}}">
+                    <button class="btn btn-default btn-create-appointment" title="{{translate 'Create'}}">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
@@ -697,6 +702,18 @@
                 <div class="inbox-entity-search-container"></div>
                 <div class="inbox-entity-create-btn">
                     <button class="btn btn-default btn-create-task" title="{{translate 'Create'}}">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="inbox-entity-list-container"></div>
+        </div>
+        
+        <div class="inbox-tab-content" data-tab="cases">
+            <div class="inbox-entity-search-wrapper">
+                <div class="inbox-entity-search-container"></div>
+                <div class="inbox-entity-create-btn">
+                    <button class="btn btn-default btn-create-case" title="{{translate 'Create'}}">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>

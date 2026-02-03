@@ -1,0 +1,120 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": true,
+            "pattern": "^[a-zA-Z0-9\\-_]+$"
+        },
+        "description": {
+            "type": "text"
+        },
+        "color": {
+            "type": "varchar",
+            "maxLength": 7,
+            "default": "#1f93ff"
+        },
+        "showOnSidebar": {
+            "type": "bool",
+            "default": true
+        },
+        "chatwootLabelId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastSyncError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "team": {
+            "type": "link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "labels"
+        },
+        "wahaSessionLabels": {
+            "type": "hasMany",
+            "entity": "WahaSessionLabel",
+            "foreign": "chatwootLabel"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "team": {
+            "type": "belongsTo",
+            "entity": "Team"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "uniqueLabel": {
+            "unique": true,
+            "columns": ["chatwootLabelId", "chatwootAccountId", "deleteId"]
+        },
+        "chatwootAccountId": {
+            "columns": ["chatwootAccountId"]
+        },
+        "name": {
+            "columns": ["name"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}

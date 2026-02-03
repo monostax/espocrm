@@ -1,0 +1,23 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": true,
+    "acl": true,
+    "aclPortal": false,
+    "customizable": true,
+    "importable": true,
+    "calendar": true,
+    "activity": true,
+    "notifications": true,
+    "activityStatusList": ["Planned"],
+    "historyStatusList": ["Held", "Not Held", "Canceled"],
+    "completedStatusList": ["Held"],
+    "canceledStatusList": ["Not Held", "Canceled"],
+    "statusField": "status",
+    "statusFieldLocked": true,
+    "stream": true,
+    "disabled": false,
+    "type": "Event",
+    "module": "Global",
+    "object": true
+}

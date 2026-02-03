@@ -44,20 +44,20 @@ class SyncAgentsFromChatwoot implements JobDataLess
 
     public function run(): void
     {
-        $this->log->warning('SyncAgentsFromChatwoot: Job started');
+        $this->log->debug('SyncAgentsFromChatwoot: Job started');
 
         try {
             $accounts = $this->getEnabledAccounts();
             $accountList = iterator_to_array($accounts);
             $accountCount = count($accountList);
 
-            $this->log->warning("SyncAgentsFromChatwoot: Found {$accountCount} account(s) to sync");
+            $this->log->debug("SyncAgentsFromChatwoot: Found {$accountCount} account(s) to sync");
 
             foreach ($accountList as $account) {
                 $this->syncAccountAgents($account);
             }
 
-            $this->log->warning("SyncAgentsFromChatwoot: Job completed - processed {$accountCount} account(s)");
+            $this->log->debug("SyncAgentsFromChatwoot: Job completed - processed {$accountCount} account(s)");
         } catch (\Throwable $e) {
             $this->log->error('SyncAgentsFromChatwoot: Job failed - ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         }
@@ -118,7 +118,7 @@ class SyncAgentsFromChatwoot implements JobDataLess
                 $teamsIds
             );
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncAgentsFromChatwoot: Account {$accountName} - " .
                 "{$stats['synced']} synced, {$stats['errors']} errors"
             );
@@ -152,7 +152,7 @@ class SyncAgentsFromChatwoot implements JobDataLess
             $chatwootAccountId
         );
 
-        $this->log->warning(
+        $this->log->debug(
             "SyncAgentsFromChatwoot: Found " . count($agents) . " agents"
         );
 
@@ -167,7 +167,7 @@ class SyncAgentsFromChatwoot implements JobDataLess
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $agentId = $chatwootAgent['id'] ?? 'unknown';
-                $this->log->warning(
+                $this->log->debug(
                     "SyncAgentsFromChatwoot: Failed to sync agent {$agentId}: " . $e->getMessage()
                 );
             }

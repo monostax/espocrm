@@ -1,0 +1,45 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "chatwootAccount"
+                }
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "color"
+                },
+                {
+                    "name": "showOnSidebar"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootLabelId"
+                },
+                {
+                    "name": "syncStatus"
+                }
+            ],
+            [
+                {
+                    "name": "lastSyncedAt"
+                },
+                {
+                    "name": "lastSyncError"
+                }
+            ]
+        ]
+    }
+]

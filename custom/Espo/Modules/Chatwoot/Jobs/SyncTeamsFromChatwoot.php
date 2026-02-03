@@ -44,20 +44,20 @@ class SyncTeamsFromChatwoot implements JobDataLess
 
     public function run(): void
     {
-        $this->log->warning('SyncTeamsFromChatwoot: Job started');
+        $this->log->debug('SyncTeamsFromChatwoot: Job started');
 
         try {
             $accounts = $this->getEnabledAccounts();
             $accountList = iterator_to_array($accounts);
             $accountCount = count($accountList);
 
-            $this->log->warning("SyncTeamsFromChatwoot: Found {$accountCount} account(s) to sync");
+            $this->log->debug("SyncTeamsFromChatwoot: Found {$accountCount} account(s) to sync");
 
             foreach ($accountList as $account) {
                 $this->syncAccountTeams($account);
             }
 
-            $this->log->warning("SyncTeamsFromChatwoot: Job completed - processed {$accountCount} account(s)");
+            $this->log->debug("SyncTeamsFromChatwoot: Job completed - processed {$accountCount} account(s)");
         } catch (\Throwable $e) {
             $this->log->error('SyncTeamsFromChatwoot: Job failed - ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         }
@@ -117,7 +117,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
                 $espoTeamsIds
             );
 
-            $this->log->warning(
+            $this->log->debug(
                 "SyncTeamsFromChatwoot: Account {$accountName} - " .
                 "{$stats['synced']} synced, {$stats['errors']} errors"
             );
@@ -150,7 +150,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
             $chatwootAccountId
         );
 
-        $this->log->warning(
+        $this->log->debug(
             "SyncTeamsFromChatwoot: Found " . count($teams) . " teams"
         );
 
@@ -165,7 +165,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $teamId = $chatwootTeam['id'] ?? 'unknown';
-                $this->log->warning(
+                $this->log->debug(
                     "SyncTeamsFromChatwoot: Failed to sync team {$teamId}: " . $e->getMessage()
                 );
             }

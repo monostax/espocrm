@@ -39,8 +39,20 @@
                     "name": "isAI"
                 },
                 {
-                    "name": "assignedUser"
+                    "name": "contextualTransferIsEnabled"
                 }
+            ],
+            [
+                {
+                    "name": "transferScenarios",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "assignedUser"
+                },
+                false
             ]
         ]
     },

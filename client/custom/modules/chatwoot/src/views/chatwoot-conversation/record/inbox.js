@@ -58,13 +58,17 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 e.preventDefault();
                 this.actionCreateOpportunity();
             },
-            "click .btn-create-agendamento": function (e) {
+            "click .btn-create-appointment": function (e) {
                 e.preventDefault();
-                this.actionCreateAgendamento();
+                this.actionCreateAppointment();
             },
             "click .btn-create-task": function (e) {
                 e.preventDefault();
                 this.actionCreateTask();
+            },
+            "click .btn-create-case": function (e) {
+                e.preventDefault();
+                this.actionCreateCase();
             },
             'click [data-action="changeStatus"]': function (e) {
                 e.preventDefault();
@@ -567,16 +571,19 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             // Clear entity list views
             this.clearView("opportunitiesList");
-            this.clearView("agendamentosList");
+            this.clearView("opportunitiesList");
+            this.clearView("appointmentsList");
             this.clearView("tasksList");
             this.clearView("opportunitiesSearch");
-            this.clearView("agendamentosSearch");
+            this.clearView("appointmentsSearch");
             this.clearView("tasksSearch");
             this.currentListModelId = {};
 
             // Reset tab counts
             this.setTabCount("opportunities", 0);
-            this.setTabCount("agendamentos", 0);
+            this.setTabCount("opportunities", 0);
+            this.setTabCount("appointments", 0);
+            this.setTabCount("cases", 0);
             this.setTabCount("tasks", 0);
 
             // Hide chat toolbar
@@ -696,7 +703,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             // Clear entity list views (they'll be re-created when tab is opened)
             this.clearView("opportunitiesList");
-            this.clearView("agendamentosList");
+            this.clearView("appointmentsList");
+            this.clearView("casesList");
             this.clearView("tasksList");
             this.currentListModelId = {};
 
@@ -724,10 +732,12 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 // If not on chat tab, refresh the current tab's list
                 if (this.activeTab === "opportunities") {
                     this.renderEntityListView("opportunities", "Opportunity");
-                } else if (this.activeTab === "agendamentos") {
-                    this.renderEntityListView("agendamentos", "CAgendamento");
+                } else if (this.activeTab === "appointments") {
+                    this.renderEntityListView("appointments", "Appointment");
                 } else if (this.activeTab === "tasks") {
                     this.renderEntityListView("tasks", "Task");
+                } else if (this.activeTab === "cases") {
+                    this.renderEntityListView("cases", "Case");
                 }
             }
         },
@@ -746,19 +756,24 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 },
             );
 
-            // Fetch counts for agendamentos
+            // Fetch counts for appointments
             this.fetchRelatedCount(
-                "cAgendamentos",
-                "CAgendamento",
+                "appointments",
+                "Appointment",
                 model.id,
                 (count) => {
-                    this.setTabCount("agendamentos", count);
+                    this.setTabCount("appointments", count);
                 },
             );
 
             // Fetch counts for tasks
             this.fetchRelatedCount("tasks", "Task", model.id, (count) => {
                 this.setTabCount("tasks", count);
+            });
+
+            // Fetch counts for cases
+            this.fetchRelatedCount("cases", "Case", model.id, (count) => {
+                this.setTabCount("cases", count);
             });
         },
 
@@ -1094,10 +1109,12 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             // Render the list view for entity tabs
             if (tab === "opportunities") {
                 this.renderEntityListView("opportunities", "Opportunity");
-            } else if (tab === "agendamentos") {
-                this.renderEntityListView("agendamentos", "CAgendamento");
+            } else if (tab === "appointments") {
+                this.renderEntityListView("appointments", "Appointment");
             } else if (tab === "tasks") {
                 this.renderEntityListView("tasks", "Task");
+            } else if (tab === "cases") {
+                this.renderEntityListView("cases", "Case");
             }
         },
 
@@ -1138,9 +1155,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             const linkName =
                 scope === "Opportunity"
                     ? "opportunities"
-                    : scope === "CAgendamento"
-                      ? "cAgendamentos"
-                      : "tasks";
+                      : scope === "Appointment"
+                        ? "appointments"
+                        : scope === "Case"
+                          ? "cases"
+                          : "tasks";
 
             // Use the relationship URL to fetch related records
             // URL format: ChatwootConversation/{id}/{link}
@@ -1240,9 +1259,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                                         const countKey =
                                             viewKey === "opportunities"
                                                 ? "opportunities"
-                                                : viewKey === "agendamentos"
-                                                  ? "cAgendamentos"
-                                                  : "tasks";
+                                                : viewKey === "appointments"
+                                                  ? "appointments"
+                                                  : viewKey === "cases"
+                                                    ? "cases"
+                                                    : "tasks";
                                         this.fetchRelatedCount(
                                             countKey,
                                             scope,
@@ -1340,9 +1361,9 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
         },
 
         /**
-         * Create a new CAgendamento linked to the selected conversation
+         * Create a new Appointment linked to the selected conversation
          */
-        actionCreateAgendamento: function () {
+        actionCreateAppointment: function () {
             const model = this.getSelectedModel();
             if (!model) return;
 
@@ -1364,10 +1385,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             Espo.Ui.notify(" ... ");
 
             this.createView(
-                "quickCreateAgendamento",
+                "quickCreateAppointment",
                 "views/modals/edit",
                 {
-                    scope: "CAgendamento",
+                    scope: "Appointment",
                     attributes: attributes,
                     fullFormDisabled: true,
                     layoutName: "detailSmall",
@@ -1380,13 +1401,13 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
                     this.listenToOnce(view, "after:save", () => {
                         // Refresh the list view and count
-                        this.refreshEntityListView("agendamentos");
+                        this.refreshEntityListView("appointments");
                         this.fetchRelatedCount(
-                            "cAgendamentos",
-                            "CAgendamento",
+                            "appointments",
+                            "Appointment",
                             model.id,
                             (count) => {
-                                this.setTabCount("agendamentos", count);
+                                this.setTabCount("appointments", count);
                             },
                         );
                     });
@@ -1433,6 +1454,61 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                             model.id,
                             (count) => {
                                 this.setTabCount("tasks", count);
+                            },
+                        );
+                    });
+                },
+            );
+        },
+
+        /**
+         * Create a new Case linked to the selected conversation
+         */
+        actionCreateCase: function () {
+            const model = this.getSelectedModel();
+            if (!model) return;
+
+            const contactId = model.get("contactId");
+            const contactName = model.get("contactDisplayName");
+
+            const attributes = {
+                chatwootConversationsIds: [model.id],
+                chatwootConversationsNames: {
+                    [model.id]: model.get("name"),
+                },
+            };
+
+            if (contactId) {
+                attributes.contactId = contactId;
+                attributes.contactName = contactName;
+            }
+
+            Espo.Ui.notify(" ... ");
+
+            this.createView(
+                "quickCreateCase",
+                "views/modals/edit",
+                {
+                    scope: "Case",
+                    attributes: attributes,
+                    fullFormDisabled: true,
+                    layoutName: "detailSmall",
+                    sideDisabled: true,
+                    bottomDisabled: true,
+                },
+                (view) => {
+                    Espo.Ui.notify(false);
+                    view.render();
+
+                    this.listenToOnce(view, "after:save", () => {
+                        // Refresh the list view and count
+                        this.refreshEntityListView("cases");
+                        this.fetchRelatedCount(
+                            "cases",
+                            "Case",
+                            model.id,
+                            (count) => {
+                                this.setTabCount("cases", count);
                             },
                         );
                     });

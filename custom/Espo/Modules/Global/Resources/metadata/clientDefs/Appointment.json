@@ -1,0 +1,54 @@
+{
+    "controller": "controllers/record",
+    "boolFilterList": ["onlyMy"],
+    "recordViews": {
+        "list": "views/record/list",
+        "detail": "views/templates/event/record/detail"
+    },
+    "activityDefs": {
+        "activitiesCreate": true,
+        "historyCreate": true
+    },
+    "viewSetupHandlers": {
+        "record/detail": ["crm:handlers/event/reminders-handler"],
+        "record/edit": ["crm:handlers/event/reminders-handler"]
+    },
+    "filterList": [
+        {
+            "name": "planned"
+        },
+        {
+            "name": "held",
+            "style": "success"
+        },
+        {
+            "name": "todays"
+        }
+    ],
+    "forcePatchAttributeDependencyMap": {
+        "dateEnd": ["dateStart"]
+    },
+    "iconClass": "fas fa-calendar-check",
+    "relationshipPanels": {
+        "assignments": {
+            "layout": null
+        }
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "chatwootConversations",
+                "label": "Chatwoot Conversations",
+                "view": "global:views/record/panels/relationship"
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "chatwootConversations",
+                "label": "Chatwoot Conversations",
+                "view": "global:views/record/panels/relationship"
+            }
+        ]
+    },
+    "kanbanViewMode": false
+}
