@@ -112,6 +112,12 @@ class SeedRole implements RebuildAction
                     'Import' => true,
                     'GoogleCalendar' => true,
                     'ExternalAccount' => true,
+                    'Appointment' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
                     'ChatwootConversation' => [
                         'create' => 'no',
                         'read' => 'team',

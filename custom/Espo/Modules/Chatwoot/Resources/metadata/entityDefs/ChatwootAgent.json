@@ -56,11 +56,14 @@
             "rowsMin": 10
         },
         "aiPrompt": {
-            "type": "text",
-            "rowsMin": 5,
+            "type": "wysiwyg",
             "tooltip": true
         },
         "knowledgeBaseCategories": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "calendarsToManage": {
             "type": "linkMultiple",
             "tooltip": true
         },
@@ -157,6 +160,12 @@
             "entity": "KnowledgeBaseCategory",
             "relationName": "chatwootAgentKnowledgeBaseCategory",
             "foreign": "chatwootAgents"
+        },
+        "calendarsToManage": {
+            "type": "hasMany",
+            "entity": "User",
+            "relationName": "chatwootAgentCalendarUser",
+            "foreign": "chatwootAgentsWithCalendarAccess"
         },
         "chatwootInboxes": {
             "type": "hasMany",

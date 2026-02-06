@@ -138,6 +138,12 @@
             ],
             [
                 {
+                    "name": "calendarsToManage",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
                     "name": "aiPrompt",
                     "fullWidth": true
                 }

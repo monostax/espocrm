@@ -39,6 +39,8 @@ class ConfigDataProvider
 
     public function getRedirectUri(): string
     {
-        return $this->config->getSiteUrl() . '/oauth/callback';
+        // Include trailing slash to match directory structure and avoid Apache's
+        // 301 redirect which uses SERVER_PORT instead of X-Forwarded-Port
+        return $this->config->getSiteUrl() . '/oauth/callback/';
     }
 }

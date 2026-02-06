@@ -17,7 +17,7 @@
                     {{translate 'Scan QR Code with WhatsApp' scope='WahaSession'}}
                 </p>
                 <img src="{{qrCodeDataUrl}}" 
-                     alt="WhatsApp QR Code" 
+                     alt="WhatsApp Lite (QR Code)" 
                      style="max-width: 300px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: white;"
                 />
                 <p style="margin-top: 15px; color: #666; font-size: 0.9em;">

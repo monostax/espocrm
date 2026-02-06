@@ -40,6 +40,16 @@
                     ]
                 }
             },
+            "calendarsToManage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
             "transferScenarios": {
                 "visible": {
                     "conditionGroup": [

@@ -6,6 +6,8 @@
     "modalViews": {
         "edit": "chatwoot:views/chatwoot-inbox-integration/modals/edit"
     },
+    "defaultSidePanelFieldList": [],
+    "defaultSidePanelDisabled": true,
     "dynamicLogic": {
         "fields": {
             "status": {

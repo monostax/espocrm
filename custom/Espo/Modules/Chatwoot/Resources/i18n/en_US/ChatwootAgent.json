@@ -10,6 +10,7 @@
         "isAI": "AI Agent",
         "aiPrompt": "Prompt",
         "knowledgeBaseCategories": "Knowledge Base Categories",
+        "calendarsToManage": "Managed Calendars",
         "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",
         "transferScenarios": "Transfer Scenarios",
         "confirmed": "Email Confirmed",
@@ -28,6 +29,7 @@
         "chatwootAccount": "Chat / Account",
         "chatwootUser": "Chat / User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
+        "calendarsToManage": "Managed Calendars",
         "team": "Team",
         "assignedUser": "Assigned User"
     },
@@ -58,6 +60,7 @@
         "isAI": "Enable to configure this agent as an AI-powered agent.",
         "aiPrompt": "The system prompt that defines the AI agent's behavior and capabilities.",
         "knowledgeBaseCategories": "Select knowledge base categories. Articles in these categories (and their sub-categories) will be available for AI-powered responses.",
+        "calendarsToManage": "Select users whose calendars this AI agent can manage. The agent can check availability, create, update, and delete appointments for these calendars.",
         "confirmed": "Whether the agent has confirmed their email address in Chat.",
         "chatwootUser": "Link to the platform-level Chat / User if this agent corresponds to one.",
         "customRoleId": "The custom role ID assigned to this agent in Chat, if any.",

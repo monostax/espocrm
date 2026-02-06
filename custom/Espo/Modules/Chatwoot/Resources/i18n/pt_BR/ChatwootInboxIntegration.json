@@ -53,8 +53,8 @@
             "FAILED": "Falhou"
         },
         "channelType": {
-            "whatsappQrcode": "WhatsApp QR Code",
-            "whatsappCloudApi": "WhatsApp Cloud API"
+            "whatsappQrcode": "WhatsApp Lite (QR Code)",
+            "whatsappCloudApi": "WhatsApp Business (Cloud API)"
         }
     },
     "tooltips": {

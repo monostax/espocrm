@@ -281,28 +281,30 @@ class SyncConversationsFromChatwoot implements JobDataLess
         ]);
 
         if (!$cwtContact) {
-            // Contact hasn't been synced yet, skip this conversation
-            $this->log->debug("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - ChatwootContact not found for Chatwoot contact ID {$contactId}");
-            return 'skipped';
+            // Contact doesn't exist - create it on-the-fly from conversation sender data
+            // This handles contacts that don't appear in the contacts filter API (e.g., Instagram contacts)
+            $senderData = $chatwootConversation['meta']['sender'] ?? null;
+            if (!$senderData) {
+                $this->log->debug("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - no sender data available");
+                return 'skipped';
+            }
+            
+            $this->log->info("SyncConversationsFromChatwoot: Creating ChatwootContact on-the-fly for contact ID {$contactId} (conversation {$chatwootConversationId})");
+            $cwtContact = $this->createContactFromSenderData($senderData, $espoAccountId, $teamId);
+            
+            if (!$cwtContact) {
+                $this->log->error("SyncConversationsFromChatwoot: Failed to create ChatwootContact for contact ID {$contactId}");
+                return 'skipped';
+            }
+        } else {
+            // Restore soft-deleted contact using the proper EspoCRM method
+            $this->entityManager
+                ->getRDBRepository('ChatwootContact')
+                ->restoreDeleted($cwtContact->getId());
+            
+            // Re-fetch the entity after restoration
+            $cwtContact = $this->entityManager->getEntityById('ChatwootContact', $cwtContact->getId());
         }
-
-        // Restore soft-deleted contact using the proper EspoCRM method
-        $this->entityManager
-            ->getRDBRepository('ChatwootContact')
-            ->restoreDeleted($cwtContact->getId());
-        
-        // Re-fetch the entity after restoration
-        $cwtContact = $this->entityManager->getEntityById('ChatwootContact', $cwtContact->getId());
-
-        // Find the ChatwootContactInbox for this conversation
-        $contactInbox = $this->entityManager
-            ->getRDBRepository('ChatwootContactInbox')
-            ->where([
-                'chatwootContactId' => $cwtContact->getId(),
-                'chatwootInboxId' => $inboxId,
-                'chatwootAccountId' => $espoAccountId,
-            ])
-            ->findOne();
 
         // Find the ChatwootInbox entity for linking
         $chatwootInbox = $this->entityManager
@@ -312,6 +314,27 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 'chatwootAccountId' => $espoAccountId,
             ])
             ->findOne();
+
+        // Find or create the ChatwootContactInbox for this conversation
+        $contactInbox = $this->entityManager
+            ->getRDBRepository('ChatwootContactInbox')
+            ->where([
+                'chatwootContactId' => $cwtContact->getId(),
+                'chatwootInboxId' => $inboxId,
+                'chatwootAccountId' => $espoAccountId,
+            ])
+            ->findOne();
+
+        // Create ChatwootContactInbox if it doesn't exist (for contacts created on-the-fly)
+        if (!$contactInbox && $chatwootInbox) {
+            $contactInbox = $this->createContactInboxFromConversation(
+                $cwtContact,
+                $chatwootInbox,
+                $chatwootConversation,
+                $espoAccountId,
+                $teamId
+            );
+        }
 
         // Check if ChatwootConversation already exists (including soft-deleted)
         $existingConversation = $this->findEntityIncludingDeleted('ChatwootConversation', [
@@ -354,6 +377,256 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
 
         return $result;
+    }
+
+    /**
+     * Create a ChatwootContact from conversation sender data.
+     * This handles contacts that don't appear in the contacts filter API (e.g., Instagram contacts).
+     *
+     * @param array $senderData Sender data from conversation meta
+     * @param string $espoAccountId EspoCRM ChatwootAccount ID
+     * @param string|null $teamId Team ID to assign
+     * @return Entity|null The created ChatwootContact, or null on failure
+     */
+    private function createContactFromSenderData(array $senderData, string $espoAccountId, ?string $teamId = null): ?Entity
+    {
+        $chatwootContactId = (int) ($senderData['id'] ?? 0);
+        if (!$chatwootContactId) {
+            return null;
+        }
+
+        $teamsIds = $teamId ? [$teamId] : [];
+
+        // Check again to prevent race conditions
+        $existingCwtContact = $this->findEntityIncludingDeleted('ChatwootContact', [
+            'chatwootContactId' => $chatwootContactId,
+            'chatwootAccountId' => $espoAccountId,
+        ]);
+
+        if ($existingCwtContact) {
+            // Restore if soft-deleted
+            $this->entityManager
+                ->getRDBRepository('ChatwootContact')
+                ->restoreDeleted($existingCwtContact->getId());
+            return $this->entityManager->getEntityById('ChatwootContact', $existingCwtContact->getId());
+        }
+
+        // Extract contact data from sender
+        $name = $senderData['name'] ?? null;
+        $phoneNumber = $senderData['phone_number'] ?? null;
+        $email = $senderData['email'] ?? null;
+        $avatarUrl = $senderData['thumbnail'] ?? null;
+        $identifier = $senderData['identifier'] ?? null;
+        $blocked = $senderData['blocked'] ?? false;
+        $lastActivityAt = $senderData['last_activity_at'] ?? null;
+        $createdAt = $senderData['created_at'] ?? null;
+
+        // Try to find existing EspoCRM Contact by phone or email within the same team
+        $espoContact = null;
+        if ($phoneNumber) {
+            $espoContact = $this->findContactByFieldInTeams('phoneNumber', $phoneNumber, $teamsIds);
+        }
+        if (!$espoContact && $email) {
+            $espoContact = $this->findContactByFieldInTeams('emailAddress', $email, $teamsIds);
+        }
+
+        // Create ChatwootContact bridge record
+        $data = [
+            'chatwootContactId' => $chatwootContactId,
+            'chatwootAccountId' => $espoAccountId,
+            'contactId' => $espoContact?->getId(),
+            'name' => $name,
+            'phoneNumber' => $phoneNumber,
+            'email' => $email,
+            'identifier' => $identifier,
+            'blocked' => $blocked,
+            'avatarUrl' => $avatarUrl,
+            'chatwootLastActivityAt' => $this->convertChatwootTimestamp($lastActivityAt),
+            'chatwootCreatedAt' => $this->convertChatwootTimestamp($createdAt),
+            'syncStatus' => 'synced',
+            'lastSyncedAt' => date('Y-m-d H:i:s'),
+        ];
+
+        if (!empty($teamsIds)) {
+            $data['teamsIds'] = $teamsIds;
+        }
+
+        try {
+            $cwtContact = $this->entityManager->createEntity('ChatwootContact', $data, ['silent' => true]);
+
+            // Explicitly set teams after creation (linkMultiple requires explicit save)
+            if (!empty($teamsIds)) {
+                $cwtContact->set('teamsIds', $teamsIds);
+                $this->entityManager->saveEntity($cwtContact, ['silent' => true]);
+            }
+
+            // Auto-create EspoCRM Contact if not found and we have enough data
+            if (!$espoContact && $name && ($phoneNumber || $email)) {
+                $espoContact = $this->createEspoContactFromSenderData($senderData, $teamsIds);
+                if ($espoContact) {
+                    $cwtContact->set('contactId', $espoContact->getId());
+                    $this->entityManager->saveEntity($cwtContact, ['silent' => true]);
+                }
+            }
+
+            $this->log->info("SyncConversationsFromChatwoot: Created ChatwootContact {$cwtContact->getId()} for Chatwoot contact {$chatwootContactId} with teams " . json_encode($teamsIds));
+            return $cwtContact;
+
+        } catch (\Exception $e) {
+            $this->log->error("SyncConversationsFromChatwoot: Failed to create ChatwootContact for {$chatwootContactId}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Find an EspoCRM Contact by a field value, scoped to teams.
+     */
+    private function findContactByFieldInTeams(string $field, string $value, array $teamsIds): ?Entity
+    {
+        $queryBuilder = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('Contact')
+            ->where([$field => $value])
+            ->withDeleted();
+
+        if (!empty($teamsIds)) {
+            $queryBuilder->join('teams', 'teams');
+            $queryBuilder->where(['teams.id' => $teamsIds]);
+        }
+
+        $query = $queryBuilder->build();
+        $contact = $this->entityManager
+            ->getRDBRepository('Contact')
+            ->clone($query)
+            ->findOne();
+
+        if ($contact) {
+            $this->entityManager
+                ->getRDBRepository('Contact')
+                ->restoreDeleted($contact->getId());
+            return $this->entityManager->getEntityById('Contact', $contact->getId());
+        }
+
+        return null;
+    }
+
+    /**
+     * Create an EspoCRM Contact from sender data.
+     */
+    private function createEspoContactFromSenderData(array $senderData, array $teamsIds): ?Entity
+    {
+        $name = $senderData['name'] ?? 'Unknown';
+        $nameParts = explode(' ', $name, 2);
+
+        $data = [
+            'firstName' => $nameParts[0] ?? '',
+            'lastName' => $nameParts[1] ?? '',
+            'phoneNumber' => $senderData['phone_number'] ?? null,
+            'emailAddress' => $senderData['email'] ?? null,
+            'description' => 'Imported from Chatwoot conversation',
+        ];
+
+        if (!empty($teamsIds)) {
+            $data['teamsIds'] = $teamsIds;
+        }
+
+        try {
+            $contact = $this->entityManager->createEntity('Contact', $data, ['silent' => true]);
+            
+            // Explicitly set teams after creation (linkMultiple requires explicit save)
+            if (!empty($teamsIds)) {
+                $contact->set('teamsIds', $teamsIds);
+                $this->entityManager->saveEntity($contact, ['silent' => true]);
+            }
+            
+            return $contact;
+        } catch (\Exception $e) {
+            $this->log->debug("SyncConversationsFromChatwoot: Failed to create EspoCRM Contact: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Create a ChatwootContactInbox from conversation data.
+     * This creates the link between ChatwootContact and ChatwootInbox for contacts created on-the-fly.
+     */
+    private function createContactInboxFromConversation(
+        Entity $cwtContact,
+        Entity $chatwootInbox,
+        array $chatwootConversation,
+        string $espoAccountId,
+        ?string $teamId = null
+    ): ?Entity {
+        $inboxId = (int) ($chatwootConversation['inbox_id'] ?? 0);
+        $channel = $chatwootConversation['meta']['channel'] ?? null;
+        $channelType = $chatwootInbox->get('channelType');
+        
+        // Map channel type to our enum
+        $mappedChannelType = $this->mapChannelType($channelType);
+        
+        // Generate display name
+        $contactName = $cwtContact->get('name') ?? 'Unknown';
+        $inboxName = $chatwootInbox->get('name') ?? $channel ?? 'Inbox #' . $inboxId;
+        if ($mappedChannelType) {
+            $inboxName .= ' (' . $mappedChannelType . ')';
+        }
+        $name = $contactName . ' <> ' . $inboxName;
+
+        $data = [
+            'name' => $name,
+            'chatwootContactId' => $cwtContact->getId(),
+            'contactId' => $cwtContact->get('contactId'),
+            'chatwootAccountId' => $espoAccountId,
+            'chatwootInboxId' => $inboxId,
+            'inboxId' => $chatwootInbox->getId(),
+            'inboxName' => $chatwootInbox->get('name') ?? $channel,
+            'inboxChannelType' => $mappedChannelType,
+            'lastSyncedAt' => date('Y-m-d H:i:s'),
+        ];
+
+        if ($teamId) {
+            $data['teamsIds'] = [$teamId];
+        }
+
+        try {
+            $contactInbox = $this->entityManager->createEntity('ChatwootContactInbox', $data, ['silent' => true]);
+            
+            // Explicitly set teams after creation (linkMultiple requires explicit save)
+            if ($teamId) {
+                $contactInbox->set('teamsIds', [$teamId]);
+                $this->entityManager->saveEntity($contactInbox, ['silent' => true]);
+            }
+            
+            $this->log->info("SyncConversationsFromChatwoot: Created ChatwootContactInbox {$contactInbox->getId()} for contact {$cwtContact->getId()} and inbox {$inboxId}");
+            return $contactInbox;
+        } catch (\Exception $e) {
+            $this->log->error("SyncConversationsFromChatwoot: Failed to create ChatwootContactInbox: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Map Chatwoot channel_type to our enum values.
+     */
+    private function mapChannelType(?string $channelType): ?string
+    {
+        if (!$channelType) {
+            return null;
+        }
+
+        $map = [
+            'Channel::Whatsapp' => 'whatsapp',
+            'Channel::Email' => 'email',
+            'Channel::WebWidget' => 'web_widget',
+            'Channel::Api' => 'api',
+            'Channel::Telegram' => 'telegram',
+            'Channel::Sms' => 'sms',
+            'Channel::FacebookPage' => 'facebook',
+            'Channel::Instagram' => 'instagram',
+        ];
+
+        return $map[$channelType] ?? strtolower(str_replace('Channel::', '', $channelType));
     }
 
     /**

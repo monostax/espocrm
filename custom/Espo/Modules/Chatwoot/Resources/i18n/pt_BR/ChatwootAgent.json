@@ -10,6 +10,7 @@
         "isAI": "Agente IA",
         "aiPrompt": "Prompt",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
+        "calendarsToManage": "Calendários Gerenciados",
         "contextualTransferIsEnabled": "Habilitar Transferência Contextual (IA)",
         "transferScenarios": "Cenários de Transferência",
         "confirmed": "Email Confirmado",
@@ -27,6 +28,7 @@
         "chatwootAccount": "Chat / Conta",
         "chatwootUser": "Chat / Usuário",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
+        "calendarsToManage": "Calendários Gerenciados",
         "team": "Time"
     },
     "labels": {
@@ -56,6 +58,7 @@
         "isAI": "Habilite para configurar este agente como um agente com inteligência artificial.",
         "aiPrompt": "O prompt do sistema que define o comportamento e as capacidades do agente IA.",
         "knowledgeBaseCategories": "Selecione categorias da base de conhecimento. Artigos nessas categorias (e suas subcategorias) estarão disponíveis para respostas com IA.",
+        "calendarsToManage": "Selecione os calendários que este agente IA pode gerenciar. O agente pode verificar disponibilidade, criar, atualizar e excluir agendamentos para esses calendários.",
         "confirmed": "Se o agente confirmou seu endereço de email no Chat.",
         "chatwootUser": "Link para o Usuário de Chat no nível da plataforma, se este agente corresponder a um.",
         "customRoleId": "O ID da função personalizada atribuída a este agente no Chat, se houver."

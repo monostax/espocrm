@@ -15,6 +15,12 @@
             "entity": "Appointment",
             "foreign": "professionals",
             "relationName": "appointmentProfessional"
+        },
+        "chatwootAgentsWithCalendarAccess": {
+            "type": "hasMany",
+            "entity": "ChatwootAgent",
+            "foreign": "calendarsToManage",
+            "relationName": "chatwootAgentCalendarUser"
         }
     }
 }
