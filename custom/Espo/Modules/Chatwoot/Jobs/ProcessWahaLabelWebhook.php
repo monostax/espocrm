@@ -366,15 +366,17 @@ class ProcessWahaLabelWebhook implements Job
             $whereConditions['chatwootInboxId'] = $chatwootInboxId;
         }
 
-        // Filter by team for ACL
+        $query = $this->entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->where($whereConditions);
+
+        // Filter by team for ACL (teams is a linkMultiple via entityTeam junction)
         if ($teamId) {
-            $whereConditions['teamId'] = $teamId;
+            $query->join('teams');
+            $query->where(['teams.id' => $teamId]);
         }
 
-        return $this->entityManager
-            ->getRDBRepository('ChatwootConversation')
-            ->where($whereConditions)
-            ->findOne();
+        return $query->findOne();
     }
 
     /**

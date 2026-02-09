@@ -18,7 +18,7 @@
         "syncStatus": "Status de Sincronização",
         "mergedIntoChatwootContactId": "Mesclado em Contato de Chat ID",
         "syncError": "Erro de Sincronização",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "links": {
         "contact": "Contato",
@@ -27,7 +27,7 @@
         "conversations": "Chat / Conversas",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "labels": {
         "Create ChatwootContact": "Criar Contato de Chat"

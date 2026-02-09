@@ -257,8 +257,8 @@ class SeedChatwootAccount implements RebuildAction
     private function createChatwootUserEntity($account, $platform, array $automationUserData): ?\Espo\ORM\Entity
     {
         try {
-            // Get Team from the ChatwootAccount for tenant isolation
-            $teamId = $account->get('teamId');
+            // Get Teams from the ChatwootAccount for tenant isolation
+            $teamsIds = $account->getLinkMultipleIdList('teams');
 
             // Create the ChatwootUser entity
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
@@ -269,7 +269,7 @@ class SeedChatwootAccount implements RebuildAction
                 'platformId' => $platform->getId(),
                 'chatwootAccountId' => $account->getId(),
                 'chatwootUserId' => $automationUserData['user_id'],
-                'teamsIds' => $teamId ? [$teamId] : []
+                'teamsIds' => $teamsIds
             ], [
                 'skipHooks' => true,
                 'silent' => true

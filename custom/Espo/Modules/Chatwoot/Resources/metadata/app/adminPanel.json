@@ -23,7 +23,7 @@
             {
                 "url": "#ChatwootUser",
                 "label": "Users",
-                "iconClass": "fas fa-user",
+                "iconClass": "ti ti-user",
                 "description": "chatwootUsers"
             },
             {
@@ -35,7 +35,7 @@
             {
                 "url": "#ChatwootTeam",
                 "label": "Teams",
-                "iconClass": "fas fa-users",
+                "iconClass": "ti ti-users",
                 "description": "chatwootTeams"
             },
             {
@@ -66,3 +66,4 @@
         "order": 30
     }
 }
+

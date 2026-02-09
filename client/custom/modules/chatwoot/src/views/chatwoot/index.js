@@ -27,28 +27,15 @@
  ************************************************************************/
 
 import View from "view";
-
-// Session storage key for tracking SSO auth state globally
-const CHATWOOT_SSO_AUTH_KEY = "chatwoot_sso_authenticated";
+import ChatwootSsoManager from "chatwoot:chatwoot-sso-manager";
 
 class ChatwootIndexView extends View {
     template = "chatwoot:chatwoot/index";
 
     chatwootBaseUrl = null;
 
-    /**
-     * Check if SSO has been completed this session (shared across all views)
-     */
-    static hasSsoAuthenticated() {
-        return sessionStorage.getItem(CHATWOOT_SSO_AUTH_KEY) === "true";
-    }
-
-    /**
-     * Mark SSO as completed for this session
-     */
-    static setSsoAuthenticated() {
-        sessionStorage.setItem(CHATWOOT_SSO_AUTH_KEY, "true");
-    }
+    /** @type {function|null} SSO monitoring cleanup */
+    _ssoCleanup = null;
 
     setup() {
         // Get cwPath, SSO URL and frontend URL from options (passed from controller)
@@ -56,11 +43,57 @@ class ChatwootIndexView extends View {
         this.chatSsoUrl = this.options.chatSsoUrl || "";
         this.chatwootBaseUrl = this.options.chatwootFrontendUrl;
 
+        // Determine the iframe URL using the centralized SSO manager
+        const { url, needsSso, pendingPath } = ChatwootSsoManager.getIframeUrl(
+            this.chatwootBaseUrl,
+            this.chatSsoUrl,
+            this.cwPath,
+        );
+
+        this.chatwootUrl = url;
+
+        // If SSO is needed, set up monitoring BEFORE render so we catch CHATWOOT_READY
+        if (needsSso) {
+            this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
+                chatwootBaseUrl: this.chatwootBaseUrl,
+                pendingPath: pendingPath,
+                ssoUrl: this.chatSsoUrl,
+                getIframe: () => {
+                    const el = this.$el ? this.$el.find("iframe")[0] : null;
+                    return el || null;
+                },
+                onConfirmed: () => {
+                    console.log(
+                        "ChatwootIndexView: SSO confirmed",
+                    );
+                },
+                onNavigated: (targetUrl) => {
+                    console.log(
+                        "ChatwootIndexView: Navigated to",
+                        targetUrl,
+                    );
+                },
+                onFailed: () => {
+                    console.error(
+                        "ChatwootIndexView: SSO failed after retries",
+                    );
+                },
+            });
+        }
+
         // Notify parent to switch to Chatwoot mode when this view is loaded
         this.notifyParentToChatwoot();
 
         // Listen for Chatwoot navigation updates from parent iframe
         this.setupChatwootListener();
+
+        // Clean up SSO monitoring when view is removed
+        this.once("remove", () => {
+            if (this._ssoCleanup) {
+                this._ssoCleanup();
+                this._ssoCleanup = null;
+            }
+        });
     }
 
     notifyParentToChatwoot() {
@@ -158,30 +191,8 @@ class ChatwootIndexView extends View {
     }
 
     data() {
-        let chatwootUrl;
-
-        // For first load, use SSO URL to authenticate
-        // SSO URLs are single-use, so we only use them once per session
-        if (this.chatSsoUrl && !ChatwootIndexView.hasSsoAuthenticated()) {
-            // Use SSO URL for authentication
-            // The SSO URL will authenticate and redirect to the Chatwoot dashboard
-            chatwootUrl = this.chatSsoUrl;
-            ChatwootIndexView.setSsoAuthenticated();
-
-            // If we have a specific path to navigate to after auth,
-            // we'll need to navigate there after the iframe loads
-            if (this.cwPath) {
-                this.pendingNavigation = this.cwPath;
-            }
-        } else {
-            // Already authenticated or no SSO URL - use direct path
-            chatwootUrl = this.cwPath
-                ? `${this.chatwootBaseUrl}${this.cwPath}`
-                : this.chatwootBaseUrl;
-        }
-
         return {
-            chatwootUrl: chatwootUrl,
+            chatwootUrl: this.chatwootUrl,
         };
     }
 
@@ -201,30 +212,6 @@ class ChatwootIndexView extends View {
 
         // Update height on window resize
         $(window).on("resize", updateHeight);
-
-        // If we used SSO and have a pending navigation, navigate after auth completes
-        if (this.pendingNavigation) {
-            const pendingPath = this.pendingNavigation;
-            this.pendingNavigation = null;
-
-            // Listen for the CHATWOOT_READY message indicating auth is complete
-            const handleReady = (event) => {
-                if (event.data.type === "CHATWOOT_READY") {
-                    // Navigate to the pending path by updating iframe src
-                    const targetUrl = `${this.chatwootBaseUrl}${pendingPath}`;
-                    $iframe.attr("src", targetUrl);
-
-                    window.removeEventListener("message", handleReady);
-                }
-            };
-
-            window.addEventListener("message", handleReady);
-
-            // Clean up if view is removed before navigation
-            this.once("remove", () => {
-                window.removeEventListener("message", handleReady);
-            });
-        }
 
         // Clean up event listener when view is removed
         this.once("remove", () => {

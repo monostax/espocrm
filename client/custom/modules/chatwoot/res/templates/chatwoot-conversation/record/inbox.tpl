@@ -45,12 +45,13 @@
 
 .inbox-conversation-item {
     display: flex;
-    padding: 14px 20px;
-    gap: 14px;
+    padding: 10px 14px;
+    gap: 10px;
     cursor: pointer;
     border-bottom: 1px solid #f3f4f6;
     transition: all 0.15s ease;
     border-left: 3px solid transparent;
+    align-items: center;
 }
 
 .inbox-conversation-item:hover {
@@ -82,27 +83,27 @@
 .inbox-conv-avatar {
     position: relative;
     flex-shrink: 0;
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
 }
 
 .inbox-conv-avatar-img {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #f3f4f6;
 }
 
 .inbox-conv-avatar-initials {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 600;
     border: 2px solid rgba(255,255,255,0.3);
 }
@@ -110,18 +111,18 @@
 /* Channel Badge */
 .inbox-conv-channel-badge {
     position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 20px;
-    height: 20px;
+    bottom: -3px;
+    right: -3px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #fff;
     border: 2px solid #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    font-size: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .inbox-conv-channel-badge.channel-whatsapp { color: #25D366; background: #dcfce7; }
@@ -142,19 +143,19 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    gap: 3px;
 }
 
 .inbox-conv-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
+    gap: 8px;
 }
 
 .inbox-conv-name {
     font-weight: 600;
     color: #111827;
-    font-size: 14px;
+    font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -162,21 +163,19 @@
 }
 
 .inbox-conv-time {
-    font-size: 11px;
+    font-size: 10px;
     color: #9ca3af;
     flex-shrink: 0;
-    margin-left: 12px;
 }
 
 /* Message Preview */
 .inbox-conv-message {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     color: #6b7280;
-    font-size: 13px;
-    line-height: 1.4;
-    margin-bottom: 8px;
+    font-size: 12px;
+    line-height: 1.3;
 }
 
 .inbox-conv-message.empty {
@@ -194,13 +193,13 @@
 /* Direction Arrow */
 .inbox-conv-direction {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
+    font-size: 7px;
 }
 
 .inbox-conv-direction.incoming { 
@@ -213,21 +212,15 @@
     color: #059669; 
 }
 
-/* Footer */
-.inbox-conv-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
+/* Status Badge - now inline in header */
 .inbox-conv-status {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
 }
 
 /* Status badge colors - matching EspoCRM brand colors */
@@ -237,12 +230,7 @@
 .inbox-conv-status.status-snoozed { background: rgba(156, 163, 175, 0.15); color: #6b7280; } /* default gray */
 
 .inbox-conv-inbox-row {
-    font-size: 11px;
-    color: #9ca3af;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
+    display: none;
 }
 
 /* Empty State */
@@ -538,6 +526,152 @@
 .inbox-conversation-list::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
 }
+
+/* Mobile Header (visible only on mobile) */
+.inbox-mobile-header {
+    display: none;
+    padding: 10px 14px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.inbox-mobile-header .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.inbox-mobile-header .btn i {
+    margin-right: 4px;
+}
+
+.inbox-mobile-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+/* Mobile Adaptations */
+@media screen and (max-width: 767px) {
+    .inbox-container {
+        height: calc(100vh - 100px);
+        border-radius: 0;
+        border: none;
+    }
+
+    .inbox-list-panel {
+        width: 100%;
+        min-width: auto;
+        border-right: none;
+        display: flex;
+    }
+
+    .inbox-iframe-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1050;
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+        display: flex;
+    }
+
+    .inbox-iframe-panel.mobile-active {
+        transform: translateX(0);
+    }
+
+    .inbox-mobile-header {
+        display: flex;
+    }
+
+    .inbox-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .inbox-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .inbox-tab {
+        padding: 12px 16px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .inbox-tab i {
+        font-size: 12px;
+    }
+
+    .inbox-tab span:not(.inbox-tab-count) {
+        display: none;
+    }
+
+    .inbox-list-header {
+        padding: 12px 14px;
+    }
+
+    .inbox-list-title {
+        font-size: 16px;
+    }
+
+    .inbox-conversation-item {
+        padding: 12px 14px;
+    }
+
+    .inbox-conv-avatar {
+        width: 44px;
+        height: 44px;
+    }
+
+    .inbox-conv-avatar-img,
+    .inbox-conv-avatar-initials {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+    }
+
+    .inbox-conv-channel-badge {
+        width: 18px;
+        height: 18px;
+        font-size: 9px;
+    }
+
+    .inbox-conv-name {
+        font-size: 14px;
+    }
+
+    .inbox-conv-message {
+        font-size: 13px;
+    }
+
+    .inbox-chat-toolbar {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .inbox-entity-search-wrapper {
+        padding: 8px 12px;
+        flex-wrap: wrap;
+    }
+
+    .inbox-iframe-placeholder {
+        padding: 20px;
+    }
+
+    .inbox-iframe-placeholder i {
+        font-size: 48px !important;
+    }
+}
 </style>
 
 <div class="inbox-container">
@@ -566,11 +700,9 @@
                     <div class="inbox-conv-content">
                         <div class="inbox-conv-header">
                             <span class="inbox-conv-name">{{contactName}}</span>
+                            <span class="inbox-conv-status status-{{status}}">{{statusLabel}}</span>
                             <span class="inbox-conv-time">{{timeAgo}}</span>
                         </div>
-                        {{#if inboxName}}
-                        <div class="inbox-conv-inbox-row">{{inboxName}}</div>
-                        {{/if}}
                         <div class="inbox-conv-message{{#unless hasMessage}} empty{{/unless}}">
                             {{#if hasMessage}}
                             <span class="inbox-conv-direction {{lastMessageType}}">
@@ -585,9 +717,6 @@
                             {{translate 'No messages yet' scope='ChatwootConversation' category='messages'}}
                             {{/if}}
                         </div>
-                        <div class="inbox-conv-footer">
-                            <span class="inbox-conv-status status-{{status}}">{{statusLabel}}</span>
-                        </div>
                     </div>
                 </div>
                 {{/each}}
@@ -601,6 +730,12 @@
     </div>
     
     <div class="inbox-iframe-panel">
+        <div class="inbox-mobile-header">
+            <button class="btn btn-default btn-sm action" data-action="mobileBack">
+                <i class="fas fa-arrow-left"></i> {{translate 'Back'}}
+            </button>
+            <span class="inbox-mobile-title">{{selectedContactName}}</span>
+        </div>
         <div class="inbox-tabs">
             <div class="inbox-tab active" data-tab="chat">
                 <i class="far fa-comment-dots"></i>
@@ -632,7 +767,7 @@
             <div class="inbox-chat-toolbar">
                 <div class="inbox-agent-dropdown btn-group">
                     <button class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
-                        <i class="fas fa-user"></i>
+                        <i class="ti ti-user"></i>
                         <span class="inbox-agent-label">{{translate 'Unassigned' scope='ChatwootConversation' category='labels'}}</span>
                         <span class="caret"></span>
                     </button>
@@ -665,7 +800,7 @@
                 </div>
             </div>
             <div class="inbox-iframe-wrapper">
-                <iframe class="inbox-iframe" src="" frameborder="0" allowfullscreen></iframe>
+                <iframe class="inbox-iframe" src="" frameborder="0" allowfullscreen sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
                 <div class="inbox-iframe-placeholder">
                     <i class="ti ti-message-circle" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px;"></i>
                     <p style="color: #6b7280; font-size: 16px;">{{noSelectionMessage}}</p>

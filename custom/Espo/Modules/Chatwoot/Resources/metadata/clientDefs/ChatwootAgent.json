@@ -1,7 +1,6 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fas fa-user-tie",
-    "color": "#17a2b8",
+    "iconClass": "ti ti-user-pentagon",
     "kanbanViewMode": false,
     "modalViews": {
         "detail": "views/modals/detail"
@@ -9,15 +8,8 @@
     "recordViews": {
         "list": "views/record/list"
     },
-    "filterList": [
-        "all",
-        "available",
-        "offline",
-        "administrators"
-    ],
-    "boolFilterList": [
-        "onlyMy"
-    ],
+    "filterList": ["all", "available", "offline", "administrators"],
+    "boolFilterList": ["onlyMy"],
     "dynamicLogic": {
         "fields": {
             "aiPrompt": {
@@ -74,8 +66,7 @@
         "record/detail": [
             "chatwoot:handlers/chatwoot-agent/record-detail-setup"
         ],
-        "record/edit": [
-            "chatwoot:handlers/chatwoot-agent/record-detail-setup"
-        ]
+        "record/edit": ["chatwoot:handlers/chatwoot-agent/record-detail-setup"]
     }
 }
+

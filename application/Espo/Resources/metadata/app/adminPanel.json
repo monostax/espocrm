@@ -90,14 +90,14 @@
             {
                 "url": "#Admin/users",
                 "label": "Users",
-                "iconClass": "fas fa-user",
+                "iconClass": "ti ti-user",
                 "description": "users",
                 "tabQuickSearch": true
             },
             {
                 "url": "#Admin/teams",
                 "label": "Teams",
-                "iconClass": "fas fa-users",
+                "iconClass": "ti ti-users",
                 "description": "teams",
                 "tabQuickSearch": true
             },
@@ -237,7 +237,7 @@
             {
                 "url": "#Admin/portalUsers",
                 "label": "Portal Users",
-                "iconClass": "fas fa-user",
+                "iconClass": "ti ti-user",
                 "description": "portalUsers",
                 "tabQuickSearch": true
             },

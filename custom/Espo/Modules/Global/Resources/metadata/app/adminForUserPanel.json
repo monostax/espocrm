@@ -1,0 +1,45 @@
+{
+    "users": {
+        "label": "Users",
+        "itemList": [
+            {
+                "url": "#User",
+                "label": "Users",
+                "iconClass": "ti ti-user",
+                "description": "users",
+                "tabQuickSearch": true
+            },
+            {
+                "url": "#Team",
+                "label": "Teams",
+                "iconClass": "ti ti-users",
+                "description": "teams",
+                "tabQuickSearch": true
+            }
+        ],
+        "order": 5
+    },
+    "data": {
+        "label": "Data",
+        "itemList": [
+            {
+                "url": "#Import",
+                "label": "Import",
+                "iconClass": "fas fa-file-import",
+                "description": "import"
+            }
+        ]
+    },
+    "sales": {
+        "label": "Sales",
+        "itemList": [
+            {
+                "url": "#Funnel",
+                "label": "Funnels",
+                "iconClass": "ti ti-chart-funnel",
+                "description": "funnels"
+            }
+        ]
+    }
+}
+

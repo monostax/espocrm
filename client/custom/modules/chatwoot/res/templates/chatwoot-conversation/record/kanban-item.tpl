@@ -733,7 +733,7 @@
             
             {{#if hasAssignee}}
             <span class="conversation-assignee">
-                <i class="fas fa-user"></i>
+                <i class="ti ti-user"></i>
                 {{assigneeName}}
             </span>
             {{/if}}

@@ -1,7 +1,7 @@
 {
     "fields": {
         "name": "Nome",
-        "team": "Conta / Time",
+        "team": "Acesso / Permissão",
         "status": "Status",
         "assignToUser": "Atribuído a",
         "host": "Host",

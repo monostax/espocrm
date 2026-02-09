@@ -1,5 +1,4 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fas fa-comments"
+    "iconClass": "ti ti-users-group"
 }
-

@@ -1,0 +1,23 @@
+{
+    "labels": {
+        "Configurations": "Configurations",
+        "Chatwoot": "Chat",
+        "Inbox Integrations": "Inbox Integrations",
+        "Users": "Users",
+        "Agents": "Agents",
+        "Teams": "Teams"
+    },
+    "descriptions": {
+        "chatwootInboxIntegrations": "Manage Chat inbox integrations for WhatsApp and other channels",
+        "chatwootUsers": "Manage Chat user accounts",
+        "chatwootAgents": "Manage Chat agents and their assignments",
+        "chatwootTeams": "Manage Chat teams and team memberships"
+    },
+    "keywords": {
+        "chatwootInboxIntegrations": "whatsapp,inbox,integration,channel",
+        "chatwootUsers": "user,account,chatwoot",
+        "chatwootAgents": "agent,support,representative",
+        "chatwootTeams": "team,group,department"
+    }
+}
+

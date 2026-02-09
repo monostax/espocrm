@@ -153,8 +153,8 @@ class SyncWithChatwoot
             // Store data for afterSave hook to create ChatwootUser entity and link it
             // Using static cache because entity transient data may be lost when EspoCRM
             // refreshes the entity from database after insert
-            // Include teamId and platformId since they may not be available after refresh
-            $automationUser['_teamId'] = $entity->get('teamId');
+            // Include teamsIds and platformId since they may not be available after refresh
+            $automationUser['_teamsIds'] = $entity->getLinkMultipleIdList('teams');
             $automationUser['_platformId'] = $entity->get('platformId');
             self::$automationUserDataCache[$entity->getId()] = $automationUser;
 

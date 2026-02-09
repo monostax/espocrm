@@ -7,7 +7,7 @@
     "customizable": true,
     "importable": false,
     "notifications": false,
-    "stream": false,
+    "stream": true,
     "disabled": false,
     "type": "Base",
     "module": "Chatwoot",

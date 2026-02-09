@@ -1,0 +1,20 @@
+{
+    "labels": {
+        "Configurations": "Configurações",
+        "Import": "Importar",
+        "Teams": "Times",
+        "Funnels": "Funis de Vendas"
+    },
+    "descriptions": {
+        "users": "Gerenciar usuários da plataforma",
+        "import": "Importar dados de arquivo CSV",
+        "teams": "Gerenciar times de usuários",
+        "funnels": "Gerenciar Funis de vendas"
+    },
+    "keywords": {
+        "users": "usuários,usuario,usuarios",
+        "data": "importar,csv",
+        "sales": "funis,funil,vendas"
+    }
+}
+

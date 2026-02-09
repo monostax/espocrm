@@ -3,17 +3,21 @@
         "Create Funnel": "Criar Funil",
         "Active": "Ativo",
         "All": "Todos",
-        "Only Active": "Apenas Ativos"
+        "Only Active": "Apenas Ativos",
+        "Opportunity Stages": "Estágios da Oportunidade"
+    },
+    "links": {
+        "opportunityStages": "Estágios da Oportunidade"
     },
     "fields": {
         "name": "Nome",
         "description": "Descrição",
-        "team": "Conta / Time",
+        "team": "Acesso / Permissão",
         "isActive": "Ativo",
-        "isDefault": "É Padrão"
+        "isDefault": "É Padrão",
+        "opportunityStages": "Estágios da Oportunidade"
     },
     "boolFilters": {
         "onlyMy": "Atribuído a Mim"
     }
 }
-

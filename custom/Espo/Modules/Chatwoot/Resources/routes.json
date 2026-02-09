@@ -1,5 +1,13 @@
 [
     {
+        "route": "/ChatwootSso/freshUrl",
+        "method": "get",
+        "params": {
+            "controller": "ChatwootSso",
+            "action": "freshUrl"
+        }
+    },
+    {
         "route": "/ChatwootInboxIntegration/:id/activate",
         "method": "post",
         "params": {

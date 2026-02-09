@@ -22,7 +22,7 @@
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
         "lastSyncError": "Last Sync Error",
-        "team": "Team",
+        "teams": "Teams",
         "assignedUser": "Assigned User"
     },
     "links": {
@@ -30,7 +30,7 @@
         "chatwootUser": "Chat / User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
-        "team": "Team",
+        "teams": "Teams",
         "assignedUser": "Assigned User"
     },
     "labels": {

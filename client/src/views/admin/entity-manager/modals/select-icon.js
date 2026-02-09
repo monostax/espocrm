@@ -26,29 +26,32 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-import ModalView from 'views/modal';
+import ModalView from "views/modal";
 
 export default class extends ModalView {
-
-    template = 'admin/entity-manager/modals/select-icon'
+    template = "admin/entity-manager/modals/select-icon";
 
     buttonList = [
         {
-            name: 'cancel',
-            label: 'Cancel'
-        }
-    ]
+            name: "cancel",
+            label: "Cancel",
+        },
+    ];
 
     data() {
         return {
-            iconDataList: this.getIconDataList()
+            iconDataList: this.getIconDataList(),
         };
     }
 
     setup() {
-        this.addHandler('keyup', 'input[data-name="quick-search"]', (e, /** HTMLInputElement */target) => {
-            this.processQuickSearch(target.value);
-        });
+        this.addHandler(
+            "keyup",
+            'input[data-name="quick-search"]',
+            (e, /** HTMLInputElement */ target) => {
+                this.processQuickSearch(target.value);
+            },
+        );
 
         this.itemCache = {};
 
@@ -1350,7 +1353,7 @@ export default class extends ModalView {
             "fas fa-up-right-and-down-left-from-center",
             "fas fa-up-right-from-square",
             "fas fa-upload",
-            "fas fa-user",
+            "ti ti-user",
             "fas fa-user-astronaut",
             "fas fa-user-check",
             "fas fa-user-clock",
@@ -1373,7 +1376,7 @@ export default class extends ModalView {
             "fas fa-user-tag",
             "fas fa-user-tie",
             "fas fa-user-xmark",
-            "fas fa-users",
+            "ti ti-users",
             "fas fa-users-between-lines",
             "fas fa-users-gear",
             "fas fa-users-line",
@@ -1609,15 +1612,17 @@ export default class extends ModalView {
             "far fa-user",
             "far fa-window-maximize",
             "far fa-window-minimize",
-            "far fa-window-restore"
+            "far fa-window-restore",
         ];
 
-        this.iconList.push(...this.getMetadata().get('app.clientIcons.classList', []));
+        this.iconList.push(
+            ...this.getMetadata().get("app.clientIcons.classList", []),
+        );
     }
 
     // noinspection JSUnusedGlobalSymbols
     actionSelect(data) {
-        this.trigger('select', data.value);
+        this.trigger("select", data.value);
     }
 
     getIconDataList() {
@@ -1636,29 +1641,31 @@ export default class extends ModalView {
 
     processQuickSearch(filter) {
         if (!filter) {
-            this.$el.find('.icon-container').removeClass('hidden');
+            this.$el.find(".icon-container").removeClass("hidden");
 
             return;
         }
 
-        const $container = this.$el.find('.icons');
+        const $container = this.$el.find(".icons");
 
         this.iconList.forEach((item) => {
             let $icon = this.itemCache[item];
 
             if (!$icon) {
-                $icon = $container.find(`> .icon-container[data-name="${item}"]`);
+                $icon = $container.find(
+                    `> .icon-container[data-name="${item}"]`,
+                );
 
                 this.itemCache[item] = $icon;
             }
 
             if (~item.indexOf(filter)) {
-                $icon.removeClass('hidden');
+                $icon.removeClass("hidden");
 
                 return;
             }
 
-            $icon.addClass('hidden');
+            $icon.addClass("hidden");
         });
     }
 }

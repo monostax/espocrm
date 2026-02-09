@@ -5,13 +5,13 @@
         "chatwootWebhookId": "ID do Webhook de Chat",
         "url": "URL",
         "subscriptions": "Assinaturas",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "links": {
         "account": "Chat / Conta",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "labels": {
         "Create ChatwootAccountWebhook": "Criar Webhook de Chat / Conta"

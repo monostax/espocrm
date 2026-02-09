@@ -427,7 +427,7 @@
     
     {{#if contactName}}
     <div class="opportunity-contact">
-        <i class="fas fa-user"></i>
+        <i class="ti ti-user"></i>
         <span class="opportunity-contact-name">{{contactName}}</span>
     </div>
     {{/if}}
@@ -494,7 +494,7 @@
             
             {{#if assignedUserName}}
             <span class="opportunity-assignee">
-                <i class="fas fa-user"></i>
+                <i class="ti ti-user"></i>
                 {{assignedUserName}}
             </span>
             {{/if}}

@@ -1,0 +1,30 @@
+{
+    "chatwoot": {
+        "label": "Chatwoot",
+        "itemList": [
+            {
+                "url": "#Configurations/ChatwootInboxIntegration",
+                "label": "Inbox Integrations",
+                "iconClass": "ti ti-plug-connected",
+                "description": "chatwootInboxIntegrations",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/ChatwootAgent",
+                "label": "Agents",
+                "iconClass": "ti ti-user-pentagon",
+                "description": "chatwootAgents",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/ChatwootTeam",
+                "label": "Teams",
+                "iconClass": "ti ti-users-group",
+                "description": "chatwootTeams",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ],
+        "order": 30
+    }
+}
+

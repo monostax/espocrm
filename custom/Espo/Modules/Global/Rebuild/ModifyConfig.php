@@ -147,9 +147,9 @@ class ModifyConfig implements RebuildAction
         $newTabList = $this->addCRMSection($newTabList);
         
         // Other sections
-        $newTabList = $this->upsertToSection($newTabList, '$Records', ['Account'], 'end');
+        // $newTabList = $this->upsertToSection($newTabList, '$Records', ['Account'], 'end');
         $newTabList = $this->addActivitiesSection($newTabList);
-        $newTabList = $this->addConfigurationSection($newTabList);
+        // $newTabList = $this->addConfigurationSection($newTabList);
         
         // Filter out null values and re-index
         $newTabList = array_values(array_filter($newTabList, fn($item) => $item !== null));
@@ -373,49 +373,7 @@ class ModifyConfig implements RebuildAction
             'text' => '$Configuration',
             'iconClass' => 'ti ti-settings',
             'color' => null,
-            'id' => '906874',
-            'itemList' => [
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Funnels',
-                    'url' => '#Funnel',
-                    'iconClass' => 'ti ti-chart-funnel',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '906877'
-                ],
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Import',
-                    'url' => '#Import',
-                    'iconClass' => 'ti ti-file-import',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '906875'
-                ],
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Reports',
-                    'url' => '#Report',
-                    'iconClass' => 'ti ti-report',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '906876'
-                ],
-                (object) [
-                    'type' => 'url',
-                    'text' => '$Users',
-                    'url' => '#Users',
-                    'iconClass' => 'ti ti-users',
-                    'color' => null,
-                    'aclScope' => null,
-                    'onlyAdmin' => false,
-                    'id' => '906878'
-                ]
-            ]
+            'id' => '906874'
         ];
         
         // Find and remove existing Configuration divider and group

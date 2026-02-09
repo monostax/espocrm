@@ -74,8 +74,7 @@ class SyncLabelsFromChatwoot implements JobDataLess
             );
 
             $syncedLabelIds = [];
-            $teamId = $account->get('teamId');
-            $teamsIds = $teamId ? [$teamId] : [];
+            $teamsIds = $account->getLinkMultipleIdList('teams');
 
             foreach ($labels as $labelData) {
                 try {

@@ -17,12 +17,8 @@
             "layout": "listForTeam",
             "selectPrimaryFilterName": "active",
             "filterList": ["all", "active"],
-            "rowActionList": [
-                "changeTeamPosition"
-            ],
-            "selectMandatoryAttributeList": [
-                "teamRole"
-            ]
+            "rowActionList": ["changeTeamPosition"],
+            "selectMandatoryAttributeList": ["teamRole"]
         }
     },
     "recordViews": {
@@ -34,5 +30,5 @@
         "detail": "views/team/modals/detail"
     },
     "boolFilterList": ["onlyMy"],
-    "iconClass": "fas fa-users"
+    "iconClass": "ti ti-users"
 }

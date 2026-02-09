@@ -1,4 +1,12 @@
 {
+    "readLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\User\\RoleNameLoader"
+    ],
+    "listLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\User\\RoleNameLoader"
+    ],
     "beforeCreateHookClassNameList": [
         "__APPEND__",
         "Espo\\Modules\\Global\\Classes\\RecordHooks\\User\\BeforeCreate"

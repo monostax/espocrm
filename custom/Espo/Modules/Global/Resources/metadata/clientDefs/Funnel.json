@@ -10,7 +10,6 @@
     },
     "relationshipPanels": {
         "opportunityStages": {
-            "label": "Opportunity Stages",
             "view": "views/record/panels/relationship",
             "orderBy": "order",
             "orderDirection": "asc",
@@ -24,4 +23,3 @@
         }
     }
 }
-

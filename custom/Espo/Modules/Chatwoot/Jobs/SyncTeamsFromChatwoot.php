@@ -104,9 +104,8 @@ class SyncTeamsFromChatwoot implements JobDataLess
                 throw new \Exception('Missing platform URL, API key, or Chatwoot account ID');
             }
 
-            // Get EspoCRM team from the ChatwootAccount for assignment
-            $espoTeamId = $this->getAccountTeamId($account);
-            $espoTeamsIds = $espoTeamId ? [$espoTeamId] : [];
+            // Get EspoCRM teams from the ChatwootAccount for assignment
+            $espoTeamsIds = $this->getAccountTeamsIds($account);
 
             // Sync teams
             $stats = $this->syncTeams(
@@ -285,12 +284,12 @@ class SyncTeamsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Get EspoCRM team ID from a ChatwootAccount.
+     * Get EspoCRM team IDs from a ChatwootAccount.
      *
-     * @return string|null
+     * @return array<string>
      */
-    private function getAccountTeamId(Entity $account): ?string
+    private function getAccountTeamsIds(Entity $account): array
     {
-        return $account->get('teamId');
+        return $account->getLinkMultipleIdList('teams');
     }
 }

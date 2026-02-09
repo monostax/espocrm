@@ -22,6 +22,9 @@ define('chatwoot:handlers/chatwoot-agent/record-detail-setup', [], function () {
         }
 
         process() {
+            // Hide stream panel (audit log is still accessible via "View Audit Log" action)
+            this.view.hidePanel('stream', true);
+
             // Hide metadata panels for non-admin users
             if (!this.view.getUser().isAdmin()) {
                 this.view.hidePanel('metadata', true);

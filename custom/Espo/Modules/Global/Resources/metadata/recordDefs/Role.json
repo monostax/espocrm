@@ -1,0 +1,8 @@
+{
+    "readLoaderClassNameList": [
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\Role\\NameLoader"
+    ],
+    "listLoaderClassNameList": [
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\Role\\NameLoader"
+    ]
+}

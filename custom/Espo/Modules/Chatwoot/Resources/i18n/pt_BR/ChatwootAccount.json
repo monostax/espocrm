@@ -7,7 +7,7 @@
         "domain": "Domínio",
         "supportEmail": "Email de Suporte",
         "status": "Status",
-        "team": "Equipe",
+        "teams": "Acesso / Permissão",
         "autoPendingEnabled": "Auto-Pendente Habilitado",
         "automationUser": "Usuário de Automação"
     },
@@ -21,7 +21,7 @@
         "webhooks": "Chat / Webhooks",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "team": "Equipe",
+        "teams": "Acesso / Permissão",
         "automationUser": "Usuário de Automação"
     },
     "labels": {

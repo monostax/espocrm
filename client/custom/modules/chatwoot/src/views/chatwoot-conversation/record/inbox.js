@@ -11,12 +11,13 @@
 define("chatwoot:views/chatwoot-conversation/record/inbox", [
     "views/record/list",
     "search-manager",
-], function (Dep, SearchManager) {
+    "chatwoot:chatwoot-sso-manager",
+], function (Dep, SearchManager, ChatwootSsoManager) {
     return Dep.extend({
         template: "chatwoot:chatwoot-conversation/record/inbox",
 
-        // Session storage key for tracking SSO auth state
-        CHATWOOT_SSO_AUTH_KEY: "chatwoot_sso_authenticated",
+        /** @type {function|null} SSO monitoring cleanup */
+        _ssoCleanup: null,
 
         // Disable standard list features we don't need
         checkboxes: false,
@@ -40,6 +41,35 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
         // Active tab in right panel
         activeTab: "chat",
+
+        // Mobile state - track if detail view is active on mobile
+        mobileDetailActive: false,
+
+        /**
+         * Check if we're on mobile viewport (< 768px)
+         * Following EspoCRM's Bootstrap 3 breakpoint pattern
+         */
+        isMobile: function () {
+            const screenWidthXs =
+                this.getThemeManager().getParam("screenWidthXs");
+            return window.innerWidth < screenWidthXs; // < 768px
+        },
+
+        /**
+         * Show the list view on mobile (hide detail)
+         */
+        showMobileList: function () {
+            this.mobileDetailActive = false;
+            this.$el.find(".inbox-iframe-panel").removeClass("mobile-active");
+        },
+
+        /**
+         * Show the detail view on mobile (slide in from right)
+         */
+        showMobileDetail: function () {
+            this.mobileDetailActive = true;
+            this.$el.find(".inbox-iframe-panel").addClass("mobile-active");
+        },
 
         events: {
             "click .inbox-conversation-item": function (e) {
@@ -84,6 +114,10 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             "click .inbox-agent-dropdown .dropdown-toggle": function (e) {
                 // Load agents when dropdown is opened
                 this.loadAgentsForDropdown();
+            },
+            'click [data-action="mobileBack"]': function (e) {
+                e.preventDefault();
+                this.showMobileList();
             },
             'click [data-action="viewConversation"]': function (e) {
                 e.preventDefault();
@@ -131,11 +165,26 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             // Don't call parent's data() - we use a custom template that doesn't need it
             const conversations = this.getConversationListData();
 
+            // Get selected conversation contact name for mobile header
+            let selectedContactName = "";
+            if (this.selectedConversationId) {
+                const selectedModel = this.collection.get(
+                    this.selectedConversationId,
+                );
+                if (selectedModel) {
+                    selectedContactName =
+                        selectedModel.get("contactDisplayName") ||
+                        selectedModel.get("name") ||
+                        "Unknown";
+                }
+            }
+
             return {
                 conversations: conversations,
                 hasConversations: conversations.length > 0,
                 conversationCount: conversations.length,
                 selectedConversationId: this.selectedConversationId,
+                selectedContactName: selectedContactName,
                 chatwootUrl: this.chatwootUrl || "",
                 hasSelectedConversation: !!this.selectedConversationId,
                 noSelectionMessage: this.translate(
@@ -619,6 +668,22 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             $(window).on("resize.inboxView" + this.cid, () =>
                 this.updateHeight(),
             );
+
+            // Handle window resize for mobile/desktop transition
+            this.handleMobileResize();
+            $(window).on("resize.inboxMobile" + this.cid, () =>
+                this.handleMobileResize(),
+            );
+        },
+
+        /**
+         * Handle window resize to reset mobile state when transitioning to desktop
+         */
+        handleMobileResize: function () {
+            if (!this.isMobile() && this.mobileDetailActive) {
+                // Reset mobile state when transitioning to desktop
+                this.showMobileList();
+            }
         },
 
         /**
@@ -697,7 +762,13 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
          * Select a conversation and load it in the iframe
          */
         selectConversation: function (id) {
-            if (this.selectedConversationId === id) return;
+            if (this.selectedConversationId === id) {
+                // If already selected on mobile, show the detail view
+                if (this.isMobile()) {
+                    this.showMobileDetail();
+                }
+                return;
+            }
 
             this.selectedConversationId = id;
 
@@ -739,7 +810,26 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 } else if (this.activeTab === "cases") {
                     this.renderEntityListView("cases", "Case");
                 }
+
+                // On mobile, slide in the detail view
+                if (this.isMobile()) {
+                    this.showMobileDetail();
+                    // Update mobile header title
+                    this.updateMobileHeaderTitle(model);
+                }
             }
+        },
+
+        /**
+         * Update the mobile header title with contact name
+         */
+        updateMobileHeaderTitle: function (model) {
+            if (!model) return;
+            const contactName =
+                model.get("contactDisplayName") ||
+                model.get("name") ||
+                "Unknown";
+            this.$el.find(".inbox-mobile-title").text(contactName);
         },
 
         /**
@@ -837,109 +927,55 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                 chatwootAccountId +
                 "/inbox-view/conversation/" +
                 chatwootConversationId;
-            const hasSsoAuthenticated =
-                sessionStorage.getItem(this.CHATWOOT_SSO_AUTH_KEY) === "true";
 
-            let chatwootUrl;
-
-            if (this.chatSsoUrl && !hasSsoAuthenticated) {
-                chatwootUrl = this.chatSsoUrl;
-                sessionStorage.setItem(this.CHATWOOT_SSO_AUTH_KEY, "true");
-                this.pendingNavigation = cwPath;
-
-                // Save intended URL to Chatwoot's localStorage via postMessage
-                // This ensures the URL is preserved even if Chatwoot redirects to dashboard after SSO
-                this.saveIntendedUrlInChatwoot(cwPath);
-            } else {
-                chatwootUrl = this.chatwootBaseUrl + cwPath;
+            // Clean up any previous SSO monitoring
+            if (this._ssoCleanup) {
+                this._ssoCleanup();
+                this._ssoCleanup = null;
             }
 
-            this.chatwootUrl = chatwootUrl;
+            // Use the centralized SSO manager to determine the URL
+            var result = ChatwootSsoManager.getIframeUrl(
+                this.chatwootBaseUrl,
+                this.chatSsoUrl,
+                cwPath,
+            );
+
+            this.chatwootUrl = result.url;
+
+            // If SSO is needed, set up monitoring BEFORE loading the iframe
+            if (result.needsSso) {
+                this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
+                    chatwootBaseUrl: this.chatwootBaseUrl,
+                    pendingPath: result.pendingPath,
+                    ssoUrl: this.chatSsoUrl,
+                    getIframe: () => {
+                        var el = this.$el
+                            ? this.$el.find(".inbox-iframe")[0]
+                            : null;
+                        return el || null;
+                    },
+                    onConfirmed: () => {
+                        console.log("Inbox: SSO confirmed");
+                    },
+                    onFailed: () => {
+                        console.error("Inbox: SSO failed after retries");
+                    },
+                });
+
+                this.once("remove", () => {
+                    if (this._ssoCleanup) {
+                        this._ssoCleanup();
+                        this._ssoCleanup = null;
+                    }
+                });
+            }
 
             const $iframe = this.$el.find(".inbox-iframe");
             const $placeholder = this.$el.find(".inbox-iframe-placeholder");
 
             $placeholder.hide();
-            $iframe.attr("src", chatwootUrl).show();
-
-            // Handle pending SSO navigation
-            if (this.pendingNavigation) {
-                this.setupPendingNavigation();
-            }
-        },
-
-        /**
-         * Save intended URL in Chatwoot's localStorage via postMessage
-         * This ensures the URL is preserved even if Chatwoot redirects to dashboard after SSO
-         */
-        saveIntendedUrlInChatwoot: function (path) {
-            // We need to save the intended URL directly in localStorage since
-            // the iframe isn't loaded yet. We'll use a temporary iframe or
-            // rely on the bridge to handle this when Chatwoot loads.
-            // For now, we also save it in the parent's localStorage as a backup
-            // that the bridge can check via the CHATWOOT_READY initial path.
-
-            // Save in parent localStorage as backup
-            try {
-                localStorage.setItem("chatwoot_intended_url_backup", path);
-                console.log("Inbox: Saved intended URL backup:", path);
-            } catch (e) {
-                console.error("Inbox: Failed to save intended URL backup:", e);
-            }
-        },
-
-        /**
-         * Setup handler for pending navigation after SSO
-         */
-        setupPendingNavigation: function () {
-            const pendingPath = this.pendingNavigation;
-            this.pendingNavigation = null;
-
-            const handleReady = (event) => {
-                if (event.data && event.data.type === "CHATWOOT_READY") {
-                    // First, send the intended URL to Chatwoot to save in its localStorage
-                    const $iframe = this.$el.find(".inbox-iframe")[0];
-                    if ($iframe && $iframe.contentWindow) {
-                        try {
-                            $iframe.contentWindow.postMessage(
-                                {
-                                    type: "SAVE_INTENDED_URL",
-                                    path: pendingPath,
-                                    timestamp: Date.now(),
-                                },
-                                this.chatwootBaseUrl,
-                            );
-                            console.log(
-                                "Inbox: Sent SAVE_INTENDED_URL to Chatwoot:",
-                                pendingPath,
-                            );
-                        } catch (e) {
-                            console.error(
-                                "Inbox: Failed to send SAVE_INTENDED_URL:",
-                                e,
-                            );
-                        }
-                    }
-
-                    // Then redirect to the target URL
-                    const targetUrl = this.chatwootBaseUrl + pendingPath;
-                    this.$el.find(".inbox-iframe").attr("src", targetUrl);
-                    window.removeEventListener("message", handleReady);
-
-                    // Clear the backup
-                    try {
-                        localStorage.removeItem("chatwoot_intended_url_backup");
-                    } catch (e) {
-                        // Ignore
-                    }
-                }
-            };
-
-            window.addEventListener("message", handleReady);
-
-            this.once("remove", function () {
-                window.removeEventListener("message", handleReady);
-            });
+            $iframe.attr("src", this.chatwootUrl).show();
         },
 
         /**
@@ -1155,11 +1191,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             const linkName =
                 scope === "Opportunity"
                     ? "opportunities"
-                      : scope === "Appointment"
-                        ? "appointments"
-                        : scope === "Case"
-                          ? "cases"
-                          : "tasks";
+                    : scope === "Appointment"
+                      ? "appointments"
+                      : scope === "Case"
+                        ? "cases"
+                        : "tasks";
 
             // Use the relationship URL to fetch related records
             // URL format: ChatwootConversation/{id}/{link}
@@ -1615,6 +1651,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             }
 
             $(window).off("resize.inboxView" + this.cid);
+            $(window).off("resize.inboxMobile" + this.cid);
+
+            // Reset mobile state
+            this.mobileDetailActive = false;
+
             Dep.prototype.onRemove.call(this);
         },
     });

@@ -1,6 +1,6 @@
 {
     "controller": "controllers/record",
-    "iconClass": "ti ti-messages",
+    "iconClass": "ti ti-plug-connected",
     "createDisabled": false,
     "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-inbox-integration/defaults-preparator",
     "modalViews": {
@@ -67,3 +67,4 @@
         }
     ]
 }
+

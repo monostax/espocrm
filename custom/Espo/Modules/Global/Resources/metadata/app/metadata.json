@@ -1,0 +1,6 @@
+{
+    "additionalBuilderClassNameList": [
+        "Espo\\Modules\\Global\\Core\\Utils\\Metadata\\AdditionalBuilder\\AdminForUserPanel"
+    ]
+}
+

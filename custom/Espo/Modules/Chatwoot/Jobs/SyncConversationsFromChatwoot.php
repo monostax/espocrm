@@ -102,8 +102,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Get cursor for incremental sync
             $cursor = $account->get('conversationSyncCursor');
 
-            // Get team from the ChatwootAccount
-            $teamId = $this->getAccountTeamId($account);
+            // Get teams from the ChatwootAccount
+            $teamsIds = $this->getAccountTeamsIds($account);
+            $teamId = !empty($teamsIds) ? $teamsIds[0] : null;
 
             // Sync conversations
             $result = $this->syncConversations(
@@ -712,9 +713,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $conversation->set('inboxId', $chatwootInbox->getId()); // Link to ChatwootInbox entity
         }
 
-        // Assign team from ChatwootAccount
+        // Assign teams from ChatwootAccount
         if ($teamId) {
-            $conversation->set('teamId', $teamId);
+            $conversation->set('teamsIds', [$teamId]);
         }
 
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
@@ -799,9 +800,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'inboxChannelType' => $chatwootInbox?->get('channelType'),
         ];
 
-        // Assign team from ChatwootAccount
+        // Assign teams from ChatwootAccount
         if ($teamId) {
-            $data['teamId'] = $teamId;
+            $data['teamsIds'] = [$teamId];
         }
 
         $this->entityManager->createEntity('ChatwootConversation', $data, ['silent' => true]);
@@ -1056,13 +1057,13 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Get team ID from a ChatwootAccount.
+     * Get team IDs from a ChatwootAccount.
      *
-     * @return string|null
+     * @return array<string>
      */
-    private function getAccountTeamId(Entity $account): ?string
+    private function getAccountTeamsIds(Entity $account): array
     {
-        return $account->get('teamId');
+        return $account->getLinkMultipleIdList('teams');
     }
 
     /**

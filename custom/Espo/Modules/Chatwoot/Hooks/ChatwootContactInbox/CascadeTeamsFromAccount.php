@@ -62,10 +62,10 @@ class CascadeTeamsFromAccount
             return;
         }
 
-        // Get team from the parent account
-        $teamId = $account->get('teamId');
-        if ($teamId) {
-            $entity->set('teamsIds', [$teamId]);
+        // Get teams from the parent account
+        $teamsIds = $account->getLinkMultipleIdList('teams');
+        if (!empty($teamsIds)) {
+            $entity->set('teamsIds', $teamsIds);
         }
     }
 }

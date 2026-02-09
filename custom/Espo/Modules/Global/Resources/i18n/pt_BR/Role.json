@@ -1,0 +1,8 @@
+{
+    "roleNames": {
+        "tenant": "Inquilino",
+        "tenant-admin": "Inquilino Admin",
+        "tenant-b2b": "Inquilino B2B",
+        "tenant-user-api": "Inquilino / API do Usuário"
+    }
+}

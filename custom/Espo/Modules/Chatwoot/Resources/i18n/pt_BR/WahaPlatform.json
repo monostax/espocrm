@@ -5,7 +5,7 @@
         "frontendUrl": "URL do Frontend",
         "backendUrl": "URL do Backend",
         "apiKey": "Chave API",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "links": {
         "platform": "Waha / Plataforma",
@@ -13,7 +13,7 @@
         "sessions": "Sessões",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "labels": {
         "Create WahaPlatform": "Criar Plataforma Waha"
@@ -24,4 +24,3 @@
         "apiKey": "Chave API da plataforma WAHA. Usada para autenticar requisições API."
     }
 }
-

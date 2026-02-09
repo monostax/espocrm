@@ -68,14 +68,14 @@ class CreateAutomationUser
 
         try {
             // Create corresponding ChatwootUser entity in EspoCRM
-            // Using cached teamId and platformId since entity may have been refreshed
+            // Using cached teamsIds and platformId since entity may have been refreshed
             $chatwootUser = $this->createChatwootUserEntity(
                 $entity,
                 $automationUserData['user_id'],
                 $automationUserData['name'],
                 $automationUserData['email'],
                 $automationUserData['password'],
-                $automationUserData['_teamId'] ?? null,
+                $automationUserData['_teamsIds'] ?? [],
                 $automationUserData['_platformId'] ?? null
             );
 
@@ -106,7 +106,7 @@ class CreateAutomationUser
      * @param string $name
      * @param string $email
      * @param string $password
-     * @param string|null $teamId
+     * @param array<string> $teamsIds
      * @param string|null $platformId
      * @return Entity|null
      */
@@ -116,11 +116,11 @@ class CreateAutomationUser
         string $name,
         string $email,
         string $password,
-        ?string $teamId,
+        array $teamsIds,
         ?string $platformId
     ): ?Entity {
         try {
-            // teamId and platformId are passed from cached data captured in beforeSave
+            // teamsIds and platformId are passed from cached data captured in beforeSave
             // because after entity refresh, the in-memory data may be lost
 
             // Create the ChatwootUser entity
@@ -134,7 +134,7 @@ class CreateAutomationUser
                 'platformId' => $platformId,
                 'chatwootAccountId' => $chatwootAccount->getId(),
                 'chatwootUserId' => $chatwootUserId,
-                'teamsIds' => $teamId ? [$teamId] : [] // Inherit Team from ChatwootAccount
+                'teamsIds' => $teamsIds // Inherit Teams from ChatwootAccount
             ], [
                 'skipHooks' => true, // Skip hooks to avoid recursive creation
                 'silent' => true

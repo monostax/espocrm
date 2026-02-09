@@ -22,14 +22,14 @@
         "syncStatus": "Status de Sincronização",
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
-        "team": "Equipe"
+        "teams": "Acesso / Permissão"
     },
     "links": {
         "chatwootAccount": "Chat / Conta",
         "chatwootUser": "Chat / Usuário",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
-        "team": "Time"
+        "teams": "Acesso / Permissão"
     },
     "labels": {
         "Create ChatwootAgent": "Criar Agente de Chat",
@@ -69,3 +69,4 @@
         "administrators": "Administradores"
     }
 }
+

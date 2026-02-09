@@ -28,11 +28,11 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Validates that the assigned EspoCRM User belongs to the same team as the ChatwootAgent.
+ * Validates that the assigned EspoCRM User belongs to at least one of the same teams as the ChatwootAgent.
  * This enforces ACL by ensuring users can only be assigned to agents within ChatwootAccounts
  * they have team access to.
  * 
- * Runs after CascadeTeamsFromAccount (order=1) so teamId is already set.
+ * Runs after CascadeTeamsFromAccount (order=1) so teamsIds is already set.
  */
 class ValidateAssignedUserTeam
 {
@@ -63,11 +63,11 @@ class ValidateAssignedUserTeam
             return;
         }
 
-        // Get the agent's team (cascaded from ChatwootAccount)
-        $agentTeamId = $entity->get('teamId');
+        // Get the agent's teams (cascaded from ChatwootAccount)
+        $agentTeamsIds = $entity->getLinkMultipleIdList('teams');
         
-        // No validation needed if agent doesn't have a team
-        if (!$agentTeamId) {
+        // No validation needed if agent doesn't have teams
+        if (empty($agentTeamsIds)) {
             return;
         }
 
@@ -81,8 +81,8 @@ class ValidateAssignedUserTeam
         // Get the user's teams
         $userTeams = $user->getLinkMultipleIdList('teams');
         
-        // Check if user belongs to the agent's team
-        if (!in_array($agentTeamId, $userTeams)) {
+        // Check if user belongs to at least one of the agent's teams
+        if (empty(array_intersect($agentTeamsIds, $userTeams))) {
             throw new Forbidden('User must be in the same team as the Chatwoot Account to be assigned to this agent.');
         }
     }

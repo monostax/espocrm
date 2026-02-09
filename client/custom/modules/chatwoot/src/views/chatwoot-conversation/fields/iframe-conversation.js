@@ -23,9 +23,7 @@
 import BaseFieldView from "views/fields/base";
 import AppParams from "app-params";
 import { inject } from "di";
-
-// Session storage key for tracking SSO auth state globally (shared with chatwoot/index.js)
-const CHATWOOT_SSO_AUTH_KEY = "chatwoot_sso_authenticated";
+import ChatwootSsoManager from "chatwoot:chatwoot-sso-manager";
 
 /**
  * A field view that displays a Chatwoot conversation in an iframe.
@@ -54,19 +52,8 @@ class IframeConversationFieldView extends BaseFieldView {
 
     chatwootBaseUrl = null;
 
-    /**
-     * Check if SSO has been completed this session (shared across all Chatwoot views)
-     */
-    static hasSsoAuthenticated() {
-        return sessionStorage.getItem(CHATWOOT_SSO_AUTH_KEY) === "true";
-    }
-
-    /**
-     * Mark SSO as completed for this session
-     */
-    static setSsoAuthenticated() {
-        sessionStorage.setItem(CHATWOOT_SSO_AUTH_KEY, "true");
-    }
+    /** @type {function|null} SSO monitoring cleanup */
+    _ssoCleanup = null;
 
     templateContent = `
         {{#if hasConversation}}
@@ -76,7 +63,7 @@ class IframeConversationFieldView extends BaseFieldView {
                 style="width: 100%; height: 600px; border: none; margin: 0; padding: 0; border-radius: 4px;"
                 frameborder="0"
                 allowfullscreen
-                sandbox="allow-same-origin allow-scripts allow-forms"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
             ></iframe>
         </div>
         {{else}}
@@ -129,8 +116,21 @@ class IframeConversationFieldView extends BaseFieldView {
 
         // Listen for model sync to re-render when data is loaded
         this.listenTo(this.model, "sync", () => {
+            // Clean up previous SSO monitoring before re-render
+            if (this._ssoCleanup) {
+                this._ssoCleanup();
+                this._ssoCleanup = null;
+            }
             if (this.isRendered()) {
                 this.reRender();
+            }
+        });
+
+        // Clean up SSO monitoring when view is removed
+        this.once("remove", () => {
+            if (this._ssoCleanup) {
+                this._ssoCleanup();
+                this._ssoCleanup = null;
             }
         });
     }
@@ -178,27 +178,42 @@ class IframeConversationFieldView extends BaseFieldView {
         // Build the conversation path
         const cwPath = `/app/accounts/${this.chatwootAccountId}/inbox-view/conversation/${chatwootConversationId}`;
 
-        let chatwootUrl;
+        // Use the centralized SSO manager to determine the URL
+        const { url, needsSso, pendingPath } =
+            ChatwootSsoManager.getIframeUrl(
+                this.chatwootBaseUrl,
+                this.chatSsoUrl,
+                cwPath,
+            );
 
-        // For first load, use SSO URL to authenticate
-        if (
-            this.chatSsoUrl &&
-            !IframeConversationFieldView.hasSsoAuthenticated()
-        ) {
-            // Use SSO URL for authentication
-            chatwootUrl = this.chatSsoUrl;
-            IframeConversationFieldView.setSsoAuthenticated();
-
-            // Store pending navigation for after auth
-            this.pendingNavigation = cwPath;
-        } else {
-            // Already authenticated - use direct path
-            chatwootUrl = `${this.chatwootBaseUrl}${cwPath}`;
+        // If SSO is needed, set up monitoring BEFORE render
+        if (needsSso) {
+            this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
+                chatwootBaseUrl: this.chatwootBaseUrl,
+                pendingPath: pendingPath,
+                ssoUrl: this.chatSsoUrl,
+                getIframe: () => {
+                    const el = this.$el
+                        ? this.$el.find("iframe")[0]
+                        : null;
+                    return el || null;
+                },
+                onConfirmed: () => {
+                    console.log(
+                        "IframeConversationFieldView: SSO confirmed",
+                    );
+                },
+                onFailed: () => {
+                    console.error(
+                        "IframeConversationFieldView: SSO failed after retries",
+                    );
+                },
+            });
         }
 
         return {
             hasConversation: true,
-            chatwootUrl: chatwootUrl,
+            chatwootUrl: url,
         };
     }
 
@@ -230,26 +245,6 @@ class IframeConversationFieldView extends BaseFieldView {
 
         // Update height on window resize
         $(window).on("resize.chatwootIframe", updateHeight);
-
-        // Handle pending navigation after SSO auth
-        if (this.pendingNavigation) {
-            const pendingPath = this.pendingNavigation;
-            this.pendingNavigation = null;
-
-            const handleReady = (event) => {
-                if (event.data.type === "CHATWOOT_READY") {
-                    const targetUrl = `${this.chatwootBaseUrl}${pendingPath}`;
-                    $iframe.attr("src", targetUrl);
-                    window.removeEventListener("message", handleReady);
-                }
-            };
-
-            window.addEventListener("message", handleReady);
-
-            this.once("remove", () => {
-                window.removeEventListener("message", handleReady);
-            });
-        }
 
         // Clean up on view removal
         this.once("remove", () => {

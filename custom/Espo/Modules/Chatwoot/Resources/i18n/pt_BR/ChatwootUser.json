@@ -9,7 +9,7 @@
         "assignedUser": "Usuário Proprietário",
         "role": "Função",
         "chatwootUserId": "Chat / Usuário (ID)",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "links": {
         "platform": "Chat / Plataforma",
@@ -18,7 +18,7 @@
         "agents": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "labels": {
         "Create ChatwootUser": "Criar Chat / Usuário"

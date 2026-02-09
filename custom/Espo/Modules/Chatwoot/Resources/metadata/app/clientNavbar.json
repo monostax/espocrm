@@ -6,7 +6,18 @@
             "order": 100,
             "disabled": false
         }
+    },
+    "menuItems": {
+        "configurations": {
+            "order": 0,
+            "groupIndex": 1,
+            "link": "#Configurations",
+            "labelTranslation": "Configurations.labels.Configurations",
+            "accessDataList": [
+                {
+                    "isAdminOnly": false
+                }
+            ]
+        }
     }
 }
-
-

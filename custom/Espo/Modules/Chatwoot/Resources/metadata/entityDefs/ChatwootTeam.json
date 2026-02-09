@@ -68,7 +68,8 @@
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
-            "required": true
+            "required": true,
+            "readOnly": true
         },
         "chatwootAgents": {
             "type": "linkMultiple"

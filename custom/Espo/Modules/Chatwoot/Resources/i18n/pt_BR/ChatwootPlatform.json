@@ -5,14 +5,14 @@
         "frontendUrl": "URL do Frontend",
         "backendUrl": "URL do Backend",
         "accessToken": "Token de Acesso",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "links": {
         "accounts": "Chat / Contas",
         "users": "Chat / Usuários",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times / Contas"
+        "teams": "Acesso / Permissão"
     },
     "labels": {
         "Create ChatwootPlatform": "Criar Plataforma de Chat"

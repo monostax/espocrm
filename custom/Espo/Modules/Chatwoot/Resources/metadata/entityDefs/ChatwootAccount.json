@@ -88,8 +88,9 @@
             "readOnly": true,
             "view": "views/fields/user"
         },
-        "team": {
-            "type": "link",
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
             "required": true
         }
     },
@@ -122,9 +123,11 @@
             "type": "belongsTo",
             "entity": "User"
         },
-        "team": {
-            "type": "belongsTo",
-            "entity": "Team"
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         },
         "syncStates": {
             "type": "hasMany",

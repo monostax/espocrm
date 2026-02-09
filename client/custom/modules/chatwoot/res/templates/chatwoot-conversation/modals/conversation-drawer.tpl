@@ -91,7 +91,7 @@
         src="{{chatwootUrl}}"
         frameborder="0"
         allowfullscreen
-        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
     ></iframe>
 </div>
 {{else}}

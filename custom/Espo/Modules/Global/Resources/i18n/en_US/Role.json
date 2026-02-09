@@ -1,0 +1,8 @@
+{
+    "roleNames": {
+        "tenant": "Tenant",
+        "tenant-admin": "Tenant Admin",
+        "tenant-b2b": "Tenant B2B",
+        "tenant-user-api": "Tenant / User API"
+    }
+}

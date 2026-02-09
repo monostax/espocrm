@@ -83,9 +83,8 @@ class SyncInboxesFromChatwoot implements JobDataLess
                 throw new \Exception('Missing platform URL, API key, or Chatwoot account ID');
             }
 
-            // Get team from the ChatwootAccount
-            $teamId = $this->getAccountTeamId($account);
-            $teamsIds = $teamId ? [$teamId] : [];
+            // Get teams from the ChatwootAccount
+            $teamsIds = $this->getAccountTeamsIds($account);
 
             // Sync inboxes
             $stats = $this->syncInboxes(
@@ -329,13 +328,13 @@ class SyncInboxesFromChatwoot implements JobDataLess
     }
 
     /**
-     * Get team ID from a ChatwootAccount.
+     * Get team IDs from a ChatwootAccount.
      *
-     * @return string|null
+     * @return array<string>
      */
-    private function getAccountTeamId(Entity $account): ?string
+    private function getAccountTeamsIds(Entity $account): array
     {
-        return $account->get('teamId');
+        return $account->getLinkMultipleIdList('teams');
     }
 }
 

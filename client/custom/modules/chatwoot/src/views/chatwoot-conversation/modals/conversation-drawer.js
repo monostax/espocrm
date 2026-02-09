@@ -10,7 +10,8 @@
 
 define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
     "views/modal",
-], function (Dep) {
+    "chatwoot:chatwoot-sso-manager",
+], function (Dep, ChatwootSsoManager) {
     return Dep.extend({
         cssName: "conversation-drawer",
         className: "dialog conversation-drawer-dialog",
@@ -21,8 +22,8 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
 
         fitHeight: true,
 
-        // Session storage key for tracking SSO auth state
-        CHATWOOT_SSO_AUTH_KEY: "chatwoot_sso_authenticated",
+        /** @type {function|null} SSO monitoring cleanup */
+        _ssoCleanup: null,
 
         data: function () {
             return {
@@ -79,20 +80,48 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
             // Build the conversation path
             const cwPath = `/app/accounts/${chatwootAccountId}/inbox-view/conversation/${chatwootConversationId}`;
 
-            // Check SSO auth state
-            const hasSsoAuthenticated =
-                sessionStorage.getItem(this.CHATWOOT_SSO_AUTH_KEY) === "true";
+            // Use the centralized SSO manager to determine the URL
+            const result = ChatwootSsoManager.getIframeUrl(
+                chatwootBaseUrl,
+                chatSsoUrl,
+                cwPath,
+            );
 
-            if (chatSsoUrl && !hasSsoAuthenticated) {
-                // Use SSO URL for first-time authentication
-                this.chatwootUrl = chatSsoUrl;
-                sessionStorage.setItem(this.CHATWOOT_SSO_AUTH_KEY, "true");
-                this.pendingNavigation = cwPath;
-                this.chatwootBaseUrl = chatwootBaseUrl;
-            } else {
-                // Already authenticated - use direct path
-                this.chatwootUrl = `${chatwootBaseUrl}${cwPath}`;
+            this.chatwootUrl = result.url;
+            this.chatwootBaseUrl = chatwootBaseUrl;
+
+            // If SSO is needed, set up monitoring BEFORE render
+            if (result.needsSso) {
+                this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
+                    chatwootBaseUrl: chatwootBaseUrl,
+                    pendingPath: result.pendingPath,
+                    ssoUrl: chatSsoUrl,
+                    getIframe: () => {
+                        var el = this.$el
+                            ? this.$el.find("iframe")[0]
+                            : null;
+                        return el || null;
+                    },
+                    onConfirmed: () => {
+                        console.log(
+                            "ConversationDrawer: SSO confirmed",
+                        );
+                    },
+                    onFailed: () => {
+                        console.error(
+                            "ConversationDrawer: SSO failed after retries",
+                        );
+                    },
+                });
             }
+
+            // Clean up SSO monitoring when view is removed
+            this.once("remove", () => {
+                if (this._ssoCleanup) {
+                    this._ssoCleanup();
+                    this._ssoCleanup = null;
+                }
+            });
         },
 
         actionClose: function () {
@@ -124,26 +153,6 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
                 // Delay to ensure modal is fully rendered
                 setTimeout(updateHeight, 50);
                 $(window).on("resize.conversationDrawer", updateHeight);
-
-                // Handle pending navigation after SSO
-                if (this.pendingNavigation) {
-                    const pendingPath = this.pendingNavigation;
-                    this.pendingNavigation = null;
-
-                    const handleReady = (event) => {
-                        if (event.data.type === "CHATWOOT_READY") {
-                            const targetUrl = `${this.chatwootBaseUrl}${pendingPath}`;
-                            $iframe.attr("src", targetUrl);
-                            window.removeEventListener("message", handleReady);
-                        }
-                    };
-
-                    window.addEventListener("message", handleReady);
-
-                    this.once("remove", () => {
-                        window.removeEventListener("message", handleReady);
-                    });
-                }
             }
 
             // Clean up on close
