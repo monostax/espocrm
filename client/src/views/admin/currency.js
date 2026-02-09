@@ -59,7 +59,7 @@ export default class extends SettingsEditRecordView {
 
             view.addMenuItem('buttons', {
                 name: 'currencyRecords',
-                link: '#CurrencyRecord',
+                link: '#CurrencyRecord/list/fromSettings=true',
                 labelTranslation: 'Settings.labels.Currency Rates',
                 iconClass: 'fas fa-euro-sign',
             });

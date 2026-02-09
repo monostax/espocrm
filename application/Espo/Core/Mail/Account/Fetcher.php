@@ -97,6 +97,7 @@ class Fetcher
     /**
      * @param Collection<EmailFilter> $filterList
      * @throws Error
+     * @throws ImapError
      */
     private function fetchFolder(
         Account $account,
@@ -211,6 +212,7 @@ class Fetcher
     /**
      * @return int[]
      * @throws Error
+     * @throws ImapError
      */
     private function fetchIds(
         Account $account,
@@ -275,7 +277,12 @@ class Fetcher
             ->withGroupEmailFolderId($groupEmailFolderId);
 
         try {
-            $message = new MessageWrapper($id, $storage, $parser);
+            $message = new MessageWrapper(
+                id: $id,
+                storage: $storage,
+                parser: $parser,
+                peek: $account->keepFetchedEmailsUnread(),
+            );
 
             $hookResult = null;
 

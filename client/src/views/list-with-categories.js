@@ -111,7 +111,7 @@ class ListWithCategories extends ListView {
         this.categoriesDisabled =
             this.categoriesDisabled ||
             this.getMetadata().get(['scopes', this.categoryScope, 'disabled']) ||
-            !this.getAcl().checkScope(this.categoryScope);
+            !this.getAcl().checkScope(this.categoryScope, 'read');
 
         if (this.categoriesDisabled) {
             this.isExpanded = true;
@@ -777,12 +777,23 @@ class ListWithCategories extends ListView {
             rootUrl += `/list/primaryFilter=${filterPart}`;
         }
 
-        const root = document.createElement('a');
-        root.href = rootUrl;
-        root.textContent = this.translate(this.scope, 'scopeNamesPlural');
-        root.dataset.action = 'openCategory';
-        root.classList.add('action');
+        const root = document.createElement('span');
         root.style.userSelect = 'none';
+
+        const a = document.createElement('a');
+        a.href = rootUrl;
+        a.textContent = this.translate(this.scope, 'scopeNamesPlural');
+        a.dataset.action = 'openCategory';
+        a.classList.add('action');
+        a.style.userSelect = 'none';
+
+        root.append(a);
+
+        const iconHtml = this.getHeaderIconHtml();
+
+        if (iconHtml) {
+            root.insertAdjacentHTML('afterbegin', iconHtml);
+        }
 
         /** @type {*[]} */
         const list = [root];
