@@ -375,7 +375,7 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
     }
 
     /**
-     * Batch-fetch Contacts by phone numbers (both raw and normalised).
+     * Batch-fetch Contacts by normalised phone numbers (+55…).
      *
      * @param string[] $phones
      * @return array<string, Entity> keyed by phone number
