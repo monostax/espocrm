@@ -1,0 +1,12 @@
+{
+    "scopeNames": {
+        "WhatsAppBusinessAccount": "Contas Business WhatsApp",
+        "WhatsAppBusinessAccountPhoneNumber": "Números de Telefone WA",
+        "WhatsAppBusinessAccountMessageTemplate": "Templates de Mensagem WA"
+    },
+    "scopeNamesPlural": {
+        "WhatsAppBusinessAccount": "Contas Business WhatsApp",
+        "WhatsAppBusinessAccountPhoneNumber": "Números de Telefone WA",
+        "WhatsAppBusinessAccountMessageTemplate": "Templates de Mensagem WA"
+    }
+}

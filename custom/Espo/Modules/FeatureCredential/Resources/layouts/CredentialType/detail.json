@@ -1,0 +1,65 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "code"
+                }
+            ],
+            [
+                {
+                    "name": "category"
+                },
+                {
+                    "name": "isSystem"
+                }
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "rows": [
+            [
+                {
+                    "name": "requiresRotation"
+                },
+                {
+                    "name": "rotationDays"
+                }
+            ]
+        ],
+        "label": "Rotation Settings"
+    },
+    {
+        "rows": [
+            [
+                {
+                    "name": "schema",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "uiConfig",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "encryptionFields",
+                    "fullWidth": true
+                }
+            ]
+        ],
+        "label": "Configuration Schema"
+    }
+]
+

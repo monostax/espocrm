@@ -1,0 +1,48 @@
+{
+    "labels": {
+        "SimplesAgendaCliente": "Cliente SimplesAgenda",
+        "Create SimplesAgendaCliente": "Criar Cliente SimplesAgenda"
+    },
+    "fields": {
+        "name": "Nome",
+        "codCliente": "Código do Cliente",
+        "cpf": "CPF",
+        "cnpj": "CNPJ",
+        "rg": "RG",
+        "dataNascimento": "Data de Nascimento",
+        "cep": "CEP",
+        "endereco": "Endereço",
+        "numero": "Número",
+        "complemento": "Complemento",
+        "referencia": "Referência",
+        "bairro": "Bairro",
+        "estado": "Estado",
+        "cidade": "Cidade",
+        "observacao": "Observação",
+        "dataCadastro": "Data de Cadastro",
+        "dataAtualizacao": "Data de Atualização",
+        "credito": "Crédito",
+        "tags": "Tags",
+        "comoConheceu": "Como Conheceu",
+        "contatos": "Contatos",
+        "contact": "Contato",
+        "credential": "Credencial",
+        "lastSyncedAt": "Última Sincronização",
+        "syncStatus": "Status de Sincronização"
+    },
+    "links": {
+        "contact": "Contato",
+        "credential": "Credencial"
+    },
+    "options": {
+        "syncStatus": {
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    },
+    "presetFilters": {
+        "all": "Todos",
+        "synced": "Sincronizados",
+        "errors": "Erros"
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "name": "Nome Verificado",
+        "phoneNumberId": "ID do Número",
+        "displayPhoneNumber": "Número de Telefone",
+        "qualityRating": "Classificação de Qualidade",
+        "credentialId": "ID da Credencial",
+        "credentialName": "Credencial"
+    },
+    "links": {},
+    "labels": {},
+    "options": {
+        "qualityRating": {
+            "GREEN": "Verde",
+            "YELLOW": "Amarelo",
+            "RED": "Vermelho",
+            "NA": "N/A"
+        }
+    },
+    "tooltips": {
+        "qualityRating": "Classificação de qualidade atribuída pela Meta com base no comportamento de mensagens",
+        "phoneNumberId": "O ID único da Meta para este número de telefone"
+    }
+}

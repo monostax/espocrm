@@ -1,0 +1,7 @@
+{
+    "order": 21,
+    "version": "1.0.0",
+    "name": "FeatureCredential",
+    "description": "Credential management feature module",
+    "jsTranspiled": true
+}

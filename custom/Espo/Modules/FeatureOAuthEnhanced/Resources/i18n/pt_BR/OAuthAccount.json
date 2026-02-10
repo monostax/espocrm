@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "teams": "Times",
+        "assignedUsers": "Usuários Responsáveis"
+    },
+    "links": {
+        "teams": "Times",
+        "assignedUsers": "Usuários Responsáveis",
+        "credentials": "Credenciais"
+    }
+}
+

@@ -22,6 +22,8 @@ use Espo\Core\Utils\Config;
 use Espo\Core\Acl;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
+use Espo\Tools\OAuth\TokensProvider;
 use stdClass;
 
 /**
@@ -36,6 +38,8 @@ class ChatwootInboxIntegration
         private EntityManager $entityManager,
         private WahaApiClient $wahaApiClient,
         private ChatwootApiClient $chatwootApiClient,
+        private CredentialResolver $credentialResolver,
+        private TokensProvider $tokensProvider,
         private Log $log,
         private Acl $acl,
         private Config $config
@@ -43,7 +47,7 @@ class ChatwootInboxIntegration
 
     /**
      * Activate a communication channel.
-     * This creates the WAHA session, Chatwoot inbox, and starts the connection process.
+     * Routes to the appropriate activation flow based on channel type.
      *
      * @param string $channelId
      * @return Entity
@@ -73,18 +77,32 @@ class ChatwootInboxIntegration
         $channel->set('errorMessage', null);
         $this->entityManager->saveEntity($channel);
 
+        $channelType = $channel->get('channelType');
+
+        if ($channelType === 'whatsappCloudApi') {
+            return $this->activateWhatsappCloudApi($channel);
+        }
+
+        return $this->activateWhatsappQrcode($channel);
+    }
+
+    /**
+     * Activate a WhatsApp QR code channel via WAHA.
+     * Creates the WAHA session, Chatwoot API inbox, and starts the connection process.
+     *
+     * @param Entity $channel
+     * @return Entity
+     * @throws Error
+     */
+    private function activateWhatsappQrcode(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
+
         try {
-            // Step 1: Get platform and account details
-            $channelType = $channel->get('channelType');
             $chatwootAccount = $channel->get('chatwootAccount');
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
-            }
-
-            // Only QR code integrations need WAHA Platform
-            if ($channelType !== 'whatsappQrcode') {
-                throw new Error("Only whatsappQrcode channel type is currently supported.");
             }
 
             // Auto-select default WahaPlatform if not set
@@ -111,21 +129,17 @@ class ChatwootInboxIntegration
             }
 
             $chatwootUrl = $chatwootPlatform->get('backendUrl');
-            $chatwootAccessToken = $chatwootPlatform->get('accessToken');
             $chatwootAccountId = $chatwootAccount->get('chatwootAccountId');
             $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
 
-            // Step 2: Generate session name and app ID (needed for webhook URL)
+            // Generate session name and app ID (needed for webhook URL)
             $sessionName = 'channel_' . $channelId;
             $appId = 'app_' . bin2hex(random_bytes(16));
 
-            // Step 3: Build WAHA webhook URL for Chatwoot to call
-            // Format: {waha_url}/webhooks/chatwoot/{session}/{app_id}
+            // Build WAHA webhook URL for Chatwoot to call
             $wahaWebhookUrl = rtrim($wahaUrl, '/') . '/webhooks/chatwoot/' . urlencode($sessionName) . '/' . urlencode($appId);
 
-            // Step 4: Create Chatwoot Inbox (API channel) with WAHA webhook URL
-            // Note: Creating inboxes requires account-level user token (admin permissions)
-            // The ChatwootAccount.apiKey must be a user access token, not a bot token
+            // Create Chatwoot Inbox (API channel) with WAHA webhook URL
             if (!$chatwootAccountApiKey) {
                 throw new Error("ChatwootAccount is missing API key. Please generate a User Access Token in Chatwoot (Settings > Account Settings > API Access Tokens) and add it to the ChatwootAccount.");
             }
@@ -142,7 +156,7 @@ class ChatwootInboxIntegration
             $channel->set('chatwootInboxId', $inboxResult['id']);
             $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
 
-            // Step 5: Create WAHA Session
+            // Create WAHA Session
             $this->wahaApiClient->createSession($wahaUrl, $wahaApiKey, [
                 'name' => $sessionName,
             ]);
@@ -150,11 +164,10 @@ class ChatwootInboxIntegration
             $channel->set('wahaSessionName', $sessionName);
             $channel->set('wahaAppId', $appId);
 
-            // Step 5b: Generate webhook secret and register label webhook
+            // Generate webhook secret and register label webhook
             $webhookSecret = bin2hex(random_bytes(32));
             $channel->set('wahaWebhookSecret', $webhookSecret);
 
-            // Use CRM_BACKEND_URL env var for external webhook URL, fallback to siteUrl
             $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
             if ($crmBackendUrl) {
                 $labelWebhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/WahaLabelWebhook/' . $channelId;
@@ -174,7 +187,7 @@ class ChatwootInboxIntegration
                 $this->log->warning("ChatwootInboxIntegration: CRM_BACKEND_URL and siteUrl not configured, skipping label webhook registration");
             }
 
-            // Step 6: Create WAHA Chatwoot App
+            // Create WAHA Chatwoot App
             $appConfig = [
                 'linkPreview' => 'OFF',
                 'locale' => str_replace('_', '-', $chatwootAccount->get('locale') ?? 'en-US'),
@@ -202,17 +215,134 @@ class ChatwootInboxIntegration
                 'config' => $appConfig,
             ]);
 
-            // Step 7: Start WAHA Session
+            // Start WAHA Session
             $this->wahaApiClient->startSession($wahaUrl, $wahaApiKey, $sessionName);
 
-            // Step 8: Update status to PENDING_QR
+            // Update status to PENDING_QR
             $channel->set('status', 'PENDING_QR');
             $this->entityManager->saveEntity($channel);
 
             return $channel;
 
         } catch (\Exception $e) {
-            $this->log->error("ChatwootInboxIntegration activation failed: " . $e->getMessage());
+            $this->log->error("ChatwootInboxIntegration activation failed (QR code): " . $e->getMessage());
+            $channel->set('status', 'FAILED');
+            $channel->set('errorMessage', $e->getMessage());
+            $this->entityManager->saveEntity($channel);
+            throw new Error("Activation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Activate a WhatsApp Cloud API channel.
+     * Resolves credentials from FeatureCredential, creates a native Chatwoot WhatsApp
+     * inbox (provider: whatsapp_cloud), and sets the channel to ACTIVE immediately.
+     * No WAHA session or QR code is needed.
+     *
+     * @param Entity $channel
+     * @return Entity
+     * @throws Error
+     */
+    private function activateWhatsappCloudApi(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
+
+        try {
+            $chatwootAccount = $channel->get('chatwootAccount');
+
+            if (!$chatwootAccount) {
+                throw new Error("Chatwoot Account not set.");
+            }
+
+            // Resolve access token and business account ID.
+            // Prefer the new OAuthAccount-based flow; fall back to credential for backward compat.
+            $oAuthAccountId = $channel->get('oAuthAccountId');
+            $businessAccountId = $channel->get('businessAccountId');
+            $accessToken = null;
+
+            if ($oAuthAccountId) {
+                // New flow: get tokens directly from OAuthAccount via TokensProvider.
+                $tokens = $this->tokensProvider->get($oAuthAccountId);
+                $accessToken = $tokens->getAccessToken();
+            } else {
+                // Legacy fallback: resolve from credential.
+                $credentialId = $channel->get('credentialId');
+
+                if (!$credentialId) {
+                    throw new Error("Meta Account (OAuth) not set. Please select a Meta Account and Business Account for this channel type.");
+                }
+
+                $resolvedConfig = $this->credentialResolver->resolve($credentialId);
+                $accessToken = $resolvedConfig->accessToken ?? null;
+                $businessAccountId = $resolvedConfig->businessAccountId ?? null;
+            }
+
+            // phoneNumberId lives exclusively on the integration entity.
+            $phoneNumberId = $channel->get('phoneNumberId');
+
+            if (!$accessToken) {
+                throw new Error("Unable to obtain access token. Ensure the Meta Account is connected and has a valid token.");
+            }
+            if (!$phoneNumberId) {
+                throw new Error("Phone Number ID is not set. Please select a phone number for this integration.");
+            }
+            if (!$businessAccountId) {
+                throw new Error("Business Account ID is not set. Please select a WhatsApp Business Account.");
+            }
+
+            // Get Chatwoot connection details
+            $chatwootPlatform = $chatwootAccount->get('platform');
+
+            if (!$chatwootPlatform) {
+                throw new Error("Chatwoot Platform not found for account.");
+            }
+
+            $chatwootUrl = $chatwootPlatform->get('backendUrl');
+            $chatwootAccountId = $chatwootAccount->get('chatwootAccountId');
+            $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
+
+            if (!$chatwootAccountApiKey) {
+                throw new Error("ChatwootAccount is missing API key. Please generate a User Access Token in Chatwoot (Settings > Account Settings > API Access Tokens) and add it to the ChatwootAccount.");
+            }
+
+            $phoneNumber = $channel->get('phoneNumber');
+            if (!$phoneNumber) {
+                throw new Error("Phone number is required for WhatsApp Cloud API integration. Please set the phone number field.");
+            }
+
+            // Normalize phone number to E.164 format for Chatwoot.
+            // Meta returns display format like "+55 11 5039-2320" but Chatwoot
+            // matches incoming webhooks using E.164 ("+551150392320").
+            $normalizedPhoneNumber = '+' . preg_replace('/[^0-9]/', '', $phoneNumber);
+
+            // Create native Chatwoot WhatsApp Cloud inbox
+            $inboxName = 'WhatsApp - ' . $channel->get('name');
+            $inboxResult = $this->createChatwootWhatsappCloudInbox(
+                $chatwootUrl,
+                $chatwootAccountApiKey,
+                $chatwootAccountId,
+                $inboxName,
+                $normalizedPhoneNumber,
+                $accessToken,
+                $phoneNumberId,
+                $businessAccountId
+            );
+
+            $channel->set('chatwootInboxId', $inboxResult['id']);
+            $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
+
+            // Set channel to ACTIVE immediately (no QR code step needed)
+            $channel->set('status', 'ACTIVE');
+            $channel->set('connectedAt', date('Y-m-d H:i:s'));
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+
+            $this->log->info("ChatwootInboxIntegration: WhatsApp Cloud API channel {$channelId} activated successfully.");
+
+            return $channel;
+
+        } catch (\Exception $e) {
+            $this->log->error("ChatwootInboxIntegration activation failed (Cloud API): " . $e->getMessage());
             $channel->set('status', 'FAILED');
             $channel->set('errorMessage', $e->getMessage());
             $this->entityManager->saveEntity($channel);
@@ -266,7 +396,8 @@ class ChatwootInboxIntegration
 
     /**
      * Disconnect a communication channel.
-     * Stops the WAHA session but keeps the configuration.
+     * For QR code channels: stops the WAHA session but keeps the configuration.
+     * For Cloud API channels: marks the channel as disconnected (Chatwoot inbox remains).
      *
      * @param string $channelId
      * @return Entity
@@ -286,20 +417,27 @@ class ChatwootInboxIntegration
             throw new NotFound("ChatwootInboxIntegration not found.");
         }
 
-        $wahaPlatform = $channel->get('wahaPlatform');
-        $sessionName = $channel->get('wahaSessionName');
+        $channelType = $channel->get('channelType');
 
-        if ($wahaPlatform && $sessionName) {
-            try {
-                $wahaUrl = $wahaPlatform->get('backendUrl');
-                $wahaApiKey = $wahaPlatform->get('apiKey');
-                
-                // Stop the session
-                $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
-            } catch (\Exception $e) {
-                $this->log->warning("Failed to stop WAHA session: " . $e->getMessage());
+        // Only stop WAHA session for QR code channels
+        if ($channelType === 'whatsappQrcode') {
+            $wahaPlatform = $channel->get('wahaPlatform');
+            $sessionName = $channel->get('wahaSessionName');
+
+            if ($wahaPlatform && $sessionName) {
+                try {
+                    $wahaUrl = $wahaPlatform->get('backendUrl');
+                    $wahaApiKey = $wahaPlatform->get('apiKey');
+                    
+                    $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                } catch (\Exception $e) {
+                    $this->log->warning("Failed to stop WAHA session: " . $e->getMessage());
+                }
             }
         }
+
+        // For Cloud API channels, disconnecting simply marks the status.
+        // The Chatwoot inbox remains intact and can be reconnected.
 
         $channel->set('status', 'DISCONNECTED');
         $this->entityManager->saveEntity($channel);
@@ -309,7 +447,8 @@ class ChatwootInboxIntegration
 
     /**
      * Reconnect a disconnected channel.
-     * Restarts the WAHA session.
+     * For QR code channels: restarts the WAHA session.
+     * For Cloud API channels: verifies the Chatwoot inbox still exists and marks ACTIVE.
      *
      * @param string $channelId
      * @return Entity
@@ -327,6 +466,25 @@ class ChatwootInboxIntegration
             throw new BadRequest("Channel can only be reconnected from DISCONNECTED status.");
         }
 
+        $channelType = $channel->get('channelType');
+
+        if ($channelType === 'whatsappCloudApi') {
+            return $this->reconnectWhatsappCloudApi($channel);
+        }
+
+        return $this->reconnectWhatsappQrcode($channel);
+    }
+
+    /**
+     * Reconnect a WhatsApp QR code channel by restarting the WAHA session.
+     *
+     * @param Entity $channel
+     * @return Entity
+     * @throws Error
+     */
+    private function reconnectWhatsappQrcode(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
         $wahaPlatform = $channel->get('wahaPlatform');
         $sessionName = $channel->get('wahaSessionName');
 
@@ -363,7 +521,87 @@ class ChatwootInboxIntegration
             return $channel;
 
         } catch (\Exception $e) {
-            $this->log->error("Reconnect failed: " . $e->getMessage());
+            $this->log->error("Reconnect failed (QR code): " . $e->getMessage());
+            $channel->set('status', 'FAILED');
+            $channel->set('errorMessage', $e->getMessage());
+            $this->entityManager->saveEntity($channel);
+            throw new Error("Reconnect failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reconnect a WhatsApp Cloud API channel.
+     * If the Chatwoot inbox still exists, marks the channel as ACTIVE.
+     * Otherwise, re-activates from scratch.
+     *
+     * @param Entity $channel
+     * @return Entity
+     * @throws Error
+     */
+    private function reconnectWhatsappCloudApi(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
+        $chatwootInboxId = $channel->get('chatwootInboxId');
+
+        if (!$chatwootInboxId) {
+            // No existing inbox, need to activate from scratch
+            return $this->activate($channelId);
+        }
+
+        try {
+            // Verify the Chatwoot inbox still exists by listing inboxes
+            $chatwootAccount = $channel->get('chatwootAccount');
+
+            if (!$chatwootAccount) {
+                throw new Error("Chatwoot Account not set.");
+            }
+
+            $chatwootPlatform = $chatwootAccount->get('platform');
+
+            if (!$chatwootPlatform) {
+                throw new Error("Chatwoot Platform not found for account.");
+            }
+
+            $chatwootUrl = $chatwootPlatform->get('backendUrl');
+            $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
+            $chatwootAccountId = $chatwootAccount->get('chatwootAccountId');
+
+            if ($chatwootAccountApiKey && $chatwootAccountId) {
+                $inboxes = $this->chatwootApiClient->listInboxes(
+                    $chatwootUrl,
+                    $chatwootAccountApiKey,
+                    (int) $chatwootAccountId
+                );
+
+                $inboxExists = false;
+                $inboxList = $inboxes['payload'] ?? $inboxes;
+                foreach ($inboxList as $inbox) {
+                    if (($inbox['id'] ?? null) == $chatwootInboxId) {
+                        $inboxExists = true;
+                        break;
+                    }
+                }
+
+                if (!$inboxExists) {
+                    $this->log->info("ChatwootInboxIntegration: Chatwoot inbox {$chatwootInboxId} no longer exists, re-activating.");
+                    $channel->set('chatwootInboxId', null);
+                    $channel->set('chatwootInboxIdentifier', null);
+                    $this->entityManager->saveEntity($channel);
+                    return $this->activate($channelId);
+                }
+            }
+
+            // Inbox exists, mark as ACTIVE
+            $channel->set('status', 'ACTIVE');
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+
+            $this->log->info("ChatwootInboxIntegration: WhatsApp Cloud API channel {$channelId} reconnected successfully.");
+
+            return $channel;
+
+        } catch (\Exception $e) {
+            $this->log->error("Reconnect failed (Cloud API): " . $e->getMessage());
             $channel->set('status', 'FAILED');
             $channel->set('errorMessage', $e->getMessage());
             $this->entityManager->saveEntity($channel);
@@ -406,7 +644,9 @@ class ChatwootInboxIntegration
     }
 
     /**
-     * Check and update channel status from WAHA.
+     * Check and update channel status.
+     * For QR code channels: polls WAHA session status.
+     * For Cloud API channels: verifies credential health via Meta Graph API.
      *
      * @param string $channelId
      * @return Entity
@@ -419,6 +659,24 @@ class ChatwootInboxIntegration
             throw new NotFound("ChatwootInboxIntegration not found.");
         }
 
+        $channelType = $channel->get('channelType');
+
+        if ($channelType === 'whatsappCloudApi') {
+            return $this->checkStatusWhatsappCloudApi($channel);
+        }
+
+        return $this->checkStatusWhatsappQrcode($channel);
+    }
+
+    /**
+     * Check status for a WhatsApp QR code channel via WAHA session.
+     *
+     * @param Entity $channel
+     * @return Entity
+     */
+    private function checkStatusWhatsappQrcode(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
         $wahaPlatform = $channel->get('wahaPlatform');
         $sessionName = $channel->get('wahaSessionName');
 
@@ -439,7 +697,6 @@ class ChatwootInboxIntegration
             switch ($wahaStatus) {
                 case 'WORKING':
                     if ($currentStatus === 'PENDING_QR' || $currentStatus === 'CONNECTING') {
-                        // Session just connected, complete setup
                         if (!$channel->get('wahaAppId')) {
                             $channel = $this->completeSetup($channelId);
                         } else {
@@ -480,14 +737,98 @@ class ChatwootInboxIntegration
             }
 
         } catch (\Exception $e) {
-            $this->log->warning("Failed to check channel status: " . $e->getMessage());
+            $this->log->warning("Failed to check channel status (QR code): " . $e->getMessage());
         }
 
         return $channel;
     }
 
     /**
-     * Create a Chatwoot API channel inbox.
+     * Check status for a WhatsApp Cloud API channel.
+     * Verifies the credential is still valid by checking the Meta Graph API.
+     *
+     * @param Entity $channel
+     * @return Entity
+     */
+    private function checkStatusWhatsappCloudApi(Entity $channel): Entity
+    {
+        $phoneNumberId = $channel->get('phoneNumberId');
+
+        if (!$phoneNumberId) {
+            return $channel;
+        }
+
+        try {
+            $accessToken = null;
+            $apiVersion = 'v21.0';
+
+            // Prefer the new OAuthAccount-based flow; fall back to credential for backward compat.
+            $oAuthAccountId = $channel->get('oAuthAccountId');
+
+            if ($oAuthAccountId) {
+                $tokens = $this->tokensProvider->get($oAuthAccountId);
+                $accessToken = $tokens->getAccessToken();
+            } else {
+                $credentialId = $channel->get('credentialId');
+
+                if (!$credentialId) {
+                    return $channel;
+                }
+
+                $resolvedConfig = $this->credentialResolver->resolve($credentialId);
+                $accessToken = $resolvedConfig->accessToken ?? null;
+                $apiVersion = $resolvedConfig->apiVersion ?? 'v21.0';
+            }
+
+            if (!$accessToken) {
+                if ($channel->get('status') === 'ACTIVE') {
+                    $channel->set('status', 'DISCONNECTED');
+                    $channel->set('errorMessage', 'Unable to obtain access token from Meta Account.');
+                    $this->entityManager->saveEntity($channel);
+                }
+                return $channel;
+            }
+
+            // Quick health check against Meta Graph API using phone number.
+            $url = "https://graph.facebook.com/{$apiVersion}/{$phoneNumberId}";
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $accessToken,
+            ]);
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $currentStatus = $channel->get('status');
+
+            if ($httpCode === 200) {
+                if ($currentStatus !== 'ACTIVE') {
+                    $channel->set('status', 'ACTIVE');
+                    $channel->set('errorMessage', null);
+                    $this->entityManager->saveEntity($channel);
+                }
+            } else {
+                if ($currentStatus === 'ACTIVE') {
+                    $errorData = json_decode($result, true);
+                    $errorMsg = $errorData['error']['message'] ?? "Meta API returned HTTP {$httpCode}";
+                    $channel->set('status', 'DISCONNECTED');
+                    $channel->set('errorMessage', $errorMsg);
+                    $this->entityManager->saveEntity($channel);
+                }
+            }
+
+        } catch (\Exception $e) {
+            $this->log->warning("Failed to check channel status (Cloud API): " . $e->getMessage());
+        }
+
+        return $channel;
+    }
+
+    /**
+     * Create a Chatwoot API channel inbox (used for whatsappQrcode via WAHA).
      *
      * @param string $chatwootUrl
      * @param string $apiKey
@@ -532,6 +873,73 @@ class ChatwootInboxIntegration
             $error = json_decode($result, true);
             throw new Error("Failed to create Chatwoot inbox: " . ($error['message'] ?? $result));
         }
+
+        return json_decode($result, true);
+    }
+
+    /**
+     * Create a native Chatwoot WhatsApp Cloud API inbox.
+     * Uses Chatwoot's Channel::Whatsapp with provider "whatsapp_cloud".
+     * Chatwoot will automatically set up Meta webhooks on creation.
+     *
+     * @param string $chatwootUrl
+     * @param string $apiKey Chatwoot account API key (User Access Token)
+     * @param int $accountId Chatwoot account ID
+     * @param string $inboxName Display name for the inbox
+     * @param string $phoneNumber WhatsApp phone number (e.g., "+5511999999999")
+     * @param string $accessToken Meta Graph API access token
+     * @param string $phoneNumberId WhatsApp Phone Number ID from Meta
+     * @param string $businessAccountId WhatsApp Business Account ID from Meta
+     * @return array
+     * @throws Error
+     */
+    private function createChatwootWhatsappCloudInbox(
+        string $chatwootUrl,
+        string $apiKey,
+        int $accountId,
+        string $inboxName,
+        string $phoneNumber,
+        string $accessToken,
+        string $phoneNumberId,
+        string $businessAccountId
+    ): array {
+        $url = rtrim($chatwootUrl, '/') . "/api/v1/accounts/{$accountId}/inboxes";
+
+        $payload = json_encode([
+            'name' => $inboxName,
+            'lock_to_single_conversation' => true,
+            'channel' => [
+                'type' => 'whatsapp',
+                'phone_number' => $phoneNumber,
+                'provider' => 'whatsapp_cloud',
+                'provider_config' => [
+                    'api_key' => $accessToken,
+                    'phone_number_id' => $phoneNumberId,
+                    'business_account_id' => $businessAccountId,
+                ],
+            ],
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'api_access_token: ' . $apiKey,
+        ]);
+
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $error = json_decode($result, true);
+            $errorMessage = $error['message'] ?? $error['error'] ?? $result;
+            throw new Error("Failed to create Chatwoot WhatsApp Cloud inbox: " . $errorMessage);
+        }
+
+        $this->log->info("ChatwootInboxIntegration: Created Chatwoot WhatsApp Cloud inbox '{$inboxName}' for account {$accountId}");
 
         return json_decode($result, true);
     }

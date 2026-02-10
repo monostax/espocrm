@@ -1,0 +1,53 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 512,
+            "readOnly": true
+        },
+        "templateId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "language": {
+            "type": "varchar",
+            "maxLength": 10,
+            "readOnly": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["APPROVED", "REJECTED", "PENDING"],
+            "readOnly": true,
+            "style": {
+                "APPROVED": "success",
+                "REJECTED": "danger",
+                "PENDING": "warning"
+            }
+        },
+        "category": {
+            "type": "enum",
+            "options": ["MARKETING", "UTILITY", "AUTHENTICATION"],
+            "readOnly": true
+        },
+        "components": {
+            "type": "text",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutListDisabled": true
+        },
+        "credentialId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "credentialName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {}
+}

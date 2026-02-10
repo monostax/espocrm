@@ -102,6 +102,36 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'CredentialHistory' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'CredentialType' => [
+                    'create' => 'no',
+                    'read' => 'all',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'Credential' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'OAuthProvider' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'OAuthAccount' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
                 'ChatwootAccount' => [
                         'create' => 'no',
                         'read' => 'team',
@@ -189,6 +219,11 @@ class SeedRole implements RebuildAction
                 'Email' => (object)[],
                 'IncomingWebhook' => (object)[],
                 'Team' => (object)[],
+                'Credential' => (object)[],
+                'CredentialHistory' => (object)[],
+                'CredentialType' => (object)[],
+                'OAuthAccount' => (object)[],
+                'OAuthProvider' => (object)[],
                 'User' => (object)[
                     'userName' => (object)['read' => 'yes', 'edit' => 'yes'],
                     'password' => (object)['read' => 'yes', 'edit' => 'yes'],

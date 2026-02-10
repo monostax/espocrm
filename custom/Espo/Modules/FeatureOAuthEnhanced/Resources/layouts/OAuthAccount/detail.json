@@ -1,0 +1,12 @@
+[
+    {
+        "label": "Overview",
+        "style": "default",
+        "rows": [
+            [{ "name": "name" }, { "name": "provider" }],
+            [{ "name": "teams" }, { "name": "assignedUsers" }],
+            [{ "name": "description" }, false]
+        ]
+    }
+]
+

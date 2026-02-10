@@ -2,10 +2,15 @@
     "fields": {
         "name": "Name",
         "phoneNumber": "Phone Number",
+        "phoneNumberId": "Phone Number ID",
         "status": "Status",
         "channelType": "Channel Type",
         "wahaPlatform": "WAHA Platform",
         "chatwootAccount": "Chat / Account",
+        "oAuthAccount": "Meta Account",
+        "businessAccountId": "Business Account",
+        "businessAccountName": "Business Account Name",
+        "credential": "Credential",
         "wahaSessionName": "WAHA Session",
         "wahaSessionId": "WAHA Session ID",
         "wahaAppId": "WAHA App ID",
@@ -22,6 +27,7 @@
     "links": {
         "wahaPlatform": "WAHA Platform",
         "chatwootAccount": "Chat / Account",
+        "oAuthAccount": "Meta Account",
         "team": "Team"
     },
     "labels": {
@@ -58,7 +64,11 @@
         }
     },
     "tooltips": {
+        "oAuthAccount": "The Meta OAuth Account used for authentication with WhatsApp Cloud API",
+        "businessAccountId": "The WhatsApp Business Account discovered from the Meta OAuth Account",
         "phoneNumber": "The phone number associated with this WhatsApp connection",
+        "phoneNumberId": "The Meta Phone Number ID for WhatsApp Cloud API",
+        "credential": "Legacy credential link (replaced by Meta Account + Business Account selection)",
         "whatsappId": "The WhatsApp account ID (format: 5511999999999@c.us)",
         "wahaSessionName": "The session name in WAHA",
         "chatwootInboxIdentifier": "The inbox identifier used for webhooks"

@@ -8,6 +8,13 @@
         "phoneNumber": {
             "type": "varchar",
             "maxLength": 50,
+            "tooltip": true,
+            "view": "chatwoot:views/chatwoot-inbox-integration/fields/phone-number"
+        },
+        "phoneNumberId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnlyAfterCreate": true,
             "tooltip": true
         },
         "status": {
@@ -41,6 +48,28 @@
         "chatwootAccount": {
             "type": "link",
             "required": true,
+            "readOnlyAfterCreate": true
+        },
+        "credential": {
+            "type": "link",
+            "readOnlyAfterCreate": true,
+            "tooltip": true
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "readOnlyAfterCreate": true,
+            "tooltip": true
+        },
+        "businessAccountId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnlyAfterCreate": true,
+            "tooltip": true,
+            "view": "chatwoot:views/chatwoot-inbox-integration/fields/business-account"
+        },
+        "businessAccountName": {
+            "type": "varchar",
+            "maxLength": 255,
             "readOnlyAfterCreate": true
         },
         "wahaSessionName": {
@@ -131,7 +160,6 @@
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
-            "required": true,
             "readOnly": true
         }
     },
@@ -145,6 +173,14 @@
             "type": "belongsTo",
             "entity": "ChatwootAccount",
             "foreign": "chatwootInboxIntegrations"
+        },
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential"
+        },
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount"
         },
         "createdBy": {
             "type": "belongsTo",
@@ -194,3 +230,4 @@
         "links": ["chatwootInbox", "wahaSessionLabels"]
     }
 }
+

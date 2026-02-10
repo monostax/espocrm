@@ -1,0 +1,9 @@
+{
+    "links": {
+        "credentialTypes": {
+            "type": "hasMany",
+            "entity": "CredentialType",
+            "foreign": "oAuthProvider"
+        }
+    }
+}

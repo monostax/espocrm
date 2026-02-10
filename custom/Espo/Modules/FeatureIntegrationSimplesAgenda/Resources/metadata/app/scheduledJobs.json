@@ -1,0 +1,9 @@
+
+{
+    "SyncContactsFromSimplesAgenda": {
+        "name": "Sync Contacts from SimplesAgenda",
+        "isSystem": false,
+        "scheduling": "*/30 * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureIntegrationSimplesAgenda\\Jobs\\SyncContactsFromSimplesAgenda"
+    }
+}

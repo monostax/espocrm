@@ -1,0 +1,8 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-comment-dots",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
+    "searchPanelDisabled": true
+}

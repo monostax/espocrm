@@ -1,0 +1,14 @@
+{
+    "controller": "feature-integration-simples-agenda:controllers/simples-agenda-cliente",
+    "iconClass": "fas fa-address-book",
+    "color": "#3498db",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    },
+    "filterList": ["all", "synced", "errors"],
+    "boolFilterList": ["onlyMy"]
+}

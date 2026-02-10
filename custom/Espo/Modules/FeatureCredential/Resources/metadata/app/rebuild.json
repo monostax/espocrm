@@ -1,0 +1,5 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeatureCredential\\Rebuild\\SeedCredentialTypes"
+    ]
+}

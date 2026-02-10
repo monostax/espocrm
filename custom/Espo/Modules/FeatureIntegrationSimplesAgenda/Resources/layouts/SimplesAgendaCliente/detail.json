@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Overview",
+    "rows": [
+      [{"name": "name"}, {"name": "contact"}],
+      [{"name": "codCliente"}, {"name": "contatos"}],
+      [{"name": "cpf"}, {"name": "cnpj"}],
+      [{"name": "credential"}, {"name": "syncStatus"}]
+    ]
+  },
+  {
+    "label": "Address",
+    "rows": [
+      [{"name": "endereco"}, {"name": "numero"}],
+      [{"name": "complemento"}, {"name": "bairro"}],
+      [{"name": "cidade"}, {"name": "estado"}],
+      [{"name": "cep"}, false]
+    ]
+  },
+  {
+    "label": "Additional",
+    "rows": [
+      [{"name": "observacao", "fullWidth": true}, false],
+      [{"name": "dataNascimento"}, {"name": "dataCadastro"}],
+      [{"name": "tags"}, {"name": "comoConheceu"}],
+      [{"name": "credito"}, {"name": "lastSyncedAt"}]
+    ]
+  }
+]

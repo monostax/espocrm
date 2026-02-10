@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "name": "Business Name",
+        "wabaId": "WABA ID",
+        "timezoneId": "Timezone",
+        "messageTemplateNamespace": "Template Namespace",
+        "currency": "Currency",
+        "oAuthAccount": "OAuth Account"
+    },
+    "links": {
+        "oAuthAccount": "OAuth Account"
+    },
+    "labels": {
+        "Create WhatsAppBusinessAccount": "View WhatsApp Business Accounts"
+    },
+    "tooltips": {
+        "wabaId": "The WhatsApp Business Account ID from Meta",
+        "messageTemplateNamespace": "The namespace used for message templates in this account",
+        "oAuthAccount": "The Meta OAuth Account used to authenticate with the Graph API"
+    }
+}

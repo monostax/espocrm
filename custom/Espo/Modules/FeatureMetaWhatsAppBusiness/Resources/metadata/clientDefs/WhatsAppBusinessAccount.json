@@ -1,0 +1,27 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fab fa-whatsapp",
+    "views": {
+        "list": "feature-meta-whatsapp-business:views/whatsapp-business-account/list"
+    },
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
+    "searchPanelDisabled": false,
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "phoneNumbers",
+                "label": "Phone Numbers",
+                "view": "feature-meta-whatsapp-business:views/whatsapp-business-account/panels/phone-numbers",
+                "order": 10
+            },
+            {
+                "name": "messageTemplates",
+                "label": "Message Templates",
+                "view": "feature-meta-whatsapp-business:views/whatsapp-business-account/panels/message-templates",
+                "order": 20
+            }
+        ]
+    }
+}

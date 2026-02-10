@@ -7,21 +7,29 @@
                     "name": "name"
                 },
                 {
-                    "name": "status"
-                }
-            ],
-            [
-                {
                     "name": "channelType"
-                },
-                false
+                }
             ],
             [
                 {
                     "name": "chatwootAccount"
                 },
                 {
-                    "name": "teams"
+                    "name": "oAuthAccount"
+                }
+            ],
+            [
+                {
+                    "name": "status"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "businessAccountId"
+                },
+                {
+                    "name": "phoneNumber"
                 }
             ]
         ]
@@ -34,6 +42,11 @@
                 {
                     "type": "isNotEmpty",
                     "attribute": "id"
+                },
+                {
+                    "type": "equals",
+                    "attribute": "channelType",
+                    "value": "whatsappQrcode"
                 }
             ]
         },
@@ -107,6 +120,51 @@
                 },
                 {
                     "name": "wahaAppId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootInboxId"
+                },
+                {
+                    "name": "chatwootInboxIdentifier"
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "Cloud API Metadata",
+        "label": "Cloud API Metadata",
+        "name": "cloudApiMetadata",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                },
+                {
+                    "type": "equals",
+                    "attribute": "channelType",
+                    "value": "whatsappCloudApi"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "connectedAt"
+                },
+                {
+                    "name": "lastActivityAt"
+                }
+            ],
+            [
+                {
+                    "name": "businessAccountName"
+                },
+                {
+                    "name": "phoneNumberId"
                 }
             ],
             [

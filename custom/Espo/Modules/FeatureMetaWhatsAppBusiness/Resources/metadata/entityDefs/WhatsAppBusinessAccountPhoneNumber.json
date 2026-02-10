@@ -1,0 +1,43 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "phoneNumberId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "displayPhoneNumber": {
+            "type": "varchar",
+            "maxLength": 30,
+            "readOnly": true
+        },
+        "qualityRating": {
+            "type": "enum",
+            "options": ["GREEN", "YELLOW", "RED", "NA"],
+            "readOnly": true,
+            "style": {
+                "GREEN": "success",
+                "YELLOW": "warning",
+                "RED": "danger",
+                "NA": "default"
+            }
+        },
+        "oAuthAccountId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "oAuthAccountName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {}
+}

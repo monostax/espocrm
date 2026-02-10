@@ -1,0 +1,35 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "credential"
+                },
+                {
+                    "name": "action"
+                }
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "createdBy"
+                }
+            ],
+            [
+                {
+                    "name": "ipAddress"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "reason",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]
+

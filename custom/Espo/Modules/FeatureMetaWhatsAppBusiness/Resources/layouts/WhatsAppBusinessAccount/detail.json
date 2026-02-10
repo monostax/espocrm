@@ -1,0 +1,31 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "wabaId"
+                }
+            ],
+            [
+                {
+                    "name": "oAuthAccount"
+                },
+                {
+                    "name": "currency"
+                }
+            ],
+            [
+                {
+                    "name": "timezoneId"
+                },
+                {
+                    "name": "messageTemplateNamespace"
+                }
+            ]
+        ]
+    }
+]

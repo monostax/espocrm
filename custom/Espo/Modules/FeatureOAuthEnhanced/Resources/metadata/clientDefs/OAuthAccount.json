@@ -1,0 +1,5 @@
+{
+    "aclFieldLevel": "yes",
+    "mandatoryFields": ["teams", "assignedUsers"]
+}
+

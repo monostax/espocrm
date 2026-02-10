@@ -1,0 +1,42 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "templateId"
+                }
+            ],
+            [
+                {
+                    "name": "language"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "category"
+                },
+                {
+                    "name": "credentialName"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Components",
+        "rows": [
+            [
+                {
+                    "name": "components",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

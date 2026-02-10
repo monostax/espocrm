@@ -1,0 +1,7 @@
+{
+    "order": 25,
+    "version": "1.0.0",
+    "name": "FeatureMetaWhatsAppBusiness",
+    "description": "Meta WhatsApp Business integration with Virtual Entity for Business Accounts",
+    "jsTranspiled": true
+}

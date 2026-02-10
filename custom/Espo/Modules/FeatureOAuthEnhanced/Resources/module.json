@@ -1,0 +1,8 @@
+{
+    "order": 22,
+    "version": "1.0.0",
+    "name": "FeatureOAuthEnhanced",
+    "description": "OAuth enhancement module with ACL scoping for OAuthAccount and OAuthProvider",
+    "jsTranspiled": true
+}
+

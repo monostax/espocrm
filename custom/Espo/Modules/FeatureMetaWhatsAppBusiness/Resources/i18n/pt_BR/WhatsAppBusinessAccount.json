@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "name": "Nome da Empresa",
+        "wabaId": "ID da Conta WABA",
+        "timezoneId": "Fuso Horário",
+        "messageTemplateNamespace": "Namespace de Templates",
+        "currency": "Moeda",
+        "credential": "Credencial"
+    },
+    "links": {
+        "credential": "Credencial"
+    },
+    "labels": {
+        "Create WhatsAppBusinessAccount": "Visualizar Contas Business"
+    },
+    "tooltips": {
+        "wabaId": "O ID da Conta Business do WhatsApp na Meta",
+        "messageTemplateNamespace": "O namespace utilizado para templates de mensagem nesta conta",
+        "credential": "A credencial usada para autenticar com a API Meta Graph"
+    }
+}

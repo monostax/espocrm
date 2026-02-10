@@ -1,0 +1,8 @@
+{
+    "CheckCredentialHealth": {
+        "name": "Check Credential Health",
+        "isSystem": false,
+        "scheduling": "0 */6 * * *",
+        "jobClassName": "Espo\\Modules\\FeatureCredential\\Jobs\\CheckCredentialHealth"
+    }
+}

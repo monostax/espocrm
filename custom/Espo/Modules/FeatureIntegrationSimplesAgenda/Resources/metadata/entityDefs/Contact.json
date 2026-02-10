@@ -1,0 +1,9 @@
+{
+    "links": {
+        "simplesAgendaClientes": {
+            "type": "hasMany",
+            "entity": "SimplesAgendaCliente",
+            "foreign": "contact"
+        }
+    }
+}

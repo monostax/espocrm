@@ -1,0 +1,172 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "codCliente": {
+            "type": "int",
+            "readOnly": true
+        },
+        "cpf": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "cnpj": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "rg": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "dataNascimento": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "cep": {
+            "type": "varchar",
+            "maxLength": 10
+        },
+        "endereco": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "numero": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "complemento": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "referencia": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "bairro": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "estado": {
+            "type": "varchar",
+            "maxLength": 2
+        },
+        "cidade": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "observacao": {
+            "type": "text"
+        },
+        "dataCadastro": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "dataAtualizacao": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "credito": {
+            "type": "varchar",
+            "maxLength": 50
+        },
+        "tags": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "comoConheceu": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "contatos": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "contact": {
+            "type": "link"
+        },
+        "credential": {
+            "type": "link",
+            "required": true
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["synced", "error"],
+            "default": "synced",
+            "view": "views/fields/enum-styled",
+            "style": {
+                "synced": "success",
+                "error": "danger"
+            }
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "simplesAgendaClientes"
+        },
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "simplesAgendaClientes"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "lastSyncedAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "codClienteCredential": {
+            "unique": true,
+            "columns": ["codCliente", "credentialId", "deleted"]
+        },
+        "contactId": {
+            "columns": ["contactId"]
+        },
+        "credentialId": {
+            "columns": ["credentialId"]
+        }
+    }
+}

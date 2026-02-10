@@ -1,0 +1,22 @@
+[
+    {
+        "name": "name",
+        "width": 25
+    },
+    {
+        "name": "language",
+        "width": 10
+    },
+    {
+        "name": "status",
+        "width": 15
+    },
+    {
+        "name": "category",
+        "width": 15
+    },
+    {
+        "name": "templateId",
+        "width": 20
+    }
+]

@@ -1,0 +1,53 @@
+{
+    "fields": {
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "importByDefault": true,
+            "isCustom": true
+        },
+        "teamsIds": {
+            "type": "jsonArray",
+            "notStorable": true
+        },
+        "teamsNames": {
+            "type": "jsonObject",
+            "notStorable": true
+        },
+        "assignedUsers": {
+            "type": "linkMultiple",
+            "view": "views/fields/assigned-users",
+            "importByDefault": true,
+            "isCustom": true
+        },
+        "assignedUsersIds": {
+            "type": "jsonArray",
+            "notStorable": true
+        },
+        "assignedUsersNames": {
+            "type": "jsonObject",
+            "notStorable": true
+        }
+    },
+    "links": {
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "assignedUsers": {
+            "type": "hasMany",
+            "entity": "User",
+            "foreign": "oauthAccounts",
+            "relationName": "oauthAccountAssignedUser",
+            "layoutRelationshipsDisabled": true
+        },
+        "credentials": {
+            "type": "hasMany",
+            "entity": "Credential",
+            "foreign": "oAuthAccount"
+        }
+    }
+}
+

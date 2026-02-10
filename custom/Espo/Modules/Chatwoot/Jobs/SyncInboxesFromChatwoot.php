@@ -246,7 +246,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
         $inbox->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
         // Auto-link to ChatwootInboxIntegration if not already linked
-        if (!$inbox->get('chatwootInboxIntegrationId') && $chatwootInbox['inbox_identifier']) {
+        if (!$inbox->get('chatwootInboxIntegrationId') && !empty($chatwootInbox['inbox_identifier'])) {
             $integration = $this->findIntegrationByIdentifier($chatwootInbox['inbox_identifier']);
             if ($integration) {
                 $inbox->set('chatwootInboxIntegrationId', $integration->getId());
@@ -293,7 +293,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
         ];
 
         // Try to find and link ChatwootInboxIntegration
-        if ($chatwootInbox['inbox_identifier']) {
+        if (!empty($chatwootInbox['inbox_identifier'])) {
             $integration = $this->findIntegrationByIdentifier($chatwootInbox['inbox_identifier']);
             if ($integration) {
                 $data['chatwootInboxIntegrationId'] = $integration->getId();

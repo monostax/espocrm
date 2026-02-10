@@ -1,0 +1,27 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "language"
+                }
+            ],
+            [
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "category"
+                }
+            ]
+        ]
+    }
+]

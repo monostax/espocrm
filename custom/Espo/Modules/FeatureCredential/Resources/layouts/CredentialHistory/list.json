@@ -1,0 +1,23 @@
+[
+    {
+        "name": "credential",
+        "width": 30
+    },
+    {
+        "name": "action",
+        "width": 15
+    },
+    {
+        "name": "createdBy",
+        "width": 20
+    },
+    {
+        "name": "createdAt",
+        "width": 20
+    },
+    {
+        "name": "ipAddress",
+        "width": 15
+    }
+]
+

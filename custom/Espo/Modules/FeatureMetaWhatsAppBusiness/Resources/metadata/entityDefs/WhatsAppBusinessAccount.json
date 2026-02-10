@@ -1,0 +1,40 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "wabaId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "timezoneId": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "messageTemplateNamespace": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "currency": {
+            "type": "varchar",
+            "maxLength": 10,
+            "readOnly": true
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount"
+        }
+    }
+}

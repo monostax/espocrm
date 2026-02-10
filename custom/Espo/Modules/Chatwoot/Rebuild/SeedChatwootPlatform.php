@@ -60,7 +60,7 @@ class SeedChatwootPlatform implements RebuildAction
         $this->upsertPlatform($frontendUrl, $backendUrl);
     }
 
-    private function upsertPlatform(string $frontendUrl, string $backendUrl, string $apiToken): void
+    private function upsertPlatform(string $frontendUrl, string $backendUrl): void
     {
         $existing = $this->entityManager
             ->getRDBRepository(self::ENTITY_TYPE)

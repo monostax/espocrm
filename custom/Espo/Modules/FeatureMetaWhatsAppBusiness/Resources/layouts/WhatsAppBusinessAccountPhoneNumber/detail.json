@@ -1,0 +1,29 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "displayPhoneNumber"
+                }
+            ],
+            [
+                {
+                    "name": "qualityRating"
+                },
+                {
+                    "name": "phoneNumberId"
+                }
+            ],
+            [
+                {
+                    "name": "credentialName"
+                },
+                false
+            ]
+        ]
+    }
+]

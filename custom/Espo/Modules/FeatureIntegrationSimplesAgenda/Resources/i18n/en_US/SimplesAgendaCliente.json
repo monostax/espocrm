@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "syncStatus": "Sync Status"
+    },
+    "options": {
+        "syncStatus": {
+            "synced": "Synced",
+            "error": "Error"
+        }
+    },
+    "presetFilters": {
+        "all": "All",
+        "synced": "Synced",
+        "errors": "Errors"
+    }
+}

@@ -56,12 +56,15 @@ class CleanupOnRemove
         }
 
         $channelId = $entity->getId();
-        $this->log->info("ChatwootInboxIntegration cleanup: Starting external API cleanup for channel {$channelId}");
+        $channelType = $entity->get('channelType');
+        $this->log->info("ChatwootInboxIntegration cleanup: Starting external API cleanup for channel {$channelId} (type: {$channelType})");
 
-        // Clean up WAHA Session (external API)
-        $this->cleanupWahaSession($entity);
+        // Clean up WAHA Session (only for QR code channels)
+        if ($channelType !== 'whatsappCloudApi') {
+            $this->cleanupWahaSession($entity);
+        }
 
-        // Clean up Chatwoot Inbox (external API)
+        // Clean up Chatwoot Inbox (works for both channel types)
         $this->cleanupChatwootInbox($entity);
     }
 

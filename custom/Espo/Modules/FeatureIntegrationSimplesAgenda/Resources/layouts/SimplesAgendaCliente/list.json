@@ -1,0 +1,9 @@
+[
+  {"name": "name", "width": 18},
+  {"name": "codCliente", "width": 10},
+  {"name": "contatos", "width": 14},
+  {"name": "contact", "width": 14},
+  {"name": "credential", "width": 12},
+  {"name": "syncStatus", "width": 10},
+  {"name": "lastSyncedAt", "width": 14}
+]

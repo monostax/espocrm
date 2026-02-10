@@ -1,0 +1,8 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-phone",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
+    "searchPanelDisabled": true
+}

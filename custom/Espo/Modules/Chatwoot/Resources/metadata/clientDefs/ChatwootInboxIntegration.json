@@ -6,8 +6,7 @@
     "modalViews": {
         "edit": "chatwoot:views/chatwoot-inbox-integration/modals/edit"
     },
-    "defaultSidePanelFieldList": [],
-    "defaultSidePanelDisabled": true,
+    "defaultSidePanelFieldList": ["teams"],
     "dynamicLogic": {
         "fields": {
             "status": {
@@ -26,6 +25,100 @@
                         {
                             "type": "isNotEmpty",
                             "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "oAuthAccount": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        }
+                    ]
+                }
+            },
+            "businessAccountId": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        }
+                    ]
+                }
+            },
+            "phoneNumber": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "businessAccountId"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        }
+                    ]
+                }
+            },
+            "phoneNumberId": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "qrCode": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappQrcode"
                         }
                     ]
                 }

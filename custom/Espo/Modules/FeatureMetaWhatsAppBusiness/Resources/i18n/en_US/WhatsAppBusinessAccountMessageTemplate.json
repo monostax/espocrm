@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "name": "Template Name",
+        "templateId": "Template ID",
+        "language": "Language",
+        "status": "Status",
+        "category": "Category",
+        "components": "Components",
+        "credentialId": "Credential ID",
+        "credentialName": "Credential"
+    },
+    "links": {},
+    "labels": {},
+    "options": {
+        "status": {
+            "APPROVED": "Approved",
+            "REJECTED": "Rejected",
+            "PENDING": "Pending"
+        },
+        "category": {
+            "MARKETING": "Marketing",
+            "UTILITY": "Utility",
+            "AUTHENTICATION": "Authentication"
+        }
+    },
+    "tooltips": {
+        "templateId": "The unique Meta ID for this message template",
+        "components": "JSON representation of the template structure (header, body, footer, buttons)"
+    }
+}

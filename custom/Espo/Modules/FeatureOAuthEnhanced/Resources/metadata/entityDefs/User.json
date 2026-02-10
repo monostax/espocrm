@@ -1,0 +1,17 @@
+{
+    "links": {
+        "oauthAccounts": {
+            "type": "hasMany",
+            "entity": "OAuthAccount",
+            "foreign": "assignedUsers",
+            "relationName": "oauthAccountAssignedUser"
+        },
+        "oauthProviders": {
+            "type": "hasMany",
+            "entity": "OAuthProvider",
+            "foreign": "assignedUsers",
+            "relationName": "oauthProviderAssignedUser"
+        }
+    }
+}
+

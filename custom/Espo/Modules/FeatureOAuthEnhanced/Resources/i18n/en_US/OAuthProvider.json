@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "teams": "Teams",
+        "assignedUsers": "Assigned Users"
+    },
+    "links": {
+        "teams": "Teams",
+        "assignedUsers": "Assigned Users",
+        "credentialTypes": "Credential Types"
+    }
+}
+

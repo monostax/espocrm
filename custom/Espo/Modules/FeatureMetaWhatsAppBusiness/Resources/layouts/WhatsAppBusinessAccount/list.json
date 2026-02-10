@@ -1,0 +1,22 @@
+[
+    {
+        "name": "name",
+        "width": 25
+    },
+    {
+        "name": "wabaId",
+        "width": 20
+    },
+    {
+        "name": "oAuthAccount",
+        "width": 20
+    },
+    {
+        "name": "timezoneId",
+        "width": 15
+    },
+    {
+        "name": "currency",
+        "width": 10
+    }
+]

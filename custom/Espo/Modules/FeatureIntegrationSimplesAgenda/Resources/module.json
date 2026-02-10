@@ -1,0 +1,7 @@
+{
+    "name": "FeatureIntegrationSimplesAgenda",
+    "description": "SimplesAgenda integration - sync clients to Contacts",
+    "version": "1.0.0",
+    "order": 26,
+    "jsTranspiled": true
+}

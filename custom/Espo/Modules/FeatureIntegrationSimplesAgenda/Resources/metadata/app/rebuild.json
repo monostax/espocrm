@@ -1,0 +1,6 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeatureIntegrationSimplesAgenda\\Rebuild\\SeedCredentialType",
+        "Espo\\Modules\\FeatureIntegrationSimplesAgenda\\Rebuild\\SeedScheduledJobs"
+    ]
+}

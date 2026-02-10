@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "name": "Verified Name",
+        "phoneNumberId": "Phone Number ID",
+        "displayPhoneNumber": "Phone Number",
+        "qualityRating": "Quality Rating",
+        "oAuthAccountId": "OAuth Account ID",
+        "oAuthAccountName": "OAuth Account"
+    },
+    "links": {},
+    "labels": {},
+    "options": {
+        "qualityRating": {
+            "GREEN": "Green",
+            "YELLOW": "Yellow",
+            "RED": "Red",
+            "NA": "N/A"
+        }
+    },
+    "tooltips": {
+        "qualityRating": "Quality rating assigned by Meta based on messaging behavior",
+        "phoneNumberId": "The unique Meta ID for this phone number"
+    }
+}

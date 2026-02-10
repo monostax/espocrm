@@ -39,9 +39,9 @@ export default class extends DefaultsPreparator {
         const response = await Espo.Ajax.getRequest("ChatwootAccount", {
             where: [
                 {
-                    type: "equals",
-                    attribute: "teamId",
-                    value: defaultTeamId,
+                    type: "linkedWith",
+                    attribute: "teams",
+                    value: [defaultTeamId],
                 },
             ],
             maxSize: 1,
