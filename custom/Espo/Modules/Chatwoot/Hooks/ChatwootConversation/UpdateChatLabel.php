@@ -296,7 +296,7 @@ class UpdateChatLabel
                 'colorHex' => $wahaResponse['colorHex'] ?? $colorHex,
                 'agentId' => $agent->getId(),
                 'inboxIntegrationId' => $inboxIntegration->getId(),
-                'teamId' => $inboxIntegration->get('teamId'),
+                'teamsIds' => $inboxIntegration->getLinkMultipleIdList('teams'),
                 'syncStatus' => 'synced',
             ], ['silent' => true]);
 

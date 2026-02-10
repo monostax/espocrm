@@ -31,9 +31,11 @@
             "type": "link",
             "required": true
         },
-        "team": {
-            "type": "link",
-            "required": true
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true
         },
         "chatwootLabel": {
             "type": "link"
@@ -67,9 +69,11 @@
             "entity": "ChatwootInboxIntegration",
             "foreign": "wahaSessionLabels"
         },
-        "team": {
-            "type": "belongsTo",
-            "entity": "Team"
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         },
         "chatwootLabel": {
             "type": "belongsTo",
@@ -88,12 +92,6 @@
         },
         "wahaLabelId": {
             "columns": ["wahaLabelId"]
-        },
-        "teamId": {
-            "columns": ["teamId"]
-        },
-        "wahaLabelIdTeamId": {
-            "columns": ["wahaLabelId", "teamId"]
         },
         "createdAt": {
             "columns": ["createdAt"]

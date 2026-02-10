@@ -47,10 +47,9 @@ class SeedChatwootPlatform implements RebuildAction
     {
         $frontendUrl = getenv('CHATWOOT_PLATFORM_FRONTEND_URL');
         $backendUrl = getenv('CHATWOOT_PLATFORM_BACKEND_URL');
-        $apiToken = "WE_NEED_TO_UPDATE_ON_UI";
 
         // Skip if environment variables are not configured
-        if (!$frontendUrl || !$backendUrl || !$apiToken) {
+        if (!$frontendUrl || !$backendUrl) {
             $this->log->debug(
                 'SeedChatwootPlatform: Skipping - environment variables not configured ' .
                 '(CHATWOOT_PLATFORM_FRONTEND_URL, CHATWOOT_PLATFORM_BACKEND_URL)'
@@ -58,7 +57,7 @@ class SeedChatwootPlatform implements RebuildAction
             return;
         }
 
-        $this->upsertPlatform($frontendUrl, $backendUrl, $apiToken);
+        $this->upsertPlatform($frontendUrl, $backendUrl);
     }
 
     private function upsertPlatform(string $frontendUrl, string $backendUrl, string $apiToken): void
@@ -71,7 +70,6 @@ class SeedChatwootPlatform implements RebuildAction
         if ($existing) {
             $existing->set('frontendUrl', $frontendUrl);
             $existing->set('backendUrl', $backendUrl);
-            $existing->set('accessToken', $apiToken);
             $existing->set('isDefault', true);
 
             $this->entityManager->saveEntity($existing, [SaveOption::SKIP_ALL => true]);
@@ -85,7 +83,7 @@ class SeedChatwootPlatform implements RebuildAction
             'name' => self::DEFAULT_NAME,
             'frontendUrl' => $frontendUrl,
             'backendUrl' => $backendUrl,
-            'accessToken' => $apiToken,
+            'accessToken' => '',
             'isDefault' => true,
         ], [SaveOption::SKIP_ALL => true]);
 

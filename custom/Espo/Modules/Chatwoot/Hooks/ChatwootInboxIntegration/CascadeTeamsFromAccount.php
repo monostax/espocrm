@@ -15,9 +15,9 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Auto-cascades team from the parent ChatwootAccount to this entity.
+ * Auto-cascades teams from the parent ChatwootAccount to this entity.
  * Ensures proper multi-tenant ACL isolation.
- * Runs early (order=1) so team is set before validation hooks.
+ * Runs early (order=1) so teams are set before validation hooks.
  */
 class CascadeTeamsFromAccount
 {
@@ -28,14 +28,14 @@ class CascadeTeamsFromAccount
     ) {}
 
     /**
-     * Cascade team from parent ChatwootAccount before save.
-     * 
+     * Cascade teams from parent ChatwootAccount before save.
+     *
      * @param Entity $entity
      * @param array<string, mixed> $options
      */
     public function beforeSave(Entity $entity, array $options): void
     {
-        // Skip for sync jobs - they handle team assignment directly
+        // Skip for sync jobs - they handle teams assignment directly
         if (!empty($options['silent'])) {
             return;
         }
@@ -53,7 +53,7 @@ class CascadeTeamsFromAccount
         // Get teams from the parent account
         $teamsIds = $account->getLinkMultipleIdList('teams');
         if (!empty($teamsIds)) {
-            $entity->set('teamId', $teamsIds[0]);
+            $entity->set('teamsIds', $teamsIds);
         }
     }
 }

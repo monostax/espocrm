@@ -51,16 +51,17 @@ class ProcessWahaLabelWebhook implements Job
 
         $this->log->warning("ProcessWahaLabelWebhook: Processing {$event} for channel {$channelId}");
 
-        // Get the channel to access teamId for ACL
+        // Get the channel to access teams for ACL
         $channel = $this->entityManager->getEntityById('ChatwootInboxIntegration', $channelId);
         if (!$channel) {
             $this->log->error("ProcessWahaLabelWebhook: Channel {$channelId} not found");
             return;
         }
 
-        $teamId = $channel->get('teamId');
+        $teamsIds = $channel->getLinkMultipleIdList('teams');
+        $teamId = $teamsIds[0] ?? null;
         if (!$teamId) {
-            $this->log->warning("ProcessWahaLabelWebhook: Channel {$channelId} has no teamId, ACL may be bypassed");
+            $this->log->warning("ProcessWahaLabelWebhook: Channel {$channelId} has no teams, ACL may be bypassed");
         }
 
         try {

@@ -15,9 +15,9 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Auto-cascades team from the parent ChatwootInboxIntegration to this entity.
+ * Auto-cascades teams from the parent ChatwootInboxIntegration to this entity.
  * Ensures proper multi-tenant ACL isolation.
- * Runs early (order=1) so team is set before validation hooks.
+ * Runs early (order=1) so teams are set before validation hooks.
  */
 class CascadeTeamsFromInboxIntegration
 {
@@ -28,14 +28,14 @@ class CascadeTeamsFromInboxIntegration
     ) {}
 
     /**
-     * Cascade team from parent ChatwootInboxIntegration before save.
-     * 
+     * Cascade teams from parent ChatwootInboxIntegration before save.
+     *
      * @param Entity $entity
      * @param array<string, mixed> $options
      */
     public function beforeSave(Entity $entity, array $options): void
     {
-        // Skip for sync jobs - they handle team assignment directly
+        // Skip for sync jobs - they handle teams assignment directly
         if (!empty($options['silent'])) {
             return;
         }
@@ -50,10 +50,10 @@ class CascadeTeamsFromInboxIntegration
             return;
         }
 
-        // Get team from the parent inbox integration
-        $teamId = $inboxIntegration->get('teamId');
-        if ($teamId) {
-            $entity->set('teamId', $teamId);
+        // Get teams from the parent inbox integration
+        $teamsIds = $inboxIntegration->getLinkMultipleIdList('teams');
+        if (!empty($teamsIds)) {
+            $entity->set('teamsIds', $teamsIds);
         }
     }
 }

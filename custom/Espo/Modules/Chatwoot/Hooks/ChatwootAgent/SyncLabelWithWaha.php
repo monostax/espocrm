@@ -196,6 +196,9 @@ class SyncLabelWithWaha
 
             $chatwootLabelId = null;
 
+            // Get teams from inbox integration for ACL
+            $teamsIds = $inboxIntegration->getLinkMultipleIdList('teams');
+
             // Create linked ChatwootLabel if we have a ChatwootAccount
             if ($chatwootAccount) {
                 try {
@@ -205,7 +208,7 @@ class SyncLabelWithWaha
                         'color' => $colorHex,
                         'showOnSidebar' => true,
                         'chatwootAccountId' => $chatwootAccount->getId(),
-                        'teamId' => $inboxIntegration->get('teamId'),
+                        'teamsIds' => $teamsIds,
                     ]);
                     
                     $chatwootLabelId = $chatwootLabel->getId();
@@ -224,7 +227,7 @@ class SyncLabelWithWaha
                 'colorHex' => $wahaResponse['colorHex'] ?? $colorHex,
                 'agentId' => $agent->getId(),
                 'inboxIntegrationId' => $inboxIntegration->getId(),
-                'teamId' => $inboxIntegration->get('teamId'),
+                'teamsIds' => $teamsIds,
                 'chatwootLabelId' => $chatwootLabelId,
                 'syncStatus' => 'synced',
             ], ['silent' => true]);
