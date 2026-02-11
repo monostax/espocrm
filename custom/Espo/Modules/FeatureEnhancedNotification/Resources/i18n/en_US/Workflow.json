@@ -1,0 +1,8 @@
+{
+    "actionTypes": {
+        "createPopupNotification": "Create Popup Notification"
+    },
+    "labels": {
+        "createPopupNotification": "Create Popup Notification"
+    }
+}

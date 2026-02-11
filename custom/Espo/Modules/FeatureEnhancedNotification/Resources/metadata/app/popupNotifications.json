@@ -1,0 +1,8 @@
+{
+    "workflowMessage": {
+        "grouped": true,
+        "providerClassName": "Espo\\Modules\\FeatureEnhancedNotification\\Tools\\PopupNotification\\WorkflowMessageProvider",
+        "useWebSocket": true,
+        "view": "feature-enhanced-notification:views/notification/workflow-popup-notification"
+    }
+}

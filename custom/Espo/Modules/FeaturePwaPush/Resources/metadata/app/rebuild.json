@@ -1,0 +1,7 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeaturePwaPush\\Rebuild\\SeedVapidKeys",
+        "Espo\\Modules\\FeaturePwaPush\\Rebuild\\SeedScheduledJobs"
+    ]
+}
+

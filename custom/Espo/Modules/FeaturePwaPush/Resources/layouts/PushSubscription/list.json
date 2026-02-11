@@ -1,0 +1,23 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "user",
+        "link": true
+    },
+    {
+        "name": "deviceName"
+    },
+    {
+        "name": "isActive"
+    },
+    {
+        "name": "lastUsedAt"
+    },
+    {
+        "name": "createdAt"
+    }
+]
+

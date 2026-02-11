@@ -1,0 +1,18 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "user" }, { "name": "deviceName" }],
+            [{ "name": "lastUsedAt" }, { "name": "createdAt" }]
+        ]
+    },
+    {
+        "label": "Technical Details",
+        "rows": [
+            [{ "name": "endpoint", "fullWidth": true }],
+            [{ "name": "userAgent", "fullWidth": true }]
+        ]
+    }
+]
+

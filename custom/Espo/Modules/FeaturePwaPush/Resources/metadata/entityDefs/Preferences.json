@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "pwaPushNotifications": {
+            "type": "jsonObject",
+            "default": {
+                "enabled": true,
+                "chatwootConversation": {
+                    "statusChanged": true,
+                    "assigned": true
+                },
+                "task": {
+                    "assigned": true,
+                    "dueReminder": true
+                }
+            }
+        }
+    }
+}
+

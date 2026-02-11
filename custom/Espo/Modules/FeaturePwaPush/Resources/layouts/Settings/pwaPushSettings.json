@@ -1,0 +1,10 @@
+[
+    {
+        "label": "PWA Manifest",
+        "rows": [
+            [{"name": "pwaAppName"}, {"name": "pwaShortName"}],
+            [{"name": "pwaDisplayMode"}, {"name": "pwaOrientation"}],
+            [{"name": "pwaThemeColor"}, {"name": "pwaBackgroundColor"}]
+        ]
+    }
+]

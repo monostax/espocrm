@@ -1,0 +1,5 @@
+/* Read notifications – dim them so unread ones stand out. */
+.notification-list .list-group-item:not(:has(.badge-circle-warning)) .notification-container,
+.notifications-panel-container .list-group-item:not(:has(.badge-circle-warning)) .notification-container {
+    opacity: 0.3;
+}

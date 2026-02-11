@@ -1,0 +1,8 @@
+{
+    "name": "FeaturePwaPush",
+    "description": "PWA (Progressive Web App) and Web Push Notifications support with VAPID authentication",
+    "version": "1.0.0",
+    "order": 30,
+    "jsTranspiled": true
+}
+

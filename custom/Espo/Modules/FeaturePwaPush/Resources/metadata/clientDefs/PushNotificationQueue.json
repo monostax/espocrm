@@ -1,0 +1,11 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-bell",
+    "color": "#ff9800",
+    "recordViews": {
+        "list": "views/record/list",
+        "detail": "views/record/detail"
+    },
+    "actionList": [],
+    "massActionList": []
+}

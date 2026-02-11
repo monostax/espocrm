@@ -1,0 +1,27 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "title" }, { "name": "status" }],
+            [{ "name": "user", "link": true }, { "name": "subscription" }],
+            [{ "name": "notificationType" }, { "name": "priority" }],
+            [{ "name": "scheduledAt" }, { "name": "sentAt" }]
+        ]
+    },
+    {
+        "label": "Content",
+        "rows": [
+            [{ "name": "body", "fullWidth": true }],
+            [{ "name": "url", "fullWidth": true }],
+            [{ "name": "icon" }]
+        ]
+    },
+    {
+        "label": "Processing",
+        "rows": [
+            [{ "name": "attempts" }, { "name": "maxAttempts" }],
+            [{ "name": "lastError", "fullWidth": true }]
+        ]
+    }
+]
+

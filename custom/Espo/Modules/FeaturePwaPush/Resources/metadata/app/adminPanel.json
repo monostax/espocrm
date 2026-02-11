@@ -1,0 +1,27 @@
+{
+    "pwaPush": {
+        "label": "PWA & Push Notifications",
+        "itemList": [
+            {
+                "url": "#Admin/pwaPushSettings",
+                "label": "Settings",
+                "iconClass": "fas fa-cog",
+                "description": "pwaPushSettings",
+                "recordView": "feature-pwa-push:views/admin/pwa-push-settings"
+            },
+            {
+                "url": "#PushSubscription",
+                "label": "Push Subscriptions",
+                "iconClass": "fas fa-bell",
+                "description": "managePushSubscriptions"
+            },
+            {
+                "url": "#PushNotificationQueue",
+                "label": "Notification Queue",
+                "iconClass": "fas fa-list",
+                "description": "viewNotificationQueue"
+            }
+        ]
+    }
+}
+

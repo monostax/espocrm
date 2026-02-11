@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "name": "Nome",
+        "userId": "ID do Usuário",
+        "user": "Usuário",
+        "endpoint": "Endpoint",
+        "p256dhKey": "Chave P256DH",
+        "authKey": "Chave de Autenticação",
+        "userAgent": "User Agent",
+        "deviceName": "Nome do Dispositivo",
+        "lastUsedAt": "Último Uso Em",
+        "isActive": "Está Ativo",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "links": {
+        "user": "Usuário"
+    },
+    "labels": {
+        "Create PushSubscription": "Criar Inscrição Push",
+        "Push Subscriptions": "Inscrições Push"
+    },
+    "tooltips": {
+        "endpoint": "A URL única do serviço push para esta inscrição",
+        "p256dhKey": "A chave pública P-256 ECDH Diffie-Hellman",
+        "authKey": "O segredo de autenticação"
+    }
+}
+

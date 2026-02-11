@@ -1,0 +1,7 @@
+{
+    "items": {
+        "notificationBadge": {
+            "view": "feature-enhanced-notification:views/notification/badge"
+        }
+    }
+}

@@ -1,0 +1,29 @@
+[
+    {
+        "name": "title",
+        "link": true
+    },
+    {
+        "name": "user",
+        "link": true
+    },
+    {
+        "name": "notificationType"
+    },
+    {
+        "name": "status"
+    },
+    {
+        "name": "priority"
+    },
+    {
+        "name": "attempts"
+    },
+    {
+        "name": "scheduledAt"
+    },
+    {
+        "name": "sentAt"
+    }
+]
+

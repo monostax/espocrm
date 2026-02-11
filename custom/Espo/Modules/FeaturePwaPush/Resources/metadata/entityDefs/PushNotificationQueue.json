@@ -1,0 +1,103 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "userId": {
+            "type": "foreignId",
+            "foreign": "User.id",
+            "index": true
+        },
+        "subscriptionId": {
+            "type": "foreignId",
+            "foreign": "PushSubscription.id",
+            "index": true
+        },
+        "title": {
+            "type": "varchar",
+            "maxLength": 200,
+            "required": true
+        },
+        "body": {
+            "type": "text"
+        },
+        "icon": {
+            "type": "varchar",
+            "maxLength": 500
+        },
+        "url": {
+            "type": "varchar",
+            "maxLength": 500
+        },
+        "data": {
+            "type": "jsonObject"
+        },
+        "notificationType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "priority": {
+            "type": "enum",
+            "options": ["low", "normal", "high"],
+            "default": "normal"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["pending", "processing", "sent", "failed"],
+            "default": "pending"
+        },
+        "attempts": {
+            "type": "int",
+            "default": 0
+        },
+        "maxAttempts": {
+            "type": "int",
+            "default": 3
+        },
+        "lastError": {
+            "type": "text"
+        },
+        "scheduledAt": {
+            "type": "datetime"
+        },
+        "sentAt": {
+            "type": "datetime"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User",
+            "key": "userId"
+        },
+        "subscription": {
+            "type": "belongsTo",
+            "entity": "PushSubscription",
+            "key": "subscriptionId"
+        }
+    },
+    "indexes": {
+        "userId": {
+            "columns": ["userId"]
+        },
+        "subscriptionId": {
+            "columns": ["subscriptionId"]
+        },
+        "status": {
+            "columns": ["status"]
+        },
+        "scheduledAt": {
+            "columns": ["scheduledAt"]
+        }
+    }
+}
+

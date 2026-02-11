@@ -1,0 +1,36 @@
+{
+    "fields": {
+        "pwaAppName": {
+            "type": "varchar",
+            "maxLength": 100,
+            "default": "Monostax CRM",
+            "tooltip": true
+        },
+        "pwaShortName": {
+            "type": "varchar",
+            "maxLength": 30,
+            "default": "CRM",
+            "tooltip": true
+        },
+        "pwaThemeColor": {
+            "type": "varchar",
+            "maxLength": 7,
+            "default": "#1976d2"
+        },
+        "pwaBackgroundColor": {
+            "type": "varchar",
+            "maxLength": 7,
+            "default": "#ffffff"
+        },
+        "pwaDisplayMode": {
+            "type": "enum",
+            "options": ["standalone", "fullscreen", "minimal-ui", "browser"],
+            "default": "standalone"
+        },
+        "pwaOrientation": {
+            "type": "enum",
+            "options": ["any", "portrait", "landscape"],
+            "default": "any"
+        }
+    }
+}

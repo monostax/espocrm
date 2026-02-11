@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "name": "Name",
+        "userId": "User ID",
+        "user": "User",
+        "endpoint": "Endpoint",
+        "p256dhKey": "P256DH Key",
+        "authKey": "Auth Key",
+        "userAgent": "User Agent",
+        "deviceName": "Device Name",
+        "lastUsedAt": "Last Used At",
+        "isActive": "Is Active",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "links": {
+        "user": "User"
+    },
+    "labels": {
+        "Create PushSubscription": "Create Push Subscription",
+        "Push Subscriptions": "Push Subscriptions"
+    },
+    "tooltips": {
+        "endpoint": "The unique push service endpoint URL for this subscription",
+        "p256dhKey": "The P-256 ECDH Diffie-Hellman public key",
+        "authKey": "The authentication secret"
+    }
+}
+

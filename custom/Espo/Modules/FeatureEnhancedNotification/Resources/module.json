@@ -1,0 +1,7 @@
+{
+    "name": "FeatureEnhancedNotification",
+    "description": "Enhanced notifications: popup notifications from Workflows/Formula and sound toggle for regular notifications",
+    "version": "1.0.0",
+    "order": 30,
+    "jsTranspiled": true
+}

@@ -14,5 +14,14 @@
             "entity": "SmartAudience",
             "foreign": "report"
         }
-    }
+    },
+    "complexExpressionFunctionList": [
+        "__APPEND__",
+        "LEFT",
+        "CONCAT",
+        "LOWER",
+        "UPPER",
+        "REPLACE",
+        "CHAR_LENGTH"
+    ]
 }

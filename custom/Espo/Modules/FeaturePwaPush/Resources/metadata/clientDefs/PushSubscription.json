@@ -1,0 +1,17 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-bell",
+    "color": "#2196f3",
+    "modalViews": {
+        "detail": "views/modals/detail",
+        "edit": "views/modals/edit"
+    },
+    "recordViews": {
+        "list": "views/record/list",
+        "detail": "views/record/detail"
+    },
+    "boolFilterList": ["onlyMy"],
+    "actionList": [],
+    "massActionList": []
+}
+

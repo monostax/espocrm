@@ -1,0 +1,15 @@
+{
+    "ProcessPushQueue": {
+        "name": "Process Push Notification Queue",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeaturePwaPush\\Jobs\\ProcessPushQueue"
+    },
+    "CleanupExpiredPushSubscriptions": {
+        "name": "Cleanup Expired Push Subscriptions",
+        "isSystem": false,
+        "scheduling": "0 3 * * *",
+        "jobClassName": "Espo\\Modules\\FeaturePwaPush\\Jobs\\CleanupExpiredSubscriptions"
+    }
+}
+

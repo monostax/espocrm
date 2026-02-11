@@ -1,0 +1,37 @@
+{
+    "labels": {
+        "PWA & Push Notifications": "PWA & Push Notifications",
+        "managePushSubscriptions": "Manage user push notification subscriptions",
+        "viewNotificationQueue": "View pending and failed push notifications",
+        "pwaPushSettings": "Configure PWA and push notification settings"
+    },
+    "fields": {
+        "vapidPublicKey": "VAPID Public Key",
+        "vapidSubject": "VAPID Subject Email",
+        "pwaAppName": "PWA App Name",
+        "pwaShortName": "PWA Short Name",
+        "pwaThemeColor": "Theme Color",
+        "pwaBackgroundColor": "Background Color",
+        "pwaDisplayMode": "Display Mode",
+        "pwaOrientation": "Orientation"
+    },
+    "options": {
+        "pwaDisplayMode": {
+            "standalone": "Standalone",
+            "fullscreen": "Fullscreen",
+            "minimal-ui": "Minimal UI",
+            "browser": "Browser"
+        },
+        "pwaOrientation": {
+            "any": "Any",
+            "portrait": "Portrait",
+            "landscape": "Landscape"
+        }
+    },
+    "messages": {
+        "vapidKeyRegenerateConfirm": "Are you sure you want to regenerate VAPID keys? All existing subscriptions will need to be re-registered.",
+        "vapidKeyRegenerated": "VAPID keys regenerated successfully. Users will need to re-subscribe.",
+        "settingsSaved": "Settings saved successfully"
+    }
+}
+

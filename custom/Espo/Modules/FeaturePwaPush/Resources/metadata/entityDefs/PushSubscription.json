@@ -1,0 +1,89 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "userId": {
+            "type": "foreignId",
+            "foreign": "User.id",
+            "index": true
+        },
+        "endpoint": {
+            "type": "varchar",
+            "maxLength": 500,
+            "required": true
+        },
+        "p256dhKey": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": true
+        },
+        "authKey": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": true
+        },
+        "userAgent": {
+            "type": "varchar",
+            "maxLength": 500
+        },
+        "deviceName": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "lastUsedAt": {
+            "type": "datetime"
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "foreign": "createdBy",
+            "entity": "User",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "foreign": "modifiedBy",
+            "entity": "User",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "foreign": "pushSubscriptions",
+            "entity": "User",
+            "key": "userId"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "indexes": {
+        "userId": {
+            "columns": ["userId"]
+        },
+        "endpoint": {
+            "columns": ["endpoint"],
+            "unique": true
+        }
+    }
+}
+

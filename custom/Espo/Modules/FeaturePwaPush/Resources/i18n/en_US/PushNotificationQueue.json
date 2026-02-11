@@ -1,0 +1,46 @@
+{
+    "fields": {
+        "name": "Name",
+        "userId": "User ID",
+        "user": "User",
+        "subscriptionId": "Subscription ID",
+        "subscription": "Subscription",
+        "title": "Title",
+        "body": "Body",
+        "icon": "Icon",
+        "url": "URL",
+        "data": "Data",
+        "notificationType": "Notification Type",
+        "priority": "Priority",
+        "status": "Status",
+        "attempts": "Attempts",
+        "maxAttempts": "Max Attempts",
+        "lastError": "Last Error",
+        "scheduledAt": "Scheduled At",
+        "sentAt": "Sent At",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At"
+    },
+    "options": {
+        "priority": {
+            "low": "Low",
+            "normal": "Normal",
+            "high": "High"
+        },
+        "status": {
+            "pending": "Pending",
+            "processing": "Processing",
+            "sent": "Sent",
+            "failed": "Failed"
+        }
+    },
+    "links": {
+        "user": "User",
+        "subscription": "Subscription"
+    },
+    "labels": {
+        "Create PushNotificationQueue": "Create Push Notification Queue Entry",
+        "Push Notification Queue": "Push Notification Queue"
+    }
+}
+

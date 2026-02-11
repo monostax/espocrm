@@ -1,0 +1,46 @@
+{
+    "fields": {
+        "name": "Nome",
+        "userId": "ID do Usuário",
+        "user": "Usuário",
+        "subscriptionId": "ID da Inscrição",
+        "subscription": "Inscrição",
+        "title": "Título",
+        "body": "Corpo",
+        "icon": "Ícone",
+        "url": "URL",
+        "data": "Dados",
+        "notificationType": "Tipo de Notificação",
+        "priority": "Prioridade",
+        "status": "Status",
+        "attempts": "Tentativas",
+        "maxAttempts": "Máximo de Tentativas",
+        "lastError": "Último Erro",
+        "scheduledAt": "Agendado Em",
+        "sentAt": "Enviado Em",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em"
+    },
+    "options": {
+        "priority": {
+            "low": "Baixa",
+            "normal": "Normal",
+            "high": "Alta"
+        },
+        "status": {
+            "pending": "Pendente",
+            "processing": "Processando",
+            "sent": "Enviado",
+            "failed": "Falhou"
+        }
+    },
+    "links": {
+        "user": "Usuário",
+        "subscription": "Inscrição"
+    },
+    "labels": {
+        "Create PushNotificationQueue": "Criar Entrada na Fila de Notificações",
+        "Push Notification Queue": "Fila de Notificações Push"
+    }
+}
+

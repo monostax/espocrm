@@ -6,6 +6,7 @@ use Espo\Core\Job\JobDataLess;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use Espo\Modules\FeatureIntegrationSimplesAgenda\Services\SimplesAgendaApiClient;
+use Espo\Entities\Note;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -228,6 +229,7 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
                 $chunkStats = $this->processChunk($chunk, $credentialId, $teamsIds, $assignedUserId);
                 $stats['upserted'] += $chunkStats['upserted'];
                 $stats['errors'] += $chunkStats['errors'];
+                $stats['skipped'] += $chunkStats['skipped'];
             } catch (\Throwable $e) {
                 $stats['errors'] += count($chunk);
                 $this->log->error(
@@ -253,7 +255,7 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
      */
     private function processChunk(array $rows, string $credentialId, array $teamsIds, ?string $assignedUserId): array
     {
-        $stats = ['upserted' => 0, 'errors' => 0];
+        $stats = ['upserted' => 0, 'errors' => 0, 'skipped' => 0];
 
         // ── Collect lookup keys ──
         $codClientes = array_map(fn($r) => $r['codCliente'], $rows);
@@ -316,6 +318,13 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
                     }
                     if ($assignedUserId !== null && $assignedUserId !== '') {
                         $data['assignedUserId'] = $assignedUserId;
+                    }
+
+                    // Check if data is stale - skip if XLS data is older than what we have
+                    if ($this->isDataStale($existing, $row['dataAtualizacao'] ?? '')) {
+                        $this->log->debug("SyncContactsFromSimplesAgenda: Skipping codCliente {$codCliente} - data is up-to-date");
+                        $stats['skipped']++;
+                        continue;
                     }
 
                     if ($existing) {
@@ -418,14 +427,24 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
     ): void {
         $contactId = $clienteEntity->get('contactId');
         $phone = $data['contatos'] ?? null; // already normalised to +55…
+        $codCliente = $data['codCliente'] ?? 'unknown';
+
+        $this->log->info("SyncContactsFromSimplesAgenda: linkContact called for codCliente {$codCliente}, contactId: " . ($contactId ?? 'null') . ", phone: " . ($phone ?? 'null'));
 
         if (!$contactId && $phone) {
             // Try finding from pre-fetched map
             $contact = $contactsByPhone[$phone] ?? null;
 
+            if ($contact) {
+                $this->log->info("SyncContactsFromSimplesAgenda: Found existing contact by phone {$phone} for codCliente {$codCliente} - will UPDATE");
+            }
+
             // Fallback: try DB query for deleted contacts
             if (!$contact) {
                 $contact = $this->findDeletedContactByPhone($phone);
+                if ($contact) {
+                    $this->log->info("SyncContactsFromSimplesAgenda: Found deleted contact by phone {$phone} for codCliente {$codCliente} - will restore and UPDATE");
+                }
             }
 
             if ($contact) {
@@ -434,18 +453,26 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
                 $this->updateContactFromRow($contact, $data, $teamsIds, $assignedUserId);
                 $contactsByPhone[$phone] = $contact;
             } else {
+                $this->log->info("SyncContactsFromSimplesAgenda: No existing contact found for phone {$phone}, codCliente {$codCliente} - will CREATE NEW");
                 $contact = $this->createContactFromRow($data, $teamsIds, $assignedUserId);
                 if ($contact) {
                     $clienteEntity->set('contactId', $contact->getId());
                     $this->entityManager->saveEntity($clienteEntity, ['silent' => true]);
                     $contactsByPhone[$phone] = $contact;
+                } else {
+                    $this->log->error("SyncContactsFromSimplesAgenda: Failed to create new contact for codCliente {$codCliente}");
                 }
             }
         } elseif ($contactId) {
+            $this->log->info("SyncContactsFromSimplesAgenda: SimplesAgendaCliente {$codCliente} already linked to Contact {$contactId} - will UPDATE");
             $contact = $this->entityManager->getEntityById('Contact', $contactId);
             if ($contact) {
                 $this->updateContactFromRow($contact, $data, $teamsIds, $assignedUserId);
+            } else {
+                $this->log->error("SyncContactsFromSimplesAgenda: Linked Contact {$contactId} not found for codCliente {$codCliente}");
             }
+        } else {
+            // $this->log->warning("SyncContactsFromSimplesAgenda: Cannot link contact for codCliente {$codCliente} - no phone number available");
         }
     }
 
@@ -514,6 +541,125 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
     }
 
     /**
+     * Parse Brazilian date format (DD/MM/YYYY) to ISO date format (YYYY-MM-DD).
+     * Returns null if parsing fails or date is invalid.
+     */
+    private function parseBrazilianDate(?string $dateStr): ?string
+    {
+        if ($dateStr === null || trim($dateStr) === '') {
+            return null;
+        }
+
+        $dateStr = trim($dateStr);
+
+        // Try DD/MM/YYYY format (Brazilian)
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $dateStr, $matches)) {
+            $day = (int) $matches[1];
+            $month = (int) $matches[2];
+            $year = (int) $matches[3];
+
+            // Validate date
+            if (checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+        }
+
+        // Try YYYY-MM-DD format (already in ISO format)
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dateStr, $matches)) {
+            $year = (int) $matches[1];
+            $month = (int) $matches[2];
+            $day = (int) $matches[3];
+
+            if (checkdate($month, $day, $year)) {
+                return $dateStr;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Create a Stream note for the Contact with the customer's observation.
+     */
+    private function createObservationNote(Entity $contact, string $observacao): void
+    {
+        $contactId = $contact->getId();
+        $this->log->info("SyncContactsFromSimplesAgenda: Attempting to create observation note for Contact {$contactId}");
+
+        try {
+            $noteData = [
+                'type' => Note::TYPE_POST,
+                'post' => $observacao,
+                'parentType' => 'Contact',
+                'parentId' => $contactId,
+                'targetType' => Note::TARGET_SELF,
+            ];
+
+            $this->log->debug("SyncContactsFromSimplesAgenda: Note data - " . json_encode($noteData));
+
+            $note = $this->entityManager->createEntity('Note', $noteData);
+
+            if ($note) {
+                $this->log->info("SyncContactsFromSimplesAgenda: Successfully created observation note ID {$note->getId()} for Contact {$contactId}");
+            } else {
+                $this->log->warning("SyncContactsFromSimplesAgenda: createEntity returned null for observation note on Contact {$contactId}");
+            }
+        } catch (\Exception $e) {
+            $this->log->error("SyncContactsFromSimplesAgenda: Failed to create observation note for Contact {$contactId} - " . $e->getMessage());
+            $this->log->error("SyncContactsFromSimplesAgenda: Exception trace - " . $e->getTraceAsString());
+            // Don't throw - this is non-critical
+        }
+    }
+
+    /**
+     * Check if the XLS data is stale compared to what we have in the database.
+     * Returns true if the existing record is up-to-date (XLS data is older or same).
+     * Returns false if we should update (no existing record or XLS data is newer).
+     */
+    private function isDataStale(?Entity $existing, string $xlsDataAtualizacao): bool
+    {
+        // If no existing record, data is not stale (needs to be created)
+        if (!$existing) {
+            return false;
+        }
+
+        // If XLS has no update date, treat as not stale
+        if (empty($xlsDataAtualizacao)) {
+            return false;
+        }
+
+        $existingDataAtualizacao = $existing->get('dataAtualizacao');
+
+        // If existing has no update date, treat as not stale
+        if (empty($existingDataAtualizacao)) {
+            return false;
+        }
+
+        try {
+            // Parse XLS date (DD/MM/YYYY format)
+            $xlsDate = \DateTime::createFromFormat('d/m/Y H:i:s', $xlsDataAtualizacao . ' 00:00:00')
+                ?: \DateTime::createFromFormat('d/m/Y', $xlsDataAtualizacao);
+
+            // Parse existing date - try multiple formats
+            $existingDate = \DateTime::createFromFormat('Y-m-d H:i:s', $existingDataAtualizacao)
+                ?: \DateTime::createFromFormat('Y-m-d', $existingDataAtualizacao)
+                ?: \DateTime::createFromFormat('d/m/Y H:i:s', $existingDataAtualizacao)
+                ?: \DateTime::createFromFormat('d/m/Y', $existingDataAtualizacao);
+
+            if (!$xlsDate || !$existingDate) {
+                // If we can't parse dates, treat as not stale to be safe
+                return false;
+            }
+
+            // Data is stale if XLS date is not newer than existing
+            return $xlsDate <= $existingDate;
+        } catch (\Exception $e) {
+            // If date comparison fails, treat as not stale to be safe
+            return false;
+        }
+    }
+
+    /**
      * Search for a deleted Contact by phone and restore it.
      */
     private function findDeletedContactByPhone(string $phone): ?Entity
@@ -574,6 +720,14 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
             $contact->set('addressPostalCode', $data['cep']);
         }
 
+        // Sync birthday if not already set on Contact
+        if (!$contact->get('birthday') && !empty($data['dataNascimento'])) {
+            $birthday = $this->parseBrazilianDate($data['dataNascimento']);
+            if ($birthday) {
+                $contact->set('birthday', $birthday);
+            }
+        }
+
         if (!empty($teamsIds)) {
             $contact->set('teamsIds', $teamsIds);
         }
@@ -597,6 +751,9 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
             return null;
         }
 
+        // Parse date of birth from SimplesAgenda format
+        $birthday = $this->parseBrazilianDate($data['dataNascimento'] ?? null);
+
         $contactData = [
             'firstName' => $nameParts[0] ?? 'Cliente',
             'lastName' => $nameParts[1] ?? 'SimplesAgenda',
@@ -606,6 +763,7 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
             'addressCity' => $data['cidade'] ?? null,
             'addressState' => $data['estado'] ?? null,
             'addressPostalCode' => $data['cep'] ?? null,
+            'birthday' => $birthday,
         ];
 
         if (!empty($teamsIds)) {
@@ -615,6 +773,21 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
             $contactData['assignedUserId'] = $assignedUserId;
         }
 
-        return $this->entityManager->createEntity('Contact', $contactData, ['silent' => true]);
+        $contact = $this->entityManager->createEntity('Contact', $contactData, ['silent' => true]);
+
+        // Create Stream note with observation (only for new contacts)
+        if ($contact) {
+            $this->log->debug("SyncContactsFromSimplesAgenda: Contact created with ID {$contact->getId()}, observacao: '" . ($data['observacao'] ?? 'EMPTY') . "'");
+            if (!empty($data['observacao'])) {
+                $this->log->info("SyncContactsFromSimplesAgenda: Creating observation note for Contact {$contact->getId()}");
+                $this->createObservationNote($contact, $data['observacao']);
+            } else {
+                $this->log->warning("SyncContactsFromSimplesAgenda: No observacao data for Contact {$contact->getId()} - skipping Stream note");
+            }
+        } else {
+            $this->log->error("SyncContactsFromSimplesAgenda: Failed to create Contact for phone {$phone}");
+        }
+
+        return $contact;
     }
 }

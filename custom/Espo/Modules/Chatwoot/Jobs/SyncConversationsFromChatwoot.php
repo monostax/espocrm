@@ -899,7 +899,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     if ($teamId) {
                         $data['teamsIds'] = [$teamId];
                     }
-                    $this->entityManager->createEntity('ChatwootMessage', $data, ['silent' => true]);
+                    $this->entityManager->createEntity('ChatwootMessage', $data);
                 }
             } catch (\Exception $e) {
                 $this->log->debug(
