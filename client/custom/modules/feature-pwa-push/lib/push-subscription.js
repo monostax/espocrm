@@ -300,13 +300,133 @@
     }
 
     /**
-     * Initialize PWA: add manifest link and register service worker.
+     * Detect if running on a mobile device.
+     */
+    function isMobile() {
+        return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent,
+        );
+    }
+
+    /**
+     * Check if user is logged in by waiting for the EspoCRM app to load.
+     */
+    function waitForAuth() {
+        return new Promise(function (resolve) {
+            var checks = 0;
+            var interval = setInterval(function () {
+                checks++;
+                if (
+                    window.app &&
+                    window.app.user &&
+                    window.app.user.id
+                ) {
+                    clearInterval(interval);
+                    resolve(true);
+                }
+                // Give up after 30 seconds
+                if (checks > 60) {
+                    clearInterval(interval);
+                    resolve(false);
+                }
+            }, 500);
+        });
+    }
+
+    /**
+     * Show a prompt banner asking the user to enable push notifications.
+     */
+    function showNotificationPrompt() {
+        // Don't show if already dismissed this session
+        if (sessionStorage.getItem("pwa-push-prompt-dismissed")) {
+            return;
+        }
+
+        var banner = document.createElement("div");
+        banner.id = "pwa-push-prompt";
+        banner.innerHTML =
+            '<div style="' +
+            "position:fixed;bottom:0;left:0;right:0;z-index:100000;" +
+            "background:#1976d2;color:#fff;padding:16px 20px;" +
+            "display:flex;align-items:center;justify-content:space-between;" +
+            "gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;" +
+            "font-size:14px;box-shadow:0 -2px 10px rgba(0,0,0,0.2);" +
+            '">' +
+            '<div style="flex:1;">' +
+            '<div style="font-weight:600;margin-bottom:2px;">Enable Notifications</div>' +
+            '<div style="opacity:0.9;font-size:13px;">Get notified about assignments, messages and updates.</div>' +
+            "</div>" +
+            '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+            '<button id="pwa-push-prompt-dismiss" style="' +
+            "background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.4);" +
+            "padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;" +
+            '">Later</button>' +
+            '<button id="pwa-push-prompt-enable" style="' +
+            "background:#fff;color:#1976d2;border:none;" +
+            "padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;" +
+            '">Enable</button>' +
+            "</div>" +
+            "</div>";
+
+        document.body.appendChild(banner);
+
+        document
+            .getElementById("pwa-push-prompt-enable")
+            .addEventListener("click", function () {
+                banner.remove();
+                subscribe().catch(function (err) {
+                    console.error("[PWA] Subscription from prompt failed:", err);
+                });
+            });
+
+        document
+            .getElementById("pwa-push-prompt-dismiss")
+            .addEventListener("click", function () {
+                banner.remove();
+                sessionStorage.setItem("pwa-push-prompt-dismissed", "1");
+            });
+    }
+
+    /**
+     * Auto-prompt for push notifications on mobile if not yet subscribed.
+     */
+    async function autoPromptMobile() {
+        if (!isSupported()) {
+            return;
+        }
+
+        // Wait for user to be logged in
+        var loggedIn = await waitForAuth();
+        if (!loggedIn) {
+            return;
+        }
+
+        // Check if already subscribed
+        var alreadySubscribed = await isSubscribed();
+        if (alreadySubscribed) {
+            return;
+        }
+
+        // Check current permission state
+        if (Notification.permission === "denied") {
+            // User previously blocked — can't prompt again
+            return;
+        }
+
+        // Show the prompt banner
+        showNotificationPrompt();
+    }
+
+    /**
+     * Initialize PWA: add manifest link, register service worker,
+     * and auto-prompt on mobile.
      */
     function initPwa() {
         addManifestLink();
 
         if (isSupported()) {
             registerServiceWorker().catch(console.error);
+            autoPromptMobile();
         }
     }
 
