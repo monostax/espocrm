@@ -1,0 +1,10 @@
+{
+    "scopeNames": {
+        "MsxGoogleCalendar": "Google Calendar",
+        "MsxGoogleCalendarUser": "Google Calendar Sync"
+    },
+    "scopeNamesPlural": {
+        "MsxGoogleCalendar": "Google Calendars",
+        "MsxGoogleCalendarUser": "Google Calendar Sync"
+    }
+}

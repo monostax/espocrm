@@ -1,9 +1,0 @@
-{
-  "products": {
-    "googleCalendar": "Google Agenda",
-    "googleTask": "Tâche Google"
-  },
-  "message": {
-    "notConfigured": "L'intégration Google n'est pas configurée."
-  }
-}

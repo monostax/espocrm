@@ -1,6 +1,0 @@
-{
-    "readLoaderClassNameList": [
-        "Espo\\Modules\\Advanced\\Classes\\FieldProcessing\\ReportPanel\\Additional"
-    ],
-    "forceSelectAllAttributes": true
-}

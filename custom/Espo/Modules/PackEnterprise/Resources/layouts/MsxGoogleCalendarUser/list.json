@@ -1,0 +1,22 @@
+[
+    {
+        "name": "user",
+        "width": 20
+    },
+    {
+        "name": "oAuthAccount",
+        "width": 20
+    },
+    {
+        "name": "active",
+        "width": 10
+    },
+    {
+        "name": "calendarDirection",
+        "width": 20
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    }
+]

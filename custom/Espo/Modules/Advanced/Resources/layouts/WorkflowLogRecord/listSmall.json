@@ -1,5 +1,0 @@
-[
-    {"name":"target", "width":50, "notSortable": true},
-    {"name":"createdBy", "width":30, "notSortable": true},
-    {"name":"createdAt", "width":20, "notSortable": true}
-]

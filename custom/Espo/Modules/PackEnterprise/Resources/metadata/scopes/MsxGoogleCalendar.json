@@ -1,0 +1,9 @@
+{
+    "entity": true,
+    "layouts": false,
+    "tab": false,
+    "acl": "boolean",
+    "module": "PackEnterprise",
+    "customizable": false,
+    "importable": false
+}

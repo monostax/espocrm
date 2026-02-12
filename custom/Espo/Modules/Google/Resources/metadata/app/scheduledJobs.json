@@ -1,7 +1,0 @@
-{
-    "GoogleJob": {
-        "isSystem": true,
-        "scheduling": "15 2 * * *",
-        "jobClassName": "Espo\\Modules\\Google\\Classes\\App\\Job"
-    }
-}

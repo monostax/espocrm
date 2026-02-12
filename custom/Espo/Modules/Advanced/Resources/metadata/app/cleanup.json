@@ -1,9 +1,0 @@
-{
-    "workflowLog": {
-        "className": "Espo\\Modules\\Advanced\\Core\\Cleanup\\WorkflowLog",
-        "order": 20
-    },
-    "advancedPack": {
-        "className": "Espo\\Modules\\Advanced\\Core\\Cleanup\\Integrity"
-    }
-}

@@ -1,5 +1,0 @@
-{
-    "ProcessPendingProcessFlows": {
-        "jobClassName": "Espo\\Modules\\Advanced\\Jobs\\ProcessPendingProcessFlows"
-    }
-}

@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "calendarStartDate": "Sync Since",
+        "calendarEntityTypes": "Sync Entities and Identification Labels",
+        "calendarDirection": "Direction",
+        "calendarMonitoredCalendars": "Other Calendars",
+        "calendarMainCalendar": "Main Calendar",
+        "calendarMainCalendarId": "Main Calendar ID",
+        "calendarMainCalendarName": "Main Calendar Name",
+        "calendarMonitoredCalendarsIds": "Monitored Calendar IDs",
+        "calendarMonitoredCalendarsNames": "Monitored Calendar Names",
+        "calendarDefaultEntity": "Default Entity",
+        "removeGCEventIfRemovedInEspo": "Remove Google Calendar Event upon removal in EspoCRM",
+        "dontSyncEventAttendees": "Don't sync event attendees",
+        "calendarAssignDefaultTeam": "Assign User's Default Team",
+        "oAuthAccount": "OAuth Account",
+        "user": "User",
+        "active": "Active",
+        "msxGoogleCalendar": "Google Calendar",
+        "assignedUser": "Assigned User",
+        "teams": "Teams"
+    },
+    "links": {
+        "user": "User",
+        "oAuthAccount": "OAuth Account",
+        "msxGoogleCalendar": "Google Calendar",
+        "assignedUser": "Assigned User",
+        "teams": "Teams"
+    },
+    "options": {
+        "calendarDirection": {
+            "EspoToGC": "One-way: EspoCRM > Google Calendar",
+            "GCToEspo": "One-way: Google Calendar > EspoCRM",
+            "Both": "Two-way"
+        }
+    },
+    "tooltips": {
+        "calendarEntityTypes": "For type recognizing event name has to start from identification label. Label for default entity can be empty. Recommendation: Do not change identification labels after you saved sync setting",
+        "calendarDefaultEntity": "Unrecognized Event will be loaded as selected entity."
+    }
+}

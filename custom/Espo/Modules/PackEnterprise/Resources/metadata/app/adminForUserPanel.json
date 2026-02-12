@@ -1,0 +1,14 @@
+{
+    "googleCalendar": {
+        "label": "Google Calendar",
+        "itemList": [
+            {
+                "url": "#Configurations/MsxGoogleCalendarUser",
+                "label": "Calendar Sync",
+                "iconClass": "ti ti-calendar-event",
+                "description": "msxGoogleCalendarSync"
+            }
+        ],
+        "order": 25
+    }
+}

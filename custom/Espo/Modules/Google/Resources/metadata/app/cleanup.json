@@ -1,5 +1,0 @@
-{
-    "googleIntegrity": {
-        "className": "Espo\\Modules\\Google\\Classes\\Cleanup\\Integrity"
-    }
-}

@@ -1,0 +1,9 @@
+{
+    "fields": {
+        "msxGoogleCalendarEventId": "Msx Google Calendar Event ID",
+        "msxGoogleCalendar": "Msx Google Calendar"
+    },
+    "links": {
+        "msxGoogleCalendar": "Msx Google Calendar"
+    }
+}

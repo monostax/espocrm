@@ -1,0 +1,145 @@
+{
+    "fields": {
+        "msxGoogleCalendar": {
+            "type": "link",
+            "utility": true
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "required": true
+        },
+        "role": {
+            "type": "enum",
+            "options": ["owner", "writer", "none", "freeBusyReader", "reader"],
+            "default": "owner",
+            "utility": true
+        },
+        "type": {
+            "type": "enum",
+            "options": ["monitored", "main"],
+            "utility": true
+        },
+        "active": {
+            "type": "bool",
+            "default": true
+        },
+        "syncToken": {
+            "type": "text",
+            "utility": true
+        },
+        "pageToken": {
+            "type": "text",
+            "utility": true
+        },
+        "lastLooked": {
+            "type": "datetime",
+            "utility": true
+        },
+        "lastSync": {
+            "type": "varchar",
+            "utility": true
+        },
+        "user": {
+            "type": "link",
+            "required": true
+        },
+        "calendarDirection": {
+            "type": "enum",
+            "options": ["EspoToGC", "GCToEspo", "Both"],
+            "default": "Both"
+        },
+        "calendarEntityTypes": {
+            "type": "jsonArray",
+            "view": "pack-enterprise:views/msx-google-calendar/fields/labeled-array"
+        },
+        "calendarStartDate": {
+            "type": "date"
+        },
+        "calendarDefaultEntity": {
+            "type": "enum",
+            "options": [],
+            "suppressValidationList": ["valid"],
+            "view": "pack-enterprise:views/msx-google-calendar/fields/default-entity"
+        },
+        "calendarMainCalendar": {
+            "type": "base",
+            "view": "pack-enterprise:views/msx-google-calendar/fields/main-calendar",
+            "notStorable": true
+        },
+        "calendarMainCalendarId": {
+            "type": "varchar",
+            "maxLength": 384
+        },
+        "calendarMainCalendarName": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "calendarMonitoredCalendars": {
+            "type": "base",
+            "view": "pack-enterprise:views/msx-google-calendar/fields/monitored-calendars",
+            "notStorable": true
+        },
+        "calendarMonitoredCalendarsIds": {
+            "type": "jsonArray"
+        },
+        "calendarMonitoredCalendarsNames": {
+            "type": "jsonObject"
+        },
+        "removeGCEventIfRemovedInEspo": {
+            "type": "bool",
+            "default": false
+        },
+        "dontSyncEventAttendees": {
+            "type": "bool",
+            "default": true
+        },
+        "calendarAssignDefaultTeam": {
+            "type": "bool",
+            "default": false
+        },
+        "assignedUser": {
+            "type": "link",
+            "required": false,
+            "view": "views/fields/assigned-user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "msxGoogleCalendar": {
+            "type": "belongsTo",
+            "entity": "MsxGoogleCalendar"
+        },
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount"
+        },
+        "msxGoogleCalendarRecurrentEvents": {
+            "type": "hasMany",
+            "entity": "MsxGoogleCalendarRecurrentEvent",
+            "foreign": "msxGoogleCalendarUser"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "indexes": {
+        "assignedUserId": {
+            "columns": ["assignedUserId"]
+        }
+    }
+}

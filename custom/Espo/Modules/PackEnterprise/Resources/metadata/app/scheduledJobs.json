@@ -1,0 +1,7 @@
+{
+    "SyncMsxGoogleCalendar": {
+        "isSystem": true,
+        "scheduling": "*/3 * * * *",
+        "jobClassName": "Espo\\Modules\\PackEnterprise\\Jobs\\SyncMsxGoogleCalendar"
+    }
+}

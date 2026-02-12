@@ -1,0 +1,75 @@
+[
+    {
+        "label": "Connection",
+        "rows": [
+            [
+                {
+                    "name": "user"
+                },
+                {
+                    "name": "oAuthAccount"
+                }
+            ],
+            [
+                {
+                    "name": "active"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Calendar Settings",
+        "name": "calendarSettings",
+        "rows": [
+            [
+                {
+                    "name": "calendarDirection"
+                },
+                {
+                    "name": "calendarStartDate"
+                }
+            ],
+            [
+                {
+                    "name": "calendarMainCalendar"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "calendarMonitoredCalendars",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "calendarEntityTypes",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "calendarDefaultEntity"
+                },
+                {
+                    "name": "calendarAssignDefaultTeam"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Advanced Options",
+        "name": "advancedOptions",
+        "rows": [
+            [
+                {
+                    "name": "removeGCEventIfRemovedInEspo"
+                },
+                {
+                    "name": "dontSyncEventAttendees"
+                }
+            ]
+        ]
+    }
+]

@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "entity": {
+            "type": "linkParent"
+        },
+        "msxGoogleCalendar": {
+            "type": "link"
+        },
+        "msxGoogleCalendarEventId": {
+            "type": "varchar",
+            "maxLength": 384,
+            "index": true
+        }
+    }
+}

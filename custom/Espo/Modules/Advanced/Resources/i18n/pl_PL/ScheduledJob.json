@@ -1,8 +1,0 @@
-{
-  "options": {
-    "job": {
-      "ReportTargetListSync": "Sync Target Lists with Reports",
-      "ScheduleReportSending": "Zaplanuj wysyłkę raportów"
-    }
-  }
-}

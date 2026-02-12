@@ -1,7 +1,0 @@
-{
-    "entity": true,
-    "module": "Advanced",
-    "type": "CategoryTree",
-    "categoryParentEntityType": "BpmnFlowchart",
-    "categoryField": "category"
-}

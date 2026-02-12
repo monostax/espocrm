@@ -1,0 +1,114 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-calendar-event",
+    "createDisabled": false,
+    "dynamicLogic": {
+        "fields": {
+            "calendarMonitoredCalendars": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "calendarDirection",
+                            "value": "EspoToGC"
+                        }
+                    ]
+                }
+            },
+            "calendarDefaultEntity": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "calendarDirection",
+                            "value": "EspoToGC"
+                        }
+                    ]
+                }
+            },
+            "calendarMainCalendar": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            },
+            "calendarDirection": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            },
+            "calendarStartDate": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            },
+            "calendarEntityTypes": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            },
+            "removeGCEventIfRemovedInEspo": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            },
+            "dontSyncEventAttendees": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            },
+            "calendarAssignDefaultTeam": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "viewSetupHandlers": {
+        "record/detail": [
+            "pack-enterprise:handlers/msx-google-calendar-user/detail-setup"
+        ],
+        "record/edit": [
+            "pack-enterprise:handlers/msx-google-calendar-user/detail-setup"
+        ]
+    },
+    "defaultSidePanelFieldLists": {
+        "detail": ["teams"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

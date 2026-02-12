@@ -1,0 +1,12 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": false,
+    "acl": "table",
+    "module": "PackEnterprise",
+    "customizable": false,
+    "importable": false,
+    "object": true,
+    "type": "Base",
+    "hasTeams": true
+}

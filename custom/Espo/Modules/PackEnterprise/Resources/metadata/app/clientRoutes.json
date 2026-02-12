@@ -1,0 +1,23 @@
+{
+    "Configurations/:page/:options": {
+        "params": {
+            "controller": "global:controllers/admin-for-user",
+            "action": "page"
+        },
+        "order": 100
+    },
+    "Configurations/:page": {
+        "params": {
+            "controller": "global:controllers/admin-for-user",
+            "action": "page"
+        },
+        "order": 101
+    },
+    "Configurations": {
+        "params": {
+            "controller": "global:controllers/admin-for-user",
+            "action": "index"
+        },
+        "order": 102
+    }
+}

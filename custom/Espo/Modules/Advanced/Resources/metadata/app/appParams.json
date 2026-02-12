@@ -1,8 +1,0 @@
-{
-    "flowchartEntityTypeList": {
-        "className": "Espo\\Modules\\Advanced\\Core\\AppParams\\FlowchartEntityTypeList"
-    },
-    "manualWorkflows": {
-        "className": "Espo\\Modules\\Advanced\\Classes\\AppParams\\ManualWorkflows"
-    }
-}

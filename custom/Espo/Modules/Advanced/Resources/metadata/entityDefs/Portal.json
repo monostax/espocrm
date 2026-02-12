@@ -1,9 +1,0 @@
-{
-    "links": {
-        "reports": {
-            "type": "hasMany",
-            "entity": "Report",
-            "foreign": "portals"
-        }
-    }
-}
