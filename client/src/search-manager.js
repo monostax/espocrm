@@ -248,6 +248,11 @@ class SearchManager {
                     continue;
                 }
 
+                // Skip filters without a type - backend requires type property
+                if (!defs.type) {
+                    continue;
+                }
+
                 const part = this.getWherePart(name, defs);
 
                 where.push(part);

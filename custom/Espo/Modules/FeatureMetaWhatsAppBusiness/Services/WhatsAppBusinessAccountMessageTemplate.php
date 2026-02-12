@@ -58,7 +58,19 @@ class WhatsAppBusinessAccountMessageTemplate
             throw new Forbidden("No read access to WhatsAppBusinessAccount.");
         }
 
-        $oAuthAccount = $this->oAuthHelper->validateOAuthAccountAccess($oAuthAccountId);
+        try {
+            $oAuthAccount = $this->oAuthHelper->validateOAuthAccountAccess($oAuthAccountId);
+        } catch (NotFound $e) {
+            $this->log->warning(
+                "WhatsAppBusinessAccountMessageTemplate: OAuthAccount {$oAuthAccountId} not found, returning empty result."
+            );
+
+            return RecordCollection::create(
+                $this->entityManager->getCollectionFactory()->create(self::ENTITY_TYPE),
+                0
+            );
+        }
+
         $accountName = $oAuthAccount->get('name');
 
         $collection = $this->entityManager->getCollectionFactory()->create(self::ENTITY_TYPE);

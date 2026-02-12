@@ -94,7 +94,6 @@ class SeedRole implements RebuildAction
             'userCalendarPermission' => 'team',
             'data' => [
                 'Import' => true,
-                'GoogleCalendar' => true,
                 'ExternalAccount' => true,
                 'Appointment' => [
                     'create' => 'yes',
@@ -163,13 +162,7 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
-                'Report' => [
-                    'create' => 'yes',
-                    'read' => 'team',
-                    'edit' => 'team',
-                    'delete' => 'team',
-                    'stream' => 'team',
-                ],
+
                 'Calendar' => true,
                 'Contact' => [
                     'create' => 'yes',
@@ -211,9 +204,7 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
-                'BpmnFlowchart' => [
-                    'read' => 'team',
-                ],
+
             ],
             'fieldData' => [
                 'Email' => (object)[],
@@ -253,11 +244,7 @@ class SeedRole implements RebuildAction
                 'Activities' => (object)[],
                 'Funnel' => (object)[],
                 'OpportunityStage' => (object)[],
-                'BpmnFlowchart' => (object)[],
-                'BpmnUserTask' => (object)[],
-                'BpmnProcess' => (object)[],
-                'ReportCategory' => (object)[],
-                'Report' => (object)[],
+
                 'ChatwootPlatform' => (object)[],
                 'ChatwootTeam' => (object)[],
                 'ChatwootUser' => (object)[],
@@ -268,7 +255,7 @@ class SeedRole implements RebuildAction
                 'ChatwootInbox' => (object)[],
                 'ChatwootMessage' => (object)[],
                 'ChatwootSyncState' => (object)[],
-                'GoogleCalendar' => (object)[],
+
             ],
         ];
     }

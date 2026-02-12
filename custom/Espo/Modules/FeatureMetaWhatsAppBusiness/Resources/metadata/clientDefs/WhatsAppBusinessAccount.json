@@ -1,6 +1,6 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fab fa-whatsapp",
+    "iconClass": "ti ti-brand-whatsapp",
     "views": {
         "list": "feature-meta-whatsapp-business:views/whatsapp-business-account/list"
     },
@@ -25,3 +25,4 @@
         ]
     }
 }
+

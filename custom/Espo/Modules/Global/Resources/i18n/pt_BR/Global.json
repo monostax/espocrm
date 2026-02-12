@@ -35,14 +35,12 @@
         "Contact": "Pessoa",
         "Funnel": "Funil de Venda",
         "OpportunityStage": "Estágio da Oportunidade",
-        "SmartAudience": "Audiência Inteligente",
         "Appointment": "Agendamento"
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
         "Contact": "Pessoas",
         "Funnel": "Funil de Venda",
-        "SmartAudience": "Audiências Inteligentes",
         "Appointment": "Agendamentos",
         "OpportunityStage": "Etapas do Funil"
     },
@@ -59,7 +57,6 @@
         "Configuration": "Configuração",
         "Funnels": "Funis de Vendas",
         "Import": "Importação",
-        "Reports": "Relatórios",
         "Lists": "Listas",
         "Records": "Cadastros",
         "Calendar": "Agenda",
@@ -67,3 +64,4 @@
         "Users": "Usuários"
     }
 }
+

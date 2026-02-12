@@ -1,0 +1,678 @@
+/* ===== Mobile Drawer Navigation (Linear.app-style) ===== */
+@media screen and (max-width: 767px) {
+    /* Keep navbar-body always visible so right-container items can render.
+       The drawer effect is applied to navbar-left-container instead. */
+    #navbar .navbar .navbar-body {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Hide the original right container inside navbar-body (items are moved to header via JS) */
+    #navbar .navbar .navbar-right-container {
+        display: none !important;
+    }
+
+    /* Hide logo on mobile */
+    #navbar .navbar .navbar-logo-container {
+        display: none !important;
+    }
+
+    /* Right-side icons (search, quick-create, bell, menu) moved into navbar-header via JS */
+    .navbar-header-right {
+        position: absolute;
+        right: 10px;
+        top: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        z-index: 10;
+    }
+
+    .navbar-header-right > li,
+    .navbar-header-right > .dropdown {
+        list-style: none;
+        display: flex !important;
+        align-items: center;
+    }
+
+    .navbar-header-right a,
+    .navbar-header-right .global-search-button {
+        color: var(--navbar-inverse-link-color, #adb5bd) !important;
+        padding: 8px !important;
+        font-size: 12px;
+    }
+
+    /* Search: icon-only mode — strip Bootstrap's table layout, show only the icon */
+    .navbar-header-right .global-search-container {
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .navbar-header-right
+        .global-search-container
+        .form-control.global-search-input {
+        display: none !important;
+    }
+
+    .navbar-header-right
+        .global-search-container
+        .global-search-panel-container {
+        display: none !important;
+    }
+
+    .navbar-header-right .global-search-container .input-group {
+        display: flex !important;
+        width: auto !important;
+        table-layout: auto !important;
+    }
+
+    .navbar-header-right .global-search-container .input-group-btn {
+        display: block !important;
+        width: auto !important;
+        white-space: normal !important;
+    }
+
+    .navbar-header-right .global-search-container .global-search-button {
+        background: none !important;
+        border: none !important;
+        padding: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    /* Quick-create: ensure it shows (hidden-xs removed via JS) */
+    .navbar-header-right .quick-create-container {
+        display: flex !important;
+        align-items: center;
+    }
+
+    /* Quick-create dropdown as a right-side drawer */
+    .navbar-header-right .quick-create-container.open > .dropdown-menu {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        left: auto !important;
+        width: 85vw !important;
+        max-width: 320px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 1080 !important;
+        overflow-y: auto !important;
+        background-color: var(--navbar-inverse-bg, #343a40) !important;
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 16px 0 !important;
+        margin: 0 !important;
+        display: block !important;
+    }
+
+    .navbar-header-right
+        .quick-create-container.open
+        > .dropdown-menu
+        > li
+        > a {
+        padding: 12px 20px !important;
+        color: var(--navbar-inverse-link-color, #adb5bd) !important;
+        font-size: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        transition: background-color 0.15s ease !important;
+    }
+
+    .navbar-header-right
+        .quick-create-container.open
+        > .dropdown-menu
+        > li
+        > a:hover,
+    .navbar-header-right
+        .quick-create-container.open
+        > .dropdown-menu
+        > li
+        > a:active {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #fff !important;
+    }
+
+    .navbar-header-right
+        .quick-create-container.open
+        > .dropdown-menu
+        > .dropdown-header {
+        color: rgba(255, 255, 255, 0.45) !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        padding: 12px 20px 6px !important;
+    }
+
+    /* Drawer panel: applied to the left container, not the whole navbar-body */
+    #navbar .navbar .navbar-body .navbar-left-container {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 85vw !important;
+        max-width: 320px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 1060 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        background-color: var(--navbar-inverse-bg, #343a40) !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3) !important;
+        padding-top: 0 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Slide in when drawer is open */
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-body
+        .navbar-left-container {
+        transform: translateX(0) !important;
+    }
+
+    /* Make tabs display vertically like a sidebar */
+    body.mobile-drawer-open #navbar .navbar .navbar-left-container ul.tabs {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li {
+        width: 100% !important;
+        float: none !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li
+        > a {
+        padding: 12px 20px !important;
+        height: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        color: var(--navbar-inverse-link-color, #adb5bd) !important;
+        text-decoration: none !important;
+        border: none !important;
+        transition: background-color 0.15s ease !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li
+        > a:hover,
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li
+        > a:active {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li.active
+        > a {
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        color: #fff !important;
+    }
+
+    /* Show full labels, hide short labels */
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        span.full-label {
+        display: inline !important;
+        position: static !important;
+        padding-left: 0 !important;
+        font-size: 14px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        span.short-label {
+        position: static !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 20px !important;
+        flex-shrink: 0 !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        span.short-label
+        > .short-label-text {
+        display: none !important;
+    }
+
+    /* Dividers as section headers */
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li.tab-divider,
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.more
+        > ul
+        > li.tab-divider {
+        display: block !important;
+        padding: 16px 20px 6px !important;
+        background: transparent !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li.tab-divider
+        > div,
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.more
+        > ul
+        > li.tab-divider
+        > div {
+        display: block !important;
+        padding: 0 !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        ul.tabs
+        > li.tab-divider
+        .label-text,
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.more
+        > ul
+        > li.tab-divider
+        .label-text {
+        color: rgba(255, 255, 255, 0.45) !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+    }
+
+    /* Empty dividers render as thin line separators */
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.tab-divider
+        .label-text:empty {
+        display: block !important;
+        height: 1px !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        margin-top: 4px !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.tab-divider:has(.label-text:empty) {
+        padding: 8px 20px 0 !important;
+    }
+
+    /* "More" dropdown items shown inline */
+    body.mobile-drawer-open #navbar .navbar .navbar-left-container li.more {
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.more
+        > ul {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.more
+        > ul
+        > li
+        > a {
+        padding: 12px 20px !important;
+        color: var(--navbar-inverse-link-color, #adb5bd) !important;
+    }
+
+    /* Hide the "more" toggle button */
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        li.more
+        > a#nav-more-tabs-dropdown {
+        display: none !important;
+    }
+
+    /* Group carets */
+    body.mobile-drawer-open
+        #navbar
+        .navbar
+        .navbar-left-container
+        .group-caret {
+        position: static !important;
+        margin-left: auto !important;
+        opacity: 0.5 !important;
+        transform: rotate(90deg) !important;
+    }
+
+    /* Prevent body scroll when drawer is open */
+    body.mobile-drawer-open {
+        overflow: hidden !important;
+    }
+
+    /* Backdrop overlay */
+    .mobile-drawer-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0);
+        z-index: 1050;
+        transition: background-color 0.3s ease;
+    }
+
+    .mobile-drawer-backdrop.visible {
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* ===== User Menu Drawer (right-side) ===== */
+
+    /* Menu dropdown as a right-side drawer */
+    .navbar-header-right .menu-container.open > .dropdown-menu {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        left: auto !important;
+        width: 85vw !important;
+        max-width: 320px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 1080 !important;
+        overflow-y: auto !important;
+        background-color: var(--navbar-inverse-bg, #343a40) !important;
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 16px 0 !important;
+        margin: 0 !important;
+        display: block !important;
+    }
+
+    /* Menu items styling */
+    .navbar-header-right .menu-container.open > .dropdown-menu > li > a {
+        padding: 12px 20px !important;
+        color: var(--navbar-inverse-link-color, #adb5bd) !important;
+        font-size: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        white-space: nowrap !important;
+        transition: background-color 0.15s ease !important;
+    }
+
+    .navbar-header-right .menu-container.open > .dropdown-menu > li > a:hover,
+    .navbar-header-right .menu-container.open > .dropdown-menu > li > a:active {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #fff !important;
+    }
+
+    /* Dividers */
+    .navbar-header-right .menu-container.open > .dropdown-menu > li.divider {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        margin: 8px 20px !important;
+        height: 1px !important;
+    }
+}
+
+/* ===== Mobile Record Detail Tabs Grouping ===== */
+
+/* Default: Hide drawer elements on desktop */
+.tab-drawer-backdrop,
+.tab-drawer {
+    display: none !important;
+}
+
+@media screen and (max-width: 767px) {
+    /* Show drawer elements on mobile */
+    .tab-drawer-backdrop,
+    .tab-drawer {
+        display: block !important;
+    }
+
+    /* Middle tabs container - horizontal scroll with overflow hidden */
+    .record .middle-tabs {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow: hidden !important;
+        position: relative !important;
+        width: 100% !important;
+        gap: 4px !important;
+    }
+
+    /* Individual tab buttons */
+    .record .middle-tabs > button {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 140px !important;
+        padding: 8px 12px !important;
+        font-size: 13px !important;
+    }
+
+    /* Hide tabs that should be in drawer */
+    .record .middle-tabs > button.tab-in-drawer {
+        display: none !important;
+    }
+
+    /* More button styling */
+    .record .middle-tabs > button.tab-more-btn {
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        border-radius: 4px !important;
+    }
+
+    .record .middle-tabs > button.tab-more-btn::after {
+        content: "";
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 4px solid currentColor;
+        margin-left: 2px;
+    }
+
+    /* Tab Drawer - Bottom Sheet Style */
+    .tab-drawer-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0);
+        z-index: 2050;
+        transition: background-color 0.3s ease;
+        pointer-events: none;
+    }
+
+    .tab-drawer-backdrop.visible {
+        background-color: rgba(0, 0, 0, 0.5);
+        pointer-events: auto;
+    }
+
+    .tab-drawer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+        z-index: 2060;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tab-drawer.open {
+        transform: translateY(0);
+    }
+
+    /* Drawer Header */
+    .tab-drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        flex-shrink: 0;
+    }
+
+    .tab-drawer-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-color, #111827);
+    }
+
+    .tab-drawer-close {
+        background: none;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        color: var(--text-muted, #6b7280);
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Drawer Content */
+    .tab-drawer-content {
+        overflow-y: auto;
+        padding: 8px 0;
+        flex: 1;
+    }
+
+    .tab-drawer-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        width: 100%;
+        border: none;
+        background: none;
+        text-align: left;
+        font-size: 15px;
+        color: var(--text-color, #111827);
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .tab-drawer-item:hover,
+    .tab-drawer-item:active {
+        background-color: var(--hover-bg, #f3f4f6);
+    }
+
+    .tab-drawer-item.active {
+        background-color: var(--active-bg, #eff6ff);
+        color: var(--primary-color, #337ab7);
+    }
+
+    .tab-drawer-item .icon {
+        font-size: 18px;
+        width: 20px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    /* Prevent body scroll when drawer is open */
+    body.tab-drawer-open {
+        overflow: hidden;
+    }
+
+    /* Badge indicator on More button */
+    .record .middle-tabs > button.tab-more-btn.has-badge {
+        position: relative;
+    }
+
+    .record .middle-tabs > button.tab-more-btn.has-badge::before {
+        content: "";
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 8px;
+        height: 8px;
+        background-color: var(--danger-color, #dc3545);
+        border-radius: 50%;
+    }
+}
+

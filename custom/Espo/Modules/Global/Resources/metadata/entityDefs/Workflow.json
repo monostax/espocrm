@@ -22,10 +22,7 @@
         "Settings",
         "UniqueId",
         "InboundEmail",
-        "BpmnFlowchart",
-        "Report",
         "WorkingTimeCalendar",
         "Template"
     ]
 }
-

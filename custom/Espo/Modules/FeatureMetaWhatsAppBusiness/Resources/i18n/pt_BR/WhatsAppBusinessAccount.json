@@ -11,7 +11,9 @@
         "credential": "Credencial"
     },
     "labels": {
-        "Create WhatsAppBusinessAccount": "Visualizar Contas Business"
+        "Create WhatsAppBusinessAccount": "Visualizar Contas Business",
+        "Phone Numbers": "Números de Telefone",
+        "Message Templates": "Templates de Mensagem"
     },
     "tooltips": {
         "wabaId": "O ID da Conta Business do WhatsApp na Meta",
@@ -19,3 +21,4 @@
         "credential": "A credencial usada para autenticar com a API Meta Graph"
     }
 }
+

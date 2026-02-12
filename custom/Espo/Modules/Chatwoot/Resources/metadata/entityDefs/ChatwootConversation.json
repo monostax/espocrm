@@ -102,13 +102,6 @@
                 "dateStart": "dateStart"
             }
         },
-        "smartAudiences": {
-            "type": "linkMultiple",
-            "layoutListDisabled": true,
-            "layoutDetailDisabled": true,
-            "layoutMassUpdateDisabled": true,
-            "noLoad": true
-        },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
@@ -185,49 +178,16 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
-        },
-        "smartAudiences": {
-            "type": "hasMany",
-            "entity": "SmartAudience",
-            "relationName": "smartAudienceConversation",
-            "foreign": "conversations",
-            "additionalColumns": {
-                "isActive": {
-                    "type": "bool",
-                    "default": true
-                },
-                "reasoningMatches": {
-                    "type": "bool"
-                },
-                "reasoningConfidence": {
-                    "type": "float"
-                },
-                "reasoningExplanation": {
-                    "type": "text"
-                },
-                "addedAt": {
-                    "type": "datetime"
-                },
-                "removedAt": {
-                    "type": "datetime"
-                },
-                "lastEvaluatedAt": {
-                    "type": "datetime"
-                },
-                "userOverride": {
-                    "type": "varchar",
-                    "len": 20
-                },
-                "userOverrideReason": {
-                    "type": "text"
-                }
-            }
         }
     },
     "indexes": {
         "uniqueConversation": {
             "unique": true,
-            "columns": ["chatwootConversationId", "chatwootAccountId", "deleteId"]
+            "columns": [
+                "chatwootConversationId",
+                "chatwootAccountId",
+                "deleteId"
+            ]
         },
         "lastActivityAt": {
             "columns": ["lastActivityAt"]
@@ -236,17 +196,36 @@
     "collection": {
         "orderBy": "lastActivityAt",
         "order": "desc",
-        "textFilterFields": ["name", "contactDisplayName", "contactPhoneNumber", "messages.content"]
+        "textFilterFields": [
+            "name",
+            "contactDisplayName",
+            "contactPhoneNumber",
+            "messages.content"
+        ]
     },
     "cascadeDelete": {
         "links": ["messages"],
         "junctionTables": [
-            {"table": "SmartAudienceConversation", "column": "chatwootConversationId"},
-            {"table": "ChatwootConversationOpportunity", "column": "chatwootConversationId"},
-            {"table": "ChatwootConversationOpportunity", "column": "chatwootConversationId"},
-            {"table": "ChatwootConversationCAgendamento", "column": "chatwootConversationId"},
-            {"table": "ChatwootConversationCase", "column": "chatwootConversationId"},
-            {"table": "ChatwootConversationAppointment", "column": "chatwootConversationId"}
+            {
+                "table": "ChatwootConversationOpportunity",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationOpportunity",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationCAgendamento",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationCase",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationAppointment",
+                "column": "chatwootConversationId"
+            }
         ]
     }
 }

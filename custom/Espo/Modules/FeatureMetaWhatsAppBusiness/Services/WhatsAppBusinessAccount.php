@@ -68,12 +68,25 @@ class WhatsAppBusinessAccount
         $totalCount = 0;
 
         if ($oAuthAccountIds) {
-            $oAuthAccounts = array_map(
-                fn (string $id) => $this->oAuthHelper->validateOAuthAccountAccess($id),
-                $oAuthAccountIds
-            );
+            $oAuthAccounts = [];
+            foreach ($oAuthAccountIds as $id) {
+                try {
+                    $oAuthAccounts[] = $this->oAuthHelper->validateOAuthAccountAccess($id);
+                } catch (NotFound $e) {
+                    $this->log->warning(
+                        "WhatsAppBusinessAccount: OAuthAccount {$id} not found, skipping."
+                    );
+                }
+            }
         } elseif ($oAuthAccountId) {
-            $oAuthAccounts = [$this->oAuthHelper->validateOAuthAccountAccess($oAuthAccountId)];
+            try {
+                $oAuthAccounts = [$this->oAuthHelper->validateOAuthAccountAccess($oAuthAccountId)];
+            } catch (NotFound $e) {
+                $this->log->warning(
+                    "WhatsAppBusinessAccount: OAuthAccount {$oAuthAccountId} not found, returning empty result."
+                );
+                $oAuthAccounts = [];
+            }
         } else {
             $oAuthAccounts = $this->oAuthHelper->getAccessibleOAuthAccounts();
         }

@@ -9,14 +9,18 @@
  ************************************************************************/
 
 import NavbarSiteView from "views/site/navbar";
+import $ from "jquery";
 
 /**
  * Custom navbar view that:
  * 1. Filters out Conversas menu items for users without chatSsoUrl
- * 2. Injects starred Reports into a "Lists" divider
+ * 2. Implements Linear.app-style mobile drawer navigation
  * Uses appParams from the /api/v1/App/user response.
  */
 class CustomNavbarSiteView extends NavbarSiteView {
+    /** @private */
+    isMobileDrawerOpen = false;
+
     /**
      * Check if the current user has Chatwoot access (valid chatSsoUrl).
      * @private
@@ -24,15 +28,6 @@ class CustomNavbarSiteView extends NavbarSiteView {
      */
     hasChatwootAccess() {
         return !!this.getHelper().getAppParam("chatSsoUrl");
-    }
-
-    /**
-     * Get starred reports from appParams (loaded with the initial App/user request).
-     * @private
-     * @return {Object[]}
-     */
-    getStarredReports() {
-        return this.getHelper().getAppParam("starredReports") || [];
     }
 
     /**
@@ -70,117 +65,185 @@ class CustomNavbarSiteView extends NavbarSiteView {
     }
 
     /**
-     * Override getTabList to:
-     * 1. Filter Conversas items based on chatSsoUrl
-     * 2. Inject starred reports into the "Lists" divider
+     * Override getTabList to filter Conversas items based on chatSsoUrl.
      * @return {(Object|string)[]}
      */
     getTabList() {
         const tabList = super.getTabList();
 
-        // First, filter out Conversas items if user doesn't have chatSsoUrl
-        const filteredList = this.filterConversasItems(tabList);
-
-        const starredReports = this.getStarredReports();
-
-        if (starredReports.length === 0) {
-            return filteredList;
-        }
-
-        // Find the "Lists" divider (looking for $Lists text)
-        const listsIndex = filteredList.findIndex(
-            (item) =>
-                typeof item === "object" &&
-                item.type === "divider" &&
-                item.text === "$Lists",
-        );
-
-        if (listsIndex === -1) {
-            // If no Lists divider exists, create one with the starred reports
-            return this.injectListsDividerWithReports(filteredList);
-        }
-
-        // Inject starred reports after the Lists divider
-        return this.injectReportsAfterDivider(filteredList, listsIndex);
+        return this.filterConversasItems(tabList);
     }
+
+    // =========================================================================
+    // Mobile Drawer Navigation (Linear.app-style)
+    // =========================================================================
 
     /**
      * @private
-     * @param {Array} tabList
-     * @return {Array}
+     * @return {boolean}
      */
-    injectListsDividerWithReports(tabList) {
-        // Find the best position to insert - after Records divider or at the beginning
-        let insertIndex = 0;
+    isMobileScreen() {
+        const smallScreenWidth =
+            this.getThemeManager().getParam("screenWidthXs") || 768;
 
-        const recordsIndex = tabList.findIndex(
-            (item) =>
-                typeof item === "object" &&
-                item.type === "divider" &&
-                item.text === "$Records",
-        );
+        return window.innerWidth < smallScreenWidth;
+    }
 
-        if (recordsIndex !== -1) {
-            // Find the end of the Records section (next divider or end)
-            for (let i = recordsIndex + 1; i < tabList.length; i++) {
-                const item = tabList[i];
-                if (typeof item === "object" && item.type === "divider") {
-                    insertIndex = i;
-                    break;
-                }
+    /**
+     * Override toggleCollapsable to use drawer on mobile.
+     */
+    toggleCollapsable() {
+        if (this.isMobileScreen()) {
+            if (this.isMobileDrawerOpen) {
+                this.closeMobileDrawer();
+            } else {
+                this.openMobileDrawer();
             }
-            if (insertIndex === 0) {
-                insertIndex = tabList.length;
-            }
+
+            return;
         }
 
-        // Create Lists divider
-        const listsDivider = {
-            type: "divider",
-            text: "$Lists",
-            id: "starred-reports-divider",
-        };
-
-        // Create report URL items
-        const reportItems = this.createReportUrlItems();
-
-        // Insert divider and reports
-        const newTabList = [...tabList];
-        newTabList.splice(insertIndex, 0, listsDivider, ...reportItems);
-
-        return newTabList;
+        super.toggleCollapsable();
     }
 
     /**
+     * Open the mobile drawer.
      * @private
-     * @param {Array} tabList
-     * @param {number} listsIndex
-     * @return {Array}
      */
-    injectReportsAfterDivider(tabList, listsIndex) {
-        const reportItems = this.createReportUrlItems();
+    openMobileDrawer() {
+        this.isMobileDrawerOpen = true;
 
-        const newTabList = [...tabList];
-        newTabList.splice(listsIndex + 1, 0, ...reportItems);
+        document.body.classList.add("mobile-drawer-open");
 
-        return newTabList;
+        // Create backdrop
+        this.$mobileDrawerBackdrop = $("<div>")
+            .addClass("mobile-drawer-backdrop")
+            .on("click", () => this.closeMobileDrawer())
+            .appendTo(document.body);
+
+        // Trigger the slide-in animation on the next frame
+        requestAnimationFrame(() => {
+            this.$mobileDrawerBackdrop.addClass("visible");
+        });
     }
 
     /**
+     * Close the mobile drawer.
      * @private
-     * @return {Object[]}
      */
-    createReportUrlItems() {
-        return this.getStarredReports().map((report) => ({
-            type: "url",
-            text: report.name,
-            url: report.url || "#Report/show/" + report.id,
-            iconClass: "ti ti-list",
-            color: null,
-            aclScope: "Report",
-            onlyAdmin: false,
-            id: "starred-report-" + report.id,
-        }));
+    closeMobileDrawer() {
+        if (!this.isMobileDrawerOpen) {
+            return;
+        }
+
+        this.isMobileDrawerOpen = false;
+
+        document.body.classList.remove("mobile-drawer-open");
+
+        if (this.$mobileDrawerBackdrop) {
+            this.$mobileDrawerBackdrop.remove();
+            this.$mobileDrawerBackdrop = null;
+        }
+    }
+
+    /**
+     * Override xsCollapse to close drawer instead of just hiding collapsable.
+     */
+    xsCollapse() {
+        if (this.isMobileDrawerOpen) {
+            this.closeMobileDrawer();
+
+            return;
+        }
+
+        super.xsCollapse();
+    }
+
+    /**
+     * Override afterRender to inject drawer styles, move header icons, and close-on-navigate.
+     */
+    afterRender() {
+        super.afterRender();
+
+        this.injectMobileDrawerStyles();
+        this.setupMobileHeaderIcons();
+
+        // Close drawer on route change
+        this.listenTo(this.getRouter(), "routed", () => {
+            if (this.isMobileDrawerOpen) {
+                this.closeMobileDrawer();
+            }
+        });
+    }
+
+    /**
+     * Move notification bell and user menu into .navbar-header on mobile.
+     * This avoids CSS inheritance issues from being inside .navbar-body/.navbar-collapse.
+     * @private
+     */
+    setupMobileHeaderIcons() {
+        if (!this.isMobileScreen()) {
+            return;
+        }
+
+        // Avoid double-init
+        if (this.element.querySelector(".navbar-header-right")) {
+            return;
+        }
+
+        const navbarHeader = this.element.querySelector(".navbar-header");
+
+        if (!navbarHeader) {
+            return;
+        }
+
+        const search = this.element.querySelector(".global-search-container");
+        const quickCreate = this.element.querySelector(
+            ".quick-create-container",
+        );
+        const bell = this.element.querySelector(
+            ".notifications-badge-container",
+        );
+        const menu = this.element.querySelector(".menu-container");
+
+        // Create a right-aligned container inside the header
+        const rightIcons = document.createElement("div");
+        rightIcons.className = "navbar-header-right";
+
+        // Move search — hide the full input, show only the icon button
+        if (search) {
+            search.classList.remove("navbar-form");
+            rightIcons.appendChild(search);
+        }
+
+        // Move quick-create — remove hidden-xs so it shows on mobile
+        if (quickCreate) {
+            quickCreate.classList.remove("hidden-xs");
+            rightIcons.appendChild(quickCreate);
+        }
+
+        if (bell) rightIcons.appendChild(bell);
+        if (menu) rightIcons.appendChild(menu);
+
+        navbarHeader.appendChild(rightIcons);
+    }
+
+    /**
+     * Load mobile drawer CSS stylesheet.
+     * Only loads once (idempotent).
+     * @private
+     */
+    injectMobileDrawerStyles() {
+        if (document.getElementById("mobile-drawer-styles")) {
+            return;
+        }
+
+        const link = document.createElement("link");
+        link.id = "mobile-drawer-styles";
+        link.rel = "stylesheet";
+        link.href = "client/custom/modules/global/css/mobile-drawer.css";
+
+        document.head.appendChild(link);
     }
 }
 

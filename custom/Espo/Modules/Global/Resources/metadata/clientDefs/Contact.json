@@ -2,6 +2,9 @@
     "recordViews": {
         "detail": "global:views/record/detail"
     },
+    "views": {
+        "list": "global:views/list"
+    },
     "sidePanels": {
         "detail": [
             {
@@ -45,9 +48,3 @@
         ]
     }
 }
-
-
-
-
-
-

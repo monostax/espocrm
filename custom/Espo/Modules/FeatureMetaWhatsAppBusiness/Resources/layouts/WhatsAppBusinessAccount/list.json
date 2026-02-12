@@ -1,6 +1,7 @@
 [
     {
         "name": "name",
+        "link": true,
         "width": 25
     },
     {
@@ -20,3 +21,4 @@
         "width": 10
     }
 ]
+
