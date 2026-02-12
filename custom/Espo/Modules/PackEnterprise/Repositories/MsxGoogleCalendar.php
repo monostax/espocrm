@@ -345,17 +345,29 @@ class MsxGoogleCalendar extends Database
                 continue;
             }
 
-            $select = SelectBuilder::create()
+            $assignedInfo = $this->getAssignedUserInfo($eventType);
+
+            $builder = SelectBuilder::create()
                 ->select('gce.entityId', 'entityId')
                 ->from('MsxGoogleCalendarEvent', 'gce')
                 ->join($eventType, 'entityTable', [
                     'entityTable.id:' => 'gce.entityId',
                     'entityTable.deleted' => false,
-                ])
-                ->where([
-                    'entityTable.assignedUserId' => $userId,
-                    'gce.msxGoogleCalendarEventId' => $eventId,
-                ])
+                ]);
+
+            if ($assignedInfo['hasAssignedUserId']) {
+                $builder->where(['entityTable.assignedUserId' => $userId]);
+            } else {
+                $builder
+                    ->leftJoin($assignedInfo['relationEntityName'], 'auMiddle', [
+                        'auMiddle.' . $assignedInfo['midKey'] . ':' => 'entityTable.id',
+                        'auMiddle.deleted' => false,
+                    ])
+                    ->where(['auMiddle.userId' => $userId]);
+            }
+
+            $select = $builder
+                ->where(['gce.msxGoogleCalendarEventId' => $eventId])
                 ->order('entityTable.modifiedAt', 'DESC')
                 ->build();
 
@@ -378,6 +390,24 @@ class MsxGoogleCalendar extends Database
         }
 
         return $results;
+    }
+
+    /**
+     * Check whether an entity type uses assignedUserId (single link) or assignedUsers (linkMultiple).
+     *
+     * @return array{hasAssignedUserId: bool, relationEntityName: string, midKey: string}
+     */
+    private function getAssignedUserInfo(string $eventType): array
+    {
+        $hasAssignedUserId = (bool) $this->metadata->get(
+            ['entityDefs', $eventType, 'fields', 'assignedUser']
+        );
+
+        return [
+            'hasAssignedUserId' => $hasAssignedUserId,
+            'relationEntityName' => $eventType . 'User',
+            'midKey' => lcfirst($eventType) . 'Id',
+        ];
     }
 
     private function hasFieldTextVarchar(string $entityType, string $field): bool
@@ -485,7 +515,9 @@ class MsxGoogleCalendar extends Database
                 continue;
             }
 
-            $select = SelectBuilder::create()
+            $assignedInfo = $this->getAssignedUserInfo($eventType);
+
+            $builder = SelectBuilder::create()
                 ->from($eventType)
                 ->select([
                     ["'$eventType'", 'scope'],
@@ -507,9 +539,21 @@ class MsxGoogleCalendar extends Database
                 ->leftJoin('MsxGoogleCalendarEvent', 'gce', [
                     'gce.entityId:' => 'id',
                     'gce.entityType' => $eventType,
-                ])
+                ]);
+
+            if ($assignedInfo['hasAssignedUserId']) {
+                $builder->where(['assignedUserId' => $userId]);
+            } else {
+                $builder
+                    ->leftJoin($assignedInfo['relationEntityName'], 'auMiddle', [
+                        'auMiddle.' . $assignedInfo['midKey'] . ':' => 'id',
+                        'auMiddle.deleted' => false,
+                    ])
+                    ->where(['auMiddle.userId' => $userId]);
+            }
+
+            $select = $builder
                 ->where([
-                    'assignedUserId' => $userId,
                     ['gce.msxGoogleCalendarEventId!=' => ''],
                     ['gce.msxGoogleCalendarEventId!=' => 'FAIL'],
                     ['gce.msxGoogleCalendarEventId!=' => null],
@@ -668,7 +712,9 @@ class MsxGoogleCalendar extends Database
                 continue;
             }
 
-            $select = SelectBuilder::create()
+            $assignedInfo = $this->getAssignedUserInfo($eventType);
+
+            $builder = SelectBuilder::create()
                 ->from($eventType)
                 ->select([
                     ["'$eventType'", 'scope'],
@@ -689,10 +735,22 @@ class MsxGoogleCalendar extends Database
                 ->leftJoin('MsxGoogleCalendarEvent', 'gce', [
                     'gce.entityId:' => 'id',
                     'gce.entityType' => $eventType,
-                ])
+                ]);
+
+            if ($assignedInfo['hasAssignedUserId']) {
+                $builder->where(['assignedUserId' => $userId]);
+            } else {
+                $builder
+                    ->leftJoin($assignedInfo['relationEntityName'], 'auMiddle', [
+                        'auMiddle.' . $assignedInfo['midKey'] . ':' => 'id',
+                        'auMiddle.deleted' => false,
+                    ])
+                    ->where(['auMiddle.userId' => $userId]);
+            }
+
+            $select = $builder
                 ->where([
                     'dateStart>=' => $since,
-                    'assignedUserId' => $userId,
                     [
                         'OR' => [
                             ['gce.msxGoogleCalendarEventId' => ''],

@@ -832,9 +832,6 @@ class EventSync extends Base
 
                     break;
                 }
-            } else {
-                $scope = $entityType;
-                break;
             }
         }
 
