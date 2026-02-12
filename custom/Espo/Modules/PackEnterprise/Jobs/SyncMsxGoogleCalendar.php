@@ -32,6 +32,8 @@ class SyncMsxGoogleCalendar implements JobDataLess
 
     public function run(): void
     {
+        $this->log->debug('MsxGoogleCalendar [Job]: START scheduled sync job');
+
         $service = $this->injectableFactory->create(MsxGoogleCalendar::class);
 
         $collection = $this->entityManager
@@ -42,7 +44,13 @@ class SyncMsxGoogleCalendar implements JobDataLess
             ->order('lastLooked')
             ->find();
 
+        $count = count($collection);
+        $this->log->debug("MsxGoogleCalendar [Job]: Found {$count} active MsxGoogleCalendarUser records");
+
         foreach ($collection as $calendarUser) {
+            $this->log->debug("MsxGoogleCalendar [Job]: Syncing MsxGoogleCalendarUser id=" . $calendarUser->get('id') .
+                ", userId=" . $calendarUser->get('userId'));
+
             try {
                 $service->syncCalendar($calendarUser);
             } catch (Exception $e) {
@@ -52,5 +60,7 @@ class SyncMsxGoogleCalendar implements JobDataLess
                 );
             }
         }
+
+        $this->log->debug('MsxGoogleCalendar [Job]: END scheduled sync job');
     }
 }

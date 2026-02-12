@@ -1,0 +1,5 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\PackEnterprise\\Rebuild\\SeedOAuthProviderGoogleCalendar"
+    ]
+}

@@ -1,5 +1,9 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true
+        },
         "msxGoogleCalendar": {
             "type": "link",
             "utility": true
@@ -50,6 +54,7 @@
         },
         "calendarEntityTypes": {
             "type": "jsonArray",
+            "suppressValidationList": ["valid"],
             "view": "pack-enterprise:views/msx-google-calendar/fields/labeled-array"
         },
         "calendarStartDate": {
@@ -57,7 +62,6 @@
         },
         "calendarDefaultEntity": {
             "type": "enum",
-            "options": [],
             "suppressValidationList": ["valid"],
             "view": "pack-enterprise:views/msx-google-calendar/fields/default-entity"
         },
@@ -105,7 +109,7 @@
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
-            "required": true
+            "required": false
         }
     },
     "links": {
@@ -143,3 +147,4 @@
         }
     }
 }
+

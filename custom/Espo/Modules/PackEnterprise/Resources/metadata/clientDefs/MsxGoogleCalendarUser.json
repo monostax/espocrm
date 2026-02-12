@@ -107,8 +107,19 @@
         ]
     },
     "defaultSidePanelFieldLists": {
-        "detail": ["teams"],
-        "edit": ["teams"],
-        "detailSmall": ["teams"]
-    }
+        "detail": ["assignedUser", "teams"],
+        "edit": ["assignedUser", "teams"],
+        "detailSmall": ["assignedUser", "teams"]
+    },
+    "detailActionList": [
+        {
+            "name": "syncNow",
+            "label": "Sync Now",
+            "handler": "pack-enterprise:handlers/msx-google-calendar-user/detail-actions",
+            "actionFunction": "syncNow",
+            "checkVisibilityFunction": "isSyncNowAvailable",
+            "groupIndex": 0
+        }
+    ]
 }
+

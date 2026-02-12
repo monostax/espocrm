@@ -18,6 +18,6 @@
         "layoutSet": "Fornece a capacidade de ter layouts que diferem dos padrões. O Conjunto de Layout será aplicado aos usuários que têm esse time definido como Time Padrão (Default Team)."
     },
     "labels": {
-        "Create Team": "Criar Acesso / Permissão"
+        "Create Team": "Criar Permissão / Times"
     }
 }

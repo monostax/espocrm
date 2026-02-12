@@ -34,6 +34,14 @@
             "Both": "Two-way"
         }
     },
+    "labels": {
+        "Sync Now": "Sync Now"
+    },
+    "messages": {
+        "confirmSyncNow": "This will synchronize your Google Calendar now. Continue?",
+        "syncStarted": "Synchronization completed successfully.",
+        "syncFailed": "Synchronization failed."
+    },
     "tooltips": {
         "calendarEntityTypes": "For type recognizing event name has to start from identification label. Label for default entity can be empty. Recommendation: Do not change identification labels after you saved sync setting",
         "calendarDefaultEntity": "Unrecognized Event will be loaded as selected entity."

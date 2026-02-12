@@ -139,6 +139,26 @@ class ChatwootInboxIntegration
             // Build WAHA webhook URL for Chatwoot to call
             $wahaWebhookUrl = rtrim($wahaUrl, '/') . '/webhooks/chatwoot/' . urlencode($sessionName) . '/' . urlencode($appId);
 
+            // Clean up any existing apps for this session to prevent duplicates/orphans
+            try {
+                // We attempt to list and delete apps even before creating the session object in memory locally,
+                // because the session might already exist in WAHA server.
+                // However, listApps requires the session to exist.
+                // It is safer to do this cleanup AFTER ensuring the session exists.
+                // But we can check if there's a stored wahaAppId on the entity and try to delete it at least.
+                $oldAppId = $channel->get('wahaAppId');
+                if ($oldAppId) {
+                    try {
+                        $this->wahaApiClient->deleteApp($wahaUrl, $wahaApiKey, $oldAppId);
+                    } catch (\Exception $e) {
+                         // Check if it's a 404, otherwise log warning
+                         $this->log->warning("Failed to delete old WAHA app during activation: " . $e->getMessage());
+                    }
+                }
+            } catch (\Exception $e) {
+                // Non-critical cleanup
+            }
+
             // Create Chatwoot Inbox (API channel) with WAHA webhook URL
             if (!$chatwootAccountApiKey) {
                 throw new Error("ChatwootAccount is missing API key. Please generate a User Access Token in Chatwoot (Settings > Account Settings > API Access Tokens) and add it to the ChatwootAccount.");
@@ -156,10 +176,54 @@ class ChatwootInboxIntegration
             $channel->set('chatwootInboxId', $inboxResult['id']);
             $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
 
+            // Ensure clean internal slate for the session
+            try {
+                // Check if session exists first
+                $existingSession = null;
+                try {
+                    $existingSession = $this->wahaApiClient->getSession($wahaUrl, $wahaApiKey, $sessionName);
+                } catch (\Exception $e) {
+                    // Session not found or error, proceed
+                }
+
+                if ($existingSession) {
+                    $this->log->info("ChatwootInboxIntegration: Session {$sessionName} already exists, deleting for clean activation.");
+                    try {
+                        $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                        sleep(1); // Give it a moment to stop
+                        $this->wahaApiClient->deleteSession($wahaUrl, $wahaApiKey, $sessionName);
+                        sleep(2); // Wait for FS cleanup
+                    } catch (\Exception $e) {
+                        $this->log->warning("ChatwootInboxIntegration: Failed to delete existing session {$sessionName}: " . $e->getMessage());
+                    }
+                }
+            } catch (\Exception $e) {
+                // Ignore pre-check errors
+            }
+
             // Create WAHA Session
-            $this->wahaApiClient->createSession($wahaUrl, $wahaApiKey, [
-                'name' => $sessionName,
-            ]);
+            try {
+                $this->wahaApiClient->createSession($wahaUrl, $wahaApiKey, [
+                    'name' => $sessionName,
+                ]);
+            } catch (\Exception $e) {
+                // If it still says "already exists", we might have failed to delete it or it's stuck.
+                // We will try to proceed, assuming it might be in a usable state or manual intervention is needed.
+                $msg = $e->getMessage();
+                if (strpos($msg, 'already exists') !== false) {
+                     $this->log->warning("ChatwootInboxIntegration: Session {$sessionName} creation failed (already exists), attempting to reuse.");
+                     // Try to stop/start to reset it?
+                     try {
+                         $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                         sleep(1);
+                         $this->wahaApiClient->startSession($wahaUrl, $wahaApiKey, $sessionName);
+                     } catch (\Exception $ex) {
+                         // Ignore
+                     }
+                } else {
+                    throw $e;
+                }
+            }
 
             $channel->set('wahaSessionName', $sessionName);
             $channel->set('wahaAppId', $appId);
@@ -185,6 +249,22 @@ class ChatwootInboxIntegration
                 $this->log->info("ChatwootInboxIntegration: Registered label webhook at {$labelWebhookUrl}");
             } else {
                 $this->log->warning("ChatwootInboxIntegration: CRM_BACKEND_URL and siteUrl not configured, skipping label webhook registration");
+            }
+
+            // Cleanup any existing Chatwoot apps for this session in WAHA
+            // This prevents "App not found" errors and performance issues with multiple apps
+            try {
+                $existingApps = $this->wahaApiClient->listApps($wahaUrl, $wahaApiKey, $sessionName);
+                foreach ($existingApps as $app) {
+                    // Delete all apps associated with this session to ensure a clean state
+                    if (isset($app['id'])) {
+                         $this->wahaApiClient->deleteApp($wahaUrl, $wahaApiKey, $app['id']);
+                         $this->log->info("ChatwootInboxIntegration: Removed stale app {$app['id']} from session {$sessionName}");
+                    }
+                }
+            } catch (\Exception $e) {
+                // Ignore errors here as the session might be new or listApps failed
+                $this->log->warning("ChatwootInboxIntegration: Failed to cleanup stale apps: " . $e->getMessage());
             }
 
             // Create WAHA Chatwoot App
@@ -428,6 +508,16 @@ class ChatwootInboxIntegration
                 try {
                     $wahaUrl = $wahaPlatform->get('backendUrl');
                     $wahaApiKey = $wahaPlatform->get('apiKey');
+
+                    // Delete the associated App first
+                    $wahaAppId = $channel->get('wahaAppId');
+                    if ($wahaAppId) {
+                        try {
+                            $this->wahaApiClient->deleteApp($wahaUrl, $wahaApiKey, $wahaAppId);
+                        } catch (\Exception $e) {
+                            $this->log->warning("Failed to delete WAHA app: " . $e->getMessage());
+                        }
+                    }
                     
                     $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
                 } catch (\Exception $e) {

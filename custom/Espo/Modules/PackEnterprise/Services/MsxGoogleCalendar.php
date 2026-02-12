@@ -126,36 +126,52 @@ class MsxGoogleCalendar
      */
     public function syncCalendar(Entity $calendarUser): void
     {
+        $calendarUserId = $calendarUser->get('id');
+        $userId = $calendarUser->get('userId');
+
+        $this->log->debug("MsxGoogleCalendar [syncCalendar]: START for MsxGoogleCalendarUser id={$calendarUserId}, userId={$userId}");
+
         /** @var ?User $user */
-        $user = $this->entityManager->getEntityById('User', $calendarUser->get('userId'));
+        $user = $this->entityManager->getEntityById('User', $userId);
 
         if (!$user || !$user->get('isActive')) {
+            $this->log->debug("MsxGoogleCalendar [syncCalendar]: BAIL - User not found or inactive. " .
+                "userId={$userId}, userExists=" . ($user ? 'yes' : 'no') .
+                ", isActive=" . ($user ? var_export($user->get('isActive'), true) : 'N/A'));
+
             return;
         }
 
         if (!$this->aclManager->check($user, 'MsxGoogleCalendar')) {
+            $this->log->debug("MsxGoogleCalendar [syncCalendar]: BAIL - ACL check failed for scope 'MsxGoogleCalendar', userId={$userId}");
+
             return;
         }
 
         $oAuthAccountId = $calendarUser->get('oAuthAccountId');
 
         if (!$oAuthAccountId || !$calendarUser->get('active')) {
+            $this->log->debug("MsxGoogleCalendar [syncCalendar]: BAIL - Missing oAuthAccountId or record inactive. " .
+                "oAuthAccountId=" . ($oAuthAccountId ?? 'NULL') . ", active=" . var_export($calendarUser->get('active'), true));
+
             return;
         }
 
         // Verify the OAuth account is connected by trying to get tokens.
         try {
-            $this->tokensProvider->get($oAuthAccountId);
+            $tokens = $this->tokensProvider->get($oAuthAccountId);
+
+            $this->log->debug("MsxGoogleCalendar [syncCalendar]: Token retrieved OK for oAuthAccountId={$oAuthAccountId}");
         } catch (AccountNotFound | NoToken | ProviderNotAvailable $e) {
             $this->log->error(
-                'MsxGoogleCalendar Sync: User \'' . ($calendarUser->get('userName') ?? $calendarUser->get('userId')) .
+                'MsxGoogleCalendar Sync: User \'' . ($calendarUser->get('userName') ?? $userId) .
                 '\' could not connect to Google when syncing. ' . $e->getMessage()
             );
 
             return;
         } catch (\Exception $e) {
             $this->log->error(
-                'MsxGoogleCalendar Sync: Token error for user ' . $calendarUser->get('userId') .
+                'MsxGoogleCalendar Sync: Token error for user ' . $userId .
                 ': ' . $e->getMessage()
             );
 
@@ -163,9 +179,13 @@ class MsxGoogleCalendar
         }
 
         $calendarManager = $this->getCalendarSyncManager();
-        $calendarManager->setUserId($calendarUser->get('userId'));
+        $calendarManager->setUserId($userId);
         $calendarManager->setOAuthAccountId($oAuthAccountId);
 
-        $calendarManager->run($calendarUser);
+        $this->log->debug("MsxGoogleCalendar [syncCalendar]: Calling CalendarSync->run() for userId={$userId}");
+
+        $result = $calendarManager->run($calendarUser);
+
+        $this->log->debug("MsxGoogleCalendar [syncCalendar]: CalendarSync->run() returned " . var_export($result, true) . " for userId={$userId}");
     }
 }

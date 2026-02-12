@@ -5,7 +5,7 @@
         "frontendUrl": "URL do Frontend",
         "backendUrl": "URL do Backend",
         "apiKey": "Chave API",
-        "teams": "Acesso / Permissão"
+        "teams": "Permissão / Times"
     },
     "links": {
         "platform": "Waha / Plataforma",
@@ -13,7 +13,7 @@
         "sessions": "Sessões",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Acesso / Permissão"
+        "teams": "Permissão / Times"
     },
     "labels": {
         "Create WahaPlatform": "Criar Plataforma Waha"

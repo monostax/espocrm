@@ -282,12 +282,28 @@ class EventSync extends Base
     {
         $googleEvent = $this->asCalendarEvent($event);
 
+        $gEventId = $googleEvent->getId() ?? 'N/A';
+        $gSummary = $googleEvent->getSummary() ?? '(no summary)';
+
+        $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: START googleEventId={$gEventId}, summary={$gSummary}, " .
+            "isDeleted=" . var_export($googleEvent->isDeleted(), true) .
+            ", isPrivate=" . var_export($googleEvent->isPrivate(), true) .
+            ", hasEnd=" . var_export($googleEvent->hasEnd(), true) .
+            ", eventType=" . ($googleEvent->getEventType() ?? 'NULL') .
+            ", hasRecurrence=" . var_export((bool)$googleEvent->getRecurrence(), true) .
+            ", recurringEventId=" . ($googleEvent->getRecurringEventId() ?? 'NULL') .
+            ", start=" . ($googleEvent->getStart() ?? 'NULL'));
+
         $parsedName = $this->parseGoogleEventName($googleEvent->getSummary());
 
         $scope = $parsedName['scope'];
         $name = $parsedName['name'];
 
+        $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: Parsed name: scope={$scope}, name={$name}");
+
         if (!$this->acl->check($scope, Table::ACTION_EDIT)) {
+            $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: BAIL - ACL edit check failed for scope={$scope}");
+
             return false;
         }
 
@@ -302,10 +318,14 @@ class EventSync extends Base
                 CalendarEvent::EVENT_TYPE_FROM_GMAIL,
             ])
         ) {
+            $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: BAIL - Unsupported eventType=" . $googleEvent->getEventType());
+
             return false;
         }
 
         if ($googleEvent->getRecurrence() && !$googleEvent->getRecurringEventId()) {
+            $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: Has recurrence but no recurringEventId - adding to recurrent queue, googleEventId={$gEventId}");
+
             $this->deleteRecurrentInstancesFromEspo($googleEvent->getId());
 
             if (!$googleEvent->isPrivate() && $googleEvent->hasEnd()) {
@@ -331,6 +351,9 @@ class EventSync extends Base
         }
 
         if (!$googleEvent->isDeleted() && $googleEvent->getStart() < $this->syncParams['fetchSince']) {
+            $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: BAIL - Event start (" . $googleEvent->getStart() .
+                ") < fetchSince (" . $this->syncParams['fetchSince'] . "), googleEventId={$gEventId}");
+
             return false;
         }
 
@@ -342,14 +365,22 @@ class EventSync extends Base
 
         if (empty($espoEvents)) {
             if (in_array($scope, $this->syncParams['syncEntities'])) {
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: No existing Espo entity found, creating NEW {$scope} for googleEventId={$gEventId}");
+
                 $espoEvents = [$this->entityManager->getNewEntity($scope)];
             } else {
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: BAIL - No existing Espo entity and scope={$scope} not in syncEntities, googleEventId={$gEventId}");
+
                 return false;
             }
+        } else {
+            $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: Found " . count($espoEvents) . " existing Espo entities for googleEventId={$gEventId}");
         }
 
         foreach ($espoEvents as $espoEvent) {
             if ($espoEvent->get('deleted')) {
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: SKIP - Espo entity is deleted, googleEventId={$gEventId}");
+
                 continue;
             }
 
@@ -357,10 +388,16 @@ class EventSync extends Base
                 !is_object($espoEvent) ||
                 !in_array($espoEvent->getEntityType(), $this->syncParams['syncEntities'])
             ) {
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: SKIP - Espo entity not object or type not in syncEntities, googleEventId={$gEventId}");
+
                 continue;
             }
 
             $eventIsNew = $espoEvent->isNew();
+            $espoEntityType = $espoEvent->getEntityType();
+            $espoEntityId = $espoEvent->get('id') ?? 'NEW';
+
+            $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: Processing Espo entity type={$espoEntityType}, id={$espoEntityId}, isNew=" . var_export($eventIsNew, true) . ", googleEventId={$gEventId}");
 
             if (
                 $googleEvent->isDeleted() ||
@@ -416,6 +453,9 @@ class EventSync extends Base
             }
 
             if (!$eventIsNew && $withCompare && $espoEvent->get('modifiedAt') > $googleEvent->updated()) {
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: SKIP - Espo event is newer (modifiedAt=" .
+                    $espoEvent->get('modifiedAt') . " > googleUpdated=" . $googleEvent->updated() . "), googleEventId={$gEventId}");
+
                 continue;
             }
 
@@ -492,7 +532,13 @@ class EventSync extends Base
 
             if ($eventIsNew) {
                 $userId = $this->syncParams['userId'];
-                $espoEvent->set('assignedUserId', $userId);
+
+                // Support both assignedUser (link) and assignedUsers (linkMultiple).
+                // For assignedUsers (linkMultiple), we must use relate() after save
+                // because the ORM does not persist linkMultiple via set() + saveEntity().
+                if ($espoEvent->hasAttribute('assignedUserId')) {
+                    $espoEvent->set('assignedUserId', $userId);
+                }
 
                 if ($this->syncParams['assignDefaultTeam']) {
                     $user = $this->entityManager->getEntityById('User', $userId);
@@ -646,7 +692,25 @@ class EventSync extends Base
             }
 
             if ($eventIsNew || $isModified) {
-                $this->entityManager->saveEntity($espoEvent, ['silent' => true]);
+                $assignedInfo = 'assignedUserId=' . ($espoEvent->get('assignedUserId') ?? 'NULL');
+                if ($espoEvent->hasRelation('assignedUsers')) {
+                    $assignedInfo .= ', assignedUsersIds=' . json_encode($espoEvent->get('assignedUsersIds') ?? []);
+                }
+
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: SAVING Espo entity type={$espoEntityType}, " .
+                    "isNew=" . var_export($eventIsNew, true) . ", isModified=" . var_export($isModified, true) .
+                    ", name=" . ($espoEvent->get('name') ?? 'NULL') .
+                    ", dateStart=" . ($espoEvent->get('dateStart') ?? $espoEvent->get('dateStartDate') ?? 'NULL') .
+                    ", {$assignedInfo}" .
+                    ", googleEventId={$gEventId}");
+
+                try {
+                    $this->entityManager->saveEntity($espoEvent, ['silent' => true]);
+
+                    $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: SAVED OK, espoId=" . $espoEvent->get('id') . ", googleEventId={$gEventId}");
+                } catch (Exception $e) {
+                    $this->log->error("MsxGoogleCalendar [updateEspoEvent]: SAVE FAILED for googleEventId={$gEventId}: " . $e->getMessage());
+                }
 
                 if ($eventIsNew) {
                     $this->getMsxGoogleCalendarRepository()->storeEventRelation(
@@ -655,7 +719,27 @@ class EventSync extends Base
                         $this->syncParams['calendar']->get('msxGoogleCalendarId'),
                         $googleEvent->getId()
                     );
+
+                    // For entities using assignedUsers (linkMultiple) instead of assignedUser (link),
+                    // we must explicitly relate the user via the junction table after save.
+                    if (
+                        !$espoEvent->hasAttribute('assignedUserId') &&
+                        $espoEvent->hasRelation('assignedUsers')
+                    ) {
+                        $userId = $this->syncParams['userId'];
+                        $user = $this->entityManager->getEntityById('User', $userId);
+
+                        if ($user) {
+                            $this->entityManager
+                                ->getRDBRepository($espoEvent->getEntityType())
+                                ->getRelation($espoEvent, 'assignedUsers')
+                                ->relate($user);
+                        }
+                    }
                 }
+            } else {
+                $this->log->debug("MsxGoogleCalendar [updateEspoEvent]: NOT SAVING - eventIsNew=" . var_export($eventIsNew, true) .
+                    ", isModified=" . var_export($isModified, true) . ", googleEventId={$gEventId}");
             }
         }
 

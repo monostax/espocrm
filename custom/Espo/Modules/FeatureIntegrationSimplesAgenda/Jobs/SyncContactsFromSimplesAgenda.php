@@ -780,10 +780,10 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
             $this->log->debug("SyncContactsFromSimplesAgenda: Contact created with ID {$contact->getId()}, observacao: '" . ($data['observacao'] ?? 'EMPTY') . "'");
             if (!empty($data['observacao'])) {
                 $this->log->info("SyncContactsFromSimplesAgenda: Creating observation note for Contact {$contact->getId()}");
-                $this->createObservationNote($contact, $data['observacao']);
-            } else {
-                $this->log->warning("SyncContactsFromSimplesAgenda: No observacao data for Contact {$contact->getId()} - skipping Stream note");
-            }
+                    $this->createObservationNote($contact, $data['observacao']);
+                } else {
+                    $this->log->debug("SyncContactsFromSimplesAgenda: No observacao data for Contact {$contact->getId()} - skipping Stream note");
+                }
         } else {
             $this->log->error("SyncContactsFromSimplesAgenda: Failed to create Contact for phone {$phone}");
         }

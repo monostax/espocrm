@@ -1,0 +1,11 @@
+[
+    {
+        "route": "/MsxGoogleCalendarUser/:id/syncNow",
+        "method": "post",
+        "params": {
+            "controller": "MsxGoogleCalendarUser",
+            "action": "syncNow",
+            "id": ":id"
+        }
+    }
+]

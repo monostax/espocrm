@@ -2,6 +2,6 @@
     "fields": {
         "futureDays": "Próximos X Dias",
         "useLastStage": "Agrupar por último estágio alcançado",
-        "team": "Acesso / Permissão"
+        "team": "Permissão / Times"
     }
 }

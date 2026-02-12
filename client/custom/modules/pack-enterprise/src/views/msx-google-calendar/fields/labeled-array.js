@@ -27,13 +27,7 @@ define('pack-enterprise:views/msx-google-calendar/fields/labeled-array', ['views
         setup: function () {
             Dep.prototype.setup.call(this);
 
-            var t = {};
-            var arr = this.params.options;
-
-            for (var key in arr) {
-                var scope = this.params.options[key];
-                t[scope] = this.translate(scope, 'scopeNamesPlural', 'Global');
-            }
+            this.buildOptions();
 
             this.listenTo(
                 this.model,
@@ -44,22 +38,6 @@ define('pack-enterprise:views/msx-google-calendar/fields/labeled-array', ['views
                 this
             );
 
-            this.translatedOptions = null;
-
-            var translatedOptions = {};
-
-            if (this.params.options) {
-                this.params.options.forEach(function (o) {
-                    if (typeof t === 'object' && o in t) {
-                        translatedOptions[o] = t[o];
-                    } else {
-                        translatedOptions[o] = o;
-                    }
-                });
-
-                this.translatedOptions = translatedOptions;
-            }
-
             this.selected = Espo.Utils.clone(this.model.get(this.name) || []);
 
             if (
@@ -67,6 +45,40 @@ define('pack-enterprise:views/msx-google-calendar/fields/labeled-array', ['views
             ) {
                 this.selected = [];
             }
+        },
+
+        /**
+         * Dynamically build options from scopes metadata,
+         * filtering for activity/calendar entity types.
+         */
+        buildOptions: function () {
+            var scopes = this.getMetadata().get('scopes') || {};
+
+            var eventOptions = Object.keys(scopes)
+                .filter(function (scope) {
+                    if (scope === 'Email') return false;
+                    if (scopes[scope].disabled) return false;
+                    if (!scopes[scope].object) return false;
+                    if (!scopes[scope].entity) return false;
+                    if (!scopes[scope].activity || !scopes[scope].calendar) return false;
+
+                    return true;
+                })
+                .sort(function (v1, v2) {
+                    return this.translate(v1, 'scopeNames').localeCompare(
+                        this.translate(v2, 'scopeNames')
+                    );
+                }.bind(this));
+
+            this.params.options = eventOptions;
+
+            var translatedOptions = {};
+
+            eventOptions.forEach(function (scope) {
+                translatedOptions[scope] = this.translate(scope, 'scopeNamesPlural', 'Global');
+            }, this);
+
+            this.translatedOptions = translatedOptions;
         },
 
         getItemHtml: function (value) {

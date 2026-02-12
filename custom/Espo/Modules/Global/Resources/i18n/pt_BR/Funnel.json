@@ -12,7 +12,7 @@
     "fields": {
         "name": "Nome",
         "description": "Descrição",
-        "team": "Acesso / Permissão",
+        "team": "Permissão / Times",
         "isActive": "Ativo",
         "isDefault": "É Padrão",
         "opportunityStages": "Estágios da Oportunidade"
