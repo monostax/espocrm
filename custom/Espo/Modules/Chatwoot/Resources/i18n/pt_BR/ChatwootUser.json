@@ -6,7 +6,7 @@
         "password": "Senha",
         "platform": "Plataforma",
         "chatwootAccount": "Chat / Conta",
-        "assignedUser": "Usuário Proprietário",
+        "assignedUser": "Usuário Atribuído",
         "role": "Função",
         "chatwootUserId": "Chat / Usuário (ID)",
         "teams": "Permissão / Times"
@@ -14,7 +14,7 @@
     "links": {
         "platform": "Chat / Plataforma",
         "chatwootAccount": "Chat / Conta",
-        "assignedUser": "Usuário Proprietário",
+        "assignedUser": "Usuário Atribuído",
         "agents": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",

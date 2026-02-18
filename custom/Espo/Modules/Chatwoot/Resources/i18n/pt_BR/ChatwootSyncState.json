@@ -54,7 +54,7 @@
             "running": "Executando"
         },
         "conflictResolution": {
-            "chat_wins": "Chat Vence",
+            "chatwoot_wins": "Chat Vence",
             "espocrm_wins": "CRM Vence",
             "most_recent": "Mais Recente"
         }

@@ -16,10 +16,11 @@
     },
     "cases": {
         "disabled": true
+    },
+    "chatwootContacts": {
+        "disabled": true
+    },
+    "chatwootContactInboxes": {
+        "disabled": true
     }
 }
-
-
-
-
-

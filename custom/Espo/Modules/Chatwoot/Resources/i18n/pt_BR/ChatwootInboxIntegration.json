@@ -17,11 +17,17 @@
         "connectedAt": "Conectado Em",
         "lastActivityAt": "Última Atividade",
         "qrCode": "QR Code",
-        "team": "Equipe"
+        "team": "Equipe",
+        "phoneNumberId": "ID do Número de Telefone",
+        "oAuthAccount": "Conta Meta",
+        "businessAccountId": "Conta Business",
+        "businessAccountName": "Nome da Conta Business",
+        "credential": "Credencial"
     },
     "links": {
         "wahaPlatform": "Plataforma WAHA",
         "chatwootAccount": "Chat / Conta",
+        "oAuthAccount": "Conta Meta",
         "team": "Equipe"
     },
     "labels": {
@@ -61,7 +67,11 @@
         "phoneNumber": "O número de telefone associado a esta conexão WhatsApp",
         "whatsappId": "O ID da conta WhatsApp (formato: 5511999999999@c.us)",
         "wahaSessionName": "O nome da sessão no WAHA",
-        "chatwootInboxIdentifier": "O identificador da caixa usado para webhooks"
+        "chatwootInboxIdentifier": "O identificador da caixa usado para webhooks",
+        "oAuthAccount": "A Conta OAuth Meta usada para autenticação com WhatsApp Cloud API",
+        "businessAccountId": "A Conta Business do WhatsApp descoberta a partir da Conta OAuth Meta",
+        "phoneNumberId": "O ID do Número de Telefone Meta para WhatsApp Cloud API",
+        "credential": "Link de credencial legado (substituído por seleção de Conta Meta + Conta Business)"
     },
     "messages": {
         "channelCreated": "Canal criado. Clique em Ativar para iniciar a conexão.",

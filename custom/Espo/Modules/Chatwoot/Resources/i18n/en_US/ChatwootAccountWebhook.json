@@ -1,0 +1,36 @@
+{
+    "fields": {
+        "name": "Name",
+        "account": "Chat / Account",
+        "chatwootWebhookId": "Chat / Webhook ID",
+        "url": "URL",
+        "subscriptions": "Subscriptions",
+        "teams": "Teams"
+    },
+    "links": {
+        "account": "Chat / Account",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams"
+    },
+    "labels": {
+        "Create ChatwootAccountWebhook": "Create Chat / Account Webhook"
+    },
+    "options": {
+        "subscriptions": {
+            "conversation_created": "Chat Conversation Created",
+            "conversation_status_changed": "Chat Conversation Status Changed",
+            "conversation_updated": "Chat Conversation Updated",
+            "contact_created": "Chat Contact Created",
+            "contact_updated": "Chat Contact Updated",
+            "message_created": "Chat Message Created",
+            "message_updated": "Chat Message Updated",
+            "webwidget_triggered": "Web Widget Triggered"
+        }
+    },
+    "tooltips": {
+        "chatwootWebhookId": "The webhook ID created in Chat. This field is automatically populated after creation.",
+        "url": "URL where events will be sent",
+        "subscriptions": "Events you want to subscribe to in Chat"
+    }
+}

@@ -9,7 +9,8 @@
         "status": "Status",
         "teams": "Permissão / Times",
         "autoPendingEnabled": "Auto-Pendente Habilitado",
-        "automationUser": "Usuário de Automação"
+        "automationUser": "Usuário de Automação",
+        "apiKey": "Chave API da Conta"
     },
     "links": {
         "platform": "Plataforma",
@@ -44,7 +45,8 @@
     "tooltips": {
         "chatwootAccountId": "ID da conta criada no Chat. Este campo é preenchido automaticamente após a criação.",
         "autoPendingEnabled": "Quando habilitado, as conversas serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente.",
-        "automationUser": "O usuário da plataforma de chat que representa o usuário de automação para esta conta. Usado para operações de API."
+        "automationUser": "O usuário da plataforma de chat que representa o usuário de automação para esta conta. Usado para operações de API.",
+        "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário de automação é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso."
     }
 }
 

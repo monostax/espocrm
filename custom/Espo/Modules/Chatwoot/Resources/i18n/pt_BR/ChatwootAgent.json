@@ -22,14 +22,16 @@
         "syncStatus": "Status de Sincronização",
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
-        "teams": "Permissão / Times"
+        "teams": "Permissão / Times",
+        "assignedUser": "Usuário Atribuído"
     },
     "links": {
         "chatwootAccount": "Chat / Conta",
         "chatwootUser": "Chat / Usuário",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
-        "teams": "Permissão / Times"
+        "teams": "Permissão / Times",
+        "assignedUser": "Usuário Atribuído"
     },
     "labels": {
         "Create ChatwootAgent": "Criar Agente de Chat",
@@ -61,7 +63,8 @@
         "calendarsToManage": "Selecione os calendários que este agente IA pode gerenciar. O agente pode verificar disponibilidade, criar, atualizar e excluir agendamentos para esses calendários.",
         "confirmed": "Se o agente confirmou seu endereço de email no Chat.",
         "chatwootUser": "Link para o Usuário de Chat no nível da plataforma, se este agente corresponder a um.",
-        "customRoleId": "O ID da função personalizada atribuída a este agente no Chat, se houver."
+        "customRoleId": "O ID da função personalizada atribuída a este agente no Chat, se houver.",
+        "assignedUser": "O usuário do EspoCRM que acessará o Chat como este agente. Isso habilita o Single Sign-On (SSO) para o usuário atribuído. O usuário deve estar no mesmo time da Conta de Chat."
     },
     "presetFilters": {
         "available": "Disponíveis",
