@@ -1,4 +1,7 @@
 {
+    "labels": {
+        "Virtual Folder": "Virtual Folder"
+    },
     "fields": {
         "navbarConfigShowDefaultTabList": "Show Default Tab List Option"
     },

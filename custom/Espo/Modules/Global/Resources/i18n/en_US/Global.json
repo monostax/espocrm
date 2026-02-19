@@ -1,11 +1,31 @@
 {
+    "labels": {
+        "Virtual Folder": "Virtual Folder",
+        "Add Virtual Folder": "Add Virtual Folder",
+        "Edit Virtual Folder": "Edit Virtual Folder",
+        "No Filter": "No Filter",
+        "No records found": "No records found",
+        "Failed to load": "Failed to load",
+        "Retry": "Retry",
+        "View All": "View All",
+        "View all": "View all",
+        "Select Entity First": "Select Entity First",
+        "No Relationship": "No Relationship"
+    },
     "fields": {
-        "weight": "Weight"
+        "weight": "Weight",
+        "entityType": "Entity",
+        "filterName": "Filter",
+        "maxItems": "Max Items",
+        "orderBy": "Order By",
+        "order": "Order",
+        "openMode": "Open Mode",
+        "relationshipLink": "Relationship"
     },
     "fieldTypes": {
         "weight": "Weight"
     },
-    "options": {
+"options": {
         "weightUnit": {
             "kg": "Kilogram (kg)",
             "g": "Gram (g)",
@@ -18,14 +38,20 @@
             "Meeting": "Meeting",
             "Call": "Call",
             "Task": "Task"
+        },
+        "openMode": {
+            "view": "Record View",
+            "relationship": "Relationship View"
         }
     },
     "tooltips": {
         "weightDecimal": "Weight decimal storage. Uses VARCHAR type for database storage to maintain precise values."
     },
-    "messages": {
+"messages": {
         "validUnit": "Unit must be valid",
-        "errorSavingPreference": "Error saving preference."
+        "errorSavingPreference": "Error saving preference.",
+        "relationshipLinkRequired": "Relationship is required when Open Mode is Relationship View",
+        "relationshipLinkInvalid": "The configured relationship is no longer available. Opening record view instead."
     },
     "boolFilters": {
         "onlyMy": "Participating",

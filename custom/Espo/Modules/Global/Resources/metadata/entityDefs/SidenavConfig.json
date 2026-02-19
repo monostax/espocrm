@@ -20,9 +20,9 @@
             "type": "varchar",
             "maxLength": 7
         },
-        "tabList": {
+"tabList": {
             "type": "jsonArray",
-            "view": "views/settings/fields/tab-list"
+            "view": "global:views/settings/fields/tab-list"
         },
         "isDefault": {
             "type": "bool",

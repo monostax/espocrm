@@ -10,6 +10,7 @@
 
 import NavbarSiteView from "views/site/navbar";
 import $ from "jquery";
+import TabsHelper from "global:helpers/site/tabs";
 
 const DEFAULT_TABLIST_ID = '__default_tablist__';
 
@@ -172,6 +173,18 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * Override setup to add preference listener for activeNavbarConfigId.
      */
     setup() {
+        this.virtualFolderViewKeys = [];
+        this.virtualFolderConfigs = [];
+
+        this.tabsHelper = new TabsHelper(
+            this.getConfig(),
+            this.getPreferences(),
+            this.getUser(),
+            this.getAcl(),
+            this.getMetadata(),
+            this.getLanguage()
+        );
+
         super.setup();
 
         this.listenTo(this.getHelper().preferences, 'update', (attributeList) => {
@@ -195,8 +208,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
         this.injectMobileDrawerStyles();
         this.injectNavbarConfigSelectorStyles();
+        this.injectVirtualFolderStyles();
         this.setupMobileHeaderIcons();
         this.setupNavbarConfigSelector();
+        this.renderAndInjectVirtualFolderViews();
 
         this.listenTo(this.getRouter(), "routed", () => {
             if (this.isMobileDrawerOpen) {
@@ -296,6 +311,277 @@ class CustomNavbarSiteView extends NavbarSiteView {
             );
         } finally {
             this._switchingConfig = false;
+        }
+    }
+
+    prepareTabItemDefs(params, tab, i, vars) {
+        const isTabVirtualFolder = (item) => {
+            if (this.tabsHelper.isTabVirtualFolder) {
+                return this.tabsHelper.isTabVirtualFolder(item);
+            }
+            return typeof item === 'object' && item !== null && item.type === 'virtualFolder';
+        };
+
+        if (isTabVirtualFolder(tab)) {
+            return this.prepareVirtualFolderDefs(params, tab, i, vars);
+        }
+
+        return super.prepareTabItemDefs(params, tab, i, vars);
+    }
+
+    prepareVirtualFolderDefs(params, tab, i, vars) {
+        return {
+            name: `vf-${tab.id}`,
+            isInMore: vars.moreIsMet,
+            isVirtualFolder: true,
+            virtualFolderId: tab.id,
+            config: tab,
+            isDivider: false,
+            link: null,
+            aClassName: 'nav-link nav-virtual-folder-link',
+            label: tab.label || tab.entityType || 'Virtual Folder',
+            shortLabel: (tab.label || tab.entityType || 'VF').substring(0, 2),
+            iconClass: tab.iconClass ||
+                this.getMetadata().get(['clientDefs', tab.entityType, 'iconClass']) ||
+                'fas fa-folder',
+            color: tab.color || null,
+        };
+    }
+
+    setupTabDefsList() {
+        this.urlList = [];
+
+        const allTabList = this.getTabList();
+        const isTabVirtualFolder = (item) => {
+            if (this.tabsHelper.isTabVirtualFolder) {
+                return this.tabsHelper.isTabVirtualFolder(item);
+            }
+            return typeof item === 'object' && item !== null && item.type === 'virtualFolder';
+        };
+
+        this.tabList = allTabList.filter((item, i) => {
+            if (!item) {
+                return false;
+            }
+
+            if (typeof item !== 'object') {
+                return this.tabsHelper.checkTabAccess(item);
+            }
+
+            if (isTabVirtualFolder(item)) {
+                return this.getAcl().checkScope(item.entityType, 'read');
+            }
+
+            if (this.tabsHelper.isTabDivider(item)) {
+                if (!this.isSide()) {
+                    return false;
+                }
+
+                if (i === allTabList.length - 1) {
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (this.tabsHelper.isTabUrl(item)) {
+                return this.tabsHelper.checkTabAccess(item);
+            }
+
+            let itemList = (item.itemList || []).filter(subItem => {
+                if (this.tabsHelper.isTabDivider(subItem)) {
+                    return true;
+                }
+
+                return this.tabsHelper.checkTabAccess(subItem);
+            });
+
+            itemList = itemList.filter((subItem, j) => {
+                if (!this.tabsHelper.isTabDivider(subItem)) {
+                    return true;
+                }
+
+                const nextItem = itemList[j + 1];
+
+                if (!nextItem) {
+                    return true;
+                }
+
+                if (this.tabsHelper.isTabDivider(nextItem)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            itemList = itemList.filter((subItem, j) => {
+                if (!this.tabsHelper.isTabDivider(subItem)) {
+                    return true;
+                }
+
+                if (j === 0 || j === itemList.length - 1) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            item.itemList = itemList;
+
+            return !!itemList.length;
+        });
+
+        let moreIsMet = false;
+
+        this.tabList = this.tabList.filter((item, i) => {
+            const nextItem = this.tabList[i + 1];
+            const prevItem = this.tabList[i - 1];
+
+            if (this.tabsHelper.isTabMoreDelimiter(item)) {
+                moreIsMet = true;
+            }
+
+            if (!this.tabsHelper.isTabDivider(item)) {
+                return true;
+            }
+
+            if (isTabVirtualFolder(item)) {
+                return true;
+            }
+
+            if (!nextItem) {
+                return true;
+            }
+
+            if (this.tabsHelper.isTabDivider(nextItem)) {
+                return false;
+            }
+
+            if (this.tabsHelper.isTabDivider(prevItem) && this.tabsHelper.isTabMoreDelimiter(nextItem) && moreIsMet) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (moreIsMet) {
+            let end = this.tabList.length;
+
+            for (let i = this.tabList.length - 1; i >= 0; i--) {
+                const item = this.tabList[i];
+
+                if (!this.tabsHelper.isTabDivider(item) || isTabVirtualFolder(item)) {
+                    break;
+                }
+
+                end = this.tabList.length - 1;
+            }
+
+            this.tabList = this.tabList.slice(0, end);
+        }
+
+        const tabDefsList = [];
+
+        const colorsDisabled =
+            this.getConfig().get('scopeColorsDisabled') ||
+            this.getConfig().get('tabColorsDisabled');
+
+        const tabIconsDisabled = this.getConfig().get('tabIconsDisabled');
+
+        const params = {
+            colorsDisabled: colorsDisabled,
+            tabIconsDisabled: tabIconsDisabled,
+        };
+
+        const vars = {
+            moreIsMet: false,
+            isHidden: false,
+        };
+
+        this.virtualFolderViewKeys = [];
+        this.virtualFolderConfigs = [];
+
+        this.tabList.forEach((tab, i) => {
+            if (this.tabsHelper.isTabMoreDelimiter(tab)) {
+                if (!vars.moreIsMet) {
+                    vars.moreIsMet = true;
+
+                    return;
+                }
+
+                if (i === this.tabList.length - 1) {
+                    return;
+                }
+
+                vars.isHidden = true;
+
+                tabDefsList.push({
+                    name: 'show-more',
+                    isInMore: true,
+                    className: 'show-more',
+                    html: '<span class="fas fa-ellipsis-h more-icon"></span>',
+                });
+
+                return;
+            }
+
+            const defs = this.prepareTabItemDefs(params, tab, i, vars);
+            tabDefsList.push(defs);
+
+            if (defs.isVirtualFolder) {
+                this.virtualFolderConfigs.push(defs);
+            }
+        });
+
+        this.tabDefsList = tabDefsList;
+    }
+
+    renderAndInjectVirtualFolderViews() {
+        if (!this.virtualFolderConfigs || !this.virtualFolderConfigs.length) {
+            return;
+        }
+
+        if (!this.element) {
+            return;
+        }
+
+        for (const defs of this.virtualFolderConfigs) {
+            if (defs.isInMore) {
+                continue;
+            }
+
+            const key = 'virtualFolder-' + defs.virtualFolderId;
+            const li = this.element.querySelector(
+                `li[data-name="vf-${defs.virtualFolderId}"]`
+            );
+
+            if (!li) {
+                console.warn(`[VirtualFolder] placeholder <li> not found for ${defs.virtualFolderId}`);
+
+                continue;
+            }
+
+            this.virtualFolderViewKeys.push(key);
+
+            const containerId = 'vf-el-' + defs.virtualFolderId;
+
+            li.id = containerId;
+            li.innerHTML = '';
+            li.classList.add('virtual-folder');
+            li.classList.remove('tab');
+
+            this.createView(
+                key,
+                'global:views/site/navbar/virtual-folder',
+                {
+                    el: '#' + containerId,
+                    virtualFolderId: defs.virtualFolderId,
+                    config: defs.config,
+                },
+                (view) => {
+                    view.render().then(() => view.fetchRecords());
+                }
+            );
         }
     }
 
@@ -459,6 +745,23 @@ class CustomNavbarSiteView extends NavbarSiteView {
         link.id = "navbar-config-selector-styles";
         link.rel = "stylesheet";
         link.href = "client/custom/modules/global/css/navbar-config-selector.css";
+
+        document.head.appendChild(link);
+    }
+
+    /**
+     * Load virtual folder CSS stylesheet (idempotent).
+     * @private
+     */
+    injectVirtualFolderStyles() {
+        if (document.getElementById("virtual-folder-styles")) {
+            return;
+        }
+
+        const link = document.createElement("link");
+        link.id = "virtual-folder-styles";
+        link.rel = "stylesheet";
+        link.href = "client/custom/modules/global/css/virtual-folder.css";
 
         document.head.appendChild(link);
     }
