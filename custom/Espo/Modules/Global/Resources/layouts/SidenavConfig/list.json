@@ -1,5 +1,7 @@
 [
-    {"name": "name", "width": 30},
-    {"name": "teams", "width": 40},
-    {"name": "isDefault", "width": 15}
+    {"name": "order", "width": 10},
+    {"name": "name", "width": 25},
+    {"name": "teams", "width": 35},
+    {"name": "isDefault", "width": 12},
+    {"name": "isDisabled", "width": 12}
 ]

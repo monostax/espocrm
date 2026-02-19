@@ -6,6 +6,12 @@
             "maxLength": 255,
             "trim": true
         },
+        "order": {
+            "type": "int",
+            "default": 10,
+            "min": 1,
+            "tooltip": true
+        },
         "iconClass": {
             "type": "varchar",
             "maxLength": 100
@@ -19,6 +25,11 @@
             "view": "views/settings/fields/tab-list"
         },
         "isDefault": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "isDisabled": {
             "type": "bool",
             "default": false,
             "tooltip": true
@@ -63,8 +74,12 @@
         }
     },
     "collection": {
-        "orderBy": "name",
+        "orderBy": "order",
         "order": "asc"
     },
-    "indexes": {}
+    "indexes": {
+        "order": {
+            "columns": ["order"]
+        }
+    }
 }

@@ -3,6 +3,7 @@
         "label": "Overview",
         "rows": [
             [{"name": "name"}, {"name": "teams"}],
+            [{"name": "order"}, {"name": "isDisabled"}],
             [{"name": "iconClass"}, {"name": "color"}],
             [{"name": "isDefault"}, false],
             [{"name": "tabList", "fullWidth": true}]

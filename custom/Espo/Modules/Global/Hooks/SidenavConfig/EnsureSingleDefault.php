@@ -11,6 +11,7 @@
 
 namespace Espo\Modules\Global\Hooks\SidenavConfig;
 
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Hook\Hook\BeforeSave;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -33,6 +34,10 @@ class EnsureSingleDefault implements BeforeSave
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
+        if ($entity->get('isDisabled') && $entity->get('isDefault')) {
+            throw new BadRequest('A disabled configuration cannot be marked as default.');
+        }
+
         if (!$entity->get('isDefault')) {
             return;
         }

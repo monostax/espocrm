@@ -55,7 +55,11 @@ class TeamSidenavConfigs implements AppParam
             ->getRDBRepository('SidenavConfig')
             ->distinct()
             ->join('teams')
-            ->where(['teams.id' => $teamIds])
+            ->where([
+                'teams.id' => $teamIds,
+                'isDisabled' => false,
+            ])
+            ->order('order')
             ->order('name')
             ->find();
 

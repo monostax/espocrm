@@ -11,9 +11,13 @@
         "iconClass": "Icon",
         "color": "Color",
         "tabList": "Tab List",
-        "isDefault": "Default"
+        "isDefault": "Default",
+        "order": "Order",
+        "isDisabled": "Disabled"
     },
     "tooltips": {
-        "isDefault": "If checked, this configuration will be the default for users in these teams who haven't selected a specific config."
+        "isDefault": "If checked, this configuration will be the default for users in these teams who haven't selected a specific config.",
+        "order": "Controls the position of this configuration in the selector dropdown. Lower numbers appear first.",
+        "isDisabled": "If checked, this configuration will be hidden from the selector dropdown but the record will be preserved."
     }
 }
