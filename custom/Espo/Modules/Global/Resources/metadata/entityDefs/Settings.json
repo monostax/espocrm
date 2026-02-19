@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "navbarConfigList": {
+            "type": "jsonArray",
+            "view": "global:views/settings/fields/navbar-config-list",
+            "tooltip": true
+        },
+        "navbarConfigDisabled": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "navbarConfigSelectorDisabled": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        }
+    }
+}

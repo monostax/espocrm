@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "navbarConfigList": "Navbar Configurations",
+        "navbarConfigDisabled": "Disable User Navbar Config",
+        "navbarConfigSelectorDisabled": "Hide Navbar Selector"
+    },
+    "tooltips": {
+        "navbarConfigList": "Define multiple navbar configurations. Each configuration has its own tab list. Users can switch between them using a selector in the sidebar. Resolution priority: 1) Navbar config system (if any configs exist), 2) Legacy tab customization, 3) System default tabList.",
+        "navbarConfigDisabled": "If checked, users cannot create their own navbar configurations. They will use the system-level configurations only.",
+        "navbarConfigSelectorDisabled": "If checked, the navbar config selector dropdown will be hidden from the sidebar, even if multiple configurations exist."
+    },
+    "labels": {
+        "Edit Navbar Configuration": "Edit Navbar Configuration",
+        "Add Navbar Configuration": "Add Navbar Configuration",
+        "Navbar Configuration": "Navbar Configuration"
+    }
+}

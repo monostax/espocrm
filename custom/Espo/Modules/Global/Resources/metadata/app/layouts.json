@@ -1,4 +1,14 @@
 {
+    "Settings": {
+        "userInterface": {
+            "module": "Global"
+        }
+    },
+    "Preferences": {
+        "detail": {
+            "module": "Global"
+        }
+    },
     "Account": {
         "detail": {
             "module": "Global"

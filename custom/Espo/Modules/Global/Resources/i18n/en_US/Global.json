@@ -24,7 +24,8 @@
         "weightDecimal": "Weight decimal storage. Uses VARCHAR type for database storage to maintain precise values."
     },
     "messages": {
-        "validUnit": "Unit must be valid"
+        "validUnit": "Unit must be valid",
+        "errorSavingPreference": "Error saving preference."
     },
     "boolFilters": {
         "onlyMy": "Participating",
@@ -44,5 +45,12 @@
     },
     "navbarTabs": {
         "Lists": "Lists"
+    },
+    "navbarConfig": {
+        "switchView": "Switch View",
+        "defaultConfig": "Default",
+        "customConfig": "Custom",
+        "noConfigs": "No configurations available",
+        "selectConfig": "Select Configuration"
     }
 }
