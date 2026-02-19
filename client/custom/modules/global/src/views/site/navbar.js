@@ -11,11 +11,13 @@
 import NavbarSiteView from "views/site/navbar";
 import $ from "jquery";
 
+const DEFAULT_TABLIST_ID = '__default_tablist__';
+
 /**
  * Custom navbar view that:
  * 1. Filters out Conversas menu items for users without chatSsoUrl
  * 2. Implements Linear.app-style mobile drawer navigation
- * 3. Supports multi-sidenav sidebar via navbar config selector
+ * 3. Supports multi-sidenav sidebar via team-scoped SidenavConfig entities
  * Uses appParams from the /api/v1/App/user response.
  */
 class CustomNavbarSiteView extends NavbarSiteView {
@@ -26,7 +28,6 @@ class CustomNavbarSiteView extends NavbarSiteView {
     _switchingConfig = false;
 
     /**
-     * Check if the current user has Chatwoot access (valid chatSsoUrl).
      * @private
      * @return {boolean}
      */
@@ -36,9 +37,6 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
     /**
      * Filter out Conversas menu items if user doesn't have chatSsoUrl.
-     * Conversas items are identified by:
-     * - Divider with text "$Conversations" (id: 853524)
-     * - URL items with IDs matching pattern 8535xx
      * @private
      * @param {Array} tabList
      * @return {Array}
@@ -66,9 +64,9 @@ class CustomNavbarSiteView extends NavbarSiteView {
     }
 
     /**
-     * Override getTabList to use navbar config system, then filter Conversas items.
+     * Override getTabList to use team-scoped navbar config system.
      * Resolution priority:
-     *   1. Navbar config system (if any navbarConfigList exists)
+     *   1. Team SidenavConfig (if any configs exist for user's teams)
      *   2. Legacy tab customization (existing useCustomTabList/addCustomTabs)
      *   3. System default tabList
      * @return {(Object|string)[]}
@@ -77,20 +75,32 @@ class CustomNavbarSiteView extends NavbarSiteView {
         if (this.hasNavbarConfigSystem()) {
             const activeConfig = this.getActiveNavbarConfig();
 
-            if (activeConfig && activeConfig.tabList) {
-                let tabList = Espo.Utils.cloneDeep(activeConfig.tabList);
-
-                if (this.isSide()) {
-                    tabList.unshift('Home');
+            if (activeConfig) {
+                if (activeConfig.isDefaultTabList) {
+                    return this.filterConversasItems(this.getLegacyTabList());
                 }
 
-                return this.filterConversasItems(tabList);
+                if (activeConfig.tabList) {
+                    let tabList = Espo.Utils.cloneDeep(activeConfig.tabList);
+
+                    if (this.isSide()) {
+                        tabList.unshift('Home');
+                    }
+
+                    return this.filterConversasItems(tabList);
+                }
             }
         }
 
-        const tabList = super.getTabList();
+        return this.filterConversasItems(this.getLegacyTabList());
+    }
 
-        return this.filterConversasItems(tabList);
+    /**
+     * Get the legacy tabList via parent's getTabList, filtered for Conversas.
+     * @return {(Object|string)[]}
+     */
+    getLegacyTabList() {
+        return super.getTabList();
     }
 
     /**
@@ -103,19 +113,23 @@ class CustomNavbarSiteView extends NavbarSiteView {
     }
 
     /**
-     * Get the resolved navbar config list based on admin and user settings.
+     * Get the navbar config list from team-scoped SidenavConfig entities.
+     * Fetches from `teamSidenavConfigs` appParam (already filtered server-side).
+     * Optionally adds a "Default" tabList option.
      * @return {Object[]}
      */
     getNavbarConfigList() {
-        if (this.getConfig().get('navbarConfigDisabled')) {
-            return this.getConfig().get('navbarConfigList') || [];
+        const configs = [...(this.getHelper().getAppParam('teamSidenavConfigs') || [])];
+
+        if (this.getConfig().get('navbarConfigShowDefaultTabList')) {
+            configs.push({
+                id: DEFAULT_TABLIST_ID,
+                name: this.getLanguage().translate('defaultConfig', 'navbarConfig', 'Global'),
+                isDefaultTabList: true,
+            });
         }
 
-        if (this.getPreferences().get('useCustomNavbarConfig')) {
-            return this.getPreferences().get('navbarConfigList') || [];
-        }
-
-        return this.getConfig().get('navbarConfigList') || [];
+        return configs;
     }
 
     /**
@@ -132,36 +146,40 @@ class CustomNavbarSiteView extends NavbarSiteView {
         const activeId = this.getPreferences().get('activeNavbarConfigId');
 
         if (activeId) {
-            const found = configList.find(c => c.id === activeId);
+            if (activeId === DEFAULT_TABLIST_ID) {
+                const defaultOption = configList.find(c => c.id === DEFAULT_TABLIST_ID);
 
-            if (found) {
-                return found;
+                if (defaultOption) {
+                    return defaultOption;
+                }
+
+                console.warn('Default tabList option selected but setting is disabled, falling back');
+            } else {
+                const found = configList.find(c => c.id === activeId);
+
+                if (found) {
+                    return found;
+                }
+
+                console.warn('Active navbar config ID not found, falling back to default');
             }
-
-            console.warn('Active navbar config ID not found, falling back to default');
         }
 
         return configList.find(c => c.isDefault) || configList[0];
     }
 
     /**
-     * Override setup to add preference listeners for navbar config fields.
+     * Override setup to add preference listener for activeNavbarConfigId.
      */
     setup() {
         super.setup();
-
-        const originalPreferencesListener = true;
 
         this.listenTo(this.getHelper().preferences, 'update', (attributeList) => {
             if (!attributeList) {
                 return;
             }
 
-            if (
-                attributeList.includes('navbarConfigList') ||
-                attributeList.includes('useCustomNavbarConfig') ||
-                attributeList.includes('activeNavbarConfigId')
-            ) {
+            if (attributeList.includes('activeNavbarConfigId')) {
                 this.setupTabDefsList();
                 this.reRender();
             }
@@ -237,10 +255,6 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * @return {boolean}
      */
     shouldShowConfigSelector() {
-        if (this.getConfig().get('navbarConfigSelectorDisabled')) {
-            return false;
-        }
-
         if (!this.isSide()) {
             return false;
         }

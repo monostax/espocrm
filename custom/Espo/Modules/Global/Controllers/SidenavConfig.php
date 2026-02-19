@@ -1,3 +1,4 @@
+<?php
 /************************************************************************
  * This file is part of Monostax.
  *
@@ -8,17 +9,10 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-import NavbarConfigListFieldView from 'global:views/settings/fields/navbar-config-list';
+namespace Espo\Modules\Global\Controllers;
 
-class PreferencesNavbarConfigListFieldView extends NavbarConfigListFieldView {
+use Espo\Core\Templates\Controllers\Base;
 
-    setup() {
-        super.setup();
-
-        if (this.getConfig().get('navbarConfigDisabled')) {
-            this.hide();
-        }
-    }
+class SidenavConfig extends Base
+{
 }
-
-export default PreferencesNavbarConfigListFieldView;

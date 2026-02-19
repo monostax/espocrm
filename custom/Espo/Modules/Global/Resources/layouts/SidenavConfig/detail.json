@@ -1,0 +1,11 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "teams"}],
+            [{"name": "iconClass"}, {"name": "color"}],
+            [{"name": "isDefault"}, false],
+            [{"name": "tabList", "fullWidth": true}]
+        ]
+    }
+]

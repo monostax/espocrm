@@ -10,42 +10,37 @@
 
 import EnumFieldView from 'views/fields/enum';
 
+const DEFAULT_TABLIST_ID = '__default_tablist__';
+
 class ActiveNavbarConfigFieldView extends EnumFieldView {
 
     setup() {
         super.setup();
 
         this.setupOptions();
-        this.listenTo(this.model, 'change:navbarConfigList', () => this.setupOptions());
-        this.listenTo(this.model, 'change:useCustomNavbarConfig', () => this.setupOptions());
-
-        if (this.getConfig().get('navbarConfigDisabled')) {
-            this.hide();
-        }
     }
 
     setupOptions() {
-        const configList = this.getResolvedConfigList();
+        const configs = this.getHelper().getAppParam('teamSidenavConfigs') || [];
 
-        this.params.options = ['', ...configList.map(c => c.id)];
+        if (this.getConfig().get('navbarConfigShowDefaultTabList')) {
+            configs.push({
+                id: DEFAULT_TABLIST_ID,
+                name: this.getLanguage().translate('defaultConfig', 'navbarConfig', 'Global'),
+            });
+        }
+
+        this.params.options = ['', ...configs.map(c => c.id)];
 
         this.translatedOptions = { '': this.translate('Default') };
 
-        configList.forEach(c => {
+        configs.forEach(c => {
             this.translatedOptions[c.id] = c.name || c.id;
         });
-    }
 
-    getResolvedConfigList() {
-        if (this.getConfig().get('navbarConfigDisabled')) {
-            return this.getConfig().get('navbarConfigList') || [];
+        if (!configs.length) {
+            this.hide();
         }
-
-        if (this.model.get('useCustomNavbarConfig')) {
-            return this.model.get('navbarConfigList') || [];
-        }
-
-        return this.getConfig().get('navbarConfigList') || [];
     }
 }
 

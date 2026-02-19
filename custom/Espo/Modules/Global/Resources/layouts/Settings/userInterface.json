@@ -30,8 +30,7 @@
     },
     {
         "rows": [
-            [{"name": "navbarConfigList", "fullWidth": true}],
-            [{"name": "navbarConfigDisabled"}, {"name": "navbarConfigSelectorDisabled"}]
+            [{"name": "navbarConfigShowDefaultTabList"}, false]
         ]
     },
     {

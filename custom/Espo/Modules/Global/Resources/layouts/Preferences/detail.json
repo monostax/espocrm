@@ -123,13 +123,6 @@
     {
         "rows": [
             [
-                {"name": "useCustomNavbarConfig"},
-                false
-            ],
-            [
-                {"name": "navbarConfigList", "fullWidth": true}
-            ],
-            [
                 {"name": "activeNavbarConfigId"},
                 false
             ]

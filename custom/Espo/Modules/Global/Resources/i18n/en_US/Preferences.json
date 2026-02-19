@@ -1,12 +1,8 @@
 {
     "fields": {
-        "navbarConfigList": "Navbar Configurations",
-        "useCustomNavbarConfig": "Use Custom Navbar Configs",
         "activeNavbarConfigId": "Active Navbar Configuration"
     },
     "tooltips": {
-        "navbarConfigList": "Your custom navbar configurations. Each configuration has its own tab list.",
-        "useCustomNavbarConfig": "If checked, your custom navbar configurations will be used instead of the system-level configurations.",
-        "activeNavbarConfigId": "The currently active navbar configuration."
+        "activeNavbarConfigId": "Select your active navbar configuration from the options provided by your teams. Use 'Default' to use the system-level tab list."
     }
 }

@@ -1,0 +1,5 @@
+[
+    {"name": "name", "width": 30},
+    {"name": "teams", "width": 40},
+    {"name": "isDefault", "width": 15}
+]

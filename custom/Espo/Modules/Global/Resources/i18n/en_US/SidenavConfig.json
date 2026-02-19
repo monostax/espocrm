@@ -1,0 +1,19 @@
+{
+    "scopeNames": {
+        "SidenavConfig": "Sidenav Configuration"
+    },
+    "scopeNamesPlural": {
+        "SidenavConfig": "Sidenav Configurations"
+    },
+    "fields": {
+        "name": "Name",
+        "teams": "Teams",
+        "iconClass": "Icon",
+        "color": "Color",
+        "tabList": "Tab List",
+        "isDefault": "Default"
+    },
+    "tooltips": {
+        "isDefault": "If checked, this configuration will be the default for users in these teams who haven't selected a specific config."
+    }
+}

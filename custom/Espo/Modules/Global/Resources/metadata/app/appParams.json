@@ -1,1 +1,5 @@
-{}
+{
+    "teamSidenavConfigs": {
+        "className": "Espo\\Modules\\Global\\Classes\\AppParams\\TeamSidenavConfigs"
+    }
+}

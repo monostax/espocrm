@@ -1,0 +1,12 @@
+{
+    "labels": {
+        "Sidenav": "Navigation",
+        "Sidenav Configs": "Sidenav Configurations"
+    },
+    "descriptions": {
+        "sidenavConfigs": "Configure team-specific navigation sidebars"
+    },
+    "keywords": {
+        "sidenavConfigs": "navigation,sidebar,menu,tabs"
+    }
+}

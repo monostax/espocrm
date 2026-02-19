@@ -40,6 +40,18 @@
                 "description": "funnels"
             }
         ]
+    },
+    "sidenav": {
+        "label": "Sidenav",
+        "itemList": [
+            {
+                "url": "#Configurations/SidenavConfig",
+                "label": "Sidenav Configs",
+                "iconClass": "fas fa-bars",
+                "description": "sidenavConfigs"
+            }
+        ],
+        "order": 10
     }
 }
 

@@ -1,15 +1,5 @@
 {
     "fields": {
-        "navbarConfigList": {
-            "type": "jsonArray",
-            "view": "global:views/preferences/fields/navbar-config-list",
-            "tooltip": true
-        },
-        "useCustomNavbarConfig": {
-            "type": "bool",
-            "default": false,
-            "tooltip": true
-        },
         "activeNavbarConfigId": {
             "type": "varchar",
             "maxLength": 36,

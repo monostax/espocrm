@@ -35,13 +35,15 @@
         "Activities": "Activities",
         "CAIPlaybook": "Playbook",
         "Funnel": "Funnel",
-        "OpportunityStage": "Opportunity Stage"
+        "OpportunityStage": "Opportunity Stage",
+        "SidenavConfig": "Sidenav Configuration"
     },
     "scopeNamesPlural": {
         "Activities": "Activities",
         "CAIPlaybook": "Playbooks",
         "Funnel": "Funnels",
-        "OpportunityStage": "Opportunity Stages"
+        "OpportunityStage": "Opportunity Stages",
+        "SidenavConfig": "Sidenav Configurations"
     },
     "navbarTabs": {
         "Lists": "Lists"
