@@ -22,9 +22,15 @@
                 "iconClass": "ti ti-users-group",
                 "description": "chatwootTeams",
                 "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
+                "label": "Knowledge Base",
+                "iconClass": "ti ti-brain",
+                "description": "knowledgeBase",
+                "roles": ["tenant", "tenant-admin"]
             }
         ],
         "order": 30
     }
 }
-

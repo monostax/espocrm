@@ -1,0 +1,13 @@
+{
+    "labels": {
+        "AI": "IA",
+        "Knowledge Base": "Base de Conhecimento"
+    },
+    "descriptions": {
+        "knowledgeBase": "Gerenciar categorias da Base de Conhecimento indexadas por IA"
+    },
+    "keywords": {
+        "knowledgeBase": "conhecimento,base,ia,categoria,artigo,gemini"
+    }
+}
+

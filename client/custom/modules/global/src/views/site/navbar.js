@@ -12,7 +12,7 @@ import NavbarSiteView from "views/site/navbar";
 import $ from "jquery";
 import TabsHelper from "global:helpers/site/tabs";
 
-const DEFAULT_TABLIST_ID = '__default_tablist__';
+const DEFAULT_TABLIST_ID = "__default_tablist__";
 
 /**
  * Custom navbar view that:
@@ -85,7 +85,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
                     let tabList = Espo.Utils.cloneDeep(activeConfig.tabList);
 
                     if (this.isSide()) {
-                        tabList.unshift('Home');
+                        tabList.unshift("Home");
                     }
 
                     return this.filterConversasItems(tabList);
@@ -120,12 +120,18 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * @return {Object[]}
      */
     getNavbarConfigList() {
-        const configs = [...(this.getHelper().getAppParam('teamSidenavConfigs') || [])];
+        const configs = [
+            ...(this.getHelper().getAppParam("teamSidenavConfigs") || []),
+        ];
 
-        if (this.getConfig().get('navbarConfigShowDefaultTabList')) {
+        if (this.getConfig().get("navbarConfigShowDefaultTabList")) {
             configs.push({
                 id: DEFAULT_TABLIST_ID,
-                name: this.getLanguage().translate('defaultConfig', 'navbarConfig', 'Global'),
+                name: this.getLanguage().translate(
+                    "defaultConfig",
+                    "navbarConfig",
+                    "Global",
+                ),
                 isDefaultTabList: true,
             });
         }
@@ -144,29 +150,35 @@ class CustomNavbarSiteView extends NavbarSiteView {
             return null;
         }
 
-        const activeId = this.getPreferences().get('activeNavbarConfigId');
+        const activeId = this.getPreferences().get("activeNavbarConfigId");
 
         if (activeId) {
             if (activeId === DEFAULT_TABLIST_ID) {
-                const defaultOption = configList.find(c => c.id === DEFAULT_TABLIST_ID);
+                const defaultOption = configList.find(
+                    (c) => c.id === DEFAULT_TABLIST_ID,
+                );
 
                 if (defaultOption) {
                     return defaultOption;
                 }
 
-                console.warn('Default tabList option selected but setting is disabled, falling back');
+                console.warn(
+                    "Default tabList option selected but setting is disabled, falling back",
+                );
             } else {
-                const found = configList.find(c => c.id === activeId);
+                const found = configList.find((c) => c.id === activeId);
 
                 if (found) {
                     return found;
                 }
 
-                console.warn('Active navbar config ID not found, falling back to default');
+                console.warn(
+                    "Active navbar config ID not found, falling back to default",
+                );
             }
         }
 
-        return configList.find(c => c.isDefault) || configList[0];
+        return configList.find((c) => c.isDefault) || configList[0];
     }
 
     /**
@@ -182,21 +194,25 @@ class CustomNavbarSiteView extends NavbarSiteView {
             this.getUser(),
             this.getAcl(),
             this.getMetadata(),
-            this.getLanguage()
+            this.getLanguage(),
         );
 
         super.setup();
 
-        this.listenTo(this.getHelper().preferences, 'update', (attributeList) => {
-            if (!attributeList) {
-                return;
-            }
+        this.listenTo(
+            this.getHelper().preferences,
+            "update",
+            (attributeList) => {
+                if (!attributeList) {
+                    return;
+                }
 
-            if (attributeList.includes('activeNavbarConfigId')) {
-                this.setupTabDefsList();
-                this.reRender();
-            }
-        });
+                if (attributeList.includes("activeNavbarConfigId")) {
+                    this.setupTabDefsList();
+                    this.reRender();
+                }
+            },
+        );
     }
 
     /**
@@ -209,8 +225,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
         this.injectMobileDrawerStyles();
         this.injectNavbarConfigSelectorStyles();
         this.injectVirtualFolderStyles();
+        this.injectChatIconStyles();
         this.setupMobileHeaderIcons();
         this.setupNavbarConfigSelector();
+        this.setupChatIcon();
         this.renderAndInjectVirtualFolderViews();
 
         this.listenTo(this.getRouter(), "routed", () => {
@@ -229,18 +247,24 @@ class CustomNavbarSiteView extends NavbarSiteView {
             return;
         }
 
-        const leftContainer = this.element.querySelector('.navbar-left-container');
-        const tabs = leftContainer ? leftContainer.querySelector('.tabs') : null;
+        const leftContainer = this.element.querySelector(
+            ".navbar-left-container",
+        );
+        const tabs = leftContainer
+            ? leftContainer.querySelector(".tabs")
+            : null;
 
         if (!leftContainer || !tabs) {
             return;
         }
 
-        let container = leftContainer.querySelector('.navbar-config-selector-container');
+        let container = leftContainer.querySelector(
+            ".navbar-config-selector-container",
+        );
 
         if (!container) {
-            container = document.createElement('div');
-            container.className = 'navbar-config-selector-container';
+            container = document.createElement("div");
+            container.className = "navbar-config-selector-container";
             leftContainer.insertBefore(container, tabs);
         }
 
@@ -248,20 +272,20 @@ class CustomNavbarSiteView extends NavbarSiteView {
         const activeConfig = this.getActiveNavbarConfig();
 
         this.createView(
-            'navbarConfigSelector',
-            'global:views/site/navbar-config-selector',
+            "navbarConfigSelector",
+            "global:views/site/navbar-config-selector",
             {
-                selector: '.navbar-config-selector-container',
+                selector: ".navbar-config-selector-container",
                 configList: configList,
                 activeConfigId: activeConfig ? activeConfig.id : null,
             },
             (view) => {
                 view.render();
 
-                this.listenTo(view, 'switch', (id) => {
+                this.listenTo(view, "switch", (id) => {
                     this.switchNavbarConfig(id);
                 });
-            }
+            },
         );
     }
 
@@ -290,24 +314,28 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
         this._switchingConfig = true;
 
-        Espo.Ui.notify(' ... ');
+        Espo.Ui.notify(" ... ");
 
         try {
-            await Espo.Ajax.putRequest('Preferences/' + this.getUser().id, {
+            await Espo.Ajax.putRequest("Preferences/" + this.getUser().id, {
                 activeNavbarConfigId: configId,
             });
 
-            this.getPreferences().set('activeNavbarConfigId', configId);
-            this.getPreferences().trigger('update', ['activeNavbarConfigId']);
+            this.getPreferences().set("activeNavbarConfigId", configId);
+            this.getPreferences().trigger("update", ["activeNavbarConfigId"]);
 
             this.setupTabDefsList();
             this.reRender();
 
             Espo.Ui.notify(false);
         } catch (e) {
-            console.error('Error switching navbar config:', e);
+            console.error("Error switching navbar config:", e);
             Espo.Ui.error(
-                this.getLanguage().translate('errorSavingPreference', 'messages', 'Global')
+                this.getLanguage().translate(
+                    "errorSavingPreference",
+                    "messages",
+                    "Global",
+                ),
             );
         } finally {
             this._switchingConfig = false;
@@ -319,7 +347,11 @@ class CustomNavbarSiteView extends NavbarSiteView {
             if (this.tabsHelper.isTabVirtualFolder) {
                 return this.tabsHelper.isTabVirtualFolder(item);
             }
-            return typeof item === 'object' && item !== null && item.type === 'virtualFolder';
+            return (
+                typeof item === "object" &&
+                item !== null &&
+                item.type === "virtualFolder"
+            );
         };
 
         if (isTabVirtualFolder(tab)) {
@@ -338,12 +370,17 @@ class CustomNavbarSiteView extends NavbarSiteView {
             config: tab,
             isDivider: false,
             link: null,
-            aClassName: 'nav-link nav-virtual-folder-link',
-            label: tab.label || tab.entityType || 'Virtual Folder',
-            shortLabel: (tab.label || tab.entityType || 'VF').substring(0, 2),
-            iconClass: tab.iconClass ||
-                this.getMetadata().get(['clientDefs', tab.entityType, 'iconClass']) ||
-                'fas fa-folder',
+            aClassName: "nav-link nav-virtual-folder-link",
+            label: tab.label || tab.entityType || "Virtual Folder",
+            shortLabel: (tab.label || tab.entityType || "VF").substring(0, 2),
+            iconClass:
+                tab.iconClass ||
+                this.getMetadata().get([
+                    "clientDefs",
+                    tab.entityType,
+                    "iconClass",
+                ]) ||
+                "fas fa-folder",
             color: tab.color || null,
         };
     }
@@ -356,7 +393,11 @@ class CustomNavbarSiteView extends NavbarSiteView {
             if (this.tabsHelper.isTabVirtualFolder) {
                 return this.tabsHelper.isTabVirtualFolder(item);
             }
-            return typeof item === 'object' && item !== null && item.type === 'virtualFolder';
+            return (
+                typeof item === "object" &&
+                item !== null &&
+                item.type === "virtualFolder"
+            );
         };
 
         this.tabList = allTabList.filter((item, i) => {
@@ -364,12 +405,12 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 return false;
             }
 
-            if (typeof item !== 'object') {
+            if (typeof item !== "object") {
                 return this.tabsHelper.checkTabAccess(item);
             }
 
             if (isTabVirtualFolder(item)) {
-                return this.getAcl().checkScope(item.entityType, 'read');
+                return this.getAcl().checkScope(item.entityType, "read");
             }
 
             if (this.tabsHelper.isTabDivider(item)) {
@@ -388,7 +429,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 return this.tabsHelper.checkTabAccess(item);
             }
 
-            let itemList = (item.itemList || []).filter(subItem => {
+            let itemList = (item.itemList || []).filter((subItem) => {
                 if (this.tabsHelper.isTabDivider(subItem)) {
                     return true;
                 }
@@ -457,7 +498,11 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 return false;
             }
 
-            if (this.tabsHelper.isTabDivider(prevItem) && this.tabsHelper.isTabMoreDelimiter(nextItem) && moreIsMet) {
+            if (
+                this.tabsHelper.isTabDivider(prevItem) &&
+                this.tabsHelper.isTabMoreDelimiter(nextItem) &&
+                moreIsMet
+            ) {
                 return false;
             }
 
@@ -470,7 +515,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
             for (let i = this.tabList.length - 1; i >= 0; i--) {
                 const item = this.tabList[i];
 
-                if (!this.tabsHelper.isTabDivider(item) || isTabVirtualFolder(item)) {
+                if (
+                    !this.tabsHelper.isTabDivider(item) ||
+                    isTabVirtualFolder(item)
+                ) {
                     break;
                 }
 
@@ -483,10 +531,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
         const tabDefsList = [];
 
         const colorsDisabled =
-            this.getConfig().get('scopeColorsDisabled') ||
-            this.getConfig().get('tabColorsDisabled');
+            this.getConfig().get("scopeColorsDisabled") ||
+            this.getConfig().get("tabColorsDisabled");
 
-        const tabIconsDisabled = this.getConfig().get('tabIconsDisabled');
+        const tabIconsDisabled = this.getConfig().get("tabIconsDisabled");
 
         const params = {
             colorsDisabled: colorsDisabled,
@@ -516,9 +564,9 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 vars.isHidden = true;
 
                 tabDefsList.push({
-                    name: 'show-more',
+                    name: "show-more",
                     isInMore: true,
-                    className: 'show-more',
+                    className: "show-more",
                     html: '<span class="fas fa-ellipsis-h more-icon"></span>',
                 });
 
@@ -550,37 +598,39 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 continue;
             }
 
-            const key = 'virtualFolder-' + defs.virtualFolderId;
+            const key = "virtualFolder-" + defs.virtualFolderId;
             const li = this.element.querySelector(
-                `li[data-name="vf-${defs.virtualFolderId}"]`
+                `li[data-name="vf-${defs.virtualFolderId}"]`,
             );
 
             if (!li) {
-                console.warn(`[VirtualFolder] placeholder <li> not found for ${defs.virtualFolderId}`);
+                console.warn(
+                    `[VirtualFolder] placeholder <li> not found for ${defs.virtualFolderId}`,
+                );
 
                 continue;
             }
 
             this.virtualFolderViewKeys.push(key);
 
-            const containerId = 'vf-el-' + defs.virtualFolderId;
+            const containerId = "vf-el-" + defs.virtualFolderId;
 
             li.id = containerId;
-            li.innerHTML = '';
-            li.classList.add('virtual-folder');
-            li.classList.remove('tab');
+            li.innerHTML = "";
+            li.classList.add("virtual-folder");
+            li.classList.remove("tab");
 
             this.createView(
                 key,
-                'global:views/site/navbar/virtual-folder',
+                "global:views/site/navbar/virtual-folder",
                 {
-                    el: '#' + containerId,
+                    el: "#" + containerId,
                     virtualFolderId: defs.virtualFolderId,
                     config: defs.config,
                 },
                 (view) => {
                     view.render().then(() => view.fetchRecords());
-                }
+                },
             );
         }
     }
@@ -744,7 +794,8 @@ class CustomNavbarSiteView extends NavbarSiteView {
         const link = document.createElement("link");
         link.id = "navbar-config-selector-styles";
         link.rel = "stylesheet";
-        link.href = "client/custom/modules/global/css/navbar-config-selector.css";
+        link.href =
+            "client/custom/modules/global/css/navbar-config-selector.css";
 
         document.head.appendChild(link);
     }
@@ -765,6 +816,93 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
         document.head.appendChild(link);
     }
+
+    /**
+     * Inject a chat icon into the navbar-right bar when chatSsoUrl is available.
+     * Opens the chat SSO URL in a new tab.
+     * @private
+     */
+    setupChatIcon() {
+        if (!this.hasChatwootAccess()) {
+            return;
+        }
+
+        const chatSsoUrl = this.getHelper().getAppParam("chatSsoUrl");
+
+        if (!chatSsoUrl) {
+            return;
+        }
+
+        const navbarRight = this.element
+            ? this.element.querySelector(".navbar-right")
+            : null;
+
+        if (!navbarRight) {
+            return;
+        }
+
+        if (navbarRight.querySelector(".chat-icon-container")) {
+            return;
+        }
+
+        const menuContainer = navbarRight.querySelector(".menu-container");
+
+        const li = document.createElement("li");
+        li.className = "chat-icon-container";
+
+        const a = document.createElement("a");
+        a.href = chatSsoUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "nav-link chat-icon-link";
+        a.title =
+            this.getLanguage().translate("Chat", "labels", "Global") || "Chat";
+
+        const icon = document.createElement("span");
+        icon.className = "fas fa-comments icon";
+
+        a.appendChild(icon);
+        li.appendChild(a);
+
+        if (menuContainer) {
+            navbarRight.insertBefore(li, menuContainer);
+        } else {
+            navbarRight.appendChild(li);
+        }
+    }
+
+    /**
+     * Load chat icon CSS styles (idempotent).
+     * @private
+     */
+    injectChatIconStyles() {
+        if (document.getElementById("chat-icon-styles")) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = "chat-icon-styles";
+        style.textContent = `
+            .chat-icon-container {
+                display: block !important;
+            }
+            .chat-icon-container .chat-icon-link {
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .chat-icon-container .chat-icon-link .icon {
+                font-size: 14px;
+            }
+            .chat-icon-container .chat-icon-link:hover {
+                opacity: 0.8;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
 }
 
 export default CustomNavbarSiteView;
+

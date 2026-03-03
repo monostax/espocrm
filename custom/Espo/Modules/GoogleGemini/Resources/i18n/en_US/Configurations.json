@@ -1,0 +1,13 @@
+{
+    "labels": {
+        "AI": "AI",
+        "Knowledge Base": "Knowledge Base"
+    },
+    "descriptions": {
+        "knowledgeBase": "Manage AI-indexed Knowledge Base categories"
+    },
+    "keywords": {
+        "knowledgeBase": "knowledge,base,ai,category,article,gemini"
+    }
+}
+

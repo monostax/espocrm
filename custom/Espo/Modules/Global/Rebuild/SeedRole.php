@@ -95,6 +95,7 @@ class SeedRole implements RebuildAction
             'data' => [
                 'Import' => true,
                 'ExternalAccount' => true,
+                'Activities' => true,
                 'Appointment' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -162,7 +163,20 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
-
+                'KnowledgeBaseCategory' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                    'stream' => 'team',
+                ],
+                'KnowledgeBaseArticle' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                    'stream' => 'team',
+                ],
                 'Calendar' => true,
                 'Contact' => [
                     'create' => 'yes',
@@ -301,21 +315,7 @@ class SeedRole implements RebuildAction
                         'edit' => 'team',
                         'delete' => 'team',
                         'stream' => 'team',
-                    ],
-                    '#KnowledgeBaseCategory' => [
-                        'create' => 'yes',
-                        'read' => 'team',
-                        'edit' => 'team',
-                        'delete' => 'team',
-                        'stream' => 'team',
-                    ],
-                    '#KnowledgeBaseArticle' => [
-                        'create' => 'yes',
-                        'read' => 'team',
-                        'edit' => 'team',
-                        'delete' => 'team',
-                        'stream' => 'team',
-                    ],
+                    ]
                 ],
                 'fieldData' => [
                     ...$tenantBase['fieldData']

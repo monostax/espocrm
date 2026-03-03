@@ -5,19 +5,21 @@
         "Inbox Integrations": "Inbox Integrations",
         "Users": "Users",
         "Agents": "Agents",
-        "Teams": "Teams"
+        "Teams": "Teams",
+        "Knowledge Base": "Knowledge Base"
     },
     "descriptions": {
         "chatwootInboxIntegrations": "Manage Chat inbox integrations for WhatsApp and other channels",
         "chatwootUsers": "Manage Chat user accounts",
         "chatwootAgents": "Manage Chat agents and their assignments",
-        "chatwootTeams": "Manage Chat teams and team memberships"
+        "chatwootTeams": "Manage Chat teams and team memberships",
+        "knowledgeBase": "Manage AI-indexed Knowledge Base categories"
     },
     "keywords": {
         "chatwootInboxIntegrations": "whatsapp,inbox,integration,channel",
         "chatwootUsers": "user,account,chatwoot",
         "chatwootAgents": "agent,support,representative",
-        "chatwootTeams": "team,group,department"
+        "chatwootTeams": "team,group,department",
+        "knowledgeBase": "knowledge,base,ai,category,article"
     }
 }
-

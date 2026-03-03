@@ -1,0 +1,15 @@
+{
+    "ai": {
+        "label": "AI",
+        "itemList": [
+            {
+                "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
+                "label": "Knowledge Base",
+                "iconClass": "ti ti-brain",
+                "description": "knowledgeBase"
+            }
+        ],
+        "order": 20
+    }
+}
+
