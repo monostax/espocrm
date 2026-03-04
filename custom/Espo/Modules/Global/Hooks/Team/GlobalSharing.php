@@ -47,7 +47,9 @@ class GlobalSharing implements AfterSave
             ->find();
 
         foreach ($entitiesToShare as $entityToShare) {
-            $this->entityManager->getRepository($entityType)->relate($entityToShare, 'teams', $team);
+            $this->entityManager->getRDBRepository($entityType)
+                ->getRelation($entityToShare, 'teams')
+                ->relate($team);
         }
     }
 }
