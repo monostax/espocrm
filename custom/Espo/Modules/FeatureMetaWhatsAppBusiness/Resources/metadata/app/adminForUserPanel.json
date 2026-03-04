@@ -1,0 +1,20 @@
+{
+    "meta": {
+        "label": "Meta",
+        "itemList": [
+            {
+                "url": "#WhatsAppBusinessAccount",
+                "label": "WhatsApp Accounts",
+                "iconClass": "fab fa-whatsapp",
+                "description": "whatsAppBusinessAccounts"
+            },
+            {
+                "url": "#WhatsAppCampaign",
+                "label": "WhatsApp Campaigns",
+                "iconClass": "ti ti-send",
+                "description": "whatsAppCampaigns"
+            }
+        ],
+        "order": 25
+    }
+}

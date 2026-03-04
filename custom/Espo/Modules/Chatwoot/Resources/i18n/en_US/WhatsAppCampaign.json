@@ -1,0 +1,62 @@
+{
+    "fields": {
+        "name": "Name",
+        "status": "Status",
+        "templateName": "Template Name",
+        "templateLanguage": "Template Language",
+        "wabaId": "WABA ID",
+        "templateCategory": "Template Category",
+        "templateBody": "Template Body",
+        "credential": "Credential",
+        "chatwootAccount": "Chat / Account",
+        "targetLists": "Target Lists",
+        "manualContacts": "Manual Contacts",
+        "parameterMapping": "Parameter Mapping",
+        "processedParams": "Processed Parameters",
+        "scheduledAt": "Scheduled At",
+        "startedAt": "Started At",
+        "completedAt": "Completed At",
+        "sentCount": "Sent",
+        "deliveredCount": "Delivered",
+        "readCount": "Read",
+        "repliedCount": "Replied",
+        "failedCount": "Failed",
+        "totalRecipients": "Total Recipients",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams"
+    },
+    "links": {
+        "credential": "Credential",
+        "chatwootAccount": "Chat / Account",
+        "targetLists": "Target Lists",
+        "manualContacts": "Manual Contacts",
+        "campaignContacts": "Recipients",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams"
+    },
+    "labels": {
+        "Create WhatsAppCampaign": "Create WhatsApp Campaign",
+        "Send Campaign": "Send Campaign",
+        "Abort Campaign": "Abort Campaign",
+        "Recipients": "Recipients"
+    },
+    "options": {
+        "status": {
+            "Draft": "Draft",
+            "Scheduled": "Scheduled",
+            "Sending": "Sending",
+            "Completed": "Completed",
+            "Cancelled": "Cancelled",
+            "Paused": "Paused"
+        }
+    },
+    "tooltips": {
+        "templateName": "Select the WhatsApp message template to use for this campaign. Templates are fetched from your Meta WhatsApp Business Account.",
+        "parameterMapping": "Maps template parameters to contact fields. Define which contact data fills each placeholder in the template.",
+        "processedParams": "The resolved parameter values after processing the mapping against actual contact data."
+    }
+}

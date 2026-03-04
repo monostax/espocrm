@@ -1,0 +1,62 @@
+{
+    "fields": {
+        "name": "Nome",
+        "status": "Status",
+        "templateName": "Nome do Template",
+        "templateLanguage": "Idioma do Template",
+        "wabaId": "ID WABA",
+        "templateCategory": "Categoria do Template",
+        "templateBody": "Corpo do Template",
+        "credential": "Credencial",
+        "chatwootAccount": "Chat / Conta",
+        "targetLists": "Listas Alvo",
+        "manualContacts": "Contatos Manuais",
+        "parameterMapping": "Mapeamento de Parâmetros",
+        "processedParams": "Parâmetros Processados",
+        "scheduledAt": "Agendado para",
+        "startedAt": "Iniciado em",
+        "completedAt": "Concluído em",
+        "sentCount": "Enviados",
+        "deliveredCount": "Entregues",
+        "readCount": "Lidos",
+        "repliedCount": "Respondidos",
+        "failedCount": "Falhos",
+        "totalRecipients": "Total de Destinatários",
+        "createdAt": "Criado em",
+        "modifiedAt": "Modificado em",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times"
+    },
+    "links": {
+        "credential": "Credencial",
+        "chatwootAccount": "Chat / Conta",
+        "targetLists": "Listas Alvo",
+        "manualContacts": "Contatos Manuais",
+        "campaignContacts": "Destinatários",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times"
+    },
+    "labels": {
+        "Create WhatsAppCampaign": "Criar Campanha WhatsApp",
+        "Send Campaign": "Enviar Campanha",
+        "Abort Campaign": "Abortar Campanha",
+        "Recipients": "Destinatários"
+    },
+    "options": {
+        "status": {
+            "Draft": "Rascunho",
+            "Scheduled": "Agendada",
+            "Sending": "Enviando",
+            "Completed": "Concluída",
+            "Cancelled": "Cancelada",
+            "Paused": "Pausada"
+        }
+    },
+    "tooltips": {
+        "templateName": "Selecione o template de mensagem WhatsApp para usar nesta campanha. Os templates são obtidos da sua Conta Business do WhatsApp na Meta.",
+        "parameterMapping": "Mapeia os parâmetros do template para campos do contato. Define quais dados do contato preenchem cada placeholder no template.",
+        "processedParams": "Os valores dos parâmetros resolvidos após processar o mapeamento com os dados reais dos contatos."
+    }
+}

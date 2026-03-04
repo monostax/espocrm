@@ -14,7 +14,7 @@ The module automatically modifies the default navbar tab list to improve usabili
 - **Automatic Execution**: Runs automatically during system rebuild
 - **One-time Setup**: Uses a flag to prevent repeated execution on subsequent rebuilds
 
-## How It Works
+## How It Works 
 
 1. A Rebuild Action (`ConfigureNavbar`) runs automatically when the system is rebuilt
 2. It checks if the navbar has already been configured (via `navbarConfigured` config flag)

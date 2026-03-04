@@ -9,6 +9,10 @@
             "type": "bool",
             "default": true
         },
+        "isGloballyShared": {
+            "type": "bool",
+            "default": false
+        },
         "clientId": {
             "type": "varchar",
             "maxLength": 150
@@ -40,12 +44,7 @@
         "authorizationPrompt": {
             "type": "enum",
             "default": "none",
-            "options": [
-                "none",
-                "consent",
-                "login",
-                "select_account"
-            ],
+            "options": ["none", "consent", "login", "select_account"],
             "maxLength": 14
         },
         "scopes": {

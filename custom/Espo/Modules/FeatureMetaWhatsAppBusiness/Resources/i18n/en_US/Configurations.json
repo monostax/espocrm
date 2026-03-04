@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Meta": "Meta",
+        "WhatsApp Accounts": "WhatsApp Accounts",
+        "WhatsApp Campaigns": "WhatsApp Campaigns"
+    },
+    "descriptions": {
+        "whatsAppBusinessAccounts": "Manage Meta WhatsApp Business accounts and phone numbers",
+        "whatsAppCampaigns": "Manage WhatsApp marketing campaigns and bulk messaging"
+    },
+    "keywords": {
+        "whatsAppBusinessAccounts": "meta,whatsapp,business,account,waba,phone",
+        "whatsAppCampaigns": "whatsapp,campaign,bulk,message,template"
+    }
+}

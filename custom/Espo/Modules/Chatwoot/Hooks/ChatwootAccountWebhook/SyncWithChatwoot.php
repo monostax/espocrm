@@ -119,7 +119,16 @@ class SyncWithChatwoot
                 }
 
                 $entity->set('chatwootWebhookId', $chatwootWebhookId);
-                
+
+                // Store webhook secret for HMAC signature validation
+                $secret = $webhookResponse['secret']
+                    ?? $webhookResponse['payload']['webhook']['secret']
+                    ?? null;
+
+                if ($secret) {
+                    $entity->set('webhookSecret', $secret);
+                }
+
                 $this->log->info('Chatwoot webhook created successfully with ID: ' . $chatwootWebhookId);
 
             } else {

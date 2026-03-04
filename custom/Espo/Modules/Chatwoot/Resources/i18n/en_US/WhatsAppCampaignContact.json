@@ -1,0 +1,48 @@
+{
+    "fields": {
+        "whatsAppCampaign": "WhatsApp Campaign",
+        "contact": "Contact",
+        "chatwootContact": "Chat / Contact",
+        "chatwootAccount": "Chat / Account",
+        "chatwootMessageId": "Chat Message ID",
+        "chatwootConversationId": "Chat Conversation ID",
+        "phoneNumber": "Phone Number",
+        "contactName": "Contact Name",
+        "status": "Status",
+        "processedParams": "Processed Parameters",
+        "sentAt": "Sent At",
+        "deliveredAt": "Delivered At",
+        "readAt": "Read At",
+        "repliedAt": "Replied At",
+        "failedAt": "Failed At",
+        "failedReason": "Failed Reason",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At"
+    },
+    "links": {
+        "whatsAppCampaign": "WhatsApp Campaign",
+        "contact": "Contact",
+        "chatwootContact": "Chat / Contact",
+        "chatwootAccount": "Chat / Account"
+    },
+    "labels": {
+        "Create WhatsAppCampaignContact": "Create Campaign Contact"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Sent": "Sent",
+            "Delivered": "Delivered",
+            "Read": "Read",
+            "Replied": "Replied",
+            "Failed": "Failed",
+            "OptedOut": "Opted Out",
+            "Bounced": "Bounced",
+            "Blocked": "Blocked"
+        }
+    },
+    "tooltips": {
+        "chatwootMessageId": "The message ID in the Chat platform for tracking delivery status.",
+        "chatwootConversationId": "The conversation ID in the Chat platform where the message was sent."
+    }
+}

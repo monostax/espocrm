@@ -41,6 +41,25 @@
             }
         ]
     },
+    "integrations": {
+        "label": "Integrations",
+        "itemList": [
+            {
+                "url": "#OAuthProvider",
+                "label": "OAuth Providers",
+                "iconClass": "ti ti-key",
+                "description": "oauthProviders",
+                "tabQuickSearch": true
+            },
+            {
+                "url": "#OAuthAccount",
+                "label": "OAuth Accounts",
+                "iconClass": "ti ti-link",
+                "description": "oauthAccounts",
+                "tabQuickSearch": true
+            }
+        ]
+    },
     "sidenav": {
         "label": "Sidenav",
         "itemList": [

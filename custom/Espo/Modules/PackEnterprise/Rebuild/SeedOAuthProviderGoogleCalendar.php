@@ -30,45 +30,75 @@ class SeedOAuthProviderGoogleCalendar implements RebuildAction
     {
         $this->log->info('PackEnterprise: Seeding OAuth provider for Google Calendar...');
 
+        $teamIds = $this->getAllTeamIds();
+
         $existing = $this->entityManager
             ->getEntityById(OAuthProvider::ENTITY_TYPE, self::PROVIDER_ID);
 
         if ($existing) {
-            $this->updateProvider($existing);
+            $this->updateProvider($existing, $teamIds);
             $this->log->info('PackEnterprise: OAuth provider "' . self::PROVIDER_NAME . '" updated.');
         } else {
-            $this->createProvider();
+            $this->createProvider($teamIds);
             $this->log->info('PackEnterprise: OAuth provider "' . self::PROVIDER_NAME . '" created.');
         }
     }
 
-    private function updateProvider(OAuthProvider $provider): void
+    /**
+     * @param string[] $teamIds
+     */
+    private function updateProvider(OAuthProvider $provider, array $teamIds): void
     {
         $provider->set('name', self::PROVIDER_NAME);
         $provider->set('isActive', true);
+        $provider->set('isGloballyShared', true);
         $provider->set('authorizationEndpoint', 'https://accounts.google.com/o/oauth2/v2/auth');
         $provider->set('tokenEndpoint', 'https://oauth2.googleapis.com/token');
         $provider->set('authorizationPrompt', 'consent');
         $provider->set('scopes', $this->getScopes());
         $provider->set('authorizationParams', $this->getAuthorizationParams());
+        $provider->set('teamsIds', $teamIds);
 
         $this->entityManager->saveEntity($provider);
     }
 
-    private function createProvider(): void
+    /**
+     * @param string[] $teamIds
+     */
+    private function createProvider(array $teamIds): void
     {
         $provider = $this->entityManager->getNewEntity(OAuthProvider::ENTITY_TYPE);
 
         $provider->set('id', self::PROVIDER_ID);
         $provider->set('name', self::PROVIDER_NAME);
         $provider->set('isActive', true);
+        $provider->set('isGloballyShared', true);
         $provider->set('authorizationEndpoint', 'https://accounts.google.com/o/oauth2/v2/auth');
         $provider->set('tokenEndpoint', 'https://oauth2.googleapis.com/token');
         $provider->set('authorizationPrompt', 'consent');
         $provider->set('scopes', $this->getScopes());
         $provider->set('authorizationParams', $this->getAuthorizationParams());
+        $provider->set('teamsIds', $teamIds);
 
         $this->entityManager->saveEntity($provider);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getAllTeamIds(): array
+    {
+        $teams = $this->entityManager->getRepository('Team')
+            ->select(['id'])
+            ->where(['deleted' => 0])
+            ->find();
+
+        $ids = [];
+        foreach ($teams as $team) {
+            $ids[] = $team->get('id');
+        }
+
+        return $ids;
     }
 
     /**

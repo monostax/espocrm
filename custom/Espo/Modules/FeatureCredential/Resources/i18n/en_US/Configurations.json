@@ -1,0 +1,11 @@
+{
+    "labels": {
+        "Credentials": "Credentials"
+    },
+    "descriptions": {
+        "credentials": "Manage API keys and service credentials"
+    },
+    "keywords": {
+        "credentials": "credential,api,key,secret,token"
+    }
+}

@@ -97,5 +97,34 @@
             "action": "listApps",
             "id": ":id"
         }
+    },
+    {
+        "route": "/WhatsAppCampaign/:id/send",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppCampaign",
+            "action": "send",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WhatsAppCampaign/:id/abort",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppCampaign",
+            "action": "abort",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WhatsAppDeliveryWebhook/:accountId",
+        "method": "post",
+        "params": {
+            "controller": "DeliveryWebhook",
+            "action": "receive",
+            "accountId": ":accountId"
+        },
+        "noAuth": true
     }
 ]
+

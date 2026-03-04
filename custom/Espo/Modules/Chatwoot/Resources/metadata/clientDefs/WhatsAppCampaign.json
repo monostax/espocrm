@@ -1,0 +1,129 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-send",
+    "dynamicLogic": {
+        "fields": {
+            "templateName": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "credential": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "chatwootAccount": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "targetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "manualContacts": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "parameterMapping": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "parameterMapping"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            }
+        },
+        "panels": {
+            "statistics": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "campaignContacts",
+                "label": "Recipients",
+                "view": "views/record/panels/relationship",
+                "link": "campaignContacts",
+                "select": false,
+                "create": false,
+                "rowActionsView": false,
+                "layout": "listSmall",
+                "order": 10
+            }
+        ]
+    },
+    "detailActionList": [
+        {
+            "name": "sendCampaign",
+            "label": "Send Campaign",
+            "handler": "chatwoot:handlers/whatsapp-campaign/detail-actions",
+            "actionFunction": "sendCampaign",
+            "checkVisibilityFunction": "isSendAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "abortCampaign",
+            "label": "Abort Campaign",
+            "handler": "chatwoot:handlers/whatsapp-campaign/detail-actions",
+            "actionFunction": "abortCampaign",
+            "checkVisibilityFunction": "isAbortAvailable",
+            "groupIndex": 1
+        }
+    ]
+}
+

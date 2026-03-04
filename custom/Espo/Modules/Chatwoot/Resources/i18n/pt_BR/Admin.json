@@ -12,6 +12,7 @@
         "chatwootWebhooks": "Gerenciar webhooks de chat",
         "chatwootSyncState": "Visualizar estado de sincronização de chat",
         "wahaPlatforms": "Gerenciar plataformas Waha",
-        "wahaSessions": "Gerenciar sessões WhatsApp"
+        "wahaSessions": "Gerenciar sessões WhatsApp",
+        "whatsAppCampaigns": "Gerenciar campanhas de marketing WhatsApp e envio em massa"
     }
 }

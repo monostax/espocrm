@@ -161,6 +161,12 @@
             "entity": "ChatwootConversation",
             "foreign": "chatwootContact"
         },
+        "whatsAppCampaignContacts": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignContact",
+            "foreign": "chatwootContact",
+            "layoutRelationshipsDisabled": true
+        },
         "teams": {
             "type": "hasMany",
             "entity": "Team",

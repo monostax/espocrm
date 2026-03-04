@@ -1,7 +1,8 @@
 {
     "fields": {
         "teams": "Times",
-        "assignedUsers": "Usuários Responsáveis"
+        "assignedUsers": "Usuários Responsáveis",
+        "isGloballyShared": "É Compartilhado Globalmente"
     },
     "links": {
         "teams": "Times",

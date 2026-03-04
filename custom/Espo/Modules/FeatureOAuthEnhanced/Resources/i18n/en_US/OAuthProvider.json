@@ -1,7 +1,8 @@
 {
     "fields": {
         "teams": "Teams",
-        "assignedUsers": "Assigned Users"
+        "assignedUsers": "Assigned Users",
+        "isGloballyShared": "Is Globally Shared"
     },
     "links": {
         "teams": "Teams",

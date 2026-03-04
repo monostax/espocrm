@@ -54,6 +54,7 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
 
             const chatwootConversationId = this.options.chatwootConversationId;
             const chatwootAccountId =
+                this.options.chatwootAccountIdExternal ||
                 this.getHelper().getAppParam("chatwootAccountId");
             const chatSsoUrl = this.getHelper().getAppParam("chatSsoUrl");
             const chatwootBaseUrl = this.getHelper().getAppParam(

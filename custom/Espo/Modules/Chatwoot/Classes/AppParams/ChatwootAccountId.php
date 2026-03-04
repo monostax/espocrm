@@ -44,8 +44,8 @@ class ChatwootAccountId implements AppParam
     /**
      * Get the Chatwoot Account ID for the current user.
      *
-     * The relationship chain is:
-     * EspoCRM User -> ChatwootUser (via assignedUserId) -> ChatwootAccount (via chatwootAccountId)
+     * Primary path: EspoCRM User → ChatwootAgent (via assignedUser) → ChatwootAccount (direct, required link)
+     * Fallback: EspoCRM User → ChatwootUser (via assignedUser) → ChatwootAccount
      *
      * @return int|null The Chatwoot account ID or null if user has no Chatwoot account
      */
@@ -55,50 +55,98 @@ class ChatwootAccountId implements AppParam
             $userId = $this->user->getId();
             $this->log->debug("ChatwootAccountId: Getting account ID for user {$userId}");
 
-            // Find ChatwootUser linked to current EspoCRM user via assignedUser
-            $chatwootUser = $this->entityManager
-                ->getRDBRepository('ChatwootUser')
-                ->where(['assignedUserId' => $userId])
-                ->findOne();
+            // Primary path: ChatwootAgent has a required link to ChatwootAccount
+            $accountId = $this->findAccountIdViaAgent($userId);
 
-            if (!$chatwootUser) {
-                $this->log->debug("ChatwootAccountId: No ChatwootUser found for user {$userId}");
-                return null;
-            }
-
-            $chatwootUserId = $chatwootUser->getId();
-            $this->log->debug("ChatwootAccountId: Found ChatwootUser: {$chatwootUserId}");
-
-            // Get the ChatwootAccount directly from ChatwootUser
-            $accountId = $chatwootUser->get('chatwootAccountId');
+            // Fallback: ChatwootUser linked directly to current EspoCRM user
             if (!$accountId) {
-                $this->log->debug("ChatwootAccountId: ChatwootUser has no chatwootAccountId");
-                return null;
+                $accountId = $this->findAccountIdViaChatwootUser($userId);
             }
 
-            $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-            if (!$account) {
-                $this->log->debug("ChatwootAccountId: ChatwootAccount not found: {$accountId}");
-                return null;
-            }
-
-            // Get the Chatwoot account ID (the ID in Chatwoot's system)
-            $chatwootAccountId = $account->get('chatwootAccountId');
-            
-            if (!$chatwootAccountId) {
-                $this->log->debug("ChatwootAccountId: Account has no chatwootAccountId");
-                return null;
-            }
-
-            $this->log->debug("ChatwootAccountId: Found chatwootAccountId: {$chatwootAccountId}");
-            
-            return $chatwootAccountId;
+            return $accountId;
         } catch (\Exception $e) {
             $this->log->error(
                 'ChatwootAccountId: Failed to get account ID for user ' . $this->user->getId() . ': ' . $e->getMessage()
             );
             return null;
         }
+    }
+
+    /**
+     * Resolve the Chatwoot API account ID from a ChatwootAccount entity ID.
+     */
+    private function resolveExternalAccountId(string $entityId): ?int
+    {
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $entityId);
+        if (!$account) {
+            $this->log->debug("ChatwootAccountId: ChatwootAccount not found: {$entityId}");
+            return null;
+        }
+
+        $chatwootAccountId = $account->get('chatwootAccountId');
+        if (!$chatwootAccountId) {
+            $this->log->debug("ChatwootAccountId: Account has no chatwootAccountId");
+            return null;
+        }
+
+        $this->log->debug("ChatwootAccountId: Found chatwootAccountId: {$chatwootAccountId}");
+        return $chatwootAccountId;
+    }
+
+    /**
+     * Find account ID via ChatwootAgent (primary path).
+     *
+     * ChatwootAgent has a required chatwootAccount link, making this
+     * the most reliable lookup path.
+     */
+    private function findAccountIdViaAgent(string $userId): ?int
+    {
+        $agent = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->where(['assignedUserId' => $userId])
+            ->findOne();
+
+        if (!$agent) {
+            $this->log->debug("ChatwootAccountId: No ChatwootAgent found for user {$userId}");
+            return null;
+        }
+
+        $this->log->debug("ChatwootAccountId: Found ChatwootAgent: " . $agent->getId());
+
+        $accountEntityId = $agent->get('chatwootAccountId');
+        if (!$accountEntityId) {
+            $this->log->debug("ChatwootAccountId: ChatwootAgent has no chatwootAccountId");
+            return null;
+        }
+
+        return $this->resolveExternalAccountId($accountEntityId);
+    }
+
+    /**
+     * Find account ID via ChatwootUser assigned directly to the EspoCRM user
+     * (backward compatibility fallback).
+     */
+    private function findAccountIdViaChatwootUser(string $userId): ?int
+    {
+        $chatwootUser = $this->entityManager
+            ->getRDBRepository('ChatwootUser')
+            ->where(['assignedUserId' => $userId])
+            ->findOne();
+
+        if (!$chatwootUser) {
+            $this->log->debug("ChatwootAccountId: No ChatwootUser found for user {$userId}");
+            return null;
+        }
+
+        $this->log->debug("ChatwootAccountId: Found ChatwootUser: " . $chatwootUser->getId());
+
+        $accountEntityId = $chatwootUser->get('chatwootAccountId');
+        if (!$accountEntityId) {
+            $this->log->debug("ChatwootAccountId: ChatwootUser has no chatwootAccountId");
+            return null;
+        }
+
+        return $this->resolveExternalAccountId($accountEntityId);
     }
 }
 

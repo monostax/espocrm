@@ -41,6 +41,14 @@
         "list": {
             "module": "Global"
         }
+    },
+    "OAuthProvider": {
+        "detail": {
+            "module": "Global"
+        },
+        "edit": {
+            "module": "Global"
+        }
     }
 }
 

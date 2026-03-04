@@ -1,0 +1,35 @@
+[
+    {
+        "name": "name",
+        "width": 20
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "templateName",
+        "width": 15
+    },
+    {
+        "name": "scheduledAt",
+        "width": 15
+    },
+    {
+        "name": "sentCount",
+        "width": 10
+    },
+    {
+        "name": "deliveredCount",
+        "width": 10
+    },
+    {
+        "name": "failedCount",
+        "width": 10
+    },
+    {
+        "name": "createdAt",
+        "width": 10
+    }
+]
+

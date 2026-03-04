@@ -102,9 +102,6 @@ class IframeConversationFieldView extends BaseFieldView {
     setup() {
         super.setup();
 
-        // Get the chatwoot account ID from AppParams (user's linked account)
-        this.chatwootAccountId = this.appParams.get("chatwootAccountId");
-
         // Get SSO URL for authentication
         this.chatSsoUrl = this.appParams.get("chatSsoUrl");
 
@@ -156,16 +153,27 @@ class IframeConversationFieldView extends BaseFieldView {
         });
     }
 
+    /**
+     * Resolve the external Chatwoot account ID.
+     * Prefers the model's own foreign field, falls back to AppParams.
+     */
+    getChatwootAccountIdExternal() {
+        return (
+            this.model.get("chatwootAccountIdExternal") ||
+            this.appParams.get("chatwootAccountId")
+        );
+    }
+
     data() {
         // Get conversation ID fresh from model (may have been loaded after setup)
         const chatwootConversationId = this.getChatwootConversationId();
-        const hasConversation =
-            chatwootConversationId && this.chatwootAccountId;
+        const chatwootAccountId = this.getChatwootAccountIdExternal();
+        const hasConversation = chatwootConversationId && chatwootAccountId;
 
         if (!hasConversation) {
             return {
                 hasConversation: false,
-                errorMessage: !this.chatwootAccountId
+                errorMessage: !chatwootAccountId
                     ? this.translate(
                           "Your user is not linked to a Chat / Account",
                       )
@@ -176,7 +184,7 @@ class IframeConversationFieldView extends BaseFieldView {
         }
 
         // Build the conversation path
-        const cwPath = `/app/accounts/${this.chatwootAccountId}/inbox-view/conversation/${chatwootConversationId}`;
+        const cwPath = `/app/accounts/${chatwootAccountId}/inbox-view/conversation/${chatwootConversationId}`;
 
         // Use the centralized SSO manager to determine the URL
         const { url, needsSso, pendingPath } =

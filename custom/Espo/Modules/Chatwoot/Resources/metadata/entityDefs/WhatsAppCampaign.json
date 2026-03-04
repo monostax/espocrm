@@ -1,0 +1,214 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Draft",
+                "Scheduled",
+                "Sending",
+                "Completed",
+                "Cancelled",
+                "Paused"
+            ],
+            "default": "Draft",
+            "style": {
+                "Draft": null,
+                "Scheduled": "primary",
+                "Sending": "warning",
+                "Completed": "success",
+                "Cancelled": "danger",
+                "Paused": "default"
+            }
+        },
+        "templateName": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "tooltip": true,
+            "view": "chatwoot:views/whatsapp-campaign/fields/template-name"
+        },
+        "templateLanguage": {
+            "type": "varchar",
+            "maxLength": 10,
+            "default": "pt_BR",
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "wabaId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "templateCategory": {
+            "type": "varchar",
+            "maxLength": 50,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "templateBody": {
+            "type": "text",
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "credential": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "targetLists": {
+            "type": "linkMultiple"
+        },
+        "manualContacts": {
+            "type": "linkMultiple"
+        },
+        "parameterMapping": {
+            "type": "jsonObject",
+            "tooltip": true,
+            "view": "views/fields/json-object"
+        },
+        "processedParams": {
+            "type": "jsonArray",
+            "readOnly": true,
+            "tooltip": true,
+            "view": "views/fields/json-object"
+        },
+        "scheduledAt": {
+            "type": "datetime"
+        },
+        "startedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "completedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "sentCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "deliveredCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "readCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "repliedCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "failedCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "totalRecipients": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "whatsAppCampaigns"
+        },
+        "targetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "whatsAppCampaigns",
+            "relationName": "whatsAppCampaignTargetList"
+        },
+        "manualContacts": {
+            "type": "hasMany",
+            "entity": "Contact",
+            "foreign": "whatsAppCampaignsManual",
+            "relationName": "whatsAppCampaignManualContact"
+        },
+        "campaignContacts": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignContact",
+            "foreign": "whatsAppCampaign"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "status": {
+            "columns": ["status", "deleted"]
+        },
+        "scheduledAt": {
+            "columns": ["scheduledAt", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}
+

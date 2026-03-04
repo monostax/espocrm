@@ -1,12 +1,19 @@
 {
     "labels": {
+        "Integrations": "Integrations",
+        "OAuth Providers": "OAuth Providers",
+        "OAuth Accounts": "OAuth Accounts",
         "Sidenav": "Navigation",
         "Sidenav Configs": "Sidenav Configurations"
     },
     "descriptions": {
+        "oauthProviders": "Manage OAuth provider connections for third-party services",
+        "oauthAccounts": "Manage linked OAuth accounts and authorizations",
         "sidenavConfigs": "Configure team-specific navigation sidebars"
     },
     "keywords": {
+        "oauthProviders": "oauth,provider,integration,api,connect",
+        "oauthAccounts": "oauth,account,authorization,token,linked",
         "sidenavConfigs": "navigation,sidebar,menu,tabs"
     }
 }

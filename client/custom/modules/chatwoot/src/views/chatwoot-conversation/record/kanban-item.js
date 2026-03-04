@@ -469,6 +469,9 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                     chatwootConversationId: this.model.get(
                         "chatwootConversationId"
                     ),
+                    chatwootAccountIdExternal: this.model.get(
+                        "chatwootAccountIdExternal"
+                    ),
                     contactName:
                         this.model.get("contactDisplayName") ||
                         this.model.get("name"),

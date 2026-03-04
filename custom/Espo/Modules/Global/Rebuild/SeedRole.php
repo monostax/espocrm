@@ -218,6 +218,18 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'WhatsAppBusinessAccount' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'WhatsAppCampaign' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
 
             ],
             'fieldData' => [
@@ -228,7 +240,9 @@ class SeedRole implements RebuildAction
                 'CredentialHistory' => (object)[],
                 'CredentialType' => (object)[],
                 'OAuthAccount' => (object)[],
-                'OAuthProvider' => (object)[],
+                'OAuthProvider' => (object)[
+                    'isGloballyShared' => (object)['read' => 'no', 'edit' => 'no'],
+                ],
                 'User' => (object)[
                     'userName' => (object)['read' => 'yes', 'edit' => 'yes'],
                     'password' => (object)['read' => 'yes', 'edit' => 'yes'],
@@ -258,6 +272,9 @@ class SeedRole implements RebuildAction
                 'Activities' => (object)[],
                 'Funnel' => (object)[],
                 'OpportunityStage' => (object)[],
+
+                'WhatsAppBusinessAccount' => (object)[],
+                'WhatsAppCampaign' => (object)[],
 
                 'ChatwootPlatform' => (object)[],
                 'ChatwootTeam' => (object)[],

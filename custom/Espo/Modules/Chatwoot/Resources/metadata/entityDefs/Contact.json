@@ -19,6 +19,13 @@
             "type": "hasMany",
             "entity": "ChatwootMessage",
             "foreign": "contact"
+        },
+        "whatsAppCampaignsManual": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "manualContacts",
+            "relationName": "whatsAppCampaignManualContact",
+            "layoutRelationshipsDisabled": true
         }
     }
 }

@@ -137,6 +137,34 @@ class MetaGraphApiClient
     }
 
     /**
+     * Get a specific template by name from a WABA.
+     * Filters results from getMessageTemplates() client-side.
+     *
+     * @param string $accessToken Meta access token
+     * @param string $businessAccountId WABA ID
+     * @param string $templateName Template name to find
+     * @param string $apiVersion API version (e.g. v21.0)
+     * @return array<string, mixed>|null Template data or null if not found
+     * @throws Error
+     */
+    public function getTemplateByName(
+        string $accessToken,
+        string $businessAccountId,
+        string $templateName,
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): ?array {
+        $templates = $this->getMessageTemplates($accessToken, $businessAccountId, $apiVersion);
+
+        foreach ($templates as $template) {
+            if (($template['name'] ?? null) === $templateName) {
+                return $template;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Perform an authenticated GET request to the Meta Graph API.
      *
      * @param string $url Full URL

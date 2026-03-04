@@ -1,0 +1,103 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "scheduledAt"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Template",
+        "rows": [
+            [
+                {
+                    "name": "credential"
+                },
+                {
+                    "name": "chatwootAccount"
+                }
+            ],
+            [
+                {
+                    "name": "templateName",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Audience",
+        "rows": [
+            [
+                {
+                    "name": "targetLists"
+                },
+                {
+                    "name": "manualContacts"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Statistics",
+        "name": "statistics",
+        "rows": [
+            [
+                {
+                    "name": "totalRecipients"
+                },
+                {
+                    "name": "sentCount"
+                }
+            ],
+            [
+                {
+                    "name": "deliveredCount"
+                },
+                {
+                    "name": "readCount"
+                }
+            ],
+            [
+                {
+                    "name": "repliedCount"
+                },
+                {
+                    "name": "failedCount"
+                }
+            ],
+            [
+                {
+                    "name": "startedAt"
+                },
+                {
+                    "name": "completedAt"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Parameter Mapping",
+        "rows": [
+            [
+                {
+                    "name": "parameterMapping",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]
+

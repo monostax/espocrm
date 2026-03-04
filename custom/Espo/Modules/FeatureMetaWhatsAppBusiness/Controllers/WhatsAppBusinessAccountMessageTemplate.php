@@ -18,6 +18,8 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
+use Espo\ORM\EntityManager;
+use Espo\Modules\Global\Tools\Credential\CredentialResolver;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccountMessageTemplate as MessageTemplateService;
 use stdClass;
 
@@ -25,19 +27,25 @@ use stdClass;
  * Controller for WhatsAppBusinessAccountMessageTemplate virtual entity.
  *
  * Read-only controller — no create, update, or delete actions.
+ *
+ * Supports two auth paths:
+ *   - oAuthAccountId + businessAccountId (preferred, used by parent WABA controller)
+ *   - credentialId + wabaId (used by WhatsAppCampaign template picker)
  */
 class WhatsAppBusinessAccountMessageTemplate
 {
-    private InjectableFactory $injectableFactory;
-
-    public function __construct(InjectableFactory $injectableFactory)
-    {
-        $this->injectableFactory = $injectableFactory;
-    }
+    public function __construct(
+        private InjectableFactory $injectableFactory,
+        private EntityManager $entityManager,
+        private CredentialResolver $credentialResolver,
+    ) {}
 
     /**
      * GET WhatsAppBusinessAccountMessageTemplate - List templates.
-     * Route: GET api/v1/WhatsAppBusinessAccountMessageTemplate?credentialId=xxx
+     *
+     * Accepts either:
+     *   ?oAuthAccountId=xxx&businessAccountId=yyy  (direct)
+     *   ?credentialId=xxx&wabaId=yyy               (resolved from credential)
      *
      * @throws BadRequest
      * @throws Error
@@ -45,14 +53,29 @@ class WhatsAppBusinessAccountMessageTemplate
      */
     public function getActionIndex(Request $request, Response $response): stdClass
     {
-        $credentialId = $request->getQueryParam('credentialId');
+        $oAuthAccountId = $request->getQueryParam('oAuthAccountId');
+        $businessAccountId = $request->getQueryParam('businessAccountId');
 
-        if (!$credentialId) {
-            throw new BadRequest("credentialId query parameter is required.");
+        if (!$oAuthAccountId) {
+            $credentialId = $request->getQueryParam('credentialId');
+            $wabaId = $request->getQueryParam('wabaId');
+
+            if ($credentialId) {
+                [$oAuthAccountId, $resolvedWabaId] = $this->resolveFromCredential($credentialId);
+                $businessAccountId = $wabaId ?: $resolvedWabaId;
+            }
+        }
+
+        if (!$oAuthAccountId) {
+            throw new BadRequest("oAuthAccountId or credentialId query parameter is required.");
+        }
+
+        if (!$businessAccountId) {
+            throw new BadRequest("businessAccountId or wabaId query parameter is required.");
         }
 
         $service = $this->getService();
-        $result = $service->find($credentialId);
+        $result = $service->find($oAuthAccountId, $businessAccountId);
 
         return (object) [
             'total' => $result->getTotal(),
@@ -62,7 +85,9 @@ class WhatsAppBusinessAccountMessageTemplate
 
     /**
      * GET WhatsAppBusinessAccountMessageTemplate/:id - Get a single template.
-     * ID format: credentialId_templateId
+     * ID format: oAuthAccountId_templateId
+     *
+     * Requires businessAccountId as a query parameter.
      *
      * @throws BadRequest
      * @throws Error
@@ -77,11 +102,17 @@ class WhatsAppBusinessAccountMessageTemplate
             throw new BadRequest("ID is required.");
         }
 
-        [$credentialId, $templateId] = $this->parseId($id);
+        $businessAccountId = $request->getQueryParam('businessAccountId');
+
+        if (!$businessAccountId) {
+            throw new BadRequest("businessAccountId query parameter is required.");
+        }
+
+        [$oAuthAccountId, $templateId] = $this->parseId($id);
 
         $service = $this->getService();
 
-        return $service->read($credentialId, $templateId);
+        return $service->read($oAuthAccountId, $businessAccountId, $templateId);
     }
 
     /**
@@ -113,7 +144,43 @@ class WhatsAppBusinessAccountMessageTemplate
     }
 
     /**
-     * Parse composite ID (credentialId_templateId).
+     * Resolve oAuthAccountId and businessAccountId from a credential ID.
+     *
+     * @param string $credentialId
+     * @return array{0: string, 1: string} [oAuthAccountId, businessAccountId]
+     * @throws BadRequest
+     */
+    private function resolveFromCredential(string $credentialId): array
+    {
+        try {
+            $resolvedConfig = $this->credentialResolver->resolve($credentialId);
+        } catch (\Throwable $e) {
+            throw new BadRequest("Failed to resolve credential: " . $e->getMessage());
+        }
+
+        $businessAccountId = $resolvedConfig->businessAccountId ?? null;
+
+        if (!$businessAccountId) {
+            throw new BadRequest("Credential is missing businessAccountId.");
+        }
+
+        $credential = $this->entityManager->getEntityById('Credential', $credentialId);
+
+        if (!$credential) {
+            throw new BadRequest("Credential not found.");
+        }
+
+        $oAuthAccountId = $credential->get('oAuthAccountId');
+
+        if (!$oAuthAccountId) {
+            throw new BadRequest("Credential has no linked OAuth Account.");
+        }
+
+        return [$oAuthAccountId, $businessAccountId];
+    }
+
+    /**
+     * Parse composite ID (oAuthAccountId_templateId).
      *
      * @param string $id
      * @return array{0: string, 1: string}
@@ -124,7 +191,7 @@ class WhatsAppBusinessAccountMessageTemplate
         $parts = explode('_', $id, 2);
 
         if (count($parts) !== 2) {
-            throw new BadRequest("Invalid ID format. Expected: credentialId_templateId");
+            throw new BadRequest("Invalid ID format. Expected: oAuthAccountId_templateId");
         }
 
         return [$parts[0], $parts[1]];

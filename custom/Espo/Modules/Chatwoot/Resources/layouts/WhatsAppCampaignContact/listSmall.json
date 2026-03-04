@@ -1,0 +1,30 @@
+[
+    {
+        "name": "contactName",
+        "width": 20
+    },
+    {
+        "name": "phoneNumber",
+        "width": 15
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "sentAt",
+        "width": 15
+    },
+    {
+        "name": "repliedAt",
+        "width": 15
+    },
+    {
+        "name": "failedAt",
+        "width": 15
+    },
+    {
+        "name": "failedReason",
+        "width": 25
+    }
+]

@@ -3,18 +3,25 @@
         "Configurations": "Configurações",
         "Import": "Importar",
         "Teams": "Times",
-        "Funnels": "Funis de Vendas"
+        "Funnels": "Funis de Vendas",
+        "Integrations": "Integrações",
+        "OAuth Providers": "Provedores OAuth",
+        "OAuth Accounts": "Contas OAuth"
     },
     "descriptions": {
         "users": "Gerenciar usuários da plataforma",
         "import": "Importar dados de arquivo CSV",
         "teams": "Gerenciar times de usuários",
-        "funnels": "Gerenciar Funis de vendas"
+        "funnels": "Gerenciar Funis de vendas",
+        "oauthProviders": "Gerenciar conexões de provedores OAuth para serviços de terceiros",
+        "oauthAccounts": "Gerenciar contas OAuth vinculadas e autorizações"
     },
     "keywords": {
         "users": "usuários,usuario,usuarios",
         "data": "importar,csv",
-        "sales": "funis,funil,vendas"
+        "sales": "funis,funil,vendas",
+        "oauthProviders": "oauth,provedor,integração,api,conectar",
+        "oauthAccounts": "oauth,conta,autorização,token,vinculada"
     }
 }
 

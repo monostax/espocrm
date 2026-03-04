@@ -1,0 +1,48 @@
+{
+    "fields": {
+        "whatsAppCampaign": "Campanha WhatsApp",
+        "contact": "Contato",
+        "chatwootContact": "Chat / Contato",
+        "chatwootAccount": "Chat / Conta",
+        "chatwootMessageId": "ID da Mensagem no Chat",
+        "chatwootConversationId": "ID da Conversa no Chat",
+        "phoneNumber": "Número de Telefone",
+        "contactName": "Nome do Contato",
+        "status": "Status",
+        "processedParams": "Parâmetros Processados",
+        "sentAt": "Enviado em",
+        "deliveredAt": "Entregue em",
+        "readAt": "Lido em",
+        "repliedAt": "Respondido em",
+        "failedAt": "Falhou em",
+        "failedReason": "Motivo da Falha",
+        "createdAt": "Criado em",
+        "modifiedAt": "Modificado em"
+    },
+    "links": {
+        "whatsAppCampaign": "Campanha WhatsApp",
+        "contact": "Contato",
+        "chatwootContact": "Chat / Contato",
+        "chatwootAccount": "Chat / Conta"
+    },
+    "labels": {
+        "Create WhatsAppCampaignContact": "Criar Contato da Campanha"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pendente",
+            "Sent": "Enviado",
+            "Delivered": "Entregue",
+            "Read": "Lido",
+            "Replied": "Respondido",
+            "Failed": "Falhou",
+            "OptedOut": "Optou por Sair",
+            "Bounced": "Devolvido",
+            "Blocked": "Bloqueado"
+        }
+    },
+    "tooltips": {
+        "chatwootMessageId": "O ID da mensagem na plataforma de Chat para rastreamento do status de entrega.",
+        "chatwootConversationId": "O ID da conversa na plataforma de Chat onde a mensagem foi enviada."
+    }
+}

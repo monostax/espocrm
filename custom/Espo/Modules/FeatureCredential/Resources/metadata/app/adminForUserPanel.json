@@ -1,0 +1,14 @@
+{
+    "integrations": {
+        "label": "Integrations",
+        "itemList": [
+            {
+                "url": "#Credential",
+                "label": "Credentials",
+                "iconClass": "ti ti-lock",
+                "description": "credentials",
+                "tabQuickSearch": true
+            }
+        ]
+    }
+}

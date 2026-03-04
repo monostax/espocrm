@@ -246,18 +246,10 @@ class SyncInboxesFromChatwoot implements JobDataLess
         $inbox->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
         // Auto-link to ChatwootInboxIntegration if not already linked
-        if (!$inbox->get('chatwootInboxIntegrationId') && !empty($chatwootInbox['inbox_identifier'])) {
-            $integration = $this->findIntegrationByIdentifier($chatwootInbox['inbox_identifier']);
+        if (!$inbox->get('chatwootInboxIntegrationId')) {
+            $integration = $this->findIntegrationForInbox($chatwootInbox, $inbox->get('chatwootAccountId'));
             if ($integration) {
-                $inbox->set('chatwootInboxIntegrationId', $integration->getId());
-                // Also update the integration with the chatwootInboxId
-                if (!$integration->get('chatwootInboxId')) {
-                    $integration->set('chatwootInboxId', $chatwootInbox['id']);
-                    $this->entityManager->saveEntity($integration, ['silent' => true]);
-                }
-                $this->log->info(
-                    "SyncInboxesFromChatwoot: Linked inbox {$inbox->getId()} to integration {$integration->getId()}"
-                );
+                $this->linkInboxToIntegration($inbox, $integration, $chatwootInbox['id']);
             }
         }
 
@@ -293,19 +285,10 @@ class SyncInboxesFromChatwoot implements JobDataLess
         ];
 
         // Try to find and link ChatwootInboxIntegration
-        if (!empty($chatwootInbox['inbox_identifier'])) {
-            $integration = $this->findIntegrationByIdentifier($chatwootInbox['inbox_identifier']);
-            if ($integration) {
-                $data['chatwootInboxIntegrationId'] = $integration->getId();
-                // Also update the integration with the chatwootInboxId
-                if (!$integration->get('chatwootInboxId')) {
-                    $integration->set('chatwootInboxId', $chatwootInbox['id']);
-                    $this->entityManager->saveEntity($integration, ['silent' => true]);
-                }
-                $this->log->info(
-                    "SyncInboxesFromChatwoot: Auto-linked new inbox to integration {$integration->getId()}"
-                );
-            }
+        $integration = $this->findIntegrationForInbox($chatwootInbox, $espoAccountId);
+        if ($integration) {
+            $data['chatwootInboxIntegrationId'] = $integration->getId();
+            $this->updateIntegrationInboxId($integration, $chatwootInbox['id']);
         }
 
         // Assign teams from ChatwootAccount
@@ -317,14 +300,78 @@ class SyncInboxesFromChatwoot implements JobDataLess
     }
 
     /**
-     * Find ChatwootInboxIntegration by inbox identifier.
+     * Find a matching ChatwootInboxIntegration for a Chatwoot inbox.
+     * Uses inbox_identifier for QRCode/API inboxes, falls back to phone number
+     * matching for WhatsApp Cloud API (Channel::Whatsapp) inboxes.
      */
-    private function findIntegrationByIdentifier(string $identifier): ?Entity
+    private function findIntegrationForInbox(array $chatwootInbox, string $espoAccountId): ?Entity
     {
-        return $this->entityManager
-            ->getRDBRepository('ChatwootInboxIntegration')
-            ->where(['chatwootInboxIdentifier' => $identifier])
-            ->findOne();
+        // Strategy 1: Match by inbox_identifier (works for QRCode/API inboxes)
+        $identifier = $chatwootInbox['inbox_identifier'] ?? null;
+
+        if ($identifier) {
+            $integration = $this->entityManager
+                ->getRDBRepository('ChatwootInboxIntegration')
+                ->where(['chatwootInboxIdentifier' => $identifier])
+                ->findOne();
+
+            if ($integration) {
+                return $integration;
+            }
+        }
+
+        // Strategy 2: Match by phone number for WhatsApp Cloud API inboxes
+        $phoneNumber = $chatwootInbox['phone_number'] ?? null;
+        $channelType = $chatwootInbox['channel_type'] ?? null;
+
+        if ($phoneNumber && $channelType === 'Channel::Whatsapp') {
+            $normalizedInboxPhone = preg_replace('/[^0-9]/', '', $phoneNumber);
+
+            $integrations = $this->entityManager
+                ->getRDBRepository('ChatwootInboxIntegration')
+                ->where([
+                    'chatwootAccountId' => $espoAccountId,
+                    'channelType' => 'whatsappCloudApi',
+                ])
+                ->find();
+
+            foreach ($integrations as $integration) {
+                $integrationPhone = preg_replace('/[^0-9]/', '', $integration->get('phoneNumber') ?? '');
+                if ($normalizedInboxPhone && $integrationPhone && $normalizedInboxPhone === $integrationPhone) {
+                    $this->log->info(
+                        "SyncInboxesFromChatwoot: Matched inbox to integration {$integration->getId()} by phone number"
+                    );
+                    return $integration;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Link a ChatwootInbox to a ChatwootInboxIntegration and update the
+     * integration's chatwootInboxId if not already set.
+     */
+    private function linkInboxToIntegration(Entity $inbox, Entity $integration, int $chatwootInboxId): void
+    {
+        $inbox->set('chatwootInboxIntegrationId', $integration->getId());
+        $this->updateIntegrationInboxId($integration, $chatwootInboxId);
+
+        $this->log->info(
+            "SyncInboxesFromChatwoot: Linked inbox {$inbox->getId()} to integration {$integration->getId()}"
+        );
+    }
+
+    /**
+     * Update the integration's chatwootInboxId if not already populated.
+     */
+    private function updateIntegrationInboxId(Entity $integration, int $chatwootInboxId): void
+    {
+        if (!$integration->get('chatwootInboxId')) {
+            $integration->set('chatwootInboxId', $chatwootInboxId);
+            $this->entityManager->saveEntity($integration, ['silent' => true]);
+        }
     }
 
     /**

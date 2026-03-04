@@ -1,0 +1,140 @@
+{
+    "fields": {
+        "whatsAppCampaign": {
+            "type": "link",
+            "required": true
+        },
+        "contact": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootContact": {
+            "type": "link"
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootMessageId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true
+        },
+        "chatwootConversationId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true
+        },
+        "phoneNumber": {
+            "type": "varchar",
+            "maxLength": 50,
+            "required": true
+        },
+        "contactName": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Pending",
+                "Sent",
+                "Delivered",
+                "Read",
+                "Replied",
+                "Failed",
+                "OptedOut",
+                "Bounced",
+                "Blocked"
+            ],
+            "default": "Pending",
+            "style": {
+                "Pending": null,
+                "Sent": "primary",
+                "Delivered": "success",
+                "Read": "success",
+                "Replied": "info",
+                "Failed": "danger",
+                "OptedOut": "default",
+                "Bounced": "warning",
+                "Blocked": "danger"
+            }
+        },
+        "processedParams": {
+            "type": "jsonObject"
+        },
+        "sentAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "deliveredAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "readAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "repliedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "failedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "failedReason": {
+            "type": "text",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "whatsAppCampaign": {
+            "type": "belongsTo",
+            "entity": "WhatsAppCampaign",
+            "foreign": "campaignContacts"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact",
+            "foreign": "whatsAppCampaignContacts"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "whatsAppCampaignContacts"
+        }
+    },
+    "indexes": {
+        "chatwootMessageId": {
+            "columns": ["chatwootMessageId"]
+        },
+        "chatwootConversationId": {
+            "columns": ["chatwootConversationId"]
+        },
+        "campaignStatus": {
+            "columns": ["whatsAppCampaignId", "status"]
+        },
+        "contactCampaign": {
+            "columns": ["contactId", "whatsAppCampaignId"],
+            "unique": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    }
+}
+

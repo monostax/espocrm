@@ -163,6 +163,18 @@
             "type": "hasMany",
             "entity": "ChatwootLabel",
             "foreign": "chatwootAccount"
+        },
+        "whatsAppCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "chatwootAccount",
+            "layoutRelationshipsDisabled": true
+        },
+        "whatsAppCampaignContacts": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignContact",
+            "foreign": "chatwootAccount",
+            "layoutRelationshipsDisabled": true
         }
     },
     "collection": {
@@ -190,7 +202,17 @@
         "foreign": "account"
     },
     "cascadeDelete": {
-        "links": ["chatwootInboxIntegrations", "inboxes", "contacts", "agents", "chatwootTeams", "syncStates", "chatwootUsers", "conversations", "labels"]
+        "links": [
+            "chatwootInboxIntegrations",
+            "inboxes",
+            "contacts",
+            "agents",
+            "chatwootTeams",
+            "syncStates",
+            "chatwootUsers",
+            "conversations",
+            "labels"
+        ]
     }
 }
 

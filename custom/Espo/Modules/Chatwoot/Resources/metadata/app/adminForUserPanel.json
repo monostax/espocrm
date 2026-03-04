@@ -29,6 +29,13 @@
                 "iconClass": "ti ti-brain",
                 "description": "knowledgeBase",
                 "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#WhatsAppCampaign",
+                "label": "WhatsApp Campaigns",
+                "iconClass": "ti ti-send",
+                "description": "whatsAppCampaigns",
+                "roles": ["tenant", "tenant-admin"]
             }
         ],
         "order": 30

@@ -6,20 +6,23 @@
         "Users": "Usuários",
         "Agents": "Agentes",
         "Teams": "Times",
-        "Knowledge Base": "Base de Conhecimento"
+        "Knowledge Base": "Base de Conhecimento",
+        "WhatsApp Campaigns": "Campanhas WhatsApp"
     },
     "descriptions": {
         "chatwootInboxIntegrations": "Gerenciar conexões do Chat para WhatsApp e outros canais",
         "chatwootUsers": "Gerenciar contas de usuários do Chat",
         "chatwootAgents": "Gerenciar agentes do Chat e suas atribuições",
         "chatwootTeams": "Gerenciar equipes do Chat e membros das equipes",
-        "knowledgeBase": "Gerenciar categorias da Base de Conhecimento indexadas por IA"
+        "knowledgeBase": "Gerenciar categorias da Base de Conhecimento indexadas por IA",
+        "whatsAppCampaigns": "Gerenciar campanhas de marketing WhatsApp e envio em massa"
     },
     "keywords": {
         "chatwootInboxIntegrations": "whatsapp,inbox,integração,canal",
         "chatwootUsers": "usuário,conta,chatwoot",
         "chatwootAgents": "agente,suporte,representante",
         "chatwootTeams": "equipe,grupo,departamento",
-        "knowledgeBase": "conhecimento,base,ia,categoria,artigo"
+        "knowledgeBase": "conhecimento,base,ia,categoria,artigo",
+        "whatsAppCampaigns": "whatsapp,campanha,massa,mensagem,template"
     }
 }

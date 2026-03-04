@@ -15,7 +15,9 @@
         "WahaPlatform": "Waha Platform",
         "WahaSession": "Waha Session",
         "WahaSessionApp": "Session App",
-        "WahaSessionLabel": "Session Label"
+        "WahaSessionLabel": "Session Label",
+        "WhatsAppCampaign": "WhatsApp Campaign",
+        "WhatsAppCampaignContact": "WhatsApp Campaign Contact"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Accounts",
@@ -33,7 +35,9 @@
         "WahaPlatform": "Waha Platforms",
         "WahaSession": "Waha Sessions",
         "WahaSessionApp": "Session Apps",
-        "WahaSessionLabel": "Session Labels"
+        "WahaSessionLabel": "Session Labels",
+        "WhatsAppCampaign": "WhatsApp Campaigns",
+        "WhatsAppCampaignContact": "WhatsApp Campaign Contacts"
     },
     "navbarTabs": {
         "Conversations": "Conversations",

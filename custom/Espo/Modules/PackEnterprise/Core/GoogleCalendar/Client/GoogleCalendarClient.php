@@ -101,7 +101,7 @@ class GoogleCalendarClient
 
             $code = $e->getCode();
 
-            if ($code == 400 || $code == 410) {
+            if ($code == 400 || $code == 401 || $code == 410) {
                 $result['action'] = 'resetToken';
             }
 
@@ -145,7 +145,7 @@ class GoogleCalendarClient
 
             $code = $e->getCode();
 
-            if ($code == 400 || $code == 410) {
+            if ($code == 400 || $code == 401 || $code == 410) {
                 $result['action'] = 'resetToken';
             } elseif ($code == 403 || $code == 404) {
                 $result['action'] = 'deleteEvent';

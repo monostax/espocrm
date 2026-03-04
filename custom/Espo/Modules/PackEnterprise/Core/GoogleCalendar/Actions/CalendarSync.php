@@ -632,8 +632,10 @@ class CalendarSync extends Base
                         );
                     }
                 } else {
+                    $this->eventManager->removeRecurrentEventFromQueue($recurrentEvent['id']);
+
                     throw new RuntimeException(
-                        "Sync for recurrent event {$recurrentEvent['id']} failed"
+                        "Sync for recurrent event {$recurrentEvent['id']} failed with unrecoverable error, removed from queue"
                     );
                 }
             }

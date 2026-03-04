@@ -20,6 +20,15 @@
             "maxLength": 512,
             "tooltip": true
         },
+        "webhookSecret": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "utility": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
         "subscriptions": {
             "type": "multiEnum",
             "required": true,

@@ -1,0 +1,11 @@
+{
+    "links": {
+        "whatsAppCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "targetLists",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}
+

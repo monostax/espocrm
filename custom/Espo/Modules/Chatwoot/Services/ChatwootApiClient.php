@@ -2106,6 +2106,212 @@ public function deleteConversation(
 }
 
     /* -------------------------------------------------------------------------- */
+    /*              WhatsApp Campaign API Methods (Account-level API)              */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * Find an existing contact by phone or create a new one in Chatwoot.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $inboxId The Chatwoot inbox ID for contact creation
+     * @param string $phoneNumber Normalized phone number (+55...)
+     * @param string|null $name Contact name
+     * @return array{id: int, name: string, phone_number: string}
+     * @throws Error
+     */
+    public function findOrCreateContact(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $inboxId,
+        string $phoneNumber,
+        ?string $name = null
+    ): array {
+        // Try to find existing contact by phone
+        $existing = $this->searchContactByPhone($platformUrl, $accountApiKey, $accountId, $phoneNumber);
+
+        if ($existing) {
+            $this->log->info("Chatwoot: Found existing contact {$existing['id']} for phone {$phoneNumber} in account {$accountId}");
+            return $existing;
+        }
+
+        // Create new contact
+        $contactData = [
+            'inbox_id' => $inboxId,
+            'phone_number' => $phoneNumber,
+        ];
+
+        if ($name) {
+            $contactData['name'] = $name;
+        }
+
+        $newContact = $this->createContact($platformUrl, $accountApiKey, $accountId, $contactData);
+
+        // createContact returns nested payload sometimes
+        $contact = $newContact['contact'] ?? $newContact;
+
+        $this->log->info("Chatwoot: Created new contact {$contact['id']} for phone {$phoneNumber} in account {$accountId}");
+
+        return $contact;
+    }
+
+    /**
+     * Create a new conversation with a contact in Chatwoot.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $contactId The Chatwoot contact ID
+     * @param int $inboxId The Chatwoot inbox ID
+     * @return array<string, mixed> Conversation data
+     * @throws Error
+     */
+    public function createConversation(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId,
+        int $inboxId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations';
+
+        $payload = json_encode([
+            'contact_id' => $contactId,
+            'inbox_id' => $inboxId,
+        ]);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode conversation data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to create conversation in Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (createConversation): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        $this->log->info("Chatwoot: Created conversation for contact {$contactId} in inbox {$inboxId}, account {$accountId}");
+
+        return $response['body'];
+    }
+
+    /**
+     * Send a WhatsApp template message via Chatwoot.
+     *
+     * Creates a conversation with the contact first, then sends the template message
+     * as an outgoing message with template payload.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $contactId The Chatwoot contact ID
+     * @param int $inboxId The Chatwoot inbox ID
+     * @param string $templateName Meta template name
+     * @param string $language Template language code (e.g., "pt_BR")
+     * @param array<string, string> $params Template parameters
+     * @param string $category Template category (e.g., "UTILITY", "MARKETING")
+     * @return array{message_id: int, conversation_id: int}
+     * @throws Error
+     */
+    public function sendTemplateMessage(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId,
+        int $inboxId,
+        string $templateName,
+        string $language,
+        array $params = [],
+        string $category = 'UTILITY',
+        string $content = ''
+    ): array {
+        // Step 1: Create a conversation with the contact
+        $conversation = $this->createConversation($platformUrl, $accountApiKey, $accountId, $contactId, $inboxId);
+        $conversationId = $conversation['id'] ?? $conversation['display_id'] ?? null;
+
+        if (!$conversationId) {
+            throw new Error('Failed to get conversation ID after creation.');
+        }
+
+        // Step 2: Send template message in the conversation
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/conversations/' . $conversationId . '/messages';
+
+        $processedParams = new \stdClass();
+        foreach ($params as $key => $value) {
+            $k = (string) $key;
+            $processedParams->$k = [
+                'type' => 'text',
+                'text' => (string) $value,
+            ];
+        }
+
+        $messageData = [
+            'content' => $content,
+            'message_type' => 'outgoing',
+            'template_params' => [
+                'name' => $templateName,
+                'category' => strtolower($category),
+                'language' => $language,
+                'processed_params' => $processedParams,
+            ],
+        ];
+
+        $payload = json_encode($messageData);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode template message data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to send template message via Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (sendTemplateMessage): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        $messageId = $response['body']['id'] ?? null;
+
+        $this->log->info("Chatwoot: Sent template message '{$templateName}' to contact {$contactId} in conversation {$conversationId}, account {$accountId}");
+
+        return [
+            'message_id' => $messageId,
+            'conversation_id' => $conversationId,
+        ];
+    }
+
+    /* -------------------------------------------------------------------------- */
     /*                    Label API Methods (Account-level API)                   */
     /* -------------------------------------------------------------------------- */
 
