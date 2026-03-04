@@ -13,7 +13,8 @@
     "labels": {
         "Create WhatsAppBusinessAccount": "Visualizar Contas Business",
         "Phone Numbers": "Números de Telefone",
-        "Message Templates": "Templates de Mensagem"
+        "Message Templates": "Templates de Mensagem",
+        "Subscribed Apps": "Apps Inscritos"
     },
     "tooltips": {
         "wabaId": "O ID da Conta Business do WhatsApp na Meta",

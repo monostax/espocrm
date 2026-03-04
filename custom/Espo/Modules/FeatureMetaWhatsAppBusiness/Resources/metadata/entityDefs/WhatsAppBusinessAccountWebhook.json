@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "appId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "overrideCallbackUri": {
+            "type": "url",
+            "readOnly": true
+        }
+    },
+    "links": {}
+}

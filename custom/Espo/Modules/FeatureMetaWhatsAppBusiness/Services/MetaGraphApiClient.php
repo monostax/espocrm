@@ -137,6 +137,31 @@ class MetaGraphApiClient
     }
 
     /**
+     * Fetch subscribed apps and webhook override configuration for a WABA.
+     *
+     * Uses GET /<WABA_ID>/subscribed_apps to retrieve the list of apps
+     * subscribed to webhooks on the WABA, including any alternate
+     * callback URL (override_callback_uri).
+     *
+     * @param string $accessToken Meta access token
+     * @param string $businessAccountId WABA ID
+     * @param string $apiVersion API version (e.g. v21.0)
+     * @return array<int, array<string, mixed>> List of subscribed app objects
+     * @throws Error
+     */
+    public function getSubscribedApps(
+        string $accessToken,
+        string $businessAccountId,
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): array {
+        $url = self::GRAPH_API_BASE . "/{$apiVersion}/{$businessAccountId}/subscribed_apps";
+
+        $response = $this->request($url, $accessToken);
+
+        return $response['data'] ?? [];
+    }
+
+    /**
      * Get a specific template by name from a WABA.
      * Filters results from getMessageTemplates() client-side.
      *

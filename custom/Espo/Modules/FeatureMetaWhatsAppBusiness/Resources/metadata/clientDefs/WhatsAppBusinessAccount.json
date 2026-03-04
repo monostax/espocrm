@@ -11,6 +11,12 @@
     "bottomPanels": {
         "detail": [
             {
+                "name": "subscribedApps",
+                "label": "Subscribed Apps",
+                "view": "feature-meta-whatsapp-business:views/whatsapp-business-account/panels/subscribed-apps",
+                "order": 5
+            },
+            {
                 "name": "phoneNumbers",
                 "label": "Phone Numbers",
                 "view": "feature-meta-whatsapp-business:views/whatsapp-business-account/panels/phone-numbers",

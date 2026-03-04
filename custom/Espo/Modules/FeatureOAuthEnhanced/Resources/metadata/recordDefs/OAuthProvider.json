@@ -1,0 +1,10 @@
+{
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureOAuthEnhanced\\Classes\\RecordHooks\\OAuthProvider\\BeforeUpdate"
+    ],
+    "beforeDeleteHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureOAuthEnhanced\\Classes\\RecordHooks\\OAuthProvider\\BeforeDelete"
+    ]
+}

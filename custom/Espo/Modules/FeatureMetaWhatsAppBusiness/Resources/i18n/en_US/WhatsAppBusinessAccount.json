@@ -11,7 +11,8 @@
         "oAuthAccount": "OAuth Account"
     },
     "labels": {
-        "Create WhatsAppBusinessAccount": "View WhatsApp Business Accounts"
+        "Create WhatsAppBusinessAccount": "View WhatsApp Business Accounts",
+        "Subscribed Apps": "Subscribed Apps"
     },
     "tooltips": {
         "wabaId": "The WhatsApp Business Account ID from Meta",

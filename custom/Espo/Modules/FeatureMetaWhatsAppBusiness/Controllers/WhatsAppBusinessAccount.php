@@ -21,6 +21,7 @@ use Espo\Core\InjectableFactory;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccount as WhatsAppBusinessAccountService;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccountPhoneNumber as PhoneNumberService;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccountMessageTemplate as MessageTemplateService;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccountWebhook as WebhookService;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppOAuthHelper;
 use stdClass;
 
@@ -142,6 +143,7 @@ class WhatsAppBusinessAccount
         return match ($link) {
             'phoneNumbers' => $this->listPhoneNumbers($oAuthAccountId, $wabaId),
             'messageTemplates' => $this->listMessageTemplates($oAuthAccountId, $wabaId),
+            'subscribedApps' => $this->listSubscribedApps($oAuthAccountId, $wabaId),
             default => (object) [
                 'total' => 0,
                 'list' => [],
@@ -175,6 +177,23 @@ class WhatsAppBusinessAccount
     private function listMessageTemplates(string $oAuthAccountId, string $businessAccountId): stdClass
     {
         $service = $this->injectableFactory->create(MessageTemplateService::class);
+        $result = $service->find($oAuthAccountId, $businessAccountId);
+
+        return (object) [
+            'total' => $result->getTotal(),
+            'list' => $result->getValueMapList(),
+        ];
+    }
+
+    /**
+     * List subscribed apps (webhooks) for a WABA via the child service.
+     *
+     * @throws Error
+     * @throws Forbidden
+     */
+    private function listSubscribedApps(string $oAuthAccountId, string $businessAccountId): stdClass
+    {
+        $service = $this->injectableFactory->create(WebhookService::class);
         $result = $service->find($oAuthAccountId, $businessAccountId);
 
         return (object) [

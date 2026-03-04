@@ -1,0 +1,49 @@
+{
+    "fields": {
+        "calendarStartDate": "Sincronizar Desde",
+        "calendarEntityTypes": "Entidades de Sincronização e Rótulos de Identificação",
+        "calendarDirection": "Direção",
+        "calendarMonitoredCalendars": "Outros Calendários",
+        "calendarMainCalendar": "Calendário Principal",
+        "calendarMainCalendarId": "ID do Calendário Principal",
+        "calendarMainCalendarName": "Nome do Calendário Principal",
+        "calendarMonitoredCalendarsIds": "IDs dos Calendários Monitorados",
+        "calendarMonitoredCalendarsNames": "Nomes dos Calendários Monitorados",
+        "calendarDefaultEntity": "Entidade Padrão",
+        "removeGCEventIfRemovedInEspo": "Remover evento do Google Calendar ao remover no EspoCRM",
+        "dontSyncEventAttendees": "Não sincronizar participantes do evento",
+        "calendarAssignDefaultTeam": "Atribuir Equipe Padrão do Usuário",
+        "oAuthAccount": "Conta OAuth",
+        "user": "Usuário",
+        "active": "Ativo",
+        "msxGoogleCalendar": "Google Calendar",
+        "assignedUser": "Usuário Responsável",
+        "teams": "Equipes"
+    },
+    "links": {
+        "user": "Usuário",
+        "oAuthAccount": "Conta OAuth",
+        "msxGoogleCalendar": "Google Calendar",
+        "assignedUser": "Usuário Responsável",
+        "teams": "Equipes"
+    },
+    "options": {
+        "calendarDirection": {
+            "EspoToGC": "Unidirecional: EspoCRM > Google Calendar",
+            "GCToEspo": "Unidirecional: Google Calendar > EspoCRM",
+            "Both": "Bidirecional"
+        }
+    },
+    "labels": {
+        "Sync Now": "Sincronizar Agora"
+    },
+    "messages": {
+        "confirmSyncNow": "Isso irá sincronizar seu Google Calendar agora. Deseja continuar?",
+        "syncStarted": "Sincronização concluída com sucesso.",
+        "syncFailed": "A sincronização falhou."
+    },
+    "tooltips": {
+        "calendarEntityTypes": "Para reconhecimento de tipo, o nome do evento deve começar com o rótulo de identificação. O rótulo da entidade padrão pode estar vazio. Recomendação: Não altere os rótulos de identificação após salvar as configurações de sincronização.",
+        "calendarDefaultEntity": "Eventos não reconhecidos serão carregados como a entidade selecionada."
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "messages": {
+        "fieldLabelIsRequired": "Apenas uma entidade pode ficar sem Rótulo de Identificação",
+        "emptyNotDefaultEnitityLabel": "O Rótulo de Identificação de uma entidade não padrão não pode estar vazio",
+        "defaultEntityIsRequiredInList": "A Entidade Padrão é obrigatória na Lista de Entidades de Sincronização",
+        "notUniqueIdentificationLabel": "Os Rótulos de Identificação devem ser únicos"
+    }
+}

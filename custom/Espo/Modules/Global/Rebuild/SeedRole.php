@@ -102,6 +102,18 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'Meeting' => [
+                    'create' => 'yes',
+                    'read' => 'own',
+                    'edit' => 'own',
+                    'delete' => 'own',
+                ],
+                'Call' => [
+                    'create' => 'yes',
+                    'read' => 'own',
+                    'edit' => 'own',
+                    'delete' => 'own',
+                ],
                 'CredentialHistory' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -131,6 +143,12 @@ class SeedRole implements RebuildAction
                     'read' => 'team',
                     'edit' => 'team',
                     'delete' => 'team',
+                ],
+                'MsxGoogleCalendarUser' => [
+                    'create' => 'yes',
+                    'read' => 'own',
+                    'edit' => 'own',
+                    'delete' => 'own',
                 ],
                 'ChatwootAccount' => [
                         'create' => 'no',
@@ -240,6 +258,7 @@ class SeedRole implements RebuildAction
                 'CredentialHistory' => (object)[],
                 'CredentialType' => (object)[],
                 'OAuthAccount' => (object)[],
+                'MsxGoogleCalendarUser' => (object)[],
                 'OAuthProvider' => (object)[
                     'isGloballyShared' => (object)['read' => 'no', 'edit' => 'no'],
                 ],
@@ -332,7 +351,25 @@ class SeedRole implements RebuildAction
                         'edit' => 'team',
                         'delete' => 'team',
                         'stream' => 'team',
-                    ]
+                    ],
+                    'MsxGoogleCalendarUser' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'Meeting' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'Call' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
                 ],
                 'fieldData' => [
                     ...$tenantBase['fieldData']

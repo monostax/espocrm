@@ -1,0 +1,14 @@
+{
+    "fields": {
+        "name": "App Name",
+        "appId": "App ID",
+        "overrideCallbackUri": "Override Callback URL"
+    },
+    "labels": {
+        "Subscribed Apps": "Subscribed Apps"
+    },
+    "tooltips": {
+        "appId": "The Meta App ID subscribed to webhooks on this WABA",
+        "overrideCallbackUri": "Alternate callback URL for messages webhooks, overriding the app-level callback"
+    }
+}
