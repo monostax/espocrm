@@ -1,6 +1,5 @@
 {
     "scopeNames": {
-        "CAgendamento": "Agendamento",
         "CPaciente": "Paciente",
         "CProfissional": "Profissional",
         "CRegistroBiometrico": "Registro Biométrico",
@@ -58,7 +57,6 @@
     },
     "scopeNamesPlural": {
         "CAIThread": "Histórico de Atividades",
-        "CAgendamento": "Agendamentos",
         "CPaciente": "Pacientes",
         "CProfissional": "Profissionais",
         "CRegistroBiometrico": "Registros Biométricos",

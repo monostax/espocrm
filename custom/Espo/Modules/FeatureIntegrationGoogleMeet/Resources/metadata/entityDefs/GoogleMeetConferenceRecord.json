@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "startTime": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "endTime": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "expireTime": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "space": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "credential": {
+            "type": "link",
+            "readOnly": true,
+            "notStorable": true
+        },
+        "transcriptContent": {
+            "type": "wysiwyg",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential"
+        },
+        "participants": {
+            "type": "hasMany",
+            "entity": "GoogleMeetParticipant",
+            "foreign": "conferenceRecord"
+        },
+        "transcriptEntries": {
+            "type": "hasMany",
+            "entity": "GoogleMeetTranscriptEntry",
+            "foreign": "conferenceRecord"
+        }
+    }
+}

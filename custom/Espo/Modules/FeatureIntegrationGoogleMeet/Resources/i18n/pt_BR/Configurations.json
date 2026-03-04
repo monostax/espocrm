@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Google": "Google",
+        "Meet Spaces": "Espaços do Meet",
+        "Meet Conference Records": "Registros de Conferência do Meet"
+    },
+    "descriptions": {
+        "googleMeetSpaces": "Navegar pelos espaços do Google Meet e seu histórico de conferências",
+        "googleMeetConferenceRecords": "Visualizar registros de conferência com participantes e transcrições"
+    },
+    "keywords": {
+        "googleMeetSpaces": "google,meet,espaço,reunião,sala",
+        "googleMeetConferenceRecords": "google,meet,conferência,registro,participante,transcrição"
+    }
+}

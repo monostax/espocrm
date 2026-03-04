@@ -1,0 +1,24 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-video",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
+    "searchPanelDisabled": false,
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "conferenceRecords",
+                "label": "Conference Records",
+                "view": "views/record/panels/relationship",
+                "order": 5
+            },
+            {
+                "name": "participants",
+                "label": "Participants",
+                "view": "views/record/panels/relationship",
+                "order": 10
+            }
+        ]
+    }
+}

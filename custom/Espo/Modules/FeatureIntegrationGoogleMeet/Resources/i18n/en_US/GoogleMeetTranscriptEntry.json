@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "name": "Entry ID",
+        "participant": "Participant",
+        "text": "Text",
+        "languageCode": "Language",
+        "startTime": "Start Time",
+        "endTime": "End Time"
+    },
+    "links": {},
+    "labels": {},
+    "tooltips": {
+        "participant": "The participant who spoke this text",
+        "text": "The transcribed text of the participant's speech",
+        "languageCode": "Language of the spoken text (IETF BCP 47, e.g. en-US)"
+    }
+}

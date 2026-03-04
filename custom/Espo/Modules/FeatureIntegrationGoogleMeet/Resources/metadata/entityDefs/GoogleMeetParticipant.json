@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "displayName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "userType": {
+            "type": "varchar",
+            "maxLength": 50,
+            "readOnly": true
+        },
+        "earliestStartTime": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "latestEndTime": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "conferenceRecord": {
+            "type": "belongsTo",
+            "entity": "GoogleMeetConferenceRecord"
+        },
+        "space": {
+            "type": "belongsTo",
+            "entity": "GoogleMeetSpace"
+        }
+    }
+}
+

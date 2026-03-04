@@ -1,0 +1,8 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-file-text",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
+    "searchPanelDisabled": true
+}

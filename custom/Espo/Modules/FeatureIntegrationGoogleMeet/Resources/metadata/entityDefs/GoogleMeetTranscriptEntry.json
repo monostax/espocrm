@@ -1,0 +1,37 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "participant": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "text": {
+            "type": "text",
+            "readOnly": true
+        },
+        "languageCode": {
+            "type": "varchar",
+            "maxLength": 20,
+            "readOnly": true
+        },
+        "startTime": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "endTime": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "conferenceRecord": {
+            "type": "belongsTo",
+            "entity": "GoogleMeetConferenceRecord"
+        }
+    }
+}

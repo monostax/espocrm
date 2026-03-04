@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Google": "Google",
+        "Meet Spaces": "Meet Spaces",
+        "Meet Conference Records": "Meet Conference Records"
+    },
+    "descriptions": {
+        "googleMeetSpaces": "Browse Google Meet spaces and their conference history",
+        "googleMeetConferenceRecords": "View conference records with participants and transcripts"
+    },
+    "keywords": {
+        "googleMeetSpaces": "google,meet,space,meeting,room",
+        "googleMeetConferenceRecords": "google,meet,conference,record,participant,transcript"
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "name": "Record Name",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "expireTime": "Expiration Time",
+        "space": "Space",
+        "credential": "Credential",
+        "transcriptContent": "Transcript Content"
+    },
+    "links": {
+        "credential": "Credential"
+    },
+    "labels": {
+        "Create GoogleMeetConferenceRecord": "View Conference Records",
+        "Participants": "Participants",
+        "Transcript Entries": "Transcript Entries"
+    },
+    "tooltips": {
+        "startTime": "When the conference started",
+        "endTime": "When the conference ended (empty if still ongoing)",
+        "expireTime": "When this record will be automatically deleted (30 days after conference ends)",
+        "space": "The Google Meet space where the conference was held",
+        "credential": "The Google Meet credential used to authenticate with the API"
+    }
+}

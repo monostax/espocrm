@@ -1089,13 +1089,17 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ->findOne();
     }
 
+    private const RECONCILE_FAIL_THRESHOLD = 3;
+
     /**
      * Reconcile ChatwootConversations that may have been deleted in Chatwoot.
      * 
      * This runs after a full sync is complete (no more pages remaining).
      * It checks conversations that haven't been synced recently and verifies
-     * they still exist in Chatwoot. If not found (404), the conversation
-     * and its messages are soft-deleted from EspoCRM.
+     * they still exist in Chatwoot. If not found (HTTP 404), the conversation's
+     * reconcileFailCount is incremented. Only after RECONCILE_FAIL_THRESHOLD
+     * consecutive confirmed 404 responses will the conversation be removed
+     * from EspoCRM. This prevents data loss from transient API errors.
      */
     private function reconcileDeletedConversations(
         string $platformUrl,
@@ -1105,9 +1109,6 @@ class SyncConversationsFromChatwoot implements JobDataLess
     ): void {
         $this->log->info("SyncConversationsFromChatwoot: Starting reconciliation for account {$espoAccountId}");
 
-        // Get ChatwootConversations that haven't been synced recently
-        // Only check conversations that were last synced more than 1 hour ago to avoid
-        // checking conversations we just synced
         $oneHourAgo = date('Y-m-d H:i:s', time() - 3600);
         
         $conversationsToCheck = $this->entityManager
@@ -1116,11 +1117,12 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 'chatwootAccountId' => $espoAccountId,
                 'lastSyncedAt<' => $oneHourAgo,
             ])
-            ->limit(50) // Check in batches to avoid timeout
+            ->limit(50)
             ->find();
 
         $checkedCount = 0;
         $deletedCount = 0;
+        $markedCount = 0;
 
         foreach ($conversationsToCheck as $conversation) {
             $chatwootConversationId = $conversation->get('chatwootConversationId');
@@ -1129,8 +1131,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 continue;
             }
             
+            $isConfirmed404 = false;
+
             try {
-                // Try to get the conversation from Chatwoot
                 $chatwootConversation = $this->apiClient->getConversation(
                     $platformUrl,
                     $apiKey,
@@ -1139,28 +1142,49 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 );
                 
                 if ($chatwootConversation === null) {
-                    // 404 - conversation doesn't exist in Chatwoot anymore
-                    $this->handleDeletedConversation($conversation);
-                    $deletedCount++;
+                    $isConfirmed404 = true;
                 } else {
-                    // Conversation exists, update lastSyncedAt to prevent re-checking
+                    // Conversation exists — reset fail counter and update sync timestamp
                     $conversation->set('lastSyncedAt', date('Y-m-d H:i:s'));
+                    $conversation->set('reconcileFailCount', 0);
                     $this->entityManager->saveEntity($conversation, ['silent' => true]);
                 }
                 
             } catch (\Exception $e) {
-                // Check if it's a 404 (conversation not found = deleted)
-                if (strpos($e->getMessage(), '404') !== false || 
-                    strpos($e->getMessage(), 'not found') !== false) {
-                    
+                $msg = $e->getMessage();
+                $httpCode = $this->extractHttpStatusCode($msg);
+
+                if ($httpCode === 404) {
+                    $isConfirmed404 = true;
+                } else {
+                    // Any non-404 error (500, timeout, class issues, etc.) — never treat as deletion
+                    $this->log->warning(
+                        "SyncConversationsFromChatwoot: Reconciliation skipped for conversation " .
+                        "{$chatwootConversationId} due to non-404 error (HTTP {$httpCode}): {$msg}"
+                    );
+                }
+            }
+
+            if ($isConfirmed404) {
+                $failCount = (int)$conversation->get('reconcileFailCount') + 1;
+                
+                if ($failCount >= self::RECONCILE_FAIL_THRESHOLD) {
+                    $this->log->warning(
+                        "SyncConversationsFromChatwoot: Conversation {$chatwootConversationId} " .
+                        "confirmed gone from Chatwoot after {$failCount} consecutive checks, " .
+                        "removing from EspoCRM (entity: {$conversation->getId()})"
+                    );
                     $this->handleDeletedConversation($conversation);
                     $deletedCount++;
                 } else {
-                    // Other error (API issue, etc) - log but don't mark as deleted
-                    $this->log->debug(
-                        "SyncConversationsFromChatwoot: Error checking conversation {$chatwootConversationId}: " . 
-                        $e->getMessage()
+                    $this->log->info(
+                        "SyncConversationsFromChatwoot: Conversation {$chatwootConversationId} " .
+                        "not found in Chatwoot (strike {$failCount}/" . self::RECONCILE_FAIL_THRESHOLD . "), " .
+                        "will retry before deleting"
                     );
+                    $conversation->set('reconcileFailCount', $failCount);
+                    $this->entityManager->saveEntity($conversation, ['silent' => true]);
+                    $markedCount++;
                 }
             }
             
@@ -1170,28 +1194,52 @@ class SyncConversationsFromChatwoot implements JobDataLess
         if ($checkedCount > 0) {
             $this->log->info(
                 "SyncConversationsFromChatwoot: Reconciliation complete - " .
-                "checked {$checkedCount}, deleted {$deletedCount}"
+                "checked {$checkedCount}, deleted {$deletedCount}, marked {$markedCount}"
             );
         }
     }
 
     /**
-     * Handle a ChatwootConversation that no longer exists in Chatwoot.
-     * Soft-deletes the conversation and all associated messages.
+     * Extract HTTP status code from an error message string.
+     * Returns the status code (e.g. 404, 500) or 0 if not found.
+     */
+    private function extractHttpStatusCode(string $message): int
+    {
+        // Match patterns like "HTTP 404", "HTTP 500", "status 404", "code 404"
+        if (preg_match('/\bHTTP\s+(\d{3})\b/i', $message, $matches)) {
+            return (int)$matches[1];
+        }
+        if (preg_match('/\b(?:status|code)\s+(\d{3})\b/i', $message, $matches)) {
+            return (int)$matches[1];
+        }
+        // Match standalone 3-digit HTTP codes that look like status codes
+        if (preg_match('/\b(4\d{2}|5\d{2})\b/', $message, $matches)) {
+            return (int)$matches[1];
+        }
+        return 0;
+    }
+
+    /**
+     * Handle a ChatwootConversation that has been confirmed deleted from Chatwoot
+     * after multiple consecutive 404 responses.
+     * Removes the conversation and its associated messages from EspoCRM.
      */
     private function handleDeletedConversation(Entity $conversation): void
     {
         $conversationId = $conversation->getId();
         $chatwootConversationId = $conversation->get('chatwootConversationId');
 
-        $this->log->info(
-            "SyncConversationsFromChatwoot: Conversation {$chatwootConversationId} " .
-            "no longer exists in Chatwoot, deleting from EspoCRM"
+        $this->log->warning(
+            "SyncConversationsFromChatwoot: Removing conversation {$chatwootConversationId} " .
+            "(entity {$conversationId}) from EspoCRM — confirmed deleted in Chatwoot"
         );
 
-        // Delete the conversation - cascade delete will handle messages automatically
-        // Using cascadeParent to skip remote API calls since entity already deleted on Chatwoot
-        $this->entityManager->removeEntity($conversation, ['cascadeParent' => true]);
+        // skipChatwootDelete tells the VerifyExistsInChatwoot hook to not call the
+        // Chatwoot API since we already confirmed the conversation is gone there
+        $this->entityManager->removeEntity($conversation, [
+            'cascadeParent' => true,
+            'skipChatwootDelete' => true,
+        ]);
     }
 
     /**
@@ -1209,9 +1257,16 @@ class SyncConversationsFromChatwoot implements JobDataLess
             }
 
             // Get WAHA platform and session info
+            $wahaPlatformId = $inboxIntegration->get('wahaPlatformId');
+
+            if (!$wahaPlatformId) {
+                $this->log->debug("SyncConversationsFromChatwoot: No wahaPlatformId on integration {$inboxIntegration->getId()}");
+                return;
+            }
+
             $wahaPlatform = $this->entityManager->getEntityById(
                 'WahaPlatform',
-                $inboxIntegration->get('wahaPlatformId')
+                $wahaPlatformId
             );
 
             if (!$wahaPlatform) {

@@ -1,0 +1,9 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "displayName"}, {"name": "userType"}],
+            [{"name": "earliestStartTime"}, {"name": "latestEndTime"}]
+        ]
+    }
+]

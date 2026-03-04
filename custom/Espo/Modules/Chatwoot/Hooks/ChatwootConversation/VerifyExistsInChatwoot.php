@@ -57,6 +57,16 @@ class VerifyExistsInChatwoot
      */
     public function beforeRemove(Entity $entity, array $options): void
     {
+        // Skip Chatwoot API call when entity is being removed by sync reconciliation
+        // (the conversation is already confirmed gone from Chatwoot)
+        if (!empty($options['cascadeParent']) || !empty($options['skipChatwootDelete'])) {
+            $this->log->info(
+                'VerifyExistsInChatwoot: Skipping Chatwoot deletion for ' . $entity->getId() .
+                ' (cascadeParent/skipChatwootDelete set)'
+            );
+            return;
+        }
+
         $this->log->info('DELETE HOOK CALLED for ChatwootConversation: ' . $entity->getId());
         
         $chatwootConversationId = $entity->get('chatwootConversationId');

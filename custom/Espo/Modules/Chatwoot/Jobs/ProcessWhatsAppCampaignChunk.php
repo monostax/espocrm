@@ -117,7 +117,9 @@ class ProcessWhatsAppCampaignChunk implements Job
         $templateBody = $campaign->get('templateBody') ?: '';
 
         $parameterMapping = $campaign->get('parameterMapping');
-        if (is_string($parameterMapping)) {
+        if ($parameterMapping instanceof \stdClass) {
+            $parameterMapping = (array) $parameterMapping;
+        } elseif (is_string($parameterMapping)) {
             $parameterMapping = json_decode($parameterMapping, true);
         }
         if (!is_array($parameterMapping)) {
@@ -218,7 +220,13 @@ class ProcessWhatsAppCampaignChunk implements Job
 
         $this->log->info("ProcessWhatsAppCampaignChunk: Completed chunk at offset {$chunkOffset} for campaign {$campaignId} ({$processedCount} contacts).");
 
-        // Check if campaign is complete
+        $this->verifyMessageStatuses(
+            $campaignId,
+            $platformUrl,
+            $accountApiKey,
+            $chatwootAccountIdExternal
+        );
+
         $this->checkCampaignCompletion($campaignId);
     }
 
@@ -266,6 +274,104 @@ class ProcessWhatsAppCampaignChunk implements Job
 
                 $this->log->info("ProcessWhatsAppCampaignChunk: Campaign {$campaignId} completed.");
             }
+        }
+    }
+
+    /**
+     * After sending, wait briefly and then verify each message's delivery status
+     * via the Chatwoot API. This catches async failures (e.g. Meta rejecting the
+     * template) that happen after Chatwoot's initial 200 response.
+     */
+    private function verifyMessageStatuses(
+        string $campaignId,
+        string $platformUrl,
+        string $accountApiKey,
+        int $chatwootAccountId
+    ): void {
+        $sentContacts = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignContact')
+            ->where([
+                'whatsAppCampaignId' => $campaignId,
+                'status' => 'Sent',
+            ])
+            ->where(['chatwootMessageId!=' => ''])
+            ->where(['chatwootConversationId!=' => ''])
+            ->find();
+
+        $contactsByConversation = [];
+        foreach ($sentContacts as $contact) {
+            $convId = $contact->get('chatwootConversationId');
+            $contactsByConversation[$convId][] = $contact;
+        }
+
+        if (empty($contactsByConversation)) {
+            return;
+        }
+
+        sleep(5);
+
+        foreach ($contactsByConversation as $conversationId => $contacts) {
+            try {
+                $messages = $this->chatwootApiClient->getConversationMessages(
+                    $platformUrl,
+                    $accountApiKey,
+                    $chatwootAccountId,
+                    (int) $conversationId
+                );
+
+                $statusByMessageId = [];
+                $errorByMessageId = [];
+                foreach ($messages as $msg) {
+                    if (isset($msg['id'])) {
+                        $statusByMessageId[(string) $msg['id']] = $msg['status'] ?? null;
+                        $errorByMessageId[(string) $msg['id']] =
+                            $msg['content_attributes']['external_error'] ?? null;
+                    }
+                }
+
+                foreach ($contacts as $contact) {
+                    $msgId = $contact->get('chatwootMessageId');
+                    $chatwootStatus = $statusByMessageId[$msgId] ?? null;
+
+                    if ($chatwootStatus === 'failed') {
+                        $reason = $errorByMessageId[$msgId] ?? 'Delivery failed (detected via post-send verification)';
+
+                        $contact->set([
+                            'status' => 'Failed',
+                            'failedAt' => date('Y-m-d H:i:s'),
+                            'failedReason' => substr((string) $reason, 0, 5000),
+                        ]);
+                        $this->entityManager->saveEntity($contact);
+
+                        $this->incrementCampaignCounter($campaignId, 'failedCount');
+                        $this->decrementCampaignCounter($campaignId, 'sentCount');
+
+                        $this->log->warning(
+                            "ProcessWhatsAppCampaignChunk: Post-send verification detected failure " .
+                            "for contact {$contact->getId()} (message {$msgId}): {$reason}"
+                        );
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->log->warning(
+                    "ProcessWhatsAppCampaignChunk: Post-send verification failed for conversation " .
+                    "{$conversationId}: {$e->getMessage()}"
+                );
+            }
+        }
+    }
+
+    /**
+     * Decrement a campaign counter, ensuring it does not go below zero.
+     */
+    private function decrementCampaignCounter(string $campaignId, string $field): void
+    {
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+
+        if ($campaign) {
+            $currentValue = (int) $campaign->get($field);
+            $campaign->set($field, max(0, $currentValue - 1));
+            $this->entityManager->saveEntity($campaign);
         }
     }
 

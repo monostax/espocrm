@@ -41,6 +41,11 @@
             "readOnly": true
         },
         "lastSyncedAt": { "type": "datetime", "readOnly": true },
+        "reconcileFailCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
         "lastMessageContent": {
             "type": "text",
             "readOnly": true,
@@ -75,13 +80,6 @@
             "type": "linkMultiple",
             "columns": {
                 "stage": "stage"
-            }
-        },
-        "cAgendamentos": {
-            "type": "linkMultiple",
-            "columns": {
-                "status": "status",
-                "dateStart": "dateStart"
             }
         },
         "assignedUser": {
@@ -135,12 +133,6 @@
             "entity": "Opportunity",
             "foreign": "chatwootConversations",
             "relationName": "chatwootConversationOpportunity"
-        },
-        "cAgendamentos": {
-            "type": "hasMany",
-            "entity": "CAgendamento",
-            "foreign": "chatwootConversations",
-            "relationName": "chatwootConversationCAgendamento"
         },
         "cases": {
             "type": "hasMany",
@@ -212,10 +204,6 @@
             },
             {
                 "table": "ChatwootConversationOpportunity",
-                "column": "chatwootConversationId"
-            },
-            {
-                "table": "ChatwootConversationCAgendamento",
                 "column": "chatwootConversationId"
             },
             {

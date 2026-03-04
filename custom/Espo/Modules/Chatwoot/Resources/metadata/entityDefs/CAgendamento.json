@@ -1,1 +1,0 @@
-{"fields":{"chatwootConversations":{"type":"linkMultiple"}},"links":{"chatwootConversations":{"type":"hasMany","entity":"ChatwootConversation","foreign":"cAgendamentos","relationName":"chatwootConversationCAgendamento"}}}

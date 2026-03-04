@@ -77,7 +77,7 @@
         "parameterMapping": {
             "type": "jsonObject",
             "tooltip": true,
-            "view": "views/fields/json-object"
+            "view": "chatwoot:views/whatsapp-campaign/fields/parameter-mapping"
         },
         "processedParams": {
             "type": "jsonArray",

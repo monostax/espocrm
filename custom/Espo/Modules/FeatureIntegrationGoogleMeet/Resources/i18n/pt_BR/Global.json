@@ -1,0 +1,14 @@
+{
+    "scopeNames": {
+        "GoogleMeetSpace": "Google Meet / Espaço",
+        "GoogleMeetConferenceRecord": "Google Meet / Registro de Conferência",
+        "GoogleMeetParticipant": "Google Meet / Participante",
+        "GoogleMeetTranscriptEntry": "Google Meet / Entrada de Transcrição"
+    },
+    "scopeNamesPlural": {
+        "GoogleMeetSpace": "Google Meet / Espaços",
+        "GoogleMeetConferenceRecord": "Google Meet / Registros de Conferência",
+        "GoogleMeetParticipant": "Google Meet / Participantes",
+        "GoogleMeetTranscriptEntry": "Google Meet / Entradas de Transcrição"
+    }
+}

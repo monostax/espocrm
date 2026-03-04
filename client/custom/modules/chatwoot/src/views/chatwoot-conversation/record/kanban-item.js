@@ -52,9 +52,6 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
             // Get linked opportunities
             const opportunities = this.getOpportunitiesData();
 
-            // Get linked agendamentos
-            const agendamentos = this.getAgendamentosData();
-
             // Get linked tasks
             const tasks = this.getTasksData();
 
@@ -80,7 +77,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                     this.getLanguage().translateOption(
                         status,
                         "status",
-                        "ChatwootConversation"
+                        "ChatwootConversation",
                     ) || status,
                 assigneeName: assigneeName,
                 hasAssignee: !!assigneeName,
@@ -88,37 +85,23 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 id: this.model.id,
                 opportunities: opportunities,
                 hasOpportunities: opportunities.length > 0,
-                agendamentos: agendamentos,
-                hasAgendamentos: agendamentos.length > 0,
                 tasks: tasks,
                 hasTasks: tasks.length > 0,
                 // Section labels
                 opportunityLabel: this.translate(
                     "Opportunity",
-                    "scopeNamesPlural"
+                    "scopeNamesPlural",
                 ),
-                agendamentoLabel: this.translate(
-                    "CAgendamento",
-                    "scopeNamesPlural"
-                ),
-                taskLabel: this.translate(
-                    "Task",
-                    "scopeNamesPlural"
-                ),
+                taskLabel: this.translate("Task", "scopeNamesPlural"),
                 createOpportunityLabel: this.translate(
                     "Create Opportunity",
                     "labels",
-                    "Opportunity"
-                ),
-                createAgendamentoLabel: this.translate(
-                    "Create CAgendamento",
-                    "labels",
-                    "CAgendamento"
+                    "Opportunity",
                 ),
                 createTaskLabel: this.translate(
                     "Create Task",
                     "labels",
-                    "Task"
+                    "Task",
                 ),
             };
         },
@@ -250,7 +233,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                         ? this.getLanguage().translateOption(
                               stage,
                               "stage",
-                              "Opportunity"
+                              "Opportunity",
                           )
                         : null,
                     stageStyle: this.getOpportunityStageStyle(stage),
@@ -271,52 +254,6 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 "Closed Lost": "opp-stage-lost",
             };
             return styleMap[stage] || "opp-stage-default";
-        },
-
-        /**
-         * Get linked agendamentos data for display
-         */
-        getAgendamentosData: function () {
-            const agendamentosIds = this.model.get("cAgendamentosIds") || [];
-            const agendamentosNames =
-                this.model.get("cAgendamentosNames") || {};
-            const agendamentosColumns =
-                this.model.get("cAgendamentosColumns") || {};
-
-            return agendamentosIds.map((id) => {
-                const status = agendamentosColumns[id]
-                    ? agendamentosColumns[id].status
-                    : null;
-                const dateStart = agendamentosColumns[id]
-                    ? agendamentosColumns[id].dateStart
-                    : null;
-                return {
-                    id: id,
-                    name: agendamentosNames[id] || "Agendamento",
-                    status: status,
-                    dateStart: dateStart,
-                    statusLabel: status
-                        ? this.getLanguage().translateOption(
-                              status,
-                              "status",
-                              "CAgendamento"
-                          )
-                        : null,
-                    statusStyle: this.getAgendamentoStatusStyle(status),
-                };
-            });
-        },
-
-        /**
-         * Get CSS class for agendamento status
-         */
-        getAgendamentoStatusStyle: function (status) {
-            const styleMap = {
-                Planned: "agendamento-status-planned",
-                Held: "agendamento-status-held",
-                "Not Held": "agendamento-status-not-held",
-            };
-            return styleMap[status] || "agendamento-status-planned";
         },
 
         /**
@@ -343,7 +280,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                         ? this.getLanguage().translateOption(
                               status,
                               "status",
-                              "Task"
+                              "Task",
                           )
                         : null,
                     statusStyle: this.getTaskStatusStyle(status),
@@ -357,10 +294,10 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
         getTaskStatusStyle: function (status) {
             const styleMap = {
                 "Not Started": "task-status-not-started",
-                "Started": "task-status-started",
-                "Completed": "task-status-completed",
-                "Canceled": "task-status-canceled",
-                "Deferred": "task-status-deferred",
+                Started: "task-status-started",
+                Completed: "task-status-completed",
+                Canceled: "task-status-canceled",
+                Deferred: "task-status-deferred",
             };
             return styleMap[status] || "task-status-not-started";
         },
@@ -402,13 +339,6 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 this.actionCreateOpportunity();
             });
 
-            // Bind create agendamento button FIRST (before card click)
-            this.$el.find(".btn-create-agendamento").on("click", (e) => {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                this.actionCreateAgendamento();
-            });
-
             // Bind create task button FIRST (before card click)
             this.$el.find(".btn-create-task").on("click", (e) => {
                 e.preventDefault();
@@ -422,10 +352,8 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 if (
                     $(e.target).closest(".item-menu-container").length ||
                     $(e.target).closest(".btn-create-opportunity").length ||
-                    $(e.target).closest(".btn-create-agendamento").length ||
                     $(e.target).closest(".btn-create-task").length ||
                     $(e.target).closest(".conversation-opportunity").length ||
-                    $(e.target).closest(".conversation-agendamento").length ||
                     $(e.target).closest(".conversation-task").length
                 ) {
                     return;
@@ -467,10 +395,10 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                 "chatwoot:views/chatwoot-conversation/modals/conversation-drawer",
                 {
                     chatwootConversationId: this.model.get(
-                        "chatwootConversationId"
+                        "chatwootConversationId",
                     ),
                     chatwootAccountIdExternal: this.model.get(
-                        "chatwootAccountIdExternal"
+                        "chatwootAccountIdExternal",
                     ),
                     contactName:
                         this.model.get("contactDisplayName") ||
@@ -485,7 +413,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                         // Refresh the model when drawer closes
                         this.model.fetch();
                     });
-                }
+                },
             );
         },
 
@@ -533,54 +461,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                             this.reRender();
                         });
                     });
-                }
-            );
-        },
-
-        actionCreateAgendamento: function () {
-            // Get contact ID from the conversation's linked contact
-            const contactId = this.model.get("contactId");
-            const contactName = this.model.get("contactDisplayName");
-
-            // Prepare attributes for the new CAgendamento
-            const attributes = {
-                chatwootConversationsIds: [this.model.id],
-                chatwootConversationsNames: {
-                    [this.model.id]: this.model.get("name"),
                 },
-            };
-
-            // If there's a linked contact, also link it to the CAgendamento
-            if (contactId) {
-                attributes.contactId = contactId;
-                attributes.contactName = contactName;
-            }
-
-            // Open the CAgendamento create modal
-            Espo.Ui.notify(" ... ");
-
-            this.createView(
-                "quickCreateAgendamento",
-                "views/modals/edit",
-                {
-                    scope: "CAgendamento",
-                    attributes: attributes,
-                    fullFormDisabled: true,
-                    layoutName: "detailSmall",
-                    sideDisabled: true,
-                    bottomDisabled: true,
-                },
-                (view) => {
-                    Espo.Ui.notify(false);
-                    view.render();
-
-                    this.listenToOnce(view, "after:save", () => {
-                        // Refresh the model and re-render the card
-                        this.model.fetch().then(() => {
-                            this.reRender();
-                        });
-                    });
-                }
             );
         },
 
@@ -627,7 +508,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
                             this.reRender();
                         });
                     });
-                }
+                },
             );
         },
     });

@@ -2105,6 +2105,48 @@ public function deleteConversation(
     return true;
 }
 
+    /**
+     * Get messages from a conversation in Chatwoot.
+     *
+     * @param string $platformUrl The Chatwoot platform URL
+     * @param string $accountApiKey The account API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $conversationId The Chatwoot conversation ID
+     * @return array<int, array<string, mixed>> List of messages
+     * @throws Error
+     */
+    public function getConversationMessages(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $conversationId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/conversations/' . $conversationId . '/messages';
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to get conversation messages from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (getConversationMessages): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body']['payload'] ?? $response['body'] ?? [];
+    }
+
     /* -------------------------------------------------------------------------- */
     /*              WhatsApp Campaign API Methods (Account-level API)              */
     /* -------------------------------------------------------------------------- */
@@ -2257,10 +2299,7 @@ public function deleteConversation(
         $processedParams = new \stdClass();
         foreach ($params as $key => $value) {
             $k = (string) $key;
-            $processedParams->$k = [
-                'type' => 'text',
-                'text' => (string) $value,
-            ];
+            $processedParams->$k = (string) $value;
         }
 
         $messageData = [

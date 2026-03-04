@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "name": "ID do Participante",
+        "displayName": "Nome de Exibição",
+        "userType": "Tipo de Usuário",
+        "earliestStartTime": "Entrou em",
+        "latestEndTime": "Saiu em"
+    },
+    "links": {},
+    "labels": {},
+    "tooltips": {
+        "userType": "Tipo de participante: autenticado, anônimo ou telefone",
+        "earliestStartTime": "Quando o participante entrou pela primeira vez na conferência",
+        "latestEndTime": "Quando o participante saiu pela última vez da conferência"
+    }
+}

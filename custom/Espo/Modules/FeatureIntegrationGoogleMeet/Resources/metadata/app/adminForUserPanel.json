@@ -1,0 +1,20 @@
+{
+    "google": {
+        "label": "Google",
+        "itemList": [
+            {
+                "url": "#GoogleMeetSpace",
+                "label": "Meet Spaces",
+                "iconClass": "ti ti-video",
+                "description": "googleMeetSpaces"
+            },
+            {
+                "url": "#GoogleMeetConferenceRecord",
+                "label": "Meet Conference Records",
+                "iconClass": "ti ti-record-mail",
+                "description": "googleMeetConferenceRecords"
+            }
+        ],
+        "order": 25
+    }
+}

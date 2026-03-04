@@ -1,0 +1,12 @@
+{
+    "labels": {
+        "Google": "Google",
+        "Calendar Sync": "Sincronização de Calendário"
+    },
+    "descriptions": {
+        "msxGoogleCalendarSync": "Configurar sincronização do Google Calendar para usuários"
+    },
+    "keywords": {
+        "msxGoogleCalendarSync": "google,calendar,sincronização,evento,reunião,chamada"
+    }
+}

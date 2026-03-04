@@ -1,0 +1,54 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "meetingUri": {
+            "type": "url",
+            "readOnly": true
+        },
+        "meetingCode": {
+            "type": "varchar",
+            "maxLength": 128,
+            "readOnly": true
+        },
+        "accessType": {
+            "type": "varchar",
+            "maxLength": 50,
+            "readOnly": true
+        },
+        "hasActiveConference": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "activeConferenceRecord": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "credential": {
+            "type": "link",
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential"
+        },
+        "conferenceRecords": {
+            "type": "hasMany",
+            "entity": "GoogleMeetConferenceRecord",
+            "foreign": "space"
+        },
+        "participants": {
+            "type": "hasMany",
+            "entity": "GoogleMeetParticipant",
+            "foreign": "space"
+        }
+    }
+}
+

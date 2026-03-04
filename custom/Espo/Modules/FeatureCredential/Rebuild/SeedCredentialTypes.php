@@ -451,7 +451,6 @@ class SeedCredentialTypes implements RebuildAction
                     'properties' => [
                         'accessToken' => ['type' => 'string', 'title' => 'Access Token', 'source' => 'oauth'],
                         'businessAccountId' => ['type' => 'string', 'title' => 'Business Account ID'],
-                        'webhookVerifyToken' => ['type' => 'string', 'title' => 'Webhook Verify Token'],
                         'apiVersion' => ['type' => 'string', 'title' => 'API Version', 'default' => 'v21.0'],
                     ],
                     'required' => ['businessAccountId'],
@@ -459,14 +458,13 @@ class SeedCredentialTypes implements RebuildAction
                 'uiConfig' => json_encode([
                     'fields' => [
                         ['name' => 'businessAccountId', 'type' => 'text', 'label' => 'Business Account ID'],
-                        ['name' => 'webhookVerifyToken', 'type' => 'password', 'label' => 'Webhook Verify Token'],
                         ['name' => 'apiVersion', 'type' => 'text', 'label' => 'API Version', 'default' => 'v21.0'],
                     ],
                 ]),
                 'tokenFieldMapping' => json_encode([
                     'accessToken' => 'access_token',
                 ]),
-                'encryptionFields' => json_encode(['webhookVerifyToken']),
+                'encryptionFields' => json_encode([]),
                 'requiresRotation' => false,
                 'rotationDays' => 90,
                 'isSystem' => true,

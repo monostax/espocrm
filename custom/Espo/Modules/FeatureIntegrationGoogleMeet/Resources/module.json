@@ -1,0 +1,7 @@
+{
+    "name": "FeatureIntegrationGoogleMeet",
+    "description": "Google Meet integration - OAuth provider, credential type, and virtual entities (Space, ConferenceRecord, Participant, TranscriptEntry)",
+    "version": "1.0.0",
+    "order": 27,
+    "jsTranspiled": true
+}

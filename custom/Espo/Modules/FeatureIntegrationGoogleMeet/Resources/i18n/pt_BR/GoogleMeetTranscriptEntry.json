@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "name": "ID da Entrada",
+        "participant": "Participante",
+        "text": "Texto",
+        "languageCode": "Idioma",
+        "startTime": "Início",
+        "endTime": "Término"
+    },
+    "links": {},
+    "labels": {},
+    "tooltips": {
+        "participant": "O participante que falou este texto",
+        "text": "O texto transcrito da fala do participante",
+        "languageCode": "Idioma do texto falado (IETF BCP 47, ex: pt-BR)"
+    }
+}

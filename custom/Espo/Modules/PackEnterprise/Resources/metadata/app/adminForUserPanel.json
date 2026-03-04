@@ -1,6 +1,6 @@
 {
-    "googleCalendar": {
-        "label": "Google Calendar",
+    "google": {
+        "label": "Google",
         "itemList": [
             {
                 "url": "#Configurations/MsxGoogleCalendarUser",

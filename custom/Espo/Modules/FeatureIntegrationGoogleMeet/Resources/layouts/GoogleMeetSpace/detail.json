@@ -1,0 +1,11 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "credential"}],
+            [{"name": "meetingUri"}, {"name": "meetingCode"}],
+            [{"name": "accessType"}, {"name": "hasActiveConference"}],
+            [{"name": "activeConferenceRecord"}, false]
+        ]
+    }
+]

@@ -95,7 +95,17 @@ class MsxGoogleCalendar
     {
         $userId = $this->user->getId();
 
-        // Verify the OAuth account is connected by trying to get tokens.
+        $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
+
+        if (!$oAuthAccount || !$this->aclManager->check($this->user, $oAuthAccount, 'read')) {
+            $this->log->warning(
+                'MsxGoogleCalendar: ACL denied for OAuthAccount ' .
+                $oAuthAccountId . ' by user ' . $userId
+            );
+
+            return [];
+        }
+
         try {
             $this->tokensProvider->get($oAuthAccountId);
         } catch (AccountNotFound | NoToken | ProviderNotAvailable $e) {

@@ -52,12 +52,6 @@
             "create": false,
             "select": true,
             "view": "views/record/panels/relationship"
-        },
-        "cAgendamentos": {
-            "create": true,
-            "select": true,
-            "view": "views/record/panels/relationship"
         }
     }
 }
-

@@ -1,0 +1,19 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 30
+    },
+    {
+        "name": "startTime",
+        "width": 20
+    },
+    {
+        "name": "endTime",
+        "width": 20
+    },
+    {
+        "name": "credential",
+        "width": 20
+    }
+]

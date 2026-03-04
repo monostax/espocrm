@@ -1,0 +1,22 @@
+[
+    {
+        "name": "participant",
+        "width": 20
+    },
+    {
+        "name": "text",
+        "width": 40
+    },
+    {
+        "name": "languageCode",
+        "width": 10
+    },
+    {
+        "name": "startTime",
+        "width": 15
+    },
+    {
+        "name": "endTime",
+        "width": 15
+    }
+]

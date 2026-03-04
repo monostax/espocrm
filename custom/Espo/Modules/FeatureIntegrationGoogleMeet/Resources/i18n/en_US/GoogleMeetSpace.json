@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "name": "Space Name",
+        "meetingUri": "Meeting URL",
+        "meetingCode": "Meeting Code",
+        "accessType": "Access Type",
+        "hasActiveConference": "Active Conference",
+        "activeConferenceRecord": "Active Conference Record",
+        "credential": "Credential"
+    },
+    "links": {
+        "credential": "Credential",
+        "conferenceRecords": "Conference Records",
+        "participants": "Participants"
+    },
+    "labels": {
+        "Create GoogleMeetSpace": "View Google Meet Spaces",
+        "Conference Records": "Conference Records"
+    },
+    "tooltips": {
+        "meetingUri": "The URL used to join the meeting (e.g. https://meet.google.com/abc-mnop-xyz)",
+        "meetingCode": "The friendly meeting code (e.g. abc-mnop-xyz)",
+        "accessType": "Who can join without knocking: OPEN, TRUSTED, or RESTRICTED",
+        "credential": "The Google Meet credential used to authenticate with the API"
+    }
+}

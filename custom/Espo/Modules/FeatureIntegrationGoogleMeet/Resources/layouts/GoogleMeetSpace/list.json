@@ -1,0 +1,23 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 25
+    },
+    {
+        "name": "meetingCode",
+        "width": 15
+    },
+    {
+        "name": "accessType",
+        "width": 15
+    },
+    {
+        "name": "hasActiveConference",
+        "width": 15
+    },
+    {
+        "name": "credential",
+        "width": 20
+    }
+]

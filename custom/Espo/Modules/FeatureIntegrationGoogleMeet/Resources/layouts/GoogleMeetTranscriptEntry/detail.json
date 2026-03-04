@@ -1,0 +1,10 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "participant"}, {"name": "languageCode"}],
+            [{"name": "startTime"}, {"name": "endTime"}],
+            [{"name": "text"}, false]
+        ]
+    }
+]

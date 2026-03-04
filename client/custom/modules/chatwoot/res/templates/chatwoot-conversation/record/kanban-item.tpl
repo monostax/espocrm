@@ -400,79 +400,6 @@
     color: #4b5563;
 }
 
-/* Agendamento Item Styles */
-.conversation-agendamento {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    background: #e0f2fe;
-    color: #0369a1;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    max-width: 100%;
-    overflow: hidden;
-}
-
-.conversation-agendamento:hover {
-    filter: brightness(0.95);
-    transform: translateY(-1px);
-}
-
-.conversation-agendamento i {
-    font-size: 10px;
-    flex-shrink: 0;
-}
-
-.conversation-agendamento-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Agendamento Status Styles */
-.conversation-agendamento.agendamento-status-planned {
-    background: #e0f2fe;
-    color: #0369a1;
-}
-
-.conversation-agendamento.agendamento-status-held {
-    background: #d1fae5;
-    color: #047857;
-}
-
-.conversation-agendamento.agendamento-status-not-held {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-/* Create Agendamento Button */
-.btn-create-agendamento {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    border: 1px dashed #d1d5db;
-    background: transparent;
-    color: #9ca3af;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    padding: 0;
-}
-
-.btn-create-agendamento:hover {
-    border-color: #0369a1;
-    background: #e0f2fe;
-    color: #0369a1;
-}
-
-.btn-create-agendamento i {
-    font-size: 10px;
-}
 
 /* Task Item Styles */
 .conversation-task {
@@ -664,33 +591,6 @@
     </div>
     {{/if}}
 
-    {{#if hasAgendamentos}}
-    <div class="conversation-related-section">
-        <div class="conversation-related-header">
-            <i class="fas fa-calendar-plus"></i>
-            <span>{{agendamentoLabel}}</span>
-        </div>
-        <div class="conversation-related-items">
-            {{#each agendamentos}}
-            <a href="#CAgendamento/view/{{id}}" class="conversation-agendamento {{statusStyle}}" title="{{name}}{{#if statusLabel}} - {{statusLabel}}{{/if}}" data-id="{{id}}" onclick="event.stopPropagation();">
-                <span class="conversation-agendamento-name">{{name}}</span>
-            </a>
-            {{/each}}
-            <button type="button" class="btn-create-agendamento" title="{{../createAgendamentoLabel}}">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
-    </div>
-    {{else}}
-    <div class="conversation-related-section">
-        <div class="conversation-related-items">
-            <button type="button" class="btn-create-agendamento" title="{{createAgendamentoLabel}}">
-                <i class="fas fa-calendar-plus"></i>
-                <i class="fas fa-plus" style="font-size: 8px; margin-left: 2px;"></i>
-            </button>
-        </div>
-    </div>
-    {{/if}}
 
     {{#if hasTasks}}
     <div class="conversation-related-section">

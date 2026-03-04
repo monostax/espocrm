@@ -17,8 +17,7 @@
         "lastMessageContent": "Última Mensagem",
         "contactAvatarUrl": "Avatar do Contato",
         "contactDisplayName": "Nome do Contato",
-        "inboxChannelType": "Tipo de Canal",
-        "cAgendamentos": "Agendamentos"
+        "inboxChannelType": "Tipo de Canal"
     },
     "links": {
         "contactInbox": "Chat / Contato / Canal",
@@ -26,7 +25,6 @@
         "contact": "CRM / Contato",
         "chatwootAccount": "Chat / Conta",
         "opportunities": "Oportunidades",
-        "cAgendamentos": "Agendamentos",
         "inbox": "Chat / Caixa de Entrada",
         "messages": "Chat / Mensagens",
         "assignedUser": "Usuário Atribuído",

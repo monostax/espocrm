@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "name": "Nome do Espaço",
+        "meetingUri": "URL da Reunião",
+        "meetingCode": "Código da Reunião",
+        "accessType": "Tipo de Acesso",
+        "hasActiveConference": "Conferência Ativa",
+        "activeConferenceRecord": "Registro de Conferência Ativo",
+        "credential": "Credencial"
+    },
+    "links": {
+        "credential": "Credencial",
+        "conferenceRecords": "Registros de Conferência",
+        "participants": "Participantes"
+    },
+    "labels": {
+        "Create GoogleMeetSpace": "Visualizar Espaços do Google Meet",
+        "Conference Records": "Registros de Conferência"
+    },
+    "tooltips": {
+        "meetingUri": "A URL usada para entrar na reunião (ex: https://meet.google.com/abc-mnop-xyz)",
+        "meetingCode": "O código amigável da reunião (ex: abc-mnop-xyz)",
+        "accessType": "Quem pode entrar sem bater: OPEN, TRUSTED ou RESTRICTED",
+        "credential": "A credencial do Google Meet usada para autenticar com a API"
+    }
+}

@@ -1,0 +1,6 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeatureIntegrationGoogleMeet\\Rebuild\\SeedOAuthProviderGoogleMeet",
+        "Espo\\Modules\\FeatureIntegrationGoogleMeet\\Rebuild\\SeedCredentialTypeGoogleMeet"
+    ]
+}

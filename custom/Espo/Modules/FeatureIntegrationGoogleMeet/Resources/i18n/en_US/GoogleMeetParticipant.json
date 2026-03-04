@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "name": "Participant ID",
+        "displayName": "Display Name",
+        "userType": "User Type",
+        "earliestStartTime": "Joined At",
+        "latestEndTime": "Left At"
+    },
+    "links": {},
+    "labels": {},
+    "tooltips": {
+        "userType": "Type of participant: signedin, anonymous, or phone",
+        "earliestStartTime": "When the participant first joined the conference",
+        "latestEndTime": "When the participant last left the conference"
+    }
+}

@@ -144,6 +144,7 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'MsxGoogleCalendar' => true,
                 'MsxGoogleCalendarUser' => [
                     'create' => 'yes',
                     'read' => 'own',
@@ -258,6 +259,7 @@ class SeedRole implements RebuildAction
                 'CredentialHistory' => (object)[],
                 'CredentialType' => (object)[],
                 'OAuthAccount' => (object)[],
+                'MsxGoogleCalendar' => (object)[],
                 'MsxGoogleCalendarUser' => (object)[],
                 'OAuthProvider' => (object)[
                     'isGloballyShared' => (object)['read' => 'no', 'edit' => 'no'],
@@ -369,6 +371,13 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
+                    ],
+                    'Task' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
                     ],
                 ],
                 'fieldData' => [
