@@ -2267,8 +2267,10 @@ public function deleteConversation(
      * @param int $inboxId The Chatwoot inbox ID
      * @param string $templateName Meta template name
      * @param string $language Template language code (e.g., "pt_BR")
-     * @param array<string, string> $params Template parameters
+     * @param array<string, string> $params Template parameters (body parameters)
      * @param string $category Template category (e.g., "UTILITY", "MARKETING")
+     * @param string|null $headerMediaUrl URL for header media (image/video/document)
+     * @param string|null $headerMediaType Media type: "image", "video", or "document"
      * @return array{message_id: int, conversation_id: int}
      * @throws Error
      */
@@ -2282,7 +2284,9 @@ public function deleteConversation(
         string $language,
         array $params = [],
         string $category = 'UTILITY',
-        string $content = ''
+        string $content = '',
+        ?string $headerMediaUrl = null,
+        ?string $headerMediaType = null
     ): array {
         // Step 1: Create a conversation with the contact
         $conversation = $this->createConversation($platformUrl, $accountApiKey, $accountId, $contactId, $inboxId);
@@ -2296,10 +2300,20 @@ public function deleteConversation(
         $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
             . '/conversations/' . $conversationId . '/messages';
 
-        $processedParams = new \stdClass();
+        $processedParams = [];
+
+        $bodyParams = new \stdClass();
         foreach ($params as $key => $value) {
             $k = (string) $key;
-            $processedParams->$k = (string) $value;
+            $bodyParams->$k = (string) $value;
+        }
+        $processedParams['body'] = $bodyParams;
+
+        if ($headerMediaUrl && $headerMediaType) {
+            $processedParams['header'] = [
+                'media_url' => $headerMediaUrl,
+                'media_type' => $headerMediaType,
+            ];
         }
 
         $messageData = [

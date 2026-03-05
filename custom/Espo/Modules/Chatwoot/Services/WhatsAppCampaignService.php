@@ -76,8 +76,9 @@ class WhatsAppCampaignService
     /**
      * Resolve the audience for a campaign.
      *
-     * Merges contacts from TargetLists and manual contacts, filters opt-outs,
-     * normalizes phone numbers, and removes duplicates.
+     * Merges contacts from TargetLists and manual contacts, filters opt-outs
+     * (both per-TargetList and global whatsAppOptedOut), normalizes phone
+     * numbers, removes duplicates, and applies campaign/list exclusions.
      *
      * @param string $campaignId Campaign entity ID
      * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
@@ -93,8 +94,9 @@ class WhatsAppCampaignService
 
         $audience = [];
         $seenPhones = [];
+        $whatsAppOptedOutCount = 0;
 
-        // 1. Collect contacts from TargetLists (filter opt-outs via ORM)
+        // 1. Collect contacts from TargetLists (filter per-list opt-outs and global whatsAppOptedOut)
         $targetLists = $this->entityManager
             ->getRDBRepository('WhatsAppCampaign')
             ->getRelation($campaign, 'targetLists')
@@ -104,10 +106,15 @@ class WhatsAppCampaignService
             $contacts = $this->entityManager
                 ->getRDBRepository('TargetList')
                 ->getRelation($targetList, 'contacts')
-                ->where(['targetListContact.isOptedOut' => false])
+                ->where(['@relation.optedOut' => false])
                 ->find();
 
             foreach ($contacts as $contact) {
+                if ($contact->get('whatsAppOptedOut')) {
+                    $whatsAppOptedOutCount++;
+                    continue;
+                }
+
                 $phone = $this->normalizePhone($contact->get('phoneNumber'));
 
                 if (!$phone) {
@@ -129,13 +136,18 @@ class WhatsAppCampaignService
             }
         }
 
-        // 2. Collect manual contacts
+        // 2. Collect manual contacts (also filter whatsAppOptedOut)
         $manualContacts = $this->entityManager
             ->getRDBRepository('WhatsAppCampaign')
             ->getRelation($campaign, 'manualContacts')
             ->find();
 
         foreach ($manualContacts as $contact) {
+            if ($contact->get('whatsAppOptedOut')) {
+                $whatsAppOptedOutCount++;
+                continue;
+            }
+
             $phone = $this->normalizePhone($contact->get('phoneNumber'));
 
             if (!$phone) {
@@ -156,9 +168,114 @@ class WhatsAppCampaignService
             ];
         }
 
+        if ($whatsAppOptedOutCount > 0) {
+            $this->log->info("WhatsAppCampaignService: Skipped {$whatsAppOptedOutCount} contacts with whatsAppOptedOut flag.");
+        }
+
+        $audienceBeforeExclusions = count($audience);
+
+        // 3. Exclude recipients from previous campaigns
+        $audience = $this->applyExcludeCampaigns($campaign, $audience);
+
+        // 4. Exclude recipients from excluding target lists
+        $audience = $this->applyExcludingTargetLists($campaign, $audience);
+
+        $excludedCount = $audienceBeforeExclusions - count($audience);
+        if ($excludedCount > 0) {
+            $this->log->info("WhatsAppCampaignService: Excluded {$excludedCount} contacts via campaign/list exclusions.");
+        }
+
         $this->log->info("WhatsAppCampaignService: Resolved audience of " . count($audience) . " contacts for campaign {$campaignId}");
 
         return $audience;
+    }
+
+    /**
+     * Remove contacts that were successfully reached in linked exclude campaigns.
+     *
+     * @param \Espo\ORM\Entity $campaign
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     */
+    private function applyExcludeCampaigns(\Espo\ORM\Entity $campaign, array $audience): array
+    {
+        $excludeCampaigns = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaign')
+            ->getRelation($campaign, 'excludeCampaigns')
+            ->find();
+
+        $excludeCampaignIds = [];
+        foreach ($excludeCampaigns as $ec) {
+            $excludeCampaignIds[] = $ec->getId();
+        }
+
+        if (empty($excludeCampaignIds)) {
+            return $audience;
+        }
+
+        $reachedStatuses = ['Sent', 'Delivered', 'Read', 'Replied'];
+        $excludedPhones = [];
+
+        $excludedContacts = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignContact')
+            ->where([
+                'whatsAppCampaignId' => $excludeCampaignIds,
+                'status' => $reachedStatuses,
+            ])
+            ->select(['phoneNumber'])
+            ->group(['phoneNumber'])
+            ->find();
+
+        foreach ($excludedContacts as $ec) {
+            $excludedPhones[$ec->get('phoneNumber')] = true;
+        }
+
+        if (empty($excludedPhones)) {
+            return $audience;
+        }
+
+        return array_values(array_filter($audience, function ($item) use ($excludedPhones) {
+            return !isset($excludedPhones[$item['phoneNumber']]);
+        }));
+    }
+
+    /**
+     * Remove contacts that appear in linked excluding target lists.
+     *
+     * @param \Espo\ORM\Entity $campaign
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     */
+    private function applyExcludingTargetLists(\Espo\ORM\Entity $campaign, array $audience): array
+    {
+        $excludingLists = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaign')
+            ->getRelation($campaign, 'excludingTargetLists')
+            ->find();
+
+        $excludedPhones = [];
+
+        foreach ($excludingLists as $targetList) {
+            $contacts = $this->entityManager
+                ->getRDBRepository('TargetList')
+                ->getRelation($targetList, 'contacts')
+                ->find();
+
+            foreach ($contacts as $contact) {
+                $phone = $this->normalizePhone($contact->get('phoneNumber'));
+                if ($phone) {
+                    $excludedPhones[$phone] = true;
+                }
+            }
+        }
+
+        if (empty($excludedPhones)) {
+            return $audience;
+        }
+
+        return array_values(array_filter($audience, function ($item) use ($excludedPhones) {
+            return !isset($excludedPhones[$item['phoneNumber']]);
+        }));
     }
 
     /**
@@ -325,13 +442,29 @@ class WhatsAppCampaignService
             return null;
         }
 
-        // If starts with 55 and has 12-13 digits, it's already Brazilian E.164 (without +)
+        // Brazilian E.164: 55 + 2-digit DDD + 9-digit mobile (13 digits total)
+        // Old format with 8-digit mobile (12 digits) needs the "9" prefix added.
         if (str_starts_with($digits, '55') && strlen($digits) >= 12 && strlen($digits) <= 13) {
+            if (strlen($digits) === 12) {
+                $ddd = substr($digits, 2, 2);
+                $local = substr($digits, 4);
+                // Local starts with 6-9 = mobile in old format, add the "9" prefix
+                if (preg_match('/^[6-9]/', $local)) {
+                    $digits = '55' . $ddd . '9' . $local;
+                }
+            }
             return '+' . $digits;
         }
 
-        // If 10-11 digits, assume Brazilian local number
+        // If 10-11 digits, assume Brazilian local number (DDD + local)
         if (strlen($digits) >= 10 && strlen($digits) <= 11) {
+            if (strlen($digits) === 10) {
+                $ddd = substr($digits, 0, 2);
+                $local = substr($digits, 2);
+                if (preg_match('/^[6-9]/', $local)) {
+                    $digits = $ddd . '9' . $local;
+                }
+            }
             return '+55' . $digits;
         }
 

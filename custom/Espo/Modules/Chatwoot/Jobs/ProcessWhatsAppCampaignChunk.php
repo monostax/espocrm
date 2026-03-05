@@ -38,6 +38,11 @@ class ProcessWhatsAppCampaignChunk implements Job
      */
     private const RATE_LIMIT_DELAY_MS = 1000;
 
+    /** WhatsApp Cloud API error codes that indicate the phone is permanently unreachable. */
+    private const AUTO_OPTOUT_ERROR_CODES = ['131026'];
+
+    private const CONTACT_LOOKUP_FAILURE = 'Failed to get Chatwoot contact ID';
+
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $chatwootApiClient,
@@ -115,6 +120,8 @@ class ProcessWhatsAppCampaignChunk implements Job
         $templateLanguage = $campaign->get('templateLanguage');
         $templateCategory = $campaign->get('templateCategory') ?: 'UTILITY';
         $templateBody = $campaign->get('templateBody') ?: '';
+        $headerMediaUrl = $campaign->get('headerMediaUrl') ?: null;
+        $headerMediaType = $campaign->get('headerMediaType') ?: null;
 
         $parameterMapping = $campaign->get('parameterMapping');
         if ($parameterMapping instanceof \stdClass) {
@@ -187,7 +194,9 @@ class ProcessWhatsAppCampaignChunk implements Job
                     $templateLanguage,
                     $params,
                     $templateCategory,
-                    $content
+                    $content,
+                    $headerMediaUrl,
+                    $headerMediaType
                 );
 
                 $campaignContact->set([
@@ -203,16 +212,21 @@ class ProcessWhatsAppCampaignChunk implements Job
 
                 $processedCount++;
             } catch (\Exception $e) {
-                $this->log->error("ProcessWhatsAppCampaignChunk: Failed to process contact {$campaignContact->getId()}: {$e->getMessage()}");
+                $errorMessage = $e->getMessage();
+                $this->log->error("ProcessWhatsAppCampaignChunk: Failed to process contact {$campaignContact->getId()}: {$errorMessage}");
 
                 $campaignContact->set([
                     'status' => 'Failed',
                     'failedAt' => date('Y-m-d H:i:s'),
-                    'failedReason' => substr($e->getMessage(), 0, 5000),
+                    'failedReason' => substr($errorMessage, 0, 5000),
                 ]);
                 $this->entityManager->saveEntity($campaignContact);
 
                 $this->incrementCampaignCounter($campaignId, 'failedCount');
+
+                if ($this->isPermanentFailure($errorMessage)) {
+                    $this->autoOptOutContact($campaignContact, $campaignId, $errorMessage);
+                }
 
                 $processedCount++;
             }
@@ -346,6 +360,10 @@ class ProcessWhatsAppCampaignChunk implements Job
                         $this->incrementCampaignCounter($campaignId, 'failedCount');
                         $this->decrementCampaignCounter($campaignId, 'sentCount');
 
+                        if ($this->isPermanentFailure((string) $reason)) {
+                            $this->autoOptOutContact($contact, $campaignId, (string) $reason);
+                        }
+
                         $this->log->warning(
                             "ProcessWhatsAppCampaignChunk: Post-send verification detected failure " .
                             "for contact {$contact->getId()} (message {$msgId}): {$reason}"
@@ -441,6 +459,78 @@ class ProcessWhatsAppCampaignChunk implements Job
         }
 
         return $content;
+    }
+
+    /**
+     * Check if an error message indicates a permanently unreachable phone number.
+     */
+    private function isPermanentFailure(string $errorMessage): bool
+    {
+        if (str_contains($errorMessage, self::CONTACT_LOOKUP_FAILURE)) {
+            return true;
+        }
+
+        foreach (self::AUTO_OPTOUT_ERROR_CODES as $code) {
+            if (str_contains($errorMessage, $code . ':')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Auto opt-out a contact after a permanent delivery failure.
+     * Sets the global whatsAppOptedOut flag on the Contact entity and
+     * marks isOptedOut on every TargetList junction linked to this campaign.
+     */
+    private function autoOptOutContact(
+        \Espo\ORM\Entity $campaignContact,
+        string $campaignId,
+        string $reason
+    ): void {
+        $contactId = $campaignContact->get('contactId');
+
+        if (!$contactId) {
+            return;
+        }
+
+        try {
+            $contact = $this->entityManager->getEntityById('Contact', $contactId);
+
+            if ($contact && !$contact->get('whatsAppOptedOut')) {
+                $contact->set('whatsAppOptedOut', true);
+                $this->entityManager->saveEntity($contact);
+
+                $this->log->info(
+                    "ProcessWhatsAppCampaignChunk: Auto opt-out Contact {$contactId} " .
+                    "(whatsAppOptedOut=true) due to: {$reason}"
+                );
+            }
+
+            $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+
+            if (!$campaign) {
+                return;
+            }
+
+            $targetLists = $this->entityManager
+                ->getRDBRepository('WhatsAppCampaign')
+                ->getRelation($campaign, 'targetLists')
+                ->find();
+
+            foreach ($targetLists as $targetList) {
+                $this->entityManager
+                    ->getRDBRepository('TargetList')
+                    ->getRelation($targetList, 'contacts')
+                    ->updateColumnsById($contactId, ['optedOut' => true]);
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                "ProcessWhatsAppCampaignChunk: Failed to auto opt-out contact {$contactId}: " .
+                $e->getMessage()
+            );
+        }
     }
 
     /**

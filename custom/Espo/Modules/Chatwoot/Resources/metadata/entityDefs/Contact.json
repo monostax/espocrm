@@ -1,4 +1,10 @@
 {
+    "fields": {
+        "whatsAppOptedOut": {
+            "type": "bool",
+            "default": false
+        }
+    },
     "links": {
         "chatwootContacts": {
             "type": "hasMany",

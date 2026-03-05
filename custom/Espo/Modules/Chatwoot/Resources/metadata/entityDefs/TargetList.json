@@ -5,6 +5,12 @@
             "entity": "WhatsAppCampaign",
             "foreign": "targetLists",
             "layoutRelationshipsDisabled": true
+        },
+        "whatsAppCampaignsExcluding": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "excludingTargetLists",
+            "layoutRelationshipsDisabled": true
         }
     }
 }

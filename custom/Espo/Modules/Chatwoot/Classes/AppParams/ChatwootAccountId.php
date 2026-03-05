@@ -94,7 +94,7 @@ class ChatwootAccountId implements AppParam
     }
 
     /**
-     * Find account ID via ChatwootAgent (primary path).
+     * Find account ID via ChatwootAgent (primary path). 
      *
      * ChatwootAgent has a required chatwootAccount link, making this
      * the most reliable lookup path.

@@ -173,9 +173,10 @@ class MsxGoogleCalendar
 
             $this->log->debug("MsxGoogleCalendar [syncCalendar]: Token retrieved OK for oAuthAccountId={$oAuthAccountId}");
         } catch (AccountNotFound | NoToken | ProviderNotAvailable $e) {
+            $exceptionClass = (new \ReflectionClass($e))->getShortName();
             $this->log->error(
                 'MsxGoogleCalendar Sync: User \'' . ($calendarUser->get('userName') ?? $userId) .
-                '\' could not connect to Google when syncing. ' . $e->getMessage()
+                '\' could not connect to Google when syncing (' . $exceptionClass . '). ' . $e->getMessage()
             );
 
             return;

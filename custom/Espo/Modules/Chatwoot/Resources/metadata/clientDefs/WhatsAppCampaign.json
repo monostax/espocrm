@@ -58,6 +58,28 @@
                     ]
                 }
             },
+            "excludeCampaigns": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "excludingTargetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
             "parameterMapping": {
                 "visible": {
                     "conditionGroup": [
@@ -79,6 +101,17 @@
             }
         },
         "panels": {
+            "exclusions": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
             "statistics": {
                 "visible": {
                     "conditionGroup": [

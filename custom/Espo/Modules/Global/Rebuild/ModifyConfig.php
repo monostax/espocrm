@@ -46,6 +46,25 @@ class ModifyConfig implements RebuildAction
     {
         $this->configureNavbar();
         $this->configureActivitiesEntityList();
+        $this->configureApplicationTitle();
+    }
+
+    private function configureApplicationTitle(): void
+    {
+        $modified = false;
+        if ($this->config->get('applicationName') !== 'Monostax CRM') {
+            $this->configWriter->set('applicationName', 'Monostax CRM');
+            $modified = true;
+        }
+
+        if ($this->config->get('outboundEmailFromName') !== 'Monostax CRM') {
+            $this->configWriter->set('outboundEmailFromName', 'Monostax CRM');
+            $modified = true;
+        }
+
+        if ($modified) {
+            $this->configWriter->save();
+        }
     }
 
     /**

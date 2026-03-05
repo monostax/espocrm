@@ -4,7 +4,8 @@
         "rows": [
             [{ "name": "name" }, { "name": "accountName" }],
             [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
-            [{ "name": "address" }, { "name": "title" }]
+            [{ "name": "address" }, { "name": "title" }],
+            [{ "name": "whatsAppOptedOut" }, false]
         ]
     },
     {

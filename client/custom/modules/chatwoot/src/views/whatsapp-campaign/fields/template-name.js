@@ -49,6 +49,22 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 'Select a Credential first.' +
             '</span>' +
             '{{/if}}' +
+            '{{#if hasHeaderMedia}}' +
+            '<div class="header-media-section" style="margin-top: 10px;">' +
+                '<div class="text-muted small" style="margin-bottom: 8px;">' +
+                    'Template header ({{headerMediaType}}):' +
+                '</div>' +
+                '<div class="form-group" style="margin-bottom: 6px;">' +
+                    '<label class="control-label small" style="margin-bottom: 2px;">' +
+                        '<code style="color: #c7254e;">Header {{headerMediaType}}</code> ' +
+                        '<span class="text-muted">Public URL to the media file</span>' +
+                    '</label>' +
+                    '<input type="text" class="form-control input-sm header-media-url-input"' +
+                        ' value="{{headerMediaUrl}}"' +
+                        ' placeholder="https://example.com/image.jpg">' +
+                '</div>' +
+            '</div>' +
+            '{{/if}}' +
             '{{#if hasTemplateParams}}' +
             '<div class="parameter-mapping-section" style="margin-top: 10px;">' +
                 '<div class="text-muted small" style="margin-bottom: 8px;">' +
@@ -75,6 +91,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
         currentRequest: null,
         templateComponentsMap: null,
         currentTemplateParams: null,
+        currentHeaderMedia: null,
 
         data: function () {
             const data = Dep.prototype.data.call(this);
@@ -97,6 +114,9 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 : 'Select a template';
             data.templateParams = this.currentTemplateParams || [];
             data.hasTemplateParams = data.templateParams.length > 0;
+            data.hasHeaderMedia = !!(this.currentHeaderMedia);
+            data.headerMediaType = this.currentHeaderMedia ? this.currentHeaderMedia.type : '';
+            data.headerMediaUrl = this.model.get('headerMediaUrl') || '';
 
             return data;
         },
@@ -109,6 +129,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
             this.loadError = null;
             this.templateComponentsMap = {};
             this.currentTemplateParams = [];
+            this.currentHeaderMedia = null;
 
             this.listenTo(this.model, 'change:credentialId', () => {
                 if (this.isEditMode()) {
@@ -116,7 +137,10 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     this.model.set('templateLanguage', null);
                     this.model.set('wabaId', null);
                     this.model.set('parameterMapping', null);
+                    this.model.set('headerMediaUrl', null);
+                    this.model.set('headerMediaType', null);
                     this.currentTemplateParams = [];
+                    this.currentHeaderMedia = null;
                     this.resolveAndFetchTemplates();
                 }
             });
@@ -132,6 +156,10 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
                 this.$el.find('.param-mapping-input').on('change', (e) => {
                     this.onMappingInputChange();
+                });
+
+                this.$el.find('.header-media-url-input').on('change', () => {
+                    this.onHeaderMediaUrlChange();
                 });
 
                 this.$el.find('.param-mapping-input').each((i, el) => {
@@ -175,23 +203,26 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 }
             }
 
+            this.currentTemplateParams = [];
+            this.currentHeaderMedia = null;
+
+            if (compositeKey && this.templateComponentsMap[compositeKey]) {
+                this.parseTemplateParameters(compositeKey);
+            }
+
             const attrs = {
                 templateName: templateName,
                 templateLanguage: language,
                 templateCategory: selectedOpt ? selectedOpt.category : null,
                 templateBody: templateBody,
                 parameterMapping: null,
+                headerMediaUrl: null,
+                headerMediaType: this.currentHeaderMedia ? this.currentHeaderMedia.type : null,
             };
-
-            this.currentTemplateParams = [];
-
-            if (compositeKey && this.templateComponentsMap[compositeKey]) {
-                this.parseTemplateParameters(compositeKey);
-            }
 
             this.model.set(attrs, {silent: true});
 
-            if (this.currentTemplateParams.length > 0) {
+            if (this.currentTemplateParams.length > 0 || this.currentHeaderMedia) {
                 this.reRender();
             }
         },
@@ -201,14 +232,27 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
             if (!components || !Array.isArray(components)) {
                 this.currentTemplateParams = [];
+                this.currentHeaderMedia = null;
                 return;
             }
 
             const params = [];
             const existingMapping = this.model.get('parameterMapping') || {};
+            const mediaFormats = ['IMAGE', 'VIDEO', 'DOCUMENT'];
+
+            this.currentHeaderMedia = null;
 
             for (const comp of components) {
                 const type = comp.type || '';
+                const format = comp.format || '';
+
+                if (type === 'HEADER' && mediaFormats.includes(format)) {
+                    this.currentHeaderMedia = {
+                        type: format.toLowerCase(),
+                    };
+                    continue;
+                }
+
                 const text = comp.text || '';
 
                 if (type !== 'BODY' && type !== 'HEADER') {
@@ -238,6 +282,13 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
             params.sort((a, b) => parseInt(a.paramNumber) - parseInt(b.paramNumber));
 
             this.currentTemplateParams = params;
+        },
+
+        onHeaderMediaUrlChange: function () {
+            const $input = this.$el.find('.header-media-url-input');
+            const url = ($input.val() || '').trim();
+
+            this.model.set('headerMediaUrl', url || null);
         },
 
         onMappingInputChange: function () {
@@ -375,6 +426,10 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
                     if (currentKey && this.templateComponentsMap[currentKey]) {
                         this.parseTemplateParameters(currentKey);
+
+                        if (this.currentHeaderMedia && !this.model.get('headerMediaType')) {
+                            this.model.set('headerMediaType', this.currentHeaderMedia.type, {silent: true});
+                        }
                     }
 
                     if (list.length === 0) {
@@ -435,6 +490,12 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
                 data['parameterMapping'] = hasMapping ? mapping : null;
                 data['templateBody'] = this.model.get('templateBody') || null;
+
+                const $mediaUrl = this.$el.find('.header-media-url-input');
+                if ($mediaUrl.length) {
+                    data['headerMediaUrl'] = ($mediaUrl.val() || '').trim() || null;
+                }
+                data['headerMediaType'] = this.model.get('headerMediaType') || null;
 
                 return data;
             }

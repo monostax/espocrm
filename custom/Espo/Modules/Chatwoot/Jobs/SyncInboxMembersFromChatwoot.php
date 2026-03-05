@@ -385,9 +385,16 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             }
 
             // Get WAHA platform and session info
+            $wahaPlatformId = $inboxIntegration->get('wahaPlatformId');
+
+            if (!$wahaPlatformId) {
+                $this->log->debug("SyncInboxMembersFromChatwoot: No wahaPlatformId for integration {$inboxIntegration->getId()}, skipping label creation");
+                return;
+            }
+
             $wahaPlatform = $this->entityManager->getEntityById(
                 'WahaPlatform',
-                $inboxIntegration->get('wahaPlatformId')
+                $wahaPlatformId
             );
 
             if (!$wahaPlatform) {
@@ -472,10 +479,12 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             $wahaLabelId = $wahaSessionLabel->get('wahaLabelId');
 
             // Delete from WAHA
-            if ($wahaLabelId) {
+            $wahaPlatformId = $inboxIntegration->get('wahaPlatformId');
+
+            if ($wahaLabelId && $wahaPlatformId) {
                 $wahaPlatform = $this->entityManager->getEntityById(
                     'WahaPlatform',
-                    $inboxIntegration->get('wahaPlatformId')
+                    $wahaPlatformId
                 );
 
                 if ($wahaPlatform) {

@@ -51,6 +51,20 @@
         ]
     },
     {
+        "label": "Exclusions",
+        "name": "exclusions",
+        "rows": [
+            [
+                {
+                    "name": "excludeCampaigns"
+                },
+                {
+                    "name": "excludingTargetLists"
+                }
+            ]
+        ]
+    },
+    {
         "label": "Statistics",
         "name": "statistics",
         "rows": [

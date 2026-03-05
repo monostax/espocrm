@@ -60,6 +60,20 @@
             "layoutListDisabled": true,
             "layoutMassUpdateDisabled": true
         },
+        "headerMediaUrl": {
+            "type": "url",
+            "maxLength": 2048,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "headerMediaType": {
+            "type": "varchar",
+            "maxLength": 20,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
         "credential": {
             "type": "link",
             "required": true
@@ -70,6 +84,14 @@
         },
         "targetLists": {
             "type": "linkMultiple"
+        },
+        "excludeCampaigns": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "excludingTargetLists": {
+            "type": "linkMultiple",
+            "tooltip": true
         },
         "manualContacts": {
             "type": "linkMultiple"
@@ -170,6 +192,27 @@
             "entity": "Contact",
             "foreign": "whatsAppCampaignsManual",
             "relationName": "whatsAppCampaignManualContact"
+        },
+        "excludeCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "excludedByCampaigns",
+            "relationName": "whatsAppCampaignExcludeCampaign",
+            "midKeys": ["whatsAppCampaignId", "excludeWhatsAppCampaignId"]
+        },
+        "excludedByCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "excludeCampaigns",
+            "relationName": "whatsAppCampaignExcludeCampaign",
+            "midKeys": ["excludeWhatsAppCampaignId", "whatsAppCampaignId"],
+            "layoutRelationshipsDisabled": true
+        },
+        "excludingTargetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "whatsAppCampaignsExcluding",
+            "relationName": "whatsAppCampaignTargetListExcluding"
         },
         "campaignContacts": {
             "type": "hasMany",
