@@ -1,7 +1,6 @@
 {
     "controller": "feature-integration-simples-agenda:controllers/simples-agenda-cliente",
     "iconClass": "fas fa-address-book",
-    "color": "#3498db",
     "kanbanViewMode": false,
     "modalViews": {
         "detail": "views/modals/detail"
@@ -10,5 +9,20 @@
         "list": "views/record/list"
     },
     "filterList": ["all", "synced", "errors"],
-    "boolFilterList": ["onlyMy"]
+    "boolFilterList": ["onlyMy"],
+    "menu": {
+        "list": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "Sync Now",
+                    "name": "syncNow",
+                    "style": "default",
+                    "acl": "edit",
+                    "handler": "feature-integration-simples-agenda:handlers/simples-agenda-cliente",
+                    "actionFunction": "syncNow"
+                }
+            ]
+        }
+    }
 }

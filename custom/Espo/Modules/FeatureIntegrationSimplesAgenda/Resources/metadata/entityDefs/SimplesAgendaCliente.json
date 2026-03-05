@@ -21,8 +21,7 @@
             "maxLength": 20
         },
         "dataNascimento": {
-            "type": "varchar",
-            "maxLength": 20
+            "type": "date"
         },
         "cep": {
             "type": "varchar",
@@ -60,12 +59,10 @@
             "type": "text"
         },
         "dataCadastro": {
-            "type": "varchar",
-            "maxLength": 20
+            "type": "date"
         },
         "dataAtualizacao": {
-            "type": "varchar",
-            "maxLength": 20
+            "type": "date"
         },
         "credito": {
             "type": "varchar",
@@ -159,7 +156,7 @@
     },
     "indexes": {
         "codClienteCredential": {
-            "unique": true,
+            "unique": true, 
             "columns": ["codCliente", "credentialId", "deleted"]
         },
         "contactId": {

@@ -1,0 +1,12 @@
+{
+    "labels": {
+        "Simples Agenda / Clientes": "Simples Agenda / Clientes",
+        "Clientes": "Clientes"
+    },
+    "descriptions": {
+        "simplesAgendaClientes": "Visualizar clientes sincronizados do SimplesAgenda"
+    },
+    "keywords": {
+        "simplesAgendaClientes": "simples,agenda,cliente,sincronização"
+    }
+}

@@ -191,7 +191,7 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
                 'cpf' => $this->getCellValue($sheet, self::XLS_COL_CPF, $row),
                 'cnpj' => $this->getCellValue($sheet, self::XLS_COL_CNPJ, $row),
                 'rg' => $this->getCellValue($sheet, self::XLS_COL_RG, $row),
-                'dataNascimento' => $this->getCellValue($sheet, self::XLS_COL_DATA_NASCIMENTO, $row),
+                'dataNascimento' => $this->parseBrazilianDate($this->getCellValue($sheet, self::XLS_COL_DATA_NASCIMENTO, $row)),
                 'cep' => $this->getCellValue($sheet, self::XLS_COL_CEP, $row),
                 'endereco' => $this->getCellValue($sheet, self::XLS_COL_ENDERECO, $row),
                 'numero' => $this->getCellValue($sheet, self::XLS_COL_NUMERO, $row),
@@ -201,8 +201,8 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
                 'estado' => $this->getCellValue($sheet, self::XLS_COL_ESTADO, $row),
                 'cidade' => $this->getCellValue($sheet, self::XLS_COL_CIDADE, $row),
                 'observacao' => $this->getCellValue($sheet, self::XLS_COL_OBSERVACAO, $row),
-                'dataCadastro' => $this->getCellValue($sheet, self::XLS_COL_DATA_CADASTRO, $row),
-                'dataAtualizacao' => $this->getCellValue($sheet, self::XLS_COL_DATA_ATUALIZACAO, $row),
+                'dataCadastro' => $this->parseBrazilianDate($this->getCellValue($sheet, self::XLS_COL_DATA_CADASTRO, $row)),
+                'dataAtualizacao' => $this->parseBrazilianDate($this->getCellValue($sheet, self::XLS_COL_DATA_ATUALIZACAO, $row)),
                 'credito' => $this->getCellValue($sheet, self::XLS_COL_CREDITO, $row),
                 'tags' => $this->getCellValue($sheet, self::XLS_COL_TAGS, $row),
                 'comoConheceu' => $this->getCellValue($sheet, self::XLS_COL_COMO_CONHECEU, $row),
@@ -616,47 +616,19 @@ class SyncContactsFromSimplesAgenda implements JobDataLess
      * Returns true if the existing record is up-to-date (XLS data is older or same).
      * Returns false if we should update (no existing record or XLS data is newer).
      */
-    private function isDataStale(?Entity $existing, string $xlsDataAtualizacao): bool
+    private function isDataStale(?Entity $existing, ?string $xlsDataAtualizacao): bool
     {
-        // If no existing record, data is not stale (needs to be created)
-        if (!$existing) {
-            return false;
-        }
-
-        // If XLS has no update date, treat as not stale
-        if (empty($xlsDataAtualizacao)) {
+        if (!$existing || empty($xlsDataAtualizacao)) {
             return false;
         }
 
         $existingDataAtualizacao = $existing->get('dataAtualizacao');
 
-        // If existing has no update date, treat as not stale
         if (empty($existingDataAtualizacao)) {
             return false;
         }
 
-        try {
-            // Parse XLS date (DD/MM/YYYY format)
-            $xlsDate = \DateTime::createFromFormat('d/m/Y H:i:s', $xlsDataAtualizacao . ' 00:00:00')
-                ?: \DateTime::createFromFormat('d/m/Y', $xlsDataAtualizacao);
-
-            // Parse existing date - try multiple formats
-            $existingDate = \DateTime::createFromFormat('Y-m-d H:i:s', $existingDataAtualizacao)
-                ?: \DateTime::createFromFormat('Y-m-d', $existingDataAtualizacao)
-                ?: \DateTime::createFromFormat('d/m/Y H:i:s', $existingDataAtualizacao)
-                ?: \DateTime::createFromFormat('d/m/Y', $existingDataAtualizacao);
-
-            if (!$xlsDate || !$existingDate) {
-                // If we can't parse dates, treat as not stale to be safe
-                return false;
-            }
-
-            // Data is stale if XLS date is not newer than existing
-            return $xlsDate <= $existingDate;
-        } catch (\Exception $e) {
-            // If date comparison fails, treat as not stale to be safe
-            return false;
-        }
+        return $xlsDataAtualizacao <= $existingDataAtualizacao;
     }
 
     /**

@@ -1,4 +1,12 @@
 {
+    "labels": {
+        "SimplesAgendaCliente": "SimplesAgenda / Customer",
+        "Create SimplesAgendaCliente": "Create SimplesAgenda Customer",
+        "Sync Now": "Sync Now",
+        "Syncing...": "Syncing...",
+        "Sync completed": "Sync completed",
+        "Sync failed": "Sync failed"
+    },
     "fields": {
         "syncStatus": "Sync Status"
     },
