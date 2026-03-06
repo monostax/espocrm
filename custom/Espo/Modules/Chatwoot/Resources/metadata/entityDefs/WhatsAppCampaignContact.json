@@ -38,6 +38,7 @@
             "type": "enum",
             "options": [
                 "Pending",
+                "Retry",
                 "Sent",
                 "Delivered",
                 "Read",
@@ -50,6 +51,7 @@
             "default": "Pending",
             "style": {
                 "Pending": null,
+                "Retry": "warning",
                 "Sent": "primary",
                 "Delivered": "success",
                 "Read": "success",
@@ -85,6 +87,11 @@
         },
         "failedReason": {
             "type": "text",
+            "readOnly": true
+        },
+        "retryCount": {
+            "type": "int",
+            "default": 0,
             "readOnly": true
         },
         "createdAt": {

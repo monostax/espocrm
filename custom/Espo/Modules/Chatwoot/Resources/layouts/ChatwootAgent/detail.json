@@ -147,7 +147,16 @@
                     "name": "aiPrompt",
                     "fullWidth": true
                 }
+            ],
+            [
+                {
+                    "name": "ignoreGroups"
+                },
+                {
+                    "name": "ignoreStatusBroadcast"
+                }
             ]
         ]
     }
 ]
+

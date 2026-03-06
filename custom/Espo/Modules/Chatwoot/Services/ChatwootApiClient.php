@@ -2191,8 +2191,9 @@ public function deleteConversation(
 
         $newContact = $this->createContact($platformUrl, $accountApiKey, $accountId, $contactData);
 
-        // createContact returns nested payload sometimes
-        $contact = $newContact['contact'] ?? $newContact;
+        $contact = $newContact['payload']['contact']
+            ?? $newContact['contact']
+            ?? $newContact;
 
         $this->log->info("Chatwoot: Created new contact {$contact['id']} for phone {$phoneNumber} in account {$accountId}");
 

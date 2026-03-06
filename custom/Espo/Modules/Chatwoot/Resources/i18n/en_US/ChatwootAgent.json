@@ -9,6 +9,8 @@
         "autoOffline": "Auto Offline",
         "isAI": "AI Agent",
         "aiPrompt": "Prompt",
+        "ignoreGroups": "Ignore Groups",
+        "ignoreStatusBroadcast": "Ignore WAHA Status Broadcasts",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
         "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",

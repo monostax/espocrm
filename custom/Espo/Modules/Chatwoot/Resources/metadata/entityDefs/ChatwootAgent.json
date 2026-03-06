@@ -61,6 +61,14 @@
             "audited": true,
             "auditView": "chatwoot:views/chatwoot-agent/fields/ai-prompt-audit-diff"
         },
+        "ignoreGroups": {
+            "type": "bool",
+            "default": false
+        },
+        "ignoreStatusBroadcast": {
+            "type": "bool",
+            "default": false
+        },
         "knowledgeBaseCategories": {
             "type": "linkMultiple",
             "tooltip": true
@@ -225,3 +233,4 @@
         }
     }
 }
+

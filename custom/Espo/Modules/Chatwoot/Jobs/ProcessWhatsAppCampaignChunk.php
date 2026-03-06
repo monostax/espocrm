@@ -17,6 +17,7 @@ use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
 use Espo\ORM\EntityManager;
 
 /**
@@ -34,19 +35,21 @@ class ProcessWhatsAppCampaignChunk implements Job
 {
     /**
      * Delay between message sends in milliseconds.
-     * 1000ms = 1 message per second = ~3600/hour.
+     * 1500ms provides breathing room when multiple campaigns overlap.
      */
-    private const RATE_LIMIT_DELAY_MS = 1000;
+    private const RATE_LIMIT_DELAY_MS = 1500;
 
-    /** WhatsApp Cloud API error codes that indicate the phone is permanently unreachable. */
-    private const AUTO_OPTOUT_ERROR_CODES = ['131026'];
+    /** Maximum number of retry attempts for transient failures per contact. */
+    private const MAX_RETRIES = 3;
 
-    private const CONTACT_LOOKUP_FAILURE = 'Failed to get Chatwoot contact ID';
+    /** Delay in seconds between retry passes within the same job run. */
+    private const RETRY_BACKOFF_SECONDS = 3;
 
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $chatwootApiClient,
         private TemplateRendererFactory $templateRendererFactory,
+        private WhatsAppOptOutService $optOutService,
         private Log $log,
     ) {}
 
@@ -133,6 +136,22 @@ class ProcessWhatsAppCampaignChunk implements Job
             $parameterMapping = [];
         }
 
+        $sendContext = [
+            'campaignId' => $campaignId,
+            'platformUrl' => $platformUrl,
+            'accountApiKey' => $accountApiKey,
+            'chatwootAccountIdExternal' => $chatwootAccountIdExternal,
+            'inboxId' => $inboxId,
+            'templateName' => $templateName,
+            'templateLanguage' => $templateLanguage,
+            'templateCategory' => $templateCategory,
+            'templateBody' => $templateBody,
+            'headerMediaUrl' => $headerMediaUrl,
+            'headerMediaType' => $headerMediaType,
+            'parameterMapping' => $parameterMapping,
+        ];
+
+        // --- First pass: process all Pending contacts in this chunk ---
         $contacts = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where([
@@ -143,14 +162,66 @@ class ProcessWhatsAppCampaignChunk implements Job
             ->limit($chunkOffset, $chunkSize)
             ->find();
 
+        $processedCount = $this->processContacts($contacts, $sendContext);
+
+        $this->log->info("ProcessWhatsAppCampaignChunk: First pass at offset {$chunkOffset} for campaign {$campaignId} ({$processedCount} contacts).");
+
+        // --- Retry passes: re-process contacts marked as Retry ---
+        for ($retryPass = 1; $retryPass <= self::MAX_RETRIES; $retryPass++) {
+            $retryContacts = $this->entityManager
+                ->getRDBRepository('WhatsAppCampaignContact')
+                ->where([
+                    'whatsAppCampaignId' => $campaignId,
+                    'status' => 'Retry',
+                ])
+                ->order('createdAt')
+                ->limit($chunkOffset, $chunkSize)
+                ->find();
+
+            $retryCount = count($retryContacts);
+
+            if ($retryCount === 0) {
+                break;
+            }
+
+            $this->log->info("ProcessWhatsAppCampaignChunk: Retry pass {$retryPass} for campaign {$campaignId} ({$retryCount} contacts).");
+
+            sleep(self::RETRY_BACKOFF_SECONDS);
+
+            $this->processContacts($retryContacts, $sendContext);
+        }
+
+        // --- Finalize any contacts still in Retry after all passes ---
+        $this->finalizeRemainingRetries($campaignId, $chunkOffset, $chunkSize);
+
+        $this->log->info("ProcessWhatsAppCampaignChunk: Completed chunk at offset {$chunkOffset} for campaign {$campaignId}.");
+
+        $this->verifyMessageStatuses(
+            $campaignId,
+            $platformUrl,
+            $accountApiKey,
+            $chatwootAccountIdExternal
+        );
+
+        $this->checkCampaignCompletion($campaignId);
+    }
+
+    /**
+     * Process a collection of campaign contacts (either Pending or Retry).
+     *
+     * @return int Number of contacts processed
+     */
+    private function processContacts(iterable $contacts, array $ctx): int
+    {
         $processedCount = 0;
+        $campaignId = $ctx['campaignId'];
 
         foreach ($contacts as $campaignContact) {
             if ($processedCount > 0 && $processedCount % 10 === 0) {
                 $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
                 if ($campaign && $campaign->get('status') === 'Cancelled') {
-                    $this->log->info("ProcessWhatsAppCampaignChunk: Campaign {$campaignId} cancelled mid-chunk at offset {$chunkOffset}+{$processedCount}.");
-                    return;
+                    $this->log->info("ProcessWhatsAppCampaignChunk: Campaign {$campaignId} cancelled mid-chunk.");
+                    return $processedCount;
                 }
             }
 
@@ -163,10 +234,10 @@ class ProcessWhatsAppCampaignChunk implements Job
                 $contactName = $campaignContact->get('contactName');
 
                 $chatwootContact = $this->chatwootApiClient->findOrCreateContact(
-                    $platformUrl,
-                    $accountApiKey,
-                    $chatwootAccountIdExternal,
-                    $inboxId,
+                    $ctx['platformUrl'],
+                    $ctx['accountApiKey'],
+                    $ctx['chatwootAccountIdExternal'],
+                    $ctx['inboxId'],
                     $phoneNumber,
                     $contactName
                 );
@@ -178,25 +249,25 @@ class ProcessWhatsAppCampaignChunk implements Job
                 }
 
                 $params = $this->resolveParameterMapping(
-                    $parameterMapping,
+                    $ctx['parameterMapping'],
                     $campaignContact->get('contactId')
                 );
 
-                $content = $this->renderTemplateContent($templateBody, $params);
+                $content = $this->renderTemplateContent($ctx['templateBody'], $params);
 
                 $result = $this->chatwootApiClient->sendTemplateMessage(
-                    $platformUrl,
-                    $accountApiKey,
-                    $chatwootAccountIdExternal,
+                    $ctx['platformUrl'],
+                    $ctx['accountApiKey'],
+                    $ctx['chatwootAccountIdExternal'],
                     $chatwootContactId,
-                    $inboxId,
-                    $templateName,
-                    $templateLanguage,
+                    $ctx['inboxId'],
+                    $ctx['templateName'],
+                    $ctx['templateLanguage'],
                     $params,
-                    $templateCategory,
+                    $ctx['templateCategory'],
                     $content,
-                    $headerMediaUrl,
-                    $headerMediaType
+                    $ctx['headerMediaUrl'],
+                    $ctx['headerMediaType']
                 );
 
                 $campaignContact->set([
@@ -209,39 +280,82 @@ class ProcessWhatsAppCampaignChunk implements Job
                 $this->entityManager->saveEntity($campaignContact);
 
                 $this->incrementCampaignCounter($campaignId, 'sentCount');
-
-                $processedCount++;
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
                 $this->log->error("ProcessWhatsAppCampaignChunk: Failed to process contact {$campaignContact->getId()}: {$errorMessage}");
 
-                $campaignContact->set([
-                    'status' => 'Failed',
-                    'failedAt' => date('Y-m-d H:i:s'),
-                    'failedReason' => substr($errorMessage, 0, 5000),
-                ]);
-                $this->entityManager->saveEntity($campaignContact);
+                $currentRetries = (int) $campaignContact->get('retryCount');
 
-                $this->incrementCampaignCounter($campaignId, 'failedCount');
+                if ($this->isTransientFailure($errorMessage) && $currentRetries < self::MAX_RETRIES) {
+                    $campaignContact->set([
+                        'status' => 'Retry',
+                        'retryCount' => $currentRetries + 1,
+                        'failedReason' => substr($errorMessage, 0, 5000),
+                    ]);
+                    $this->entityManager->saveEntity($campaignContact);
 
-                if ($this->isPermanentFailure($errorMessage)) {
-                    $this->autoOptOutContact($campaignContact, $campaignId, $errorMessage);
+                    $this->log->info(
+                        "ProcessWhatsAppCampaignChunk: Contact {$campaignContact->getId()} " .
+                        "marked for retry ({$currentRetries} -> " . ($currentRetries + 1) . ")"
+                    );
+                } else {
+                    $campaignContact->set([
+                        'status' => 'Failed',
+                        'failedAt' => date('Y-m-d H:i:s'),
+                        'failedReason' => substr($errorMessage, 0, 5000),
+                    ]);
+                    $this->entityManager->saveEntity($campaignContact);
+
+                    $this->incrementCampaignCounter($campaignId, 'failedCount');
+
+                    if ($this->optOutService->isPermanentFailure($errorMessage)) {
+                        $contactId = $campaignContact->get('contactId');
+                        if ($contactId) {
+                            $this->optOutService->autoOptOutContact($contactId, $campaignId, $errorMessage);
+                        }
+                    }
                 }
-
-                $processedCount++;
             }
+
+            $processedCount++;
         }
 
-        $this->log->info("ProcessWhatsAppCampaignChunk: Completed chunk at offset {$chunkOffset} for campaign {$campaignId} ({$processedCount} contacts).");
+        return $processedCount;
+    }
 
-        $this->verifyMessageStatuses(
-            $campaignId,
-            $platformUrl,
-            $accountApiKey,
-            $chatwootAccountIdExternal
-        );
+    /**
+     * Mark any contacts still in Retry status as permanently Failed
+     * after all retry passes have been exhausted.
+     */
+    private function finalizeRemainingRetries(string $campaignId, int $chunkOffset, int $chunkSize): void
+    {
+        $remaining = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignContact')
+            ->where([
+                'whatsAppCampaignId' => $campaignId,
+                'status' => 'Retry',
+            ])
+            ->order('createdAt')
+            ->limit($chunkOffset, $chunkSize)
+            ->find();
 
-        $this->checkCampaignCompletion($campaignId);
+        foreach ($remaining as $campaignContact) {
+            $lastReason = $campaignContact->get('failedReason') ?: 'Max retries exhausted';
+
+            $campaignContact->set([
+                'status' => 'Failed',
+                'failedAt' => date('Y-m-d H:i:s'),
+                'failedReason' => $lastReason,
+            ]);
+            $this->entityManager->saveEntity($campaignContact);
+
+            $this->incrementCampaignCounter($campaignId, 'failedCount');
+
+            $this->log->warning(
+                "ProcessWhatsAppCampaignChunk: Contact {$campaignContact->getId()} " .
+                "failed after {$campaignContact->get('retryCount')} retries: {$lastReason}"
+            );
+        }
     }
 
     /**
@@ -268,15 +382,15 @@ class ProcessWhatsAppCampaignChunk implements Job
      */
     private function checkCampaignCompletion(string $campaignId): void
     {
-        $pendingCount = $this->entityManager
+        $pendingOrRetryCount = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where([
                 'whatsAppCampaignId' => $campaignId,
-                'status' => 'Pending',
+                'status' => ['Pending', 'Retry'],
             ])
             ->count();
 
-        if ($pendingCount === 0) {
+        if ($pendingOrRetryCount === 0) {
             $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
 
             if ($campaign && $campaign->get('status') === 'Sending') {
@@ -360,8 +474,11 @@ class ProcessWhatsAppCampaignChunk implements Job
                         $this->incrementCampaignCounter($campaignId, 'failedCount');
                         $this->decrementCampaignCounter($campaignId, 'sentCount');
 
-                        if ($this->isPermanentFailure((string) $reason)) {
-                            $this->autoOptOutContact($contact, $campaignId, (string) $reason);
+                        if ($this->optOutService->isPermanentFailure((string) $reason)) {
+                            $contactId = $contact->get('contactId');
+                            if ($contactId) {
+                                $this->optOutService->autoOptOutContact($contactId, $campaignId, (string) $reason);
+                            }
                         }
 
                         $this->log->warning(
@@ -462,75 +579,27 @@ class ProcessWhatsAppCampaignChunk implements Job
     }
 
     /**
-     * Check if an error message indicates a permanently unreachable phone number.
+     * Detect transient (retryable) failures: HTTP 429, 5xx, connection timeouts.
      */
-    private function isPermanentFailure(string $errorMessage): bool
+    private function isTransientFailure(string $errorMessage): bool
     {
-        if (str_contains($errorMessage, self::CONTACT_LOOKUP_FAILURE)) {
+        if (str_contains($errorMessage, 'HTTP 429')) {
             return true;
         }
 
-        foreach (self::AUTO_OPTOUT_ERROR_CODES as $code) {
-            if (str_contains($errorMessage, $code . ':')) {
-                return true;
-            }
+        if (preg_match('/HTTP 5\d{2}/', $errorMessage)) {
+            return true;
+        }
+
+        if (
+            str_contains($errorMessage, 'Connection timed out')
+            || str_contains($errorMessage, 'cURL error 28')
+            || str_contains($errorMessage, 'Operation timed out')
+        ) {
+            return true;
         }
 
         return false;
-    }
-
-    /**
-     * Auto opt-out a contact after a permanent delivery failure.
-     * Sets the global whatsAppOptedOut flag on the Contact entity and
-     * marks isOptedOut on every TargetList junction linked to this campaign.
-     */
-    private function autoOptOutContact(
-        \Espo\ORM\Entity $campaignContact,
-        string $campaignId,
-        string $reason
-    ): void {
-        $contactId = $campaignContact->get('contactId');
-
-        if (!$contactId) {
-            return;
-        }
-
-        try {
-            $contact = $this->entityManager->getEntityById('Contact', $contactId);
-
-            if ($contact && !$contact->get('whatsAppOptedOut')) {
-                $contact->set('whatsAppOptedOut', true);
-                $this->entityManager->saveEntity($contact);
-
-                $this->log->info(
-                    "ProcessWhatsAppCampaignChunk: Auto opt-out Contact {$contactId} " .
-                    "(whatsAppOptedOut=true) due to: {$reason}"
-                );
-            }
-
-            $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
-
-            if (!$campaign) {
-                return;
-            }
-
-            $targetLists = $this->entityManager
-                ->getRDBRepository('WhatsAppCampaign')
-                ->getRelation($campaign, 'targetLists')
-                ->find();
-
-            foreach ($targetLists as $targetList) {
-                $this->entityManager
-                    ->getRDBRepository('TargetList')
-                    ->getRelation($targetList, 'contacts')
-                    ->updateColumnsById($contactId, ['optedOut' => true]);
-            }
-        } catch (\Throwable $e) {
-            $this->log->warning(
-                "ProcessWhatsAppCampaignChunk: Failed to auto opt-out contact {$contactId}: " .
-                $e->getMessage()
-            );
-        }
     }
 
     /**

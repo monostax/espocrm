@@ -9,6 +9,8 @@
         "autoOffline": "Offline Automático",
         "isAI": "Agente IA",
         "aiPrompt": "Prompt",
+        "ignoreGroups": "Ignorar Grupos",
+        "ignoreStatusBroadcast": "Ignorar Broadcasts de Status",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
         "contextualTransferIsEnabled": "Habilitar Transferência Contextual (IA)",

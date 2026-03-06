@@ -17,6 +17,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
 use Espo\ORM\EntityManager;
 use stdClass;
 
@@ -43,6 +44,7 @@ class DeliveryWebhook
 
     public function __construct(
         private EntityManager $entityManager,
+        private WhatsAppOptOutService $optOutService,
         private Log $log
     ) {}
 
@@ -237,6 +239,19 @@ class DeliveryWebhook
 
         $this->entityManager->saveEntity($campaignContact);
         $this->updateCampaignCounters($campaignContact->get('whatsAppCampaignId'));
+
+        if ($newStatus === 'Failed') {
+            $reason = (string) ($campaignContact->get('failedReason') ?? '');
+
+            if ($this->optOutService->isPermanentFailure($reason)) {
+                $contactId = $campaignContact->get('contactId');
+                $campaignId = $campaignContact->get('whatsAppCampaignId');
+
+                if ($contactId && $campaignId) {
+                    $this->optOutService->autoOptOutContact($contactId, $campaignId, $reason);
+                }
+            }
+        }
 
         $this->log->info(
             "DeliveryWebhook: Updated contact {$campaignContact->getId()} " .
