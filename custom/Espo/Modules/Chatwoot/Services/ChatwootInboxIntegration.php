@@ -232,12 +232,20 @@ class ChatwootInboxIntegration
             $webhookSecret = bin2hex(random_bytes(32));
             $channel->set('wahaWebhookSecret', $webhookSecret);
 
+            $ignoreConfig = [
+                'status' => (bool) $channel->get('wahaIgnoreStatus'),
+                'groups' => (bool) $channel->get('wahaIgnoreGroups'),
+                'channels' => (bool) $channel->get('wahaIgnoreChannels'),
+                'broadcast' => (bool) $channel->get('wahaIgnoreBroadcast'),
+            ];
+
             $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
             if ($crmBackendUrl) {
                 $labelWebhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/WahaLabelWebhook/' . $channelId;
 
                 $this->wahaApiClient->updateSession($wahaUrl, $wahaApiKey, $sessionName, [
                     'config' => [
+                        'ignore' => $ignoreConfig,
                         'webhooks' => [[
                             'url' => $labelWebhookUrl,
                             'events' => ['label.chat.added', 'label.chat.deleted'],
@@ -248,6 +256,12 @@ class ChatwootInboxIntegration
 
                 $this->log->info("ChatwootInboxIntegration: Registered label webhook at {$labelWebhookUrl}");
             } else {
+                $this->wahaApiClient->updateSession($wahaUrl, $wahaApiKey, $sessionName, [
+                    'config' => [
+                        'ignore' => $ignoreConfig,
+                    ],
+                ]);
+
                 $this->log->warning("ChatwootInboxIntegration: CRM_BACKEND_URL and siteUrl not configured, skipping label webhook registration");
             }
 

@@ -60,6 +60,41 @@
         ]
     },
     {
+        "label": "Ignore Rules",
+        "name": "ignoreRules",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                },
+                {
+                    "type": "equals",
+                    "attribute": "channelType",
+                    "value": "whatsappQrcode"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "wahaIgnoreStatus"
+                },
+                {
+                    "name": "wahaIgnoreGroups"
+                }
+            ],
+            [
+                {
+                    "name": "wahaIgnoreChannels"
+                },
+                {
+                    "name": "wahaIgnoreBroadcast"
+                }
+            ]
+        ]
+    },
+    {
         "label": "Error",
         "name": "error",
         "dynamicLogicVisible": {

@@ -139,6 +139,26 @@
             "layoutEditDisabled": true,
             "view": "chatwoot:views/chatwoot-inbox-integration/fields/qr-code"
         },
+        "wahaIgnoreStatus": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "wahaIgnoreGroups": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "wahaIgnoreChannels": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "wahaIgnoreBroadcast": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

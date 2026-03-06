@@ -41,6 +41,26 @@
                 {
                     "name": "businessAccountId"
                 }
+            ],
+            [
+                {
+                    "name": "wahaIgnoreStatus"
+                }
+            ],
+            [
+                {
+                    "name": "wahaIgnoreGroups"
+                }
+            ],
+            [
+                {
+                    "name": "wahaIgnoreChannels"
+                }
+            ],
+            [
+                {
+                    "name": "wahaIgnoreBroadcast"
+                }
             ]
         ]
     }

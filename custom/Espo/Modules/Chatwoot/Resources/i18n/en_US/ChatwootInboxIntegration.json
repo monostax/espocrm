@@ -22,6 +22,10 @@
         "connectedAt": "Connected At",
         "lastActivityAt": "Last Activity",
         "qrCode": "QR Code",
+        "wahaIgnoreStatus": "Ignore Status",
+        "wahaIgnoreGroups": "Ignore Groups",
+        "wahaIgnoreChannels": "Ignore Channels",
+        "wahaIgnoreBroadcast": "Ignore Broadcast",
         "team": "Team"
     },
     "links": {
@@ -46,7 +50,8 @@
         "Creating resources": "Creating WhatsApp session and Chat / Connection...",
         "Connecting": "Connecting to WhatsApp...",
         "Loading QR Code": "Loading QR Code...",
-        "Scan QR Code with WhatsApp": "Scan QR Code with WhatsApp"
+        "Scan QR Code with WhatsApp": "Scan QR Code with WhatsApp",
+        "Ignore Rules": "Ignore Rules"
     },
     "options": {
         "status": {
@@ -71,7 +76,11 @@
         "credential": "Legacy credential link (replaced by Meta Account + Business Account selection)",
         "whatsappId": "The WhatsApp account ID (format: 5511999999999@c.us)",
         "wahaSessionName": "The session name in WAHA",
-        "chatwootInboxIdentifier": "The inbox identifier used for webhooks"
+        "chatwootInboxIdentifier": "The inbox identifier used for webhooks",
+        "wahaIgnoreStatus": "Ignore Status updates (stories). No webhooks or stored messages for status@broadcast.",
+        "wahaIgnoreGroups": "Ignore Group chats. No webhooks or stored messages for group conversations.",
+        "wahaIgnoreChannels": "Ignore Channel messages. No webhooks or stored messages for channels.",
+        "wahaIgnoreBroadcast": "Ignore Broadcast lists (*@broadcast), excluding status@broadcast. Use 'Ignore Status' for Status."
     },
     "messages": {
         "channelCreated": "Channel created. Click Activate to start the connection.",

@@ -17,6 +17,10 @@
         "connectedAt": "Conectado Em",
         "lastActivityAt": "Última Atividade",
         "qrCode": "QR Code",
+        "wahaIgnoreStatus": "Ignorar Status",
+        "wahaIgnoreGroups": "Ignorar Grupos",
+        "wahaIgnoreChannels": "Ignorar Canais",
+        "wahaIgnoreBroadcast": "Ignorar Broadcast",
         "team": "Equipe",
         "phoneNumberId": "ID do Número de Telefone",
         "oAuthAccount": "Conta Meta",
@@ -46,7 +50,8 @@
         "Creating resources": "Criando sessão WhatsApp e conexão de Chat...",
         "Connecting": "Conectando ao WhatsApp...",
         "Loading QR Code": "Carregando QR Code...",
-        "Scan QR Code with WhatsApp": "Escaneie o QR Code com o WhatsApp"
+        "Scan QR Code with WhatsApp": "Escaneie o QR Code com o WhatsApp",
+        "Ignore Rules": "Regras de Ignorar"
     },
     "options": {
         "status": {
@@ -71,7 +76,11 @@
         "oAuthAccount": "A Conta OAuth Meta usada para autenticação com WhatsApp Cloud API",
         "businessAccountId": "A Conta Business do WhatsApp descoberta a partir da Conta OAuth Meta",
         "phoneNumberId": "O ID do Número de Telefone Meta para WhatsApp Cloud API",
-        "credential": "Link de credencial legado (substituído por seleção de Conta Meta + Conta Business)"
+        "credential": "Link de credencial legado (substituído por seleção de Conta Meta + Conta Business)",
+        "wahaIgnoreStatus": "Ignorar atualizações de Status (stories). Sem webhooks ou mensagens armazenadas para status@broadcast.",
+        "wahaIgnoreGroups": "Ignorar conversas em Grupo. Sem webhooks ou mensagens armazenadas para grupos.",
+        "wahaIgnoreChannels": "Ignorar mensagens de Canais. Sem webhooks ou mensagens armazenadas para canais.",
+        "wahaIgnoreBroadcast": "Ignorar listas de Broadcast (*@broadcast), exceto status@broadcast. Use 'Ignorar Status' para Status."
     },
     "messages": {
         "channelCreated": "Canal criado. Clique em Ativar para iniciar a conexão.",

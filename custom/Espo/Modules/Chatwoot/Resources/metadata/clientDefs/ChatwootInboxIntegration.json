@@ -122,6 +122,50 @@
                         }
                     ]
                 }
+            },
+            "wahaIgnoreStatus": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappQrcode"
+                        }
+                    ]
+                }
+            },
+            "wahaIgnoreGroups": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappQrcode"
+                        }
+                    ]
+                }
+            },
+            "wahaIgnoreChannels": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappQrcode"
+                        }
+                    ]
+                }
+            },
+            "wahaIgnoreBroadcast": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappQrcode"
+                        }
+                    ]
+                }
             }
         }
     },
