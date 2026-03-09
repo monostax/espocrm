@@ -1,0 +1,132 @@
+{
+    "fields": {
+        "paciente": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "profissional": {
+            "type": "link",
+            "required": true
+        },
+        "jornada": {
+            "type": "link"
+        },
+        "appointment": {
+            "type": "link"
+        },
+        "dataHoraInicio": {
+            "type": "datetime",
+            "required": true
+        },
+        "dataHoraFim": {
+            "type": "datetime"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["EmAndamento", "Concluido", "Cancelado"],
+            "default": "EmAndamento",
+            "style": {
+                "EmAndamento": "primary",
+                "Concluido": "success",
+                "Cancelado": "danger"
+            }
+        },
+        "observacao": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "Paciente",
+            "foreign": "atendimentos"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "profissional": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "jornada": {
+            "type": "belongsTo",
+            "entity": "Jornada"
+        },
+        "appointment": {
+            "type": "belongsTo",
+            "entity": "Appointment"
+        },
+        "procedimentosRealizados": {
+            "type": "hasMany",
+            "entity": "ProcedimentoRealizado",
+            "foreign": "atendimento"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "dataHoraInicio",
+        "order": "desc",
+        "textFilterFields": ["paciente"]
+    },
+    "indexes": {
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "profissionalId": {
+            "columns": ["profissionalId"]
+        },
+        "dataHoraInicio": {
+            "columns": ["dataHoraInicio"]
+        },
+        "appointmentId": {
+            "columns": ["appointmentId"]
+        }
+    },
+    "cascadeDelete": {
+        "links": ["procedimentosRealizados"]
+    }
+}

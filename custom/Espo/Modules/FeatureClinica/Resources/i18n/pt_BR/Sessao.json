@@ -1,0 +1,37 @@
+{
+    "fields": {
+        "jornada": "Jornada",
+        "sequencia": "Sequência",
+        "status": "Status",
+        "procedimento": "Procedimento",
+        "appointment": "Agendamento",
+        "dosagemAplicada": "Dosagem Aplicada",
+        "unidadeDosagem": "Unidade de Dosagem",
+        "unidade": "Unidade",
+        "observacao": "Observação"
+    },
+    "links": {
+        "jornada": "Jornada",
+        "procedimento": "Procedimento",
+        "appointment": "Agendamento",
+        "unidade": "Unidade",
+        "unidadeDosagem": "Unidade de Dosagem"
+    },
+    "labels": {
+        "Create Sessao": "Criar Sessão"
+    },
+    "options": {
+        "status": {
+            "Pendente": "Pendente",
+            "Agendada": "Agendada",
+            "Realizada": "Realizada",
+            "Cancelada": "Cancelada"
+        }
+    },
+    "scopeNames": {
+        "Sessao": "Sessão"
+    },
+    "scopeNamesPlural": {
+        "Sessao": "Sessões"
+    }
+}

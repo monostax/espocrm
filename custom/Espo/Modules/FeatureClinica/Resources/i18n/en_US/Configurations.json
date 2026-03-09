@@ -1,0 +1,30 @@
+{
+    "labels": {
+        "Clínica": "Clinic",
+        "Unidades": "Units",
+        "Profissionais": "Professionals",
+        "Procedimentos": "Procedures",
+        "Tipos de Profissional": "Professional Types",
+        "Especialidades": "Specialties",
+        "Canais de Agendamento": "Scheduling Channels",
+        "Unidades de Dosagem": "Dosage Units"
+    },
+    "descriptions": {
+        "unidades": "Manage service units and their settings",
+        "profissionais": "Manage healthcare professionals and their information",
+        "procedimentosConsulta": "Manage available procedures and consultations",
+        "tiposProfissional": "Manage professional types (doctor, nurse, etc.)",
+        "especialidades": "Manage available medical specialties",
+        "canaisAgendamento": "Manage scheduling channels (WhatsApp, phone, etc.)",
+        "unidadesDosagem": "Manage dosage units for prescriptions"
+    },
+    "keywords": {
+        "unidades": "unit,clinic,branch,location,service",
+        "profissionais": "professional,doctor,nurse,dentist,healthcare",
+        "procedimentosConsulta": "procedure,consultation,exam,service",
+        "tiposProfissional": "type,professional,category,role",
+        "especialidades": "specialty,area,medical,specialization",
+        "canaisAgendamento": "channel,scheduling,whatsapp,phone,online",
+        "unidadesDosagem": "dosage,unit,measure,prescription,mg,ml"
+    }
+}

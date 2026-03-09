@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "sigla": "Sigla",
+        "ativo": "Ativo"
+    },
+    "links": {},
+    "labels": {
+        "Create UnidadeDosagem": "Criar Unidade de Dosagem"
+    },
+    "scopeNames": {
+        "UnidadeDosagem": "Unidade de Dosagem"
+    },
+    "scopeNamesPlural": {
+        "UnidadeDosagem": "Unidades de Dosagem"
+    }
+}

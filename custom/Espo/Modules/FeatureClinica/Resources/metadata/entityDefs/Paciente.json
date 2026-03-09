@@ -1,0 +1,113 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "required": true
+        },
+        "contactName": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "name",
+            "readOnly": true
+        },
+        "emailAddress": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "emailAddress"
+        },
+        "phoneNumber": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "phoneNumber"
+        },
+        "cpf": {
+            "type": "varchar",
+            "maxLength": 14,
+            "trim": true
+        },
+        "dataNascimento": {
+            "type": "date"
+        },
+        "sexo": {
+            "type": "enum",
+            "options": ["", "M", "F", "Outro"],
+            "default": ""
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "pacientes"
+        },
+        "jornadas": {
+            "type": "hasMany",
+            "entity": "Jornada",
+            "foreign": "paciente"
+        },
+        "atendimentos": {
+            "type": "hasMany",
+            "entity": "Atendimento",
+            "foreign": "paciente"
+        },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "paciente"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc",
+        "textFilterFields": ["name", "cpf", "contact"]
+    },
+    "indexes": {
+        "cpf": {
+            "unique": true,
+            "columns": ["cpf", "deleted"]
+        },
+        "contactId": {
+            "columns": ["contactId"]
+        }
+    }
+}

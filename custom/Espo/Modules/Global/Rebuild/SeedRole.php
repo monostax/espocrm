@@ -318,6 +318,13 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'own',
                 ],
+                'Paciente' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                    'stream' => 'team',
+                ],
 
             ],
             'fieldData' => [
@@ -388,6 +395,7 @@ class SeedRole implements RebuildAction
                 'Sessao' => (object)[],
                 'Atendimento' => (object)[],
                 'ProcedimentoRealizado' => (object)[],
+                'Paciente' => (object)[],
 
             ],
         ];
@@ -501,6 +509,13 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
+                    ],
+                    'Paciente' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
                     ],
                 ],
                 'fieldData' => [

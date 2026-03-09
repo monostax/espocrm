@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-hospital",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativa", "responsavel", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

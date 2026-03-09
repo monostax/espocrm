@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-route",
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "paciente", "unidade", "profissional", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "sessoes": {
+            "create": true,
+            "select": false
+        }
+    }
+}

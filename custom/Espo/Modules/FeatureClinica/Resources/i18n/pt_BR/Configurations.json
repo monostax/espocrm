@@ -1,0 +1,30 @@
+{
+    "labels": {
+        "Clínica": "Clínica",
+        "Unidades": "Unidades",
+        "Profissionais": "Profissionais",
+        "Procedimentos": "Procedimentos",
+        "Tipos de Profissional": "Tipos de Profissional",
+        "Especialidades": "Especialidades",
+        "Canais de Agendamento": "Canais de Agendamento",
+        "Unidades de Dosagem": "Unidades de Dosagem"
+    },
+    "descriptions": {
+        "unidades": "Gerenciar unidades de atendimento e suas configurações",
+        "profissionais": "Gerenciar profissionais de saúde e suas informações",
+        "procedimentosConsulta": "Gerenciar procedimentos e consultas disponíveis",
+        "tiposProfissional": "Gerenciar tipos de profissional (médico, enfermeiro, etc.)",
+        "especialidades": "Gerenciar especialidades médicas disponíveis",
+        "canaisAgendamento": "Gerenciar canais de agendamento (WhatsApp, telefone, etc.)",
+        "unidadesDosagem": "Gerenciar unidades de dosagem para prescrições"
+    },
+    "keywords": {
+        "unidades": "unidade,clínica,filial,local,atendimento",
+        "profissionais": "profissional,médico,enfermeiro,dentista,saúde",
+        "procedimentosConsulta": "procedimento,consulta,exame,serviço",
+        "tiposProfissional": "tipo,profissional,categoria,função",
+        "especialidades": "especialidade,área,médica,especialização",
+        "canaisAgendamento": "canal,agendamento,whatsapp,telefone,online",
+        "unidadesDosagem": "dosagem,unidade,medida,prescrição,mg,ml"
+    }
+}

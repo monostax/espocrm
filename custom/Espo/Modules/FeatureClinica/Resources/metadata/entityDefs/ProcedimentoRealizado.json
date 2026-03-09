@@ -1,0 +1,110 @@
+{
+    "fields": {
+        "atendimento": {
+            "type": "link",
+            "required": true
+        },
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta"]
+        },
+        "sessao": {
+            "type": "link"
+        },
+        "quantidade": {
+            "type": "int",
+            "default": 1
+        },
+        "valorCobrado": {
+            "type": "currency"
+        },
+        "dosagemAplicada": {
+            "type": "float"
+        },
+        "unidadeDosagem": {
+            "type": "link"
+        },
+        "observacao": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "atendimento": {
+            "type": "belongsTo",
+            "entity": "Atendimento",
+            "foreign": "procedimentosRealizados"
+        },
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "sessao": {
+            "type": "belongsTo",
+            "entity": "Sessao"
+        },
+        "unidadeDosagem": {
+            "type": "belongsTo",
+            "entity": "UnidadeDosagem",
+            "foreignName": "nome"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "atendimentoId": {
+            "columns": ["atendimentoId"]
+        },
+        "sessaoId": {
+            "columns": ["sessaoId"]
+        },
+        "unidadeDosagemId": {
+            "columns": ["unidadeDosagemId"]
+        }
+    }
+}

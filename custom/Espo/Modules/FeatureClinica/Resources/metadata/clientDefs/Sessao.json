@@ -1,0 +1,9 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-syringe",
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "jornada", "unidade", "appointment", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

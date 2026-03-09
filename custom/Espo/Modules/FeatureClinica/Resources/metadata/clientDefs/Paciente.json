@@ -1,0 +1,23 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-user-injured",
+    "defaultSidePanelFieldLists": {
+        "detail": ["contact", "emailAddress", "phoneNumber", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "jornadas": {
+            "create": true,
+            "select": false
+        },
+        "atendimentos": {
+            "create": false,
+            "select": false
+        },
+        "appointments": {
+            "create": false,
+            "select": false
+        }
+    }
+}

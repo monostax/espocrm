@@ -1,0 +1,20 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-stethoscope",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "unidade", "valorBase", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "appointments": {
+            "create": false,
+            "select": false
+        },
+        "sessoes": {
+            "create": false,
+            "select": false
+        }
+    }
+}

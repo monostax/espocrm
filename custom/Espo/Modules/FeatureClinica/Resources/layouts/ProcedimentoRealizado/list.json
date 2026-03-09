@@ -1,0 +1,7 @@
+[
+    {"name": "procedimento"},
+    {"name": "quantidade"},
+    {"name": "valorCobrado"},
+    {"name": "dosagemAplicada"},
+    {"name": "unidadeDosagem"}
+]

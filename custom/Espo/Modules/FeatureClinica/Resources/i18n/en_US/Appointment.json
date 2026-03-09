@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "procedimento": "Procedure",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "sessao": "Session",
+        "convenio": "Health Plan",
+        "atendimento": "Care Session",
+        "canalAgendamento": "Scheduling Channel",
+        "duracaoPrevistaMin": "Expected Duration (min)",
+        "observacao": "Notes"
+    },
+    "links": {
+        "paciente": "Patient",
+        "procedimento": "Procedure",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "sessao": "Session",
+        "convenio": "Health Plan",
+        "atendimento": "Care Session",
+        "canalAgendamento": "Scheduling Channel"
+    },
+    "options": {
+        "status": {
+            "Scheduled": "Scheduled",
+            "Confirmed": "Confirmed",
+            "Realized": "Realized",
+            "NoShow": "No Show",
+            "Canceled": "Canceled",
+            "Rescheduled": "Rescheduled"
+        }
+    },
+    "presetFilters": {
+        "scheduled": "Scheduled",
+        "realized": "Realized",
+        "todays": "Today's"
+    }
+}

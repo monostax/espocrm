@@ -1,0 +1,4 @@
+{
+    "entityList": ["ProcedimentoConsulta"],
+    "consumingEntities": ["Sessao", "Appointment", "ProcedimentoRealizado"]
+}

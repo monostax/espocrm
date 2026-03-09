@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "jornada"}, {"name": "sequencia"}],
+            [{"name": "procedimento"}, {"name": "status"}],
+            [{"name": "dosagemAplicada"}, {"name": "unidadeDosagem"}],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

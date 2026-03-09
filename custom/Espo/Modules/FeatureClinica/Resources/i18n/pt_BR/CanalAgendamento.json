@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "codigo": "Código",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "appointments": "Agendamentos"
+    },
+    "labels": {
+        "Create CanalAgendamento": "Criar Canal de Agendamento"
+    },
+    "scopeNames": {
+        "CanalAgendamento": "Canal de Agendamento"
+    },
+    "scopeNamesPlural": {
+        "CanalAgendamento": "Canais de Agendamento"
+    }
+}

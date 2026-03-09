@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "tipoProfissional": "Tipo de Profissional",
+        "crm": "CRM",
+        "crmUf": "CRM UF",
+        "especialidades": "Especialidades",
+        "telefone": "Telefone",
+        "email": "E-mail",
+        "user": "Usuário do Sistema",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "tipoProfissional": "Tipo de Profissional",
+        "especialidades": "Especialidades",
+        "user": "Usuário do Sistema"
+    },
+    "labels": {
+        "Create Profissional": "Criar Profissional"
+    },
+    "options": {
+        "crmUf": {
+            "": "",
+            "AC": "AC", "AL": "AL", "AM": "AM", "AP": "AP", "BA": "BA",
+            "CE": "CE", "DF": "DF", "ES": "ES", "GO": "GO", "MA": "MA",
+            "MG": "MG", "MS": "MS", "MT": "MT", "PA": "PA", "PB": "PB",
+            "PE": "PE", "PI": "PI", "PR": "PR", "RJ": "RJ", "RN": "RN",
+            "RO": "RO", "RR": "RR", "RS": "RS", "SC": "SC", "SE": "SE",
+            "SP": "SP", "TO": "TO"
+        }
+    },
+    "scopeNames": {
+        "Profissional": "Profissional"
+    },
+    "scopeNamesPlural": {
+        "Profissional": "Profissionais"
+    }
+}

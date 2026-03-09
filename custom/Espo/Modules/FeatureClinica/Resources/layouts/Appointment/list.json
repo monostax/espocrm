@@ -1,0 +1,13 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {"name": "status"},
+    {"name": "dateStart"},
+    {"name": "procedimento"},
+    {"name": "paciente"},
+    {"name": "unidade"},
+    {"name": "profissional"},
+    {"name": "customer"}
+]

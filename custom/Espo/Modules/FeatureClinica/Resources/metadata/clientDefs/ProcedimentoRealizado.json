@@ -1,0 +1,9 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-clipboard-check",
+    "defaultSidePanelFieldLists": {
+        "detail": ["atendimento", "sessao", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

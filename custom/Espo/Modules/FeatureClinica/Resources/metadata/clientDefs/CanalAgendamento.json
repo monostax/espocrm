@@ -1,0 +1,16 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-phone-alt",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "appointments": {
+            "create": false,
+            "select": false
+        }
+    }
+}

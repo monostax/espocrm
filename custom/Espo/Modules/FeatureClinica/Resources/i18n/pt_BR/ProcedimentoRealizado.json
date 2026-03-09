@@ -1,0 +1,27 @@
+{
+    "fields": {
+        "atendimento": "Atendimento",
+        "procedimento": "Procedimento",
+        "sessao": "Sessão",
+        "quantidade": "Quantidade",
+        "valorCobrado": "Valor Cobrado",
+        "dosagemAplicada": "Dosagem Aplicada",
+        "unidadeDosagem": "Unidade de Dosagem",
+        "observacao": "Observação"
+    },
+    "links": {
+        "atendimento": "Atendimento",
+        "procedimento": "Procedimento",
+        "sessao": "Sessão",
+        "unidadeDosagem": "Unidade de Dosagem"
+    },
+    "labels": {
+        "Create ProcedimentoRealizado": "Criar Procedimento Realizado"
+    },
+    "scopeNames": {
+        "ProcedimentoRealizado": "Procedimento Realizado"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoRealizado": "Procedimentos Realizados"
+    }
+}

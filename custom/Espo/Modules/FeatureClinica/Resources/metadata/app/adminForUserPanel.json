@@ -1,0 +1,57 @@
+{
+    "clinica": {
+        "label": "Clínica",
+        "itemList": [
+            {
+                "url": "#Unidade",
+                "label": "Unidades",
+                "iconClass": "fas fa-hospital",
+                "description": "unidades",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Profissional",
+                "label": "Profissionais",
+                "iconClass": "fas fa-user-md",
+                "description": "profissionais",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoConsulta",
+                "label": "Procedimentos",
+                "iconClass": "fas fa-stethoscope",
+                "description": "procedimentosConsulta",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/TipoProfissional",
+                "label": "Tipos de Profissional",
+                "iconClass": "fas fa-user-tag",
+                "description": "tiposProfissional",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/Especialidade",
+                "label": "Especialidades",
+                "iconClass": "fas fa-certificate",
+                "description": "especialidades",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/CanalAgendamento",
+                "label": "Canais de Agendamento",
+                "iconClass": "fas fa-phone-alt",
+                "description": "canaisAgendamento",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/UnidadeDosagem",
+                "label": "Unidades de Dosagem",
+                "iconClass": "fas fa-prescription-bottle",
+                "description": "unidadesDosagem",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ],
+        "order": 15
+    }
+}

@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}],
+            [{"name": "codigo"}],
+            [{"name": "duracaoMin"}],
+            [{"name": "descricao"}]
+        ]
+    }
+]

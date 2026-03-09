@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "nome": "Name",
+        "codigo": "Code",
+        "requerCRM": "Requires CRM",
+        "ativo": "Active"
+    },
+    "links": {
+        "profissionais": "Professionals"
+    },
+    "labels": {
+        "Create TipoProfissional": "Create Professional Type"
+    },
+    "scopeNames": {
+        "TipoProfissional": "Professional Type"
+    },
+    "scopeNamesPlural": {
+        "TipoProfissional": "Professional Types"
+    }
+}

@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "tipoProfissional"}],
+            [{"name": "crm"}, {"name": "crmUf"}],
+            [{"name": "especialidades", "fullWidth": true}],
+            [{"name": "telefone"}, {"name": "email"}]
+        ]
+    }
+]

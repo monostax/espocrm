@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "procedimento": "Procedimento",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "sessao": "Sessão",
+        "convenio": "Convênio",
+        "atendimento": "Atendimento",
+        "canalAgendamento": "Canal de Agendamento",
+        "duracaoPrevistaMin": "Duração Prevista (min)",
+        "observacao": "Observação"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "procedimento": "Procedimento",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "sessao": "Sessão",
+        "convenio": "Convênio",
+        "atendimento": "Atendimento",
+        "canalAgendamento": "Canal de Agendamento"
+    },
+    "options": {
+        "status": {
+            "Scheduled": "Agendado",
+            "Confirmed": "Confirmado",
+            "Realized": "Realizado",
+            "NoShow": "Faltou",
+            "Canceled": "Cancelado",
+            "Rescheduled": "Desmarcado"
+        }
+    },
+    "presetFilters": {
+        "scheduled": "Agendados",
+        "realized": "Realizados",
+        "todays": "De Hoje"
+    }
+}

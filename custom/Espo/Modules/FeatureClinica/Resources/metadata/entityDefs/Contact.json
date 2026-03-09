@@ -1,0 +1,9 @@
+{
+    "links": {
+        "pacientes": {
+            "type": "hasMany",
+            "entity": "Paciente",
+            "foreign": "contact"
+        }
+    }
+}

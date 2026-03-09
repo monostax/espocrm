@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "atendimento"}, {"name": "procedimento"}],
+            [{"name": "quantidade"}, {"name": "valorCobrado"}],
+            [{"name": "dosagemAplicada"}, {"name": "unidadeDosagem"}],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

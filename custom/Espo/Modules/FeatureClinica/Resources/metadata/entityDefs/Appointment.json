@@ -1,0 +1,118 @@
+{
+    "fields": {
+        "status": {
+            "type": "enum",
+            "options": ["Scheduled", "Confirmed", "Realized", "NoShow", "Canceled", "Rescheduled"],
+            "default": "Scheduled",
+            "style": {
+                "Scheduled": "primary",
+                "Confirmed": "info",
+                "Realized": "success",
+                "NoShow": "warning",
+                "Canceled": "danger",
+                "Rescheduled": "default"
+            },
+            "audited": true
+        },
+        "location": {
+            "type": "link",
+            "view": "views/fields/user",
+            "required": false
+        },
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta"]
+        },
+        "paciente": {
+            "type": "link"
+        },
+        "sessao": {
+            "type": "link"
+        },
+        "convenio": {
+            "type": "link"
+        },
+        "atendimento": {
+            "type": "link"
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "profissional": {
+            "type": "link",
+            "required": true
+        },
+        "canalAgendamento": {
+            "type": "link"
+        },
+        "duracaoPrevistaMin": {
+            "type": "int"
+        },
+        "observacao": {
+            "type": "text"
+        }
+    },
+    "links": {
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "Paciente",
+            "foreign": "appointments"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "profissional": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "sessao": {
+            "type": "belongsTo",
+            "entity": "Sessao"
+        },
+        "convenio": {
+            "type": "belongsTo",
+            "entity": "Convenio"
+        },
+        "atendimento": {
+            "type": "belongsTo",
+            "entity": "Atendimento"
+        },
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "canalAgendamento": {
+            "type": "belongsTo",
+            "entity": "CanalAgendamento",
+            "foreign": "appointments",
+            "foreignName": "nome"
+        }
+    },
+    "indexes": {
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "profissionalId": {
+            "columns": ["profissionalId"]
+        },
+        "canalAgendamentoId": {
+            "columns": ["canalAgendamentoId"]
+        },
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        }
+    }
+}

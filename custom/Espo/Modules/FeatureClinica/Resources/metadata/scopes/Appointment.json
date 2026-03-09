@@ -1,0 +1,6 @@
+{
+    "activityStatusList": ["Scheduled", "Confirmed"],
+    "historyStatusList": ["Realized", "NoShow", "Canceled", "Rescheduled"],
+    "completedStatusList": ["Realized"],
+    "canceledStatusList": ["NoShow", "Canceled", "Rescheduled"]
+}

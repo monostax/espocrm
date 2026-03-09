@@ -1,0 +1,16 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-user-tag",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "profissionais": {
+            "create": false,
+            "select": false
+        }
+    }
+}

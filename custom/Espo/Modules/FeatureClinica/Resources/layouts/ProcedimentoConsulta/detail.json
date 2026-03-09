@@ -1,0 +1,9 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "codigo"}],
+            [{"name": "duracaoMin"}, false],
+            [{"name": "descricao", "fullWidth": true}]
+        ]
+    }
+]

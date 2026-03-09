@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "cnpj": "CNPJ",
+        "endereco": "Endereço",
+        "telefone": "Telefone",
+        "email": "E-mail",
+        "responsavel": "Responsável",
+        "ativa": "Ativa"
+    },
+    "links": {
+        "responsavel": "Responsável"
+    },
+    "labels": {
+        "Create Unidade": "Criar Unidade"
+    },
+    "scopeNames": {
+        "Unidade": "Unidade"
+    },
+    "scopeNamesPlural": {
+        "Unidade": "Unidades"
+    }
+}

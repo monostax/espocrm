@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "name": "Nome",
+        "contact": "Contato",
+        "contactName": "Nome do Contato",
+        "emailAddress": "E-mail",
+        "phoneNumber": "Telefone",
+        "cpf": "CPF",
+        "dataNascimento": "Data de Nascimento",
+        "sexo": "Sexo"
+    },
+    "links": {
+        "contact": "Contato",
+        "jornadas": "Jornadas",
+        "atendimentos": "Atendimentos",
+        "appointments": "Agendamentos"
+    },
+    "labels": {
+        "Create Paciente": "Criar Paciente"
+    },
+    "options": {
+        "sexo": {
+            "": "",
+            "M": "Masculino",
+            "F": "Feminino",
+            "Outro": "Outro"
+        }
+    },
+    "scopeNames": {
+        "Paciente": "Paciente"
+    },
+    "scopeNamesPlural": {
+        "Paciente": "Pacientes"
+    }
+}

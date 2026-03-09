@@ -1,0 +1,7 @@
+{
+    "create": "team",
+    "read": "team",
+    "edit": "owner",
+    "delete": "admin",
+    "stream": "team"
+}

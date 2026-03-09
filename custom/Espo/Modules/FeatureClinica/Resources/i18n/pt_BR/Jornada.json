@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "convenio": "Convênio",
+        "status": "Status",
+        "dataInicio": "Data de Início",
+        "dataFim": "Data de Fim",
+        "descricao": "Descrição"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "convenio": "Convênio",
+        "sessoes": "Sessões"
+    },
+    "labels": {
+        "Create Jornada": "Criar Jornada"
+    },
+    "options": {
+        "status": {
+            "EmAndamento": "Em Andamento",
+            "Concluida": "Concluída",
+            "Cancelada": "Cancelada"
+        }
+    },
+    "scopeNames": {
+        "Jornada": "Jornada"
+    },
+    "scopeNamesPlural": {
+        "Jornada": "Jornadas"
+    }
+}

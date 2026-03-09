@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}, {"name": "unidade"}],
+            [{"name": "profissional"}, {"name": "status"}],
+            [{"name": "dataInicio"}, {"name": "dataFim"}],
+            [{"name": "descricao", "fullWidth": true}]
+        ]
+    }
+]

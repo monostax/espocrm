@@ -1,0 +1,34 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-user-md",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "tipoProfissional", "user", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "dynamicLogic": {
+        "fields": {
+            "crm": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "tipoProfissionalRequerCRM"
+                        }
+                    ]
+                }
+            },
+            "crmUf": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "tipoProfissionalRequerCRM"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

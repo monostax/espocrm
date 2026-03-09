@@ -1,0 +1,129 @@
+{
+    "fields": {
+        "jornada": {
+            "type": "link",
+            "required": true
+        },
+        "sequencia": {
+            "type": "int"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pendente", "Agendada", "Realizada", "Cancelada"],
+            "default": "Pendente",
+            "style": {
+                "Pendente": "default",
+                "Agendada": "primary",
+                "Realizada": "success",
+                "Cancelada": "danger"
+            }
+        },
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta"]
+        },
+        "appointment": {
+            "type": "link"
+        },
+        "dosagemAplicada": {
+            "type": "float"
+        },
+        "unidadeDosagem": {
+            "type": "link"
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "observacao": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "jornada": {
+            "type": "belongsTo",
+            "entity": "Jornada",
+            "foreign": "sessoes"
+        },
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "appointment": {
+            "type": "belongsTo",
+            "entity": "Appointment"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "unidadeDosagem": {
+            "type": "belongsTo",
+            "entity": "UnidadeDosagem",
+            "foreignName": "nome"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "sequencia",
+        "order": "asc"
+    },
+    "indexes": {
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "jornadaId": {
+            "columns": ["jornadaId"]
+        },
+        "appointmentId": {
+            "columns": ["appointmentId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "unidadeDosagemId": {
+            "columns": ["unidadeDosagemId"]
+        }
+    }
+}

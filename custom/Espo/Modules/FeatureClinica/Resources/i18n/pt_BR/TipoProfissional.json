@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "codigo": "Código",
+        "requerCRM": "Requer CRM",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "profissionais": "Profissionais"
+    },
+    "labels": {
+        "Create TipoProfissional": "Criar Tipo de Profissional"
+    },
+    "scopeNames": {
+        "TipoProfissional": "Tipo de Profissional"
+    },
+    "scopeNamesPlural": {
+        "TipoProfissional": "Tipos de Profissional"
+    }
+}

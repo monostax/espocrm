@@ -1,0 +1,37 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "jornada": "Jornada",
+        "appointment": "Agendamento",
+        "dataHoraInicio": "Início",
+        "dataHoraFim": "Fim",
+        "status": "Status",
+        "observacao": "Observação"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "jornada": "Jornada",
+        "appointment": "Agendamento",
+        "procedimentosRealizados": "Procedimentos Realizados"
+    },
+    "labels": {
+        "Create Atendimento": "Criar Atendimento"
+    },
+    "options": {
+        "status": {
+            "EmAndamento": "Em Andamento",
+            "Concluido": "Concluído",
+            "Cancelado": "Cancelado"
+        }
+    },
+    "scopeNames": {
+        "Atendimento": "Atendimento"
+    },
+    "scopeNamesPlural": {
+        "Atendimento": "Atendimentos"
+    }
+}

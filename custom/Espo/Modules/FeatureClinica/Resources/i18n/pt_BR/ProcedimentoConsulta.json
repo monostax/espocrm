@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "codigo": "Código",
+        "descricao": "Descrição",
+        "duracaoMin": "Duração (min)",
+        "unidade": "Unidade",
+        "valorBase": "Valor Base",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "unidade": "Unidade",
+        "appointments": "Agendamentos",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados"
+    },
+    "labels": {
+        "Create ProcedimentoConsulta": "Criar Procedimento de Consulta"
+    },
+    "scopeNames": {
+        "ProcedimentoConsulta": "Procedimento de Consulta"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoConsulta": "Procedimentos de Consulta"
+    }
+}

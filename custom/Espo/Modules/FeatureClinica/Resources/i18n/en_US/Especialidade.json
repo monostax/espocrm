@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "nome": "Name",
+        "codigo": "Code",
+        "ativo": "Active"
+    },
+    "links": {
+        "profissionais": "Professionals"
+    },
+    "labels": {
+        "Create Especialidade": "Create Specialty"
+    },
+    "scopeNames": {
+        "Especialidade": "Specialty"
+    },
+    "scopeNamesPlural": {
+        "Especialidade": "Specialties"
+    }
+}

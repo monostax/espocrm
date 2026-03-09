@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}, {"name": "profissional"}],
+            [{"name": "unidade"}, {"name": "status"}],
+            [{"name": "dataHoraInicio"}, {"name": "dataHoraFim"}],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-notes-medical",
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "paciente", "unidade", "profissional", "appointment", "jornada", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "procedimentosRealizados": {
+            "create": true,
+            "select": false
+        }
+    }
+}

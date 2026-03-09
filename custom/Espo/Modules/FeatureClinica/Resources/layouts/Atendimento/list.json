@@ -1,0 +1,8 @@
+[
+    {"name": "paciente", "link": true},
+    {"name": "profissional"},
+    {"name": "unidade"},
+    {"name": "status"},
+    {"name": "dataHoraInicio"},
+    {"name": "dataHoraFim"}
+]

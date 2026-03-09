@@ -1,0 +1,7 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeatureClinica\\Rebuild\\ValidateProcedureTypeRegistry",
+        "Espo\\Modules\\FeatureClinica\\Rebuild\\MigrateAppointmentStatus",
+        "Espo\\Modules\\FeatureClinica\\Rebuild\\SeedSidenavConfig"
+    ]
+}

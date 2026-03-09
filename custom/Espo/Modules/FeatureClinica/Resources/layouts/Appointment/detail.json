@@ -1,0 +1,12 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}],
+            [{"name": "dateStart"}, {"name": "dateEnd"}, {"name": "duration"}],
+            [{"name": "duracaoPrevistaMin"}, false],
+            [{"name": "observacao", "fullWidth": true}],
+            [{"name": "description"}]
+        ]
+    }
+]

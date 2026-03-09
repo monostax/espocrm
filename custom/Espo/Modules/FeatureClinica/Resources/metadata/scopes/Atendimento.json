@@ -1,0 +1,16 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": true,
+    "acl": true,
+    "aclPortal": false,
+    "customizable": false,
+    "importable": false,
+    "notifications": false,
+    "stream": true,
+    "disabled": false,
+    "type": "Base",
+    "module": "FeatureClinica",
+    "object": true,
+    "hasTeams": true
+}
