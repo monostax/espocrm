@@ -250,6 +250,75 @@ class SeedRole implements RebuildAction
                     'delete' => 'team',
                 ],
 
+                'Unidade' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'Profissional' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'ProcedimentoConsulta' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'TipoProfissional' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'Especialidade' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'CanalAgendamento' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'UnidadeDosagem' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'Jornada' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                    'stream' => 'team',
+                ],
+                'Sessao' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                ],
+                'Atendimento' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                    'stream' => 'team',
+                ],
+                'ProcedimentoRealizado' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                ],
+
             ],
             'fieldData' => [
                 'Email' => (object)[],
@@ -307,6 +376,18 @@ class SeedRole implements RebuildAction
                 'ChatwootInbox' => (object)[],
                 'ChatwootMessage' => (object)[],
                 'ChatwootSyncState' => (object)[],
+
+                'Unidade' => (object)[],
+                'Profissional' => (object)[],
+                'ProcedimentoConsulta' => (object)[],
+                'TipoProfissional' => (object)[],
+                'Especialidade' => (object)[],
+                'CanalAgendamento' => (object)[],
+                'UnidadeDosagem' => (object)[],
+                'Jornada' => (object)[],
+                'Sessao' => (object)[],
+                'Atendimento' => (object)[],
+                'ProcedimentoRealizado' => (object)[],
 
             ],
         ];
@@ -378,6 +459,48 @@ class SeedRole implements RebuildAction
                         'edit' => 'team',
                         'delete' => 'team',
                         'stream' => 'team',
+                    ],
+                    'Unidade' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'Profissional' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'ProcedimentoConsulta' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'TipoProfissional' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'Especialidade' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'CanalAgendamento' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'UnidadeDosagem' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
                     ],
                 ],
                 'fieldData' => [

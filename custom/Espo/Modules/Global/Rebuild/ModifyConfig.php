@@ -47,6 +47,15 @@ class ModifyConfig implements RebuildAction
         $this->configureNavbar();
         $this->configureActivitiesEntityList();
         $this->configureApplicationTitle();
+        $this->configureSystemOptions();
+    }
+
+    private function configureSystemOptions(): void
+    {
+        if ($this->config->get('customPrefixDisabled') !== true) {
+            $this->configWriter->set('customPrefixDisabled', true);
+            $this->configWriter->save();
+        }
     }
 
     private function configureApplicationTitle(): void
