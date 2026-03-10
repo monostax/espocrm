@@ -14,17 +14,7 @@
             "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "unidade"
-        },
-        {
-            "name": "convenio"
-        }
-    ],
+    "filterList": ["status", "unidade", "convenio"],
     "dynamicLogic": {
         "fields": {
             "motivoRecusa": {

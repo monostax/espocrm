@@ -7,7 +7,8 @@
         "origem": "Origin",
         "profissional": "Professional",
         "dataHora": "Date/Time",
-        "observacao": "Note"
+        "observacao": "Note",
+        "quantidadeFormatada": "Quantity"
     },
     "links": {
         "insumoLote": "Supply Lot",

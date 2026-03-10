@@ -109,6 +109,11 @@
             "entity": "OrcamentoItem",
             "foreign": "procedimento"
         },
+        "consumoInsumoPadrao": {
+            "type": "hasChildren",
+            "entity": "ConsumoInsumoPadrao",
+            "foreign": "procedimento"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

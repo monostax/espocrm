@@ -10,16 +10,12 @@
         "jornadas": {
             "create": true,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "atendimentos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "appointments": {
             "create": false,
@@ -28,29 +24,18 @@
         "prescricoes": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "orcamentos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "lancamentosFinanceiros": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"},
-                {"name": "tipo"}
-            ]
+            "filterList": ["status", "tipo"]
         }
     },
-    "filterList": [
-        {
-            "name": "sexo"
-        }
-    ]
+    "filterList": ["sexo"]
 }

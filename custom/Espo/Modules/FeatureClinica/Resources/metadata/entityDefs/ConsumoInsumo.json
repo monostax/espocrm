@@ -1,0 +1,93 @@
+{
+    "fields": {
+        "sessao": {
+            "type": "link",
+            "required": true
+        },
+        "insumo": {
+            "type": "link"
+        },
+        "insumoLote": {
+            "type": "link",
+            "required": true
+        },
+        "quantidade": {
+            "type": "float",
+            "required": true,
+            "default": 1
+        },
+        "observacao": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "sessao": {
+            "type": "belongsTo",
+            "entity": "Sessao",
+            "foreign": "consumoItens",
+            "foreignName": "id"
+        },
+        "insumo": {
+            "type": "belongsTo",
+            "entity": "Insumo",
+            "foreignName": "nome"
+        },
+        "insumoLote": {
+            "type": "belongsTo",
+            "entity": "InsumoLote",
+            "foreignName": "numeroLote"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "asc"
+    },
+    "indexes": {
+        "sessaoId": {
+            "columns": ["sessaoId"]
+        },
+        "insumoId": {
+            "columns": ["insumoId"]
+        },
+        "insumoLoteId": {
+            "columns": ["insumoLoteId"]
+        }
+    }
+}

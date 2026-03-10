@@ -18,7 +18,8 @@
         "especialidade": "Specialty",
         "appointments": "Appointments",
         "sessoes": "Sessions",
-        "procedimentosRealizados": "Performed Procedures"
+        "procedimentosRealizados": "Performed Procedures",
+        "consumoInsumoPadrao": "Default Consumables"
     },
     "labels": {
         "Create ProcedimentoConsulta": "Create Consultation Procedure"

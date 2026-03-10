@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "sessao": "Sessão",
+        "insumo": "Insumo",
+        "insumoLote": "Lote de Insumo",
+        "quantidade": "Quantidade",
+        "observacao": "Observação"
+    },
+    "links": {
+        "sessao": "Sessão",
+        "insumo": "Insumo",
+        "insumoLote": "Lote de Insumo"
+    },
+    "labels": {
+        "Create ConsumoInsumo": "Criar Consumo de Insumo"
+    },
+    "scopeNames": {
+        "ConsumoInsumo": "Consumo de Insumo"
+    },
+    "scopeNamesPlural": {
+        "ConsumoInsumo": "Consumos de Insumo"
+    }
+}

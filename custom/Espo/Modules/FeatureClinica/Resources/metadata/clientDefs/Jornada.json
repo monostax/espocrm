@@ -11,30 +11,13 @@
         "sessoes": {
             "create": true,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "atendimentos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         }
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "unidade"
-        },
-        {
-            "name": "profissional"
-        },
-        {
-            "name": "programa"
-        }
-    ]
+    "filterList": ["status", "unidade", "profissional", "programa"]
 }

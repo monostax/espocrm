@@ -52,5 +52,9 @@ class SnapshotDosagem
 
         $entity->set('dosagemAplicada', $sessao->get('dosagemAplicada'));
         $entity->set('unidadeDosagemId', $sessao->get('unidadeDosagemId'));
+
+        if (!$entity->get('insumoLoteId') && $sessao->get('insumoLoteId')) {
+            $entity->set('insumoLoteId', $sessao->get('insumoLoteId'));
+        }
     }
 }

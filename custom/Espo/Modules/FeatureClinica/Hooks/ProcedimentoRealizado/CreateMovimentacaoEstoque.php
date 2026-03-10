@@ -69,29 +69,65 @@ class CreateMovimentacaoEstoque
         }
 
         $atendimentoId = $entity->get('atendimentoId');
+        $unidadeId = null;
+        $profissionalId = null;
 
-        if (!$atendimentoId) {
+        if ($atendimentoId) {
+            $atendimento = $this->entityManager->getEntityById('Atendimento', $atendimentoId);
+            if ($atendimento) {
+                $unidadeId = $atendimento->get('unidadeId');
+                $profissionalId = $atendimento->get('profissionalId');
+            }
+        }
+
+        if (!$unidadeId) {
+            $sessaoId = $entity->get('sessaoId');
+            if ($sessaoId) {
+                $sessao = $this->entityManager->getEntityById('Sessao', $sessaoId);
+                if ($sessao) {
+                    $unidadeId = $sessao->get('unidadeId');
+                    $jornadaId = $sessao->get('jornadaId');
+                    if (!$profissionalId && $jornadaId) {
+                        $jornada = $this->entityManager->getEntityById('Jornada', $jornadaId);
+                        if ($jornada) {
+                            $profissionalId = $jornada->get('profissionalId');
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$unidadeId) {
             return;
         }
 
-        $atendimento = $this->entityManager->getEntityById('Atendimento', $atendimentoId);
+        $movQuantidade = (float) ($entity->get('quantidade') ?? 1);
 
-        if (!$atendimento) {
-            return;
+        $insumoLote = $this->entityManager->getEntityById('InsumoLote', $insumoLoteId);
+        if ($insumoLote) {
+            $insumoId = $insumoLote->get('insumoId');
+            if ($insumoId) {
+                $insumo = $this->entityManager->getEntityById('Insumo', $insumoId);
+                if ($insumo && in_array($insumo->get('unidadeMedida'), ['mg', 'ml', 'UI'])) {
+                    $dosagemAplicada = (float) $entity->get('dosagemAplicada');
+                    if ($dosagemAplicada > 0) {
+                        $movQuantidade = $dosagemAplicada;
+                    }
+                }
+            }
         }
 
-        $quantidade = $entity->get('quantidade') ?? 1;
         $teamsIds = $entity->getLinkMultipleIdList('teams');
 
         $movimentacao = $this->entityManager->getNewEntity('MovimentacaoEstoque');
         $movimentacao->set([
             'insumoLoteId' => $insumoLoteId,
-            'unidadeId' => $atendimento->get('unidadeId'),
+            'unidadeId' => $unidadeId,
             'tipo' => 'Saida',
-            'quantidade' => $quantidade,
+            'quantidade' => $movQuantidade,
             'origemType' => 'ProcedimentoRealizado',
             'origemId' => $entity->getId(),
-            'profissionalId' => $atendimento->get('profissionalId'),
+            'profissionalId' => $profissionalId,
             'dataHora' => date('Y-m-d H:i:s'),
         ]);
 

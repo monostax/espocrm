@@ -8,7 +8,8 @@
         "dosagemAplicada": "Dosagem Aplicada",
         "unidadeDosagem": "Unidade de Dosagem",
         "insumoLote": "Lote de Insumo",
-        "observacao": "Observação"
+        "observacao": "Observação",
+        "dosagemAplicadaFormatada": "Dosagem Aplicada"
     },
     "links": {
         "atendimento": "Atendimento",

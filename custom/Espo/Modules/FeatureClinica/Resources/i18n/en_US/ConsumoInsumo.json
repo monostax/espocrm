@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "sessao": "Session",
+        "insumo": "Supply",
+        "insumoLote": "Supply Lot",
+        "quantidade": "Quantity",
+        "observacao": "Note"
+    },
+    "links": {
+        "sessao": "Session",
+        "insumo": "Supply",
+        "insumoLote": "Supply Lot"
+    },
+    "labels": {
+        "Create ConsumoInsumo": "Create Supply Consumption"
+    },
+    "scopeNames": {
+        "ConsumoInsumo": "Supply Consumption"
+    },
+    "scopeNamesPlural": {
+        "ConsumoInsumo": "Supply Consumptions"
+    }
+}

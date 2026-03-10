@@ -11,35 +11,23 @@
         "jornadas": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "appointments": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "atendimentos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "insumoLotes": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         }
     },
-    "filterList": [
-        {
-            "name": "ativa"
-        }
-    ]
+    "filterList": ["ativa"]
 }

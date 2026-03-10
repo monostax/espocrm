@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "procedimento": "Procedure",
+        "insumo": "Supply",
+        "quantidade": "Quantity",
+        "observacao": "Note"
+    },
+    "links": {
+        "procedimento": "Procedure",
+        "insumo": "Supply"
+    },
+    "labels": {
+        "Create ConsumoInsumoPadrao": "Create Default Consumable"
+    },
+    "scopeNames": {
+        "ConsumoInsumoPadrao": "Default Consumable"
+    },
+    "scopeNamesPlural": {
+        "ConsumoInsumoPadrao": "Default Consumables"
+    }
+}

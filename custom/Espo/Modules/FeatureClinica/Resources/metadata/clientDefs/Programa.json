@@ -8,12 +8,5 @@
             "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        },
-        {
-            "name": "unidade"
-        }
-    ]
+    "filterList": ["ativo", "unidade"]
 }

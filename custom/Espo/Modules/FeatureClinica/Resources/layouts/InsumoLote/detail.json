@@ -4,7 +4,7 @@
             [{"name": "insumo"}, {"name": "unidade"}],
             [{"name": "numeroLote"}, {"name": "status"}],
             [{"name": "dataFabricacao"}, {"name": "dataValidade"}],
-            [{"name": "quantidadeEntrada"}, {"name": "quantidadeAtual"}],
+            [{"name": "quantidadeEntrada"}, {"name": "saldoFormatado"}],
             [{"name": "fornecedor"}, {"name": "notaFiscal"}],
             [{"name": "precoUnitarioCusto"}, false]
         ]

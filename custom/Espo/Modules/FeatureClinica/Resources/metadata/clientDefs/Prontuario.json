@@ -13,15 +13,5 @@
             "select": true
         }
     },
-    "filterList": [
-        {
-            "name": "tipo"
-        },
-        {
-            "name": "confidencial"
-        },
-        {
-            "name": "unidade"
-        }
-    ]
+    "filterList": ["tipo", "confidencial", "unidade"]
 }

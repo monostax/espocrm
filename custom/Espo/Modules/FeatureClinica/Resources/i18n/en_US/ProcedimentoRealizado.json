@@ -8,7 +8,8 @@
         "dosagemAplicada": "Applied Dosage",
         "unidadeDosagem": "Dosage Unit",
         "insumoLote": "Supply Lot",
-        "observacao": "Note"
+        "observacao": "Note",
+        "dosagemAplicadaFormatada": "Applied Dosage"
     },
     "links": {
         "atendimento": "Visit",

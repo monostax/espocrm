@@ -84,6 +84,16 @@
             "entity": "ProcedimentoImplante",
             "foreign": "insumo"
         },
+        "consumoInsumoPadrao": {
+            "type": "hasMany",
+            "entity": "ConsumoInsumoPadrao",
+            "foreign": "insumo"
+        },
+        "consumoItens": {
+            "type": "hasMany",
+            "entity": "ConsumoInsumo",
+            "foreign": "insumo"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

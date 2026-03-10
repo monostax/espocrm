@@ -2,8 +2,45 @@
     "controller": "controllers/record",
     "iconClass": "fas fa-clipboard-check",
     "defaultSidePanelFieldLists": {
-        "detail": ["atendimento", "sessao", "teams", "createdAt", "modifiedAt"],
+        "detail": ["atendimento", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],
         "detailSmall": ["teams"]
+    },
+    "dynamicLogic": {
+        "fields": {
+            "dosagemAplicada": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "procedimentoType",
+                            "value": "ProcedimentoInjetavel"
+                        }
+                    ]
+                }
+            },
+            "unidadeDosagem": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "procedimentoType",
+                            "value": "ProcedimentoInjetavel"
+                        }
+                    ]
+                }
+            },
+            "insumoLote": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "procedimentoType",
+                            "value": ["ProcedimentoInjetavel", "ProcedimentoImplante"]
+                        }
+                    ]
+                }
+            }
+        }
     }
 }

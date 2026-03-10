@@ -7,9 +7,5 @@
         "edit": ["teams"],
         "detailSmall": ["teams"]
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        }
-    ]
+    "filterList": ["ativo"]
 }

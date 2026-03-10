@@ -1,22 +1,5 @@
 {
-    "filterList": [
-        {
-            "name": "scheduled"
-        },
-        {
-            "name": "realized",
-            "style": "success"
-        },
-        {
-            "name": "todays"
-        },
-        {
-            "name": "unidade"
-        },
-        {
-            "name": "profissional"
-        }
-    ],
+    "filterList": ["scheduled", "realized", "todays", "unidade", "profissional"],
     "sidePanels": {
         "detail": [
             {

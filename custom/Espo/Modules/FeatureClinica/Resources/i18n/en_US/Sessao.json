@@ -10,7 +10,9 @@
         "unidade": "Unit",
         "insumoLote": "Supply Lot",
         "dataExpiracao": "Expiration Date",
-        "observacao": "Note"
+        "observacao": "Note",
+        "insumoLoteQuantidadeAtual": "Lot Balance",
+        "dosagemAplicadaFormatada": "Applied Dosage"
     },
     "links": {
         "jornada": "Journey",
@@ -18,7 +20,8 @@
         "appointment": "Appointment",
         "unidade": "Unit",
         "unidadeDosagem": "Dosage Unit",
-        "insumoLote": "Supply Lot"
+        "insumoLote": "Supply Lot",
+        "consumoItens": "Supply Consumptions"
     },
     "labels": {
         "Create Sessao": "Create Session"

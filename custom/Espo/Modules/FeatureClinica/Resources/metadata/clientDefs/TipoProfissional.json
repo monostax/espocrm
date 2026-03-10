@@ -13,9 +13,5 @@
             "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        }
-    ]
+    "filterList": ["ativo"]
 }

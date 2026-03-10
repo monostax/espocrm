@@ -11,30 +11,22 @@
         "appointments": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "atendimentos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "jornadas": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "prescricoes": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "prontuarios": {
             "create": false,
@@ -45,14 +37,7 @@
             "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        },
-        {
-            "name": "tipoProfissional"
-        }
-    ],
+    "filterList": ["ativo", "tipoProfissional"],
     "dynamicLogic": {
         "fields": {
             "crm": {

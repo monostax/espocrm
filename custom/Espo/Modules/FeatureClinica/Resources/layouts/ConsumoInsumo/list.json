@@ -1,0 +1,6 @@
+[
+    {"name": "insumo", "width": 25},
+    {"name": "insumoLote", "width": 30},
+    {"name": "quantidade", "width": 15},
+    {"name": "observacao", "width": 30}
+]

@@ -13,14 +13,7 @@
             "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "tipo"
-        }
-    ],
+    "filterList": ["status", "tipo"],
     "dynamicLogic": {
         "fields": {
             "paciente": {

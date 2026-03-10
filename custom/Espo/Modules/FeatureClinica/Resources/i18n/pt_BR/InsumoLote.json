@@ -10,14 +10,16 @@
         "fornecedor": "Fornecedor",
         "notaFiscal": "Nota Fiscal",
         "precoUnitarioCusto": "Preço Unitário (Custo)",
-        "status": "Status"
+        "status": "Status",
+        "saldoFormatado": "Saldo Atual"
     },
     "links": {
         "insumo": "Insumo",
         "unidade": "Unidade",
         "movimentacoes": "Movimentações",
         "sessoes": "Sessões",
-        "procedimentosRealizados": "Procedimentos Realizados"
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "consumoItens": "Consumos de Insumo"
     },
     "labels": {
         "Create InsumoLote": "Criar Lote de Insumo"

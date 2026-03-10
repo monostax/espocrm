@@ -2,14 +2,7 @@
     "controller": "controllers/record",
     "iconClass": "fas fa-balance-scale",
     "nameAttribute": "id",
-    "filterList": [
-        {
-            "name": "cobertura"
-        },
-        {
-            "name": "requerAutorizacao"
-        }
-    ],
+    "filterList": ["cobertura", "requerAutorizacao"],
     "dynamicLogic": {
         "fields": {
             "percentualCobertura": {

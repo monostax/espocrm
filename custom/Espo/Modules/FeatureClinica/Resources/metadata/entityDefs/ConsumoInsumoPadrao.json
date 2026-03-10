@@ -1,0 +1,86 @@
+{
+    "fields": {
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
+        },
+        "insumo": {
+            "type": "link",
+            "required": true
+        },
+        "quantidade": {
+            "type": "float",
+            "required": true,
+            "default": 1
+        },
+        "observacao": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "insumo": {
+            "type": "belongsTo",
+            "entity": "Insumo",
+            "foreignName": "nome"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "asc"
+    },
+    "indexes": {
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "insumoId": {
+            "columns": ["insumoId"]
+        }
+    }
+}

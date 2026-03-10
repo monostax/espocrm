@@ -7,23 +7,7 @@
         "edit": ["teams"],
         "detailSmall": ["teams"]
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "tipo"
-        },
-        {
-            "name": "formaPagamento"
-        },
-        {
-            "name": "unidade"
-        },
-        {
-            "name": "convenio"
-        }
-    ],
+    "filterList": ["status", "tipo", "formaPagamento", "unidade", "convenio"],
     "dynamicLogic": {
         "fields": {
             "autorizadoPor": {

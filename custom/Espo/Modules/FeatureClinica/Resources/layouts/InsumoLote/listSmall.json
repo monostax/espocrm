@@ -1,7 +1,7 @@
 [
     {"name": "insumo", "link": true},
     {"name": "numeroLote"},
-    {"name": "quantidadeAtual"},
+    {"name": "saldoFormatado"},
     {"name": "status"},
     {"name": "dataValidade"}
 ]

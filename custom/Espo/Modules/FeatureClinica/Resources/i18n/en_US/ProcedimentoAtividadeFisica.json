@@ -15,7 +15,8 @@
         "procedimentosRealizados": "Performed Procedures",
         "tabelaDePrecos": "Price Table",
         "convenioRegras": "Health Plan Rules",
-        "programaItens": "Program Items"
+        "programaItens": "Program Items",
+        "consumoInsumoPadrao": "Default Consumables"
     },
     "labels": {
         "Create ProcedimentoAtividadeFisica": "Create Physical Activity Procedure"

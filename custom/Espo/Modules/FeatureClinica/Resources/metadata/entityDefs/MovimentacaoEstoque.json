@@ -17,6 +17,18 @@
             "type": "float",
             "required": true
         },
+        "quantidadeFormatada": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(quantidade, ' ', movInsumo.unidadeMedida)",
+                "leftJoins": [
+                    "insumoLote",
+                    ["Insumo", "movInsumo", {"movInsumo.id:": "insumoLote.insumoId"}]
+                ]
+            }
+        },
         "origemType": {
             "type": "varchar",
             "maxLength": 100
@@ -26,7 +38,7 @@
         },
         "origem": {
             "type": "linkParent",
-            "entityList": ["ProcedimentoRealizado"]
+            "entityList": ["ProcedimentoRealizado", "Sessao"]
         },
         "profissional": {
             "type": "link"

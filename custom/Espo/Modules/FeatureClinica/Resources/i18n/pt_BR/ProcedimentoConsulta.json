@@ -18,7 +18,8 @@
         "especialidade": "Especialidade",
         "appointments": "Agendamentos",
         "sessoes": "Sessões",
-        "procedimentosRealizados": "Procedimentos Realizados"
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "consumoInsumoPadrao": "Consumos Padrão"
     },
     "labels": {
         "Create ProcedimentoConsulta": "Criar Procedimento de Consulta"

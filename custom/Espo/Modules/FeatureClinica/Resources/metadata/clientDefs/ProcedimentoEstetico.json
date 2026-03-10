@@ -6,16 +6,12 @@
         "appointments": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "sessoes": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "procedimentosRealizados": {
             "create": false,
@@ -24,31 +20,21 @@
         "tabelaDePrecos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "ativo"}
-            ]
+            "filterList": ["ativo"]
         },
         "convenioRegras": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "cobertura"}
-            ]
+            "filterList": ["cobertura"]
         },
         "programaItens": {
             "create": false,
             "select": false
+        },
+        "consumoInsumoPadrao": {
+            "create": true,
+            "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        },
-        {
-            "name": "subtipo"
-        },
-        {
-            "name": "unidade"
-        }
-    ]
+    "filterList": ["ativo", "subtipo", "unidade"]
 }

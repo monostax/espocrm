@@ -12,15 +12,5 @@
             "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "unidade"
-        },
-        {
-            "name": "profissional"
-        }
-    ]
+    "filterList": ["status", "unidade", "profissional"]
 }

@@ -10,14 +10,16 @@
         "fornecedor": "Supplier",
         "notaFiscal": "Invoice",
         "precoUnitarioCusto": "Unit Cost Price",
-        "status": "Status"
+        "status": "Status",
+        "saldoFormatado": "Current Balance"
     },
     "links": {
         "insumo": "Supply",
         "unidade": "Unit",
         "movimentacoes": "Movements",
         "sessoes": "Sessions",
-        "procedimentosRealizados": "Performed Procedures"
+        "procedimentosRealizados": "Performed Procedures",
+        "consumoItens": "Supply Consumptions"
     },
     "labels": {
         "Create InsumoLote": "Create Supply Lot"

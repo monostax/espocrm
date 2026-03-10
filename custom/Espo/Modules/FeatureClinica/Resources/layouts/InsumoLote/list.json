@@ -3,6 +3,6 @@
     {"name": "unidade"},
     {"name": "numeroLote"},
     {"name": "dataValidade"},
-    {"name": "quantidadeAtual"},
+    {"name": "saldoFormatado"},
     {"name": "status"}
 ]

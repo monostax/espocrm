@@ -11,17 +11,15 @@
         "movimentacoes": {
             "create": false,
             "select": false
+        },
+        "sessoes": {
+            "create": false,
+            "select": false
+        },
+        "procedimentosRealizados": {
+            "create": false,
+            "select": false
         }
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "insumo"
-        },
-        {
-            "name": "unidade"
-        }
-    ]
+    "filterList": ["status", "insumo", "unidade"]
 }

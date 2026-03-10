@@ -7,12 +7,5 @@
         "edit": ["teams"],
         "detailSmall": ["teams"]
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        },
-        {
-            "name": "unidade"
-        }
-    ]
+    "filterList": ["ativo", "unidade"]
 }

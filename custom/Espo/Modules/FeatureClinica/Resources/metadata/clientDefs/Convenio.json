@@ -11,9 +11,7 @@
         "jornadas": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         },
         "appointments": {
             "create": false,
@@ -22,29 +20,18 @@
         "convenioRegras": {
             "create": true,
             "select": false,
-            "filterList": [
-                {"name": "cobertura"}
-            ]
+            "filterList": ["cobertura"]
         },
         "lancamentosFinanceiros": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"},
-                {"name": "tipo"}
-            ]
+            "filterList": ["status", "tipo"]
         },
         "orcamentos": {
             "create": false,
             "select": false,
-            "filterList": [
-                {"name": "status"}
-            ]
+            "filterList": ["status"]
         }
     },
-    "filterList": [
-        {
-            "name": "ativo"
-        }
-    ]
+    "filterList": ["ativo"]
 }

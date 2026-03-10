@@ -40,6 +40,21 @@
             "type": "float",
             "required": true
         },
+        "insumoUnidadeMedida": {
+            "type": "foreign",
+            "link": "insumo",
+            "field": "unidadeMedida",
+            "readOnly": true
+        },
+        "saldoFormatado": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(quantidadeAtual, ' ', insumo.unidadeMedida)",
+                "leftJoins": ["insumo"]
+            }
+        },
         "fornecedor": {
             "type": "varchar",
             "maxLength": 255,
@@ -105,6 +120,11 @@
         "procedimentosRealizados": {
             "type": "hasMany",
             "entity": "ProcedimentoRealizado",
+            "foreign": "insumoLote"
+        },
+        "consumoItens": {
+            "type": "hasMany",
+            "entity": "ConsumoInsumo",
             "foreign": "insumoLote"
         },
         "createdBy": {

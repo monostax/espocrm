@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "procedimento": "Procedimento",
+        "insumo": "Insumo",
+        "quantidade": "Quantidade",
+        "observacao": "Observação"
+    },
+    "links": {
+        "procedimento": "Procedimento",
+        "insumo": "Insumo"
+    },
+    "labels": {
+        "Create ConsumoInsumoPadrao": "Criar Consumo Padrão"
+    },
+    "scopeNames": {
+        "ConsumoInsumoPadrao": "Consumo Padrão"
+    },
+    "scopeNamesPlural": {
+        "ConsumoInsumoPadrao": "Consumos Padrão"
+    }
+}

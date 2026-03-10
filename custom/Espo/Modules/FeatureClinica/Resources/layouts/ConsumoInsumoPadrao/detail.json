@@ -1,0 +1,9 @@
+[
+    {
+        "rows": [
+            [{"name": "procedimento"}, {"name": "insumo"}],
+            [{"name": "quantidade"}, false],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

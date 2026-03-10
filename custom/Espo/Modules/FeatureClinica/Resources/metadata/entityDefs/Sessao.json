@@ -47,6 +47,27 @@
         "insumoLote": {
             "type": "link"
         },
+        "insumoLoteQuantidadeAtual": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(insumoLote.quantidadeAtual, ' ', insumoLoteInsumo.unidadeMedida)",
+                "leftJoins": [
+                    "insumoLote",
+                    ["Insumo", "insumoLoteInsumo", {"insumoLoteInsumo.id:": "insumoLote.insumoId"}]
+                ]
+            }
+        },
+        "dosagemAplicadaFormatada": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(dosagemAplicada, ' ', unidadeDosagem.sigla)",
+                "leftJoins": ["unidadeDosagem"]
+            }
+        },
         "dataExpiracao": {
             "type": "date"
         },
@@ -103,6 +124,16 @@
             "type": "belongsTo",
             "entity": "InsumoLote",
             "foreignName": "numeroLote"
+        },
+        "procedimentosRealizados": {
+            "type": "hasMany",
+            "entity": "ProcedimentoRealizado",
+            "foreign": "sessao"
+        },
+        "consumoItens": {
+            "type": "hasMany",
+            "entity": "ConsumoInsumo",
+            "foreign": "sessao"
         },
         "createdBy": {
             "type": "belongsTo",

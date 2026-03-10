@@ -34,6 +34,15 @@
         "dosagemMaxima": {
             "type": "float"
         },
+        "dosagemPadraoFormatada": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(dosagemPadrao, ' ', unidadeDosagem.sigla)",
+                "leftJoins": ["unidadeDosagem"]
+            }
+        },
         "requerPrescricao": {
             "type": "bool",
             "default": true
@@ -134,6 +143,11 @@
         "orcamentoItens": {
             "type": "hasChildren",
             "entity": "OrcamentoItem",
+            "foreign": "procedimento"
+        },
+        "consumoInsumoPadrao": {
+            "type": "hasChildren",
+            "entity": "ConsumoInsumoPadrao",
             "foreign": "procedimento"
         },
         "createdBy": {

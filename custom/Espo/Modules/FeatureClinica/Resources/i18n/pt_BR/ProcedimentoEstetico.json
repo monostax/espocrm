@@ -16,7 +16,8 @@
         "procedimentosRealizados": "Procedimentos Realizados",
         "tabelaDePrecos": "Tabela de Preços",
         "convenioRegras": "Regras de Convênio",
-        "programaItens": "Itens de Programa"
+        "programaItens": "Itens de Programa",
+        "consumoInsumoPadrao": "Consumos Padrão"
     },
     "labels": {
         "Create ProcedimentoEstetico": "Criar Procedimento Estético"

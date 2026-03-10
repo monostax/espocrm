@@ -12,7 +12,8 @@
         "insumo": "Supply",
         "controlaEstoque": "Controls Stock",
         "unidade": "Unit",
-        "ativo": "Active"
+        "ativo": "Active",
+        "dosagemPadraoFormatada": "Default Dosage"
     },
     "links": {
         "insumo": "Supply",
@@ -23,7 +24,8 @@
         "procedimentosRealizados": "Performed Procedures",
         "tabelaDePrecos": "Price Table",
         "convenioRegras": "Health Plan Rules",
-        "programaItens": "Program Items"
+        "programaItens": "Program Items",
+        "consumoInsumoPadrao": "Default Consumables"
     },
     "labels": {
         "Create ProcedimentoInjetavel": "Create Injectable Procedure"

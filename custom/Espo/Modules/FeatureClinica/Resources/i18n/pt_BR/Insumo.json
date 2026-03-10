@@ -12,7 +12,9 @@
     "links": {
         "lotes": "Lotes",
         "procedimentosInjetaveis": "Procedimentos Injetáveis",
-        "procedimentosImplante": "Procedimentos Implante"
+        "procedimentosImplante": "Procedimentos Implante",
+        "consumoInsumoPadrao": "Consumos Padrão",
+        "consumoItens": "Consumos de Insumo"
     },
     "labels": {
         "Create Insumo": "Criar Insumo"

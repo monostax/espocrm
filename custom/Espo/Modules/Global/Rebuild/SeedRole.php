@@ -431,6 +431,18 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                'ConsumoInsumoPadrao' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'ConsumoInsumo' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                ],
                 'Orcamento' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -539,6 +551,8 @@ class SeedRole implements RebuildAction
                 'Insumo' => (object)[],
                 'InsumoLote' => (object)[],
                 'MovimentacaoEstoque' => (object)[],
+                'ConsumoInsumoPadrao' => (object)[],
+                'ConsumoInsumo' => (object)[],
                 'Orcamento' => (object)[],
                 'OrcamentoItem' => (object)[],
                 'LancamentoFinanceiro' => (object)[],
@@ -734,6 +748,18 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'no',
                         'delete' => 'no',
+                    ],
+                    'ConsumoInsumoPadrao' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'ConsumoInsumo' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'own',
                     ],
                     'Orcamento' => [
                         'create' => 'yes',

@@ -10,7 +10,9 @@
         "unidade": "Unidade",
         "insumoLote": "Lote de Insumo",
         "dataExpiracao": "Data de Expiração",
-        "observacao": "Observação"
+        "observacao": "Observação",
+        "insumoLoteQuantidadeAtual": "Saldo do Lote",
+        "dosagemAplicadaFormatada": "Dosagem Aplicada"
     },
     "links": {
         "jornada": "Jornada",
@@ -18,7 +20,8 @@
         "appointment": "Agendamento",
         "unidade": "Unidade",
         "unidadeDosagem": "Unidade de Dosagem",
-        "insumoLote": "Lote de Insumo"
+        "insumoLote": "Lote de Insumo",
+        "consumoItens": "Consumos de Insumo"
     },
     "labels": {
         "Create Sessao": "Criar Sessão"

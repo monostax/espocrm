@@ -1,17 +1,92 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-syringe",
+    "relationshipPanels": {
+        "consumoItens": {
+            "create": true,
+            "select": false
+        }
+    },
     "defaultSidePanelFieldLists": {
         "detail": ["status", "jornada", "unidade", "appointment", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],
         "detailSmall": ["teams"]
     },
-    "filterList": [
-        {
-            "name": "status"
-        },
-        {
-            "name": "unidade"
+    "filterList": ["status", "unidade", "procedimentoType"],
+    "dynamicLogic": {
+        "fields": {
+            "dosagemAplicada": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "procedimentoType",
+                            "value": "ProcedimentoInjetavel"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "procedimentoType",
+                            "value": "ProcedimentoInjetavel"
+                        },
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Realizada"
+                        }
+                    ]
+                }
+            },
+            "unidadeDosagem": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "procedimentoType",
+                            "value": "ProcedimentoInjetavel"
+                        }
+                    ]
+                }
+            },
+            "insumoLote": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "procedimentoType",
+                            "value": ["ProcedimentoInjetavel", "ProcedimentoImplante"]
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "procedimentoType",
+                            "value": ["ProcedimentoInjetavel", "ProcedimentoImplante"]
+                        },
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Realizada"
+                        }
+                    ]
+                }
+            },
+            "insumoLoteQuantidadeAtual": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "procedimentoType",
+                            "value": ["ProcedimentoInjetavel", "ProcedimentoImplante"]
+                        }
+                    ]
+                }
+            }
         }
-    ]
+    }
 }

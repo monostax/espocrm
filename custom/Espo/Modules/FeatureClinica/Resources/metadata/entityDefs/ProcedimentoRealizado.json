@@ -34,6 +34,15 @@
         "insumoLote": {
             "type": "link"
         },
+        "dosagemAplicadaFormatada": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(dosagemAplicada, ' ', unidadeDosagem.sigla)",
+                "leftJoins": ["unidadeDosagem"]
+            }
+        },
         "observacao": {
             "type": "text"
         },

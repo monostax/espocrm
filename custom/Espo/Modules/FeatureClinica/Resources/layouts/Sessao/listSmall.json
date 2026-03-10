@@ -3,6 +3,6 @@
     {"name": "procedimento"},
     {"name": "status"},
     {"name": "unidade"},
-    {"name": "dosagemAplicada"},
-    {"name": "unidadeDosagem"}
+    {"name": "insumoLote"},
+    {"name": "dosagemAplicadaFormatada"}
 ]
