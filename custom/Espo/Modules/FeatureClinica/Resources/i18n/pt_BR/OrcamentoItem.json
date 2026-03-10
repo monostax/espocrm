@@ -3,6 +3,8 @@
         "orcamento": "Orçamento",
         "procedimento": "Procedimento",
         "quantidade": "Quantidade",
+        "dosagemPorSessao": "Dosagem por Sessão",
+        "unidadeDosagem": "Unidade de Dosagem",
         "valorUnitario": "Valor Unitário",
         "valorTotal": "Valor Total",
         "desconto": "Desconto (%)",
@@ -11,7 +13,8 @@
     },
     "links": {
         "orcamento": "Orçamento",
-        "procedimento": "Procedimento"
+        "procedimento": "Procedimento",
+        "unidadeDosagem": "Unidade de Dosagem"
     },
     "labels": {
         "Create OrcamentoItem": "Criar Item de Orçamento"

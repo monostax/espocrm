@@ -2,7 +2,7 @@
     {
         "rows": [
             [{"name": "procedimento"}, {"name": "insumo"}],
-            [{"name": "quantidade"}, false],
+            [{"name": "quantidade"}, {"name": "usarDosagemDaSessao"}],
             [{"name": "observacao", "fullWidth": true}]
         ]
     }

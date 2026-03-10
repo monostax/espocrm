@@ -3,6 +3,7 @@
         "procedimento": "Procedimento",
         "insumo": "Insumo",
         "quantidade": "Quantidade",
+        "usarDosagemDaSessao": "Usar Dosagem da Sessão",
         "observacao": "Observação"
     },
     "links": {

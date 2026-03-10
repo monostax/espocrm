@@ -3,6 +3,7 @@
         "rows": [
             [{"name": "programa"}, {"name": "procedimento"}],
             [{"name": "quantidade"}, {"name": "ordem"}],
+            [{"name": "dosagemPorSessao"}, {"name": "unidadeDosagem"}],
             [{"name": "valorUnitario"}, {"name": "valorTotal"}],
             [{"name": "observacao", "fullWidth": true}]
         ]

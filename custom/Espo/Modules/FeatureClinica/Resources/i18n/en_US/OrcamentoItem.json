@@ -3,6 +3,8 @@
         "orcamento": "Quote",
         "procedimento": "Procedure",
         "quantidade": "Quantity",
+        "dosagemPorSessao": "Dosage per Session",
+        "unidadeDosagem": "Dosage Unit",
         "valorUnitario": "Unit Price",
         "valorTotal": "Total Value",
         "desconto": "Discount (%)",
@@ -11,7 +13,8 @@
     },
     "links": {
         "orcamento": "Quote",
-        "procedimento": "Procedure"
+        "procedimento": "Procedure",
+        "unidadeDosagem": "Dosage Unit"
     },
     "labels": {
         "Create OrcamentoItem": "Create Quote Item"

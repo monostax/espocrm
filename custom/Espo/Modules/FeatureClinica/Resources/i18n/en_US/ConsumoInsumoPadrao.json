@@ -3,6 +3,7 @@
         "procedimento": "Procedure",
         "insumo": "Supply",
         "quantidade": "Quantity",
+        "usarDosagemDaSessao": "Use Session Dosage",
         "observacao": "Note"
     },
     "links": {

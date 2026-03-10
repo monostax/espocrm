@@ -20,6 +20,10 @@
             "required": true,
             "default": 1
         },
+        "usarDosagemDaSessao": {
+            "type": "bool",
+            "default": false
+        },
         "observacao": {
             "type": "varchar",
             "maxLength": 255,

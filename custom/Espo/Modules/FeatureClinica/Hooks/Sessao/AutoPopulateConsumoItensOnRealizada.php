@@ -107,6 +107,14 @@ class AutoPopulateConsumoItensOnRealizada
 
             $quantidade = (float) ($template->get('quantidade') ?? 1);
 
+            $usarDosagemDaSessao = (bool) $template->get('usarDosagemDaSessao');
+            if ($usarDosagemDaSessao) {
+                $dosagemAplicada = (float) $entity->get('dosagemAplicada');
+                if ($dosagemAplicada > 0) {
+                    $quantidade = $dosagemAplicada;
+                }
+            }
+
             $lot = $this->findBestAvailableLot($insumoId, $unidadeId, $quantidade);
 
             if (!$lot) {

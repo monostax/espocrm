@@ -4,13 +4,16 @@
         "procedimento": "Procedure",
         "quantidade": "Quantity",
         "ordem": "Order",
+        "dosagemPorSessao": "Dosage per Session",
+        "unidadeDosagem": "Dosage Unit",
         "observacao": "Note",
         "valorUnitario": "Unit Price",
         "valorTotal": "Total Price"
     },
     "links": {
         "programa": "Program",
-        "procedimento": "Procedure"
+        "procedimento": "Procedure",
+        "unidadeDosagem": "Dosage Unit"
     },
     "labels": {
         "Create ProgramaItem": "Create Program Item"

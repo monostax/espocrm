@@ -1,6 +1,8 @@
 [
     {"name": "procedimento", "link": true},
     {"name": "quantidade"},
+    {"name": "dosagemPorSessao"},
+    {"name": "unidadeDosagem"},
     {"name": "valorUnitario"},
     {"name": "valorTotal"},
     {"name": "ordem"},

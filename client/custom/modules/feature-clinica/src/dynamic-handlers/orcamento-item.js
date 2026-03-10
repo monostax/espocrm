@@ -40,6 +40,18 @@ class OrcamentoItemDynamicHandler extends DynamicHandler {
                 model.set('valorUnitario', response.list[0].valor);
             }
         });
+
+        if (procedimentoType === 'ProcedimentoInjetavel') {
+            Espo.Ajax.getRequest(`${procedimentoType}/${value}`).then(procedure => {
+                if (procedure.dosagemPadrao) {
+                    model.set('dosagemPorSessao', procedure.dosagemPadrao);
+                }
+                if (procedure.unidadeDosagemId) {
+                    model.set('unidadeDosagemId', procedure.unidadeDosagemId);
+                    model.set('unidadeDosagemName', procedure.unidadeDosagemName || '');
+                }
+            });
+        }
     }
 
     onChangeQuantidade() {

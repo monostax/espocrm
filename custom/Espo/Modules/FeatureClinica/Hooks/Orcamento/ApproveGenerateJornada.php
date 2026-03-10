@@ -116,14 +116,26 @@ class ApproveGenerateJornada
 
             for ($i = 0; $i < $quantidade; $i++) {
                 $sessao = $this->entityManager->getNewEntity('Sessao');
-                $sessao->set([
+                $sessaoData = [
                     'jornadaId' => $jornada->getId(),
                     'procedimentoType' => $item->get('procedimentoType'),
                     'procedimentoId' => $item->get('procedimentoId'),
                     'sequencia' => $sequencia,
                     'status' => 'Pendente',
                     'unidadeId' => $orcamento->get('unidadeId'),
-                ]);
+                ];
+
+                $dosagemPorSessao = $item->get('dosagemPorSessao');
+                if ($dosagemPorSessao && $dosagemPorSessao > 0) {
+                    $sessaoData['dosagemAplicada'] = $dosagemPorSessao;
+                }
+
+                $unidadeDosagemId = $item->get('unidadeDosagemId');
+                if ($unidadeDosagemId) {
+                    $sessaoData['unidadeDosagemId'] = $unidadeDosagemId;
+                }
+
+                $sessao->set($sessaoData);
 
                 if (!empty($teamsIds)) {
                     $sessao->set('teamsIds', $teamsIds);
