@@ -1,4 +1,5 @@
 [
     {"name": "nome", "link": true},
-    {"name": "cnpj"}
+    {"name": "cnpj"},
+    {"name": "ativo"}
 ]

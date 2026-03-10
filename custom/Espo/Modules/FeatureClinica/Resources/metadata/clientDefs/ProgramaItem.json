@@ -1,5 +1,6 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-list-ol",
-    "nameAttribute": "id"
+    "nameAttribute": "id",
+    "dynamicHandler": "feature-clinica:dynamic-handlers/programa-item"
 }

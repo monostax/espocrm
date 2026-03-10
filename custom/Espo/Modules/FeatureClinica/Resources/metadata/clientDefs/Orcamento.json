@@ -2,6 +2,7 @@
     "controller": "controllers/record",
     "iconClass": "fas fa-file-invoice-dollar",
     "nameAttribute": "numero",
+    "dynamicHandler": "feature-clinica:dynamic-handlers/orcamento",
     "defaultSidePanelFieldLists": {
         "detail": ["status", "paciente", "unidade", "profissional", "convenio", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],
@@ -16,6 +17,135 @@
     "filterList": [
         {
             "name": "status"
+        },
+        {
+            "name": "unidade"
+        },
+        {
+            "name": "convenio"
         }
-    ]
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "motivoRecusa": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Recusado"
+                        }
+                    ]
+                }
+            },
+            "autorizadoPor": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "valorDesconto"
+                        }
+                    ]
+                }
+            },
+            "jornada": {
+                "readOnly": {
+                    "conditionGroup": []
+                }
+            },
+            "lancamento": {
+                "readOnly": {
+                    "conditionGroup": []
+                }
+            },
+            "paciente": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "profissional": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "unidade": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "convenio": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "programa": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "valorTotal": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "valorDesconto": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            },
+            "valorLiquido": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Aprovado", "Expirado", "Recusado"]
+                        }
+                    ]
+                }
+            }
+        }
+    }
 }

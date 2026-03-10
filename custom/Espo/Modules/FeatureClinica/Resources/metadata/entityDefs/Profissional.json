@@ -100,6 +100,36 @@
             "type": "belongsTo",
             "entity": "User"
         },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "profissional"
+        },
+        "atendimentos": {
+            "type": "hasMany",
+            "entity": "Atendimento",
+            "foreign": "profissional"
+        },
+        "jornadas": {
+            "type": "hasMany",
+            "entity": "Jornada",
+            "foreign": "profissional"
+        },
+        "prescricoes": {
+            "type": "hasMany",
+            "entity": "Prescricao",
+            "foreign": "medico"
+        },
+        "prontuarios": {
+            "type": "hasMany",
+            "entity": "Prontuario",
+            "foreign": "profissional"
+        },
+        "anamneses": {
+            "type": "hasMany",
+            "entity": "Anamnese",
+            "foreign": "profissional"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

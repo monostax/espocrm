@@ -1,5 +1,5 @@
 [
-    {"name": "sequencia"},
+    {"name": "sequencia", "link": true},
     {"name": "procedimento"},
     {"name": "status"},
     {"name": "appointment"},

@@ -17,7 +17,8 @@
         "observacoes": "Observações",
         "motivoRecusa": "Motivo da Recusa",
         "jornada": "Jornada",
-        "lancamento": "Lançamento Financeiro"
+        "lancamento": "Lançamento Financeiro",
+        "programa": "Programa"
     },
     "links": {
         "paciente": "Paciente",
@@ -28,6 +29,7 @@
         "autorizadoPor": "Autorizado Por",
         "jornada": "Jornada",
         "lancamento": "Lançamento Financeiro",
+        "programa": "Programa",
         "itens": "Itens",
         "versoes": "Versões"
     },

@@ -1,5 +1,8 @@
 [
-    {"name": "sequencia"},
+    {"name": "sequencia", "link": true},
     {"name": "procedimento"},
-    {"name": "status"}
+    {"name": "status"},
+    {"name": "unidade"},
+    {"name": "dosagemAplicada"},
+    {"name": "unidadeDosagem"}
 ]

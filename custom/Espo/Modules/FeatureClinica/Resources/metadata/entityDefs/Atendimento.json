@@ -33,7 +33,8 @@
                 "EmAndamento": "primary",
                 "Concluido": "success",
                 "Cancelado": "danger"
-            }
+            },
+            "audited": true
         },
         "observacao": {
             "type": "text"

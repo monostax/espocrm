@@ -1,16 +1,35 @@
 [
     {
+        "label": "Dados Gerais",
         "rows": [
             [{"name": "paciente"}, {"name": "profissional"}],
             [{"name": "unidade"}, {"name": "convenio"}],
             [{"name": "numero"}, {"name": "versao"}],
             [{"name": "status"}, {"name": "orcamentoOrigem"}],
+            [{"name": "programa"}, false]
+        ]
+    },
+    {
+        "label": "Valores",
+        "rows": [
             [{"name": "dataEmissao"}, {"name": "dataValidade"}],
             [{"name": "valorTotal"}, {"name": "valorDesconto"}],
-            [{"name": "valorLiquido"}, {"name": "autorizadoPor"}],
-            [{"name": "jornada"}, {"name": "lancamento"}],
+            [{"name": "valorLiquido"}, {"name": "autorizadoPor"}]
+        ]
+    },
+    {
+        "label": "Observações",
+        "name": "observacoes_panel",
+        "rows": [
             [{"name": "observacoes", "fullWidth": true}],
             [{"name": "motivoRecusa", "fullWidth": true}]
+        ]
+    },
+    {
+        "label": "Resultado",
+        "name": "resultado",
+        "rows": [
+            [{"name": "jornada"}, {"name": "lancamento"}]
         ]
     }
 ]

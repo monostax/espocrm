@@ -39,6 +39,9 @@
         "orcamentoOrigem": {
             "type": "link"
         },
+        "programa": {
+            "type": "link"
+        },
         "status": {
             "type": "enum",
             "required": true,
@@ -50,7 +53,8 @@
                 "Aprovado": "success",
                 "Expirado": "warning",
                 "Recusado": "danger"
-            }
+            },
+            "audited": true
         },
         "dataEmissao": {
             "type": "date",
@@ -132,21 +136,29 @@
         "orcamentoOrigem": {
             "type": "belongsTo",
             "entity": "Orcamento",
-            "foreign": "versoes"
+            "foreign": "versoes",
+            "foreignName": "numero"
         },
         "autorizadoPor": {
             "type": "belongsTo",
             "entity": "Profissional",
             "foreignName": "nome"
         },
+        "programa": {
+            "type": "belongsTo",
+            "entity": "Programa",
+            "foreignName": "nome"
+        },
         "jornada": {
             "type": "belongsTo",
             "entity": "Jornada",
-            "foreign": "orcamentos"
+            "foreign": "orcamentos",
+            "foreignName": "nome"
         },
         "lancamento": {
             "type": "belongsTo",
-            "entity": "LancamentoFinanceiro"
+            "entity": "LancamentoFinanceiro",
+            "foreignName": "id"
         },
         "itens": {
             "type": "hasMany",
@@ -187,6 +199,9 @@
         },
         "convenioId": {
             "columns": ["convenioId"]
+        },
+        "programaId": {
+            "columns": ["programaId"]
         },
         "status": {
             "columns": ["status"]

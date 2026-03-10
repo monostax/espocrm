@@ -4,7 +4,8 @@
             [{"name": "nome"}, {"name": "tipoProfissional"}],
             [{"name": "crm"}, {"name": "crmUf"}],
             [{"name": "especialidades", "fullWidth": true}],
-            [{"name": "telefone"}, {"name": "email"}]
+            [{"name": "telefone"}, {"name": "email"}],
+            [{"name": "user"}, {"name": "ativo"}]
         ]
     }
 ]

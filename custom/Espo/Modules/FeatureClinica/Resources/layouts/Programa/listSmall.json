@@ -1,4 +1,6 @@
 [
     {"name": "nome", "link": true},
-    {"name": "precoTotal"}
+    {"name": "precoTotal"},
+    {"name": "validadeDias"},
+    {"name": "ativo"}
 ]

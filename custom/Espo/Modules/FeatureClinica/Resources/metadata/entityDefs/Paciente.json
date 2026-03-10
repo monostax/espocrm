@@ -18,12 +18,14 @@
         "emailAddress": {
             "type": "foreign",
             "link": "contact",
-            "field": "emailAddress"
+            "field": "emailAddress",
+            "readOnly": true
         },
         "phoneNumber": {
             "type": "foreign",
             "link": "contact",
-            "field": "phoneNumber"
+            "field": "phoneNumber",
+            "readOnly": true
         },
         "cpf": {
             "type": "varchar",

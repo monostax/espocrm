@@ -6,5 +6,40 @@
         "detail": ["ativa", "responsavel", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],
         "detailSmall": ["teams"]
-    }
+    },
+    "relationshipPanels": {
+        "jornadas": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        },
+        "appointments": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        },
+        "atendimentos": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        },
+        "insumoLotes": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        }
+    },
+    "filterList": [
+        {
+            "name": "ativa"
+        }
+    ]
 }

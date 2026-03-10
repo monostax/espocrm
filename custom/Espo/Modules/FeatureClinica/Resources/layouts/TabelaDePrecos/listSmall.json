@@ -1,5 +1,7 @@
 [
-    {"name": "procedimento"},
+    {"name": "procedimento", "link": true},
     {"name": "valor"},
-    {"name": "unidade"}
+    {"name": "unidade"},
+    {"name": "vigenciaInicio"},
+    {"name": "ativo"}
 ]

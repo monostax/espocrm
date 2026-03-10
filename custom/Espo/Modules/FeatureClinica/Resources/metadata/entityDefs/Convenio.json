@@ -74,6 +74,16 @@
             "entity": "ConvenioRegra",
             "foreign": "convenio"
         },
+        "lancamentosFinanceiros": {
+            "type": "hasMany",
+            "entity": "LancamentoFinanceiro",
+            "foreign": "convenio"
+        },
+        "orcamentos": {
+            "type": "hasMany",
+            "entity": "Orcamento",
+            "foreign": "convenio"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

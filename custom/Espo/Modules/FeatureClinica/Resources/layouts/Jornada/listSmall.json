@@ -1,5 +1,8 @@
 [
     {"name": "nome", "link": true},
     {"name": "paciente"},
-    {"name": "status"}
+    {"name": "unidade"},
+    {"name": "profissional"},
+    {"name": "status"},
+    {"name": "dataInicio"}
 ]

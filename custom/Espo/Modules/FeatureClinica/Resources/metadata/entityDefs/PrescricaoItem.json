@@ -53,7 +53,8 @@
         "prescricao": {
             "type": "belongsTo",
             "entity": "Prescricao",
-            "foreign": "itens"
+            "foreign": "itens",
+            "foreignName": "id"
         },
         "procedimento": {
             "type": "belongsToParent"

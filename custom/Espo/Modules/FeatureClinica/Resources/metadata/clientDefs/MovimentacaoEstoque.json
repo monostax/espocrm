@@ -10,6 +10,9 @@
     "filterList": [
         {
             "name": "tipo"
+        },
+        {
+            "name": "unidade"
         }
     ]
 }

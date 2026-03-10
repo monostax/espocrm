@@ -63,14 +63,16 @@
         "atendimento": {
             "type": "belongsTo",
             "entity": "Atendimento",
-            "foreign": "procedimentosRealizados"
+            "foreign": "procedimentosRealizados",
+            "foreignName": "id"
         },
         "procedimento": {
             "type": "belongsToParent"
         },
         "sessao": {
             "type": "belongsTo",
-            "entity": "Sessao"
+            "entity": "Sessao",
+            "foreignName": "id"
         },
         "unidadeDosagem": {
             "type": "belongsTo",

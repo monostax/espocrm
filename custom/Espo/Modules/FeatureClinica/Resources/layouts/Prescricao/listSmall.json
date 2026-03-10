@@ -1,5 +1,7 @@
 [
     {"name": "paciente", "link": true},
     {"name": "medico"},
-    {"name": "status"}
+    {"name": "status"},
+    {"name": "tipo"},
+    {"name": "dataValidade"}
 ]

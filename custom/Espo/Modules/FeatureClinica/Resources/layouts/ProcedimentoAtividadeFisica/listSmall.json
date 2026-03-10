@@ -1,4 +1,6 @@
 [
     {"name": "nome", "link": true},
-    {"name": "modalidade"}
+    {"name": "modalidade"},
+    {"name": "duracaoMin"},
+    {"name": "ativo"}
 ]

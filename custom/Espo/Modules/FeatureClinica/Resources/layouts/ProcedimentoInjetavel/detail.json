@@ -1,12 +1,18 @@
 [
     {
+        "label": "Dados Gerais",
         "rows": [
             [{"name": "nome"}, {"name": "viaAdministracao"}],
+            [{"name": "requerPrescricao"}, {"name": "tempoAplicacaoMin"}],
+            [{"name": "unidade"}, {"name": "ativo"}]
+        ]
+    },
+    {
+        "label": "Dosagem e Estoque",
+        "rows": [
             [{"name": "dosagemPadrao"}, {"name": "unidadeDosagem"}],
             [{"name": "dosagemMinima"}, {"name": "dosagemMaxima"}],
-            [{"name": "requerPrescricao"}, {"name": "tempoAplicacaoMin"}],
             [{"name": "insumo"}, {"name": "controlaEstoque"}],
-            [{"name": "unidade"}, {"name": "ativo"}],
             [{"name": "protocolo", "fullWidth": true}]
         ]
     }

@@ -16,6 +16,90 @@
     "filterList": [
         {
             "name": "status"
+        },
+        {
+            "name": "tipo"
         }
-    ]
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "paciente": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            },
+            "medico": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            },
+            "unidade": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            },
+            "dataEmissao": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            },
+            "dataValidade": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            },
+            "tipo": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            },
+            "observacoes": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "status",
+                            "value": ["Expirada", "Cancelada"]
+                        }
+                    ]
+                }
+            }
+        }
+    }
 }

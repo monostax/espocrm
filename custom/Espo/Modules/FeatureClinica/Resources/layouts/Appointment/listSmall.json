@@ -1,0 +1,7 @@
+[
+    {"name": "name", "link": true},
+    {"name": "status"},
+    {"name": "dateStart"},
+    {"name": "procedimento"},
+    {"name": "paciente"}
+]

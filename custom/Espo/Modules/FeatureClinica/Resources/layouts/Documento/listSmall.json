@@ -1,5 +1,6 @@
 [
     {"name": "nome", "link": true},
     {"name": "tipo"},
+    {"name": "subtipo"},
     {"name": "dataDocumento"}
 ]

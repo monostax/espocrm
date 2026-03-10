@@ -71,7 +71,8 @@
                 "Pago": "success",
                 "Vencido": "danger",
                 "Estornado": "default"
-            }
+            },
+            "audited": true
         },
         "dataVencimento": {
             "type": "date",
@@ -150,7 +151,7 @@
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": []
+        "textFilterFields": ["pacienteName"]
     },
     "indexes": {
         "pacienteId": {

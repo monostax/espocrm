@@ -22,6 +22,13 @@
         "ordem": {
             "type": "int"
         },
+        "valorUnitario": {
+            "type": "currency"
+        },
+        "valorTotal": {
+            "type": "currency",
+            "readOnly": true
+        },
         "observacao": {
             "type": "varchar",
             "maxLength": 255,

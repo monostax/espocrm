@@ -64,7 +64,8 @@
         "orcamento": {
             "type": "belongsTo",
             "entity": "Orcamento",
-            "foreign": "itens"
+            "foreign": "itens",
+            "foreignName": "numero"
         },
         "procedimento": {
             "type": "belongsToParent"

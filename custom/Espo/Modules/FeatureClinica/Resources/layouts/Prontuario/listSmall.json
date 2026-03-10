@@ -1,5 +1,6 @@
 [
     {"name": "titulo", "link": true},
-    {"name": "paciente"},
-    {"name": "tipo"}
+    {"name": "tipo"},
+    {"name": "profissional"},
+    {"name": "dataHora"}
 ]

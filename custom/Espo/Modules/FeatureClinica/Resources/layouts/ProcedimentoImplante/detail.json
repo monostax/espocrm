@@ -1,12 +1,18 @@
 [
     {
+        "label": "Dados Gerais",
         "rows": [
             [{"name": "nome"}, {"name": "substanciaAtiva"}],
             [{"name": "forma"}, {"name": "dosagemMg"}],
             [{"name": "validadeEstimadaDias"}, {"name": "requerSalaCirurgica"}],
-            [{"name": "requerCRM"}, {"name": "insumo"}],
-            [{"name": "unidade"}, false],
-            [{"name": "ativo"}, false],
+            [{"name": "requerCRM"}, {"name": "unidade"}],
+            [{"name": "ativo"}, false]
+        ]
+    },
+    {
+        "label": "Estoque e Protocolo",
+        "rows": [
+            [{"name": "insumo"}, false],
             [{"name": "protocoloAplicacao", "fullWidth": true}]
         ]
     }

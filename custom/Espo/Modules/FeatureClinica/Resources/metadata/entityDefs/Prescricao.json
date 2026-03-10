@@ -29,7 +29,8 @@
                 "Ativa": "success",
                 "Expirada": "warning",
                 "Cancelada": "danger"
-            }
+            },
+            "audited": true
         },
         "tipo": {
             "type": "enum",
@@ -82,7 +83,8 @@
         },
         "documento": {
             "type": "belongsTo",
-            "entity": "Documento"
+            "entity": "Documento",
+            "foreignName": "nome"
         },
         "itens": {
             "type": "hasMany",
@@ -107,7 +109,7 @@
     "collection": {
         "orderBy": "dataEmissao",
         "order": "desc",
-        "textFilterFields": []
+        "textFilterFields": ["pacienteName", "medicoName"]
     },
     "indexes": {
         "pacienteId": {

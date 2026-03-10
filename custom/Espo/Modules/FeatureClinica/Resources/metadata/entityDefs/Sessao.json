@@ -17,7 +17,8 @@
                 "Realizada": "success",
                 "Expirada": "warning",
                 "Cancelada": "danger"
-            }
+            },
+            "audited": true
         },
         "procedimentoType": {
             "type": "varchar",

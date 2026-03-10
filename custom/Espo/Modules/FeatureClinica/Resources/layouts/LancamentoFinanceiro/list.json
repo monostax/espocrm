@@ -1,5 +1,5 @@
 [
-    {"name": "paciente"},
+    {"name": "paciente", "link": true},
     {"name": "origem"},
     {"name": "tipo"},
     {"name": "valorLiquido"},

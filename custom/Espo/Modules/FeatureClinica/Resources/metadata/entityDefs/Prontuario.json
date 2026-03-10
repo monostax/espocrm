@@ -96,7 +96,8 @@
         "atendimento": {
             "type": "belongsTo",
             "entity": "Atendimento",
-            "foreign": "prontuarios"
+            "foreign": "prontuarios",
+            "foreignName": "id"
         },
         "jornada": {
             "type": "belongsTo",

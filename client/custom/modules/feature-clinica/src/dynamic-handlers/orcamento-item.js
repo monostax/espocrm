@@ -1,0 +1,81 @@
+/************************************************************************
+ * This file is part of Monostax.
+ *
+ * Monostax – Custom EspoCRM extensions.
+ * Copyright (C) 2025 Antonio Moura. All rights reserved.
+ * Website: https://www.monostax.ai
+ *
+ * PROPRIETARY AND CONFIDENTIAL
+ ************************************************************************/
+
+import DynamicHandler from 'dynamic-handler';
+
+class OrcamentoItemDynamicHandler extends DynamicHandler {
+
+    onChangeProcedimentoId(model, value, o) {
+        if (!o.ui || !value) {
+            return;
+        }
+
+        const procedimentoType = model.get('procedimentoType');
+
+        if (!procedimentoType) {
+            return;
+        }
+
+        const params = {
+            where: [
+                {type: 'equals', attribute: 'procedimentoType', value: procedimentoType},
+                {type: 'equals', attribute: 'procedimentoId', value: value},
+                {type: 'isTrue', attribute: 'ativo'},
+                {type: 'before', attribute: 'vigenciaInicio', value: new Date().toISOString().slice(0, 10)},
+            ],
+            orderBy: 'vigenciaInicio',
+            order: 'desc',
+            maxSize: 1,
+        };
+
+        Espo.Ajax.getRequest('TabelaDePrecos', params).then(response => {
+            if (response.list && response.list.length > 0) {
+                model.set('valorUnitario', response.list[0].valor);
+            }
+        });
+    }
+
+    onChangeQuantidade() {
+        this._recalcItemTotals();
+    }
+
+    onChangeValorUnitario() {
+        this._recalcItemTotals();
+    }
+
+    onChangeValorTotal() {
+        this._recalcDiscount();
+    }
+
+    onChangeDesconto() {
+        this._recalcDiscount();
+    }
+
+    _recalcItemTotals() {
+        const quantidade = parseInt(this.model.get('quantidade')) || 0;
+        const valorUnitario = parseFloat(this.model.get('valorUnitario')) || 0;
+        const valorTotal = valorUnitario * quantidade;
+
+        this.model.set('valorTotal', valorTotal);
+    }
+
+    _recalcDiscount() {
+        const valorTotal = parseFloat(this.model.get('valorTotal')) || 0;
+        const desconto = parseFloat(this.model.get('desconto')) || 0;
+
+        if (desconto > 0) {
+            this.model.set('valorComDesconto', valorTotal * (1 - desconto / 100));
+        } else {
+            this.model.set('valorComDesconto', valorTotal);
+        }
+    }
+}
+
+export default OrcamentoItemDynamicHandler;

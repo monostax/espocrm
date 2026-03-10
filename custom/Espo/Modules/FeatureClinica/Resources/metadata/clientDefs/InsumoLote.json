@@ -16,6 +16,12 @@
     "filterList": [
         {
             "name": "status"
+        },
+        {
+            "name": "insumo"
+        },
+        {
+            "name": "unidade"
         }
     ]
 }

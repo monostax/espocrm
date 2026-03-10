@@ -70,6 +70,26 @@
             "entity": "Profissional",
             "foreignName": "nome"
         },
+        "jornadas": {
+            "type": "hasMany",
+            "entity": "Jornada",
+            "foreign": "unidade"
+        },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "unidade"
+        },
+        "atendimentos": {
+            "type": "hasMany",
+            "entity": "Atendimento",
+            "foreign": "unidade"
+        },
+        "insumoLotes": {
+            "type": "hasMany",
+            "entity": "InsumoLote",
+            "foreign": "unidade"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

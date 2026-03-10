@@ -3,6 +3,7 @@
         "rows": [
             [{"name": "nome"}, {"name": "cnpj"}],
             [{"name": "telefone"}, {"name": "email"}],
+            [{"name": "responsavel"}, {"name": "ativa"}],
             [{"name": "endereco", "fullWidth": true}]
         ]
     }

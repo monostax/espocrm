@@ -16,6 +16,12 @@
     "filterList": [
         {
             "name": "tipo"
+        },
+        {
+            "name": "confidencial"
+        },
+        {
+            "name": "unidade"
         }
     ]
 }

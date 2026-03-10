@@ -11,5 +11,16 @@
             "create": true,
             "select": false
         }
-    }
+    },
+    "filterList": [
+        {
+            "name": "status"
+        },
+        {
+            "name": "unidade"
+        },
+        {
+            "name": "profissional"
+        }
+    ]
 }

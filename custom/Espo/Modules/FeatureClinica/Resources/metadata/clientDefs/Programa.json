@@ -7,5 +7,13 @@
             "create": true,
             "select": false
         }
-    }
+    },
+    "filterList": [
+        {
+            "name": "ativo"
+        },
+        {
+            "name": "unidade"
+        }
+    ]
 }

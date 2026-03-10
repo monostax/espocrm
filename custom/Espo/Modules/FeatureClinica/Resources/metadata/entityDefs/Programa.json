@@ -22,7 +22,7 @@
         },
         "precoTotal": {
             "type": "currency",
-            "required": true
+            "readOnly": true
         },
         "validadeDias": {
             "type": "int",

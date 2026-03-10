@@ -13,6 +13,81 @@
         },
         {
             "name": "tipo"
+        },
+        {
+            "name": "formaPagamento"
+        },
+        {
+            "name": "unidade"
+        },
+        {
+            "name": "convenio"
         }
-    ]
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "autorizadoPor": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "valorDesconto"
+                        }
+                    ]
+                }
+            },
+            "percentualConvenio": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "convenioId"
+                        }
+                    ]
+                }
+            },
+            "valorConvenio": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "convenioId"
+                        }
+                    ]
+                }
+            },
+            "valorPaciente": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "convenioId"
+                        }
+                    ]
+                }
+            },
+            "dataPagamento": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Pago"
+                        }
+                    ]
+                }
+            },
+            "parcelas": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "formaPagamento",
+                            "value": ["Cartao", "Boleto"]
+                        }
+                    ]
+                }
+            }
+        }
+    }
 }

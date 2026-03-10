@@ -17,7 +17,8 @@
         "observacoes": "Notes",
         "motivoRecusa": "Refusal Reason",
         "jornada": "Journey",
-        "lancamento": "Financial Transaction"
+        "lancamento": "Financial Transaction",
+        "programa": "Program"
     },
     "links": {
         "paciente": "Patient",
@@ -28,6 +29,7 @@
         "autorizadoPor": "Authorized By",
         "jornada": "Journey",
         "lancamento": "Financial Transaction",
+        "programa": "Program",
         "itens": "Items",
         "versoes": "Versions"
     },

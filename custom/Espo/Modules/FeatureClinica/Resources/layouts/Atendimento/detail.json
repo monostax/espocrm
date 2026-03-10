@@ -3,6 +3,8 @@
         "rows": [
             [{"name": "paciente"}, {"name": "profissional"}],
             [{"name": "unidade"}, {"name": "status"}],
+            [{"name": "jornada"}, {"name": "convenio"}],
+            [{"name": "appointment"}, false],
             [{"name": "dataHoraInicio"}, {"name": "dataHoraFim"}],
             [{"name": "observacao", "fullWidth": true}]
         ]

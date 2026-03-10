@@ -1,6 +1,8 @@
 [
-    {"name": "paciente"},
+    {"name": "paciente", "link": true},
     {"name": "tipo"},
     {"name": "valorLiquido"},
-    {"name": "status"}
+    {"name": "status"},
+    {"name": "formaPagamento"},
+    {"name": "dataVencimento"}
 ]

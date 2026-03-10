@@ -20,5 +20,13 @@
             "create": false,
             "select": false
         }
-    }
+    },
+    "filterList": [
+        {
+            "name": "ativo"
+        },
+        {
+            "name": "tipo"
+        }
+    ]
 }

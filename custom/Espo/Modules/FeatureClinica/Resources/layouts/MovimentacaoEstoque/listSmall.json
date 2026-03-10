@@ -1,5 +1,7 @@
 [
     {"name": "insumoLote", "link": true},
     {"name": "tipo"},
-    {"name": "quantidade"}
+    {"name": "quantidade"},
+    {"name": "dataHora"},
+    {"name": "profissional"}
 ]

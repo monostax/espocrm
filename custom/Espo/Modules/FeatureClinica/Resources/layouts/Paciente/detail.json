@@ -3,7 +3,8 @@
         "rows": [
             [{"name": "contact"}, {"name": "name"}],
             [{"name": "cpf"}, {"name": "dataNascimento"}],
-            [{"name": "sexo"}, false]
+            [{"name": "sexo"}, false],
+            [{"name": "emailAddress"}, {"name": "phoneNumber"}]
         ]
     }
 ]

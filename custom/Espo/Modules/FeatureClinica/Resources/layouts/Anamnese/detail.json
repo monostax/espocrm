@@ -1,15 +1,26 @@
 [
     {
+        "label": "Dados Gerais",
         "rows": [
             [{"name": "paciente"}, {"name": "profissional"}],
             [{"name": "unidade"}, {"name": "dataColeta"}],
-            [{"name": "versao"}, {"name": "jornada"}],
+            [{"name": "versao"}, {"name": "jornada"}]
+        ]
+    },
+    {
+        "label": "Historico Clinico",
+        "rows": [
             [{"name": "queixaPrincipal", "fullWidth": true}],
             [{"name": "historicoDoencas", "fullWidth": true}],
             [{"name": "medicamentosEmUso", "fullWidth": true}],
             [{"name": "alergias", "fullWidth": true}],
             [{"name": "historicoFamiliar", "fullWidth": true}],
-            [{"name": "habitosAlimentares"}, {"name": "nivelAtividadeFisica"}],
+            [{"name": "habitosAlimentares"}, {"name": "nivelAtividadeFisica"}]
+        ]
+    },
+    {
+        "label": "Objetivos e Observacoes",
+        "rows": [
             [{"name": "objetivos", "fullWidth": true}],
             [{"name": "observacoes", "fullWidth": true}]
         ]

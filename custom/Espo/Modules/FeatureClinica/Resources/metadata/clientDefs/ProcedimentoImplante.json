@@ -5,11 +5,17 @@
     "relationshipPanels": {
         "appointments": {
             "create": false,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
         },
         "sessoes": {
             "create": false,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
         },
         "procedimentosRealizados": {
             "create": false,
@@ -17,15 +23,32 @@
         },
         "tabelaDePrecos": {
             "create": false,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "ativo"}
+            ]
         },
         "convenioRegras": {
             "create": false,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "cobertura"}
+            ]
         },
         "programaItens": {
             "create": false,
             "select": false
         }
-    }
+    },
+    "filterList": [
+        {
+            "name": "ativo"
+        },
+        {
+            "name": "forma"
+        },
+        {
+            "name": "unidade"
+        }
+    ]
 }

@@ -4,7 +4,9 @@
         "procedimento": "Procedure",
         "quantidade": "Quantity",
         "ordem": "Order",
-        "observacao": "Note"
+        "observacao": "Note",
+        "valorUnitario": "Unit Price",
+        "valorTotal": "Total Price"
     },
     "links": {
         "programa": "Program",

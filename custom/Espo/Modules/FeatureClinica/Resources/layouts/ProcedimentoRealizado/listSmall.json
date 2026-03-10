@@ -1,5 +1,6 @@
 [
-    {"name": "procedimento"},
+    {"name": "procedimento", "link": true},
     {"name": "quantidade"},
-    {"name": "valorCobrado"}
+    {"name": "valorCobrado"},
+    {"name": "dosagemAplicada"}
 ]

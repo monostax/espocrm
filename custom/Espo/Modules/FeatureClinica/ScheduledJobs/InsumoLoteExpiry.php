@@ -70,6 +70,7 @@ class InsumoLoteExpiry implements JobDataLess
             $task->set([
                 'name' => "Lote vencido: {$insumoNome} - Lote {$numeroLote}",
                 'status' => 'Not Started',
+                'assignedUserId' => '1',
                 'dateEnd' => date('Y-m-d', strtotime('+3 days')),
             ]);
             $this->entityManager->saveEntity($task);
@@ -98,10 +99,16 @@ class InsumoLoteExpiry implements JobDataLess
         $count = 0;
 
         foreach ($lotes as $lote) {
+            $insumoNome = $this->getInsumoNome($lote->get('insumoId'));
+            $numeroLote = $lote->get('numeroLote');
+            $dataValidade = $lote->get('dataValidade');
+
+            $taskName = "Lote próximo do vencimento: {$insumoNome} - Lote {$numeroLote} (vence em {$dataValidade})";
+
             $existing = $this->entityManager
                 ->getRDBRepository('Task')
                 ->where([
-                    'name*' => "Lote próximo do vencimento:%Lote {$lote->get('numeroLote')}%",
+                    'name' => $taskName,
                     'createdAt>=' => $currentMonth . '-01 00:00:00',
                 ])
                 ->findOne();
@@ -110,14 +117,11 @@ class InsumoLoteExpiry implements JobDataLess
                 continue;
             }
 
-            $insumoNome = $this->getInsumoNome($lote->get('insumoId'));
-            $numeroLote = $lote->get('numeroLote');
-            $dataValidade = $lote->get('dataValidade');
-
             $task = $this->entityManager->getNewEntity('Task');
             $task->set([
-                'name' => "Lote próximo do vencimento: {$insumoNome} - Lote {$numeroLote} (vence em {$dataValidade})",
+                'name' => $taskName,
                 'status' => 'Not Started',
+                'assignedUserId' => '1',
                 'dateEnd' => $dataValidade,
             ]);
             $this->entityManager->saveEntity($task);
@@ -184,6 +188,7 @@ class InsumoLoteExpiry implements JobDataLess
             $task->set([
                 'name' => "Estoque baixo: {$insumoNome} na unidade {$unidadeNome}",
                 'status' => 'Not Started',
+                'assignedUserId' => '1',
                 'dateEnd' => date('Y-m-d', strtotime('+7 days')),
             ]);
             $this->entityManager->saveEntity($task);

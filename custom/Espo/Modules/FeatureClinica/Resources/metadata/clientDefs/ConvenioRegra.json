@@ -1,5 +1,50 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-balance-scale",
-    "nameAttribute": "id"
+    "nameAttribute": "id",
+    "filterList": [
+        {
+            "name": "cobertura"
+        },
+        {
+            "name": "requerAutorizacao"
+        }
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "percentualCobertura": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "cobertura",
+                            "value": "Parcial"
+                        }
+                    ]
+                }
+            },
+            "valorFixo": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "cobertura",
+                            "value": "Parcial"
+                        }
+                    ]
+                }
+            },
+            "limiteAnual": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "cobertura",
+                            "value": ["Total", "Parcial"]
+                        }
+                    ]
+                }
+            }
+        }
+    }
 }

@@ -44,7 +44,8 @@
                 "Concluida": "success",
                 "Abandonada": "danger",
                 "Cancelada": "danger"
-            }
+            },
+            "audited": true
         },
         "dataInicio": {
             "type": "date",
@@ -133,6 +134,11 @@
         "orcamentos": {
             "type": "hasMany",
             "entity": "Orcamento",
+            "foreign": "jornada"
+        },
+        "atendimentos": {
+            "type": "hasMany",
+            "entity": "Atendimento",
             "foreign": "jornada"
         },
         "createdBy": {

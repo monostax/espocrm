@@ -10,7 +10,31 @@
     "relationshipPanels": {
         "sessoes": {
             "create": true,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        },
+        "atendimentos": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
         }
-    }
+    },
+    "filterList": [
+        {
+            "name": "status"
+        },
+        {
+            "name": "unidade"
+        },
+        {
+            "name": "profissional"
+        },
+        {
+            "name": "programa"
+        }
+    ]
 }

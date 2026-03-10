@@ -2,9 +2,9 @@
     {
         "rows": [
             [{"name": "nome"}],
-            [{"name": "codigo"}],
+            [{"name": "especialidade"}],
             [{"name": "duracaoMin"}],
-            [{"name": "descricao"}]
+            [{"name": "ativo"}]
         ]
     }
 ]

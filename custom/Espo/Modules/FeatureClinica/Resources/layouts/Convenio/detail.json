@@ -2,7 +2,8 @@
     {
         "rows": [
             [{"name": "nome"}, {"name": "cnpj"}],
-            [{"name": "telefone"}, {"name": "email"}]
+            [{"name": "telefone"}, {"name": "email"}],
+            [{"name": "ativo"}, false]
         ]
     }
 ]

@@ -89,7 +89,7 @@
     "collection": {
         "orderBy": "vigenciaInicio",
         "order": "desc",
-        "textFilterFields": []
+        "textFilterFields": ["convenioName"]
     },
     "indexes": {
         "convenioId": {

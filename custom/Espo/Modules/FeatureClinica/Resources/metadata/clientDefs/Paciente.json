@@ -9,15 +9,48 @@
     "relationshipPanels": {
         "jornadas": {
             "create": true,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
         },
         "atendimentos": {
             "create": false,
-            "select": false
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
         },
         "appointments": {
             "create": false,
             "select": false
+        },
+        "prescricoes": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        },
+        "orcamentos": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"}
+            ]
+        },
+        "lancamentosFinanceiros": {
+            "create": false,
+            "select": false,
+            "filterList": [
+                {"name": "status"},
+                {"name": "tipo"}
+            ]
         }
-    }
+    },
+    "filterList": [
+        {
+            "name": "sexo"
+        }
+    ]
 }

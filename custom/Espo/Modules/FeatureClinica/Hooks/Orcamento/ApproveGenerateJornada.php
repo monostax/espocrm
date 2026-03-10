@@ -73,14 +73,21 @@ class ApproveGenerateJornada
     private function createJornada(Entity $orcamento, array $teamsIds): Entity
     {
         $jornada = $this->entityManager->getNewEntity('Jornada');
-        $jornada->set([
+        $data = [
             'pacienteId' => $orcamento->get('pacienteId'),
             'unidadeId' => $orcamento->get('unidadeId'),
             'convenioId' => $orcamento->get('convenioId'),
             'nome' => 'Orçamento #' . $orcamento->get('numero'),
             'dataInicio' => date('Y-m-d'),
             'status' => 'EmAndamento',
-        ]);
+        ];
+
+        $programaId = $orcamento->get('programaId');
+        if ($programaId) {
+            $data['programaId'] = $programaId;
+        }
+
+        $jornada->set($data);
 
         if (!empty($teamsIds)) {
             $jornada->set('teamsIds', $teamsIds);

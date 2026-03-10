@@ -5,5 +5,13 @@
         "detail": ["status", "jornada", "unidade", "appointment", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],
         "detailSmall": ["teams"]
-    }
+    },
+    "filterList": [
+        {
+            "name": "status"
+        },
+        {
+            "name": "unidade"
+        }
+    ]
 }
