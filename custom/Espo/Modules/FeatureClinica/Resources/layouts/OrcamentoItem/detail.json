@@ -3,6 +3,7 @@
         "rows": [
             [{"name": "orcamento"}, {"name": "procedimento"}],
             [{"name": "quantidade"}, {"name": "valorUnitario"}],
+            [{"name": "dosagemPorSessao"}, {"name": "unidadeDosagem"}],
             [{"name": "valorTotal"}, {"name": "desconto"}],
             [{"name": "valorComDesconto"}, false],
             [{"name": "observacao", "fullWidth": true}]

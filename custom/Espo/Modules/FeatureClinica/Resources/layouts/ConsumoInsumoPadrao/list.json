@@ -1,5 +1,6 @@
 [
-    {"name": "insumo", "width": 40},
-    {"name": "quantidade", "width": 20},
-    {"name": "observacao", "width": 40}
+    {"name": "insumo", "width": 30},
+    {"name": "quantidade", "width": 15},
+    {"name": "usarDosagemDaSessao", "width": 20},
+    {"name": "observacao", "width": 35}
 ]

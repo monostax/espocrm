@@ -33,6 +33,12 @@
         "valorComDesconto": {
             "type": "currency"
         },
+        "dosagemPorSessao": {
+            "type": "float"
+        },
+        "unidadeDosagem": {
+            "type": "link"
+        },
         "observacao": {
             "type": "varchar",
             "maxLength": 255,
@@ -69,6 +75,11 @@
         },
         "procedimento": {
             "type": "belongsToParent"
+        },
+        "unidadeDosagem": {
+            "type": "belongsTo",
+            "entity": "UnidadeDosagem",
+            "foreignName": "nome"
         },
         "createdBy": {
             "type": "belongsTo",
