@@ -117,6 +117,7 @@ class SeedSidenavConfig implements RebuildAction
             'Paciente',
             'Atendimento',
             'Jornada',
+            'Prontuario',
 
             (object) [
                 'type' => 'divider',

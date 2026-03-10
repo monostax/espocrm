@@ -1,5 +1,6 @@
 {
     "fields": {
+        "nome": "Nome",
         "paciente": "Paciente",
         "unidade": "Unidade",
         "profissional": "Profissional",

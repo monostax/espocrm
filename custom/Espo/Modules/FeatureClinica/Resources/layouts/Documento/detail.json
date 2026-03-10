@@ -1,0 +1,12 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}, {"name": "nome"}],
+            [{"name": "tipo"}, {"name": "subtipo"}],
+            [{"name": "arquivo"}, {"name": "dataDocumento"}],
+            [{"name": "profissional"}, {"name": "unidade"}],
+            [{"name": "origem"}, {"name": "confidencial"}],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

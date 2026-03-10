@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "nome": "Name",
+        "cnpj": "CNPJ",
+        "telefone": "Phone",
+        "email": "Email",
+        "ativo": "Active"
+    },
+    "links": {
+        "jornadas": "Journeys",
+        "appointments": "Appointments"
+    },
+    "labels": {
+        "Create Convenio": "Create Health Plan"
+    },
+    "scopeNames": {
+        "Convenio": "Health Plan"
+    },
+    "scopeNamesPlural": {
+        "Convenio": "Health Plans"
+    }
+}

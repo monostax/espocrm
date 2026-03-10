@@ -1,0 +1,12 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}, {"name": "profissional"}],
+            [{"name": "unidade"}, {"name": "dataHora"}],
+            [{"name": "tipo"}, {"name": "titulo"}],
+            [{"name": "atendimento"}, {"name": "jornada"}],
+            [{"name": "confidencial"}, false],
+            [{"name": "conteudo", "fullWidth": true}]
+        ]
+    }
+]

@@ -1,4 +1,18 @@
 {
-    "entityList": ["ProcedimentoConsulta"],
-    "consumingEntities": ["Sessao", "Appointment", "ProcedimentoRealizado"]
+    "entityList": [
+        "ProcedimentoConsulta",
+        "ProcedimentoInjetavel",
+        "ProcedimentoImplante",
+        "ProcedimentoEstetico",
+        "ProcedimentoAtividadeFisica"
+    ],
+    "consumingEntities": [
+        "Sessao",
+        "Appointment",
+        "ProcedimentoRealizado",
+        "TabelaDePrecos",
+        "ConvenioRegra",
+        "ProgramaItem",
+        "PrescricaoItem"
+    ]
 }

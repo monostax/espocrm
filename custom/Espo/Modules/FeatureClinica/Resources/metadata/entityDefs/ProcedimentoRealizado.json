@@ -13,7 +13,7 @@
         },
         "procedimento": {
             "type": "linkParent",
-            "entityList": ["ProcedimentoConsulta"]
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
         },
         "sessao": {
             "type": "link"

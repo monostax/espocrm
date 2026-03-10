@@ -1,0 +1,12 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "substanciaAtiva"}],
+            [{"name": "forma"}, {"name": "dosagemMg"}],
+            [{"name": "validadeEstimadaDias"}, {"name": "requerSalaCirurgica"}],
+            [{"name": "requerCRM"}, {"name": "unidade"}],
+            [{"name": "ativo"}, false],
+            [{"name": "protocoloAplicacao", "fullWidth": true}]
+        ]
+    }
+]

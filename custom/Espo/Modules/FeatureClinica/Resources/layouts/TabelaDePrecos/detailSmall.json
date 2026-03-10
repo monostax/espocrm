@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "procedimento"}],
+            [{"name": "valor"}],
+            [{"name": "vigenciaInicio"}],
+            [{"name": "vigenciaFim"}]
+        ]
+    }
+]

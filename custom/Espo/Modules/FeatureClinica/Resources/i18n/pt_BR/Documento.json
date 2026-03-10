@@ -1,0 +1,40 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "nome": "Nome",
+        "tipo": "Tipo",
+        "subtipo": "Subtipo",
+        "arquivo": "Arquivo",
+        "dataDocumento": "Data do Documento",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "origem": "Origem",
+        "confidencial": "Confidencial",
+        "observacao": "Observação"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "origem": "Origem"
+    },
+    "options": {
+        "tipo": {
+            "Exame": "Exame",
+            "Foto": "Foto",
+            "Receita": "Receita",
+            "Laudo": "Laudo",
+            "Contrato": "Contrato",
+            "Outro": "Outro"
+        }
+    },
+    "labels": {
+        "Create Documento": "Criar Documento"
+    },
+    "scopeNames": {
+        "Documento": "Documento"
+    },
+    "scopeNamesPlural": {
+        "Documento": "Documentos"
+    }
+}

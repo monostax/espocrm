@@ -7,7 +7,17 @@
         "Tipos de Profissional": "Professional Types",
         "Especialidades": "Specialties",
         "Canais de Agendamento": "Scheduling Channels",
-        "Unidades de Dosagem": "Dosage Units"
+        "Unidades de Dosagem": "Dosage Units",
+        "Convênios": "Health Plans",
+        "Tabelas de Preços": "Price Tables",
+        "Procedimentos Injetáveis": "Injectable Procedures",
+        "Procedimentos Implante": "Implant Procedures",
+        "Procedimentos Estéticos": "Aesthetic Procedures",
+        "Procedimentos Ativ. Física": "Physical Activity Procedures",
+        "Regras de Convênio": "Health Plan Rules",
+        "Programas": "Programs",
+        "Prescrições": "Prescriptions",
+        "Documentos": "Documents"
     },
     "descriptions": {
         "unidades": "Manage service units and their settings",
@@ -16,7 +26,17 @@
         "tiposProfissional": "Manage professional types (doctor, nurse, etc.)",
         "especialidades": "Manage available medical specialties",
         "canaisAgendamento": "Manage scheduling channels (WhatsApp, phone, etc.)",
-        "unidadesDosagem": "Manage dosage units for prescriptions"
+        "unidadesDosagem": "Manage dosage units for prescriptions",
+        "convenios": "Manage health plans and insurance providers",
+        "tabelaDePrecos": "Manage price tables per procedure",
+        "procedimentosInjetavel": "Manage injectable procedures and protocols",
+        "procedimentosImplante": "Manage implant procedures",
+        "procedimentosEstetico": "Manage aesthetic procedures",
+        "procedimentosAtividadeFisica": "Manage physical activity procedures",
+        "convenioRegras": "Manage health plan coverage rules",
+        "programas": "Manage programs and service packages",
+        "prescricoes": "Manage medical prescriptions",
+        "documentos": "Manage patient documents"
     },
     "keywords": {
         "unidades": "unit,clinic,branch,location,service",
@@ -25,6 +45,16 @@
         "tiposProfissional": "type,professional,category,role",
         "especialidades": "specialty,area,medical,specialization",
         "canaisAgendamento": "channel,scheduling,whatsapp,phone,online",
-        "unidadesDosagem": "dosage,unit,measure,prescription,mg,ml"
+        "unidadesDosagem": "dosage,unit,measure,prescription,mg,ml",
+        "convenios": "health,plan,insurance,coverage,provider",
+        "tabelaDePrecos": "price,table,value,validity,procedure",
+        "procedimentosInjetavel": "injectable,injection,application,protocol,dosage",
+        "procedimentosImplante": "implant,substance,silastic,pellet",
+        "procedimentosEstetico": "aesthetic,body,facial,hair,drainage",
+        "procedimentosAtividadeFisica": "activity,physical,gym,pilates,personal",
+        "convenioRegras": "rule,health,plan,coverage,authorization,validity",
+        "programas": "program,package,service,items,validity",
+        "prescricoes": "prescription,recipe,medical,medication,injectable",
+        "documentos": "document,file,exam,photo,report,contract"
     }
 }

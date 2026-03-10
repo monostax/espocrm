@@ -28,7 +28,7 @@
         },
         "procedimento": {
             "type": "linkParent",
-            "entityList": ["ProcedimentoConsulta"]
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
         },
         "paciente": {
             "type": "link"
@@ -82,7 +82,8 @@
         },
         "convenio": {
             "type": "belongsTo",
-            "entity": "Convenio"
+            "entity": "Convenio",
+            "foreignName": "nome"
         },
         "atendimento": {
             "type": "belongsTo",
@@ -113,6 +114,9 @@
         },
         "pacienteId": {
             "columns": ["pacienteId"]
+        },
+        "convenioId": {
+            "columns": ["convenioId"]
         }
     }
 }

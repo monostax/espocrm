@@ -1,0 +1,9 @@
+[
+    {
+        "rows": [
+            [{"name": "prescricao"}, {"name": "procedimento"}],
+            [{"name": "dosagem"}, {"name": "quantidade"}],
+            [{"name": "instrucoes", "fullWidth": true}]
+        ]
+    }
+]

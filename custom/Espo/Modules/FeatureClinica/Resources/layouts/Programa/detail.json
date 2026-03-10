@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "precoTotal"}],
+            [{"name": "validadeDias"}, {"name": "unidade"}],
+            [{"name": "ativo"}, false],
+            [{"name": "descricao", "fullWidth": true}]
+        ]
+    }
+]

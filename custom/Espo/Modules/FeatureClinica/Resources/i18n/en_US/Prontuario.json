@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "dataHora": "Date/Time",
+        "tipo": "Type",
+        "titulo": "Title",
+        "conteudo": "Content",
+        "atendimento": "Appointment Visit",
+        "jornada": "Journey",
+        "documentos": "Documents",
+        "confidencial": "Confidential"
+    },
+    "links": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "atendimento": "Appointment Visit",
+        "jornada": "Journey",
+        "documentos": "Documents"
+    },
+    "options": {
+        "tipo": {
+            "Consulta": "Consultation",
+            "Procedimento": "Procedure",
+            "Evolucao": "Evolution",
+            "Exame": "Exam",
+            "Implante": "Implant",
+            "Observacao": "Observation"
+        }
+    },
+    "labels": {
+        "Create Prontuario": "Create Clinical Record"
+    },
+    "scopeNames": {
+        "Prontuario": "Clinical Record"
+    },
+    "scopeNamesPlural": {
+        "Prontuario": "Clinical Records"
+    }
+}

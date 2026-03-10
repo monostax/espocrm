@@ -1,0 +1,11 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-box-open",
+    "nameAttribute": "nome",
+    "relationshipPanels": {
+        "itens": {
+            "create": true,
+            "select": false
+        }
+    }
+}

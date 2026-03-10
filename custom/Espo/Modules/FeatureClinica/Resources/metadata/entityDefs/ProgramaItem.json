@@ -1,0 +1,91 @@
+{
+    "fields": {
+        "programa": {
+            "type": "link",
+            "required": true
+        },
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
+        },
+        "quantidade": {
+            "type": "int",
+            "required": true
+        },
+        "ordem": {
+            "type": "int"
+        },
+        "observacao": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "programa": {
+            "type": "belongsTo",
+            "entity": "Programa",
+            "foreignName": "nome"
+        },
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "ordem",
+        "order": "asc"
+    },
+    "indexes": {
+        "programaId": {
+            "columns": ["programaId"]
+        },
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "ordem": {
+            "columns": ["ordem"]
+        }
+    }
+}

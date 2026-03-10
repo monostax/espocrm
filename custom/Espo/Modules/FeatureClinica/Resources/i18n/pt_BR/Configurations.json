@@ -7,7 +7,17 @@
         "Tipos de Profissional": "Tipos de Profissional",
         "Especialidades": "Especialidades",
         "Canais de Agendamento": "Canais de Agendamento",
-        "Unidades de Dosagem": "Unidades de Dosagem"
+        "Unidades de Dosagem": "Unidades de Dosagem",
+        "Convênios": "Convênios",
+        "Tabelas de Preços": "Tabelas de Preços",
+        "Procedimentos Injetáveis": "Procedimentos Injetáveis",
+        "Procedimentos Implante": "Procedimentos Implante",
+        "Procedimentos Estéticos": "Procedimentos Estéticos",
+        "Procedimentos Ativ. Física": "Procedimentos Ativ. Física",
+        "Regras de Convênio": "Regras de Convênio",
+        "Programas": "Programas",
+        "Prescrições": "Prescrições",
+        "Documentos": "Documentos"
     },
     "descriptions": {
         "unidades": "Gerenciar unidades de atendimento e suas configurações",
@@ -16,7 +26,17 @@
         "tiposProfissional": "Gerenciar tipos de profissional (médico, enfermeiro, etc.)",
         "especialidades": "Gerenciar especialidades médicas disponíveis",
         "canaisAgendamento": "Gerenciar canais de agendamento (WhatsApp, telefone, etc.)",
-        "unidadesDosagem": "Gerenciar unidades de dosagem para prescrições"
+        "unidadesDosagem": "Gerenciar unidades de dosagem para prescrições",
+        "convenios": "Gerenciar convênios e planos de saúde",
+        "tabelaDePrecos": "Gerenciar tabelas de preços por procedimento",
+        "procedimentosInjetavel": "Gerenciar procedimentos injetáveis e protocolos",
+        "procedimentosImplante": "Gerenciar procedimentos de implante",
+        "procedimentosEstetico": "Gerenciar procedimentos estéticos",
+        "procedimentosAtividadeFisica": "Gerenciar procedimentos de atividade física",
+        "convenioRegras": "Gerenciar regras de cobertura por convênio",
+        "programas": "Gerenciar programas e pacotes de serviços",
+        "prescricoes": "Gerenciar prescrições médicas",
+        "documentos": "Gerenciar documentos de pacientes"
     },
     "keywords": {
         "unidades": "unidade,clínica,filial,local,atendimento",
@@ -25,6 +45,16 @@
         "tiposProfissional": "tipo,profissional,categoria,função",
         "especialidades": "especialidade,área,médica,especialização",
         "canaisAgendamento": "canal,agendamento,whatsapp,telefone,online",
-        "unidadesDosagem": "dosagem,unidade,medida,prescrição,mg,ml"
+        "unidadesDosagem": "dosagem,unidade,medida,prescrição,mg,ml",
+        "convenios": "convênio,plano,saúde,seguro,cobertura",
+        "tabelaDePrecos": "tabela,preço,valor,vigência,procedimento",
+        "procedimentosInjetavel": "injetável,injeção,aplicação,protocolo,dosagem",
+        "procedimentosImplante": "implante,substância,silástico,pellet",
+        "procedimentosEstetico": "estético,corporal,facial,capilar,drenagem",
+        "procedimentosAtividadeFisica": "atividade,física,academia,pilates,personal",
+        "convenioRegras": "regra,convênio,cobertura,autorização,vigência",
+        "programas": "programa,pacote,serviço,itens,validade",
+        "prescricoes": "prescrição,receita,médica,medicamento,injetável",
+        "documentos": "documento,arquivo,exame,foto,laudo,contrato"
     }
 }

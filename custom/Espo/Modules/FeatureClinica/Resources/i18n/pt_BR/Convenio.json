@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "cnpj": "CNPJ",
+        "telefone": "Telefone",
+        "email": "E-mail",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "jornadas": "Jornadas",
+        "appointments": "Agendamentos"
+    },
+    "labels": {
+        "Create Convenio": "Criar Convênio"
+    },
+    "scopeNames": {
+        "Convenio": "Convênio"
+    },
+    "scopeNamesPlural": {
+        "Convenio": "Convênios"
+    }
+}

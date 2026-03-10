@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-file-medical-alt",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["tipo", "confidencial", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "filterList": [
+        {
+            "name": "tipo"
+        }
+    ]
+}

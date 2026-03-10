@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "subtipo"}],
+            [{"name": "duracaoMin"}, {"name": "equipamentoNecessario"}],
+            [{"name": "requerAvaliacaoPrevia"}, {"name": "maximoSessoesSemana"}],
+            [{"name": "unidade"}, {"name": "ativo"}]
+        ]
+    }
+]

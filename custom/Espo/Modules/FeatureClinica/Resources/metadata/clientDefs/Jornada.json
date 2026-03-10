@@ -1,6 +1,7 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-route",
+    "nameAttribute": "nome",
     "defaultSidePanelFieldLists": {
         "detail": ["status", "paciente", "unidade", "profissional", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],

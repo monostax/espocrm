@@ -71,6 +71,26 @@
             "entity": "ProcedimentoRealizado",
             "foreign": "procedimento"
         },
+        "tabelaDePrecos": {
+            "type": "hasChildren",
+            "entity": "TabelaDePrecos",
+            "foreign": "procedimento"
+        },
+        "convenioRegras": {
+            "type": "hasChildren",
+            "entity": "ConvenioRegra",
+            "foreign": "procedimento"
+        },
+        "programaItens": {
+            "type": "hasChildren",
+            "entity": "ProgramaItem",
+            "foreign": "procedimento"
+        },
+        "prescricaoItens": {
+            "type": "hasChildren",
+            "entity": "PrescricaoItem",
+            "foreign": "procedimento"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "prescricao": "Prescrição",
+        "procedimento": "Procedimento",
+        "dosagem": "Dosagem",
+        "quantidade": "Quantidade",
+        "instrucoes": "Instruções"
+    },
+    "links": {
+        "prescricao": "Prescrição",
+        "procedimento": "Procedimento"
+    },
+    "labels": {
+        "Create PrescricaoItem": "Criar Item de Prescrição"
+    },
+    "scopeNames": {
+        "PrescricaoItem": "Item de Prescrição"
+    },
+    "scopeNamesPlural": {
+        "PrescricaoItem": "Itens de Prescrição"
+    }
+}

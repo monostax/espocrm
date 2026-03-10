@@ -1,0 +1,33 @@
+{
+    "fields": {
+        "convenio": "Health Plan",
+        "procedimento": "Procedure",
+        "cobertura": "Coverage",
+        "percentualCobertura": "Coverage Percentage",
+        "valorFixo": "Fixed Value",
+        "limiteAnual": "Annual Limit",
+        "requerAutorizacao": "Requires Authorization",
+        "vigenciaInicio": "Validity Start",
+        "vigenciaFim": "Validity End"
+    },
+    "links": {
+        "convenio": "Health Plan",
+        "procedimento": "Procedure"
+    },
+    "labels": {
+        "Create ConvenioRegra": "Create Health Plan Rule"
+    },
+    "options": {
+        "cobertura": {
+            "Total": "Full",
+            "Parcial": "Partial",
+            "NaoCoberto": "Not Covered"
+        }
+    },
+    "scopeNames": {
+        "ConvenioRegra": "Health Plan Rule"
+    },
+    "scopeNamesPlural": {
+        "ConvenioRegra": "Health Plan Rules"
+    }
+}

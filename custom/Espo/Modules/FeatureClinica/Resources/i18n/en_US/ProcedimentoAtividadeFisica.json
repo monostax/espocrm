@@ -1,0 +1,43 @@
+{
+    "fields": {
+        "nome": "Name",
+        "modalidade": "Modality",
+        "duracaoMin": "Duration (min)",
+        "requerAvaliacaoFisica": "Requires Physical Evaluation",
+        "nivelIntensidade": "Intensity Level",
+        "unidade": "Unit",
+        "ativo": "Active"
+    },
+    "links": {
+        "unidade": "Unit",
+        "appointments": "Appointments",
+        "sessoes": "Sessions",
+        "procedimentosRealizados": "Performed Procedures",
+        "tabelaDePrecos": "Price Table",
+        "convenioRegras": "Health Plan Rules",
+        "programaItens": "Program Items"
+    },
+    "labels": {
+        "Create ProcedimentoAtividadeFisica": "Create Physical Activity Procedure"
+    },
+    "options": {
+        "modalidade": {
+            "Academia": "Gym",
+            "Pilates": "Pilates",
+            "Personal": "Personal",
+            "Funcional": "Functional",
+            "Outro": "Other"
+        },
+        "nivelIntensidade": {
+            "Leve": "Light",
+            "Moderado": "Moderate",
+            "Intenso": "Intense"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoAtividadeFisica": "Physical Activity Procedure"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoAtividadeFisica": "Physical Activity Procedures"
+    }
+}

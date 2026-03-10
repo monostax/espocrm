@@ -1,0 +1,7 @@
+[
+    {"name": "nome", "link": true},
+    {"name": "precoTotal"},
+    {"name": "validadeDias"},
+    {"name": "unidade"},
+    {"name": "ativo"}
+]

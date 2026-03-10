@@ -1,0 +1,43 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "dataColeta": "Data da Coleta",
+        "versao": "Versão",
+        "queixaPrincipal": "Queixa Principal",
+        "historicoDoencas": "Histórico de Doenças",
+        "medicamentosEmUso": "Medicamentos em Uso",
+        "alergias": "Alergias",
+        "historicoFamiliar": "Histórico Familiar",
+        "habitosAlimentares": "Hábitos Alimentares",
+        "nivelAtividadeFisica": "Nível de Atividade Física",
+        "objetivos": "Objetivos",
+        "observacoes": "Observações",
+        "jornada": "Jornada"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "jornada": "Jornada"
+    },
+    "options": {
+        "nivelAtividadeFisica": {
+            "": "",
+            "Sedentario": "Sedentário",
+            "PoucoAtivo": "Pouco Ativo",
+            "Ativo": "Ativo",
+            "MuitoAtivo": "Muito Ativo"
+        }
+    },
+    "labels": {
+        "Create Anamnese": "Criar Anamnese"
+    },
+    "scopeNames": {
+        "Anamnese": "Anamnese"
+    },
+    "scopeNamesPlural": {
+        "Anamnese": "Anamneses"
+    }
+}

@@ -1,0 +1,8 @@
+[
+    {"name": "nome", "link": true},
+    {"name": "viaAdministracao"},
+    {"name": "dosagemPadrao"},
+    {"name": "unidadeDosagem"},
+    {"name": "requerPrescricao"},
+    {"name": "ativo"}
+]

@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "medico": "Médico Prescritor",
+        "unidade": "Unidade",
+        "dataEmissao": "Data de Emissão",
+        "dataValidade": "Data de Validade",
+        "status": "Status",
+        "tipo": "Tipo",
+        "observacoes": "Observações",
+        "documento": "Documento"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "medico": "Médico Prescritor",
+        "unidade": "Unidade",
+        "documento": "Documento",
+        "itens": "Itens"
+    },
+    "options": {
+        "status": {
+            "Ativa": "Ativa",
+            "Expirada": "Expirada",
+            "Cancelada": "Cancelada"
+        },
+        "tipo": {
+            "Simples": "Simples",
+            "Especial": "Especial",
+            "ControleEspecial": "Controle Especial"
+        }
+    },
+    "labels": {
+        "Create Prescricao": "Criar Prescrição"
+    },
+    "scopeNames": {
+        "Prescricao": "Prescrição"
+    },
+    "scopeNamesPlural": {
+        "Prescricao": "Prescrições"
+    }
+}

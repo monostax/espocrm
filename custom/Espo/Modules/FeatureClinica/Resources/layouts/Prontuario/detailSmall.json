@@ -1,0 +1,9 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}],
+            [{"name": "tipo"}],
+            [{"name": "titulo"}]
+        ]
+    }
+]

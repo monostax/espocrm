@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "procedimento": "Procedimento",
+        "valor": "Valor",
+        "vigenciaInicio": "Início da Vigência",
+        "vigenciaFim": "Fim da Vigência",
+        "unidade": "Unidade",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "procedimento": "Procedimento",
+        "unidade": "Unidade"
+    },
+    "labels": {
+        "Create TabelaDePrecos": "Criar Tabela de Preços"
+    },
+    "scopeNames": {
+        "TabelaDePrecos": "Tabela de Preços"
+    },
+    "scopeNamesPlural": {
+        "TabelaDePrecos": "Tabelas de Preços"
+    }
+}

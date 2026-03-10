@@ -1,0 +1,8 @@
+[
+    {"name": "paciente", "link": true},
+    {"name": "nome", "link": true},
+    {"name": "tipo"},
+    {"name": "subtipo"},
+    {"name": "dataDocumento"},
+    {"name": "profissional"}
+]

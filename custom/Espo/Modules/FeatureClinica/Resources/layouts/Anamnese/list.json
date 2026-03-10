@@ -1,0 +1,7 @@
+[
+    {"name": "paciente", "link": true},
+    {"name": "profissional"},
+    {"name": "dataColeta"},
+    {"name": "versao"},
+    {"name": "queixaPrincipal"}
+]

@@ -1,7 +1,9 @@
 [
-    {"name": "paciente", "link": true},
+    {"name": "nome", "link": true},
+    {"name": "paciente"},
     {"name": "unidade"},
     {"name": "profissional"},
+    {"name": "convenio"},
     {"name": "status"},
     {"name": "dataInicio"},
     {"name": "dataFim"}

@@ -1,0 +1,9 @@
+[
+    {
+        "rows": [
+            [{"name": "programa"}, {"name": "procedimento"}],
+            [{"name": "quantidade"}, {"name": "ordem"}],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

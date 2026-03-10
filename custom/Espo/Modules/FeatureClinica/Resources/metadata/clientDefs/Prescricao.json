@@ -1,0 +1,21 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-prescription",
+    "nameAttribute": "id",
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "tipo", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "itens": {
+            "create": true,
+            "select": false
+        }
+    },
+    "filterList": [
+        {
+            "name": "status"
+        }
+    ]
+}

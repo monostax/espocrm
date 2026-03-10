@@ -1,0 +1,8 @@
+[
+    {"name": "convenio", "link": true},
+    {"name": "procedimento"},
+    {"name": "cobertura"},
+    {"name": "percentualCobertura"},
+    {"name": "vigenciaInicio"},
+    {"name": "vigenciaFim"}
+]

@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "viaAdministracao": "Via de Administração",
+        "dosagemPadrao": "Dosagem Padrão",
+        "unidadeDosagem": "Unidade de Dosagem",
+        "dosagemMinima": "Dosagem Mínima",
+        "dosagemMaxima": "Dosagem Máxima",
+        "requerPrescricao": "Requer Prescrição",
+        "tempoAplicacaoMin": "Tempo de Aplicação (min)",
+        "protocolo": "Protocolo",
+        "unidade": "Unidade",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "unidade": "Unidade",
+        "unidadeDosagem": "Unidade de Dosagem",
+        "appointments": "Agendamentos",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "tabelaDePrecos": "Tabela de Preços",
+        "convenioRegras": "Regras de Convênio",
+        "programaItens": "Itens de Programa"
+    },
+    "labels": {
+        "Create ProcedimentoInjetavel": "Criar Procedimento Injetável"
+    },
+    "options": {
+        "viaAdministracao": {
+            "EV": "Endovenosa",
+            "IM": "Intramuscular",
+            "SC": "Subcutânea",
+            "Oral": "Oral"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoInjetavel": "Procedimento Injetável"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoInjetavel": "Procedimentos Injetáveis"
+    }
+}

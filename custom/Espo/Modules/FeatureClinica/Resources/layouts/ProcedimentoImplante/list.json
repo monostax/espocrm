@@ -1,0 +1,8 @@
+[
+    {"name": "nome", "link": true},
+    {"name": "substanciaAtiva"},
+    {"name": "forma"},
+    {"name": "dosagemMg"},
+    {"name": "validadeEstimadaDias"},
+    {"name": "ativo"}
+]

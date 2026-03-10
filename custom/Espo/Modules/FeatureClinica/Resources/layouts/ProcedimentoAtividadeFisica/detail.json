@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "modalidade"}],
+            [{"name": "duracaoMin"}, {"name": "requerAvaliacaoFisica"}],
+            [{"name": "nivelIntensidade"}, {"name": "unidade"}],
+            [{"name": "ativo"}, false]
+        ]
+    }
+]

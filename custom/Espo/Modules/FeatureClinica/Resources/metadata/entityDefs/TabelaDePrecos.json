@@ -1,0 +1,96 @@
+{
+    "fields": {
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
+        },
+        "valor": {
+            "type": "currency",
+            "required": true
+        },
+        "vigenciaInicio": {
+            "type": "date",
+            "required": true
+        },
+        "vigenciaFim": {
+            "type": "date"
+        },
+        "unidade": {
+            "type": "link"
+        },
+        "ativo": {
+            "type": "bool",
+            "default": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "vigenciaInicio",
+        "order": "desc"
+    },
+    "indexes": {
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "ativo": {
+            "columns": ["ativo"]
+        },
+        "vigenciaInicio": {
+            "columns": ["vigenciaInicio"]
+        }
+    }
+}

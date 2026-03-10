@@ -81,6 +81,26 @@
             "entity": "Appointment",
             "foreign": "paciente"
         },
+        "prescricoes": {
+            "type": "hasMany",
+            "entity": "Prescricao",
+            "foreign": "paciente"
+        },
+        "anamneses": {
+            "type": "hasMany",
+            "entity": "Anamnese",
+            "foreign": "paciente"
+        },
+        "prontuarios": {
+            "type": "hasMany",
+            "entity": "Prontuario",
+            "foreign": "paciente"
+        },
+        "documentos": {
+            "type": "hasMany",
+            "entity": "Documento",
+            "foreign": "paciente"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

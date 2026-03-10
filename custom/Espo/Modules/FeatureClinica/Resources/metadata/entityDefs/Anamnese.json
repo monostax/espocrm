@@ -1,0 +1,137 @@
+{
+    "fields": {
+        "paciente": {
+            "type": "link",
+            "required": true
+        },
+        "profissional": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "dataColeta": {
+            "type": "date",
+            "required": true
+        },
+        "versao": {
+            "type": "int",
+            "required": true,
+            "default": 1
+        },
+        "queixaPrincipal": {
+            "type": "text"
+        },
+        "historicoDoencas": {
+            "type": "text"
+        },
+        "medicamentosEmUso": {
+            "type": "text"
+        },
+        "alergias": {
+            "type": "text"
+        },
+        "historicoFamiliar": {
+            "type": "text"
+        },
+        "habitosAlimentares": {
+            "type": "text"
+        },
+        "nivelAtividadeFisica": {
+            "type": "enum",
+            "options": ["", "Sedentario", "PoucoAtivo", "Ativo", "MuitoAtivo"],
+            "default": ""
+        },
+        "objetivos": {
+            "type": "text"
+        },
+        "observacoes": {
+            "type": "text"
+        },
+        "jornada": {
+            "type": "link"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "Paciente",
+            "foreign": "anamneses"
+        },
+        "profissional": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "jornada": {
+            "type": "belongsTo",
+            "entity": "Jornada",
+            "foreign": "anamneses",
+            "foreignName": "nome"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "dataColeta",
+        "order": "desc",
+        "textFilterFields": ["queixaPrincipal"]
+    },
+    "indexes": {
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        },
+        "profissionalId": {
+            "columns": ["profissionalId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "jornadaId": {
+            "columns": ["jornadaId"]
+        },
+        "dataColeta": {
+            "columns": ["dataColeta"]
+        }
+    }
+}

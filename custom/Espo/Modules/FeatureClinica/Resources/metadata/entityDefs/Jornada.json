@@ -1,5 +1,11 @@
 {
     "fields": {
+        "nome": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "trim": true
+        },
         "paciente": {
             "type": "link",
             "required": true
@@ -74,11 +80,22 @@
         },
         "convenio": {
             "type": "belongsTo",
-            "entity": "Convenio"
+            "entity": "Convenio",
+            "foreignName": "nome"
         },
         "sessoes": {
             "type": "hasMany",
             "entity": "Sessao",
+            "foreign": "jornada"
+        },
+        "anamneses": {
+            "type": "hasMany",
+            "entity": "Anamnese",
+            "foreign": "jornada"
+        },
+        "prontuarios": {
+            "type": "hasMany",
+            "entity": "Prontuario",
             "foreign": "jornada"
         },
         "createdBy": {
@@ -99,7 +116,7 @@
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": ["paciente", "descricao"]
+        "textFilterFields": ["nome", "paciente", "descricao"]
     },
     "indexes": {
         "pacienteId": {
@@ -113,6 +130,9 @@
         },
         "status": {
             "columns": ["status"]
+        },
+        "convenioId": {
+            "columns": ["convenioId"]
         }
     },
     "cascadeDelete": {

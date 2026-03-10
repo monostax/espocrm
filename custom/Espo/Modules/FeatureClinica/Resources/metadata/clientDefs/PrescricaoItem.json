@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-pills",
+    "nameAttribute": "id",
+    "defaultSidePanelFieldLists": {
+        "detail": ["teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

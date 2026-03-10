@@ -1,0 +1,8 @@
+[
+    {"name": "procedimento"},
+    {"name": "valor"},
+    {"name": "unidade"},
+    {"name": "vigenciaInicio"},
+    {"name": "vigenciaFim"},
+    {"name": "ativo"}
+]

@@ -1,0 +1,33 @@
+{
+    "fields": {
+        "convenio": "Convênio",
+        "procedimento": "Procedimento",
+        "cobertura": "Cobertura",
+        "percentualCobertura": "Percentual de Cobertura",
+        "valorFixo": "Valor Fixo",
+        "limiteAnual": "Limite Anual",
+        "requerAutorizacao": "Requer Autorização",
+        "vigenciaInicio": "Vigência Início",
+        "vigenciaFim": "Vigência Fim"
+    },
+    "links": {
+        "convenio": "Convênio",
+        "procedimento": "Procedimento"
+    },
+    "labels": {
+        "Create ConvenioRegra": "Criar Regra de Convênio"
+    },
+    "options": {
+        "cobertura": {
+            "Total": "Total",
+            "Parcial": "Parcial",
+            "NaoCoberto": "Não Coberto"
+        }
+    },
+    "scopeNames": {
+        "ConvenioRegra": "Regra de Convênio"
+    },
+    "scopeNamesPlural": {
+        "ConvenioRegra": "Regras de Convênio"
+    }
+}

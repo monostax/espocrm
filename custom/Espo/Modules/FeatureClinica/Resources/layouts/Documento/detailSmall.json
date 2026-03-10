@@ -1,0 +1,9 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}],
+            [{"name": "tipo"}],
+            [{"name": "dataDocumento"}]
+        ]
+    }
+]

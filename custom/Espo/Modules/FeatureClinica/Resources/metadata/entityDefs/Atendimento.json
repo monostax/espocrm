@@ -78,7 +78,8 @@
         },
         "jornada": {
             "type": "belongsTo",
-            "entity": "Jornada"
+            "entity": "Jornada",
+            "foreignName": "nome"
         },
         "appointment": {
             "type": "belongsTo",
@@ -88,6 +89,16 @@
             "type": "hasMany",
             "entity": "ProcedimentoRealizado",
             "foreign": "atendimento"
+        },
+        "prontuarios": {
+            "type": "hasMany",
+            "entity": "Prontuario",
+            "foreign": "atendimento"
+        },
+        "documentos": {
+            "type": "hasChildren",
+            "entity": "Documento",
+            "foreign": "origem"
         },
         "createdBy": {
             "type": "belongsTo",

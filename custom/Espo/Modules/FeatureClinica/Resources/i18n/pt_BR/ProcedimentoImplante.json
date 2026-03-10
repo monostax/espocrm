@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "substanciaAtiva": "Substância Ativa",
+        "forma": "Forma",
+        "dosagemMg": "Dosagem (mg)",
+        "validadeEstimadaDias": "Validade Estimada (dias)",
+        "requerSalaCirurgica": "Requer Sala Cirúrgica",
+        "requerCRM": "Requer CRM",
+        "protocoloAplicacao": "Protocolo de Aplicação",
+        "unidade": "Unidade",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "unidade": "Unidade",
+        "appointments": "Agendamentos",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "tabelaDePrecos": "Tabela de Preços",
+        "convenioRegras": "Regras de Convênio",
+        "programaItens": "Itens de Programa"
+    },
+    "labels": {
+        "Create ProcedimentoImplante": "Criar Procedimento Implante"
+    },
+    "options": {
+        "forma": {
+            "Silastico": "Silástico",
+            "Pellet": "Pellet",
+            "Outro": "Outro"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoImplante": "Procedimento Implante"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoImplante": "Procedimentos Implante"
+    }
+}

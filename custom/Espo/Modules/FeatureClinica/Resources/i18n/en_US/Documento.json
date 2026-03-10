@@ -1,0 +1,40 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "nome": "Name",
+        "tipo": "Type",
+        "subtipo": "Subtype",
+        "arquivo": "File",
+        "dataDocumento": "Document Date",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "origem": "Origin",
+        "confidencial": "Confidential",
+        "observacao": "Note"
+    },
+    "links": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "origem": "Origin"
+    },
+    "options": {
+        "tipo": {
+            "Exame": "Exam",
+            "Foto": "Photo",
+            "Receita": "Prescription",
+            "Laudo": "Report",
+            "Contrato": "Contract",
+            "Outro": "Other"
+        }
+    },
+    "labels": {
+        "Create Documento": "Create Document"
+    },
+    "scopeNames": {
+        "Documento": "Document"
+    },
+    "scopeNamesPlural": {
+        "Documento": "Documents"
+    }
+}

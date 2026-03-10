@@ -1,0 +1,91 @@
+{
+    "fields": {
+        "nome": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "trim": true
+        },
+        "cnpj": {
+            "type": "varchar",
+            "maxLength": 18,
+            "trim": true
+        },
+        "telefone": {
+            "type": "varchar",
+            "maxLength": 20,
+            "trim": true
+        },
+        "email": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true
+        },
+        "ativo": {
+            "type": "bool",
+            "default": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "jornadas": {
+            "type": "hasMany",
+            "entity": "Jornada",
+            "foreign": "convenio"
+        },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "convenio"
+        },
+        "convenioRegras": {
+            "type": "hasMany",
+            "entity": "ConvenioRegra",
+            "foreign": "convenio"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "nome",
+        "order": "asc",
+        "textFilterFields": ["nome", "cnpj"]
+    },
+    "indexes": {
+        "ativo": {
+            "columns": ["ativo"]
+        }
+    }
+}

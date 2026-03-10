@@ -1,0 +1,43 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "modalidade": "Modalidade",
+        "duracaoMin": "Duração (min)",
+        "requerAvaliacaoFisica": "Requer Avaliação Física",
+        "nivelIntensidade": "Nível de Intensidade",
+        "unidade": "Unidade",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "unidade": "Unidade",
+        "appointments": "Agendamentos",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "tabelaDePrecos": "Tabela de Preços",
+        "convenioRegras": "Regras de Convênio",
+        "programaItens": "Itens de Programa"
+    },
+    "labels": {
+        "Create ProcedimentoAtividadeFisica": "Criar Procedimento Atividade Física"
+    },
+    "options": {
+        "modalidade": {
+            "Academia": "Academia",
+            "Pilates": "Pilates",
+            "Personal": "Personal",
+            "Funcional": "Funcional",
+            "Outro": "Outro"
+        },
+        "nivelIntensidade": {
+            "Leve": "Leve",
+            "Moderado": "Moderado",
+            "Intenso": "Intenso"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoAtividadeFisica": "Procedimento Atividade Física"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoAtividadeFisica": "Procedimentos Atividade Física"
+    }
+}

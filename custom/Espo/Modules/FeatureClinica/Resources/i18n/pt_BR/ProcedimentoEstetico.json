@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "subtipo": "Subtipo",
+        "duracaoMin": "Duração (min)",
+        "equipamentoNecessario": "Equipamento Necessário",
+        "requerAvaliacaoPrevia": "Requer Avaliação Prévia",
+        "maximoSessoesSemana": "Máximo Sessões/Semana",
+        "unidade": "Unidade",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "unidade": "Unidade",
+        "appointments": "Agendamentos",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "tabelaDePrecos": "Tabela de Preços",
+        "convenioRegras": "Regras de Convênio",
+        "programaItens": "Itens de Programa"
+    },
+    "labels": {
+        "Create ProcedimentoEstetico": "Criar Procedimento Estético"
+    },
+    "options": {
+        "subtipo": {
+            "Corporal": "Corporal",
+            "Facial": "Facial",
+            "Capilar": "Capilar",
+            "Outro": "Outro"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoEstetico": "Procedimento Estético"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoEstetico": "Procedimentos Estéticos"
+    }
+}

@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "dataHora": "Data/Hora",
+        "tipo": "Tipo",
+        "titulo": "Título",
+        "conteudo": "Conteúdo",
+        "atendimento": "Atendimento",
+        "jornada": "Jornada",
+        "documentos": "Documentos",
+        "confidencial": "Confidencial"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "atendimento": "Atendimento",
+        "jornada": "Jornada",
+        "documentos": "Documentos"
+    },
+    "options": {
+        "tipo": {
+            "Consulta": "Consulta",
+            "Procedimento": "Procedimento",
+            "Evolucao": "Evolução",
+            "Exame": "Exame",
+            "Implante": "Implante",
+            "Observacao": "Observação"
+        }
+    },
+    "labels": {
+        "Create Prontuario": "Criar Prontuário"
+    },
+    "scopeNames": {
+        "Prontuario": "Prontuário"
+    },
+    "scopeNamesPlural": {
+        "Prontuario": "Prontuários"
+    }
+}

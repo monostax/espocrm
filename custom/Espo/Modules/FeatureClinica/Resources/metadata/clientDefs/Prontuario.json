@@ -1,0 +1,21 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-notes-medical",
+    "nameAttribute": "titulo",
+    "defaultSidePanelFieldLists": {
+        "detail": ["tipo", "confidencial", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "documentos": {
+            "create": true,
+            "select": true
+        }
+    },
+    "filterList": [
+        {
+            "name": "tipo"
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "programa": "Programa",
+        "procedimento": "Procedimento",
+        "quantidade": "Quantidade",
+        "ordem": "Ordem",
+        "observacao": "Observação"
+    },
+    "links": {
+        "programa": "Programa",
+        "procedimento": "Procedimento"
+    },
+    "labels": {
+        "Create ProgramaItem": "Criar Item de Programa"
+    },
+    "scopeNames": {
+        "ProgramaItem": "Item de Programa"
+    },
+    "scopeNamesPlural": {
+        "ProgramaItem": "Itens de Programa"
+    }
+}

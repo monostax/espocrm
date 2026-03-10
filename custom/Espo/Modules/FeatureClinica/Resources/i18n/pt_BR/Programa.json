@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "descricao": "Descrição",
+        "precoTotal": "Preço Total",
+        "validadeDias": "Validade (dias)",
+        "unidade": "Unidade",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "unidade": "Unidade",
+        "itens": "Itens"
+    },
+    "labels": {
+        "Create Programa": "Criar Programa"
+    },
+    "scopeNames": {
+        "Programa": "Programa"
+    },
+    "scopeNamesPlural": {
+        "Programa": "Programas"
+    }
+}

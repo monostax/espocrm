@@ -1,0 +1,43 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "dataColeta": "Collection Date",
+        "versao": "Version",
+        "queixaPrincipal": "Chief Complaint",
+        "historicoDoencas": "Disease History",
+        "medicamentosEmUso": "Current Medications",
+        "alergias": "Allergies",
+        "historicoFamiliar": "Family History",
+        "habitosAlimentares": "Dietary Habits",
+        "nivelAtividadeFisica": "Physical Activity Level",
+        "objetivos": "Goals",
+        "observacoes": "Notes",
+        "jornada": "Journey"
+    },
+    "links": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "jornada": "Journey"
+    },
+    "options": {
+        "nivelAtividadeFisica": {
+            "": "",
+            "Sedentario": "Sedentary",
+            "PoucoAtivo": "Slightly Active",
+            "Ativo": "Active",
+            "MuitoAtivo": "Very Active"
+        }
+    },
+    "labels": {
+        "Create Anamnese": "Create Anamnesis"
+    },
+    "scopeNames": {
+        "Anamnese": "Anamnesis"
+    },
+    "scopeNamesPlural": {
+        "Anamnese": "Anamneses"
+    }
+}

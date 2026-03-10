@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "nome": "Name",
+        "viaAdministracao": "Administration Route",
+        "dosagemPadrao": "Default Dosage",
+        "unidadeDosagem": "Dosage Unit",
+        "dosagemMinima": "Minimum Dosage",
+        "dosagemMaxima": "Maximum Dosage",
+        "requerPrescricao": "Requires Prescription",
+        "tempoAplicacaoMin": "Application Time (min)",
+        "protocolo": "Protocol",
+        "unidade": "Unit",
+        "ativo": "Active"
+    },
+    "links": {
+        "unidade": "Unit",
+        "unidadeDosagem": "Dosage Unit",
+        "appointments": "Appointments",
+        "sessoes": "Sessions",
+        "procedimentosRealizados": "Performed Procedures",
+        "tabelaDePrecos": "Price Table",
+        "convenioRegras": "Health Plan Rules",
+        "programaItens": "Program Items"
+    },
+    "labels": {
+        "Create ProcedimentoInjetavel": "Create Injectable Procedure"
+    },
+    "options": {
+        "viaAdministracao": {
+            "EV": "Intravenous",
+            "IM": "Intramuscular",
+            "SC": "Subcutaneous",
+            "Oral": "Oral"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoInjetavel": "Injectable Procedure"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoInjetavel": "Injectable Procedures"
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-file-medical",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "jornadas": {
+            "create": false,
+            "select": false
+        },
+        "appointments": {
+            "create": false,
+            "select": false
+        }
+    }
+}

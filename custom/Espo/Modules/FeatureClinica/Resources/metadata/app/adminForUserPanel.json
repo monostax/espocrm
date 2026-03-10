@@ -50,6 +50,76 @@
                 "iconClass": "fas fa-prescription-bottle",
                 "description": "unidadesDosagem",
                 "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Convenio",
+                "label": "Convênios",
+                "iconClass": "fas fa-file-medical",
+                "description": "convenios",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/TabelaDePrecos",
+                "label": "Tabelas de Preços",
+                "iconClass": "fas fa-money-bill-wave",
+                "description": "tabelaDePrecos",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoInjetavel",
+                "label": "Procedimentos Injetáveis",
+                "iconClass": "fas fa-syringe",
+                "description": "procedimentosInjetavel",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoImplante",
+                "label": "Procedimentos Implante",
+                "iconClass": "fas fa-microchip",
+                "description": "procedimentosImplante",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoEstetico",
+                "label": "Procedimentos Estéticos",
+                "iconClass": "fas fa-spa",
+                "description": "procedimentosEstetico",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoAtividadeFisica",
+                "label": "Procedimentos Ativ. Física",
+                "iconClass": "fas fa-dumbbell",
+                "description": "procedimentosAtividadeFisica",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/ConvenioRegra",
+                "label": "Regras de Convênio",
+                "iconClass": "fas fa-balance-scale",
+                "description": "convenioRegras",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/Programa",
+                "label": "Programas",
+                "iconClass": "fas fa-box-open",
+                "description": "programas",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Prescricao",
+                "label": "Prescrições",
+                "iconClass": "fas fa-prescription",
+                "description": "prescricoes",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Documento",
+                "label": "Documentos",
+                "iconClass": "fas fa-file-medical-alt",
+                "description": "documentos",
+                "roles": ["tenant", "tenant-admin"]
             }
         ],
         "order": 15

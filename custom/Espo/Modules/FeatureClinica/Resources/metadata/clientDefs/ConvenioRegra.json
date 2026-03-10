@@ -1,0 +1,5 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-balance-scale",
+    "nameAttribute": "id"
+}

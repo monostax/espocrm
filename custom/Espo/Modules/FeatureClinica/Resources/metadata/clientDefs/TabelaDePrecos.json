@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-money-bill-wave",
+    "nameAttribute": "id",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "unidade", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

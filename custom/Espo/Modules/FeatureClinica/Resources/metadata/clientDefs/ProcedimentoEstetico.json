@@ -1,0 +1,31 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-spa",
+    "nameAttribute": "nome",
+    "relationshipPanels": {
+        "appointments": {
+            "create": false,
+            "select": false
+        },
+        "sessoes": {
+            "create": false,
+            "select": false
+        },
+        "procedimentosRealizados": {
+            "create": false,
+            "select": false
+        },
+        "tabelaDePrecos": {
+            "create": false,
+            "select": false
+        },
+        "convenioRegras": {
+            "create": false,
+            "select": false
+        },
+        "programaItens": {
+            "create": false,
+            "select": false
+        }
+    }
+}

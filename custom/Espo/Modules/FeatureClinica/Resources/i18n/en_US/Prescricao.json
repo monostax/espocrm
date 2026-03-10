@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "medico": "Prescribing Doctor",
+        "unidade": "Unit",
+        "dataEmissao": "Issue Date",
+        "dataValidade": "Expiry Date",
+        "status": "Status",
+        "tipo": "Type",
+        "observacoes": "Notes",
+        "documento": "Document"
+    },
+    "links": {
+        "paciente": "Patient",
+        "medico": "Prescribing Doctor",
+        "unidade": "Unit",
+        "documento": "Document",
+        "itens": "Items"
+    },
+    "options": {
+        "status": {
+            "Ativa": "Active",
+            "Expirada": "Expired",
+            "Cancelada": "Canceled"
+        },
+        "tipo": {
+            "Simples": "Simple",
+            "Especial": "Special",
+            "ControleEspecial": "Controlled"
+        }
+    },
+    "labels": {
+        "Create Prescricao": "Create Prescription"
+    },
+    "scopeNames": {
+        "Prescricao": "Prescription"
+    },
+    "scopeNamesPlural": {
+        "Prescricao": "Prescriptions"
+    }
+}

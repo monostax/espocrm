@@ -1,0 +1,132 @@
+{
+    "fields": {
+        "paciente": {
+            "type": "link",
+            "required": true
+        },
+        "medico": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "dataEmissao": {
+            "type": "date",
+            "required": true
+        },
+        "dataValidade": {
+            "type": "date",
+            "required": true
+        },
+        "status": {
+            "type": "enum",
+            "required": true,
+            "options": ["Ativa", "Expirada", "Cancelada"],
+            "default": "Ativa",
+            "style": {
+                "Ativa": "success",
+                "Expirada": "warning",
+                "Cancelada": "danger"
+            }
+        },
+        "tipo": {
+            "type": "enum",
+            "required": true,
+            "options": ["Simples", "Especial", "ControleEspecial"]
+        },
+        "observacoes": {
+            "type": "text"
+        },
+        "documento": {
+            "type": "link"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "Paciente",
+            "foreign": "prescricoes"
+        },
+        "medico": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "documento": {
+            "type": "belongsTo",
+            "entity": "Documento"
+        },
+        "itens": {
+            "type": "hasMany",
+            "entity": "PrescricaoItem",
+            "foreign": "prescricao"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "dataEmissao",
+        "order": "desc",
+        "textFilterFields": []
+    },
+    "indexes": {
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        },
+        "medicoId": {
+            "columns": ["medicoId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "status": {
+            "columns": ["status"]
+        },
+        "dataValidade": {
+            "columns": ["dataValidade"]
+        }
+    },
+    "cascadeDelete": {
+        "links": ["itens"]
+    }
+}

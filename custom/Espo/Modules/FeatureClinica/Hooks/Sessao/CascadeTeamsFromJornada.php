@@ -54,5 +54,10 @@ class CascadeTeamsFromJornada
         if (!empty($teamsIds)) {
             $entity->set('teamsIds', $teamsIds);
         }
+
+        $unidadeId = $jornada->get('unidadeId');
+        if ($unidadeId && !$entity->get('unidadeId')) {
+            $entity->set('unidadeId', $unidadeId);
+        }
     }
 }

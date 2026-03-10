@@ -27,7 +27,7 @@
         },
         "procedimento": {
             "type": "linkParent",
-            "entityList": ["ProcedimentoConsulta"]
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
         },
         "appointment": {
             "type": "link"
@@ -71,7 +71,8 @@
         "jornada": {
             "type": "belongsTo",
             "entity": "Jornada",
-            "foreign": "sessoes"
+            "foreign": "sessoes",
+            "foreignName": "nome"
         },
         "procedimento": {
             "type": "belongsToParent"

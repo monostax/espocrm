@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "nome": "Name",
+        "subtipo": "Subtype",
+        "duracaoMin": "Duration (min)",
+        "equipamentoNecessario": "Required Equipment",
+        "requerAvaliacaoPrevia": "Requires Prior Evaluation",
+        "maximoSessoesSemana": "Max Sessions/Week",
+        "unidade": "Unit",
+        "ativo": "Active"
+    },
+    "links": {
+        "unidade": "Unit",
+        "appointments": "Appointments",
+        "sessoes": "Sessions",
+        "procedimentosRealizados": "Performed Procedures",
+        "tabelaDePrecos": "Price Table",
+        "convenioRegras": "Health Plan Rules",
+        "programaItens": "Program Items"
+    },
+    "labels": {
+        "Create ProcedimentoEstetico": "Create Aesthetic Procedure"
+    },
+    "options": {
+        "subtipo": {
+            "Corporal": "Body",
+            "Facial": "Facial",
+            "Capilar": "Hair",
+            "Outro": "Other"
+        }
+    },
+    "scopeNames": {
+        "ProcedimentoEstetico": "Aesthetic Procedure"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoEstetico": "Aesthetic Procedures"
+    }
+}

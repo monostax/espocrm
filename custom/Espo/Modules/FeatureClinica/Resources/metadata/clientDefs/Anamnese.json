@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-clipboard-list",
+    "nameAttribute": "id",
+    "defaultSidePanelFieldLists": {
+        "detail": ["versao", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    }
+}

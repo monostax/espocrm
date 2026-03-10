@@ -1,0 +1,11 @@
+[
+    {
+        "rows": [
+            [{"name": "convenio"}, {"name": "procedimento"}],
+            [{"name": "cobertura"}, {"name": "percentualCobertura"}],
+            [{"name": "valorFixo"}, {"name": "limiteAnual"}],
+            [{"name": "requerAutorizacao"}, false],
+            [{"name": "vigenciaInicio"}, {"name": "vigenciaFim"}]
+        ]
+    }
+]

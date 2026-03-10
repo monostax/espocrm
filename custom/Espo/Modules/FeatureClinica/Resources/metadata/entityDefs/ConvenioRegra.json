@@ -1,0 +1,108 @@
+{
+    "fields": {
+        "convenio": {
+            "type": "link",
+            "required": true
+        },
+        "procedimentoType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "procedimentoId": {
+            "type": "foreignId"
+        },
+        "procedimento": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
+        },
+        "cobertura": {
+            "type": "enum",
+            "required": true,
+            "options": ["Total", "Parcial", "NaoCoberto"]
+        },
+        "percentualCobertura": {
+            "type": "float"
+        },
+        "valorFixo": {
+            "type": "currency"
+        },
+        "limiteAnual": {
+            "type": "int"
+        },
+        "requerAutorizacao": {
+            "type": "bool",
+            "default": false
+        },
+        "vigenciaInicio": {
+            "type": "date",
+            "required": true
+        },
+        "vigenciaFim": {
+            "type": "date"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "convenio": {
+            "type": "belongsTo",
+            "entity": "Convenio",
+            "foreignName": "nome"
+        },
+        "procedimento": {
+            "type": "belongsToParent"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "vigenciaInicio",
+        "order": "desc",
+        "textFilterFields": []
+    },
+    "indexes": {
+        "convenioId": {
+            "columns": ["convenioId"]
+        },
+        "procedimento": {
+            "columns": ["procedimentoType", "procedimentoId"]
+        },
+        "vigenciaInicio": {
+            "columns": ["vigenciaInicio"]
+        },
+        "cobertura": {
+            "columns": ["cobertura"]
+        }
+    }
+}
