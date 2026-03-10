@@ -9,13 +9,11 @@
     "relationshipPanels": {
         "jornadas": {
             "create": true,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "atendimentos": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "appointments": {
             "create": false,
@@ -23,18 +21,15 @@
         },
         "prescricoes": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "orcamentos": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "lancamentosFinanceiros": {
             "create": false,
-            "select": false,
-            "filterList": ["status", "tipo"]
+            "select": false
         }
     },
     "filterList": ["sexo"]

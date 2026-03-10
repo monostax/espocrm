@@ -274,6 +274,10 @@
         "currentUserTeams": {
             "view": "views/admin/dynamic-logic/conditions/field-types/current-user-teams",
             "typeList": ["contains", "notContains"]
+        },
+        "currentUserRoles": {
+            "view": "views/admin/dynamic-logic/conditions/field-types/current-user-roles",
+            "typeList": ["contains", "notContains"]
         }
     },
     "conditionTypes": {

@@ -93,6 +93,10 @@ export default class DynamicLogicConditionGroupBaseView extends View {
         'click > div.group-bottom [data-action="addCurrentUserTeams"]': function () {
             this.addCurrentUserTeams();
         },
+        /** @this {DynamicLogicConditionGroupBaseView} */
+        'click > div.group-bottom [data-action="addCurrentUserRoles"]': function () {
+            this.addCurrentUserRoles();
+        },
     }
 
     setup() {
@@ -165,6 +169,10 @@ export default class DynamicLogicConditionGroupBaseView extends View {
 
             if (item.attribute === '$user.teamsIds') {
                 fieldType = 'currentUserTeams';
+            }
+
+            if (item.attribute === '$user.rolesIds') {
+                fieldType = 'currentUserRoles';
             }
 
             if (fieldType) {
@@ -279,6 +287,22 @@ export default class DynamicLogicConditionGroupBaseView extends View {
             data: {
                 type: 'contains',
                 field: 'teams',
+            },
+        });
+    }
+
+    addCurrentUserRoles() {
+        const i = this.getIndexForNewItem();
+        const key = this.getKey(i);
+
+        this.addItemContainer(i);
+        this.addViewDataListItem(i, key);
+
+        this.createItemView(i, key, {
+            attribute: '$user.rolesIds',
+            data: {
+                type: 'contains',
+                field: 'roles',
             },
         });
     }

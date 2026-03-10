@@ -345,6 +345,10 @@ class ConditionChecker
             if ($attribute === '$user.teamsIds') {
                 return $this->user->getTeamIdList();
             }
+
+            if ($attribute === '$user.rolesIds') {
+                return $this->user->getLinkMultipleIdList('roles');
+            }
         }
 
         return $this->entity->get($attribute);

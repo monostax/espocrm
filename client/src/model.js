@@ -1026,6 +1026,15 @@ class Model {
     }
 
     /**
+     * Get role IDs.
+     *
+     * @returns {string[]}
+     */
+    getRoleIdList() {
+        return this.get('rolesIds') || [];
+    }
+
+    /**
      * Whether it has a field.
      *
      * @param {string} field A field.

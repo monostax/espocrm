@@ -10,8 +10,7 @@
     "relationshipPanels": {
         "jornadas": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "appointments": {
             "create": false,
@@ -19,18 +18,15 @@
         },
         "convenioRegras": {
             "create": true,
-            "select": false,
-            "filterList": ["cobertura"]
+            "select": false
         },
         "lancamentosFinanceiros": {
             "create": false,
-            "select": false,
-            "filterList": ["status", "tipo"]
+            "select": false
         },
         "orcamentos": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         }
     },
     "filterList": ["ativo"]

@@ -5,13 +5,11 @@
     "relationshipPanels": {
         "appointments": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "sessoes": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "procedimentosRealizados": {
             "create": false,
@@ -19,13 +17,11 @@
         },
         "tabelaDePrecos": {
             "create": false,
-            "select": false,
-            "filterList": ["ativo"]
+            "select": false
         },
         "convenioRegras": {
             "create": false,
-            "select": false,
-            "filterList": ["cobertura"]
+            "select": false
         },
         "programaItens": {
             "create": false,

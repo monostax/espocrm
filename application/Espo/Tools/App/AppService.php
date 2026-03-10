@@ -62,8 +62,6 @@ class AppService
         'apiKey',
         'authTokenId',
         'password',
-        'rolesIds',
-        'rolesNames',
     ];
 
     /** @var string[] */
@@ -76,6 +74,7 @@ class AppService
         'teamsIds',
         'defaultTeamId',
         'defaultTeamName',
+        'rolesIds',
     ];
 
     /** @var string[] */
@@ -115,6 +114,10 @@ class AppService
 
         if (!$user->has('teamsIds')) {
             $user->loadLinkMultipleField(Field::TEAMS);
+        }
+
+        if (!$user->has('rolesIds')) {
+            $user->loadLinkMultipleField(User::LINK_ROLES);
         }
 
         if ($user->isPortal()) {

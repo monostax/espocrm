@@ -276,6 +276,10 @@ class DynamicLogic {
             if (attribute === '$user.teamsIds') {
                 return this.recordView.getUser().getTeamIdList();
             }
+
+            if (attribute === '$user.rolesIds') {
+                return this.recordView.getUser().getRoleIdList();
+            }
         }
 
         if (preSave) {

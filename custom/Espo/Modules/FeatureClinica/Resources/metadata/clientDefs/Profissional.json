@@ -10,23 +10,19 @@
     "relationshipPanels": {
         "appointments": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "atendimentos": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "jornadas": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "prescricoes": {
             "create": false,
-            "select": false,
-            "filterList": ["status"]
+            "select": false
         },
         "prontuarios": {
             "create": false,
