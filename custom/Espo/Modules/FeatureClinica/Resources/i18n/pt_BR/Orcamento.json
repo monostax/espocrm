@@ -50,5 +50,13 @@
     },
     "scopeNamesPlural": {
         "Orcamento": "Orçamentos"
+    },
+    "tabs": {
+        "Itens": "Itens",
+        "Versoes": "Versões"
+    },
+    "tabLabels": {
+        "Itens": "Itens",
+        "Versoes": "Versões"
     }
 }

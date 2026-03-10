@@ -1,0 +1,20 @@
+{
+    "appointments": {
+        "disabled": true
+    },
+    "atendimentos": {
+        "disabled": true
+    },
+    "jornadas": {
+        "disabled": true
+    },
+    "prescricoes": {
+        "disabled": true
+    },
+    "prontuarios": {
+        "disabled": true
+    },
+    "anamneses": {
+        "disabled": true
+    }
+}

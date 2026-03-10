@@ -5369,3 +5369,91 @@ html.is-iframe {
     }
 }
 
+// ===== Relationship List Field Sub-Panels =====
+.relationship-list-field {
+    .panel.panel-condensed {
+        margin-bottom: 0;
+
+        > .panel-heading {
+            padding: var(--6px) 0;
+            min-height: auto;
+
+            .panel-title {
+                font-size: var(--14px);
+                font-weight: 600;
+                padding: 0;
+                line-height: var(--24px);
+                display: flex;
+                align-items: center;
+                gap: var(--6px);
+
+                > span {
+                    overflow: visible;    // Override default Espo styling
+                    text-overflow: clip;
+                }
+
+                > span:first-child {      // Icon
+                    opacity: 0.65;
+                    font-size: var(--13px);
+                    flex-shrink: 0;
+                }
+
+                > span:nth-child(2) {     // Text
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            }
+
+            .panel-actions-container {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+        }
+
+        > .panel-body {
+            padding: var(--8px) var(--12px);
+        }
+    }
+
+    .relationship-list-badge {
+        font-size: var(--11px);
+        font-weight: 600;
+        padding: 0 var(--6px);
+        border-radius: var(--10px);
+        background-color: var(--gray-soft);
+        color: var(--white);
+        min-width: var(--20px);
+        height: var(--20px);
+        text-align: center;
+        line-height: var(--20px);
+        flex-shrink: 0;
+        display: inline-block;
+        padding-top: var(--1px); // Optical center adjustment
+
+    }
+}
+
+// Spacing between multiple relationship list fields in the same panel
+.panel-body-form > .row + .row {
+    > .cell > .field > .relationship-list-field {
+        margin-top: var(--12px);
+    }
+}
+
+// Hide inline edit pencil icon for relationship list fields
+.cell:has(> .field > .relationship-list-field) > .inline-edit-link {
+    display: none !important;
+}
+
+// Strip parent panel chrome when it contains relationship list fields
+.panel.panel-default:not(.panel-condensed):has(.relationship-list-field) {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    > .panel-body.panel-body-form {
+        padding: 0;
+    }
+}
+
+

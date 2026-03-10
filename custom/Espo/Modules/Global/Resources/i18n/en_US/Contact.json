@@ -1,4 +1,17 @@
 {
+    "fields": {
+        "cpf": "CPF",
+        "dataNascimento": "Date of Birth",
+        "sexo": "Sex"
+    },
+    "options": {
+        "sexo": {
+            "": "",
+            "M": "Male",
+            "F": "Female",
+            "Outro": "Other"
+        }
+    },
     "tabs": {
         "Opportunities": "Opportunities",
         "Cases": "Cases",

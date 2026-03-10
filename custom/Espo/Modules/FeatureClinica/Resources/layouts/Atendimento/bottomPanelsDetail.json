@@ -1,0 +1,14 @@
+{
+    "procedimentosRealizados": {
+        "disabled": true
+    },
+    "prontuarios": {
+        "disabled": true
+    },
+    "documentos": {
+        "disabled": true
+    },
+    "lancamentosFinanceiros": {
+        "disabled": true
+    }
+}

@@ -27,5 +27,11 @@
     },
     "scopeNamesPlural": {
         "ProcedimentoRealizado": "Procedimentos Realizados"
+    },
+    "tabs": {
+        "Movimentacoes": "Movimentações"
+    },
+    "tabLabels": {
+        "Movimentacoes": "Movimentações"
     }
 }

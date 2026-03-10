@@ -50,5 +50,13 @@
     },
     "scopeNamesPlural": {
         "Orcamento": "Quotes"
+    },
+    "tabs": {
+        "Itens": "Items",
+        "Versoes": "Versions"
+    },
+    "tabLabels": {
+        "Itens": "Items",
+        "Versoes": "Versions"
     }
 }

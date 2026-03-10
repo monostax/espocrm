@@ -1,11 +1,33 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "paciente"}, {"name": "medico"}],
             [{"name": "unidade"}, {"name": "status"}],
             [{"name": "dataEmissao"}, {"name": "dataValidade"}],
             [{"name": "tipo"}, {"name": "documento"}],
             [{"name": "observacoes", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Itens",
+        "name": "itensTab",
+        "tabEntityType": "PrescricaoItem",
+        "rows": [
+            [
+                {
+                    "name": "itensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "itens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

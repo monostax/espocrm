@@ -8,7 +8,10 @@
     },
     "links": {
         "jornadas": "Jornadas",
-        "appointments": "Agendamentos"
+        "appointments": "Agendamentos",
+        "convenioRegras": "Regras de Convênio",
+        "lancamentosFinanceiros": "Lançamentos Financeiros",
+        "orcamentos": "Orçamentos"
     },
     "labels": {
         "Create Convenio": "Criar Convênio"
@@ -18,5 +21,15 @@
     },
     "scopeNamesPlural": {
         "Convenio": "Convênios"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Financeiro": "Financeiro"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Financeiro": "Financeiro"
     }
 }

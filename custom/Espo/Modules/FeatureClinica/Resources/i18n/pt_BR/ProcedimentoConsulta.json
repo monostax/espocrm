@@ -19,7 +19,12 @@
         "appointments": "Agendamentos",
         "sessoes": "Sessões",
         "procedimentosRealizados": "Procedimentos Realizados",
-        "consumoInsumoPadrao": "Consumos Padrão"
+        "consumoInsumoPadrao": "Consumos Padrão",
+        "tabelaDePrecos": "Tabela de Preços",
+        "convenioRegras": "Regras de Convênio",
+        "programaItens": "Itens de Programa",
+        "prescricaoItens": "Itens de Prescrição",
+        "orcamentoItens": "Itens de Orçamento"
     },
     "labels": {
         "Create ProcedimentoConsulta": "Criar Procedimento de Consulta"
@@ -29,5 +34,15 @@
     },
     "scopeNamesPlural": {
         "ProcedimentoConsulta": "Procedimentos de Consulta"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Programas": "Programas"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Programas": "Programas"
     }
 }

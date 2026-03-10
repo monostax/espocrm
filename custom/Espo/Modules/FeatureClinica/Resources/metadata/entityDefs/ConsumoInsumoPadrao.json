@@ -9,7 +9,8 @@
         },
         "procedimento": {
             "type": "linkParent",
-            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"]
+            "entityList": ["ProcedimentoConsulta", "ProcedimentoInjetavel", "ProcedimentoImplante", "ProcedimentoEstetico", "ProcedimentoAtividadeFisica"],
+            "view": "feature-clinica:views/fields/procedimento-link-parent"
         },
         "insumo": {
             "type": "link",

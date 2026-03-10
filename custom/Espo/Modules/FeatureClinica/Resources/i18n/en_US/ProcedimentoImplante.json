@@ -38,5 +38,15 @@
     },
     "scopeNamesPlural": {
         "ProcedimentoImplante": "Implant Procedures"
+    },
+    "tabs": {
+        "Atendimento": "Appointments",
+        "Configuracao": "Settings",
+        "Programas": "Programs"
+    },
+    "tabLabels": {
+        "Atendimento": "Appointments",
+        "Configuracao": "Settings",
+        "Programas": "Programs"
     }
 }

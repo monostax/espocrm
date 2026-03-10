@@ -4,7 +4,9 @@
         "rows": [
             [{ "name": "name" }, { "name": "accountName" }],
             [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
-            [{ "name": "address" }, { "name": "title" }],
+            [{ "name": "cpf" }, { "name": "dataNascimento" }],
+            [{ "name": "sexo" }, { "name": "title" }],
+            [{ "name": "address" }, false],
             [{ "name": "whatsAppOptedOut" }, false]
         ]
     },

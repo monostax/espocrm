@@ -1,5 +1,6 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "paciente"}, {"name": "profissional"}],
             [{"name": "unidade"}, {"name": "status"}],
@@ -7,6 +8,82 @@
             [{"name": "appointment"}, false],
             [{"name": "dataHoraInicio"}, {"name": "dataHoraFim"}],
             [{"name": "observacao", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Procedimentos",
+        "name": "procedimentosTab",
+        "tabEntityType": "ProcedimentoRealizado",
+        "rows": [
+            [
+                {
+                    "name": "procedimentosRealizadosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "procedimentosRealizados",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Clinico",
+        "name": "clinicoTab",
+        "tabEntityType": "Prontuario",
+        "rows": [
+            [
+                {
+                    "name": "prontuariosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "prontuarios",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "documentosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "documentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Financeiro",
+        "name": "financeiroTab",
+        "tabEntityType": "LancamentoFinanceiro",
+        "rows": [
+            [
+                {
+                    "name": "lancamentosFinanceirosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "lancamentosFinanceiros",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

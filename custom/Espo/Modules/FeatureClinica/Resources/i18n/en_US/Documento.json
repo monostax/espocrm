@@ -36,5 +36,11 @@
     },
     "scopeNamesPlural": {
         "Documento": "Documents"
+    },
+    "tabs": {
+        "Prontuarios": "Medical Records"
+    },
+    "tabLabels": {
+        "Prontuarios": "Medical Records"
     }
 }

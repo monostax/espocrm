@@ -1,0 +1,12 @@
+[
+    "contact",
+    "contactName",
+    "emailAddress",
+    "phoneNumber",
+    "cpf",
+    "dataNascimento",
+    "sexo",
+    "createdAt",
+    "createdBy",
+    "teams"
+]

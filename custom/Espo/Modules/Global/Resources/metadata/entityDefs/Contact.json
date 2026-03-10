@@ -1,10 +1,29 @@
 {
     "fields": {
+        "cpf": {
+            "type": "varchar",
+            "maxLength": 14,
+            "trim": true
+        },
+        "dataNascimento": {
+            "type": "date"
+        },
+        "sexo": {
+            "type": "enum",
+            "options": ["", "M", "F", "Outro"],
+            "default": ""
+        },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
         },
         "modifiedBy": {
             "view": "views/fields/user-with-avatar"
+        }
+    },
+    "indexes": {
+        "cpf": {
+            "unique": true,
+            "columns": ["cpf", "deleted"]
         }
     }
 }

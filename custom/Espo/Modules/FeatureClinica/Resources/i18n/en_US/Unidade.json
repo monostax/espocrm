@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "nome": "Name",
+        "cnpj": "CNPJ",
+        "endereco": "Address",
+        "telefone": "Phone",
+        "email": "Email",
+        "responsavel": "Manager",
+        "ativa": "Active"
+    },
+    "links": {
+        "responsavel": "Manager",
+        "jornadas": "Journeys",
+        "appointments": "Appointments",
+        "atendimentos": "Services",
+        "insumoLotes": "Supply Lots"
+    },
+    "labels": {
+        "Create Unidade": "Create Unit"
+    },
+    "scopeNames": {
+        "Unidade": "Unit"
+    },
+    "scopeNamesPlural": {
+        "Unidade": "Units"
+    },
+    "tabs": {
+        "Atendimento": "Appointments",
+        "Estoque": "Inventory"
+    },
+    "tabLabels": {
+        "Atendimento": "Appointments",
+        "Estoque": "Inventory"
+    }
+}

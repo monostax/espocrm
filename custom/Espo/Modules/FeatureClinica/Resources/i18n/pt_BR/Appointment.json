@@ -35,5 +35,11 @@
         "scheduled": "Agendados",
         "realized": "Realizados",
         "todays": "De Hoje"
+    },
+    "scopeNames": {
+        "Appointment": "Agendamento"
+    },
+    "scopeNamesPlural": {
+        "Appointment": "Agendamentos"
     }
 }

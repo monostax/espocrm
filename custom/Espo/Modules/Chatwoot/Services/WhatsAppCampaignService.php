@@ -320,6 +320,28 @@ class WhatsAppCampaignService
             throw new Error('Linked Chatwoot Account not found.');
         }
 
+        // Sync WhatsApp templates from Meta so Chatwoot has the latest versions
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $chatwootAccount->get('platformId'));
+
+        if ($platform) {
+            $whatsappInbox = $this->entityManager
+                ->getRDBRepository('ChatwootInbox')
+                ->where([
+                    'chatwootAccountId' => $chatwootAccountId,
+                    'channelType' => 'Channel::Whatsapp',
+                ])
+                ->findOne();
+
+            if ($whatsappInbox) {
+                $this->chatwootApiClient->syncInboxTemplates(
+                    $platform->get('backendUrl'),
+                    $chatwootAccount->get('apiKey'),
+                    (int) $chatwootAccount->get('chatwootAccountId'),
+                    (int) $whatsappInbox->get('chatwootInboxId')
+                );
+            }
+        }
+
         foreach ($audience as $item) {
             $this->entityManager->createEntity('WhatsAppCampaignContact', [
                 'whatsAppCampaignId' => $campaignId,

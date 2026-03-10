@@ -1,0 +1,17 @@
+{
+    "lotes": {
+        "disabled": true
+    },
+    "procedimentosInjetaveis": {
+        "disabled": true
+    },
+    "procedimentosImplante": {
+        "disabled": true
+    },
+    "consumoInsumoPadrao": {
+        "disabled": true
+    },
+    "consumoItens": {
+        "disabled": true
+    }
+}

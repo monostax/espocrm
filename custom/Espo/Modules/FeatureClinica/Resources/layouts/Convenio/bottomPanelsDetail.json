@@ -1,0 +1,17 @@
+{
+    "jornadas": {
+        "disabled": true
+    },
+    "appointments": {
+        "disabled": true
+    },
+    "convenioRegras": {
+        "disabled": true
+    },
+    "lancamentosFinanceiros": {
+        "disabled": true
+    },
+    "orcamentos": {
+        "disabled": true
+    }
+}

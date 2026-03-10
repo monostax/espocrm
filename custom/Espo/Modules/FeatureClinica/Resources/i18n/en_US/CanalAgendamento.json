@@ -15,5 +15,11 @@
     },
     "scopeNamesPlural": {
         "CanalAgendamento": "Scheduling Channels"
+    },
+    "tabs": {
+        "Agendamentos": "Appointments"
+    },
+    "tabLabels": {
+        "Agendamentos": "Appointments"
     }
 }

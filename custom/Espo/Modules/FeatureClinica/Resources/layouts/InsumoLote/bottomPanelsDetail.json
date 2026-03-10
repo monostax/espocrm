@@ -1,0 +1,14 @@
+{
+    "movimentacoes": {
+        "disabled": true
+    },
+    "sessoes": {
+        "disabled": true
+    },
+    "procedimentosRealizados": {
+        "disabled": true
+    },
+    "consumoItens": {
+        "disabled": true
+    }
+}

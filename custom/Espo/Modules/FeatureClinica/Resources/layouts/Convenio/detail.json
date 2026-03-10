@@ -1,9 +1,99 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "nome"}, {"name": "cnpj"}],
             [{"name": "telefone"}, {"name": "email"}],
             [{"name": "ativo"}, false]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Atendimento",
+        "name": "atendimentoTab",
+        "tabEntityType": "Jornada",
+        "rows": [
+            [
+                {
+                    "name": "jornadasList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "jornadas",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "appointmentsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "appointments",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Configuracao",
+        "name": "configuracaoTab",
+        "tabEntityType": "ConvenioRegra",
+        "rows": [
+            [
+                {
+                    "name": "convenioRegrasList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "convenioRegras",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Financeiro",
+        "name": "financeiroTab",
+        "tabEntityType": "LancamentoFinanceiro",
+        "rows": [
+            [
+                {
+                    "name": "lancamentosFinanceirosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "lancamentosFinanceiros",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "orcamentosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "orcamentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

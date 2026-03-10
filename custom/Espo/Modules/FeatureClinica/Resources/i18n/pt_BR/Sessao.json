@@ -21,7 +21,8 @@
         "unidade": "Unidade",
         "unidadeDosagem": "Unidade de Dosagem",
         "insumoLote": "Lote de Insumo",
-        "consumoItens": "Consumos de Insumo"
+        "consumoItens": "Consumos de Insumo",
+        "procedimentosRealizados": "Procedimentos Realizados"
     },
     "labels": {
         "Create Sessao": "Criar Sessão"
@@ -40,5 +41,11 @@
     },
     "scopeNamesPlural": {
         "Sessao": "Sessões"
+    },
+    "tabs": {
+        "Registros": "Registros"
+    },
+    "tabLabels": {
+        "Registros": "Registros"
     }
 }

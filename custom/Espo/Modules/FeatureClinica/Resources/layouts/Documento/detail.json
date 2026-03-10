@@ -1,5 +1,6 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "paciente"}, {"name": "nome"}],
             [{"name": "tipo"}, {"name": "subtipo"}],
@@ -7,6 +8,27 @@
             [{"name": "profissional"}, {"name": "unidade"}],
             [{"name": "origem"}, {"name": "confidencial"}],
             [{"name": "observacao", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Prontuarios",
+        "name": "prontuariosTab",
+        "tabEntityType": "Prontuario",
+        "rows": [
+            [
+                {
+                    "name": "prontuariosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "prontuarios",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

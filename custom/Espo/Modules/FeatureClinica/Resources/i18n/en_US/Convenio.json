@@ -8,7 +8,10 @@
     },
     "links": {
         "jornadas": "Journeys",
-        "appointments": "Appointments"
+        "appointments": "Appointments",
+        "convenioRegras": "Health Plan Rules",
+        "lancamentosFinanceiros": "Financial Transactions",
+        "orcamentos": "Quotes"
     },
     "labels": {
         "Create Convenio": "Create Health Plan"
@@ -18,5 +21,15 @@
     },
     "scopeNamesPlural": {
         "Convenio": "Health Plans"
+    },
+    "tabs": {
+        "Atendimento": "Appointments",
+        "Configuracao": "Settings",
+        "Financeiro": "Financial"
+    },
+    "tabLabels": {
+        "Atendimento": "Appointments",
+        "Configuracao": "Settings",
+        "Financeiro": "Financial"
     }
 }

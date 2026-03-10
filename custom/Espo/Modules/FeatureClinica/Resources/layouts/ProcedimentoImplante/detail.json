@@ -15,5 +15,146 @@
             [{"name": "insumo"}, false],
             [{"name": "protocoloAplicacao", "fullWidth": true}]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Atendimento",
+        "name": "atendimentoTab",
+        "tabEntityType": "Appointment",
+        "rows": [
+            [
+                {
+                    "name": "appointmentsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "appointments",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "sessoesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "sessoes",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "procedimentosRealizadosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "procedimentosRealizados",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Configuracao",
+        "name": "configuracaoTab",
+        "tabEntityType": "TabelaDePrecos",
+        "rows": [
+            [
+                {
+                    "name": "tabelaDePrecosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "tabelaDePrecos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "convenioRegrasList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "convenioRegras",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "consumoInsumoPadraoList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "consumoInsumoPadrao",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Programas",
+        "name": "programasTab",
+        "tabEntityType": "ProgramaItem",
+        "rows": [
+            [
+                {
+                    "name": "programaItensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "programaItens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "prescricaoItensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "prescricaoItens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "orcamentoItensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "orcamentoItens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
     }
 ]

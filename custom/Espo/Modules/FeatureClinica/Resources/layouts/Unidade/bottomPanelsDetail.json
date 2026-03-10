@@ -1,0 +1,14 @@
+{
+    "jornadas": {
+        "disabled": true
+    },
+    "appointments": {
+        "disabled": true
+    },
+    "atendimentos": {
+        "disabled": true
+    },
+    "insumoLotes": {
+        "disabled": true
+    }
+}

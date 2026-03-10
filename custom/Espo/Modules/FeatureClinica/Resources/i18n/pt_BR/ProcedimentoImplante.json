@@ -21,7 +21,9 @@
         "tabelaDePrecos": "Tabela de Preços",
         "convenioRegras": "Regras de Convênio",
         "programaItens": "Itens de Programa",
-        "consumoInsumoPadrao": "Consumos Padrão"
+        "consumoInsumoPadrao": "Consumos Padrão",
+        "prescricaoItens": "Itens de Prescrição",
+        "orcamentoItens": "Itens de Orçamento"
     },
     "labels": {
         "Create ProcedimentoImplante": "Criar Procedimento Implante"
@@ -38,5 +40,15 @@
     },
     "scopeNamesPlural": {
         "ProcedimentoImplante": "Procedimentos Implante"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Programas": "Programas"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Programas": "Programas"
     }
 }

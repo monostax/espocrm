@@ -39,5 +39,13 @@
     },
     "scopeNamesPlural": {
         "Insumo": "Supplies"
+    },
+    "tabs": {
+        "Estoque": "Inventory",
+        "Procedimentos": "Procedures"
+    },
+    "tabLabels": {
+        "Estoque": "Inventory",
+        "Procedimentos": "Procedures"
     }
 }

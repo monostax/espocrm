@@ -38,5 +38,11 @@
     },
     "scopeNamesPlural": {
         "Prontuario": "Clinical Records"
+    },
+    "tabs": {
+        "Documentos": "Documents"
+    },
+    "tabLabels": {
+        "Documentos": "Documents"
     }
 }

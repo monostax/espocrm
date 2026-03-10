@@ -39,5 +39,13 @@
     },
     "scopeNamesPlural": {
         "Insumo": "Insumos"
+    },
+    "tabs": {
+        "Estoque": "Estoque",
+        "Procedimentos": "Procedimentos"
+    },
+    "tabLabels": {
+        "Estoque": "Estoque",
+        "Procedimentos": "Procedimentos"
     }
 }

@@ -21,7 +21,8 @@
         "unidade": "Unit",
         "unidadeDosagem": "Dosage Unit",
         "insumoLote": "Supply Lot",
-        "consumoItens": "Supply Consumptions"
+        "consumoItens": "Supply Consumptions",
+        "procedimentosRealizados": "Performed Procedures"
     },
     "labels": {
         "Create Sessao": "Create Session"
@@ -40,5 +41,11 @@
     },
     "scopeNamesPlural": {
         "Sessao": "Sessions"
+    },
+    "tabs": {
+        "Registros": "Records"
+    },
+    "tabLabels": {
+        "Registros": "Records"
     }
 }

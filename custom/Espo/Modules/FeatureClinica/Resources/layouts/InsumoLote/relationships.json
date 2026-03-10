@@ -1,5 +1,1 @@
-[
-    "movimentacoes",
-    "sessoes",
-    "procedimentosRealizados"
-]
+["movimentacoes", "sessoes", "procedimentosRealizados", "consumoItens"]

@@ -13,23 +13,33 @@
         "contact": "Contato",
         "jornadas": "Jornadas",
         "atendimentos": "Atendimentos",
-        "appointments": "Agendamentos"
+        "appointments": "Agendamentos",
+        "prescricoes": "Prescrições",
+        "anamneses": "Anamneses",
+        "prontuarios": "Prontuários",
+        "documentos": "Documentos",
+        "orcamentos": "Orçamentos",
+        "lancamentosFinanceiros": "Lançamentos Financeiros"
     },
     "labels": {
         "Create Paciente": "Criar Paciente"
-    },
-    "options": {
-        "sexo": {
-            "": "",
-            "M": "Masculino",
-            "F": "Feminino",
-            "Outro": "Outro"
-        }
     },
     "scopeNames": {
         "Paciente": "Paciente"
     },
     "scopeNamesPlural": {
         "Paciente": "Pacientes"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro",
+        "Documentos": "Documentos"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro",
+        "Documentos": "Documentos"
     }
 }

@@ -13,32 +13,43 @@
             "type": "foreign",
             "link": "contact",
             "field": "name",
+            "view": "views/fields/foreign-varchar",
             "readOnly": true
         },
         "emailAddress": {
             "type": "foreign",
             "link": "contact",
             "field": "emailAddress",
+            "view": "views/fields/foreign-varchar",
             "readOnly": true
         },
         "phoneNumber": {
             "type": "foreign",
             "link": "contact",
             "field": "phoneNumber",
+            "view": "views/fields/foreign-varchar",
             "readOnly": true
         },
         "cpf": {
-            "type": "varchar",
-            "maxLength": 14,
-            "trim": true
+            "type": "foreign",
+            "link": "contact",
+            "field": "cpf",
+            "view": "views/fields/foreign-varchar",
+            "readOnly": true
         },
         "dataNascimento": {
-            "type": "date"
+            "type": "foreign",
+            "link": "contact",
+            "field": "dataNascimento",
+            "view": "views/fields/foreign-date",
+            "readOnly": true
         },
         "sexo": {
-            "type": "enum",
-            "options": ["", "M", "F", "Outro"],
-            "default": ""
+            "type": "foreign",
+            "link": "contact",
+            "field": "sexo",
+            "view": "views/fields/foreign-enum",
+            "readOnly": true
         },
         "createdAt": {
             "type": "datetime",
@@ -131,13 +142,9 @@
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": ["name", "cpf", "contact"]
+        "textFilterFields": ["name", "contact"]
     },
     "indexes": {
-        "cpf": {
-            "unique": true,
-            "columns": ["cpf", "deleted"]
-        },
         "contactId": {
             "columns": ["contactId"]
         }

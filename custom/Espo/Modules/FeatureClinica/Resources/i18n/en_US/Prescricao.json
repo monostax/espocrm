@@ -37,5 +37,11 @@
     },
     "scopeNamesPlural": {
         "Prescricao": "Prescriptions"
+    },
+    "tabs": {
+        "Itens": "Items"
+    },
+    "tabLabels": {
+        "Itens": "Items"
     }
 }

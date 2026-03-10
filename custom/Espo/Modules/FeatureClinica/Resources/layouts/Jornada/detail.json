@@ -1,5 +1,6 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "nome"}, {"name": "paciente"}],
             [{"name": "programa"}, {"name": "unidade"}],
@@ -8,6 +9,108 @@
             [{"name": "dataExpiracao"}, false],
             [{"name": "objetivo", "fullWidth": true}],
             [{"name": "descricao", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Sessoes",
+        "name": "sessoesTab",
+        "tabEntityType": "Sessao",
+        "rows": [
+            [
+                {
+                    "name": "sessoesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "sessoes",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "atendimentosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "atendimentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Clinico",
+        "name": "clinicoTab",
+        "tabEntityType": "Anamnese",
+        "rows": [
+            [
+                {
+                    "name": "anamnesesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "anamneses",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "prontuariosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "prontuarios",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Financeiro",
+        "name": "financeiroTab",
+        "tabEntityType": "LancamentoFinanceiro",
+        "rows": [
+            [
+                {
+                    "name": "lancamentosFinanceirosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "lancamentosFinanceiros",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "orcamentosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "orcamentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

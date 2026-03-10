@@ -1,5 +1,6 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "paciente"}, {"name": "profissional"}],
             [{"name": "unidade"}, {"name": "dataHora"}],
@@ -7,6 +8,27 @@
             [{"name": "atendimento"}, {"name": "jornada"}],
             [{"name": "confidencial"}, false],
             [{"name": "conteudo", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Documentos",
+        "name": "documentosTab",
+        "tabEntityType": "Documento",
+        "rows": [
+            [
+                {
+                    "name": "documentosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "documentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

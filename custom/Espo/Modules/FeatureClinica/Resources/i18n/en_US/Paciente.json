@@ -18,18 +18,22 @@
     "labels": {
         "Create Paciente": "Create Patient"
     },
-    "options": {
-        "sexo": {
-            "": "",
-            "M": "Male",
-            "F": "Female",
-            "Outro": "Other"
-        }
-    },
     "scopeNames": {
         "Paciente": "Patient"
     },
     "scopeNamesPlural": {
         "Paciente": "Patients"
+    },
+    "tabs": {
+        "Atendimento": "Care",
+        "Clinico": "Clinical",
+        "Financeiro": "Financial",
+        "Documentos": "Documents"
+    },
+    "tabLabels": {
+        "Atendimento": "Care",
+        "Clinico": "Clinical",
+        "Financeiro": "Financial",
+        "Documentos": "Documents"
     }
 }

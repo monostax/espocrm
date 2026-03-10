@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\FeatureClinica\Hooks\Paciente;
+namespace Espo\Modules\Global\Hooks\Contact;
 
 use Espo\Core\Exceptions\Conflict;
 use Espo\ORM\Entity;
@@ -56,12 +56,12 @@ class ValidateUniqueCpf
         }
 
         $existing = $this->entityManager
-            ->getRDBRepository('Paciente')
+            ->getRDBRepository('Contact')
             ->where($where)
             ->findOne();
 
         if ($existing) {
-            throw new Conflict('CPF já cadastrado para outro paciente.');
+            throw new Conflict('CPF já cadastrado para outro contato.');
         }
     }
 }

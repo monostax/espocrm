@@ -1,11 +1,93 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "nome"}, {"name": "tipo"}],
             [{"name": "unidadeMedida"}, {"name": "estoqueMinimo"}],
             [{"name": "fornecedorPrincipal"}, {"name": "requerReceituario"}],
             [{"name": "ativo"}, false],
             [{"name": "descricao", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Estoque",
+        "name": "estoqueTab",
+        "tabEntityType": "InsumoLote",
+        "rows": [
+            [
+                {
+                    "name": "lotesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "lotes",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "consumoItensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "consumoItens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "consumoInsumoPadraoList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "consumoInsumoPadrao",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Procedimentos",
+        "name": "procedimentosTab",
+        "tabEntityType": "ProcedimentoInjetavel",
+        "rows": [
+            [
+                {
+                    "name": "procedimentosInjetaveisList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "procedimentosInjetaveis",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "procedimentosImplanteList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "procedimentosImplante",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

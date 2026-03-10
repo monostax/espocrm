@@ -1,0 +1,29 @@
+{
+    "jornadas": {
+        "disabled": true
+    },
+    "atendimentos": {
+        "disabled": true
+    },
+    "appointments": {
+        "disabled": true
+    },
+    "anamneses": {
+        "disabled": true
+    },
+    "prontuarios": {
+        "disabled": true
+    },
+    "prescricoes": {
+        "disabled": true
+    },
+    "orcamentos": {
+        "disabled": true
+    },
+    "lancamentosFinanceiros": {
+        "disabled": true
+    },
+    "documentos": {
+        "disabled": true
+    }
+}

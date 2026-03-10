@@ -19,7 +19,12 @@
         "profissional": "Professional",
         "convenio": "Health Plan",
         "programa": "Program",
-        "sessoes": "Sessions"
+        "sessoes": "Sessions",
+        "atendimentos": "Services",
+        "anamneses": "Anamneses",
+        "prontuarios": "Clinical Records",
+        "lancamentosFinanceiros": "Financial Transactions",
+        "orcamentos": "Quotes"
     },
     "labels": {
         "Create Jornada": "Create Journey"
@@ -38,5 +43,15 @@
     },
     "scopeNamesPlural": {
         "Jornada": "Journeys"
+    },
+    "tabs": {
+        "Sessoes": "Sessions",
+        "Clinico": "Clinical",
+        "Financeiro": "Financial"
+    },
+    "tabLabels": {
+        "Sessoes": "Sessions",
+        "Clinico": "Clinical",
+        "Financeiro": "Financial"
     }
 }

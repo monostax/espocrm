@@ -1,0 +1,20 @@
+{
+    "sessoes": {
+        "disabled": true
+    },
+    "atendimentos": {
+        "disabled": true
+    },
+    "anamneses": {
+        "disabled": true
+    },
+    "prontuarios": {
+        "disabled": true
+    },
+    "lancamentosFinanceiros": {
+        "disabled": true
+    },
+    "orcamentos": {
+        "disabled": true
+    }
+}

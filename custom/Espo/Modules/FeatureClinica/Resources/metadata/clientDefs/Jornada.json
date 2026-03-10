@@ -2,6 +2,17 @@
     "controller": "controllers/record",
     "iconClass": "fas fa-route",
     "nameAttribute": "nome",
+    "kanbanViewMode": true,
+    "kanbanStatusField": "status",
+    "listDefaultViewMode": "kanban",
+    "listViewModeList": ["list", "kanban"],
+    "viewModeIconClassMap": {
+        "list": "fas fa-align-justify",
+        "kanban": "fas fa-columns"
+    },
+    "recordViews": {
+        "kanban": "feature-clinica:views/jornada/record/kanban"
+    },
     "defaultSidePanelFieldLists": {
         "detail": ["status", "paciente", "unidade", "profissional", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],

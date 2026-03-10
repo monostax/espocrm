@@ -17,7 +17,9 @@
         "tabelaDePrecos": "Tabela de Preços",
         "convenioRegras": "Regras de Convênio",
         "programaItens": "Itens de Programa",
-        "consumoInsumoPadrao": "Consumos Padrão"
+        "consumoInsumoPadrao": "Consumos Padrão",
+        "prescricaoItens": "Itens de Prescrição",
+        "orcamentoItens": "Itens de Orçamento"
     },
     "labels": {
         "Create ProcedimentoEstetico": "Criar Procedimento Estético"
@@ -35,5 +37,15 @@
     },
     "scopeNamesPlural": {
         "ProcedimentoEstetico": "Procedimentos Estéticos"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Programas": "Programas"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Configuracao": "Configuração",
+        "Programas": "Programas"
     }
 }

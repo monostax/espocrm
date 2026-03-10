@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "name": "Name",
+        "paciente": "Patient",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "jornada": "Journey",
+        "appointment": "Appointment",
+        "dataHoraInicio": "Start",
+        "dataHoraFim": "End",
+        "status": "Status",
+        "observacao": "Note"
+    },
+    "links": {
+        "paciente": "Patient",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "jornada": "Journey",
+        "appointment": "Appointment",
+        "procedimentosRealizados": "Performed Procedures",
+        "prontuarios": "Clinical Records",
+        "documentos": "Documents",
+        "lancamentosFinanceiros": "Financial Transactions"
+    },
+    "labels": {
+        "Create Atendimento": "Create Service"
+    },
+    "options": {
+        "status": {
+            "EmAndamento": "In Progress",
+            "Concluido": "Completed",
+            "Cancelado": "Cancelled"
+        }
+    },
+    "scopeNames": {
+        "Atendimento": "Service"
+    },
+    "scopeNamesPlural": {
+        "Atendimento": "Services"
+    },
+    "tabs": {
+        "Procedimentos": "Procedures",
+        "Clinico": "Clinical",
+        "Financeiro": "Financial"
+    },
+    "tabLabels": {
+        "Procedimentos": "Procedures",
+        "Clinico": "Clinical",
+        "Financeiro": "Financial"
+    }
+}

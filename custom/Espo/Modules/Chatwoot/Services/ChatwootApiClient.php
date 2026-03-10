@@ -2303,12 +2303,14 @@ public function deleteConversation(
 
         $processedParams = [];
 
-        $bodyParams = new \stdClass();
-        foreach ($params as $key => $value) {
-            $k = (string) $key;
-            $bodyParams->$k = (string) $value;
+        if (!empty($params)) {
+            $bodyParams = new \stdClass();
+            foreach ($params as $key => $value) {
+                $k = (string) $key;
+                $bodyParams->$k = (string) $value;
+            }
+            $processedParams['body'] = $bodyParams;
         }
-        $processedParams['body'] = $bodyParams;
 
         if ($headerMediaUrl && $headerMediaType) {
             $processedParams['header'] = [
@@ -2363,6 +2365,52 @@ public function deleteConversation(
             'message_id' => $messageId,
             'conversation_id' => $conversationId,
         ];
+    }
+
+    /**
+     * Sync WhatsApp message templates for a Chatwoot inbox.
+     *
+     * Triggers an on-demand template sync from Meta so that Chatwoot's
+     * cached template list is up-to-date before sending campaign messages.
+     * Failures are logged as warnings but never thrown -- a stale cache
+     * should not prevent the campaign from launching.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $inboxId The Chatwoot inbox ID (must be Channel::Whatsapp)
+     */
+    public function syncInboxTemplates(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $inboxId
+    ): void {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/inboxes/' . $inboxId . '/sync_templates';
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: 0',
+        ];
+
+        try {
+            $response = $this->executeRequest($url, 'POST', null, $headers);
+
+            if ($response['code'] >= 200 && $response['code'] < 300) {
+                $this->log->info("Chatwoot: Synced templates for inbox {$inboxId}, account {$accountId}.");
+            } else {
+                $this->log->warning(
+                    "Chatwoot: Template sync returned HTTP {$response['code']} for inbox {$inboxId}, account {$accountId}. "
+                    . 'Response: ' . json_encode($response['body'])
+                );
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                "Chatwoot: Template sync failed for inbox {$inboxId}, account {$accountId}: " . $e->getMessage()
+            );
+        }
     }
 
     /* -------------------------------------------------------------------------- */

@@ -1,5 +1,6 @@
 [
     {"name": "name", "link": true},
     {"name": "cpf"},
-    {"name": "dataNascimento"}
+    {"name": "dataNascimento"},
+    {"name": "sexo"}
 ]

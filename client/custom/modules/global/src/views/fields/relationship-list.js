@@ -30,37 +30,47 @@ class RelationshipListFieldView extends BaseFieldView {
     // noinspection JSUnusedGlobalSymbols
     templateContent = `
         <div class="relationship-list-field">
-            <div class="btn-group pull-right relationship-buttons">
-                {{#if showCreateButton}}
-                <button
-                    class="btn btn-default btn-sm action"
-                    data-action="createRelated"
-                    title="{{translate 'Create'}}"
-                ><span class="fas fa-plus"></span></button>
-                {{/if}}
-                {{#if showSelectButton}}
-                <button
-                    class="btn btn-default btn-sm action"
-                    data-action="selectRelated"
-                    title="{{translate 'Select'}}"
-                ><span class="fas fa-link"></span></button>
-                {{/if}}
-                {{#if showViewListButton}}
-                <button
-                    class="btn btn-default btn-sm action"
-                    data-action="viewRelatedList"
-                    title="{{translate 'View List'}}"
-                ><span class="fas fa-list"></span></button>
-                {{/if}}
+            <div class="panel panel-default panel-condensed">
+                <div class="panel-heading">
+                    <div class="pull-right btn-group panel-actions-container">
+                        {{#if showCreateButton}}
+                        <button
+                            class="btn btn-default btn-sm action"
+                            data-action="createRelated"
+                            title="{{translate 'Create'}}"
+                        ><span class="fas fa-plus"></span></button>
+                        {{/if}}
+                        {{#if showSelectButton}}
+                        <button
+                            class="btn btn-default btn-sm action"
+                            data-action="selectRelated"
+                            title="{{translate 'Select'}}"
+                        ><span class="fas fa-link"></span></button>
+                        {{/if}}
+                        {{#if showViewListButton}}
+                        <button
+                            class="btn btn-default btn-sm action"
+                            data-action="viewRelatedList"
+                            title="{{translate 'View List'}}"
+                        ><span class="fas fa-list"></span></button>
+                        {{/if}}
+                    </div>
+                    <h4 class="panel-title">
+                        {{#if icon}}<span class="{{icon}}"{{#if iconColor}} style="color: {{iconColor}}"{{/if}}></span> {{/if}}
+                        <span>{{title}}</span>
+                        <span class="relationship-list-badge badge" data-role="count" style="display:none;"></span>
+                    </h4>
+                </div>
+                <div class="panel-body">
+                    {{#if hasId}}
+                    <div class="relationship-list-container"></div>
+                    {{else}}
+                    <div class="text-muted">
+                        {{translate 'Save record first'}}
+                    </div>
+                    {{/if}}
+                </div>
             </div>
-            <div class="clearfix"></div>
-            {{#if hasId}}
-            <div class="relationship-list-container" style="margin-top: 10px;"></div>
-            {{else}}
-            <div class="text-muted" style="margin-top: 10px;">
-                {{translate 'Save record first'}}
-            </div>
-            {{/if}}
         </div>
     `;
 
@@ -121,7 +131,60 @@ class RelationshipListFieldView extends BaseFieldView {
             showSelectButton: hasId && this.showSelectButton,
             showViewListButton: hasId,
             hasId: hasId,
+            title: this.getTitle(),
+            icon: this.getIcon(),
+            iconColor: this.getIconColor(),
         };
+    }
+
+    /**
+     * Get the translated title for this relationship.
+     * @returns {string}
+     */
+    getTitle() {
+        return this.translate(this.link, "links", this.model.entityType);
+    }
+
+    /**
+     * Get the entity icon class for the foreign entity.
+     * @returns {string|null}
+     */
+    getIcon() {
+        if (!this.foreignEntityType) return null;
+
+        return this.getMetadata().get([
+            "clientDefs",
+            this.foreignEntityType,
+            "iconClass",
+        ]) || null;
+    }
+
+    /**
+     * Get the entity icon color for the foreign entity.
+     * @returns {string|null}
+     */
+    getIconColor() {
+        if (!this.foreignEntityType) return null;
+
+        return this.getMetadata().get([
+            "clientDefs",
+            this.foreignEntityType,
+            "color",
+        ]) || null;
+    }
+
+    /**
+     * Update the count badge in the header.
+     * @param {number} count
+     */
+    updateCount(count) {
+        const $badge = this.$el.find('[data-role="count"]');
+
+        if (count > 0) {
+            $badge.text(count).show();
+        } else {
+            $badge.hide();
+        }
     }
 
     /**
@@ -238,6 +301,59 @@ class RelationshipListFieldView extends BaseFieldView {
         }
     }
 
+    /**
+     * Listen to the list collection and update count badge.
+     * @private
+     */
+    listenToListCollection() {
+        const listView = this.getView("list");
+
+        if (!listView) return;
+
+        // Wait for the nested view to be ready and have a collection
+        const tryListen = () => {
+            if (listView.collection) {
+                this.updateCount(listView.collection.total || listView.collection.length);
+
+                this.listenTo(listView.collection, "sync", () => {
+                    this.updateCount(listView.collection.total || listView.collection.length);
+                });
+            }
+        };
+
+        if (listView.isRendered()) {
+            // The list view might create its own nested list view with the collection
+            // We need to wait for that inner view
+            setTimeout(() => {
+                const innerList = listView.getView("list");
+                if (innerList && innerList.collection) {
+                    this.updateCount(innerList.collection.total || innerList.collection.length);
+
+                    this.listenTo(innerList.collection, "sync", () => {
+                        this.updateCount(innerList.collection.total || innerList.collection.length);
+                    });
+                } else {
+                    tryListen();
+                }
+            }, 100);
+        } else {
+            this.listenToOnce(listView, "after:render", () => {
+                setTimeout(() => {
+                    const innerList = listView.getView("list");
+                    if (innerList && innerList.collection) {
+                        this.updateCount(innerList.collection.total || innerList.collection.length);
+
+                        this.listenTo(innerList.collection, "sync", () => {
+                            this.updateCount(innerList.collection.total || innerList.collection.length);
+                        });
+                    } else {
+                        tryListen();
+                    }
+                }, 100);
+            });
+        }
+    }
+
     setupRelationshipPanel() {
         const panelDefs =
             this.getMetadata().get([
@@ -275,6 +391,8 @@ class RelationshipListFieldView extends BaseFieldView {
             },
             (view) => {
                 view.render();
+
+                this.listenToListCollection();
             }
         );
     }
@@ -463,6 +581,12 @@ class RelationshipListFieldView extends BaseFieldView {
 
         if (listView && listView.collection) {
             listView.collection.fetch();
+        } else {
+            // Try inner list view
+            const innerList = listView && listView.getView("list");
+            if (innerList && innerList.collection) {
+                innerList.collection.fetch();
+            }
         }
     }
 }

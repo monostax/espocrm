@@ -1,11 +1,106 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "nome"}, {"name": "tipoProfissional"}],
             [{"name": "crm"}, {"name": "crmUf"}],
             [{"name": "especialidades", "fullWidth": true}],
             [{"name": "telefone"}, {"name": "email"}],
             [{"name": "user"}, {"name": "ativo"}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Agenda",
+        "name": "agendaTab",
+        "tabEntityType": "Appointment",
+        "rows": [
+            [
+                {
+                    "name": "appointmentsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "appointments",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "atendimentosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "atendimentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "jornadasList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "jornadas",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Clinico",
+        "name": "clinicoTab",
+        "tabEntityType": "Prescricao",
+        "rows": [
+            [
+                {
+                    "name": "prescricoesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "prescricoes",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "prontuariosList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "prontuarios",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "anamnesesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "anamneses",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

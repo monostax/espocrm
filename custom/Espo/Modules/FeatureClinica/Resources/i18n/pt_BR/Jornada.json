@@ -19,7 +19,12 @@
         "profissional": "Profissional",
         "convenio": "Convênio",
         "programa": "Programa",
-        "sessoes": "Sessões"
+        "sessoes": "Sessões",
+        "atendimentos": "Atendimentos",
+        "anamneses": "Anamneses",
+        "prontuarios": "Prontuários",
+        "lancamentosFinanceiros": "Lançamentos Financeiros",
+        "orcamentos": "Orçamentos"
     },
     "labels": {
         "Create Jornada": "Criar Jornada"
@@ -38,5 +43,15 @@
     },
     "scopeNamesPlural": {
         "Jornada": "Jornadas"
+    },
+    "tabs": {
+        "Sessoes": "Sessões",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro"
+    },
+    "tabLabels": {
+        "Sessoes": "Sessões",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro"
     }
 }

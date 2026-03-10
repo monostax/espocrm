@@ -37,5 +37,13 @@
     },
     "scopeNamesPlural": {
         "InsumoLote": "Lotes de Insumo"
+    },
+    "tabs": {
+        "Movimentacoes": "Movimentações",
+        "Uso": "Uso"
+    },
+    "tabLabels": {
+        "Movimentacoes": "Movimentações",
+        "Uso": "Uso"
     }
 }

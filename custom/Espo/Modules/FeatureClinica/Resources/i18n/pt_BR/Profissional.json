@@ -13,7 +13,13 @@
     "links": {
         "tipoProfissional": "Tipo de Profissional",
         "especialidades": "Especialidades",
-        "user": "Usuário do Sistema"
+        "user": "Usuário do Sistema",
+        "appointments": "Agendamentos",
+        "atendimentos": "Atendimentos",
+        "jornadas": "Jornadas",
+        "prescricoes": "Prescrições",
+        "prontuarios": "Prontuários",
+        "anamneses": "Anamneses"
     },
     "labels": {
         "Create Profissional": "Criar Profissional"
@@ -21,12 +27,33 @@
     "options": {
         "crmUf": {
             "": "",
-            "AC": "AC", "AL": "AL", "AM": "AM", "AP": "AP", "BA": "BA",
-            "CE": "CE", "DF": "DF", "ES": "ES", "GO": "GO", "MA": "MA",
-            "MG": "MG", "MS": "MS", "MT": "MT", "PA": "PA", "PB": "PB",
-            "PE": "PE", "PI": "PI", "PR": "PR", "RJ": "RJ", "RN": "RN",
-            "RO": "RO", "RR": "RR", "RS": "RS", "SC": "SC", "SE": "SE",
-            "SP": "SP", "TO": "TO"
+            "AC": "AC",
+            "AL": "AL",
+            "AM": "AM",
+            "AP": "AP",
+            "BA": "BA",
+            "CE": "CE",
+            "DF": "DF",
+            "ES": "ES",
+            "GO": "GO",
+            "MA": "MA",
+            "MG": "MG",
+            "MS": "MS",
+            "MT": "MT",
+            "PA": "PA",
+            "PB": "PB",
+            "PE": "PE",
+            "PI": "PI",
+            "PR": "PR",
+            "RJ": "RJ",
+            "RN": "RN",
+            "RO": "RO",
+            "RR": "RR",
+            "RS": "RS",
+            "SC": "SC",
+            "SE": "SE",
+            "SP": "SP",
+            "TO": "TO"
         }
     },
     "scopeNames": {
@@ -34,5 +61,13 @@
     },
     "scopeNamesPlural": {
         "Profissional": "Profissionais"
+    },
+    "tabs": {
+        "Agenda": "Agenda",
+        "Clinico": "Clínico"
+    },
+    "tabLabels": {
+        "Agenda": "Agenda",
+        "Clinico": "Clínico"
     }
 }

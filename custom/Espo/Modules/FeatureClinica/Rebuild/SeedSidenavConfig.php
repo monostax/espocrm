@@ -30,8 +30,9 @@ use Espo\ORM\EntityManager;
 
 /**
  * Seeds a "Clínica" SidenavConfig record with a clinical-workflow-focused
- * tabList. Create-only: skips if the record already exists so that
- * tenant-admin customizations are preserved across rebuilds.
+ * tabList. Upsert: creates if not exists, updates seed-controlled fields
+ * (tabList, name, order, iconClass) while preserving user customizations
+ * (teams, isDefault, isDisabled) across rebuilds.
  *
  * Tenant-admins assign the config to their team(s) via
  * Configurations > Sidenav Configs.
@@ -55,40 +56,39 @@ class SeedSidenavConfig implements RebuildAction
 
         $existing = $this->entityManager->getEntityById('SidenavConfig', $configId);
 
-        if ($existing) {
-            $this->log->debug("FeatureClinica: SidenavConfig '{$configId}' already exists, skipping.");
-            return;
-        }
+        $data = [
+            'name' => 'Clínica',
+            'order' => 10,
+            'iconClass' => 'fas fa-heartbeat',
+            'tabList' => $this->getTabList(),
+        ];
 
         try {
-            $this->entityManager->createEntity('SidenavConfig', [
-                'id' => $configId,
-                'name' => 'Clínica',
-                'order' => 10,
-                'iconClass' => 'fas fa-heartbeat',
-                'isDefault' => false,
-                'isDisabled' => false,
-                'tabList' => $this->getTabList(),
-            ], [
-                'createdById' => 'system',
-                'skipWorkflow' => true,
-            ]);
-
-            $this->log->info("FeatureClinica: Created SidenavConfig 'Clínica' (ID: '{$configId}')");
-        } catch (\Exception $e) {
-            if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                $this->log->debug("FeatureClinica: SidenavConfig 'Clínica' already exists (caught duplicate), skipping.");
+            if ($existing) {
+                $existing->set($data);
+                $this->entityManager->saveEntity($existing, [
+                    'modifiedById' => 'system',
+                    'skipWorkflow' => true,
+                ]);
+                $this->log->info("FeatureClinica: Updated SidenavConfig 'Clínica' (ID: '{$configId}')");
             } else {
-                $this->log->error("FeatureClinica: Failed to create SidenavConfig: " . $e->getMessage());
+                $data['id'] = $configId;
+                $data['isDefault'] = false;
+                $data['isDisabled'] = false;
+                $this->entityManager->createEntity('SidenavConfig', $data, [
+                    'createdById' => 'system',
+                    'skipWorkflow' => true,
+                ]);
+                $this->log->info("FeatureClinica: Created SidenavConfig 'Clínica' (ID: '{$configId}')");
             }
+        } catch (\Exception $e) {
+            $this->log->error("FeatureClinica: Failed to upsert SidenavConfig: " . $e->getMessage());
         }
     }
 
     private function getTabList(): array
     {
         return [
-            'Home',
-
             (object) [
                 'type' => 'url',
                 'text' => '$Calendar',
@@ -97,29 +97,43 @@ class SeedSidenavConfig implements RebuildAction
                 'color' => null,
                 'aclScope' => null,
                 'onlyAdmin' => false,
-                'id' => '906879',
-            ],
-            (object) [
-                'type' => 'url',
-                'text' => '$Activities',
-                'url' => '#Activities',
-                'iconClass' => 'ti ti-checklist',
-                'color' => null,
-                'aclScope' => null,
-                'onlyAdmin' => false,
-                'id' => '906883',
+                'id' => 'sidenav-calendar',
             ],
 
             (object) [
                 'type' => 'divider',
-                'text' => '$Clínica',
+                'text' => '$Pacientes',
             ],
             'Paciente',
-            'Atendimento',
             'Jornada',
             'Prontuario',
+            'Documento',
+            'Anamnese',
+            'Prescricao',
+
+            (object) [
+                'type' => 'divider',
+                'text' => '$Atendimento',
+            ],
+            'Atendimento',
+            'Sessao',
+            'ProcedimentoRealizado',
+
+            (object) [
+                'type' => 'divider',
+                'text' => '$Financeiro',
+            ],
             'Orcamento',
             'LancamentoFinanceiro',
+            'Convenio',
+
+            (object) [
+                'type' => 'divider',
+                'text' => '$Estoque',
+            ],
+            'Insumo',
+            'InsumoLote',
+            'MovimentacaoEstoque',
 
             (object) [
                 'type' => 'divider',
@@ -127,11 +141,12 @@ class SeedSidenavConfig implements RebuildAction
             ],
             'Contact',
             'Opportunity',
+            'Programa',
 
             (object) [
                 'type' => 'divider',
                 'text' => '$Conversations',
-                'id' => '853524',
+                'id' => 'sidenav-conversations',
             ],
             (object) [
                 'type' => 'url',
@@ -141,7 +156,7 @@ class SeedSidenavConfig implements RebuildAction
                 'color' => null,
                 'aclScope' => 'ChatwootConversation',
                 'onlyAdmin' => false,
-                'id' => '853526',
+                'id' => 'sidenav-conversations-open',
             ],
             (object) [
                 'type' => 'url',
@@ -151,7 +166,7 @@ class SeedSidenavConfig implements RebuildAction
                 'color' => null,
                 'aclScope' => 'ChatwootConversation',
                 'onlyAdmin' => false,
-                'id' => '853527',
+                'id' => 'sidenav-conversations-pending',
             ],
             (object) [
                 'type' => 'url',
@@ -161,7 +176,7 @@ class SeedSidenavConfig implements RebuildAction
                 'color' => null,
                 'aclScope' => 'ChatwootConversation',
                 'onlyAdmin' => false,
-                'id' => '853529',
+                'id' => 'sidenav-conversations-snoozed',
             ],
             (object) [
                 'type' => 'url',
@@ -171,7 +186,7 @@ class SeedSidenavConfig implements RebuildAction
                 'color' => null,
                 'aclScope' => 'ChatwootConversation',
                 'onlyAdmin' => false,
-                'id' => '853528',
+                'id' => 'sidenav-conversations-resolved',
             ],
 
             (object) [

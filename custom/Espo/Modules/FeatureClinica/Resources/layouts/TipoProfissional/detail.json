@@ -1,8 +1,30 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "nome"}, {"name": "codigo"}],
             [{"name": "requerCRM"}, {"name": "ativo"}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Profissionais",
+        "name": "profissionaisTab",
+        "tabEntityType": "Profissional",
+        "rows": [
+            [
+                {
+                    "name": "profissionaisList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "profissionais",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

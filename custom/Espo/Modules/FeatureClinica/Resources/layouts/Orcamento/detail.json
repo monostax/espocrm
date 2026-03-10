@@ -31,5 +31,47 @@
         "rows": [
             [{"name": "jornada"}, {"name": "lancamento"}]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Itens",
+        "name": "itensTab",
+        "tabEntityType": "OrcamentoItem",
+        "rows": [
+            [
+                {
+                    "name": "itensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "itens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Versoes",
+        "name": "versoesTab",
+        "tabEntityType": "Orcamento",
+        "rows": [
+            [
+                {
+                    "name": "versoesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "versoes",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
     }
 ]

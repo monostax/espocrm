@@ -1,5 +1,11 @@
 {
     "links": {
         "pacientes": "Pacientes"
+    },
+    "scopeNames": {
+        "Contact": "Contato"
+    },
+    "scopeNamesPlural": {
+        "Contact": "Contatos"
     }
 }

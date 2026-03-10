@@ -20,5 +20,11 @@
     },
     "scopeNamesPlural": {
         "Programa": "Programs"
+    },
+    "tabs": {
+        "Composicao": "Composition"
+    },
+    "tabLabels": {
+        "Composicao": "Composition"
     }
 }

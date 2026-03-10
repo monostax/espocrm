@@ -36,5 +36,11 @@
     },
     "scopeNamesPlural": {
         "Documento": "Documentos"
+    },
+    "tabs": {
+        "Prontuarios": "Prontuários"
+    },
+    "tabLabels": {
+        "Prontuarios": "Prontuários"
     }
 }

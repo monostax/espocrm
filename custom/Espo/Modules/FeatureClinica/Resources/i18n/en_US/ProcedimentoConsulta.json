@@ -19,7 +19,12 @@
         "appointments": "Appointments",
         "sessoes": "Sessions",
         "procedimentosRealizados": "Performed Procedures",
-        "consumoInsumoPadrao": "Default Consumables"
+        "consumoInsumoPadrao": "Default Consumables",
+        "tabelaDePrecos": "Price Tables",
+        "convenioRegras": "Health Plan Rules",
+        "programaItens": "Program Items",
+        "prescricaoItens": "Prescription Items",
+        "orcamentoItens": "Quote Items"
     },
     "labels": {
         "Create ProcedimentoConsulta": "Create Consultation Procedure"
@@ -29,5 +34,15 @@
     },
     "scopeNamesPlural": {
         "ProcedimentoConsulta": "Consultation Procedures"
+    },
+    "tabs": {
+        "Atendimento": "Appointments",
+        "Configuracao": "Settings",
+        "Programas": "Programs"
+    },
+    "tabLabels": {
+        "Atendimento": "Appointments",
+        "Configuracao": "Settings",
+        "Programas": "Programs"
     }
 }

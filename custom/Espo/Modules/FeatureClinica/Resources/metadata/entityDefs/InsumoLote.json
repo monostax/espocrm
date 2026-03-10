@@ -37,8 +37,7 @@
             "required": true
         },
         "quantidadeAtual": {
-            "type": "float",
-            "required": true
+            "type": "float"
         },
         "insumoUnidadeMedida": {
             "type": "foreign",

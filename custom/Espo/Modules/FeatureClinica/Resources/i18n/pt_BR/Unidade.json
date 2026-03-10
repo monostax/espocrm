@@ -9,7 +9,11 @@
         "ativa": "Ativa"
     },
     "links": {
-        "responsavel": "Responsável"
+        "responsavel": "Responsável",
+        "jornadas": "Jornadas",
+        "appointments": "Agendamentos",
+        "atendimentos": "Atendimentos",
+        "insumoLotes": "Lotes de Insumo"
     },
     "labels": {
         "Create Unidade": "Criar Unidade"
@@ -19,5 +23,13 @@
     },
     "scopeNamesPlural": {
         "Unidade": "Unidades"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Estoque": "Estoque"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Estoque": "Estoque"
     }
 }

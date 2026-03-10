@@ -1,6 +1,9 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-user-injured",
+    "recordViews": {
+        "detail": "global:views/record/detail"
+    },
     "defaultSidePanelFieldLists": {
         "detail": ["contact", "emailAddress", "phoneNumber", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],
@@ -32,5 +35,5 @@
             "select": false
         }
     },
-    "filterList": ["sexo"]
+    "filterList": ["contact"]
 }

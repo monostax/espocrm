@@ -1,5 +1,6 @@
 {
     "fields": {
+        "name": "Nome",
         "paciente": "Paciente",
         "unidade": "Unidade",
         "profissional": "Profissional",
@@ -16,7 +17,10 @@
         "profissional": "Profissional",
         "jornada": "Jornada",
         "appointment": "Agendamento",
-        "procedimentosRealizados": "Procedimentos Realizados"
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "prontuarios": "Prontuários",
+        "documentos": "Documentos",
+        "lancamentosFinanceiros": "Lançamentos Financeiros"
     },
     "labels": {
         "Create Atendimento": "Criar Atendimento"
@@ -33,5 +37,15 @@
     },
     "scopeNamesPlural": {
         "Atendimento": "Atendimentos"
+    },
+    "tabs": {
+        "Procedimentos": "Procedimentos",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro"
+    },
+    "tabLabels": {
+        "Procedimentos": "Procedimentos",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro"
     }
 }

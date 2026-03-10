@@ -1,0 +1,30 @@
+{
+    "appointments": {
+        "disabled": true
+    },
+    "sessoes": {
+        "disabled": true
+    },
+    "procedimentosRealizados": {
+        "disabled": true
+    },
+    "tabelaDePrecos": {
+        "disabled": true
+    },
+    "convenioRegras": {
+        "disabled": true
+    },
+    "programaItens": {
+        "disabled": true
+    },
+    "prescricaoItens": {
+        "disabled": true
+    },
+    "orcamentoItens": {
+        "disabled": true
+    },
+    "consumoInsumoPadrao": {
+        "disabled": true
+    }
+}
+

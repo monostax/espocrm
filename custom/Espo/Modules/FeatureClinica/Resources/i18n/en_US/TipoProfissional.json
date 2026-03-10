@@ -16,5 +16,11 @@
     },
     "scopeNamesPlural": {
         "TipoProfissional": "Professional Types"
+    },
+    "tabs": {
+        "Profissionais": "Professionals"
+    },
+    "tabLabels": {
+        "Profissionais": "Professionals"
     }
 }

@@ -15,5 +15,11 @@
     },
     "scopeNamesPlural": {
         "Especialidade": "Especialidades"
+    },
+    "tabs": {
+        "Profissionais": "Profissionais"
+    },
+    "tabLabels": {
+        "Profissionais": "Profissionais"
     }
 }

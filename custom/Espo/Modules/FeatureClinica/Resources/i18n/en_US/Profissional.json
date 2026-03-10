@@ -1,0 +1,73 @@
+{
+    "fields": {
+        "nome": "Name",
+        "tipoProfissional": "Professional Type",
+        "crm": "CRM",
+        "crmUf": "CRM State",
+        "especialidades": "Specialties",
+        "telefone": "Phone",
+        "email": "Email",
+        "user": "System User",
+        "ativo": "Active"
+    },
+    "links": {
+        "tipoProfissional": "Professional Type",
+        "especialidades": "Specialties",
+        "user": "System User",
+        "appointments": "Appointments",
+        "atendimentos": "Services",
+        "jornadas": "Journeys",
+        "prescricoes": "Prescriptions",
+        "prontuarios": "Clinical Records",
+        "anamneses": "Anamneses"
+    },
+    "labels": {
+        "Create Profissional": "Create Professional"
+    },
+    "options": {
+        "crmUf": {
+            "": "",
+            "AC": "AC",
+            "AL": "AL",
+            "AM": "AM",
+            "AP": "AP",
+            "BA": "BA",
+            "CE": "CE",
+            "DF": "DF",
+            "ES": "ES",
+            "GO": "GO",
+            "MA": "MA",
+            "MG": "MG",
+            "MS": "MS",
+            "MT": "MT",
+            "PA": "PA",
+            "PB": "PB",
+            "PE": "PE",
+            "PI": "PI",
+            "PR": "PR",
+            "RJ": "RJ",
+            "RN": "RN",
+            "RO": "RO",
+            "RR": "RR",
+            "RS": "RS",
+            "SC": "SC",
+            "SE": "SE",
+            "SP": "SP",
+            "TO": "TO"
+        }
+    },
+    "scopeNames": {
+        "Profissional": "Professional"
+    },
+    "scopeNamesPlural": {
+        "Profissional": "Professionals"
+    },
+    "tabs": {
+        "Agenda": "Schedule",
+        "Clinico": "Clinical"
+    },
+    "tabLabels": {
+        "Agenda": "Schedule",
+        "Clinico": "Clinical"
+    }
+}

@@ -1,6 +1,6 @@
 {
     "clinica": {
-        "label": "Clínica",
+        "label": "Clinica / Geral",
         "itemList": [
             {
                 "url": "#Unidade",
@@ -10,17 +10,23 @@
                 "roles": ["tenant", "tenant-admin"]
             },
             {
+                "url": "#Configurations/CanalAgendamento",
+                "label": "Canais de Agendamento",
+                "iconClass": "fas fa-phone-alt",
+                "description": "canaisAgendamento",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ],
+        "order": 15
+    },
+    "profissionais": {
+        "label": "Clinica / Profissionais",
+        "itemList": [
+            {
                 "url": "#Profissional",
                 "label": "Profissionais",
                 "iconClass": "fas fa-user-md",
                 "description": "profissionais",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#ProcedimentoConsulta",
-                "label": "Procedimentos",
-                "iconClass": "fas fa-stethoscope",
-                "description": "procedimentosConsulta",
                 "roles": ["tenant", "tenant-admin"]
             },
             {
@@ -36,12 +42,46 @@
                 "iconClass": "fas fa-certificate",
                 "description": "especialidades",
                 "roles": ["tenant", "tenant-admin"]
+            }
+        ],
+        "order": 16
+    },
+    "procedimentos": {
+        "label": "Clinica / Procedimentos",
+        "itemList": [
+            {
+                "url": "#ProcedimentoConsulta",
+                "label": "Consultas",
+                "iconClass": "fas fa-stethoscope",
+                "description": "procedimentosConsulta",
+                "roles": ["tenant", "tenant-admin"]
             },
             {
-                "url": "#Configurations/CanalAgendamento",
-                "label": "Canais de Agendamento",
-                "iconClass": "fas fa-phone-alt",
-                "description": "canaisAgendamento",
+                "url": "#ProcedimentoInjetavel",
+                "label": "Injetáveis",
+                "iconClass": "fas fa-syringe",
+                "description": "procedimentosInjetavel",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoImplante",
+                "label": "Implantes",
+                "iconClass": "fas fa-microchip",
+                "description": "procedimentosImplante",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoEstetico",
+                "label": "Estéticos",
+                "iconClass": "fas fa-spa",
+                "description": "procedimentosEstetico",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#ProcedimentoAtividadeFisica",
+                "label": "Atividade Física",
+                "iconClass": "fas fa-dumbbell",
+                "description": "procedimentosAtividadeFisica",
                 "roles": ["tenant", "tenant-admin"]
             },
             {
@@ -50,47 +90,18 @@
                 "iconClass": "fas fa-prescription-bottle",
                 "description": "unidadesDosagem",
                 "roles": ["tenant", "tenant-admin"]
-            },
+            }
+        ],
+        "order": 17
+    },
+    "financeiro": {
+        "label": "Clinica / Financeiro",
+        "itemList": [
             {
                 "url": "#Convenio",
                 "label": "Convênios",
                 "iconClass": "fas fa-file-medical",
                 "description": "convenios",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/TabelaDePrecos",
-                "label": "Tabelas de Preços",
-                "iconClass": "fas fa-money-bill-wave",
-                "description": "tabelaDePrecos",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#ProcedimentoInjetavel",
-                "label": "Procedimentos Injetáveis",
-                "iconClass": "fas fa-syringe",
-                "description": "procedimentosInjetavel",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#ProcedimentoImplante",
-                "label": "Procedimentos Implante",
-                "iconClass": "fas fa-microchip",
-                "description": "procedimentosImplante",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#ProcedimentoEstetico",
-                "label": "Procedimentos Estéticos",
-                "iconClass": "fas fa-spa",
-                "description": "procedimentosEstetico",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#ProcedimentoAtividadeFisica",
-                "label": "Procedimentos Ativ. Física",
-                "iconClass": "fas fa-dumbbell",
-                "description": "procedimentosAtividadeFisica",
                 "roles": ["tenant", "tenant-admin"]
             },
             {
@@ -101,12 +112,39 @@
                 "roles": ["tenant", "tenant-admin"]
             },
             {
+                "url": "#Configurations/TabelaDePrecos",
+                "label": "Tabelas de Preços",
+                "iconClass": "fas fa-money-bill-wave",
+                "description": "tabelaDePrecos",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
                 "url": "#Configurations/Programa",
                 "label": "Programas",
                 "iconClass": "fas fa-box-open",
                 "description": "programas",
                 "roles": ["tenant", "tenant-admin"]
             },
+            {
+                "url": "#Orcamento",
+                "label": "Orçamentos",
+                "iconClass": "fas fa-file-invoice-dollar",
+                "description": "orcamentos",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#LancamentoFinanceiro",
+                "label": "Lançamentos Financeiros",
+                "iconClass": "fas fa-money-check-alt",
+                "description": "lancamentosFinanceiros",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ],
+        "order": 18
+    },
+    "estoque": {
+        "label": "Clinica / Estoque",
+        "itemList": [
             {
                 "url": "#Insumo",
                 "label": "Insumos",
@@ -127,7 +165,13 @@
                 "iconClass": "fas fa-exchange-alt",
                 "description": "movimentacoesEstoque",
                 "roles": ["tenant", "tenant-admin"]
-            },
+            }
+        ],
+        "order": 19
+    },
+    "pacientes": {
+        "label": "Clinica / Pacientes",
+        "itemList": [
             {
                 "url": "#Prescricao",
                 "label": "Prescrições",
@@ -141,22 +185,8 @@
                 "iconClass": "fas fa-file-medical-alt",
                 "description": "documentos",
                 "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Orcamento",
-                "label": "Orçamentos",
-                "iconClass": "fas fa-file-invoice-dollar",
-                "description": "orcamentos",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#LancamentoFinanceiro",
-                "label": "Lançamentos Financeiros",
-                "iconClass": "fas fa-money-check-alt",
-                "description": "lancamentosFinanceiros",
-                "roles": ["tenant", "tenant-admin"]
             }
         ],
-        "order": 15
+        "order": 20
     }
 }

@@ -1,5 +1,6 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "atendimento"}, {"name": "sessao"}],
             [{"name": "procedimento"}, {"name": "quantidade"}],
@@ -7,6 +8,27 @@
             [{"name": "dosagemAplicada"}, {"name": "unidadeDosagem"}],
             [{"name": "insumoLote"}, false],
             [{"name": "observacao", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Movimentacoes",
+        "name": "movimentacoesTab",
+        "tabEntityType": "MovimentacaoEstoque",
+        "rows": [
+            [
+                {
+                    "name": "movimentacoesEstoqueList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "movimentacoesEstoque",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

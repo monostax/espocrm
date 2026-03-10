@@ -3,6 +3,17 @@
     "iconClass": "fas fa-file-invoice-dollar",
     "nameAttribute": "numero",
     "dynamicHandler": "feature-clinica:dynamic-handlers/orcamento",
+    "kanbanViewMode": true,
+    "kanbanStatusField": "status",
+    "listDefaultViewMode": "kanban",
+    "listViewModeList": ["list", "kanban"],
+    "viewModeIconClassMap": {
+        "list": "fas fa-align-justify",
+        "kanban": "fas fa-columns"
+    },
+    "recordViews": {
+        "kanban": "feature-clinica:views/orcamento/record/kanban"
+    },
     "defaultSidePanelFieldLists": {
         "detail": ["status", "paciente", "unidade", "profissional", "convenio", "teams", "createdAt", "modifiedAt"],
         "edit": ["teams"],

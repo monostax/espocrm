@@ -1,10 +1,45 @@
 [
     {
+        "label": "Overview",
         "rows": [
             [{"name": "nome"}, {"name": "precoTotal"}],
             [{"name": "validadeDias"}, {"name": "unidade"}],
             [{"name": "ativo"}, false],
             [{"name": "descricao", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Composicao",
+        "name": "composicaoTab",
+        "tabEntityType": "ProgramaItem",
+        "rows": [
+            [
+                {
+                    "name": "itensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "itens",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ],
+            [
+                {
+                    "name": "jornadasList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "jornadas",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]
