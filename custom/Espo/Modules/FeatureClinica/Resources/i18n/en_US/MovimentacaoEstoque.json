@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "insumoLote": "Supply Lot",
+        "unidade": "Unit",
+        "tipo": "Type",
+        "quantidade": "Quantity",
+        "origem": "Origin",
+        "profissional": "Professional",
+        "dataHora": "Date/Time",
+        "observacao": "Note"
+    },
+    "links": {
+        "insumoLote": "Supply Lot",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "origem": "Origin"
+    },
+    "labels": {
+        "Create MovimentacaoEstoque": "Create Stock Movement"
+    },
+    "options": {
+        "tipo": {
+            "Entrada": "Inbound",
+            "Saida": "Outbound",
+            "Ajuste": "Adjustment",
+            "Descarte": "Disposal"
+        }
+    },
+    "scopeNames": {
+        "MovimentacaoEstoque": "Stock Movement"
+    },
+    "scopeNamesPlural": {
+        "MovimentacaoEstoque": "Stock Movements"
+    }
+}

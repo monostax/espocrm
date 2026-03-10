@@ -1,0 +1,181 @@
+{
+    "fields": {
+        "paciente": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "convenio": {
+            "type": "link"
+        },
+        "origemType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "origemId": {
+            "type": "foreignId"
+        },
+        "origem": {
+            "type": "linkParent",
+            "entityList": ["Atendimento", "Jornada", "Orcamento"]
+        },
+        "tipo": {
+            "type": "enum",
+            "required": true,
+            "options": ["Receita", "Estorno", "Desconto", "Bonus"],
+            "style": {
+                "Receita": "success",
+                "Estorno": "warning",
+                "Desconto": "primary",
+                "Bonus": "info"
+            }
+        },
+        "valorTotal": {
+            "type": "currency",
+            "required": true
+        },
+        "valorDesconto": {
+            "type": "currency"
+        },
+        "valorLiquido": {
+            "type": "currency",
+            "required": true
+        },
+        "percentualConvenio": {
+            "type": "float"
+        },
+        "valorConvenio": {
+            "type": "currency"
+        },
+        "valorPaciente": {
+            "type": "currency"
+        },
+        "formaPagamento": {
+            "type": "enum",
+            "required": true,
+            "options": ["Pix", "Cartao", "Dinheiro", "Convenio", "Boleto"]
+        },
+        "parcelas": {
+            "type": "int"
+        },
+        "status": {
+            "type": "enum",
+            "required": true,
+            "options": ["Pendente", "Pago", "Vencido", "Estornado"],
+            "default": "Pendente",
+            "style": {
+                "Pendente": "warning",
+                "Pago": "success",
+                "Vencido": "danger",
+                "Estornado": "default"
+            }
+        },
+        "dataVencimento": {
+            "type": "date",
+            "required": true
+        },
+        "dataPagamento": {
+            "type": "date"
+        },
+        "autorizadoPor": {
+            "type": "link"
+        },
+        "observacao": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "Paciente",
+            "foreign": "lancamentosFinanceiros"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "convenio": {
+            "type": "belongsTo",
+            "entity": "Convenio",
+            "foreignName": "nome"
+        },
+        "origem": {
+            "type": "belongsToParent"
+        },
+        "autorizadoPor": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc",
+        "textFilterFields": []
+    },
+    "indexes": {
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "convenioId": {
+            "columns": ["convenioId"]
+        },
+        "origem": {
+            "columns": ["origemType", "origemId"]
+        },
+        "tipo": {
+            "columns": ["tipo"]
+        },
+        "status": {
+            "columns": ["status"]
+        },
+        "dataVencimento": {
+            "columns": ["dataVencimento"]
+        },
+        "dataPagamento": {
+            "columns": ["dataPagamento"]
+        }
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "insumo": "Supply",
+        "unidade": "Unit",
+        "numeroLote": "Lot Number",
+        "dataFabricacao": "Manufacturing Date",
+        "dataValidade": "Expiry Date",
+        "quantidadeEntrada": "Entry Quantity",
+        "quantidadeAtual": "Current Quantity",
+        "fornecedor": "Supplier",
+        "notaFiscal": "Invoice",
+        "precoUnitarioCusto": "Unit Cost Price",
+        "status": "Status"
+    },
+    "links": {
+        "insumo": "Supply",
+        "unidade": "Unit",
+        "movimentacoes": "Movements",
+        "sessoes": "Sessions",
+        "procedimentosRealizados": "Performed Procedures"
+    },
+    "labels": {
+        "Create InsumoLote": "Create Supply Lot"
+    },
+    "options": {
+        "status": {
+            "Disponivel": "Available",
+            "Vencido": "Expired",
+            "Esgotado": "Depleted",
+            "Bloqueado": "Blocked"
+        }
+    },
+    "scopeNames": {
+        "InsumoLote": "Supply Lot"
+    },
+    "scopeNamesPlural": {
+        "InsumoLote": "Supply Lots"
+    }
+}

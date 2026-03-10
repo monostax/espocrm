@@ -1,0 +1,11 @@
+[
+    {
+        "rows": [
+            [{"name": "insumoLote"}, {"name": "unidade"}],
+            [{"name": "tipo"}, {"name": "quantidade"}],
+            [{"name": "profissional"}, {"name": "dataHora"}],
+            [{"name": "origem"}, false],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

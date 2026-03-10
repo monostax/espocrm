@@ -1,0 +1,52 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "convenio": "Convênio",
+        "numero": "Número",
+        "versao": "Versão",
+        "orcamentoOrigem": "Orçamento Anterior",
+        "status": "Status",
+        "dataEmissao": "Data de Emissão",
+        "dataValidade": "Data de Validade",
+        "valorTotal": "Valor Total",
+        "valorDesconto": "Valor Desconto",
+        "valorLiquido": "Valor Líquido",
+        "autorizadoPor": "Autorizado Por",
+        "observacoes": "Observações",
+        "motivoRecusa": "Motivo da Recusa",
+        "jornada": "Jornada",
+        "lancamento": "Lançamento Financeiro"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "profissional": "Profissional",
+        "unidade": "Unidade",
+        "convenio": "Convênio",
+        "orcamentoOrigem": "Orçamento Anterior",
+        "autorizadoPor": "Autorizado Por",
+        "jornada": "Jornada",
+        "lancamento": "Lançamento Financeiro",
+        "itens": "Itens",
+        "versoes": "Versões"
+    },
+    "labels": {
+        "Create Orcamento": "Criar Orçamento"
+    },
+    "options": {
+        "status": {
+            "Rascunho": "Rascunho",
+            "Enviado": "Enviado",
+            "Aprovado": "Aprovado",
+            "Expirado": "Expirado",
+            "Recusado": "Recusado"
+        }
+    },
+    "scopeNames": {
+        "Orcamento": "Orçamento"
+    },
+    "scopeNamesPlural": {
+        "Orcamento": "Orçamentos"
+    }
+}

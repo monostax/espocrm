@@ -100,6 +100,11 @@
             "entity": "Documento",
             "foreign": "origem"
         },
+        "lancamentosFinanceiros": {
+            "type": "hasChildren",
+            "entity": "LancamentoFinanceiro",
+            "foreign": "origem"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

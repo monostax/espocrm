@@ -1,0 +1,118 @@
+{
+    "fields": {
+        "insumoLote": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "tipo": {
+            "type": "enum",
+            "required": true,
+            "options": ["Entrada", "Saida", "Ajuste", "Descarte"]
+        },
+        "quantidade": {
+            "type": "float",
+            "required": true
+        },
+        "origemType": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "origemId": {
+            "type": "foreignId"
+        },
+        "origem": {
+            "type": "linkParent",
+            "entityList": ["ProcedimentoRealizado"]
+        },
+        "profissional": {
+            "type": "link"
+        },
+        "dataHora": {
+            "type": "datetime",
+            "required": true
+        },
+        "observacao": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "insumoLote": {
+            "type": "belongsTo",
+            "entity": "InsumoLote",
+            "foreignName": "numeroLote"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "profissional": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "origem": {
+            "type": "belongsToParent"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "dataHora",
+        "order": "desc"
+    },
+    "indexes": {
+        "insumoLoteId": {
+            "columns": ["insumoLoteId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "tipo": {
+            "columns": ["tipo"]
+        },
+        "dataHora": {
+            "columns": ["dataHora"]
+        },
+        "origem": {
+            "columns": ["origemType", "origemId"]
+        }
+    }
+}

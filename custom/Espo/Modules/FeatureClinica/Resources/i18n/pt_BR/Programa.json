@@ -9,7 +9,8 @@
     },
     "links": {
         "unidade": "Unidade",
-        "itens": "Itens"
+        "itens": "Itens",
+        "jornadas": "Jornadas"
     },
     "labels": {
         "Create Programa": "Criar Programa"

@@ -1,5 +1,16 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
         "nome": {
             "type": "varchar",
             "required": true,
@@ -36,6 +47,9 @@
         "protocoloAplicacao": {
             "type": "text"
         },
+        "insumo": {
+            "type": "link"
+        },
         "unidade": {
             "type": "link"
         },
@@ -66,6 +80,11 @@
         }
     },
     "links": {
+        "insumo": {
+            "type": "belongsTo",
+            "entity": "Insumo",
+            "foreignName": "nome"
+        },
         "unidade": {
             "type": "belongsTo",
             "entity": "Unidade",
@@ -106,6 +125,11 @@
             "entity": "PrescricaoItem",
             "foreign": "procedimento"
         },
+        "orcamentoItens": {
+            "type": "hasChildren",
+            "entity": "OrcamentoItem",
+            "foreign": "procedimento"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
@@ -132,6 +156,9 @@
         },
         "ativo": {
             "columns": ["ativo"]
+        },
+        "insumoId": {
+            "columns": ["insumoId"]
         }
     }
 }

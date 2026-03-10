@@ -2,9 +2,11 @@
     {
         "rows": [
             [{"name": "nome"}, {"name": "paciente"}],
-            [{"name": "profissional"}, {"name": "convenio"}],
-            [{"name": "status"}, false],
+            [{"name": "programa"}, {"name": "convenio"}],
+            [{"name": "profissional"}, {"name": "status"}],
             [{"name": "dataInicio"}, {"name": "dataFim"}],
+            [{"name": "dataExpiracao"}, false],
+            [{"name": "objetivo", "fullWidth": true}],
             [{"name": "descricao", "fullWidth": true}]
         ]
     }

@@ -5,9 +5,12 @@
         "unidade": "Unidade",
         "profissional": "Profissional",
         "convenio": "Convênio",
+        "programa": "Programa",
         "status": "Status",
         "dataInicio": "Data de Início",
         "dataFim": "Data de Fim",
+        "dataExpiracao": "Data de Expiração",
+        "objetivo": "Objetivo",
         "descricao": "Descrição"
     },
     "links": {
@@ -15,6 +18,7 @@
         "unidade": "Unidade",
         "profissional": "Profissional",
         "convenio": "Convênio",
+        "programa": "Programa",
         "sessoes": "Sessões"
     },
     "labels": {
@@ -23,7 +27,9 @@
     "options": {
         "status": {
             "EmAndamento": "Em Andamento",
+            "Pausada": "Pausada",
             "Concluida": "Concluída",
+            "Abandonada": "Abandonada",
             "Cancelada": "Cancelada"
         }
     },

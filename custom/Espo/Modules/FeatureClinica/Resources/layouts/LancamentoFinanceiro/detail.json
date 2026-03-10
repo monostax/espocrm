@@ -1,0 +1,16 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}, {"name": "unidade"}],
+            [{"name": "convenio"}, {"name": "origem"}],
+            [{"name": "tipo"}, {"name": "formaPagamento"}],
+            [{"name": "valorTotal"}, {"name": "valorDesconto"}],
+            [{"name": "valorLiquido"}, {"name": "parcelas"}],
+            [{"name": "percentualConvenio"}, {"name": "valorConvenio"}],
+            [{"name": "valorPaciente"}, {"name": "autorizadoPor"}],
+            [{"name": "status"}, {"name": "dataVencimento"}],
+            [{"name": "dataPagamento"}, false],
+            [{"name": "observacao", "fullWidth": true}]
+        ]
+    }
+]

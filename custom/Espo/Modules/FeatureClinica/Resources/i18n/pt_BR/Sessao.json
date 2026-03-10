@@ -8,6 +8,8 @@
         "dosagemAplicada": "Dosagem Aplicada",
         "unidadeDosagem": "Unidade de Dosagem",
         "unidade": "Unidade",
+        "insumoLote": "Lote de Insumo",
+        "dataExpiracao": "Data de Expiração",
         "observacao": "Observação"
     },
     "links": {
@@ -15,7 +17,8 @@
         "procedimento": "Procedimento",
         "appointment": "Agendamento",
         "unidade": "Unidade",
-        "unidadeDosagem": "Unidade de Dosagem"
+        "unidadeDosagem": "Unidade de Dosagem",
+        "insumoLote": "Lote de Insumo"
     },
     "labels": {
         "Create Sessao": "Criar Sessão"
@@ -25,6 +28,7 @@
             "Pendente": "Pendente",
             "Agendada": "Agendada",
             "Realizada": "Realizada",
+            "Expirada": "Expirada",
             "Cancelada": "Cancelada"
         }
     },

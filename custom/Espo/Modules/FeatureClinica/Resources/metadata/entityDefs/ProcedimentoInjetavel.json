@@ -1,5 +1,16 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
         "nome": {
             "type": "varchar",
             "required": true,
@@ -32,6 +43,13 @@
         },
         "protocolo": {
             "type": "text"
+        },
+        "insumo": {
+            "type": "link"
+        },
+        "controlaEstoque": {
+            "type": "bool",
+            "default": false
         },
         "unidade": {
             "type": "link"
@@ -66,6 +84,11 @@
         "unidade": {
             "type": "belongsTo",
             "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "insumo": {
+            "type": "belongsTo",
+            "entity": "Insumo",
             "foreignName": "nome"
         },
         "unidadeDosagem": {
@@ -108,6 +131,11 @@
             "entity": "PrescricaoItem",
             "foreign": "procedimento"
         },
+        "orcamentoItens": {
+            "type": "hasChildren",
+            "entity": "OrcamentoItem",
+            "foreign": "procedimento"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
@@ -137,6 +165,9 @@
         },
         "unidadeDosagemId": {
             "columns": ["unidadeDosagemId"]
+        },
+        "insumoId": {
+            "columns": ["insumoId"]
         }
     }
 }

@@ -31,6 +31,9 @@
         "unidadeDosagem": {
             "type": "link"
         },
+        "insumoLote": {
+            "type": "link"
+        },
         "observacao": {
             "type": "text"
         },
@@ -74,6 +77,16 @@
             "entity": "UnidadeDosagem",
             "foreignName": "nome"
         },
+        "insumoLote": {
+            "type": "belongsTo",
+            "entity": "InsumoLote",
+            "foreignName": "numeroLote"
+        },
+        "movimentacoesEstoque": {
+            "type": "hasChildren",
+            "entity": "MovimentacaoEstoque",
+            "foreign": "origem"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
@@ -105,6 +118,9 @@
         },
         "unidadeDosagemId": {
             "columns": ["unidadeDosagemId"]
+        },
+        "insumoLoteId": {
+            "columns": ["insumoLoteId"]
         }
     }
 }

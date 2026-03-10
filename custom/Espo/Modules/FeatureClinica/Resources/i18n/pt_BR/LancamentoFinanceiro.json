@@ -1,0 +1,59 @@
+{
+    "fields": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "convenio": "Convênio",
+        "origem": "Origem",
+        "tipo": "Tipo",
+        "valorTotal": "Valor Total",
+        "valorDesconto": "Valor Desconto",
+        "valorLiquido": "Valor Líquido",
+        "percentualConvenio": "Percentual Convênio",
+        "valorConvenio": "Valor Convênio",
+        "valorPaciente": "Valor Paciente",
+        "formaPagamento": "Forma de Pagamento",
+        "parcelas": "Parcelas",
+        "status": "Status",
+        "dataVencimento": "Data de Vencimento",
+        "dataPagamento": "Data de Pagamento",
+        "autorizadoPor": "Autorizado Por",
+        "observacao": "Observação"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "convenio": "Convênio",
+        "origem": "Origem",
+        "autorizadoPor": "Autorizado Por"
+    },
+    "labels": {
+        "Create LancamentoFinanceiro": "Criar Lançamento Financeiro"
+    },
+    "options": {
+        "tipo": {
+            "Receita": "Receita",
+            "Estorno": "Estorno",
+            "Desconto": "Desconto",
+            "Bonus": "Bônus"
+        },
+        "formaPagamento": {
+            "Pix": "Pix",
+            "Cartao": "Cartão",
+            "Dinheiro": "Dinheiro",
+            "Convenio": "Convênio",
+            "Boleto": "Boleto"
+        },
+        "status": {
+            "Pendente": "Pendente",
+            "Pago": "Pago",
+            "Vencido": "Vencido",
+            "Estornado": "Estornado"
+        }
+    },
+    "scopeNames": {
+        "LancamentoFinanceiro": "Lançamento Financeiro"
+    },
+    "scopeNamesPlural": {
+        "LancamentoFinanceiro": "Lançamentos Financeiros"
+    }
+}

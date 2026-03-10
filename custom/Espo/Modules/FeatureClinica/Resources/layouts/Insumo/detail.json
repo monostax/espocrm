@@ -1,0 +1,11 @@
+[
+    {
+        "rows": [
+            [{"name": "nome"}, {"name": "tipo"}],
+            [{"name": "unidadeMedida"}, {"name": "estoqueMinimo"}],
+            [{"name": "fornecedorPrincipal"}, {"name": "requerReceituario"}],
+            [{"name": "ativo"}, false],
+            [{"name": "descricao", "fullWidth": true}]
+        ]
+    }
+]

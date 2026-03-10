@@ -1,0 +1,6 @@
+{
+    "create": "yes",
+    "read": "team",
+    "edit": "team",
+    "delete": "own"
+}

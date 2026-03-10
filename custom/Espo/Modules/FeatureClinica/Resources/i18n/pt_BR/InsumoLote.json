@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "insumo": "Insumo",
+        "unidade": "Unidade",
+        "numeroLote": "Número do Lote",
+        "dataFabricacao": "Data de Fabricação",
+        "dataValidade": "Data de Validade",
+        "quantidadeEntrada": "Quantidade de Entrada",
+        "quantidadeAtual": "Quantidade Atual",
+        "fornecedor": "Fornecedor",
+        "notaFiscal": "Nota Fiscal",
+        "precoUnitarioCusto": "Preço Unitário (Custo)",
+        "status": "Status"
+    },
+    "links": {
+        "insumo": "Insumo",
+        "unidade": "Unidade",
+        "movimentacoes": "Movimentações",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados"
+    },
+    "labels": {
+        "Create InsumoLote": "Criar Lote de Insumo"
+    },
+    "options": {
+        "status": {
+            "Disponivel": "Disponível",
+            "Vencido": "Vencido",
+            "Esgotado": "Esgotado",
+            "Bloqueado": "Bloqueado"
+        }
+    },
+    "scopeNames": {
+        "InsumoLote": "Lote de Insumo"
+    },
+    "scopeNamesPlural": {
+        "InsumoLote": "Lotes de Insumo"
+    }
+}

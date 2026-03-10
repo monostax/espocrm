@@ -1,5 +1,16 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
         "nome": {
             "type": "varchar",
             "required": true,
@@ -91,6 +102,11 @@
         "prescricaoItens": {
             "type": "hasChildren",
             "entity": "PrescricaoItem",
+            "foreign": "procedimento"
+        },
+        "orcamentoItens": {
+            "type": "hasChildren",
+            "entity": "OrcamentoItem",
             "foreign": "procedimento"
         },
         "createdBy": {

@@ -4,6 +4,7 @@
             [{"name": "atendimento"}, {"name": "procedimento"}],
             [{"name": "quantidade"}, {"name": "valorCobrado"}],
             [{"name": "dosagemAplicada"}, {"name": "unidadeDosagem"}],
+            [{"name": "insumoLote"}, false],
             [{"name": "observacao", "fullWidth": true}]
         ]
     }

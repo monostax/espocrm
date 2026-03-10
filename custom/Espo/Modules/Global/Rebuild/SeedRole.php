@@ -413,6 +413,44 @@ class SeedRole implements RebuildAction
                     'delete' => 'own',
                     'stream' => 'team',
                 ],
+                'Insumo' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'InsumoLote' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'MovimentacaoEstoque' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'Orcamento' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                    'stream' => 'team',
+                ],
+                'OrcamentoItem' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                ],
+                'LancamentoFinanceiro' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                    'stream' => 'team',
+                ],
 
             ],
             'fieldData' => [
@@ -498,6 +536,12 @@ class SeedRole implements RebuildAction
                 'Anamnese' => (object)[],
                 'Prontuario' => (object)[],
                 'Documento' => (object)[],
+                'Insumo' => (object)[],
+                'InsumoLote' => (object)[],
+                'MovimentacaoEstoque' => (object)[],
+                'Orcamento' => (object)[],
+                'OrcamentoItem' => (object)[],
+                'LancamentoFinanceiro' => (object)[],
 
             ],
         ];
@@ -672,6 +716,44 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
+                    ],
+                    'Insumo' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'InsumoLote' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'MovimentacaoEstoque' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'no',
+                        'delete' => 'no',
+                    ],
+                    'Orcamento' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
+                    ],
+                    'OrcamentoItem' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'LancamentoFinanceiro' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
                     ],
                 ],
                 'fieldData' => [

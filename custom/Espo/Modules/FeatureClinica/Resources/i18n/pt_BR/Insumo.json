@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "descricao": "Descrição",
+        "tipo": "Tipo",
+        "unidadeMedida": "Unidade de Medida",
+        "estoqueMinimo": "Estoque Mínimo",
+        "fornecedorPrincipal": "Fornecedor Principal",
+        "requerReceituario": "Requer Receituário",
+        "ativo": "Ativo"
+    },
+    "links": {
+        "lotes": "Lotes",
+        "procedimentosInjetaveis": "Procedimentos Injetáveis",
+        "procedimentosImplante": "Procedimentos Implante"
+    },
+    "labels": {
+        "Create Insumo": "Criar Insumo"
+    },
+    "options": {
+        "tipo": {
+            "Medicamento": "Medicamento",
+            "Cosmetico": "Cosmético",
+            "Material": "Material",
+            "Outro": "Outro"
+        },
+        "unidadeMedida": {
+            "mg": "mg",
+            "ml": "ml",
+            "UI": "UI",
+            "unidade": "unidade",
+            "caixa": "caixa"
+        }
+    },
+    "scopeNames": {
+        "Insumo": "Insumo"
+    },
+    "scopeNamesPlural": {
+        "Insumo": "Insumos"
+    }
+}

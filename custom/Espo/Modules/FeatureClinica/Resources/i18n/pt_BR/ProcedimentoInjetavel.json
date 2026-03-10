@@ -9,10 +9,13 @@
         "requerPrescricao": "Requer Prescrição",
         "tempoAplicacaoMin": "Tempo de Aplicação (min)",
         "protocolo": "Protocolo",
+        "insumo": "Insumo",
+        "controlaEstoque": "Controla Estoque",
         "unidade": "Unidade",
         "ativo": "Ativo"
     },
     "links": {
+        "insumo": "Insumo",
         "unidade": "Unidade",
         "unidadeDosagem": "Unidade de Dosagem",
         "appointments": "Agendamentos",

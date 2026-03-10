@@ -7,13 +7,16 @@
         "valorCobrado": "Valor Cobrado",
         "dosagemAplicada": "Dosagem Aplicada",
         "unidadeDosagem": "Unidade de Dosagem",
+        "insumoLote": "Lote de Insumo",
         "observacao": "Observação"
     },
     "links": {
         "atendimento": "Atendimento",
         "procedimento": "Procedimento",
         "sessao": "Sessão",
-        "unidadeDosagem": "Unidade de Dosagem"
+        "unidadeDosagem": "Unidade de Dosagem",
+        "insumoLote": "Lote de Insumo",
+        "movimentacoesEstoque": "Movimentações de Estoque"
     },
     "labels": {
         "Create ProcedimentoRealizado": "Criar Procedimento Realizado"

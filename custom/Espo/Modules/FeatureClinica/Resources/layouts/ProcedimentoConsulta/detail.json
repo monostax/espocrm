@@ -2,7 +2,9 @@
     {
         "rows": [
             [{"name": "nome"}, {"name": "codigo"}],
-            [{"name": "duracaoMin"}, false],
+            [{"name": "especialidade"}, {"name": "duracaoMin"}],
+            [{"name": "requerAnamnese"}, {"name": "requerCRM"}],
+            [{"name": "ehRetorno"}, {"name": "intervaloRetornoDias"}],
             [{"name": "descricao", "fullWidth": true}]
         ]
     }

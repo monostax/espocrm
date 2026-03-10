@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "nome": "Name",
+        "paciente": "Patient",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "convenio": "Health Plan",
+        "programa": "Program",
+        "status": "Status",
+        "dataInicio": "Start Date",
+        "dataFim": "End Date",
+        "dataExpiracao": "Expiration Date",
+        "objetivo": "Objective",
+        "descricao": "Description"
+    },
+    "links": {
+        "paciente": "Patient",
+        "unidade": "Unit",
+        "profissional": "Professional",
+        "convenio": "Health Plan",
+        "programa": "Program",
+        "sessoes": "Sessions"
+    },
+    "labels": {
+        "Create Jornada": "Create Journey"
+    },
+    "options": {
+        "status": {
+            "EmAndamento": "In Progress",
+            "Pausada": "Paused",
+            "Concluida": "Completed",
+            "Abandonada": "Abandoned",
+            "Cancelada": "Cancelled"
+        }
+    },
+    "scopeNames": {
+        "Jornada": "Journey"
+    },
+    "scopeNamesPlural": {
+        "Jornada": "Journeys"
+    }
+}

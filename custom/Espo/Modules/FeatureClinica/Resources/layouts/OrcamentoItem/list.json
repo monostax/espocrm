@@ -1,0 +1,7 @@
+[
+    {"name": "procedimento"},
+    {"name": "quantidade"},
+    {"name": "valorUnitario"},
+    {"name": "valorTotal"},
+    {"name": "valorComDesconto"}
+]

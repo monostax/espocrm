@@ -1,0 +1,25 @@
+{
+    "fields": {
+        "orcamento": "Orçamento",
+        "procedimento": "Procedimento",
+        "quantidade": "Quantidade",
+        "valorUnitario": "Valor Unitário",
+        "valorTotal": "Valor Total",
+        "desconto": "Desconto (%)",
+        "valorComDesconto": "Valor com Desconto",
+        "observacao": "Observação"
+    },
+    "links": {
+        "orcamento": "Orçamento",
+        "procedimento": "Procedimento"
+    },
+    "labels": {
+        "Create OrcamentoItem": "Criar Item de Orçamento"
+    },
+    "scopeNames": {
+        "OrcamentoItem": "Item de Orçamento"
+    },
+    "scopeNamesPlural": {
+        "OrcamentoItem": "Itens de Orçamento"
+    }
+}

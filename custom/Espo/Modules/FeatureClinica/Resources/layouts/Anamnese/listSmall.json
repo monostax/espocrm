@@ -1,0 +1,5 @@
+[
+    {"name": "paciente", "link": true},
+    {"name": "profissional"},
+    {"name": "dataColeta"}
+]

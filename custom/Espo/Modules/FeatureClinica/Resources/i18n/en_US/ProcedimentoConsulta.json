@@ -1,0 +1,32 @@
+{
+    "fields": {
+        "nome": "Name",
+        "codigo": "Code",
+        "descricao": "Description",
+        "especialidade": "Specialty",
+        "duracaoMin": "Duration (min)",
+        "requerAnamnese": "Requires Anamnesis",
+        "requerCRM": "Requires CRM",
+        "ehRetorno": "Is Return Visit",
+        "intervaloRetornoDias": "Return Interval (days)",
+        "unidade": "Unit",
+        "valorBase": "Base Price",
+        "ativo": "Active"
+    },
+    "links": {
+        "unidade": "Unit",
+        "especialidade": "Specialty",
+        "appointments": "Appointments",
+        "sessoes": "Sessions",
+        "procedimentosRealizados": "Performed Procedures"
+    },
+    "labels": {
+        "Create ProcedimentoConsulta": "Create Consultation Procedure"
+    },
+    "scopeNames": {
+        "ProcedimentoConsulta": "Consultation Procedure"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoConsulta": "Consultation Procedures"
+    }
+}

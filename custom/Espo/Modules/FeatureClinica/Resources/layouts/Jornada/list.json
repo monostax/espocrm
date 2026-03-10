@@ -1,6 +1,7 @@
 [
     {"name": "nome", "link": true},
     {"name": "paciente"},
+    {"name": "programa"},
     {"name": "unidade"},
     {"name": "profissional"},
     {"name": "convenio"},

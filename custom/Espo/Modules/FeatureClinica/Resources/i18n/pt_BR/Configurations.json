@@ -16,8 +16,13 @@
         "Procedimentos Ativ. Física": "Procedimentos Ativ. Física",
         "Regras de Convênio": "Regras de Convênio",
         "Programas": "Programas",
+        "Insumos": "Insumos",
+        "Lotes de Insumo": "Lotes de Insumo",
+        "Movimentações de Estoque": "Movimentações de Estoque",
         "Prescrições": "Prescrições",
-        "Documentos": "Documentos"
+        "Documentos": "Documentos",
+        "Orçamentos": "Orçamentos",
+        "Lançamentos Financeiros": "Lançamentos Financeiros"
     },
     "descriptions": {
         "unidades": "Gerenciar unidades de atendimento e suas configurações",
@@ -35,8 +40,13 @@
         "procedimentosAtividadeFisica": "Gerenciar procedimentos de atividade física",
         "convenioRegras": "Gerenciar regras de cobertura por convênio",
         "programas": "Gerenciar programas e pacotes de serviços",
+        "insumos": "Gerenciar catálogo de insumos e materiais",
+        "insumoLotes": "Gerenciar lotes de estoque por unidade",
+        "movimentacoesEstoque": "Consultar movimentações de entrada e saída de estoque",
         "prescricoes": "Gerenciar prescrições médicas",
-        "documentos": "Gerenciar documentos de pacientes"
+        "documentos": "Gerenciar documentos de pacientes",
+        "orcamentos": "Gerenciar orçamentos e propostas comerciais",
+        "lancamentosFinanceiros": "Gerenciar lançamentos financeiros e cobranças"
     },
     "keywords": {
         "unidades": "unidade,clínica,filial,local,atendimento",
@@ -54,7 +64,12 @@
         "procedimentosAtividadeFisica": "atividade,física,academia,pilates,personal",
         "convenioRegras": "regra,convênio,cobertura,autorização,vigência",
         "programas": "programa,pacote,serviço,itens,validade",
+        "insumos": "insumo,material,medicamento,cosmético,estoque",
+        "insumoLotes": "lote,estoque,validade,quantidade,fornecedor",
+        "movimentacoesEstoque": "movimentação,estoque,entrada,saída,ajuste,descarte",
         "prescricoes": "prescrição,receita,médica,medicamento,injetável",
-        "documentos": "documento,arquivo,exame,foto,laudo,contrato"
+        "documentos": "documento,arquivo,exame,foto,laudo,contrato",
+        "orcamentos": "orçamento,proposta,cotação,valor,aprovação",
+        "lancamentosFinanceiros": "lançamento,financeiro,cobrança,pagamento,receita"
     }
 }

@@ -118,6 +118,8 @@ class SeedSidenavConfig implements RebuildAction
             'Atendimento',
             'Jornada',
             'Prontuario',
+            'Orcamento',
+            'LancamentoFinanceiro',
 
             (object) [
                 'type' => 'divider',

@@ -1,0 +1,18 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-money-check-alt",
+    "nameAttribute": "id",
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "tipo", "paciente", "unidade", "convenio", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "filterList": [
+        {
+            "name": "status"
+        },
+        {
+            "name": "tipo"
+        }
+    ]
+}

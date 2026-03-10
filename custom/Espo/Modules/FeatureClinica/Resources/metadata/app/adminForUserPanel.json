@@ -108,6 +108,27 @@
                 "roles": ["tenant", "tenant-admin"]
             },
             {
+                "url": "#Insumo",
+                "label": "Insumos",
+                "iconClass": "fas fa-vials",
+                "description": "insumos",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/InsumoLote",
+                "label": "Lotes de Insumo",
+                "iconClass": "fas fa-boxes",
+                "description": "insumoLotes",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/MovimentacaoEstoque",
+                "label": "Movimentações de Estoque",
+                "iconClass": "fas fa-exchange-alt",
+                "description": "movimentacoesEstoque",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
                 "url": "#Prescricao",
                 "label": "Prescrições",
                 "iconClass": "fas fa-prescription",
@@ -119,6 +140,20 @@
                 "label": "Documentos",
                 "iconClass": "fas fa-file-medical-alt",
                 "description": "documentos",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Orcamento",
+                "label": "Orçamentos",
+                "iconClass": "fas fa-file-invoice-dollar",
+                "description": "orcamentos",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#LancamentoFinanceiro",
+                "label": "Lançamentos Financeiros",
+                "iconClass": "fas fa-money-check-alt",
+                "description": "lancamentosFinanceiros",
                 "roles": ["tenant", "tenant-admin"]
             }
         ],

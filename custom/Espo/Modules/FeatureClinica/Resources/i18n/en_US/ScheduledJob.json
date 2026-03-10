@@ -1,0 +1,7 @@
+{
+    "labels": {
+        "OrcamentoExpire": "Expire Overdue Quotes",
+        "InsumoLoteExpiry": "Check Lot Expiry & Stock Levels",
+        "PrescricaoExpiry": "Expire Overdue Prescriptions"
+    }
+}

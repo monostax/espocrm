@@ -5,6 +5,7 @@
             [{"name": "dosagemPadrao"}, {"name": "unidadeDosagem"}],
             [{"name": "dosagemMinima"}, {"name": "dosagemMaxima"}],
             [{"name": "requerPrescricao"}, {"name": "tempoAplicacaoMin"}],
+            [{"name": "insumo"}, {"name": "controlaEstoque"}],
             [{"name": "unidade"}, {"name": "ativo"}],
             [{"name": "protocolo", "fullWidth": true}]
         ]

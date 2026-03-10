@@ -4,6 +4,7 @@
             [{"name": "jornada"}, {"name": "sequencia"}],
             [{"name": "procedimento"}, {"name": "status"}],
             [{"name": "dosagemAplicada"}, {"name": "unidadeDosagem"}],
+            [{"name": "insumoLote"}, {"name": "dataExpiracao"}],
             [{"name": "observacao", "fullWidth": true}]
         ]
     }

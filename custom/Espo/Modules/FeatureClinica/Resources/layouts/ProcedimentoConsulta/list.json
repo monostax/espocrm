@@ -1,6 +1,7 @@
 [
     {"name": "nome", "link": true},
     {"name": "codigo"},
+    {"name": "especialidade"},
     {"name": "duracaoMin"},
     {"name": "valorBase"},
     {"name": "ativo"}

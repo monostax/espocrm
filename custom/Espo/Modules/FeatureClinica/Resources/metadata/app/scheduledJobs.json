@@ -1,0 +1,14 @@
+{
+    "OrcamentoExpire": {
+        "jobClassName": "Espo\\Modules\\FeatureClinica\\ScheduledJobs\\OrcamentoExpire",
+        "isSystem": true
+    },
+    "InsumoLoteExpiry": {
+        "jobClassName": "Espo\\Modules\\FeatureClinica\\ScheduledJobs\\InsumoLoteExpiry",
+        "isSystem": true
+    },
+    "PrescricaoExpiry": {
+        "jobClassName": "Espo\\Modules\\FeatureClinica\\ScheduledJobs\\PrescricaoExpiry",
+        "isSystem": true
+    }
+}

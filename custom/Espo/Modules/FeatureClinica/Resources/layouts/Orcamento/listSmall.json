@@ -1,0 +1,5 @@
+[
+    {"name": "numero", "link": true},
+    {"name": "paciente"},
+    {"name": "status"}
+]

@@ -1,0 +1,52 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "convenio": "Health Plan",
+        "numero": "Number",
+        "versao": "Version",
+        "orcamentoOrigem": "Previous Quote",
+        "status": "Status",
+        "dataEmissao": "Issue Date",
+        "dataValidade": "Expiry Date",
+        "valorTotal": "Total Value",
+        "valorDesconto": "Discount Value",
+        "valorLiquido": "Net Value",
+        "autorizadoPor": "Authorized By",
+        "observacoes": "Notes",
+        "motivoRecusa": "Refusal Reason",
+        "jornada": "Journey",
+        "lancamento": "Financial Transaction"
+    },
+    "links": {
+        "paciente": "Patient",
+        "profissional": "Professional",
+        "unidade": "Unit",
+        "convenio": "Health Plan",
+        "orcamentoOrigem": "Previous Quote",
+        "autorizadoPor": "Authorized By",
+        "jornada": "Journey",
+        "lancamento": "Financial Transaction",
+        "itens": "Items",
+        "versoes": "Versions"
+    },
+    "labels": {
+        "Create Orcamento": "Create Quote"
+    },
+    "options": {
+        "status": {
+            "Rascunho": "Draft",
+            "Enviado": "Sent",
+            "Aprovado": "Approved",
+            "Expirado": "Expired",
+            "Recusado": "Refused"
+        }
+    },
+    "scopeNames": {
+        "Orcamento": "Quote"
+    },
+    "scopeNamesPlural": {
+        "Orcamento": "Quotes"
+    }
+}

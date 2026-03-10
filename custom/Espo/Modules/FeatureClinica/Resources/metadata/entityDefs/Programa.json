@@ -1,5 +1,16 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
         "nome": {
             "type": "varchar",
             "required": true,
@@ -57,6 +68,11 @@
             "entity": "ProgramaItem",
             "foreign": "programa",
             "cascadeDelete": true
+        },
+        "jornadas": {
+            "type": "hasMany",
+            "entity": "Jornada",
+            "foreign": "programa"
         },
         "createdBy": {
             "type": "belongsTo",

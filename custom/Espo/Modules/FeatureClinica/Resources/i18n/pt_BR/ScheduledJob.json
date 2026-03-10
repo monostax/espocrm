@@ -1,0 +1,7 @@
+{
+    "labels": {
+        "OrcamentoExpire": "Expirar Orçamentos Vencidos",
+        "InsumoLoteExpiry": "Verificar Vencimento de Lotes",
+        "PrescricaoExpiry": "Expirar Prescrições Vencidas"
+    }
+}

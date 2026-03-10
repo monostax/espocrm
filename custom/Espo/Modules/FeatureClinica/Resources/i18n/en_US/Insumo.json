@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "nome": "Name",
+        "descricao": "Description",
+        "tipo": "Type",
+        "unidadeMedida": "Unit of Measure",
+        "estoqueMinimo": "Minimum Stock",
+        "fornecedorPrincipal": "Primary Supplier",
+        "requerReceituario": "Requires Receipt",
+        "ativo": "Active"
+    },
+    "links": {
+        "lotes": "Lots",
+        "procedimentosInjetaveis": "Injectable Procedures",
+        "procedimentosImplante": "Implant Procedures"
+    },
+    "labels": {
+        "Create Insumo": "Create Supply"
+    },
+    "options": {
+        "tipo": {
+            "Medicamento": "Medication",
+            "Cosmetico": "Cosmetic",
+            "Material": "Material",
+            "Outro": "Other"
+        },
+        "unidadeMedida": {
+            "mg": "mg",
+            "ml": "ml",
+            "UI": "IU",
+            "unidade": "unit",
+            "caixa": "box"
+        }
+    },
+    "scopeNames": {
+        "Insumo": "Supply"
+    },
+    "scopeNamesPlural": {
+        "Insumo": "Supplies"
+    }
+}

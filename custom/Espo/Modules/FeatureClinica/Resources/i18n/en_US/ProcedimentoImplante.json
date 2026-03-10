@@ -8,10 +8,12 @@
         "requerSalaCirurgica": "Requires Surgical Room",
         "requerCRM": "Requires CRM",
         "protocoloAplicacao": "Application Protocol",
+        "insumo": "Supply",
         "unidade": "Unit",
         "ativo": "Active"
     },
     "links": {
+        "insumo": "Supply",
         "unidade": "Unit",
         "appointments": "Appointments",
         "sessoes": "Sessions",

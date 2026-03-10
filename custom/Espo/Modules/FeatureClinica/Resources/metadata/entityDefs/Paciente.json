@@ -101,6 +101,16 @@
             "entity": "Documento",
             "foreign": "paciente"
         },
+        "orcamentos": {
+            "type": "hasMany",
+            "entity": "Orcamento",
+            "foreign": "paciente"
+        },
+        "lancamentosFinanceiros": {
+            "type": "hasMany",
+            "entity": "LancamentoFinanceiro",
+            "foreign": "paciente"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

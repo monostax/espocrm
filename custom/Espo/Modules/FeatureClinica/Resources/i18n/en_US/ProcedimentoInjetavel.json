@@ -9,10 +9,13 @@
         "requerPrescricao": "Requires Prescription",
         "tempoAplicacaoMin": "Application Time (min)",
         "protocolo": "Protocol",
+        "insumo": "Supply",
+        "controlaEstoque": "Controls Stock",
         "unidade": "Unit",
         "ativo": "Active"
     },
     "links": {
+        "insumo": "Supply",
         "unidade": "Unit",
         "unidadeDosagem": "Dosage Unit",
         "appointments": "Appointments",

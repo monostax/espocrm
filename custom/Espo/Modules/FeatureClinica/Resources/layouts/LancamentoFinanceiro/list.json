@@ -1,0 +1,9 @@
+[
+    {"name": "paciente"},
+    {"name": "origem"},
+    {"name": "tipo"},
+    {"name": "valorLiquido"},
+    {"name": "formaPagamento"},
+    {"name": "status"},
+    {"name": "dataVencimento"}
+]

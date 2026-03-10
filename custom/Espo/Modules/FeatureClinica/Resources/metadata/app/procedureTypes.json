@@ -13,6 +13,7 @@
         "TabelaDePrecos",
         "ConvenioRegra",
         "ProgramaItem",
-        "PrescricaoItem"
+        "PrescricaoItem",
+        "OrcamentoItem"
     ]
 }

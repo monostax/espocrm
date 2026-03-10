@@ -1,0 +1,8 @@
+[
+    {"name": "insumo", "link": true},
+    {"name": "unidade"},
+    {"name": "numeroLote"},
+    {"name": "dataValidade"},
+    {"name": "quantidadeAtual"},
+    {"name": "status"}
+]

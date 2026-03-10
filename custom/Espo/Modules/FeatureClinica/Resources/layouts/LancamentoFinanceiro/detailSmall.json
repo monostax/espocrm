@@ -1,0 +1,10 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}],
+            [{"name": "tipo"}],
+            [{"name": "valorLiquido"}],
+            [{"name": "status"}]
+        ]
+    }
+]

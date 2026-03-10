@@ -1,5 +1,16 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
         "nome": {
             "type": "varchar",
             "required": true,
@@ -20,13 +31,18 @@
         "convenio": {
             "type": "link"
         },
+        "programa": {
+            "type": "link"
+        },
         "status": {
             "type": "enum",
-            "options": ["EmAndamento", "Concluida", "Cancelada"],
+            "options": ["EmAndamento", "Pausada", "Concluida", "Abandonada", "Cancelada"],
             "default": "EmAndamento",
             "style": {
                 "EmAndamento": "primary",
+                "Pausada": "warning",
                 "Concluida": "success",
+                "Abandonada": "danger",
                 "Cancelada": "danger"
             }
         },
@@ -36,6 +52,12 @@
         },
         "dataFim": {
             "type": "date"
+        },
+        "dataExpiracao": {
+            "type": "date"
+        },
+        "objetivo": {
+            "type": "text"
         },
         "descricao": {
             "type": "text"
@@ -83,6 +105,11 @@
             "entity": "Convenio",
             "foreignName": "nome"
         },
+        "programa": {
+            "type": "belongsTo",
+            "entity": "Programa",
+            "foreignName": "nome"
+        },
         "sessoes": {
             "type": "hasMany",
             "entity": "Sessao",
@@ -96,6 +123,16 @@
         "prontuarios": {
             "type": "hasMany",
             "entity": "Prontuario",
+            "foreign": "jornada"
+        },
+        "lancamentosFinanceiros": {
+            "type": "hasChildren",
+            "entity": "LancamentoFinanceiro",
+            "foreign": "origem"
+        },
+        "orcamentos": {
+            "type": "hasMany",
+            "entity": "Orcamento",
             "foreign": "jornada"
         },
         "createdBy": {
@@ -133,6 +170,9 @@
         },
         "convenioId": {
             "columns": ["convenioId"]
+        },
+        "programaId": {
+            "columns": ["programaId"]
         }
     },
     "cascadeDelete": {

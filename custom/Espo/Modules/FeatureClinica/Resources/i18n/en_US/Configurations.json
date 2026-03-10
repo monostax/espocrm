@@ -16,8 +16,13 @@
         "Procedimentos Ativ. Física": "Physical Activity Procedures",
         "Regras de Convênio": "Health Plan Rules",
         "Programas": "Programs",
+        "Insumos": "Supplies",
+        "Lotes de Insumo": "Supply Lots",
+        "Movimentações de Estoque": "Stock Movements",
         "Prescrições": "Prescriptions",
-        "Documentos": "Documents"
+        "Documentos": "Documents",
+        "Orçamentos": "Quotes",
+        "Lançamentos Financeiros": "Financial Transactions"
     },
     "descriptions": {
         "unidades": "Manage service units and their settings",
@@ -35,8 +40,13 @@
         "procedimentosAtividadeFisica": "Manage physical activity procedures",
         "convenioRegras": "Manage health plan coverage rules",
         "programas": "Manage programs and service packages",
+        "insumos": "Manage supply and material catalog",
+        "insumoLotes": "Manage stock lots per unit",
+        "movimentacoesEstoque": "View stock inbound and outbound movements",
         "prescricoes": "Manage medical prescriptions",
-        "documentos": "Manage patient documents"
+        "documentos": "Manage patient documents",
+        "orcamentos": "Manage quotes and commercial proposals",
+        "lancamentosFinanceiros": "Manage financial transactions and billing"
     },
     "keywords": {
         "unidades": "unit,clinic,branch,location,service",
@@ -54,7 +64,12 @@
         "procedimentosAtividadeFisica": "activity,physical,gym,pilates,personal",
         "convenioRegras": "rule,health,plan,coverage,authorization,validity",
         "programas": "program,package,service,items,validity",
+        "insumos": "supply,material,medication,cosmetic,stock",
+        "insumoLotes": "lot,stock,expiry,quantity,supplier",
+        "movimentacoesEstoque": "movement,stock,inbound,outbound,adjustment,disposal",
         "prescricoes": "prescription,recipe,medical,medication,injectable",
-        "documentos": "document,file,exam,photo,report,contract"
+        "documentos": "document,file,exam,photo,report,contract",
+        "orcamentos": "quote,proposal,budget,value,approval",
+        "lancamentosFinanceiros": "transaction,financial,billing,payment,revenue"
     }
 }

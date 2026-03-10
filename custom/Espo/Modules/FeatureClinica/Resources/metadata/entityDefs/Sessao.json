@@ -9,12 +9,13 @@
         },
         "status": {
             "type": "enum",
-            "options": ["Pendente", "Agendada", "Realizada", "Cancelada"],
+            "options": ["Pendente", "Agendada", "Realizada", "Expirada", "Cancelada"],
             "default": "Pendente",
             "style": {
                 "Pendente": "default",
                 "Agendada": "primary",
                 "Realizada": "success",
+                "Expirada": "warning",
                 "Cancelada": "danger"
             }
         },
@@ -41,6 +42,12 @@
         "unidade": {
             "type": "link",
             "required": true
+        },
+        "insumoLote": {
+            "type": "link"
+        },
+        "dataExpiracao": {
+            "type": "date"
         },
         "observacao": {
             "type": "text"
@@ -91,6 +98,11 @@
             "entity": "UnidadeDosagem",
             "foreignName": "nome"
         },
+        "insumoLote": {
+            "type": "belongsTo",
+            "entity": "InsumoLote",
+            "foreignName": "numeroLote"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
@@ -125,6 +137,9 @@
         },
         "unidadeDosagemId": {
             "columns": ["unidadeDosagemId"]
+        },
+        "insumoLoteId": {
+            "columns": ["insumoLoteId"]
         }
     }
 }

@@ -1,0 +1,147 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "numeroLote"
+            },
+            "order": {
+                "order": [["numeroLote", "{direction}"]]
+            }
+        },
+        "insumo": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "numeroLote": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true
+        },
+        "dataFabricacao": {
+            "type": "date"
+        },
+        "dataValidade": {
+            "type": "date",
+            "required": true
+        },
+        "quantidadeEntrada": {
+            "type": "float",
+            "required": true
+        },
+        "quantidadeAtual": {
+            "type": "float",
+            "required": true
+        },
+        "fornecedor": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true
+        },
+        "notaFiscal": {
+            "type": "varchar",
+            "maxLength": 100,
+            "trim": true
+        },
+        "precoUnitarioCusto": {
+            "type": "currency"
+        },
+        "status": {
+            "type": "enum",
+            "required": true,
+            "options": ["Disponivel", "Vencido", "Esgotado", "Bloqueado"],
+            "default": "Disponivel"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "insumo": {
+            "type": "belongsTo",
+            "entity": "Insumo",
+            "foreignName": "nome"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "movimentacoes": {
+            "type": "hasMany",
+            "entity": "MovimentacaoEstoque",
+            "foreign": "insumoLote"
+        },
+        "sessoes": {
+            "type": "hasMany",
+            "entity": "Sessao",
+            "foreign": "insumoLote"
+        },
+        "procedimentosRealizados": {
+            "type": "hasMany",
+            "entity": "ProcedimentoRealizado",
+            "foreign": "insumoLote"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "dataValidade",
+        "order": "asc",
+        "textFilterFields": ["numeroLote", "fornecedor"]
+    },
+    "indexes": {
+        "insumoId": {
+            "columns": ["insumoId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "status": {
+            "columns": ["status"]
+        },
+        "dataValidade": {
+            "columns": ["dataValidade"]
+        },
+        "numeroLote": {
+            "columns": ["numeroLote"]
+        }
+    }
+}

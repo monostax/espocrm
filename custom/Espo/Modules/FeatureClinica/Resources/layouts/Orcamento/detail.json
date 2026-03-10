@@ -1,0 +1,16 @@
+[
+    {
+        "rows": [
+            [{"name": "paciente"}, {"name": "profissional"}],
+            [{"name": "unidade"}, {"name": "convenio"}],
+            [{"name": "numero"}, {"name": "versao"}],
+            [{"name": "status"}, {"name": "orcamentoOrigem"}],
+            [{"name": "dataEmissao"}, {"name": "dataValidade"}],
+            [{"name": "valorTotal"}, {"name": "valorDesconto"}],
+            [{"name": "valorLiquido"}, {"name": "autorizadoPor"}],
+            [{"name": "jornada"}, {"name": "lancamento"}],
+            [{"name": "observacoes", "fullWidth": true}],
+            [{"name": "motivoRecusa", "fullWidth": true}]
+        ]
+    }
+]

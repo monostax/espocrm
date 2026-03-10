@@ -3,13 +3,19 @@
         "nome": "Nome",
         "codigo": "Código",
         "descricao": "Descrição",
+        "especialidade": "Especialidade",
         "duracaoMin": "Duração (min)",
+        "requerAnamnese": "Requer Anamnese",
+        "requerCRM": "Requer CRM",
+        "ehRetorno": "É Retorno",
+        "intervaloRetornoDias": "Intervalo Retorno (dias)",
         "unidade": "Unidade",
         "valorBase": "Valor Base",
         "ativo": "Ativo"
     },
     "links": {
         "unidade": "Unidade",
+        "especialidade": "Especialidade",
         "appointments": "Agendamentos",
         "sessoes": "Sessões",
         "procedimentosRealizados": "Procedimentos Realizados"

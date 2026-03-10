@@ -1,0 +1,7 @@
+{
+    "create": "yes",
+    "read": "team",
+    "edit": "no",
+    "delete": "no",
+    "stream": false
+}

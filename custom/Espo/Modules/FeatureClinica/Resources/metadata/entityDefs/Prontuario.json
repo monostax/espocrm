@@ -1,5 +1,16 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "titulo"
+            },
+            "order": {
+                "order": [["titulo", "{direction}"]]
+            }
+        },
         "paciente": {
             "type": "link",
             "required": true

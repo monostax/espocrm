@@ -1,0 +1,59 @@
+{
+    "fields": {
+        "paciente": "Patient",
+        "unidade": "Unit",
+        "convenio": "Health Plan",
+        "origem": "Origin",
+        "tipo": "Type",
+        "valorTotal": "Total Value",
+        "valorDesconto": "Discount Value",
+        "valorLiquido": "Net Value",
+        "percentualConvenio": "Health Plan %",
+        "valorConvenio": "Health Plan Value",
+        "valorPaciente": "Patient Value",
+        "formaPagamento": "Payment Method",
+        "parcelas": "Installments",
+        "status": "Status",
+        "dataVencimento": "Due Date",
+        "dataPagamento": "Payment Date",
+        "autorizadoPor": "Authorized By",
+        "observacao": "Note"
+    },
+    "links": {
+        "paciente": "Patient",
+        "unidade": "Unit",
+        "convenio": "Health Plan",
+        "origem": "Origin",
+        "autorizadoPor": "Authorized By"
+    },
+    "labels": {
+        "Create LancamentoFinanceiro": "Create Financial Transaction"
+    },
+    "options": {
+        "tipo": {
+            "Receita": "Revenue",
+            "Estorno": "Refund",
+            "Desconto": "Discount",
+            "Bonus": "Bonus"
+        },
+        "formaPagamento": {
+            "Pix": "Pix",
+            "Cartao": "Card",
+            "Dinheiro": "Cash",
+            "Convenio": "Health Plan",
+            "Boleto": "Bank Slip"
+        },
+        "status": {
+            "Pendente": "Pending",
+            "Pago": "Paid",
+            "Vencido": "Overdue",
+            "Estornado": "Refunded"
+        }
+    },
+    "scopeNames": {
+        "LancamentoFinanceiro": "Financial Transaction"
+    },
+    "scopeNamesPlural": {
+        "LancamentoFinanceiro": "Financial Transactions"
+    }
+}

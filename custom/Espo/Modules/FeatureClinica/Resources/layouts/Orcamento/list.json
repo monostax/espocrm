@@ -1,0 +1,9 @@
+[
+    {"name": "paciente"},
+    {"name": "numero", "link": true},
+    {"name": "versao"},
+    {"name": "status"},
+    {"name": "dataEmissao"},
+    {"name": "dataValidade"},
+    {"name": "valorLiquido"}
+]

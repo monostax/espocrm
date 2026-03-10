@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "insumoLote": "Lote de Insumo",
+        "unidade": "Unidade",
+        "tipo": "Tipo",
+        "quantidade": "Quantidade",
+        "origem": "Origem",
+        "profissional": "Profissional",
+        "dataHora": "Data/Hora",
+        "observacao": "Observação"
+    },
+    "links": {
+        "insumoLote": "Lote de Insumo",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "origem": "Origem"
+    },
+    "labels": {
+        "Create MovimentacaoEstoque": "Criar Movimentação de Estoque"
+    },
+    "options": {
+        "tipo": {
+            "Entrada": "Entrada",
+            "Saida": "Saída",
+            "Ajuste": "Ajuste",
+            "Descarte": "Descarte"
+        }
+    },
+    "scopeNames": {
+        "MovimentacaoEstoque": "Movimentação de Estoque"
+    },
+    "scopeNamesPlural": {
+        "MovimentacaoEstoque": "Movimentações de Estoque"
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "atendimento": "Visit",
+        "procedimento": "Procedure",
+        "sessao": "Session",
+        "quantidade": "Quantity",
+        "valorCobrado": "Charged Value",
+        "dosagemAplicada": "Applied Dosage",
+        "unidadeDosagem": "Dosage Unit",
+        "insumoLote": "Supply Lot",
+        "observacao": "Note"
+    },
+    "links": {
+        "atendimento": "Visit",
+        "procedimento": "Procedure",
+        "sessao": "Session",
+        "unidadeDosagem": "Dosage Unit",
+        "insumoLote": "Supply Lot",
+        "movimentacoesEstoque": "Stock Movements"
+    },
+    "labels": {
+        "Create ProcedimentoRealizado": "Create Performed Procedure"
+    },
+    "scopeNames": {
+        "ProcedimentoRealizado": "Performed Procedure"
+    },
+    "scopeNamesPlural": {
+        "ProcedimentoRealizado": "Performed Procedures"
+    }
+}

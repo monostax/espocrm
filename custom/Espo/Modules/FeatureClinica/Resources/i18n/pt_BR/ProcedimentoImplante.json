@@ -8,10 +8,12 @@
         "requerSalaCirurgica": "Requer Sala Cirúrgica",
         "requerCRM": "Requer CRM",
         "protocoloAplicacao": "Protocolo de Aplicação",
+        "insumo": "Insumo",
         "unidade": "Unidade",
         "ativo": "Ativo"
     },
     "links": {
+        "insumo": "Insumo",
         "unidade": "Unidade",
         "appointments": "Agendamentos",
         "sessoes": "Sessões",

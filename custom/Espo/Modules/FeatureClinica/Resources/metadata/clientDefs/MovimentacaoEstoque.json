@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-exchange-alt",
+    "nameAttribute": "id",
+    "defaultSidePanelFieldLists": {
+        "detail": ["teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "filterList": [
+        {
+            "name": "tipo"
+        }
+    ]
+}
