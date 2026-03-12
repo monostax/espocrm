@@ -1,0 +1,191 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "selectForeign": {
+                "select": "{alias}.nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
+        "nome": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "trim": true
+        },
+        "viaAdministracao": {
+            "type": "enum",
+            "required": true,
+            "options": ["EV", "IM", "SC", "Oral"]
+        },
+        "dosagemPadrao": {
+            "type": "float"
+        },
+        "unidadeDosagem": {
+            "type": "link"
+        },
+        "dosagemMinima": {
+            "type": "float"
+        },
+        "dosagemMaxima": {
+            "type": "float"
+        },
+        "dosagemPadraoFormatada": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "CONCAT:(dosagemPadrao, ' ', unidadeDosagem.sigla)",
+                "leftJoins": ["unidadeDosagem"]
+            }
+        },
+        "requerPrescricao": {
+            "type": "bool",
+            "default": true
+        },
+        "tempoAplicacaoMin": {
+            "type": "int"
+        },
+        "protocolo": {
+            "type": "text"
+        },
+        "insumo": {
+            "type": "link"
+        },
+        "controlaEstoque": {
+            "type": "bool",
+            "default": false
+        },
+        "unidade": {
+            "type": "link"
+        },
+        "ativo": {
+            "type": "bool",
+            "default": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "insumo": {
+            "type": "belongsTo",
+            "entity": "Insumo",
+            "foreignName": "nome"
+        },
+        "unidadeDosagem": {
+            "type": "belongsTo",
+            "entity": "UnidadeDosagem",
+            "foreignName": "nome"
+        },
+        "appointments": {
+            "type": "hasChildren",
+            "entity": "Appointment",
+            "foreign": "procedimento"
+        },
+        "sessoes": {
+            "type": "hasChildren",
+            "entity": "Sessao",
+            "foreign": "procedimento"
+        },
+        "procedimentosRealizados": {
+            "type": "hasChildren",
+            "entity": "ProcedimentoRealizado",
+            "foreign": "procedimento"
+        },
+        "tabelaDePrecos": {
+            "type": "hasChildren",
+            "entity": "TabelaDePrecos",
+            "foreign": "procedimento"
+        },
+        "convenioRegras": {
+            "type": "hasChildren",
+            "entity": "ConvenioRegra",
+            "foreign": "procedimento"
+        },
+        "programaItens": {
+            "type": "hasChildren",
+            "entity": "ProgramaItem",
+            "foreign": "procedimento"
+        },
+        "prescricaoItens": {
+            "type": "hasChildren",
+            "entity": "PrescricaoItem",
+            "foreign": "procedimento"
+        },
+        "orcamentoItens": {
+            "type": "hasChildren",
+            "entity": "OrcamentoItem",
+            "foreign": "procedimento"
+        },
+        "consumoInsumoPadrao": {
+            "type": "hasChildren",
+            "entity": "ConsumoInsumoPadrao",
+            "foreign": "procedimento"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "nome",
+        "order": "asc",
+        "textFilterFields": ["nome"]
+    },
+    "indexes": {
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "ativo": {
+            "columns": ["ativo"]
+        },
+        "unidadeDosagemId": {
+            "columns": ["unidadeDosagemId"]
+        },
+        "insumoId": {
+            "columns": ["insumoId"]
+        }
+    }
+}
+

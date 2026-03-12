@@ -1,0 +1,60 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "convenio": "Convênio",
+        "programa": "Programa",
+        "status": "Status",
+        "dataInicio": "Data de Início",
+        "dataFim": "Data de Fim",
+        "dataExpiracao": "Data de Expiração",
+        "objetivo": "Objetivo",
+        "descricao": "Descrição",
+        "dosagemInjetavel": "Dosagem Injetável"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "unidade": "Unidade",
+        "profissional": "Profissional",
+        "convenio": "Convênio",
+        "programa": "Programa",
+        "sessoes": "Sessões",
+        "atendimentos": "Atendimentos",
+        "anamneses": "Anamneses",
+        "prontuarios": "Prontuários",
+        "lancamentosFinanceiros": "Lançamentos Financeiros",
+        "orcamentos": "Orçamentos",
+        "lotesExclusivos": "Lotes Exclusivos"
+    },
+    "labels": {
+        "Create Jornada": "Criar Jornada"
+    },
+    "options": {
+        "status": {
+            "EmAndamento": "Em Andamento",
+            "Pausada": "Pausada",
+            "Concluida": "Concluída",
+            "Abandonada": "Abandonada",
+            "Cancelada": "Cancelada"
+        }
+    },
+    "scopeNames": {
+        "Jornada": "Jornada"
+    },
+    "scopeNamesPlural": {
+        "Jornada": "Jornadas"
+    },
+    "tabs": {
+        "Sessoes": "Sessões",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro"
+    },
+    "tabLabels": {
+        "Sessoes": "Sessões",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro"
+    }
+}
+

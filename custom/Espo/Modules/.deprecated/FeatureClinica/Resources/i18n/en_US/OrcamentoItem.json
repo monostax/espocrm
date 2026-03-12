@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "orcamento": "Quote",
+        "procedimento": "Procedure",
+        "quantidade": "Quantity",
+        "valorUnitario": "Unit Price",
+        "valorTotal": "Total Value",
+        "desconto": "Discount (%)",
+        "valorComDesconto": "Discounted Value",
+        "observacao": "Note",
+        "tipoItem": "Item Type",
+        "insumoExclusivo": "Exclusive Supply"
+    },
+    "links": {
+        "orcamento": "Quote",
+        "procedimento": "Procedure",
+        "insumoExclusivo": "Exclusive Supply"
+    },
+    "options": {
+        "tipoItem": {
+            "Procedimento": "Procedure",
+            "InsumoExclusivo": "Exclusive Supply"
+        }
+    },
+    "labels": {
+        "Create OrcamentoItem": "Create Quote Item"
+    },
+    "scopeNames": {
+        "OrcamentoItem": "Quote Item"
+    },
+    "scopeNamesPlural": {
+        "OrcamentoItem": "Quote Items"
+    }
+}
+

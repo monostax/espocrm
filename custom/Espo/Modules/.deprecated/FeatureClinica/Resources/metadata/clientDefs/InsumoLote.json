@@ -1,0 +1,85 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-boxes",
+    "nameAttribute": "numeroLote",
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "movimentacoes": {
+            "create": false,
+            "select": false
+        },
+        "sessoes": {
+            "create": false,
+            "select": false
+        },
+        "procedimentosRealizados": {
+            "create": false,
+            "select": false
+        }
+    },
+    "filterList": ["status", "insumo", "unidade"],
+    "dynamicLogic": {
+        "fields": {
+            "saldoMg": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "insumoTipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "saldoMgFormatado": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "insumoTipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "modalidadeUso": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "insumoTipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "jornadaId": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "insumoTipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "jornada": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "insumoTipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
+

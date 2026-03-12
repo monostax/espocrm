@@ -1,0 +1,13 @@
+[
+    {
+        "rows": [
+            [{ "name": "sessao" }, { "name": "insumo" }],
+            [{ "name": "insumoLote" }, { "name": "insumoLoteTipo" }],
+            [{ "name": "quantidade" }, { "name": "concentracao" }],
+            [{ "name": "dosagemMg" }, { "name": "volumeMl" }],
+            [{ "name": "saldoRestanteMg" }, { "name": "saldoRestanteMl" }],
+            [{ "name": "observacao", "fullWidth": true }]
+        ]
+    }
+]
+

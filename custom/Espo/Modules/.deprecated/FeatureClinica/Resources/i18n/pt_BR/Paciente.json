@@ -1,0 +1,45 @@
+{
+    "fields": {
+        "name": "Nome",
+        "contact": "Contato",
+        "contactName": "Nome do Contato",
+        "emailAddress": "E-mail",
+        "phoneNumber": "Telefone",
+        "cpf": "CPF",
+        "dataNascimento": "Data de Nascimento",
+        "sexo": "Sexo"
+    },
+    "links": {
+        "contact": "Contato",
+        "jornadas": "Jornadas",
+        "atendimentos": "Atendimentos",
+        "appointments": "Agendamentos",
+        "prescricoes": "Prescrições",
+        "anamneses": "Anamneses",
+        "prontuarios": "Prontuários",
+        "documentos": "Documentos",
+        "orcamentos": "Orçamentos",
+        "lancamentosFinanceiros": "Lançamentos Financeiros"
+    },
+    "labels": {
+        "Create Paciente": "Criar Paciente"
+    },
+    "scopeNames": {
+        "Paciente": "Paciente"
+    },
+    "scopeNamesPlural": {
+        "Paciente": "Pacientes"
+    },
+    "tabs": {
+        "Atendimento": "Atendimento",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro",
+        "Documentos": "Documentos"
+    },
+    "tabLabels": {
+        "Atendimento": "Atendimento",
+        "Clinico": "Clínico",
+        "Financeiro": "Financeiro",
+        "Documentos": "Documentos"
+    }
+}

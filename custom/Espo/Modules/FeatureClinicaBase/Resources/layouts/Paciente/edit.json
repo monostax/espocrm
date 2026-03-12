@@ -1,0 +1,12 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "contact" }],
+            [{ "name": "cpf" }, { "name": "dataNascimento" }],
+            [{ "name": "sexo" }, false],
+            [{ "name": "emailAddress" }, { "name": "phoneNumber" }]
+        ]
+    }
+]
+

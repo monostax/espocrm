@@ -1,0 +1,100 @@
+{
+    "fields": {
+        "nome": "Nome",
+        "descricao": "Descrição",
+        "tipo": "Tipo",
+        "apresentacao": "Apresentação",
+        "unidadeAquisicao": "Unidade de Aquisição",
+        "quantidadePorUnidade": "Quantidade por Unidade",
+        "unidadeDosagem": "Unidade de Dosagem",
+        "volumeTotal": "Volume Total (mL)",
+        "dosagemTotal": "Dosagem Total",
+        "concentracao": "Concentração",
+        "estoqueMinimo": "Estoque Mínimo",
+        "fornecedorPrincipal": "Fornecedor Principal",
+        "requerReceituario": "Requer Receituário",
+        "ativo": "Ativo"
+    },
+    "placeholders": {
+        "nome": "Ex: Tirzepatida 2,5 mg",
+        "descricao": "Descrição detalhada do insumo...",
+        "quantidadePorUnidade": "Ex: 4",
+        "dosagemTotal": "Ex: 10",
+        "volumeTotal": "Ex: 0,5",
+        "concentracao": "Ex: 20",
+        "estoqueMinimo": "Ex: 5",
+        "fornecedorPrincipal": "Ex: Laboratório XYZ"
+    },
+    "tooltips": {
+        "nome": "Nome comercial do insumo para identificação",
+        "tipo": "Categoria do insumo. Medicamento: produtos farmacêuticos. Cosmético: produtos de beleza. Material: materiais descartáveis. Outro: demais tipos.",
+        "apresentacao": "Forma farmacêutica ou apresentação do produto (ampola, frasco, seringa, etc.)",
+        "unidadeAquisicao": "Unidade de compra do fornecedor (unidade, caixa, pacote, kit)",
+        "quantidadePorUnidade": "Quantidade de unidades individuais por unidade de aquisição. Ex: 4 ampolas por caixa.",
+        "unidadeDosagem": "Unidade de medida da dosagem (mg, mL, UI, mcg)",
+        "volumeTotal": "Volume total em mililitros (mL) por unidade individual",
+        "dosagemTotal": "Dosagem total por unidade individual na unidade de dosagem informada",
+        "concentracao": "Concentração calculada automaticamente: Dosagem Total ÷ Volume Total",
+        "estoqueMinimo": "Quantidade mínima em estoque para alerta de reposição",
+        "fornecedorPrincipal": "Nome do fornecedor principal deste insumo",
+        "requerReceituario": "Marque se este insumo requer receita médica para dispensação",
+        "ativo": "Desmarque para inativar este insumo sem excluí-lo"
+    },
+    "links": {
+        "lotes": "Lotes",
+        "procedimentosInjetaveis": "Procedimentos Injetáveis",
+        "procedimentosImplante": "Procedimentos Implante",
+        "consumoInsumoPadrao": "Consumos Padrão",
+        "consumoItens": "Consumos de Insumo"
+    },
+    "labels": {
+        "Create Insumo": "Criar Insumo"
+    },
+    "options": {
+        "tipo": {
+            "Medicamento": "Medicamento",
+            "Cosmetico": "Cosmético",
+            "Material": "Material",
+            "Outro": "Outro"
+        },
+        "apresentacao": {
+            "ampola": "Ampola",
+            "frasco": "Frasco",
+            "seringa": "Seringa",
+            "caneta": "Caneta",
+            "cartucho": "Cartucho",
+            "laminula": "Lâmina",
+            "tubo": "Tubo",
+            "frascoamp": "Frasco-Ampola",
+            "patch": "Patch",
+            "outro": "Outro"
+        },
+        "unidadeAquisicao": {
+            "unidade": "Unidade",
+            "caixa": "Caixa",
+            "pacote": "Pacote",
+            "kit": "Kit"
+        },
+        "unidadeDosagem": {
+            "mg": "mg",
+            "mL": "mL",
+            "UI": "UI",
+            "mcg": "mcg"
+        }
+    },
+    "scopeNames": {
+        "Insumo": "Insumo"
+    },
+    "scopeNamesPlural": {
+        "Insumo": "Insumos"
+    },
+    "tabs": {
+        "Estoque": "Estoque",
+        "Procedimentos": "Procedimentos"
+    },
+    "tabLabels": {
+        "Estoque": "Estoque",
+        "Procedimentos": "Procedimentos"
+    }
+}
+

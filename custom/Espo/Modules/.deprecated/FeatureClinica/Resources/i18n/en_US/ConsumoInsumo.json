@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "sessao": "Session",
+        "insumo": "Supply",
+        "insumoLote": "Supply Lot",
+        "insumoLoteTipo": "Lot Type",
+        "insumoLoteApresentacao": "Lot Presentation",
+        "concentracao": "Concentration",
+        "quantidade": "Quantity",
+        "dosagemMg": "Dosage (mg)",
+        "volumeMl": "Volume (mL)",
+        "saldoRestanteMg": "Remaining Balance (mg)",
+        "saldoRestanteMl": "Remaining Balance (mL)",
+        "observacao": "Note"
+    },
+    "links": {
+        "sessao": "Session",
+        "insumo": "Supply",
+        "insumoLote": "Supply Lot"
+    },
+    "labels": {
+        "Create ConsumoInsumo": "Create Supply Consumption"
+    },
+    "scopeNames": {
+        "ConsumoInsumo": "Supply Consumption"
+    },
+    "scopeNamesPlural": {
+        "ConsumoInsumo": "Supply Consumptions"
+    }
+}
+

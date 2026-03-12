@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "orcamento": "Orçamento",
+        "procedimento": "Procedimento",
+        "quantidade": "Quantidade",
+        "valorUnitario": "Valor Unitário",
+        "valorTotal": "Valor Total",
+        "desconto": "Desconto (%)",
+        "valorComDesconto": "Valor com Desconto",
+        "observacao": "Observação",
+        "tipoItem": "Tipo de Item",
+        "insumoExclusivo": "Insumo Exclusivo"
+    },
+    "links": {
+        "orcamento": "Orçamento",
+        "procedimento": "Procedimento",
+        "insumoExclusivo": "Insumo Exclusivo"
+    },
+    "options": {
+        "tipoItem": {
+            "Procedimento": "Procedimento",
+            "InsumoExclusivo": "Insumo Exclusivo"
+        }
+    },
+    "labels": {
+        "Create OrcamentoItem": "Criar Item de Orçamento"
+    },
+    "scopeNames": {
+        "OrcamentoItem": "Item de Orçamento"
+    },
+    "scopeNamesPlural": {
+        "OrcamentoItem": "Itens de Orçamento"
+    }
+}
+

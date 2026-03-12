@@ -1,0 +1,193 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "selectForeign": {
+                "select": "{alias}.nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
+        "nome": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "trim": true
+        },
+        "tipoProfissional": {
+            "type": "link",
+            "required": true
+        },
+        "tipoProfissionalRequerCRM": {
+            "type": "foreign",
+            "link": "tipoProfissional",
+            "field": "requerCRM",
+            "readOnly": true
+        },
+        "crm": {
+            "type": "varchar",
+            "maxLength": 20,
+            "trim": true
+        },
+        "crmUf": {
+            "type": "enum",
+            "options": [
+                "",
+                "AC",
+                "AL",
+                "AM",
+                "AP",
+                "BA",
+                "CE",
+                "DF",
+                "ES",
+                "GO",
+                "MA",
+                "MG",
+                "MS",
+                "MT",
+                "PA",
+                "PB",
+                "PE",
+                "PI",
+                "PR",
+                "RJ",
+                "RN",
+                "RO",
+                "RR",
+                "RS",
+                "SC",
+                "SE",
+                "SP",
+                "TO"
+            ],
+            "default": ""
+        },
+        "especialidades": {
+            "type": "linkMultiple"
+        },
+        "telefone": {
+            "type": "varchar",
+            "maxLength": 20,
+            "trim": true
+        },
+        "email": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true
+        },
+        "user": {
+            "type": "link"
+        },
+        "ativo": {
+            "type": "bool",
+            "default": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "tipoProfissional": {
+            "type": "belongsTo",
+            "entity": "TipoProfissional",
+            "foreign": "profissionais",
+            "foreignName": "nome"
+        },
+        "especialidades": {
+            "type": "hasMany",
+            "entity": "Especialidade",
+            "foreign": "profissionais",
+            "relationName": "profissionalEspecialidade"
+        },
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "appointments": {
+            "type": "hasMany",
+            "entity": "Appointment",
+            "foreign": "profissional"
+        },
+        "atendimentos": {
+            "type": "hasMany",
+            "entity": "Atendimento",
+            "foreign": "profissional"
+        },
+        "jornadas": {
+            "type": "hasMany",
+            "entity": "Jornada",
+            "foreign": "profissional"
+        },
+        "prescricoes": {
+            "type": "hasMany",
+            "entity": "Prescricao",
+            "foreign": "medico"
+        },
+        "prontuarios": {
+            "type": "hasMany",
+            "entity": "Prontuario",
+            "foreign": "profissional"
+        },
+        "anamneses": {
+            "type": "hasMany",
+            "entity": "Anamnese",
+            "foreign": "profissional"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "nome",
+        "order": "asc",
+        "textFilterFields": ["nome", "crm", "email"]
+    },
+    "indexes": {
+        "ativo": {
+            "columns": ["ativo"]
+        },
+        "userId": {
+            "columns": ["userId"]
+        },
+        "tipoProfissionalId": {
+            "columns": ["tipoProfissionalId"]
+        }
+    }
+}
+

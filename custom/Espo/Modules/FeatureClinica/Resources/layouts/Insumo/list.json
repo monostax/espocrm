@@ -1,7 +1,0 @@
-[
-    {"name": "nome", "link": true},
-    {"name": "tipo"},
-    {"name": "unidadeMedida"},
-    {"name": "estoqueMinimo"},
-    {"name": "ativo"}
-]

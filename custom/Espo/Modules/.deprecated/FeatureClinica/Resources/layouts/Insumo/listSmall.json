@@ -1,0 +1,7 @@
+[
+    { "name": "nome", "link": true },
+    { "name": "tipo" },
+    { "name": "apresentacao" },
+    { "name": "ativo" }
+]
+

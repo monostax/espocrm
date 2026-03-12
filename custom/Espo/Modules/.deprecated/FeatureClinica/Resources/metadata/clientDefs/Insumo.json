@@ -1,0 +1,74 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-vials",
+    "nameAttribute": "nome",
+    "defaultSidePanelFieldLists": {
+        "detail": ["ativo", "teams", "createdAt", "modifiedAt"],
+        "edit": ["teams"],
+        "detailSmall": ["teams"]
+    },
+    "relationshipPanels": {
+        "lotes": {
+            "create": true,
+            "select": false
+        },
+        "procedimentosInjetaveis": {
+            "create": false,
+            "select": false
+        },
+        "procedimentosImplante": {
+            "create": false,
+            "select": false
+        }
+    },
+    "filterList": ["ativo", "tipo"],
+    "dynamicLogic": {
+        "fields": {
+            "unidadeDosagem": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "tipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "dosagemTotal": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "tipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "volumeTotal": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "tipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            },
+            "concentracao": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "tipo",
+                            "value": "Medicamento"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
+

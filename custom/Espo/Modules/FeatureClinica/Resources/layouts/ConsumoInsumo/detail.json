@@ -1,9 +1,0 @@
-[
-    {
-        "rows": [
-            [{"name": "sessao"}, {"name": "insumo"}],
-            [{"name": "insumoLote"}, {"name": "quantidade"}],
-            [{"name": "observacao", "fullWidth": true}]
-        ]
-    }
-]

@@ -1,0 +1,8 @@
+[
+    { "name": "nome", "link": true },
+    { "name": "tipo" },
+    { "name": "apresentacao" },
+    { "name": "estoqueMinimo" },
+    { "name": "ativo" }
+]
+

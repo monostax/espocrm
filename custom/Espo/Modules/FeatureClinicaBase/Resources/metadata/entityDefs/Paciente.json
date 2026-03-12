@@ -1,0 +1,108 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "required": true
+        },
+        "contactName": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "name",
+            "view": "views/fields/foreign-varchar",
+            "readOnly": true
+        },
+        "emailAddress": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "emailAddress",
+            "view": "views/fields/foreign-varchar",
+            "readOnly": true
+        },
+        "phoneNumber": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "phoneNumber",
+            "view": "views/fields/foreign-varchar",
+            "readOnly": true
+        },
+        "cpf": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "cpf",
+            "view": "views/fields/foreign-varchar",
+            "readOnly": true
+        },
+        "dataNascimento": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "dataNascimento",
+            "view": "views/fields/foreign-date",
+            "readOnly": true
+        },
+        "sexo": {
+            "type": "foreign",
+            "link": "contact",
+            "field": "sexo",
+            "view": "views/fields/foreign-enum",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "pacientes"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc",
+        "textFilterFields": ["name", "contact"]
+    },
+    "indexes": {
+        "contactId": {
+            "columns": ["contactId"]
+        }
+    }
+}
+

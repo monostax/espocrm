@@ -1,0 +1,17 @@
+[
+    {
+        "name": "contactPanel",
+        "label": "Contact",
+        "rows": [[{ "name": "contact" }, false]]
+    },
+    {
+        "name": "overviewPanel",
+        "label": "Overview",
+        "rows": [
+            [{ "name": "cpf" }, { "name": "dataNascimento" }],
+            [{ "name": "sexo" }, false],
+            [{ "name": "emailAddress" }, { "name": "phoneNumber" }]
+        ]
+    }
+]
+

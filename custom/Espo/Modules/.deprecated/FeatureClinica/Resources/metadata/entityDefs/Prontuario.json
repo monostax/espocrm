@@ -1,0 +1,168 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "titulo"
+            },
+            "selectForeign": {
+                "select": "{alias}.titulo"
+            },
+            "order": {
+                "order": [["titulo", "{direction}"]]
+            }
+        },
+        "paciente": {
+            "type": "link",
+            "required": true
+        },
+        "profissional": {
+            "type": "link",
+            "required": true
+        },
+        "unidade": {
+            "type": "link",
+            "required": true
+        },
+        "dataHora": {
+            "type": "datetime",
+            "required": true
+        },
+        "tipo": {
+            "type": "enum",
+            "required": true,
+            "options": [
+                "Consulta",
+                "Procedimento",
+                "Evolucao",
+                "Exame",
+                "Implante",
+                "Observacao"
+            ]
+        },
+        "titulo": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "trim": true
+        },
+        "conteudo": {
+            "type": "text",
+            "required": true
+        },
+        "atendimento": {
+            "type": "link"
+        },
+        "jornada": {
+            "type": "link"
+        },
+        "documentos": {
+            "type": "linkMultiple"
+        },
+        "confidencial": {
+            "type": "bool",
+            "default": false
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "Paciente",
+            "foreign": "prontuarios"
+        },
+        "profissional": {
+            "type": "belongsTo",
+            "entity": "Profissional",
+            "foreignName": "nome"
+        },
+        "unidade": {
+            "type": "belongsTo",
+            "entity": "Unidade",
+            "foreignName": "nome"
+        },
+        "atendimento": {
+            "type": "belongsTo",
+            "entity": "Atendimento",
+            "foreign": "prontuarios",
+            "foreignName": "id"
+        },
+        "jornada": {
+            "type": "belongsTo",
+            "entity": "Jornada",
+            "foreign": "prontuarios",
+            "foreignName": "nome"
+        },
+        "documentos": {
+            "type": "hasMany",
+            "entity": "Documento",
+            "relationName": "prontuarioDocumento",
+            "foreign": "prontuarios"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "dataHora",
+        "order": "desc",
+        "textFilterFields": ["titulo", "conteudo"]
+    },
+    "indexes": {
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        },
+        "profissionalId": {
+            "columns": ["profissionalId"]
+        },
+        "unidadeId": {
+            "columns": ["unidadeId"]
+        },
+        "atendimentoId": {
+            "columns": ["atendimentoId"]
+        },
+        "jornadaId": {
+            "columns": ["jornadaId"]
+        },
+        "tipo": {
+            "columns": ["tipo"]
+        },
+        "dataHora": {
+            "columns": ["dataHora"]
+        }
+    }
+}
+

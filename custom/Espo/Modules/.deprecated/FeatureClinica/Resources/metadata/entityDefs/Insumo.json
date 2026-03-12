@@ -1,0 +1,173 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "select": {
+                "select": "nome"
+            },
+            "selectForeign": {
+                "select": "{alias}.nome"
+            },
+            "order": {
+                "order": [["nome", "{direction}"]]
+            }
+        },
+        "nome": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "trim": true,
+            "tooltip": true
+        },
+        "descricao": {
+            "type": "text",
+            "tooltip": true
+        },
+        "tipo": {
+            "type": "enum",
+            "required": true,
+            "options": ["Medicamento", "Cosmetico", "Material", "Outro"],
+            "tooltip": true
+        },
+        "apresentacao": {
+            "type": "enum",
+            "options": [
+                "ampola",
+                "frasco",
+                "seringa",
+                "caneta",
+                "cartucho",
+                "laminula",
+                "tubo",
+                "frascoamp",
+                "patch",
+                "outro"
+            ],
+            "tooltip": true
+        },
+        "unidadeAquisicao": {
+            "type": "enum",
+            "options": ["unidade", "caixa", "pacote", "kit"],
+            "tooltip": true
+        },
+        "quantidadePorUnidade": {
+            "type": "int",
+            "tooltip": true
+        },
+        "unidadeDosagem": {
+            "type": "enum",
+            "options": ["mg", "mL", "UI", "mcg"],
+            "tooltip": true
+        },
+        "volumeTotal": {
+            "type": "float",
+            "tooltip": true
+        },
+        "dosagemTotal": {
+            "type": "float",
+            "tooltip": true
+        },
+        "concentracao": {
+            "type": "float",
+            "tooltip": true
+        },
+        "estoqueMinimo": {
+            "type": "float",
+            "tooltip": true
+        },
+        "fornecedorPrincipal": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true,
+            "tooltip": true
+        },
+        "requerReceituario": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "ativo": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "links": {
+        "lotes": {
+            "type": "hasMany",
+            "entity": "InsumoLote",
+            "foreign": "insumo"
+        },
+        "procedimentosInjetaveis": {
+            "type": "hasMany",
+            "entity": "ProcedimentoInjetavel",
+            "foreign": "insumo"
+        },
+        "procedimentosImplante": {
+            "type": "hasMany",
+            "entity": "ProcedimentoImplante",
+            "foreign": "insumo"
+        },
+        "consumoInsumoPadrao": {
+            "type": "hasMany",
+            "entity": "ConsumoInsumoPadrao",
+            "foreign": "insumo"
+        },
+        "consumoItens": {
+            "type": "hasMany",
+            "entity": "ConsumoInsumo",
+            "foreign": "insumo"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "nome",
+        "order": "asc",
+        "textFilterFields": ["nome", "descricao"]
+    },
+    "indexes": {
+        "ativo": {
+            "columns": ["ativo"]
+        },
+        "tipo": {
+            "columns": ["tipo"]
+        }
+    }
+}
+

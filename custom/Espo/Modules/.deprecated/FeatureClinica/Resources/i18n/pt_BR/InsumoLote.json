@@ -1,0 +1,77 @@
+{
+    "fields": {
+        "insumo": "Insumo",
+        "unidade": "Unidade",
+        "numeroLote": "Número do Lote",
+        "dataFabricacao": "Data de Fabricação",
+        "dataValidade": "Data de Validade",
+        "quantidadeAquisicao": "Quantidade de Aquisição",
+        "quantidadeAtual": "Quantidade Atual",
+        "fornecedor": "Fornecedor",
+        "notaFiscal": "Nota Fiscal",
+        "precoUnitarioCusto": "Preço Unitário (Custo)",
+        "status": "Status",
+        "saldoFormatado": "Saldo Atual",
+        "insumoTipo": "Tipo do Insumo",
+        "insumoApresentacao": "Apresentação do Insumo",
+        "insumoUnidadeDosagem": "Unidade de Dosagem do Insumo",
+        "insumoVolumeTotal": "Volume Total do Insumo",
+        "insumoDosagemTotal": "Dosagem Total do Insumo",
+        "insumoConcentracao": "Concentração do Insumo",
+        "insumoUnidadeAquisicao": "Unidade de Aquisição do Insumo",
+        "insumoQuantidadePorUnidade": "Quantidade por Unidade do Insumo",
+        "saldoMg": "Saldo (mg)",
+        "saldoMl": "Saldo (mL)",
+        "saldoMgFormatado": "Saldo de Dosagem",
+        "saldoMlFormatado": "Saldo de Volume",
+        "statusUso": "Status de Uso",
+        "sessoesUsadas": "Sessões Usadas",
+        "modalidadeUso": "Modalidade de Uso",
+        "jornadaId": "ID da Jornada",
+        "jornada": "Jornada"
+    },
+    "links": {
+        "insumo": "Insumo",
+        "unidade": "Unidade",
+        "movimentacoes": "Movimentações",
+        "sessoes": "Sessões",
+        "procedimentosRealizados": "Procedimentos Realizados",
+        "consumoItens": "Consumos de Insumo",
+        "jornada": "Jornada"
+    },
+    "labels": {
+        "Create InsumoLote": "Criar Lote de Insumo"
+    },
+    "options": {
+        "status": {
+            "Disponivel": "Disponível",
+            "Vencido": "Vencido",
+            "Esgotado": "Esgotado",
+            "Bloqueado": "Bloqueado"
+        },
+        "statusUso": {
+            "Nova": "Nova",
+            "EmUso": "Em Uso",
+            "Esgotada": "Esgotada"
+        },
+        "modalidadeUso": {
+            "Coletivo": "Coletivo",
+            "Exclusivo": "Exclusivo"
+        }
+    },
+    "scopeNames": {
+        "InsumoLote": "Lote de Insumo"
+    },
+    "scopeNamesPlural": {
+        "InsumoLote": "Lotes de Insumo"
+    },
+    "tabs": {
+        "Movimentacoes": "Movimentações",
+        "Uso": "Uso"
+    },
+    "tabLabels": {
+        "Movimentacoes": "Movimentações",
+        "Uso": "Uso"
+    }
+}
+

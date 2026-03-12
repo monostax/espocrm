@@ -1,0 +1,100 @@
+{
+    "fields": {
+        "nome": "Name",
+        "descricao": "Description",
+        "tipo": "Type",
+        "apresentacao": "Presentation",
+        "unidadeAquisicao": "Acquisition Unit",
+        "quantidadePorUnidade": "Quantity per Unit",
+        "unidadeDosagem": "Dosage Unit",
+        "volumeTotal": "Total Volume (mL)",
+        "dosagemTotal": "Total Dosage",
+        "concentracao": "Concentration",
+        "estoqueMinimo": "Minimum Stock",
+        "fornecedorPrincipal": "Primary Supplier",
+        "requerReceituario": "Requires Receipt",
+        "ativo": "Active"
+    },
+    "placeholders": {
+        "nome": "Ex: Tirzepatide 2.5 mg",
+        "descricao": "Detailed description of the supply...",
+        "quantidadePorUnidade": "Ex: 4",
+        "dosagemTotal": "Ex: 10",
+        "volumeTotal": "Ex: 0.5",
+        "concentracao": "Ex: 20",
+        "estoqueMinimo": "Ex: 5",
+        "fornecedorPrincipal": "Ex: Laboratory XYZ"
+    },
+    "tooltips": {
+        "nome": "Commercial name of the supply for identification",
+        "tipo": "Category of the supply. Medication: pharmaceutical products. Cosmetic: beauty products. Material: disposable materials. Other: other types.",
+        "apresentacao": "Pharmaceutical form or presentation of the product (ampoule, vial, syringe, etc.)",
+        "unidadeAquisicao": "Unit of purchase from the supplier (unit, box, package, kit)",
+        "quantidadePorUnidade": "Quantity of individual units per acquisition unit. Ex: 4 ampoules per box.",
+        "unidadeDosagem": "Unit of measurement for dosage (mg, mL, IU, mcg)",
+        "volumeTotal": "Total volume in milliliters (mL) per individual unit",
+        "dosagemTotal": "Total dosage per individual unit in the informed dosage unit",
+        "concentracao": "Concentration calculated automatically: Total Dosage ÷ Total Volume",
+        "estoqueMinimo": "Minimum quantity in stock for replenishment alert",
+        "fornecedorPrincipal": "Name of the primary supplier of this supply",
+        "requerReceituario": "Check if this supply requires a medical prescription for dispensing",
+        "ativo": "Uncheck to deactivate this supply without deleting it"
+    },
+    "links": {
+        "lotes": "Lots",
+        "procedimentosInjetaveis": "Injectable Procedures",
+        "procedimentosImplante": "Implant Procedures",
+        "consumoInsumoPadrao": "Default Consumables",
+        "consumoItens": "Supply Consumptions"
+    },
+    "labels": {
+        "Create Insumo": "Create Supply"
+    },
+    "options": {
+        "tipo": {
+            "Medicamento": "Medication",
+            "Cosmetico": "Cosmetic",
+            "Material": "Material",
+            "Outro": "Other"
+        },
+        "apresentacao": {
+            "ampola": "Ampoule",
+            "frasco": "Vial",
+            "seringa": "Syringe",
+            "caneta": "Pen",
+            "cartucho": "Cartridge",
+            "laminula": "Lamella",
+            "tubo": "Tube",
+            "frascoamp": "Vial-Ampoule",
+            "patch": "Patch",
+            "outro": "Other"
+        },
+        "unidadeAquisicao": {
+            "unidade": "Unit",
+            "caixa": "Box",
+            "pacote": "Package",
+            "kit": "Kit"
+        },
+        "unidadeDosagem": {
+            "mg": "mg",
+            "mL": "mL",
+            "UI": "IU",
+            "mcg": "mcg"
+        }
+    },
+    "scopeNames": {
+        "Insumo": "Supply"
+    },
+    "scopeNamesPlural": {
+        "Insumo": "Supplies"
+    },
+    "tabs": {
+        "Estoque": "Inventory",
+        "Procedimentos": "Procedures"
+    },
+    "tabLabels": {
+        "Estoque": "Inventory",
+        "Procedimentos": "Procedures"
+    }
+}
+

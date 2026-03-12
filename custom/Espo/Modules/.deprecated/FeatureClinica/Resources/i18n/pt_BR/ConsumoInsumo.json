@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "sessao": "Sessão",
+        "insumo": "Insumo",
+        "insumoLote": "Lote de Insumo",
+        "insumoLoteTipo": "Tipo do Lote",
+        "insumoLoteApresentacao": "Apresentação do Lote",
+        "concentracao": "Concentração",
+        "quantidade": "Quantidade",
+        "dosagemMg": "Dosagem (mg)",
+        "volumeMl": "Volume (mL)",
+        "saldoRestanteMg": "Saldo Restante (mg)",
+        "saldoRestanteMl": "Saldo Restante (mL)",
+        "observacao": "Observação"
+    },
+    "links": {
+        "sessao": "Sessão",
+        "insumo": "Insumo",
+        "insumoLote": "Lote de Insumo"
+    },
+    "labels": {
+        "Create ConsumoInsumo": "Criar Consumo de Insumo"
+    },
+    "scopeNames": {
+        "ConsumoInsumo": "Consumo de Insumo"
+    },
+    "scopeNamesPlural": {
+        "ConsumoInsumo": "Consumos de Insumo"
+    }
+}
+

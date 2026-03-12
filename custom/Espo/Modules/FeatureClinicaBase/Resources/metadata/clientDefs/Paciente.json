@@ -1,0 +1,29 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-user-injured",
+    "recordViews": {
+        "detail": "global:views/record/detail"
+    },
+    "defaultSidePanelFieldLists": {
+        "detail": ["contact", "teams", "createdAt", "modifiedAt"],
+        "edit": ["contact", "teams"],
+        "detailSmall": ["contact", "teams"]
+    },
+    "relationshipPanels": {},
+    "filterList": ["contact"],
+    "dynamicLogic": {
+        "panels": {
+            "contactPanel": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
+

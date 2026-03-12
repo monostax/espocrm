@@ -1,0 +1,77 @@
+{
+    "fields": {
+        "insumo": "Supply",
+        "unidade": "Unit",
+        "numeroLote": "Lot Number",
+        "dataFabricacao": "Manufacturing Date",
+        "dataValidade": "Expiry Date",
+        "quantidadeAquisicao": "Acquisition Quantity",
+        "quantidadeAtual": "Current Quantity",
+        "fornecedor": "Supplier",
+        "notaFiscal": "Invoice",
+        "precoUnitarioCusto": "Unit Cost Price",
+        "status": "Status",
+        "saldoFormatado": "Current Balance",
+        "insumoTipo": "Supply Type",
+        "insumoApresentacao": "Supply Presentation",
+        "insumoUnidadeDosagem": "Supply Dosage Unit",
+        "insumoVolumeTotal": "Supply Total Volume",
+        "insumoDosagemTotal": "Supply Total Dosage",
+        "insumoConcentracao": "Supply Concentration",
+        "insumoUnidadeAquisicao": "Supply Acquisition Unit",
+        "insumoQuantidadePorUnidade": "Supply Quantity per Unit",
+        "saldoMg": "Balance (mg)",
+        "saldoMl": "Balance (mL)",
+        "saldoMgFormatado": "Dosage Balance",
+        "saldoMlFormatado": "Volume Balance",
+        "statusUso": "Usage Status",
+        "sessoesUsadas": "Sessions Used",
+        "modalidadeUso": "Usage Mode",
+        "jornadaId": "Journey ID",
+        "jornada": "Journey"
+    },
+    "links": {
+        "insumo": "Supply",
+        "unidade": "Unit",
+        "movimentacoes": "Movements",
+        "sessoes": "Sessions",
+        "procedimentosRealizados": "Performed Procedures",
+        "consumoItens": "Supply Consumptions",
+        "jornada": "Journey"
+    },
+    "labels": {
+        "Create InsumoLote": "Create Supply Lot"
+    },
+    "options": {
+        "status": {
+            "Disponivel": "Available",
+            "Vencido": "Expired",
+            "Esgotado": "Depleted",
+            "Bloqueado": "Blocked"
+        },
+        "statusUso": {
+            "Nova": "New",
+            "EmUso": "In Use",
+            "Esgotada": "Depleted"
+        },
+        "modalidadeUso": {
+            "Coletivo": "Collective",
+            "Exclusivo": "Exclusive"
+        }
+    },
+    "scopeNames": {
+        "InsumoLote": "Supply Lot"
+    },
+    "scopeNamesPlural": {
+        "InsumoLote": "Supply Lots"
+    },
+    "tabs": {
+        "Movimentacoes": "Movements",
+        "Uso": "Usage"
+    },
+    "tabLabels": {
+        "Movimentacoes": "Movements",
+        "Uso": "Usage"
+    }
+}
+
