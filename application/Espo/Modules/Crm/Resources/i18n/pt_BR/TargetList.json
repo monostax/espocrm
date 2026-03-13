@@ -30,7 +30,7 @@
         }
     },
     "labels": {
-        "Create TargetList": "Criar Lista de Alvos",
+        "Create TargetList": "Cadastrar Lista de Alvos",
         "Opted Out": "Cancelado",
         "Cancel Opt-Out": "Cancelar Cancelamento",
         "Opt-Out": "Cancelar"

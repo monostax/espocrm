@@ -1,7 +1,7 @@
 {
     "labels": {
         "SimplesAgendaCliente": "SimplesAgenda / Clientes",
-        "Create SimplesAgendaCliente": "Criar Cliente SimplesAgenda",
+        "Create SimplesAgendaCliente": "Cadastrar Cliente SimplesAgenda",
         "Sync Now": "Sincronizar Agora",
         "Syncing...": "Sincronizando...",
         "Sync completed": "Sincronização concluída",

@@ -55,7 +55,7 @@
         }
     },
     "labels": {
-        "Create Campaign": "Criar Campanha",
+        "Create Campaign": "Cadastrar Campanha",
         "Target Lists": "Públicos Alvo",
         "Statistics": "Estatística",
         "hard": "Difícil",
@@ -65,7 +65,7 @@
         "Email Templates": "Modelo de email",
         "Unsubscribe again": "Cancelar subscrição outra vez",
         "Subscribe again": "Subscrever outra vez",
-        "Create Target List": "Criar Público Alvo",
+        "Create Target List": "Cadastrar Público Alvo",
         "Generate Mail Merge PDF": "Gerar Mail Merge PDF"
     },
     "presetFilters": {

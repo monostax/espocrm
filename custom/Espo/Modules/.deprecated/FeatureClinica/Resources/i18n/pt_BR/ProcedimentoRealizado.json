@@ -20,7 +20,7 @@
         "movimentacoesEstoque": "Movimentações de Estoque"
     },
     "labels": {
-        "Create ProcedimentoRealizado": "Criar Procedimento Realizado"
+        "Create ProcedimentoRealizado": "Cadastrar Procedimento Realizado"
     },
     "scopeNames": {
         "ProcedimentoRealizado": "Procedimento Realizado"

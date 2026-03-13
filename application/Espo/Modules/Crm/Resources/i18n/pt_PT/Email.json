@@ -1,9 +1,9 @@
 {
   "labels": {
-    "Create Lead": "Criar Lead",
-    "Create Contact": "Criar Contato",
-    "Create Task": "Criar tarefa",
-    "Create Case": "Criar caso",
+    "Create Lead": "Cadastrar Lead",
+    "Create Contact": "Cadastrar Contato",
+    "Create Task": "Cadastrar tarefa",
+    "Create Case": "Cadastrar caso",
     "Add to Contact": "Adicionar contato",
     "Add to Lead": "Adicionar à Lead"
   },

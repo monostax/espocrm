@@ -1,8 +1,8 @@
 {
     "actionTypes": {
-        "createPopupNotification": "Criar Notificação Popup"
+        "createPopupNotification": "Cadastrar Notificação Popup"
     },
     "labels": {
-        "createPopupNotification": "Criar Notificação Popup"
+        "createPopupNotification": "Cadastrar Notificação Popup"
     }
 }

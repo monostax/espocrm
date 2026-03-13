@@ -14,7 +14,7 @@
         "inboxIntegration": "Integração Inbox"
     },
     "labels": {
-        "Create WahaSessionLabel": "Criar Etiqueta de Sessão"
+        "Create WahaSessionLabel": "Cadastrar Etiqueta de Sessão"
     },
     "options": {
         "syncStatus": {

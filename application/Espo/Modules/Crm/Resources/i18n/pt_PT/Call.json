@@ -36,7 +36,7 @@
         "setNotHeld": "Configurar como Não realizado"
     },
     "labels": {
-        "Create Call": "Criar chamada",
+        "Create Call": "Cadastrar chamada",
         "Set Held": "Configurar como Realizado",
         "Set Not Held": "Configurar como Não Realizado",
         "Send Invitations": "Enviar convites"

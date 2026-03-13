@@ -1,12 +1,37 @@
 [
     {
+        "label": "ContactPanelCreate",
         "name": "contactPanel",
-        "label": "Contact",
-        "rows": [[{ "name": "contact" }, false]]
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isEmpty",
+                    "attribute": "id"
+                }
+            ]
+        },
+        "rows": [[{ "name": "contact", "label": "selectContact" }]]
     },
     {
-        "name": "overviewPanel",
         "label": "Overview",
+        "name": "overviewPanel",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "or",
+                    "value": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "contactId"
+                        }
+                    ]
+                }
+            ]
+        },
         "rows": [
             [{ "name": "cpf" }, { "name": "dataNascimento" }],
             [{ "name": "sexo" }, false],

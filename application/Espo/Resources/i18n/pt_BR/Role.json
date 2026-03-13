@@ -27,7 +27,7 @@
     },
     "labels": {
         "Access": "Acesso",
-        "Create Role": "Criar Regra",
+        "Create Role": "Cadastrar Regra",
         "Scope Level": "Nível do Escopo",
         "Field Level": "Nível do Campo"
     },

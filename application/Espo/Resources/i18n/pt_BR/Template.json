@@ -22,7 +22,7 @@
     "title": "Título"
   },
   "labels": {
-    "Create Template": "Criar template"
+    "Create Template": "Cadastrar template"
   },
   "tooltips": {
     "footer": "Use {pageNumber} para imprimir o número da página.",

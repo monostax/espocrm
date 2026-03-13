@@ -6,24 +6,10 @@
     },
     "defaultSidePanelFieldLists": {
         "detail": ["contact", "teams", "createdAt", "modifiedAt"],
-        "edit": ["contact", "teams"],
+        "edit": ["teams"],
         "detailSmall": ["contact", "teams"]
     },
     "relationshipPanels": {},
-    "filterList": ["contact"],
-    "dynamicLogic": {
-        "panels": {
-            "contactPanel": {
-                "visible": {
-                    "conditionGroup": [
-                        {
-                            "type": "isEmpty",
-                            "attribute": "id"
-                        }
-                    ]
-                }
-            }
-        }
-    }
+    "filterList": ["contact"]
 }
 

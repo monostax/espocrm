@@ -19,7 +19,7 @@
         "insumoLote": "Lote de Insumo"
     },
     "labels": {
-        "Create ConsumoInsumo": "Criar Consumo de Insumo"
+        "Create ConsumoInsumo": "Cadastrar Consumo de Insumo"
     },
     "scopeNames": {
         "ConsumoInsumo": "Consumo de Insumo"

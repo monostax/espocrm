@@ -16,7 +16,7 @@
         "teams": "Permissão / Times"
     },
     "labels": {
-        "Create ChatwootTeam": "Criar Chat / Time"
+        "Create ChatwootTeam": "Cadastrar Chat / Time"
     },
     "tooltips": {
         "allowAutoAssign": "Se esta configuração estiver ativada, o sistema atribuirá automaticamente a conversa a um agente do time ao atribuir a conversa ao time.",

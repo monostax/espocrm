@@ -34,7 +34,7 @@
     }
   },
   "labels": {
-    "Create MassEmail": "Criar email em massa",
+    "Create MassEmail": "Cadastrar email em massa",
     "Send Test": "Enviar Teste",
     "System SMTP": "SMTP do sistema",
     "system": "sistema",

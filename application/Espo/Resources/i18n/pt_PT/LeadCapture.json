@@ -14,7 +14,7 @@
     "apiKey": "API key",
     "targetTeam": "Equipa alvo",
     "exampleRequestMethod": "Método",
-    "createLeadBeforeOptInConfirmation": "Criar lead antes de confirmar",
+    "createLeadBeforeOptInConfirmation": "Cadastrar lead antes de confirmar",
     "duplicateCheck": "Duplicate check ",
     "skipOptInConfirmationIfSubscribed": "Pular confirmação se a lead já estiver na lista de alvos.",
     "smtpAccount": "AMTP Account",
@@ -30,13 +30,13 @@
     "inboundEmail": "Conta de email de grupo"
   },
   "labels": {
-    "Create LeadCapture": "Criar ponto de entrada",
+    "Create LeadCapture": "Cadastrar ponto de entrada",
     "Generate New API Key": "Gerar nova chave API",
     "Request": "Pedido",
     "Confirm Opt-In": "Confirme Opt-In"
   },
   "messages": {
-    "generateApiKey": "Criar nova chave API",
+    "generateApiKey": "Cadastrar nova chave API",
     "optInConfirmationExpired": "O link de confirmação de ativação expirou.",
     "optInIsConfirmed": "O opt-in confirmado."
   },

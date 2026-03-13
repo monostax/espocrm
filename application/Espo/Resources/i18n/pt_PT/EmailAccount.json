@@ -26,7 +26,7 @@
     }
   },
   "labels": {
-    "Create EmailAccount": "Criar conta de email",
+    "Create EmailAccount": "Cadastrar conta de email",
     "Main": "Principal",
     "Test Connection": "Teste de conexão",
     "Send Test Email": "Enviar email de teste"

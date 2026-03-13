@@ -39,7 +39,7 @@
         "subscription": "Inscrição"
     },
     "labels": {
-        "Create PushNotificationQueue": "Criar Entrada na Fila de Notificações",
+        "Create PushNotificationQueue": "Cadastrar Entrada na Fila de Notificações",
         "Push Notification Queue": "Fila de Notificações Push"
     }
 }

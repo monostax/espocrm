@@ -64,7 +64,7 @@
         "textFilterFields": "Campos usados pela pesquisa de texto.",
         "stream": "Se a entidade tem um Stream.",
         "disabled": "Verifique se você não precisa dessa entidade em seu sistema.",
-        "linkAudited": "Criar registro relacionado e vincular com registro existente será registrado no Stream.",
+        "linkAudited": "Cadastrar registro relacionado e vincular com registro existente será registrado no Stream.",
         "linkMultipleField": "O campo Link Múltiplo fornece uma maneira prática de editar relações. Não use se você tiver um grande número de registros relacionados.",
         "entityType": "Base Plus - possui painéis de Atividades, Histórico e Tarefas.\n\nEvento - disponível nos painéis de Agenda e Atividades",
         "fullTextSearch": "A reconstrução em execução é necessária.",

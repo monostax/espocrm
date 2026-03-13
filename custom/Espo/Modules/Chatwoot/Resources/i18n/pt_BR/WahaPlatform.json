@@ -16,7 +16,7 @@
         "teams": "Permissão / Times"
     },
     "labels": {
-        "Create WahaPlatform": "Criar Plataforma Waha"
+        "Create WahaPlatform": "Cadastrar Plataforma Waha"
     },
     "tooltips": {
         "frontendUrl": "URL da plataforma WAHA voltada para o usuário (ex: https://waha.exemplo.com). Usada para acesso externo.",

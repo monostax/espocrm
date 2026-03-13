@@ -32,7 +32,7 @@
     }
   },
   "labels": {
-    "Create EmailAccount": "Criar conta de e-mail",
+    "Create EmailAccount": "Cadastrar conta de e-mail",
     "Main": "Principal",
     "Test Connection": "Testar conexão",
     "Send Test Email": "Enviar Email de Teste"

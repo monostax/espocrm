@@ -9,7 +9,7 @@
     "log": "Registo"
   },
   "labels": {
-    "Create ScheduledJob": "Criar trabalho agendado",
+    "Create ScheduledJob": "Cadastrar trabalho agendado",
     "As often as possible": "O mais frequente possível"
   },
   "options": {

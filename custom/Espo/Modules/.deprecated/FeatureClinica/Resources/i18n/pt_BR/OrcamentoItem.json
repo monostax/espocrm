@@ -23,7 +23,7 @@
         }
     },
     "labels": {
-        "Create OrcamentoItem": "Criar Item de Orçamento"
+        "Create OrcamentoItem": "Cadastrar Item de Orçamento"
     },
     "scopeNames": {
         "OrcamentoItem": "Item de Orçamento"

@@ -10,7 +10,7 @@
     "apiKey": "Chave de API",
     "targetTeam": "Time Alvo",
     "exampleRequestMethod": "Método",
-    "createLeadBeforeOptInConfirmation": "Criar Lead antes da confirmação",
+    "createLeadBeforeOptInConfirmation": "Cadastrar Lead antes da confirmação",
     "duplicateCheck": "Verificar Duplicados",
     "skipOptInConfirmationIfSubscribed": "Pule a confirmação se o lead já estiver na lista de destino",
     "smtpAccount": "Conta SMTP",
@@ -23,12 +23,12 @@
     "inboundEmail": "Conta de Email do Grupo"
   },
   "labels": {
-    "Create LeadCapture": "Criar Ponto de Entrada",
+    "Create LeadCapture": "Cadastrar Ponto de Entrada",
     "Generate New API Key": "Gerar Nova Chave de API",
     "Request": "Solicitação"
   },
   "messages": {
-    "generateApiKey": "Criar Nova Chave de API"
+    "generateApiKey": "Cadastrar Nova Chave de API"
   },
   "tooltips": {
     "optInConfirmationSuccessMessage": "Markdown é suportado."

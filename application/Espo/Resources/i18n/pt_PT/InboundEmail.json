@@ -9,7 +9,7 @@
     "port": "Porta",
     "monitoredFolders": "Pastas monotorizadas",
     "trashFolder": "Lixo",
-    "createCase": "Criar Caso",
+    "createCase": "Cadastrar Caso",
     "reply": "Auto resposta",
     "caseDistribution": "Distribuição de casos",
     "replyEmailTemplate": "Modelo de email de resposta",
@@ -34,7 +34,7 @@
   },
   "tooltips": {
     "reply": "Notifique os remetentes de email que seus emails foram recebidos.\n\nSomente um email será enviado para um determinado destinatário durante algum período de tempo para evitar o loop.",
-    "createCase": "Criar casos automaticamente a partir de emails recebidos.",
+    "createCase": "Cadastrar casos automaticamente a partir de emails recebidos.",
     "replyToAddress": "Especifique o endereço de email da caixa de correio para que as respostas cheguem até aqui.",
     "caseDistribution": "Como os casos serão atribuídos. Atribuído diretamente ao utilizador ou a alguém da equipa.",
     "assignToUser": "Casos de utilizadores serão atribuídos a.",

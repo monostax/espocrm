@@ -43,7 +43,7 @@
         }
     },
     "labels": {
-        "Create Case": "Criar Atendimento",
+        "Create Case": "Cadastrar Atendimento",
         "Close": "Fechar",
         "Reject": "Rejeitar",
         "Closed": "Fechado",

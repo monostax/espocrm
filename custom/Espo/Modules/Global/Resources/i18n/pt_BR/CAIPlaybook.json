@@ -1,6 +1,6 @@
 {
     "labels": {
-        "Create CAIPlaybook": "Criar Playbook"
+        "Create CAIPlaybook": "Cadastrar Playbook"
     },
     "fields": {
         "mastraWorkflowId": "Mastra Workflow Id"

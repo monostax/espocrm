@@ -54,7 +54,7 @@
         }
     },
     "labels": {
-        "Create Campaign": "Criar Campanha",
+        "Create Campaign": "Cadastrar Campanha",
         "Target Lists": "Lista de Alvos",
         "Statistics": "Estatísticas",
         "Unsubscribe": "Cancelar Subscrição",
@@ -62,7 +62,7 @@
         "Email Templates": "Templates de email",
         "Unsubscribe again": "Cancelar inscrição novamente",
         "Subscribe again": "Inscreva-se novamente",
-        "Create Target List": "Criar Lista de Alvo",
+        "Create Target List": "Cadastrar Lista de Alvo",
         "Mail Merge": "Mala Direta",
         "Generate Mail Merge PDF": "Gerar PDF de mala direta"
     },

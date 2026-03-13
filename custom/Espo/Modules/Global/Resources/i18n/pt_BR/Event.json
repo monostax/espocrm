@@ -1,0 +1,7 @@
+{
+    "labels": {
+        "Create {entityType}": "Cadastrar {entityTypeTranslated}",
+        "Schedule {entityType}": "Agendar {entityTypeTranslated}"
+    }
+}
+

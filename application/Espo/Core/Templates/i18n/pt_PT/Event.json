@@ -21,7 +21,7 @@
     }
   },
   "labels": {
-    "Create {entityType}": "Criar {entityTypeTranslated}",
+    "Create {entityType}": "Cadastrar {entityTypeTranslated}",
     "Schedule {entityType}": "Planeamento {entityTypeTranslated}",
     "Log {entityType}": "Registo {entityTypeTranslated}",
     "Set Held": "Configurar como Realizada",

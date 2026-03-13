@@ -9,7 +9,7 @@
     "emailFolder": "Pasta"
   },
   "labels": {
-    "Create EmailFilter": "Criar filtro de email"
+    "Create EmailFilter": "Cadastrar filtro de email"
   },
   "tooltips": {
     "from": "E-mails sendo enviados através das contas especificadas. Deixar em branco se desnecessário. Você pode usar wildcard *.",

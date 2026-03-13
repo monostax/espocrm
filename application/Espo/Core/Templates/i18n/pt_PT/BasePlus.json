@@ -5,6 +5,6 @@
     "tasks": "Tarefas"
   },
   "labels": {
-    "Create {entityType}": "Criar {entityTypeTranslated}"
+    "Create {entityType}": "Cadastrar {entityTypeTranslated}"
   }
 }

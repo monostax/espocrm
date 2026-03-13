@@ -54,7 +54,7 @@
         "workingTimeCalendar": "Agenda do horário de trabalho"
     },
     "labels": {
-        "Create User": "Criar utilizador",
+        "Create User": "Cadastrar utilizador",
         "Generate": "Gerar",
         "Access": "Acesso",
         "Preferences": "Preferências",
@@ -65,7 +65,7 @@
         "Email Address": "Endereço de email",
         "External Accounts": "Conta externa",
         "Email Accounts": "Contas de email",
-        "Create Portal User": "Criar utilizador do portal",
+        "Create Portal User": "Cadastrar utilizador do portal",
         "Proceed w/o Contact": "Continuar sem contato",
         "Generate New API Key": "Gerar nova chave de API",
         "Generate New Password": "Gerar nova senha",

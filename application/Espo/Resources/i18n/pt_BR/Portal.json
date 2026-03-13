@@ -5,7 +5,7 @@
     "isActive": "Está Ativo",
     "isDefault": "É padrão",
     "tabList": "Lista de Aba",
-    "quickCreateList": "Criar Lista Rápida",
+    "quickCreateList": "Cadastrar Lista Rápida",
     "theme": "Tema",
     "language": "Linguagem",
     "dashboardLayout": "Layout do Dashboard",
@@ -29,7 +29,7 @@
     "layoutSet": "Fornece a capacidade de ter layouts que diferem dos padrões."
   },
   "labels": {
-    "Create Portal": "Criar portal",
+    "Create Portal": "Cadastrar portal",
     "User Interface": "Interface do Usuário",
     "General": "Geral",
     "Settings": "Configurações"

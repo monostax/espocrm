@@ -15,7 +15,7 @@
         "teams": "Permissão / Times"
     },
     "labels": {
-        "Create ChatwootPlatform": "Criar Plataforma de Chat"
+        "Create ChatwootPlatform": "Cadastrar Plataforma de Chat"
     },
     "tooltips": {
         "frontendUrl": "URL da plataforma de Chat voltada para o usuário (ex: https://chat.exemplo.com). Usada para redirecionamentos SSO e incorporação em iframe.",

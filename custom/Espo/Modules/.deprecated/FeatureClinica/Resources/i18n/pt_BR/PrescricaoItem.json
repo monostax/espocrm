@@ -11,7 +11,7 @@
         "procedimento": "Procedimento"
     },
     "labels": {
-        "Create PrescricaoItem": "Criar Item de Prescrição"
+        "Create PrescricaoItem": "Cadastrar Item de Prescrição"
     },
     "scopeNames": {
         "PrescricaoItem": "Item de Prescrição"

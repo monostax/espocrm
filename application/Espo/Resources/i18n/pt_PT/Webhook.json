@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Create Webhook": "Criar Webhook"
+    "Create Webhook": "Cadastrar Webhook"
   },
   "fields": {
     "event": "Evento",

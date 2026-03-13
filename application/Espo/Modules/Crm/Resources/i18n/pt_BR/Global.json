@@ -73,7 +73,7 @@
         "Activities": "Minhas Atividades"
     },
     "labels": {
-        "Create InboundEmail": "Criar E-mail de Entrada",
+        "Create InboundEmail": "Cadastrar E-mail de Entrada",
         "Activities": "Atividades",
         "History": "Atividades (Realizadas)",
         "Attendees": "participantes",
@@ -83,7 +83,7 @@
         "Log Meeting": "Logar Reunião",
         "Log Call": "Logar Ligação",
         "Archive Email": "Arquivar E-mail",
-        "Create Task": "Criar Tarefa",
+        "Create Task": "Cadastrar Tarefa",
         "Tasks": "Tarefas",
         "Scheduler": "Agendador"
     },

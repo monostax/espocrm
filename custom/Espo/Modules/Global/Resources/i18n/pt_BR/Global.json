@@ -45,7 +45,10 @@
         "OpportunityStage": "Etapas do Funil"
     },
     "labels": {
-        "Home": "Dashboard"
+        "Home": "Dashboard",
+        "Create {entityType}": "Cadastrar {entityTypeTranslated}",
+        "Create": "Cadastrar",
+        "create": "cadastrar"
     },
     "navbarTabs": {
         "Conversations": "Conversas",
@@ -62,6 +65,8 @@
         "Calendar": "Agenda",
         "Activities": "Atividades",
         "Users": "Usuários"
+    },
+    "actions": {
+        "create": "Cadastrar"
     }
 }
-

@@ -53,7 +53,7 @@
         "userData": "Dados do Usuário"
     },
     "labels": {
-        "Create User": "Criar Usuário",
+        "Create User": "Cadastrar Usuário",
         "Generate": "Gerar",
         "Access": "Acesso",
         "Preferences": "Preferências",
@@ -64,7 +64,7 @@
         "Email Address": "Endereço de e-mail",
         "External Accounts": "Contas externas",
         "Email Accounts": "Contas de e-mail",
-        "Create Portal User": "Criar Usuário de Portal",
+        "Create Portal User": "Cadastrar Usuário de Portal",
         "Proceed w/o Contact": "Prossiga sem Contato",
         "Generate New API Key": "Gerar Nova Chave de API",
         "Generate New Password": "Gerar Nova Senha",

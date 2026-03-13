@@ -1,6 +1,6 @@
 {
     "labels": {
-        "Create WorkingTimeCalendar": "Criar Agenda"
+        "Create WorkingTimeCalendar": "Cadastrar Agenda"
     },
     "fields": {
         "timeZone": "Fuso horário",

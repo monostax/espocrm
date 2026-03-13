@@ -33,7 +33,7 @@
         }
     },
     "labels": {
-        "Create Task": "Criar Tarefa",
+        "Create Task": "Cadastrar Tarefa",
         "Complete": "Marcar como Concluída",
         "overdue": "atrasado"
     },

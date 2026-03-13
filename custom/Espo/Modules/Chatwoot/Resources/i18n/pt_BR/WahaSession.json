@@ -16,7 +16,7 @@
         "platform": "Plataforma"
     },
     "labels": {
-        "Create WahaSession": "Criar Sessão",
+        "Create WahaSession": "Cadastrar Sessão",
         "Start Session": "Iniciar Sessão",
         "Stop Session": "Parar Sessão",
         "Restart Session": "Reiniciar Sessão",

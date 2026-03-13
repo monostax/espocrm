@@ -3,7 +3,7 @@
     "append": "Anexar (não remover as guias do utilizador)"
   },
   "labels": {
-    "Create DashboardTemplate": "Criar template",
+    "Create DashboardTemplate": "Cadastrar template",
     "Deploy to Users": "Implantar para utilizadores",
     "Deploy to Team": "Implantar para a equipa"
   }
