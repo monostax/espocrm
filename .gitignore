@@ -15,7 +15,8 @@
 /test.php
 /main.html
 /client/custom/modules/**/lib/transpiled/
-
+.direnv/
+**/.direnv
 /tests/unit/testData/cache/*
 !/tests/unit/testData/cache/.data
 /tests/integration/config.php

@@ -1,5 +1,8 @@
 {
     "teamSidenavConfigs": {
         "className": "Espo\\Modules\\Global\\Classes\\AppParams\\TeamSidenavConfigs"
+    },
+    "buildVersion": {
+        "className": "Espo\\Modules\\Global\\Classes\\AppParams\\BuildVersion"
     }
 }

@@ -31,6 +31,12 @@ import View from 'view';
 class FooterSiteView extends View {
 
     template = 'site/footer'
+
+    data() {
+        return {
+            buildVersion: this.getHelper().getAppParam('buildVersion') || '',
+        };
+    }
 }
 
 export default FooterSiteView;

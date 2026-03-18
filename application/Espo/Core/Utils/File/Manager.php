@@ -121,6 +121,10 @@ class Manager
                 continue;
             }
 
+            if (strpos($value, '.') === 0) {
+                continue;
+            }
+
             $add = false;
 
             if (is_dir($path . Util::getSeparator() . $value)) {
