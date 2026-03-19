@@ -117,6 +117,24 @@
         }
     },
     {
+        "route": "/ChatwootAccountUserMembership/:id/enableAiProfile",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootAccountUserMembership",
+            "action": "enableAiProfile",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/ChatwootAccountUserMembership/:id/disableAiProfile",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootAccountUserMembership",
+            "action": "disableAiProfile",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/WhatsAppDeliveryWebhook/:accountId",
         "method": "post",
         "params": {

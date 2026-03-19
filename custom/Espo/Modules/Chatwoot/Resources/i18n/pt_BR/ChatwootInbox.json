@@ -1,8 +1,8 @@
 {
     "fields": {
-        "accountUserMemberships": "Membros da Conta"
+        "accountUserMemberships": "Membros da Caixa de Entrada"
     },
     "links": {
-        "accountUserMemberships": "Membros da Conta"
+        "accountUserMemberships": "Membros da Caixa de Entrada"
     }
 }

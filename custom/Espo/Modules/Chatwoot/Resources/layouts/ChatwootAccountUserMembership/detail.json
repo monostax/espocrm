@@ -17,7 +17,21 @@
                 {
                     "name": "role"
                 }
-            ],
+            ]
+        ]
+    },
+    {
+        "label": "AI Agent Profile",
+        "name": "aiProfile",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "chatwootAgentId"
+                }
+            ]
+        },
+        "rows": [
             [
                 {
                     "name": "chatwootAgent"

@@ -10,10 +10,10 @@
                 "roles": ["tenant", "tenant-admin"]
             },
             {
-                "url": "#Configurations/ChatwootAgent",
-                "label": "Agents",
-                "iconClass": "ti ti-user-pentagon",
-                "description": "chatwootAgents",
+                "url": "#Configurations/ChatwootAccountUserMembership",
+                "label": "Account Users",
+                "iconClass": "ti ti-user-shield",
+                "description": "accountUserMemberships",
                 "roles": ["tenant", "tenant-admin"]
             },
             {

@@ -13,6 +13,7 @@
         "chatwootSyncState": "View chat synchronization state",
         "wahaPlatforms": "Manage Waha platforms",
         "wahaSessions": "Manage WhatsApp sessions",
-        "whatsAppCampaigns": "Manage WhatsApp marketing campaigns and bulk messaging"
+        "whatsAppCampaigns": "Manage WhatsApp marketing campaigns and bulk messaging",
+        "accountUserMemberships": "Manage account user memberships"
     }
 }

@@ -22,7 +22,16 @@
         "chatwootInboxes": "Chat / Inboxes"
     },
     "labels": {
-        "Create ChatwootAccountUserMembership": "Create Account Membership"
+        "Create ChatwootAccountUserMembership": "Create Account User",
+        "Enable AI Profile": "Enable AI Profile",
+        "Disable AI Profile": "Disable AI Profile",
+        "Account Users": "Account Users"
+    },
+    "messages": {
+        "confirmEnableAiProfile": "This will create a Chat Agent profile with AI capabilities for this account member. Continue?",
+        "confirmDisableAiProfile": "This will disable AI capabilities on the linked Agent profile. The agent profile will remain linked but with AI turned off. Continue?",
+        "aiProfileEnabled": "AI Agent profile has been enabled successfully.",
+        "aiProfileDisabled": "AI Agent profile has been disabled."
     },
     "options": {
         "role": {
@@ -37,6 +46,7 @@
     },
     "tooltips": {
         "chatwootAccountUserId": "The account-user membership ID in Chat. This field is automatically populated after sync.",
-        "chatwootAgent": "The agent record associated with this account membership, if any."
+        "chatwootAgent": "The agent record associated with this account membership, if any.",
+        "chatwootInboxes": "The inboxes this account member has access to. Managed automatically by the inbox member sync."
     }
 }

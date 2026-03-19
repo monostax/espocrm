@@ -202,6 +202,27 @@
             "checkVisibilityFunction": "isReconnectAvailable",
             "groupIndex": 1
         }
-    ]
+    ],
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "wahaSessionLabels",
+                "label": "Session Labels",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 5,
+                "disabled": false
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "wahaSessionLabels": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        }
+    }
 }
 

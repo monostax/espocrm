@@ -257,6 +257,152 @@ class ChatwootAccountUserMembershipService
     }
 
     /**
+     * Enable AI profile for a membership by creating or re-enabling a ChatwootAgent.
+     *
+     * If an agent already exists for this (account, user) pair:
+     *   - If isAI is false: set isAI = true, link if needed
+     *   - If isAI is true: no-op
+     * If no agent exists: create one via non-silent createEntity (triggers full hook chain).
+     *
+     * @param Entity $membership ChatwootAccountUserMembership entity
+     * @return Entity The refreshed membership entity
+     * @throws \Espo\Core\Exceptions\BadRequest
+     */
+    public function enableAiProfile(Entity $membership): Entity
+    {
+        $accountId = $membership->get('chatwootAccountId');
+        $userId = $membership->get('chatwootUserId');
+
+        if (!$accountId || !$userId) {
+            throw new \Espo\Core\Exceptions\BadRequest('Membership must have both a Chat Account and Chat User to enable AI profile.');
+        }
+
+        // Check if a ChatwootAgent already exists for this (account, user) pair
+        $existingAgent = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->where([
+                'chatwootAccountId' => $accountId,
+                'chatwootUserId' => $userId,
+            ])
+            ->findOne();
+
+        if ($existingAgent) {
+            if ($existingAgent->get('isAI')) {
+                // Already enabled — no-op
+                $this->log->info(
+                    "enableAiProfile: Agent {$existingAgent->getId()} already has isAI=true for membership {$membership->getId()}"
+                );
+            } else {
+                // Re-enable AI on existing agent
+                $existingAgent->set('isAI', true);
+                $this->entityManager->saveEntity($existingAgent, ['silent' => true]);
+
+                $this->log->info(
+                    "enableAiProfile: Re-enabled isAI on existing agent {$existingAgent->getId()} for membership {$membership->getId()}"
+                );
+            }
+
+            // Ensure membership has the agent linked
+            if ($membership->get('chatwootAgentId') !== $existingAgent->getId()) {
+                $membership->set('chatwootAgentId', $existingAgent->getId());
+                $this->entityManager->saveEntity($membership, ['silent' => true]);
+            }
+
+            // Reload to get fresh state
+            return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
+        }
+
+        // No existing agent — create one via non-silent createEntity (triggers full hook chain)
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
+        if (!$chatwootUser) {
+            throw new \Espo\Core\Exceptions\BadRequest('Chat User not found.');
+        }
+
+        $email = $chatwootUser->get('email');
+        $name = $chatwootUser->get('name') ?: $membership->get('name');
+        $role = $membership->get('role') ?? 'agent';
+
+        // Generate a password that satisfies ValidateBeforeSync requirements
+        // (min 6 chars, at least 1 special char). This password is never actually
+        // used — createChatwootUserFirst() finds the existing user by email+platform
+        // and skips user creation entirely (Decision #9).
+        $generatedPassword = bin2hex(random_bytes(8)) . '!A1';
+
+        $agentData = [
+            'name' => $name,
+            'email' => $email,
+            'password' => $generatedPassword,
+            'chatwootAccountId' => $accountId,
+            'role' => $role,
+            'isAI' => true,
+        ];
+
+        try {
+            // Non-silent createEntity triggers full hook chain:
+            // CascadeTeamsFromAccount → ValidateAssignedUserTeam → ValidateBeforeSync →
+            // SyncWithChatwoot (creates user + agent on Chatwoot) → LinkToUser (upserts membership)
+            $this->entityManager->createEntity('ChatwootAgent', $agentData);
+
+            $this->log->info(
+                "enableAiProfile: Created new ChatwootAgent for membership {$membership->getId()}"
+            );
+        } catch (\Throwable $e) {
+            $this->log->error(
+                "enableAiProfile: Failed to create ChatwootAgent for membership {$membership->getId()}: " . $e->getMessage()
+            );
+
+            throw new \Espo\Core\Exceptions\BadRequest(
+                'Failed to create AI agent profile: ' . $e->getMessage()
+            );
+        }
+
+        // Reload membership — LinkToUser afterSave hook sets chatwootAgentId on it
+        return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
+    }
+
+    /**
+     * Disable AI profile on the linked agent without unlinking.
+     *
+     * Sets agent.isAI = false. Does NOT null chatwootAgentId on membership —
+     * the link is preserved (Decision #10). Nulling chatwootAgentId is not durable
+     * because SyncAgentsFromChatwoot, SyncAccountMembersFromChatwoot, LinkToUser,
+     * and RepairAccountUserMembershipInvariants would all re-link within minutes.
+     *
+     * @param Entity $membership ChatwootAccountUserMembership entity
+     * @return Entity The refreshed membership entity
+     * @throws \Espo\Core\Exceptions\BadRequest
+     */
+    public function disableAiProfile(Entity $membership): Entity
+    {
+        $agentId = $membership->get('chatwootAgentId');
+        if (!$agentId) {
+            throw new \Espo\Core\Exceptions\BadRequest('No agent profile is linked to this membership.');
+        }
+
+        $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
+        if (!$agent) {
+            throw new \Espo\Core\Exceptions\BadRequest('Linked agent profile not found.');
+        }
+
+        if (!$agent->get('isAI')) {
+            // Already disabled — no-op
+            $this->log->info(
+                "disableAiProfile: Agent {$agentId} already has isAI=false for membership {$membership->getId()}"
+            );
+        } else {
+            $agent->set('isAI', false);
+            $this->entityManager->saveEntity($agent, ['silent' => true]);
+
+            $this->log->info(
+                "disableAiProfile: Disabled isAI on agent {$agentId} for membership {$membership->getId()}"
+            );
+        }
+
+        // Reload membership to get fresh state
+        return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
+    }
+
+    /**
      * Update an existing membership if dirty.
      */
     private function updateMembership(

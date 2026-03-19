@@ -144,7 +144,8 @@
         "assignedUser": {
             "type": "link",
             "view": "views/fields/assigned-user",
-            "tooltip": true
+            "tooltip": true,
+            "readOnly": true
         },
         "accountUserMembership": {
             "type": "link",

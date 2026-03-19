@@ -1,10 +1,40 @@
 {
     "controller": "controllers/record",
-    "iconClass": "fas fa-comments"
+    "iconClass": "fas fa-comments",
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "accounts",
+                "label": "Accounts",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 5,
+                "disabled": false
+            },
+            {
+                "name": "users",
+                "label": "Users",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 6,
+                "disabled": false
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "accounts": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "users": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        }
+    }
 }
-
-
-
-
-
-

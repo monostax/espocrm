@@ -33,6 +33,12 @@
                 "description": "chatwootAgents"
             },
             {
+                "url": "#ChatwootAccountUserMembership",
+                "label": "Account Users",
+                "iconClass": "ti ti-user-shield",
+                "description": "accountUserMemberships"
+            },
+            {
                 "url": "#ChatwootTeam",
                 "label": "Teams",
                 "iconClass": "ti ti-users",

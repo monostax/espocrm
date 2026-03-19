@@ -21,11 +21,6 @@
                 {
                     "name": "role"
                 }
-            ],
-            [
-                {
-                    "name": "chatwootAgent"
-                }
             ]
         ]
     }

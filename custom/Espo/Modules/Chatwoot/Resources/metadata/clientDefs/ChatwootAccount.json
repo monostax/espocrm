@@ -1,4 +1,115 @@
 {
     "controller": "controllers/record",
-    "iconClass": "ti ti-building"
+    "iconClass": "ti ti-building",
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "inboxes",
+                "label": "Inboxes",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 1,
+                "disabled": false
+            },
+            {
+                "name": "chatwootInboxIntegrations",
+                "label": "Connections",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 2,
+                "disabled": false
+            },
+            {
+                "name": "agents",
+                "label": "Agents",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 3,
+                "disabled": false
+            },
+            {
+                "name": "accountUserMemberships",
+                "label": "Account Users",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 4,
+                "disabled": false
+            },
+            {
+                "name": "chatwootTeams",
+                "label": "Teams",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 5,
+                "disabled": false
+            },
+            {
+                "name": "chatwootUsers",
+                "label": "Users",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 6,
+                "disabled": false
+            },
+            {
+                "name": "labels",
+                "label": "Labels",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 7,
+                "disabled": false
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "inboxes": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "chatwootInboxIntegrations": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "agents": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "accountUserMemberships": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "chatwootTeams": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "chatwootUsers": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        },
+        "labels": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        }
+    }
 }

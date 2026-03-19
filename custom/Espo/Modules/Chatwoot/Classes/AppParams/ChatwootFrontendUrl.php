@@ -30,7 +30,10 @@ use Espo\Core\Utils\Log;
 
 /**
  * AppParam that provides the Chatwoot Frontend URL for the current user.
- * 
+ *
+ * Resolution path (Phase 5):
+ *   EspoCRM User → ChatwootUser (via assignedUserId) → ChatwootPlatform → frontendUrl
+ *
  * This is returned as part of the /api/v1/App/user response.
  * The frontend URL is used for iframe embedding and user-facing redirects.
  */
@@ -45,9 +48,6 @@ class ChatwootFrontendUrl implements AppParam
     /**
      * Get the Chatwoot Frontend URL for the current user.
      *
-     * The relationship chain is:
-     * EspoCRM User -> ChatwootUser (via assignedUserId) -> ChatwootPlatform (via platform) -> frontendUrl
-     *
      * @return string|null The frontend URL or null if not configured
      */
     public function get(): ?string
@@ -56,17 +56,13 @@ class ChatwootFrontendUrl implements AppParam
             $userId = $this->user->getId();
             $this->log->debug("ChatwootFrontendUrl: Getting frontend URL for user {$userId}");
 
-            // First try: Find ChatwootUser linked to current EspoCRM user via assignedUser
-            $chatwootUser = $this->findChatwootUserViaAgent($userId);
-
-            // Fallback: Find ChatwootUser linked directly to current EspoCRM user
-            // (for backward compatibility with existing setups)
-            if (!$chatwootUser) {
-                $chatwootUser = $this->entityManager
-                    ->getRDBRepository('ChatwootUser')
-                    ->where(['assignedUserId' => $userId])
-                    ->findOne();
-            }
+            // Single-path lookup: ChatwootUser assigned to this EspoCRM user.
+            // Deterministic ordering (oldest first) for multi-platform stability (Decision #13).
+            $chatwootUser = $this->entityManager
+                ->getRDBRepository('ChatwootUser')
+                ->where(['assignedUserId' => $userId])
+                ->order('createdAt', 'ASC')
+                ->findOne();
 
             if (!$chatwootUser) {
                 $this->log->debug("ChatwootFrontendUrl: No ChatwootUser found for user {$userId}");
@@ -98,7 +94,7 @@ class ChatwootFrontendUrl implements AppParam
             $frontendUrl = rtrim($frontendUrl, '/');
 
             $this->log->debug("ChatwootFrontendUrl: Found frontendUrl: {$frontendUrl}");
-            
+
             return $frontendUrl;
         } catch (\Exception $e) {
             $this->log->error(
@@ -106,45 +102,5 @@ class ChatwootFrontendUrl implements AppParam
             );
             return null;
         }
-    }
-
-    /**
-     * Find ChatwootUser via ChatwootAgent linkage.
-     * 
-     * This is the primary lookup path in the simplified architecture:
-     * EspoCRM User → ChatwootAgent (via assignedUser) → ChatwootUser (via chatwootUser link)
-     * 
-     * @param string $userId The EspoCRM user ID
-     * @return \Espo\ORM\Entity|null The ChatwootUser entity if found
-     */
-    private function findChatwootUserViaAgent(string $userId): ?\Espo\ORM\Entity
-    {
-        // Find any ChatwootAgent assigned to this user
-        $agent = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where(['assignedUserId' => $userId])
-            ->findOne();
-
-        if (!$agent) {
-            $this->log->debug("ChatwootFrontendUrl: No ChatwootAgent found for user {$userId}");
-            return null;
-        }
-
-        $this->log->debug("ChatwootFrontendUrl: Found ChatwootAgent: " . $agent->getId());
-
-        // Get the linked ChatwootUser
-        $chatwootUserId = $agent->get('chatwootUserId');
-        if (!$chatwootUserId) {
-            $this->log->debug("ChatwootFrontendUrl: ChatwootAgent has no linked ChatwootUser");
-            return null;
-        }
-
-        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
-        if (!$chatwootUser) {
-            $this->log->debug("ChatwootFrontendUrl: ChatwootUser {$chatwootUserId} not found");
-            return null;
-        }
-
-        return $chatwootUser;
     }
 }

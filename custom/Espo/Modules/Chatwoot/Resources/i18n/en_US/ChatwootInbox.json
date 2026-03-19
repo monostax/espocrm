@@ -1,8 +1,8 @@
 {
     "fields": {
-        "accountUserMemberships": "Account Memberships"
+        "accountUserMemberships": "Inbox Members"
     },
     "links": {
-        "accountUserMemberships": "Account Memberships"
+        "accountUserMemberships": "Inbox Members"
     }
 }

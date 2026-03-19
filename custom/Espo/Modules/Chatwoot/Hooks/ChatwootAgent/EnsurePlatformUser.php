@@ -29,15 +29,18 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
- * Hook to ensure platform user linkage when assignedUser is set on ChatwootAgent.
- * 
- * When an EspoCRM User is assigned to a ChatwootAgent:
- * 1. Propagates the assignedUserId to the linked ChatwootUser entity
- * 2. Ensures the platform user is attached to the Chatwoot account
- * 
- * This enables SSO to work by ensuring the ChatwootUser knows which EspoCRM User it belongs to.
- * 
+ * Hook to ensure platform user linkage on ChatwootAgent.
+ *
+ * Phase 5: Assignment propagation (agent→user) has been removed. The authoritative
+ * assignment now lives on ChatwootUser and flows user→agent via LinkToUser/LinkToAgents.
+ * This hook only handles platform user discovery/linking (finding a ChatwootUser by email
+ * when agent has no linked user).
+ *
+ * To change the assigned user, update the Assigned User on the linked ChatwootUser record.
+ *
  * Runs after SyncWithChatwoot (10) and LinkToUser (20) so the agent is fully synced and linked.
+ *
+ * @deprecated Phase 8 — this hook will be removed when agent-side fields are cleaned up.
  */
 class EnsurePlatformUser
 {
@@ -50,8 +53,9 @@ class EnsurePlatformUser
     ) {}
 
     /**
-     * After a ChatwootAgent is saved with assignedUser, ensure ChatwootUser is properly linked.
-     * 
+     * After a ChatwootAgent is saved, try to discover and link a matching platform user
+     * if no ChatwootUser is linked yet.
+     *
      * @param Entity $entity
      * @param array<string, mixed> $options
      */
@@ -70,20 +74,13 @@ class EnsurePlatformUser
         $assignedUserId = $entity->get('assignedUserId');
         $chatwootUserId = $entity->get('chatwootUserId');
 
-        // If assignedUser was cleared, also clear it from ChatwootUser
-        if (!$assignedUserId && $chatwootUserId) {
-            $this->clearAssignedUserFromChatwootUser($chatwootUserId);
-            return;
-        }
-
         // Nothing to do if no assignedUser is set
         if (!$assignedUserId) {
             return;
         }
 
-        // If agent has a linked ChatwootUser, update its assignedUserId
+        // If agent already has a linked ChatwootUser, nothing to discover
         if ($chatwootUserId) {
-            $this->updateChatwootUserAssignment($chatwootUserId, $assignedUserId);
             return;
         }
 
@@ -92,73 +89,19 @@ class EnsurePlatformUser
     }
 
     /**
-     * Clear assignedUser from ChatwootUser when it's cleared from agent.
-     */
-    private function clearAssignedUserFromChatwootUser(string $chatwootUserId): void
-    {
-        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
-        
-        if (!$chatwootUser) {
-            return;
-        }
-
-        // Only clear if this agent was the one that set it
-        // (In multi-agent scenarios, another agent might have the same user assigned)
-        $hasOtherAgentsWithSameUser = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where([
-                'chatwootUserId' => $chatwootUserId,
-                'assignedUserId!=' => null,
-            ])
-            ->count() > 0;
-
-        if (!$hasOtherAgentsWithSameUser) {
-            $chatwootUser->set('assignedUserId', null);
-            $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
-            
-            $this->log->info(
-                "EnsurePlatformUser: Cleared assignedUser from ChatwootUser {$chatwootUserId}"
-            );
-        }
-    }
-
-    /**
-     * Update ChatwootUser's assignedUserId to match the agent's.
-     */
-    private function updateChatwootUserAssignment(string $chatwootUserId, string $assignedUserId): void
-    {
-        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
-        
-        if (!$chatwootUser) {
-            $this->log->warning(
-                "EnsurePlatformUser: ChatwootUser {$chatwootUserId} not found"
-            );
-            return;
-        }
-
-        // Only update if different
-        if ($chatwootUser->get('assignedUserId') === $assignedUserId) {
-            return;
-        }
-
-        $chatwootUser->set('assignedUserId', $assignedUserId);
-        $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
-
-        $this->log->info(
-            "EnsurePlatformUser: Updated ChatwootUser {$chatwootUserId} assignedUserId to {$assignedUserId}"
-        );
-    }
-
-    /**
      * Ensure the agent's platform user is attached to the account and tracked in EspoCRM.
      * This handles the case where an agent exists but wasn't created through EspoCRM
      * (e.g., synced from Chatwoot directly).
+     *
+     * Note: This method links the agent to a discovered ChatwootUser but does NOT
+     * propagate assignedUserId onto the ChatwootUser. The assignment must be set
+     * on the ChatwootUser record by an admin (Phase 5 source-of-truth change).
      */
     private function ensurePlatformUserAttached(Entity $agent, string $assignedUserId): void
     {
         $accountId = $agent->get('chatwootAccountId');
         $chatwootAgentId = $agent->get('chatwootAgentId');
-        
+
         if (!$accountId || !$chatwootAgentId) {
             return;
         }
@@ -170,7 +113,7 @@ class EnsurePlatformUser
 
         $platformId = $account->get('platformId');
         $chatwootAccountId = $account->get('chatwootAccountId');
-        
+
         if (!$platformId || !$chatwootAccountId) {
             return;
         }
@@ -182,7 +125,7 @@ class EnsurePlatformUser
 
         $platformUrl = $platform->get('backendUrl');
         $platformAccessToken = $platform->get('accessToken');
-        
+
         if (!$platformUrl || !$platformAccessToken) {
             return;
         }
@@ -196,7 +139,7 @@ class EnsurePlatformUser
 
             // List agents to find the one with this chatwootAgentId
             $agents = $this->apiClient->listAgents($platformUrl, $apiKey, $chatwootAccountId);
-            
+
             $agentData = null;
             foreach ($agents as $a) {
                 if (isset($a['id']) && $a['id'] == $chatwootAgentId) {
@@ -235,11 +178,9 @@ class EnsurePlatformUser
                 ->findOne();
 
             if ($chatwootUser) {
-                // Link agent to this user
+                // Link agent to this user (agent→user link only, no assignment propagation)
                 $agent->set('chatwootUserId', $chatwootUser->getId());
-                $chatwootUser->set('assignedUserId', $assignedUserId);
-                
-                $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+
                 $this->entityManager->saveEntity($agent, ['silent' => true, 'skipEnsurePlatformUser' => true]);
 
                 $this->log->info(

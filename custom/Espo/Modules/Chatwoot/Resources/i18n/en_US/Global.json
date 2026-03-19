@@ -18,7 +18,7 @@
         "WahaSessionLabel": "Session Label",
         "WhatsAppCampaign": "WhatsApp Campaign",
         "WhatsAppCampaignContact": "WhatsApp Campaign Contact",
-        "ChatwootAccountUserMembership": "Chat / Account Membership"
+        "ChatwootAccountUserMembership": "Chat / Account User"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Accounts",
@@ -39,7 +39,7 @@
         "WahaSessionLabel": "Session Labels",
         "WhatsAppCampaign": "WhatsApp Campaigns",
         "WhatsAppCampaignContact": "WhatsApp Campaign Contacts",
-        "ChatwootAccountUserMembership": "Chat / Account Memberships"
+        "ChatwootAccountUserMembership": "Chat / Account Users"
     },
     "navbarTabs": {
         "Conversations": "Conversations",

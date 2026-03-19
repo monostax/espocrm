@@ -7,7 +7,8 @@
         "Agents": "Agents",
         "Teams": "Teams",
         "Knowledge Base": "Knowledge Base",
-        "WhatsApp Campaigns": "WhatsApp Campaigns"
+        "WhatsApp Campaigns": "WhatsApp Campaigns",
+        "Account Users": "Account Users"
     },
     "descriptions": {
         "chatwootInboxIntegrations": "Manage Chat inbox integrations for WhatsApp and other channels",
@@ -15,7 +16,8 @@
         "chatwootAgents": "Manage Chat agents and their assignments",
         "chatwootTeams": "Manage Chat teams and team memberships",
         "knowledgeBase": "Manage AI-indexed Knowledge Base categories",
-        "whatsAppCampaigns": "Manage WhatsApp marketing campaigns and bulk messaging"
+        "whatsAppCampaigns": "Manage WhatsApp marketing campaigns and bulk messaging",
+        "accountUserMemberships": "Manage account user memberships and AI agent profiles"
     },
     "keywords": {
         "chatwootInboxIntegrations": "whatsapp,inbox,integration,channel",
@@ -23,6 +25,7 @@
         "chatwootAgents": "agent,support,representative",
         "chatwootTeams": "team,group,department",
         "knowledgeBase": "knowledge,base,ai,category,article",
-        "whatsAppCampaigns": "whatsapp,campaign,bulk,message,template"
+        "whatsAppCampaigns": "whatsapp,campaign,bulk,message,template",
+        "accountUserMemberships": "member,membership,account,user,agent,ai"
     }
 }

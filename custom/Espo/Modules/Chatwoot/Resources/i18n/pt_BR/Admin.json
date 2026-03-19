@@ -13,6 +13,7 @@
         "chatwootSyncState": "Visualizar estado de sincronização de chat",
         "wahaPlatforms": "Gerenciar plataformas Waha",
         "wahaSessions": "Gerenciar sessões WhatsApp",
-        "whatsAppCampaigns": "Gerenciar campanhas de marketing WhatsApp e envio em massa"
+        "whatsAppCampaigns": "Gerenciar campanhas de marketing WhatsApp e envio em massa",
+        "accountUserMemberships": "Gerenciar membros das contas"
     }
 }

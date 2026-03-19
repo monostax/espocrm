@@ -68,7 +68,7 @@
         "confirmed": "Whether the agent has confirmed their email address in Chat.",
         "chatwootUser": "Link to the platform-level Chat / User if this agent corresponds to one.",
         "customRoleId": "The custom role ID assigned to this agent in Chat, if any.",
-        "assignedUser": "The EspoCRM user who will access Chat as this agent. This enables Single Sign-On (SSO) for the assigned user. The user must be in the same team as the Chat / Account."
+        "assignedUser": "The EspoCRM user linked to this agent's Chat / User. This field is managed automatically — to change it, update the Assigned User on the linked Chat / User record."
     },
     "presetFilters": {
         "available": "Available",

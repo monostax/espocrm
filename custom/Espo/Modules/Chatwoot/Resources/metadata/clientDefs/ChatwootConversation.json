@@ -40,7 +40,28 @@
         "inbox": "chatwoot:views/chatwoot-conversation/record/inbox"
     },
     "bottomPanels": {
-        "detail": []
+        "detail": [
+            {
+                "name": "messages",
+                "label": "Messages",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-remove",
+                "order": 5,
+                "disabled": false
+            },
+            {
+                "name": "opportunities",
+                "label": "Opportunities",
+                "view": "views/record/panels/relationship",
+                "select": true,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
+                "order": 6,
+                "disabled": false
+            }
+        ]
     },
     "relationshipPanels": {
         "messages": {

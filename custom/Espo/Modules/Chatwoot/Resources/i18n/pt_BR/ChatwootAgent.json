@@ -68,7 +68,7 @@
         "confirmed": "Se o agente confirmou seu endereço de email no Chat.",
         "chatwootUser": "Link para o Usuário de Chat no nível da plataforma, se este agente corresponder a um.",
         "customRoleId": "O ID da função personalizada atribuída a este agente no Chat, se houver.",
-        "assignedUser": "O usuário do EspoCRM que acessará o Chat como este agente. Isso habilita o Single Sign-On (SSO) para o usuário atribuído. O usuário deve estar no mesmo time da Conta de Chat."
+        "assignedUser": "O usuário do EspoCRM vinculado ao Chat / Usuário deste agente. Este campo é gerenciado automaticamente — para alterá-lo, atualize o Usuário Atribuído no registro do Chat / Usuário vinculado."
     },
     "presetFilters": {
         "available": "Disponíveis",

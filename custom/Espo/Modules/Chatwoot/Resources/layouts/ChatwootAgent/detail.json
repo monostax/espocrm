@@ -52,7 +52,9 @@
                 {
                     "name": "assignedUser"
                 },
-                false
+                {
+                    "name": "accountUserMembership"
+                }
             ]
         ]
     },
