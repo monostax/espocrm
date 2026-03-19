@@ -1,6 +1,6 @@
 [
+    {"name": "name", "link": true, "width": 25},
     {"name": "order", "width": 10},
-    {"name": "name", "width": 25},
     {"name": "teams", "width": 35},
     {"name": "isDefault", "width": 12},
     {"name": "isDisabled", "width": 12}

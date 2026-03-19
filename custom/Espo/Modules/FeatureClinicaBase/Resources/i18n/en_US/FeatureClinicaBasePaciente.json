@@ -16,13 +16,13 @@
         "appointments": "Appointments"
     },
     "labels": {
-        "Create Paciente": "Create Patient"
+        "Create FeatureClinicaBasePaciente": "Create Patient"
     },
     "scopeNames": {
-        "Paciente": "Patient"
+        "FeatureClinicaBasePaciente": "Patient"
     },
     "scopeNamesPlural": {
-        "Paciente": "Patients"
+        "FeatureClinicaBasePaciente": "Patients"
     },
     "tabs": {
         "Atendimento": "Care",

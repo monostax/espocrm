@@ -1,10 +1,4 @@
 {
-    "fields": {
-        "weight": "Peso"
-    },
-    "fieldTypes": {
-        "weight": "Peso"
-    },
     "options": {
         "weightUnit": {
             "kg": "Quilograma (kg)",
@@ -33,16 +27,20 @@
     "scopeNames": {
         "Activities": "Atividades",
         "Contact": "Pessoa",
+        "FeatureClinicaBasePaciente": "Paciente",
         "Funnel": "Funil de Venda",
         "OpportunityStage": "Estágio da Oportunidade",
-        "Appointment": "Agendamento"
+        "Appointment": "Agendamento",
+        "SidenavConfig": "Menu Lateral"
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
         "Contact": "Pessoas",
+        "FeatureClinicaBasePaciente": "Pacientes",
         "Funnel": "Funil de Venda",
         "Appointment": "Agendamentos",
-        "OpportunityStage": "Etapas do Funil"
+        "OpportunityStage": "Etapas do Funil",
+        "SidenavConfig": "Menu Lateral"
     },
     "labels": {
         "Home": "Dashboard",

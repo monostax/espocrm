@@ -2,12 +2,13 @@
     {
         "name": "avatarUrl",
         "width": 4,
-        "link": false,
+        "customLabel": "",
         "notSortable": true
     },
     {
         "name": "name",
-        "width": 16
+        "width": 16,
+        "link": true
     },
     {
         "name": "phoneNumber",

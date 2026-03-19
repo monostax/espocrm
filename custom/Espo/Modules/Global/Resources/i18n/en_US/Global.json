@@ -60,16 +60,18 @@
     "scopeNames": {
         "Activities": "Activities",
         "CAIPlaybook": "Playbook",
+        "FeatureClinicaBasePaciente": "Patient",
         "Funnel": "Funnel",
         "OpportunityStage": "Opportunity Stage",
-        "SidenavConfig": "Sidenav Configuration"
+        "SidenavConfig": "Custom Sidenav"
     },
     "scopeNamesPlural": {
         "Activities": "Activities",
         "CAIPlaybook": "Playbooks",
+        "FeatureClinicaBasePaciente": "Patients",
         "Funnel": "Funnels",
         "OpportunityStage": "Opportunity Stages",
-        "SidenavConfig": "Sidenav Configurations"
+        "SidenavConfig": "Custom Sidenav"
     },
     "navbarTabs": {
         "Lists": "Lists"

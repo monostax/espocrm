@@ -23,16 +23,16 @@
         "lancamentosFinanceiros": "Lançamentos Financeiros"
     },
     "labels": {
-        "Create Paciente": "Cadastrar Paciente",
+        "Create FeatureClinicaBasePaciente": "Cadastrar Paciente",
         "contactPanel": "Contato",
         "ContactPanelCreate": "Cadastro de Paciente",
         "selectContact": "Selecione o contato do paciente"
     },
     "scopeNames": {
-        "Paciente": "Paciente"
+        "FeatureClinicaBasePaciente": "Paciente"
     },
     "scopeNamesPlural": {
-        "Paciente": "Pacientes"
+        "FeatureClinicaBasePaciente": "Pacientes"
     },
     "tabs": {
         "Atendimento": "Atendimento",
@@ -47,4 +47,3 @@
         "Documentos": "Documentos"
     }
 }
-

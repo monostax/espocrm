@@ -1,0 +1,21 @@
+{
+    "scopeNames": {
+        "SidenavConfig": "Menu Lateral"
+    },
+    "scopeNamesPlural": {
+        "SidenavConfig": "Menu Lateral"
+    },
+    "fields": {
+        "iconClass": "Icone",
+        "color": "Cor (#HEX)",
+        "tabList": "Lista de Abas",
+        "isDefault": "É Padrão",
+        "order": "Ordem",
+        "isDisabled": "Desabilitado"
+    },
+    "tooltips": {
+        "isDefault": "Se habilitada, esse menu lateral será utilizado por padrão por usuários que estão nesses times",
+        "order": "Controla a posição desse menu na caixa de seleção de menus. Menor o número, maior a prioridade (aparece primeiro).",
+        "isDisabled": "Se habilitada, essa configuração vai esconder o menu na caixa de seleção de menus."
+    }
+}

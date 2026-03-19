@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\FeatureClinicaBase\Hooks\Paciente;
+namespace Espo\Modules\FeatureClinicaBase\Hooks\FeatureClinicaBasePaciente;
 
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -48,7 +48,7 @@ class SyncNameFromContact
         $contact = $this->entityManager->getEntityById('Contact', $contactId);
         if (!$contact) {
             $GLOBALS['log']->warning(
-                "FeatureClinicaBase: SyncNameFromContact - Contact '{$contactId}' not found for Paciente '{$entity->getId()}'"
+                "FeatureClinicaBase: SyncNameFromContact - Contact '{$contactId}' not found for FeatureClinicaBasePaciente '{$entity->getId()}'"
             );
             return;
         }

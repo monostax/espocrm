@@ -1,15 +1,7 @@
 {
-    "scopeNames": {
-        "SidenavConfig": "Sidenav Configuration"
-    },
-    "scopeNamesPlural": {
-        "SidenavConfig": "Sidenav Configurations"
-    },
     "fields": {
-        "name": "Name",
-        "teams": "Teams",
         "iconClass": "Icon",
-        "color": "Color",
+        "color": "Color (HEX)",
         "tabList": "Tab List",
         "isDefault": "Default",
         "order": "Order",

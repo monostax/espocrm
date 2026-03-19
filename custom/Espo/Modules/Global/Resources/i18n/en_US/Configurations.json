@@ -3,8 +3,7 @@
         "Integrations": "Integrations",
         "OAuth Providers": "OAuth Providers",
         "OAuth Accounts": "OAuth Accounts",
-        "Sidenav": "Navigation",
-        "Sidenav Configs": "Sidenav Configurations"
+        "Sidenav": "Navigation"
     },
     "descriptions": {
         "oauthProviders": "Manage OAuth provider connections for third-party services",
