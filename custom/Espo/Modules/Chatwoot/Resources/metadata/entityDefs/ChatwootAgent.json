@@ -104,9 +104,6 @@
         "chatwootTeams": {
             "type": "linkMultiple"
         },
-        "chatwootInboxes": {
-            "type": "linkMultiple"
-        },
         "syncStatus": {
             "type": "enum",
             "options": ["pending", "synced", "error"],
@@ -148,6 +145,10 @@
             "type": "link",
             "view": "views/fields/assigned-user",
             "tooltip": true
+        },
+        "accountUserMembership": {
+            "type": "link",
+            "readOnly": true
         }
     },
     "links": {
@@ -179,12 +180,6 @@
             "relationName": "chatwootAgentCalendarUser",
             "foreign": "chatwootAgentsWithCalendarAccess"
         },
-        "chatwootInboxes": {
-            "type": "hasMany",
-            "entity": "ChatwootInbox",
-            "relationName": "chatwootAgentChatwootInbox",
-            "foreign": "chatwootAgents"
-        },
         "wahaSessionLabels": {
             "type": "hasMany",
             "entity": "WahaSessionLabel",
@@ -207,6 +202,11 @@
         "assignedUser": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "accountUserMembership": {
+            "type": "hasOne",
+            "entity": "ChatwootAccountUserMembership",
+            "foreign": "chatwootAgent"
         }
     },
     "collection": {

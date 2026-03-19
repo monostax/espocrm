@@ -18,7 +18,8 @@
         "agents": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Permissão / Times"
+        "teams": "Permissão / Times",
+        "accountUserMemberships": "Membros da Conta"
     },
     "labels": {
         "Create ChatwootUser": "Cadastrar Chat / Usuário"

@@ -411,6 +411,52 @@ class ChatwootApiClient
     }
 
     /**
+     * List all account users (memberships) for a Chatwoot account via Platform API.
+     *
+     * Returns a bare JSON array of account_user objects. Each object includes:
+     * - id (int): junction row PK (account_users table primary key)
+     * - account_id (int)
+     * - user_id (int): the Chatwoot platform user ID
+     * - role (string): 'agent' or 'administrator'
+     * No pagination or wrapping — returns $response['body'] directly.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accessToken The platform access token
+     * @param int $accountId The Chatwoot account ID
+     * @return array<int, array<string, mixed>> Array of account_user objects
+     * @throws Error
+     */
+    public function listAccountUsers(
+        string $platformUrl,
+        string $accessToken,
+        int $accountId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/platform/api/v1/accounts/' . $accountId . '/account_users';
+
+        $headers = [
+            'api_access_token: ' . $accessToken,
+            'Content-Type: application/json'
+        ];
+
+        $response = $this->executeRequest($url, 'GET', null, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to list account users from Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (listAccountUsers): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
      * Delete a user from Chatwoot via Platform API.
      *
      * @param string $platformUrl The base URL of the Chatwoot platform
@@ -1892,13 +1938,17 @@ public function deleteAgent(
 }
 
 /**
- * List all agents (members) in an inbox.
+ * List all members (platform user identity objects) in an inbox.
+ *
+ * Each returned object's `id` field is the Chatwoot platform user ID
+ * (same value as `ChatwootUser.chatwootUserId`), used for membership-based
+ * resolution in `SyncInboxMembersFromChatwoot`.
  *
  * @param string $platformUrl The Chatwoot platform URL
  * @param string $accountApiKey The account API key
  * @param int $accountId The Chatwoot account ID
  * @param int $inboxId The Chatwoot inbox ID
- * @return array<int, array<string, mixed>> List of agents in the inbox
+ * @return array<int, array<string, mixed>> List of platform user objects in the inbox
  * @throws Error
  */
 public function listInboxMembers(

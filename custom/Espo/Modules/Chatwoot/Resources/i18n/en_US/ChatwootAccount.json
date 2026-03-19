@@ -7,7 +7,8 @@
     },
     "links": {
         "automationUser": "Automation User",
-        "teams": "Teams"
+        "teams": "Teams",
+        "accountUserMemberships": "Account Memberships"
     },
     "tooltips": {
         "apiKey": "Account-level API token from Chat. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",

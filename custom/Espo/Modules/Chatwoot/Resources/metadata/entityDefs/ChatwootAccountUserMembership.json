@@ -1,0 +1,142 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootUser": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootAgent": {
+            "type": "link"
+        },
+        "role": {
+            "type": "enum",
+            "options": ["agent", "administrator"],
+            "default": "agent",
+            "required": true
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastSyncError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "chatwootAccountUserId": {
+            "type": "int",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true
+        },
+        "chatwootInboxes": {
+            "type": "linkMultiple"
+        }
+    },
+    "links": {
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "accountUserMemberships"
+        },
+        "chatwootUser": {
+            "type": "belongsTo",
+            "entity": "ChatwootUser",
+            "foreign": "accountUserMemberships"
+        },
+        "chatwootAgent": {
+            "type": "belongsTo",
+            "entity": "ChatwootAgent",
+            "foreign": "accountUserMembership"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "chatwootInboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootInbox",
+            "relationName": "chatwootAccountUserMembershipChatwootInbox",
+            "foreign": "accountUserMemberships"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "uniqueMembership": {
+            "unique": true,
+            "columns": ["chatwootAccountId", "chatwootUserId", "deleteId"]
+        },
+        "chatwootAccountId": {
+            "columns": ["chatwootAccountId"]
+        },
+        "chatwootUserId": {
+            "columns": ["chatwootUserId"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    },
+    "cascadeDelete": {
+        "junctionTables": [
+            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootAccountUserMembershipId"}
+        ]
+    }
+}

@@ -26,11 +26,18 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootUser;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 
 /**
  * Hook to link ChatwootUser to matching ChatwootAgents after creation.
  * This ensures bidirectional sync - when a user is created, any agents
  * with the same email across ALL accounts in the same platform get linked.
+ *
+ * Also creates ChatwootAccountUserMembership for each linked agent.
+ * Note: LinkToAgents saves the agent with ['silent' => true], which triggers
+ * LinkToUser.afterSave (it doesn't check silent). LinkToUser would also upsert
+ * the membership via its new guard. However, the explicit call here ensures it
+ * works even if LinkToUser is modified in the future. The upsert is idempotent.
  */
 class LinkToAgents
 {
@@ -38,7 +45,8 @@ class LinkToAgents
 
     public function __construct(
         private EntityManager $entityManager,
-        private Log $log
+        private Log $log,
+        private ChatwootAccountUserMembershipService $membershipService
     ) {}
 
     /**
@@ -91,6 +99,15 @@ class LinkToAgents
             $agent->set('chatwootUserId', $userId);
             $agent->set('confirmed', true); // User exists, so agent is confirmed
             $this->entityManager->saveEntity($agent, ['silent' => true]);
+
+            // Upsert membership for each linked agent (idempotent)
+            $this->membershipService->upsertMembership(
+                $agent->get('chatwootAccountId'),
+                $userId,
+                $agent->get('role') ?? 'agent',
+                $agent->getId()
+            );
+
             $linkedCount++;
         }
 

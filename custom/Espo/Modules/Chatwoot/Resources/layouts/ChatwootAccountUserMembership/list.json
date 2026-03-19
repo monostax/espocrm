@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 20
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 20
+    },
+    {
+        "name": "chatwootUser",
+        "width": 20
+    },
+    {
+        "name": "role",
+        "width": 10
+    },
+    {
+        "name": "syncStatus",
+        "width": 10
+    },
+    {
+        "name": "lastSyncedAt",
+        "width": 15
+    }
+]

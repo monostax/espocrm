@@ -25,7 +25,8 @@
         "lastSyncedAt": "Last Synced At",
         "lastSyncError": "Last Sync Error",
         "teams": "Teams",
-        "assignedUser": "Assigned User"
+        "assignedUser": "Assigned User",
+        "accountUserMembership": "Account Membership"
     },
     "links": {
         "chatwootAccount": "Chat / Account",
@@ -33,7 +34,8 @@
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
         "teams": "Teams",
-        "assignedUser": "Assigned User"
+        "assignedUser": "Assigned User",
+        "accountUserMembership": "Account Membership"
     },
     "labels": {
         "Create ChatwootAgent": "Create Agent",

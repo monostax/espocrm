@@ -33,6 +33,10 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
  * Hook to delete ChatwootAgent from Chatwoot Account API.
  * This hook works for BOTH regular delete AND mass delete.
  * Deletes the agent from Chatwoot BEFORE deleting from EspoCRM.
+ *
+ * Also clears dangling chatwootAgentId on the associated membership
+ * (Decision #11). The membership itself is NOT deleted — the user
+ * is still a member of the account; only the agent reference is cleared.
  */
 class DeleteFromChatwoot
 {
@@ -57,6 +61,9 @@ class DeleteFromChatwoot
         if (!empty($options['cascadeParent'])) {
             return;
         }
+
+        // Clear dangling chatwootAgentId on membership (Decision #11)
+        $this->clearAgentIdFromMembership($entity);
 
         $this->log->info('DELETE HOOK CALLED for ChatwootAgent: ' . $entity->getId());
         
@@ -151,6 +158,46 @@ class DeleteFromChatwoot
                 'Failed to delete agent from Chatwoot: ' . $e->getMessage() . 
                 '. The agent was not deleted from EspoCRM to maintain synchronization. ' .
                 'Please check if the agent still exists in Chatwoot or try again.'
+            );
+        }
+    }
+
+    /**
+     * Clear the chatwootAgentId reference on the associated membership.
+     * The membership itself is NOT deleted — the user is still a member of the account.
+     */
+    private function clearAgentIdFromMembership(Entity $entity): void
+    {
+        $accountId = $entity->get('chatwootAccountId');
+        $userId = $entity->get('chatwootUserId');
+        $agentId = $entity->getId();
+
+        if (!$accountId || !$userId) {
+            return;
+        }
+
+        try {
+            $membership = $this->entityManager
+                ->getRDBRepository('ChatwootAccountUserMembership')
+                ->where([
+                    'chatwootAccountId' => $accountId,
+                    'chatwootUserId' => $userId,
+                    'chatwootAgentId' => $agentId,
+                ])
+                ->findOne();
+
+            if ($membership) {
+                $membership->set('chatwootAgentId', null);
+                $this->entityManager->saveEntity($membership, ['silent' => true]);
+
+                $this->log->info(
+                    "DeleteFromChatwoot: Cleared chatwootAgentId on membership {$membership->getId()} for deleted agent {$agentId}"
+                );
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                "DeleteFromChatwoot: Failed to clear agentId from membership for agent {$agentId}: " .
+                $e->getMessage()
             );
         }
     }

@@ -28,6 +28,7 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 
 /**
  * Scheduled job to sync agents from Chatwoot to EspoCRM.
@@ -39,7 +40,8 @@ class SyncAgentsFromChatwoot implements JobDataLess
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
-        private Log $log
+        private Log $log,
+        private ChatwootAccountUserMembershipService $membershipService
     ) {}
 
     public function run(): void
@@ -241,6 +243,16 @@ class SyncAgentsFromChatwoot implements JobDataLess
         }
 
         $this->entityManager->saveEntity($agent, ['silent' => true]);
+
+        // Upsert membership if agent is linked to a user
+        if ($agent->get('chatwootUserId') && $agent->get('chatwootAccountId')) {
+            $this->membershipService->upsertMembership(
+                $agent->get('chatwootAccountId'),
+                $agent->get('chatwootUserId'),
+                $agent->get('role') ?? 'agent',
+                $agent->getId()
+            );
+        }
     }
 
     /**
@@ -278,6 +290,16 @@ class SyncAgentsFromChatwoot implements JobDataLess
         
         if ($agent->get('chatwootUserId')) {
             $this->entityManager->saveEntity($agent, ['silent' => true]);
+
+            // Upsert membership for newly created agent linked to a user
+            if ($agent->get('chatwootAccountId')) {
+                $this->membershipService->upsertMembership(
+                    $agent->get('chatwootAccountId'),
+                    $agent->get('chatwootUserId'),
+                    $agent->get('role') ?? 'agent',
+                    $agent->getId()
+                );
+            }
         }
     }
 
@@ -335,6 +357,19 @@ class SyncAgentsFromChatwoot implements JobDataLess
             $this->log->info(
                 "SyncAgentsFromChatwoot: Marked agent {$agent->get('chatwootAgentId')} as removed"
             );
+
+            // Propagate error status to the associated membership
+            if ($agent->get('chatwootUserId') && $agent->get('chatwootAccountId')) {
+                $membership = $this->membershipService->resolveMembershipForAgent($agent);
+
+                if ($membership) {
+                    $this->membershipService->updateSyncStatus(
+                        $membership,
+                        'error',
+                        'Linked agent no longer exists in Chatwoot'
+                    );
+                }
+            }
         }
     }
 

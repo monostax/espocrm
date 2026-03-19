@@ -25,7 +25,8 @@
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
         "teams": "Permissão / Times",
-        "assignedUser": "Usuário Atribuído"
+        "assignedUser": "Usuário Atribuído",
+        "accountUserMembership": "Membro da Conta"
     },
     "links": {
         "chatwootAccount": "Chat / Conta",
@@ -33,7 +34,8 @@
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
         "teams": "Permissão / Times",
-        "assignedUser": "Usuário Atribuído"
+        "assignedUser": "Usuário Atribuído",
+        "accountUserMembership": "Membro da Conta"
     },
     "labels": {
         "Create ChatwootAgent": "Cadastrar Agente de Chat",

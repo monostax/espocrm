@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "name": "Name",
+        "chatwootAccount": "Chat Account",
+        "chatwootUser": "Chat User",
+        "chatwootAgent": "Chat Agent",
+        "role": "Role",
+        "syncStatus": "Sync Status",
+        "lastSyncedAt": "Last Synced At",
+        "lastSyncError": "Last Sync Error",
+        "chatwootAccountUserId": "Account User ID",
+        "teams": "Teams",
+        "chatwootInboxes": "Chat Inboxes"
+    },
+    "links": {
+        "chatwootAccount": "Chat / Account",
+        "chatwootUser": "Chat / User",
+        "chatwootAgent": "Chat / Agent",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams",
+        "chatwootInboxes": "Chat / Inboxes"
+    },
+    "labels": {
+        "Create ChatwootAccountUserMembership": "Create Account Membership"
+    },
+    "options": {
+        "role": {
+            "agent": "Agent",
+            "administrator": "Administrator"
+        },
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    },
+    "tooltips": {
+        "chatwootAccountUserId": "The account-user membership ID in Chat. This field is automatically populated after sync.",
+        "chatwootAgent": "The agent record associated with this account membership, if any."
+    }
+}

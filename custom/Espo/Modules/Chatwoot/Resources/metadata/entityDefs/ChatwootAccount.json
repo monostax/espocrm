@@ -164,6 +164,11 @@
             "entity": "ChatwootLabel",
             "foreign": "chatwootAccount"
         },
+        "accountUserMemberships": {
+            "type": "hasMany",
+            "entity": "ChatwootAccountUserMembership",
+            "foreign": "chatwootAccount"
+        },
         "whatsAppCampaigns": {
             "type": "hasMany",
             "entity": "WhatsAppCampaign",
@@ -211,7 +216,8 @@
             "syncStates",
             "chatwootUsers",
             "conversations",
-            "labels"
+            "labels",
+            "accountUserMemberships"
         ]
     }
 }

@@ -18,7 +18,12 @@ use Espo\Modules\Chatwoot\Services\WahaApiClient;
 
 /**
  * Hook to synchronize WahaSessionLabel when ChatwootAgent is linked/unlinked to/from ChatwootInbox.
- * 
+ *
+ * @deprecated Phase 4: inbox↔agent relation removed; this hook is dead code.
+ *             The afterRelate/afterUnrelate handlers key on chatwootAgentChatwootInbox
+ *             which no longer exists in metadata. Label lifecycle is now managed by
+ *             SyncInboxMembersFromChatwoot via membership-derived agents.
+ *
  * When an agent is added to an inbox:
  *   1. Find the ChatwootInboxIntegration for that inbox
  *   2. Create a label in WAHA with name "[✨] {agent.name}" (AI) or "[👤] {agent.name}" (human)

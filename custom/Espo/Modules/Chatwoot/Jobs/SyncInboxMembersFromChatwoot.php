@@ -16,11 +16,16 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
 
 /**
- * Scheduled job to sync inbox members (agents) from Chatwoot to EspoCRM.
- * Syncs the many-to-many relationship between ChatwootAgent and ChatwootInbox.
+ * Scheduled job to sync inbox members from Chatwoot to EspoCRM.
+ *
+ * Resolves remote inbox members via membership-first lookup
+ * (ChatwootUser.chatwootUserId → ChatwootAccountUserMembership)
+ * and writes the inbox↔membership relation as the sole source of truth.
+ * WAHA labels are derived from membership-linked agents.
  */
 class SyncInboxMembersFromChatwoot implements JobDataLess
 {
@@ -39,7 +44,8 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private WahaApiClient $wahaApiClient,
-        private Log $log
+        private Log $log,
+        private ChatwootAccountUserMembershipService $membershipService
     ) {}
 
     public function run(): void
@@ -99,6 +105,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             $platformUrl = $platform->get('backendUrl');
             $apiKey = $account->get('apiKey');
             $chatwootAccountId = $account->get('chatwootAccountId');
+            $platformId = $account->get('platformId');
 
             if (!$platformUrl || !$apiKey || !$chatwootAccountId) {
                 throw new \Exception('Missing platform URL, API key, or Chatwoot account ID');
@@ -119,7 +126,8 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                     $apiKey,
                     $chatwootAccountId,
                     $inbox,
-                    $account->getId()
+                    $account->getId(),
+                    $platformId
                 );
 
                 $totalSynced += $stats['synced'];
@@ -141,6 +149,11 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
     /**
      * Sync members for a single inbox.
      *
+     * Uses membership-first resolution: each remote member's platform user ID
+     * is resolved to a ChatwootAccountUserMembership. The inbox↔membership
+     * relation is the sole relation managed. WAHA labels are derived from
+     * membership-linked agents.
+     *
      * @return array{synced: int, errors: int}
      */
     private function syncInboxMembers(
@@ -148,7 +161,8 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
         string $apiKey,
         int $chatwootAccountId,
         Entity $inbox,
-        string $espoAccountId
+        string $espoAccountId,
+        string $platformId
     ): array {
         $stats = ['synced' => 0, 'errors' => 0];
 
@@ -182,92 +196,191 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                 "SyncInboxMembersFromChatwoot: Found " . count($members) . " members for inbox {$chatwootInboxId}"
             );
 
-            // Get current linked agents in EspoCRM
-            $currentAgentIds = $this->getCurrentLinkedAgentIds($inbox);
+            // --- Membership-first resolution ---
+            // For each remote member, resolve to a local membership via platform user ID.
+            /** @var array<string, Entity> $membershipsToLink membershipId => membership entity */
+            $membershipsToLink = [];
+            /** @var array<string, Entity> $agentsFromMemberships agentId => agent entity */
+            $agentsFromMemberships = [];
+            /** @var array<int> $resolvedRemoteUserIds platform user IDs that were successfully resolved */
+            $resolvedRemoteUserIds = [];
 
-            // Build set of Chatwoot agent IDs from API response
-            $chatwootAgentIds = [];
             foreach ($members as $member) {
-                $chatwootAgentId = $member['id'] ?? null;
-                if ($chatwootAgentId) {
-                    $chatwootAgentIds[] = $chatwootAgentId;
+                $chatwootPlatformUserId = (int) ($member['id'] ?? 0);
+
+                if (!$chatwootPlatformUserId) {
+                    continue;
+                }
+
+                $membership = $this->membershipService->resolveMembershipByPlatformUserId(
+                    $chatwootPlatformUserId,
+                    $platformId,
+                    $espoAccountId
+                );
+
+                if (!$membership) {
+                    $this->log->debug(
+                        "SyncInboxMembersFromChatwoot: No membership found for platform user {$chatwootPlatformUserId} " .
+                        "in account {$espoAccountId}, skipping (user not yet synced)"
+                    );
+                    continue;
+                }
+
+                $resolvedRemoteUserIds[] = $chatwootPlatformUserId;
+                $membershipsToLink[$membership->getId()] = $membership;
+
+                // If membership has a linked agent, load the agent entity for WAHA label operations
+                $agentId = $membership->get('chatwootAgentId');
+
+                if ($agentId) {
+                    $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
+
+                    if ($agent) {
+                        $agentsFromMemberships[$agent->getId()] = $agent;
+                    } else {
+                        $this->log->debug(
+                            "SyncInboxMembersFromChatwoot: Membership {$membership->getId()} has chatwootAgentId={$agentId} " .
+                            "but agent entity is deleted, skipping label operations for this member"
+                        );
+                    }
                 }
             }
 
-            // Find agents in EspoCRM by chatwootAgentId
-            $agentsToLink = [];
-            foreach ($chatwootAgentIds as $chatwootAgentId) {
-                $agent = $this->entityManager
-                    ->getRDBRepository('ChatwootAgent')
-                    ->where([
-                        'chatwootAgentId' => $chatwootAgentId,
-                        'chatwootAccountId' => $espoAccountId,
-                    ])
-                    ->findOne();
+            // --- Build previous agent IDs for label reconciliation ---
+            // Primary path: load current accountUserMemberships on inbox → read chatwootAgentId → load agent
+            $previousAgentIds = [];
+            $currentMemberships = $this->entityManager
+                ->getRDBRepository('ChatwootInbox')
+                ->getRelation($inbox, 'accountUserMemberships')
+                ->find();
 
-                if ($agent) {
-                    $agentsToLink[$agent->getId()] = $agent;
+            $currentMembershipIds = [];
+
+            foreach ($currentMemberships as $m) {
+                $currentMembershipIds[] = $m->getId();
+                $mAgentId = $m->get('chatwootAgentId');
+
+                if ($mAgentId) {
+                    $mAgent = $this->entityManager->getEntityById('ChatwootAgent', $mAgentId);
+
+                    if ($mAgent) {
+                        $previousAgentIds[$mAgentId] = $mAgentId;
+                    }
                 }
             }
 
-            // Determine which agents to add and remove
-            $agentIdsToLink = array_keys($agentsToLink);
-            $agentIdsToAdd = array_diff($agentIdsToLink, $currentAgentIds);
-            $agentIdsToRemove = array_diff($currentAgentIds, $agentIdsToLink);
-
-            // Find inbox integration for label management
+            // Fallback path (Decision #10 / Warning #2): also query WahaSessionLabel records
+            // for this inbox integration to catch labels for agents whose membership FK is stale/deleted.
             $inboxIntegration = $this->findIntegrationForInbox($inbox);
 
-            // Reconcile labels for existing agents (create missing labels)
             if ($inboxIntegration) {
-                foreach ($agentsToLink as $agent) {
+                $existingLabels = $this->entityManager
+                    ->getRDBRepository('WahaSessionLabel')
+                    ->where(['inboxIntegrationId' => $inboxIntegration->getId()])
+                    ->find();
+
+                foreach ($existingLabels as $label) {
+                    $labelAgentId = $label->get('agentId');
+
+                    if ($labelAgentId) {
+                        $previousAgentIds[$labelAgentId] = $labelAgentId;
+                    }
+                }
+            }
+
+            $previousAgentIds = array_values($previousAgentIds);
+
+            // --- Safety guards ---
+            $desiredMembershipIds = array_keys($membershipsToLink);
+
+            // Empty-response guard (Warning #3): If API returns empty but local memberships exist,
+            // skip destructive operations entirely.
+            if (count($members) === 0 && count($currentMembershipIds) > 0) {
+                $this->log->warning(
+                    "SyncInboxMembersFromChatwoot: Inbox {$chatwootInboxId} — " .
+                    'remote members list is empty but local memberships exist. ' .
+                    'Skipping removals to protect against API errors.'
+                );
+                return $stats;
+            }
+
+            // Partial-resolution guard (Warning #3): If some API members couldn't be resolved locally,
+            // only perform additions — skip the removal pass.
+            $hasUnresolvedMembers = count($resolvedRemoteUserIds) < count($members);
+
+            if ($hasUnresolvedMembers) {
+                $this->log->debug(
+                    "SyncInboxMembersFromChatwoot: Inbox {$chatwootInboxId} — " .
+                    count($resolvedRemoteUserIds) . '/' . count($members) . ' members resolved. ' .
+                    'Skipping removal pass (partial resolution).'
+                );
+            }
+
+            // --- Reconcile inbox↔membership relation ---
+            $membershipIdsToAdd = array_diff($desiredMembershipIds, $currentMembershipIds);
+            $membershipIdsToRemove = $hasUnresolvedMembers
+                ? [] // Skip removals when partially resolved
+                : array_diff($currentMembershipIds, $desiredMembershipIds);
+
+            // Add new membership links
+            foreach ($membershipIdsToAdd as $membershipId) {
+                try {
+                    $this->entityManager
+                        ->getRDBRepository('ChatwootInbox')
+                        ->getRelation($inbox, 'accountUserMemberships')
+                        ->relateById($membershipId);
+
+                    $stats['synced']++;
+                    $this->log->debug("SyncInboxMembersFromChatwoot: Linked membership {$membershipId} to inbox {$inbox->getId()}");
+                } catch (\Exception $e) {
+                    $stats['errors']++;
+                    $this->log->debug(
+                        "SyncInboxMembersFromChatwoot: Failed to link membership {$membershipId} to inbox: " . $e->getMessage()
+                    );
+                }
+            }
+
+            // Remove old membership links
+            foreach ($membershipIdsToRemove as $membershipId) {
+                try {
+                    $this->entityManager
+                        ->getRDBRepository('ChatwootInbox')
+                        ->getRelation($inbox, 'accountUserMemberships')
+                        ->unrelateById($membershipId);
+
+                    $stats['synced']++;
+                    $this->log->debug("SyncInboxMembersFromChatwoot: Unlinked membership {$membershipId} from inbox {$inbox->getId()}");
+                } catch (\Exception $e) {
+                    $stats['errors']++;
+                    $this->log->debug(
+                        "SyncInboxMembersFromChatwoot: Failed to unlink membership {$membershipId} from inbox: " . $e->getMessage()
+                    );
+                }
+            }
+
+            // --- WAHA label lifecycle (derived from membership-linked agents) ---
+            if ($inboxIntegration) {
+                $desiredAgentIds = array_keys($agentsFromMemberships);
+
+                // Added agents: create labels
+                $addedAgentIds = array_diff($desiredAgentIds, $previousAgentIds);
+
+                foreach ($addedAgentIds as $agentId) {
+                    if (isset($agentsFromMemberships[$agentId])) {
+                        $this->createLabelForAgentInbox($agentsFromMemberships[$agentId], $inboxIntegration);
+                    }
+                }
+
+                // Removed agents: delete labels
+                $removedAgentIds = array_diff($previousAgentIds, $desiredAgentIds);
+
+                foreach ($removedAgentIds as $agentId) {
+                    $this->deleteLabelForAgentInbox($agentId, $inboxIntegration);
+                }
+
+                // Reconcile labels for all desired agents (create missing labels)
+                foreach ($agentsFromMemberships as $agent) {
                     $this->reconcileLabelForAgentInbox($agent, $inboxIntegration);
-                }
-            }
-
-            // Add new relationships
-            foreach ($agentIdsToAdd as $agentId) {
-                try {
-                    $this->entityManager
-                        ->getRDBRepository('ChatwootInbox')
-                        ->getRelation($inbox, 'chatwootAgents')
-                        ->relateById($agentId);
-                    
-                    $stats['synced']++;
-                    $this->log->debug("SyncInboxMembersFromChatwoot: Linked agent {$agentId} to inbox {$inbox->getId()}");
-
-                    // Create WAHA label for agent-inbox combination
-                    if ($inboxIntegration && isset($agentsToLink[$agentId])) {
-                        $this->createLabelForAgentInbox($agentsToLink[$agentId], $inboxIntegration);
-                    }
-                } catch (\Exception $e) {
-                    $stats['errors']++;
-                    $this->log->debug(
-                        "SyncInboxMembersFromChatwoot: Failed to link agent {$agentId} to inbox: " . $e->getMessage()
-                    );
-                }
-            }
-
-            // Remove old relationships
-            foreach ($agentIdsToRemove as $agentId) {
-                try {
-                    $this->entityManager
-                        ->getRDBRepository('ChatwootInbox')
-                        ->getRelation($inbox, 'chatwootAgents')
-                        ->unrelateById($agentId);
-                    
-                    $stats['synced']++;
-                    $this->log->debug("SyncInboxMembersFromChatwoot: Unlinked agent {$agentId} from inbox {$inbox->getId()}");
-
-                    // Delete WAHA label for agent-inbox combination
-                    if ($inboxIntegration) {
-                        $this->deleteLabelForAgentInbox($agentId, $inboxIntegration);
-                    }
-                } catch (\Exception $e) {
-                    $stats['errors']++;
-                    $this->log->debug(
-                        "SyncInboxMembersFromChatwoot: Failed to unlink agent {$agentId} from inbox: " . $e->getMessage()
-                    );
                 }
             }
 
@@ -279,26 +392,6 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
         }
 
         return $stats;
-    }
-
-    /**
-     * Get current linked agent IDs for an inbox.
-     *
-     * @return array<string>
-     */
-    private function getCurrentLinkedAgentIds(Entity $inbox): array
-    {
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootInbox')
-            ->getRelation($inbox, 'chatwootAgents')
-            ->find();
-
-        $ids = [];
-        foreach ($agents as $agent) {
-            $ids[] = $agent->getId();
-        }
-
-        return $ids;
     }
 
     /**

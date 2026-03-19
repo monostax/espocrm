@@ -73,11 +73,11 @@
             "required": true,
             "readOnly": true
         },
-        "chatwootAgents": {
-            "type": "linkMultiple"
-        },
         "chatwootInboxIntegration": {
             "type": "link"
+        },
+        "accountUserMemberships": {
+            "type": "linkMultiple"
         }
     },
     "links": {
@@ -102,16 +102,16 @@
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
         },
-        "chatwootAgents": {
-            "type": "hasMany",
-            "entity": "ChatwootAgent",
-            "relationName": "chatwootAgentChatwootInbox",
-            "foreign": "chatwootInboxes"
-        },
         "chatwootInboxIntegration": {
             "type": "belongsTo",
             "entity": "ChatwootInboxIntegration",
             "foreign": "chatwootInbox"
+        },
+        "accountUserMemberships": {
+            "type": "hasMany",
+            "entity": "ChatwootAccountUserMembership",
+            "relationName": "chatwootAccountUserMembershipChatwootInbox",
+            "foreign": "chatwootInboxes"
         }
     },
     "indexes": {
@@ -126,7 +126,7 @@
     "cascadeDelete": {
         "links": ["conversations", "contactInboxes"],
         "junctionTables": [
-            {"table": "ChatwootAgentChatwootInbox", "column": "chatwootInboxId"}
+            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootInboxId"}
         ]
     }
 }

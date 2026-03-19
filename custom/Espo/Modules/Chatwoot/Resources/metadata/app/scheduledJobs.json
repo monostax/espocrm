@@ -34,6 +34,18 @@
         "isSystem": false,
         "scheduling": "*/5 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxMembersFromChatwoot"
+    },
+    "RepairAccountUserMembershipInvariants": {
+        "name": "Repair Account User Membership Invariants",
+        "isSystem": false,
+        "scheduling": "*/30 * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\RepairAccountUserMembershipInvariants"
+    },
+    "SyncAccountMembersFromChatwoot": {
+        "name": "Sync Account Members from Chatwoot",
+        "isSystem": false,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAccountMembersFromChatwoot"
     }
 }
 

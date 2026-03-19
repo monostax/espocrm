@@ -67,6 +67,16 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'SyncInboxMembersFromChatwoot',
             'scheduling' => '*/5 * * * *',
         ],
+        [
+            'name' => 'Repair Account User Membership Invariants',
+            'job' => 'RepairAccountUserMembershipInvariants',
+            'scheduling' => '*/30 * * * *',
+        ],
+        [
+            'name' => 'Sync Account Members from Chatwoot',
+            'job' => 'SyncAccountMembersFromChatwoot',
+            'scheduling' => '*/5 * * * *',
+        ],
     ];
 
     public function __construct(

@@ -84,6 +84,11 @@
             "entity": "ChatwootAgent",
             "foreign": "chatwootUser"
         },
+        "accountUserMemberships": {
+            "type": "hasMany",
+            "entity": "ChatwootAccountUserMembership",
+            "foreign": "chatwootUser"
+        },
         "assignedUser": {
             "type": "belongsTo",
             "entity": "User"
@@ -107,6 +112,9 @@
         "orderBy": "createdAt",
         "order": "desc"
     },
+    "cascadeDelete": {
+        "links": ["accountUserMemberships"]
+    },
     "indexes": {
         "name": {
             "columns": ["name", "deleted"]
@@ -119,6 +127,9 @@
         },
         "chatwootAccountId": {
             "columns": ["chatwootAccountId", "deleted"]
+        },
+        "chatwootUserIdPlatformId": {
+            "columns": ["chatwootUserId", "platformId", "deleted"]
         },
         "createdAt": {
             "columns": ["createdAt"]

@@ -17,7 +17,8 @@
         "agents": "Chat / Agents",
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
-        "teams": "Teams / Accounts"
+        "teams": "Teams / Accounts",
+        "accountUserMemberships": "Account Memberships"
     },
     "labels": {
         "Create ChatwootUser": "Create Chat / User"

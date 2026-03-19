@@ -23,7 +23,8 @@
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "automationUser": "Usuário de Automação"
+        "automationUser": "Usuário de Automação",
+        "accountUserMemberships": "Membros da Conta"
     },
     "labels": {
         "Create ChatwootAccount": "Cadastrar Conta de Chat"

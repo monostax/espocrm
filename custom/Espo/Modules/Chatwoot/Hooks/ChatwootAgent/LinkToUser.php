@@ -26,11 +26,23 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootAgent;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 
 /**
  * Hook to link ChatwootAgent to matching ChatwootUser after save.
  * This ensures bidirectional sync - when an agent is created or synced,
  * if there's a ChatwootUser with the same email in the same platform, they get linked.
+ *
+ * Also upserts the ChatwootAccountUserMembership for the agent↔user pair.
+ * The membership upsert fires BEFORE the chatwootUserId early-return guard
+ * (Decision #7) so that it covers all three creation paths:
+ *   - SyncWithChatwoot.beforeSave (order=10) sets chatwootUserId before this hook
+ *   - EnsurePlatformUser.afterSave (order=25) sets chatwootUserId via silent save
+ *   - LinkToUser itself discovers and links a user (below)
+ *
+ * Note: LinkToUser does NOT check $options['silent'], so this upsert fires on
+ * ALL afterSave invocations including silent saves from LinkToAgents and
+ * EnsurePlatformUser. This is intentionally desired.
  */
 class LinkToUser
 {
@@ -38,12 +50,13 @@ class LinkToUser
 
     public function __construct(
         private EntityManager $entityManager,
-        private Log $log
+        private Log $log,
+        private ChatwootAccountUserMembershipService $membershipService
     ) {}
 
     /**
-     * After a ChatwootAgent is saved, find and link matching ChatwootUser if not already linked.
-     * Searches for user by email within the same platform (via account).
+     * After a ChatwootAgent is saved, ensure membership exists and find/link
+     * matching ChatwootUser if not already linked.
      * 
      * @param Entity $entity
      * @param array<string, mixed> $options
@@ -55,8 +68,16 @@ class LinkToUser
             return;
         }
 
-        // Skip if already linked to a user
-        if ($entity->get('chatwootUserId')) {
+        // If already linked to user+account, ensure membership exists and return.
+        // This covers the SyncWithChatwoot path, EnsurePlatformUser path, and
+        // the LinkToAgents silent-save path.
+        if ($entity->get('chatwootUserId') && $entity->get('chatwootAccountId')) {
+            $this->membershipService->upsertMembership(
+                $entity->get('chatwootAccountId'),
+                $entity->get('chatwootUserId'),
+                $entity->get('role') ?? 'agent',
+                $entity->getId()
+            );
             return;
         }
 
@@ -94,6 +115,14 @@ class LinkToUser
 
             $this->log->info(
                 "LinkToUser: Linked ChatwootAgent {$entity->getId()} to ChatwootUser {$chatwootUser->getId()} by email {$email} in platform {$platformId}"
+            );
+
+            // Create membership for the newly linked agent↔user pair
+            $this->membershipService->upsertMembership(
+                $accountId,
+                $chatwootUser->getId(),
+                $entity->get('role') ?? 'agent',
+                $entity->getId()
             );
         }
     }
