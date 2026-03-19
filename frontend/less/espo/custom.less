@@ -5370,19 +5370,20 @@ html.is-iframe {
 }
 
 // ===== Relationship List Field Sub-Panels =====
+
+.record .middle {
+    margin-top: var(--vertical-gap);
+}
+
 .relationship-list-field {
     .panel.panel-condensed {
         margin-bottom: 0;
-
         > .panel-heading {
-            padding: var(--6px) 0;
+            padding: var(--8px) var(--12px);
             min-height: auto;
 
             .panel-title {
-                font-size: var(--14px);
-                font-weight: 600;
                 padding: 0;
-                line-height: var(--24px);
                 display: flex;
                 align-items: center;
                 gap: var(--6px);
@@ -5410,9 +5411,6 @@ html.is-iframe {
             }
         }
 
-        > .panel-body {
-            padding: var(--8px) var(--12px);
-        }
     }
 
     .relationship-list-badge {

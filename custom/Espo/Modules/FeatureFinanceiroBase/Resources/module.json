@@ -1,0 +1,8 @@
+{
+    "order": 20,
+    "version": "1.0.0",
+    "name": "FeatureFinanceiroBase",
+    "description": "Modulo de Financeiro",
+    "jsTranspiled": true
+}
+

@@ -166,20 +166,20 @@ for (const module of modules) {
 
         // Pattern 1: define("modules/{moduleName}/path", ...)
         const pattern1 = new RegExp(
-            `define\\("modules/${module.moduleName}/([^"]+)"`,
+            `define\\(\\s*([\"'])modules/${module.moduleName}/([^\"']+)\\1`,
             "g",
         );
-        content = content.replace(pattern1, (match, pathPart) => {
-            return `define("${module.moduleName}:${pathPart}"`;
+        content = content.replace(pattern1, (match, quote, pathPart) => {
+            return `define(${quote}${module.moduleName}:${pathPart}${quote}`;
         });
 
         // Pattern 2: define("path", ...) where path doesn't contain ':'
-        const pattern2 = /define\("([^":]+)",/g;
-        content = content.replace(pattern2, (match, pathPart) => {
+        const pattern2 = /define\(\s*(["'])([^:"']+)\1\s*,/g;
+        content = content.replace(pattern2, (match, quote, pathPart) => {
             if (pathPart.includes(":")) {
                 return match;
             }
-            return `define("${module.moduleName}:${pathPart}",`;
+            return `define(${quote}${module.moduleName}:${pathPart}${quote},`;
         });
 
         if (content !== originalContent) {
@@ -209,15 +209,15 @@ for (const module of modules) {
 
     for (const file of files) {
         const content = fs.readFileSync(file, "utf-8");
-        const defineMatch = content.match(/^define\("([^"]+)"/);
+        const defineMatch = content.match(/(^|\n)\s*define\(\s*["']([^"']+)["']/);
 
         if (!defineMatch) continue;
 
-        const moduleId = defineMatch[1];
+        const moduleId = defineMatch[2];
 
-        if (!moduleId.includes(":")) {
+        if (!moduleId.startsWith(`${module.moduleName}:`)) {
             console.error(
-                `      ✗ ${path.relative(".", file)}: define("${moduleId}") is missing namespace prefix "${module.moduleName}:"`,
+                `      ✗ ${path.relative(".", file)}: define("${moduleId}") does not start with namespace prefix "${module.moduleName}:"`,
             );
             validationErrors++;
         }
@@ -233,4 +233,3 @@ if (validationErrors > 0) {
 }
 
 console.log(`  ✓ All module IDs validated successfully.\n`);
-

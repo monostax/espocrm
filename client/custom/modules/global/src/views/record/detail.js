@@ -18,7 +18,24 @@ class CustomDetailRecordView extends DetailRecordView {
      * @inheritDoc
      */
     events = {
-        ...DetailRecordView.prototype.events,
+        "click .button-container .action": function (e) {
+            const target = e.currentTarget;
+
+            let actionItems = undefined;
+
+            if (target.classList.contains("detail-action-item")) {
+                actionItems = [...this.buttonList, ...this.dropdownItemList];
+            } else if (target.classList.contains("edit-action-item")) {
+                actionItems = [...this.buttonEditList, ...this.dropdownEditItemList];
+            }
+
+            Espo.Utils.handleAction(this, e.originalEvent, target, {
+                actionItems: actionItems,
+            });
+        },
+        'click [data-action="showMoreDetailPanels"]': function () {
+            this.showMoreDetailPanels();
+        },
         // Override parent's generic button click to skip the "More" button
         "click .middle-tabs > button": function (e) {
             const $btn = $(e.currentTarget);

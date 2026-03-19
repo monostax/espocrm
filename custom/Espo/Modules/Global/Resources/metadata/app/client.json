@@ -4,6 +4,9 @@
         "client/custom/modules/global/lib/iframe-detection.js",
         "client/custom/modules/global/lib/iframe-parent-bridge.js"
     ],
-    "cssList": ["__APPEND__", "client/css/tailwind.css"]
+    "cssList": [
+        "__APPEND__",
+        "client/css/tailwind.css"
+    ]
 }
 

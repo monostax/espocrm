@@ -58,7 +58,6 @@ class RelationshipListFieldView extends BaseFieldView {
                     <h4 class="panel-title">
                         {{#if icon}}<span class="{{icon}}"{{#if iconColor}} style="color: {{iconColor}}"{{/if}}></span> {{/if}}
                         <span>{{title}}</span>
-                        <span class="relationship-list-badge badge" data-role="count" style="display:none;"></span>
                     </h4>
                 </div>
                 <div class="panel-body">

@@ -31,6 +31,18 @@
                         "recordsPerPage": 10
                     }
                 }
+            ],[
+                {
+                    "name": "casesListNew",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "cases",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
             ]
         ]
     },
