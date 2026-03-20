@@ -282,6 +282,7 @@ class RelationshipListFieldView extends BaseFieldView {
 
         this.showCreateButton =
             !this.createDisabled &&
+            panelDefs.create !== false &&
             !panelDefs.createDisabled &&
             this.getAcl().check(this.foreignEntityType, "create") &&
             !noCreateScopeList.includes(this.foreignEntityType);

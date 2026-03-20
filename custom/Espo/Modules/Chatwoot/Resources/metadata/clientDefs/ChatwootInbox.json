@@ -7,8 +7,17 @@
         "edit": "chatwoot:views/chatwoot-inbox/modals/edit"
     },
     "recordViews": {
-        "detail": "global:views/record/detail",
-        "list": "views/record/list"
+        "detail": "chatwoot:views/chatwoot-inbox/record/detail",
+        "list": "chatwoot:views/chatwoot-inbox/record/list"
+    },
+    "typeDeleteConfirmation": {
+        "enabled": true,
+        "expectedValue": "DELETE",
+        "actions": {
+            "detail": true,
+            "quickRemove": true,
+            "massRemove": true
+        }
     }
 }
 

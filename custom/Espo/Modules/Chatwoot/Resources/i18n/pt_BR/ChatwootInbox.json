@@ -13,5 +13,8 @@
         "tabAgents": "Agentes",
         "tabConversations": "Conversas",
         "Create ChatwootInbox": "Cadastrar Canal de Chat"
+    },
+    "messages": {
+        "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao."
     }
 }

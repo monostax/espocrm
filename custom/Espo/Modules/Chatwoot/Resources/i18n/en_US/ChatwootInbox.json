@@ -12,5 +12,8 @@
         "tabAgents": "Agents",
         "tabContacts": "Contacts",
         "tabConversations": "Conversations"
+    },
+    "messages": {
+        "typeToConfirmValueInstruction": "Type {value} to confirm deletion."
     }
 }

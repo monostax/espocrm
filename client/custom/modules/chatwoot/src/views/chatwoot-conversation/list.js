@@ -14,6 +14,13 @@ import ListView from 'views/list';
  */
 class ChatwootConversationListView extends ListView {
 
+    setup() {
+        super.setup();
+
+        // Keep merge available only for administrators.
+        this.mergeDisabled = !this.getUser().isAdmin();
+    }
+
     /**
      * Override createSearchView to NOT disable primaryFilters when
      * navigating with primaryFilter in URL.

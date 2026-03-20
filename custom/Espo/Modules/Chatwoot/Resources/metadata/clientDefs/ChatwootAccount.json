@@ -2,6 +2,16 @@
     "controller": "controllers/record",
     "iconClass": "ti ti-building",
     "recordViews": {
-        "detail": "global:views/record/detail"
+        "detail": "chatwoot:views/chatwoot-account/record/detail",
+        "list": "chatwoot:views/chatwoot-account/record/list"
+    },
+    "typeDeleteConfirmation": {
+        "enabled": true,
+        "expectedValue": "DELETE",
+        "actions": {
+            "detail": true,
+            "quickRemove": true,
+            "massRemove": true
+        }
     }
 }
