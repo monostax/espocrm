@@ -12,7 +12,8 @@
                 "view": "global:views/record/panels/activities",
                 "label": "Activities",
                 "aclScope": "Activities",
-                "orderDirection": "asc"
+                "orderDirection": "asc",
+                "notRefreshable": true
             },
             {
                 "name": "history",
@@ -32,7 +33,8 @@
                 "view": "global:views/record/panels/activities",
                 "label": "Activities",
                 "aclScope": "Activities",
-                "orderDirection": "asc"
+                "orderDirection": "asc",
+                "notRefreshable": true
             },
             {
                 "name": "history",

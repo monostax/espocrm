@@ -6,6 +6,100 @@
         "detail": "chatwoot:views/chatwoot-account/record/detail",
         "list": "chatwoot:views/chatwoot-account/record/list"
     },
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "Create Inbox Channel",
+                    "name": "createInboxChannel",
+                    "style": "default",
+                    "acl": "create",
+                    "aclScope": "ChatwootInboxIntegration",
+                    "handler": "chatwoot:handlers/chatwoot-account/detail-actions",
+                    "actionFunction": "createInboxChannel"
+                }
+            ]
+        }
+    },
+    "relationshipPanels": {
+        "inboxes": {
+            "unlinkDisabled": true,
+            "selectDisabled": true
+        }
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "inboxes",
+                "view": "views/record/panels/relationship",
+                "label": "tabInboxes",
+                "layout": "listSmall",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 1
+            },
+            {
+                "name": "accountUserMemberships",
+                "view": "views/record/panels/relationship",
+                "label": "tabUsers",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 2
+            },
+            {
+                "name": "chatwootTeams",
+                "view": "views/record/panels/relationship",
+                "label": "tabTeams",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 3
+            },
+            {
+                "name": "labels",
+                "view": "views/record/panels/relationship",
+                "label": "tabLabels",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 4
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "inboxes",
+                "view": "views/record/panels/relationship",
+                "label": "tabInboxes",
+                "layout": "listSmall",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 1
+            },
+            {
+                "name": "accountUserMemberships",
+                "view": "views/record/panels/relationship",
+                "label": "tabUsers",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 2
+            },
+            {
+                "name": "chatwootTeams",
+                "view": "views/record/panels/relationship",
+                "label": "tabTeams",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 3
+            },
+            {
+                "name": "labels",
+                "view": "views/record/panels/relationship",
+                "label": "tabLabels",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 4
+            }
+        ]
+    },
     "typeDeleteConfirmation": {
         "enabled": true,
         "expectedValue": "DELETE",

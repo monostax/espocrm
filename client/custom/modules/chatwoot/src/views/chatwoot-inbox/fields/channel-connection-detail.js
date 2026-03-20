@@ -14,6 +14,7 @@ define("chatwoot:views/chatwoot-inbox/fields/channel-connection-detail", [
             this.link = this.options.link || "chatwootInboxIntegration";
             this.targetScope = "ChatwootInboxIntegration";
             this.showRecordButtons = this.options.showRecordButtons;
+            this.showEditButton = this.options.showEditButton;
 
             if (this.showRecordButtons === undefined && this.options.defs?.params) {
                 this.showRecordButtons = this.options.defs.params.showRecordButtons;
@@ -21,6 +22,14 @@ define("chatwoot:views/chatwoot-inbox/fields/channel-connection-detail", [
 
             if (this.showRecordButtons === undefined) {
                 this.showRecordButtons = true;
+            }
+
+            if (this.showEditButton === undefined && this.options.defs?.params) {
+                this.showEditButton = this.options.defs.params.showEditButton;
+            }
+
+            if (this.showEditButton === undefined) {
+                this.showEditButton = true;
             }
         },
 
@@ -72,6 +81,7 @@ define("chatwoot:views/chatwoot-inbox/fields/channel-connection-detail", [
                             inlineEditDisabled: false,
                             sideView: null,
                             showRecordButtons: this.showRecordButtons,
+                            hideEditButton: !this.showEditButton,
                         },
                         (view) => {
                             this.$el.find(".channel-connection-empty").addClass("hidden");

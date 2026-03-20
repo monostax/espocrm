@@ -1,0 +1,16 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 50
+    },
+    {
+        "name": "status",
+        "width": 40
+    },
+    {
+        "name": "channelType",
+        "view": "global:views/fields/svg-icon-enum-only",
+        "width": 10
+    }
+]

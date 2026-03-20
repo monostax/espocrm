@@ -22,8 +22,16 @@
             "required": true
         },
         "channelType": {
-            "type": "varchar",
-            "maxLength": 100
+            "type": "foreign",
+            "link": "chatwootInboxIntegration",
+            "field": "channelType",
+            "optionsReference": "ChatwootInboxIntegration.channelType",
+            "view": "global:views/fields/svg-icon-enum",
+            "svgIconByValue": {
+                "whatsappQrcode": "whatsapp",
+                "whatsappCloudApi": "whatsapp"
+            },
+            "readOnly": true
         },
         "websiteUrl": {
             "type": "url"
@@ -75,6 +83,22 @@
         },
         "chatwootInboxIntegration": {
             "type": "link"
+        },
+        "status": {
+            "type": "foreign",
+            "link": "chatwootInboxIntegration",
+            "field": "status",
+            "view": "views/fields/foreign-enum",
+            "style": {
+                "DRAFT": "default",
+                "CREATING": "info",
+                "PENDING_QR": "warning",
+                "CONNECTING": "info",
+                "ACTIVE": "success",
+                "DISCONNECTED": "danger",
+                "FAILED": "danger"
+            },
+            "readOnly": true
         },
         "accountUserMemberships": {
             "type": "linkMultiple"
@@ -130,9 +154,3 @@
         ]
     }
 }
-
-
-
-
-
-

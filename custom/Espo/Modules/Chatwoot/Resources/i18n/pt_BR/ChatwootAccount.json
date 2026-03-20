@@ -12,29 +12,35 @@
         "lastContactSyncAt": "Último Sync de Contatos",
         "lastConversationSyncAt": "Último Sync de Conversas",
         "autoPendingEnabled": "Auto-Pendente Habilitado",
-        "automationUser": "Usuário de Automação",
+        "automationUser": "Usuário (Automação)",
         "apiKey": "Chave API da Conta"
     },
     "links": {
-        "automationUser": "Chat / Usuário (Automação)",
+        "automationUser": "Usuário (Automação)",
         "platform": "Plataforma",
-        "chatwootTeams": "Chat / Conta / Times",
-        "contacts": "Chat / Contatos",
+        "chatwootTeams": "Times",
+        "contacts": "Contatos",
         "syncStates": "Estados de Sincronização",
-        "inboxes": "Chat / Conta / Canais",
-        "chatwootInboxIntegrations": "Chat / Conta / Conexões de Canal",
-        "agents": "Chat / Agentes",
-        "webhooks": "Chat / Webhooks",
+        "inboxes": "Caixas de Entrada",
+        "chatwootInboxIntegrations": "Caixas de Entrada (Conexões)",
+        "agents": "Agentes",
+        "webhooks": "Webhooks",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "accountUserMemberships": "Chat / Conta / Agentes"
+        "accountUserMemberships": "Agentes"
     },
     "labels": {
+        "Overview": "Visão Geral",
         "Create ChatwootAccount": "Criar Nova Conta",
-        "tabInboxes": "Canais",
+        "Create Inbox Channel": "Adicionar Caixa de Entrada",
+        "inboxes": "Caixas de Entrada",
+        "accountUserMemberships": "Agentes",
+        "chatwootTeams": "Times",
+        "labels": "Etiquetas",
+        "tabInboxes": "Caixas de Entrada",
         "tabConnections": "Conexões de Canal",
-        "tabUsers": "Usuários",
+        "tabUsers": "Agentes",
         "tabTeams": "Times",
         "tabLabels": "Etiquetas",
         "Sync": "Chat / Sync",
@@ -43,6 +49,9 @@
         "Chat / Account / Teams": "Chat / Conta / Times",
         "Chat / Account / Users": "Chat / Conta / Agentes",
         "Chat / Account / Labels": "Chat / Conta / Etiquetas"
+    },
+    "tabs": {
+        "Overview": "Configurações"
     },
     "options": {
         "locale": {

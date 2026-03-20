@@ -6,6 +6,7 @@ define("global:views/global/record/embedded-detail", [
             Dep.prototype.setup.call(this);
 
             this.showRecordButtons = this.options.showRecordButtons;
+            this.hideEditButton = this.options.hideEditButton === true;
 
             if (this.showRecordButtons === undefined) {
                 this.showRecordButtons = true;
@@ -24,6 +25,12 @@ define("global:views/global/record/embedded-detail", [
             }
 
             this.buttonList = this.buttonList || [];
+
+            if (this.hideEditButton) {
+                this.buttonList = this.buttonList.filter(
+                    (item) => item && item.name !== "edit"
+                );
+            }
 
             this.buttonList.splice(1, 0, {
                 name: "openFullRecord",
@@ -62,6 +69,10 @@ define("global:views/global/record/embedded-detail", [
         applyButtonsVisibility: function () {
             if (this.showRecordButtons) {
                 this.$el.find(".detail-button-container.record-buttons").show();
+
+                if (this.hideEditButton) {
+                    this.$el.find('.detail-button-container.record-buttons [data-name="edit"]').hide();
+                }
 
                 return;
             }

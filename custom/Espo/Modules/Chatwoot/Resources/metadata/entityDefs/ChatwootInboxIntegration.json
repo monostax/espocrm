@@ -29,12 +29,27 @@
                 "FAILED"
             ],
             "default": "DRAFT",
+            "view": "views/fields/enum-styled",
+            "style": {
+                "DRAFT": "default",
+                "CREATING": "info",
+                "PENDING_QR": "warning",
+                "CONNECTING": "info",
+                "ACTIVE": "success",
+                "DISCONNECTED": "danger",
+                "FAILED": "danger"
+            },
             "readOnly": true
         },
         "channelType": {
             "type": "enum",
             "options": ["whatsappQrcode", "whatsappCloudApi"],
             "default": "whatsappQrcode",
+            "view": "global:views/fields/svg-icon-enum",
+            "svgIconByValue": {
+                "whatsappQrcode": "whatsapp",
+                "whatsappCloudApi": "whatsapp"
+            },
             "readOnlyAfterCreate": true
         },
         "wahaPlatform": {

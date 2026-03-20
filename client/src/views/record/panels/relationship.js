@@ -630,7 +630,8 @@ class RelationshipPanelView extends BottomPanelView {
 
         if (this.isRendered()) {
             this.$el.closest('.panel')
-                .find('> .panel-heading > .panel-title > span')
+                .find('> .panel-heading > .panel-title > .action')
+                .first()
                 .html(this.titleHtml);
         }
     }

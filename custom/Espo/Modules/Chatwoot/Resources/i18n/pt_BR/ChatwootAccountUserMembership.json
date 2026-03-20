@@ -8,9 +8,9 @@
         "syncStatus": "Status de Sincronização",
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
-        "chatwootAccountUserId": "ID do Membro da Conta",
+        "chatwootAccountUserId": "ID do Agente",
         "teams": "Permissão / Times",
-        "chatwootInboxes": "Chat / Conta / Canais"
+        "chatwootInboxes": "Chat / Conta / Caixas de Entrada"
     },
     "links": {
         "chatwootAccount": "Chat / Conta",
@@ -19,13 +19,14 @@
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "chatwootInboxes": "Chat / Conta / Canais"
+        "chatwootInboxes": "Chat / Conta / Caixas de Entrada"
     },
     "labels": {
-        "Create ChatwootAccountUserMembership": "Cadastrar Membro da Conta",
+        "tabUsers": "Agentes",
+        "Create ChatwootAccountUserMembership": "Cadastrar Agente",
         "Enable AI Profile": "Ativar Perfil IA",
         "Disable AI Profile": "Desativar Perfil IA",
-        "Chat / Account / Inboxes": "Chat / Conta / Canais",
+        "Chat / Account / Inboxes": "Chat / Conta / Caixas de Entrada",
         "Account Users": "Chat / Conta / Agentes"
     },
     "messages": {

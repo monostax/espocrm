@@ -16,6 +16,7 @@
         "teams": "Permissão / Times"
     },
     "labels": {
+        "tabTeams": "Times",
         "Create ChatwootTeam": "Cadastrar Chat / Time"
     },
     "tooltips": {

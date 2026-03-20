@@ -1,11 +1,14 @@
 {
     "labels": {
         "Chatwoot": "Chat",
-        "Waha": "Waha"
+        "Waha": "Waha",
+        "Chat / Accounts": "Chat / Accounts",
+        "Chat / Account Users": "Chat / Account Users"
     },
     "descriptions": {
         "chatwootPlatforms": "Manage chat platforms",
         "chatwootAccounts": "Manage chat accounts",
+        "chatwootAccountsForUser": "Manage chat accounts",
         "chatwootInboxIntegrations": "Manage inbox integrations",
         "chatwootUsers": "Manage chat users",
         "chatwootTeams": "Manage chat teams",

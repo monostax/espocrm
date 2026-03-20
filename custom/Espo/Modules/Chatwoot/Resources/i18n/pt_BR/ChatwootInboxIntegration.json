@@ -11,7 +11,7 @@
         "wahaAppId": "ID do App WAHA",
         "chatwootInboxId": "ID do Canal de Chat",
         "chatwootInboxIdentifier": "Identificador do Canal de Chat",
-        "chatwootInbox": "Chat / Conta / Canal",
+        "chatwootInbox": "Chat / Conta / Caixa de Entrada",
         "whatsappId": "ID WhatsApp",
         "whatsappName": "Nome WhatsApp",
         "errorMessage": "Mensagem de Erro",
@@ -32,12 +32,12 @@
     "links": {
         "wahaPlatform": "Plataforma WAHA",
         "chatwootAccount": "Chat / Conta",
-        "chatwootInbox": "Chat / Conta / Canal",
+        "chatwootInbox": "Chat / Conta / Caixa de Entrada",
         "oAuthAccount": "Conta Meta",
         "team": "Equipe"
     },
     "labels": {
-        "Create ChatwootInboxIntegration": "Cadastrar Conexão de Canal",
+        "Create ChatwootInboxIntegration": "Cadastrar Caixa de Entrada (Conexão)",
         "WhatsApp Connection": "Conexão WhatsApp",
         "Connection Details": "Detalhes da Conexão",
         "Error": "Erro",

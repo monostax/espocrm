@@ -10,6 +10,40 @@
         "detail": "chatwoot:views/chatwoot-inbox/record/detail",
         "list": "chatwoot:views/chatwoot-inbox/record/list"
     },
+    "relationshipPanels": {
+        "contactInboxes": {
+            "unlinkDisabled": true,
+            "selectDisabled": true
+        },
+        "conversations": {
+            "unlinkDisabled": true,
+            "selectDisabled": true
+        },
+        "accountUserMemberships": {
+            "unlinkDisabled": true,
+            "selectDisabled": true
+        }
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "accountUserMemberships",
+                "view": "views/record/panels/relationship",
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 1
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "accountUserMemberships",
+                "view": "views/record/panels/relationship",
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 1
+            }
+        ]
+    },
     "typeDeleteConfirmation": {
         "enabled": true,
         "expectedValue": "DELETE",

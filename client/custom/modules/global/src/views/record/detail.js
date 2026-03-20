@@ -6,6 +6,8 @@ import DetailRecordView from "views/record/detail";
 
 class CustomDetailRecordView extends DetailRecordView {
     template = "global:record/detail";
+    middleView = "global:views/record/detail-middle";
+    bottomView = "global:views/record/detail-bottom";
 
     /**
      * Mobile tab grouping configuration
@@ -60,6 +62,47 @@ class CustomDetailRecordView extends DetailRecordView {
             this.selectTab(tab);
         },
     };
+
+    /**
+     * @override
+     * Provide collapse data required by record layout template.
+     */
+    createMiddleView(callback) {
+        const el = this.getSelector() || "#" + this.id;
+
+        this.waitForView("middle");
+
+        this.getGridLayout((layout) => {
+            if (
+                this.hasTabs() &&
+                this.options.isReturn &&
+                this.isStoredTabForThisRecord()
+            ) {
+                this.selectStoredTab();
+            }
+
+            this.createView(
+                "middle",
+                this.middleView,
+                {
+                    model: this.model,
+                    scope: this.scope,
+                    type: this.type,
+                    layoutDefs: layout,
+                    fullSelector: el + " .middle",
+                    layoutData: {
+                        model: this.model,
+                        hiddenPanels: this.recordHelper.getHiddenPanels(),
+                        collapsedPanels: {},
+                    },
+                    recordHelper: this.recordHelper,
+                    recordViewObject: this,
+                    panelFieldListMap: this.panelFieldListMap,
+                },
+                callback,
+            );
+        });
+    }
 
     /**
      * @inheritDoc

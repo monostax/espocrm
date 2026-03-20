@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "channelType": {
+            "onlyAdmin": true
+        },
+        "chatwootInboxId": {
+            "onlyAdmin": true
+        },
+        "lastSyncedAt": {
+            "onlyAdmin": true
+        },
+        "inboxIdentifier": {
+            "onlyAdmin": true
+        },
+        "provider": {
+            "onlyAdmin": true
+        },
+        "medium": {
+            "onlyAdmin": true
+        }
+    }
+}

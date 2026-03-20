@@ -11,6 +11,7 @@
         "accountUserMemberships": "Chat / Account / Users"
     },
     "labels": {
+        "Create Inbox Channel": "Create Inbox Channel",
         "tabInboxes": "Inboxes",
         "tabConnections": "Connections",
         "tabUsers": "Users",

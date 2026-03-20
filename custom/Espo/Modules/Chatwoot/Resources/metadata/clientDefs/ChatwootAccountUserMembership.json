@@ -63,6 +63,7 @@
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,
+                "unlinkDisabled": true,
                 "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
                 "order": 5,
                 "disabled": false
@@ -72,7 +73,8 @@
     "relationshipPanels": {
         "chatwootInboxes": {
             "select": true,
-            "create": false
+            "create": false,
+            "unlinkDisabled": true
         }
     }
 }

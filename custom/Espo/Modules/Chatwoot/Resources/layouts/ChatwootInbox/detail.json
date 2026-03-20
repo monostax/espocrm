@@ -13,26 +13,10 @@
             ],
             [
                 {
-                    "name": "channelType"
-                },
-                {
-                    "name": "chatwootInboxId"
-                }
-            ],
-            [
-                {
                     "name": "phoneNumber"
                 },
                 {
                     "name": "websiteUrl"
-                }
-            ],
-            [
-                {
-                    "name": "provider"
-                },
-                {
-                    "name": "medium"
                 }
             ]
         ]
@@ -61,10 +45,49 @@
         "rows": [
             [
                 {
+                    "name": "createdAt"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:metadata",
+        "tabIconClass": "fas fa-user-shield",
+        "label": "$label:metadata",
+        "name": "metadata",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "channelType"
+                },
+                {
+                    "name": "chatwootInboxId"
+                }
+            ],
+            [
+                {
                     "name": "lastSyncedAt"
                 },
                 {
-                    "name": "createdAt"
+                    "name": "inboxIdentifier"
+                }
+            ],
+            [
+                {
+                    "name": "provider"
+                },
+                {
+                    "name": "medium"
                 }
             ]
         ]
@@ -84,27 +107,8 @@
                     "span": 12,
                     "options": {
                         "link": "chatwootInboxIntegration",
-                        "showRecordButtons": true
-                    }
-                }
-            ]
-        ]
-    },
-    {
-        "tabBreak": true,
-        "tabLabel": "$label:tabAgents",
-        "name": "agentsTab",
-        "rows": [
-            [
-                {
-                    "name": "accountUserMembershipsList",
-                    "view": "global:views/fields/relationship-list",
-                    "noLabel": true,
-                    "span": 4,
-                    "options": {
-                        "link": "accountUserMemberships",
-                        "layout": "listSmall",
-                        "recordsPerPage": 10
+                        "showRecordButtons": true,
+                        "showEditButton": false
                     }
                 }
             ]

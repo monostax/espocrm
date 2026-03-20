@@ -23,7 +23,7 @@
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
         "teams": "Permissão / Times",
-        "accountUserMembership": "Membro da Conta"
+        "accountUserMembership": "Agente"
     },
     "links": {
         "chatwootAccount": "Chat / Conta",
@@ -31,7 +31,7 @@
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
         "teams": "Permissão / Times",
-        "accountUserMembership": "Membro da Conta"
+        "accountUserMembership": "Agente"
     },
     "labels": {
         "Create ChatwootAgent": "Cadastrar Agente IA de Chat",

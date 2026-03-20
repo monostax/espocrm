@@ -1,0 +1,80 @@
+.relationship-list-field .panel.panel-condensed > .panel-heading {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--10px);
+    min-height: var(--panel-heading-height);
+}
+
+.relationship-list-field .panel.panel-condensed > .panel-heading .panel-title {
+    order: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--6px);
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+    padding-top: calc((var(--panel-heading-height) - var(--panel-heading-font-size) * 1.4) / 2);
+    padding-bottom: calc((var(--panel-heading-height) - var(--panel-heading-font-size) * 1.4) / 2);
+}
+
+.relationship-list-field .panel.panel-condensed > .panel-heading .panel-title > span {
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.relationship-list-field
+    .panel.panel-condensed
+    > .panel-heading
+    .panel-title
+    > .panel-collapse-chevron {
+    font-size: var(--10px);
+    opacity: 0.55;
+    flex-shrink: 0;
+    width: 1.1em;
+    text-align: center;
+}
+
+.relationship-list-field
+    .panel.panel-condensed
+    > .panel-heading
+    .panel-title
+    > .relationship-list-entity-icon {
+    opacity: 0.65;
+    font-size: var(--13px);
+    flex-shrink: 0;
+}
+
+.relationship-list-field
+    .panel.panel-condensed
+    > .panel-heading
+    .panel-title
+    > .relationship-list-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.relationship-list-field .panel.panel-condensed > .panel-heading > .btn-group.panel-actions-container {
+    order: 2;
+    margin-left: auto;
+    margin-top: calc((var(--panel-heading-height) - var(--30px)) / 2);
+    margin-bottom: 0;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.relationship-list-field .panel.panel-condensed > .panel-heading > .btn-group.panel-actions-container > .btn {
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.relationship-list-field .panel.panel-condensed > .panel-heading > .pull-right.panel-actions-container {
+    float: none !important;
+    margin-left: auto;
+}
+
+.panel > .panel-heading > .panel-title > .panel-collapse-chevron {
+    display: inline-block;
+    width: 1.1em;
+    text-align: center;
+}

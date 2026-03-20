@@ -1,11 +1,14 @@
 {
     "labels": {
         "Chatwoot": "Chat",
-        "Waha": "Waha"
+        "Waha": "Waha",
+        "Chat / Accounts": "Chat / Contas",
+        "Chat / Account Users": "Chat / Contas / Agentes"
     },
     "descriptions": {
         "chatwootPlatforms": "Gerenciar plataformas de chat",
         "chatwootAccounts": "Gerenciar contas de chat",
+        "chatwootAccountsForUser": "Gerenciar contas de chat",
         "chatwootInboxIntegrations": "Gerenciar conexões de canal do chat",
         "chatwootUsers": "Gerenciar usuários de chat",
         "chatwootTeams": "Gerenciar times de chat",

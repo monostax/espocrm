@@ -159,7 +159,7 @@ class SeedRole implements RebuildAction
                         'stream' => 'no',
                     ],
                 'ChatwootInbox' => [
-                    'create' => 'no',
+                    'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',
                     'delete' => 'team',
@@ -188,7 +188,25 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'ChatwootMessage' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'ChatwootAgent' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'WahaSessionLabel' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'ChatwootUser' => [
                     'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',

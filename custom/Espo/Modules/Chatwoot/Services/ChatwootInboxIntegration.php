@@ -740,13 +740,98 @@ class ChatwootInboxIntegration
         $wahaUrl = $wahaPlatform->get('backendUrl');
         $wahaApiKey = $wahaPlatform->get('apiKey');
 
-        $qrData = $this->wahaApiClient->getQrCode($wahaUrl, $wahaApiKey, $sessionName);
+        $this->recoverSessionForQrCode($channel, $wahaUrl, $wahaApiKey, $sessionName);
+
+        try {
+            $qrData = $this->wahaApiClient->getQrCode($wahaUrl, $wahaApiKey, $sessionName);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $isStatusMismatch = strpos($message, 'Session status is not as expected') !== false ||
+                strpos($message, 'HTTP 422') !== false;
+
+            if (!$isStatusMismatch) {
+                throw $e;
+            }
+
+            $this->log->warning("ChatwootInboxIntegration: QR fetch failed due to session status mismatch for {$sessionName}, retrying after restart.");
+            $this->recoverSessionForQrCode($channel, $wahaUrl, $wahaApiKey, $sessionName, true);
+            $qrData = $this->wahaApiClient->getQrCode($wahaUrl, $wahaApiKey, $sessionName);
+        }
 
         return (object) [
             'mimetype' => $qrData['mimetype'],
             'data' => $qrData['data'],
             'dataUrl' => 'data:' . $qrData['mimetype'] . ';base64,' . $qrData['data']
         ];
+    }
+
+    private function recoverSessionForQrCode(
+        Entity $channel,
+        string $wahaUrl,
+        string $wahaApiKey,
+        string $sessionName,
+        bool $forceRestart = false
+    ): void {
+        try {
+            $sessionInfo = $this->wahaApiClient->getSession($wahaUrl, $wahaApiKey, $sessionName);
+        } catch (\Exception $e) {
+            $this->log->warning("ChatwootInboxIntegration: Failed to read WAHA session {$sessionName} before QR fetch: " . $e->getMessage());
+            return;
+        }
+
+        $status = $sessionInfo['status'] ?? 'UNKNOWN';
+
+        if ($forceRestart || $status === 'FAILED' || $status === 'STOPPED') {
+            $this->log->warning("ChatwootInboxIntegration: Restarting WAHA session {$sessionName} from status {$status}.");
+            $this->wahaApiClient->restartSession($wahaUrl, $wahaApiKey, $sessionName);
+            $sessionInfo = $this->waitForSessionStatus($wahaUrl, $wahaApiKey, $sessionName, ['SCAN_QR_CODE', 'WORKING']);
+            $status = $sessionInfo['status'] ?? 'UNKNOWN';
+        }
+
+        if ($status === 'SCAN_QR_CODE' && $channel->get('status') !== 'PENDING_QR') {
+            $channel->set('status', 'PENDING_QR');
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+            return;
+        }
+
+        if ($status === 'WORKING' && $channel->get('status') !== 'ACTIVE') {
+            $channel->set('status', 'ACTIVE');
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+        }
+    }
+
+    /**
+     * @param array<int, string> $expectedStatuses
+     * @return array<string, mixed>
+     */
+    private function waitForSessionStatus(
+        string $wahaUrl,
+        string $wahaApiKey,
+        string $sessionName,
+        array $expectedStatuses,
+        int $maxAttempts = 8,
+        int $delaySeconds = 1
+    ): array {
+        $lastSessionInfo = ['status' => 'UNKNOWN'];
+
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            try {
+                $lastSessionInfo = $this->wahaApiClient->getSession($wahaUrl, $wahaApiKey, $sessionName);
+                $status = $lastSessionInfo['status'] ?? 'UNKNOWN';
+
+                if (in_array($status, $expectedStatuses, true)) {
+                    return $lastSessionInfo;
+                }
+            } catch (\Exception $e) {
+                $this->log->warning("ChatwootInboxIntegration: Failed to poll WAHA session {$sessionName}: " . $e->getMessage());
+            }
+
+            sleep($delaySeconds);
+        }
+
+        return $lastSessionInfo;
     }
 
     public function findLinkedChatwootInboxRecordId(string $channelId): ?string

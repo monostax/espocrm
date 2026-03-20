@@ -35,22 +35,31 @@ class RelationshipListFieldView extends BaseFieldView {
                     <div class="pull-right btn-group panel-actions-container">
                         {{#if showCreateButton}}
                         <button
-                            class="btn btn-default btn-sm action"
+                            type="button"
+                            class="btn btn-default btn-sm panel-action action"
                             data-action="createRelated"
+                            data-panel="{{link}}"
+                            data-link="{{link}}"
                             title="{{translate 'Create'}}"
                         ><span class="fas fa-plus"></span></button>
                         {{/if}}
                         {{#if showSelectButton}}
                         <button
-                            class="btn btn-default btn-sm action"
+                            type="button"
+                            class="btn btn-default btn-sm panel-action action"
                             data-action="selectRelated"
+                            data-panel="{{link}}"
+                            data-link="{{link}}"
                             title="{{translate 'Select'}}"
                         ><span class="fas fa-link"></span></button>
                         {{/if}}
                         {{#if showViewListButton}}
                         <button
-                            class="btn btn-default btn-sm action"
+                            type="button"
+                            class="btn btn-default btn-sm panel-action action"
                             data-action="viewRelatedList"
+                            data-panel="{{link}}"
+                            data-link="{{link}}"
                             title="{{translate 'View List'}}"
                         ><span class="fas fa-list"></span></button>
                         {{/if}}
@@ -148,6 +157,7 @@ class RelationshipListFieldView extends BaseFieldView {
             showSelectButton: hasId && this.showSelectButton,
             showViewListButton: hasId,
             hasId: hasId,
+            link: this.link,
             title: this.getTitle(),
             icon: this.getIcon(),
             iconColor: this.getIconColor(),
