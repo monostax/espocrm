@@ -35,6 +35,12 @@
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxMembersFromChatwoot"
     },
+    "SyncLabelsFromChatwoot": {
+        "name": "Sync Labels from Chatwoot",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncLabelsFromChatwoot"
+    },
     "RepairAccountUserMembershipInvariants": {
         "name": "Repair Account User Membership Invariants",
         "isSystem": false,

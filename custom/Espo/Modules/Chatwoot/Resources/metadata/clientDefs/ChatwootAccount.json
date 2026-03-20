@@ -1,6 +1,7 @@
 {
     "controller": "controllers/record",
     "iconClass": "ti ti-building",
+    "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-account/defaults-preparator",
     "recordViews": {
         "detail": "chatwoot:views/chatwoot-account/record/detail",
         "list": "chatwoot:views/chatwoot-account/record/list"

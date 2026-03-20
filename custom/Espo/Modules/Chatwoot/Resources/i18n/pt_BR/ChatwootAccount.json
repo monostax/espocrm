@@ -31,6 +31,7 @@
         "accountUserMemberships": "Chat / Conta / Agentes"
     },
     "labels": {
+        "Create ChatwootAccount": "Criar Nova Conta",
         "tabInboxes": "Canais",
         "tabConnections": "Conexões de Canal",
         "tabUsers": "Usuários",
@@ -41,8 +42,7 @@
         "Chat / Account / Connections": "Chat / Conta / Conexões de Canal",
         "Chat / Account / Teams": "Chat / Conta / Times",
         "Chat / Account / Users": "Chat / Conta / Agentes",
-        "Chat / Account / Labels": "Chat / Conta / Etiquetas",
-        "Create ChatwootAccount": "Cadastrar Conta de Chat"
+        "Chat / Account / Labels": "Chat / Conta / Etiquetas"
     },
     "options": {
         "locale": {

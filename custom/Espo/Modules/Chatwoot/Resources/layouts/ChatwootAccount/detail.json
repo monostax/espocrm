@@ -1,23 +1,16 @@
 [
     {
         "tabLabel": "$Overview",
-        "label": "Overview",
+        "label": "$Overview",
         "rows": [
             [
                 {
                     "name": "name"
                 },
                 {
-                    "name": "platform"
-                }
-            ],
-            [
-                {
                     "name": "status"
                 },
-                {
-                    "name": "locale"
-                }
+                false
             ],
             [
                 {
@@ -25,41 +18,9 @@
                 },
                 {
                     "name": "supportEmail"
-                }
-            ],
-            [
-                {
-                    "name": "chatwootAccountId"
                 },
                 {
-                    "name": "apiKey"
-                }
-            ],
-            [
-                {
-                    "name": "automationUser"
-                },
-                false
-            ]
-        ]
-    },
-    {
-        "label": "Sync",
-        "rows": [
-            [
-                {
-                    "name": "contactSyncEnabled"
-                },
-                {
-                    "name": "autoPendingEnabled"
-                }
-            ],
-            [
-                {
-                    "name": "lastContactSyncAt"
-                },
-                {
-                    "name": "lastConversationSyncAt"
+                    "name": "locale"
                 }
             ]
         ]
@@ -143,6 +104,59 @@
                 }
             ]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "Metadata",
+        "tabIconClass": "fas fa-user-shield",
+        "label": "Metadata",
+        "name": "metadata",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "platform"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "automationUser"
+                },
+                {
+                    "name": "apiKey"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "contactSyncEnabled"
+                },
+                {
+                    "name": "autoPendingEnabled"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccountId"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "lastContactSyncAt"
+                },
+                {
+                    "name": "lastConversationSyncAt"
+                }
+            ]
+        ]
     }
 ]
-

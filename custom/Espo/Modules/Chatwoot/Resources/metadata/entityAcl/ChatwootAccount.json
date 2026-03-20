@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "platform": {
+            "onlyAdmin": true
+        }
+    },
+    "links": {
+        "platform": {
+            "onlyAdmin": true
+        }
+    }
+}

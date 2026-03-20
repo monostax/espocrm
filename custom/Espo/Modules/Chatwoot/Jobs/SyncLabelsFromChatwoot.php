@@ -126,9 +126,8 @@ class SyncLabelsFromChatwoot implements JobDataLess
         }
 
         if (!$label) {
-            $label = $this->entityManager->createEntity('ChatwootLabel', [
-                'chatwootAccountId' => $accountId,
-            ]);
+            $label = $this->entityManager->getNewEntity('ChatwootLabel');
+            $label->set('chatwootAccountId', $accountId);
         }
 
         $label->set('name', $name);

@@ -359,19 +359,24 @@ class CustomDetailRecordView extends DetailRecordView {
                     );
                 }
 
-                // Try to get entity icon for relationship tabs
-                const entityType = this.getTabEntityType(item);
-                if (entityType) {
-                    icon = this.getMetadata().get([
-                        "clientDefs",
-                        entityType,
-                        "iconClass",
-                    ]);
-                    iconColor = this.getMetadata().get([
-                        "clientDefs",
-                        entityType,
-                        "color",
-                    ]);
+                if (item.tabIconClass) {
+                    icon = item.tabIconClass;
+                    iconColor = item.tabIconColor || null;
+                } else {
+                    // Try to get entity icon for relationship tabs
+                    const entityType = this.getTabEntityType(item);
+                    if (entityType) {
+                        icon = this.getMetadata().get([
+                            "clientDefs",
+                            entityType,
+                            "iconClass",
+                        ]);
+                        iconColor = this.getMetadata().get([
+                            "clientDefs",
+                            entityType,
+                            "color",
+                        ]);
+                    }
                 }
 
                 return {

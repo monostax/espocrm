@@ -2,7 +2,8 @@
     "scriptList": [
         "__APPEND__",
         "client/custom/modules/global/lib/iframe-detection.js",
-        "client/custom/modules/global/lib/iframe-parent-bridge.js"
+        "client/custom/modules/global/lib/iframe-parent-bridge.js",
+        "client/custom/modules/global/lib/hide-metadata-tab-for-non-admin.js"
     ],
     "cssList": [
         "__APPEND__",
