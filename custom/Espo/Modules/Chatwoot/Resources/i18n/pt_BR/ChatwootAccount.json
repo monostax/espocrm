@@ -8,6 +8,9 @@
         "supportEmail": "Email de Suporte",
         "status": "Status",
         "teams": "Permissão / Times",
+        "contactSyncEnabled": "Sync de Contatos Habilitado",
+        "lastContactSyncAt": "Último Sync de Contatos",
+        "lastConversationSyncAt": "Último Sync de Conversas",
         "autoPendingEnabled": "Auto-Pendente Habilitado",
         "automationUser": "Usuário de Automação",
         "apiKey": "Chave API da Conta"
@@ -15,10 +18,11 @@
     "links": {
         "automationUser": "Chat / Usuário (Automação)",
         "platform": "Plataforma",
-        "chatwootTeams": "Chat / Times",
+        "chatwootTeams": "Chat / Conta / Times",
         "contacts": "Chat / Contatos",
         "syncStates": "Estados de Sincronização",
-        "inboxes": "Chat / Inboxes",
+        "inboxes": "Chat / Conta / Canais",
+        "chatwootInboxIntegrations": "Chat / Conta / Conexões de Canal",
         "agents": "Chat / Agentes",
         "webhooks": "Chat / Webhooks",
         "createdBy": "Criado por",
@@ -27,7 +31,17 @@
         "accountUserMemberships": "Chat / Conta / Agentes"
     },
     "labels": {
-        "Connections": "Chat / Conexões",
+        "tabInboxes": "Canais",
+        "tabConnections": "Conexões de Canal",
+        "tabUsers": "Usuários",
+        "tabTeams": "Times",
+        "tabLabels": "Etiquetas",
+        "Sync": "Chat / Sync",
+        "Connections": "Chat / Conta / Conexões de Canal",
+        "Chat / Account / Connections": "Chat / Conta / Conexões de Canal",
+        "Chat / Account / Teams": "Chat / Conta / Times",
+        "Chat / Account / Users": "Chat / Conta / Agentes",
+        "Chat / Account / Labels": "Chat / Conta / Etiquetas",
         "Create ChatwootAccount": "Cadastrar Conta de Chat"
     },
     "options": {
@@ -51,4 +65,3 @@
         "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário de automação é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso."
     }
 }
-

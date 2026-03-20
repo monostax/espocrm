@@ -19,7 +19,7 @@
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
         "teams": "Teams",
-        "chatwootInboxes": "Chat / Inboxes"
+        "chatwootInboxes": "Chat / Account / Inboxes"
     },
     "labels": {
         "Create ChatwootAccountUserMembership": "Create Account User",

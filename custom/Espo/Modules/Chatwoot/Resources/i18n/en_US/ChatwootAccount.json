@@ -3,12 +3,19 @@
         "apiKey": "API Key",
         "automationUser": "Chat / User (Automation)",
         "autoPendingEnabled": "Auto-Pending Enabled",
-        "teams": "Chat / Teams"
+        "teams": "Chat / Account / Teams"
     },
     "links": {
         "automationUser": "Chat / User (Automation)",
         "teams": "Chat / Account / Teams",
         "accountUserMemberships": "Chat / Account / Users"
+    },
+    "labels": {
+        "tabInboxes": "Inboxes",
+        "tabConnections": "Connections",
+        "tabUsers": "Users",
+        "tabTeams": "Teams",
+        "tabLabels": "Labels"
     },
     "tooltips": {
         "apiKey": "Account-level API token from Chat. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",
@@ -16,4 +23,3 @@
         "autoPendingEnabled": "When enabled, conversations will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
     }
 }
-

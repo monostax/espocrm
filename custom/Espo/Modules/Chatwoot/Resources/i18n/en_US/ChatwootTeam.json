@@ -4,7 +4,7 @@
         "description": "Description",
         "allowAutoAssign": "Allow Auto Assign",
         "account": "Chat / Account",
-        "chatwootTeamId": "Chat / Team ID",
+        "chatwootTeamId": "Chat / Account / Team ID",
         "isMember": "Is Member"
     },
     "tooltips": {

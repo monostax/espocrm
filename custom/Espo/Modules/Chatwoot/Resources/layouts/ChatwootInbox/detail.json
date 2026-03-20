@@ -1,5 +1,6 @@
 [
     {
+        "tabLabel": "$Overview",
         "label": "Overview",
         "rows": [
             [
@@ -64,6 +65,67 @@
                 },
                 {
                     "name": "createdAt"
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabChannelConnection",
+        "tabEntityType": "ChatwootInboxIntegration",
+        "name": "channelConnectionTab",
+        "rows": [
+            [
+                {
+                    "name": "channelConnectionDetail",
+                    "view": "chatwoot:views/chatwoot-inbox/fields/channel-connection-detail",
+                    "noLabel": true,
+                    "inlineEditDisabled": true,
+                    "span": 12,
+                    "options": {
+                        "link": "chatwootInboxIntegration",
+                        "showRecordButtons": true
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabAgents",
+        "name": "agentsTab",
+        "rows": [
+            [
+                {
+                    "name": "accountUserMembershipsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "accountUserMemberships",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabConversations",
+        "name": "conversationsTab",
+        "rows": [
+            [
+                {
+                    "name": "conversationsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "conversations",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
                 }
             ]
         ]

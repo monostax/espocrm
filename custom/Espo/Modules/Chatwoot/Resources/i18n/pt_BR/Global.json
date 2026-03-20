@@ -5,14 +5,14 @@
         "ChatwootContact": "Chat / Contato",
         "ChatwootContactInbox": "Chat / Contato / Canal",
         "ChatwootConversation": "Chat / Conversa",
-        "ChatwootInbox": "Chat / Inbox",
+        "ChatwootInbox": "Chat / Conta / Canal",
         "ChatwootMessage": "Chat / Mensagem",
         "ChatwootPlatform": "Chat / Plataforma",
         "ChatwootUser": "Chat / Usuário",
         "ChatwootTeam": "Chat / Time",
         "ChatwootSyncState": "Chat / Sync",
         "ChatwootAccountWebhook": "Chat / Webhook",
-        "ChatwootInboxIntegration": "Chat / Conexão",
+        "ChatwootInboxIntegration": "Chat / Conta / Conexão de Canal",
         "ChatwootLabel": "Chat / Etiqueta",
         "WahaPlatform": "Plataforma Waha",
         "WahaSession": "Sessão Waha",
@@ -20,22 +20,22 @@
         "WahaSessionLabel": "Etiqueta de Sessão",
         "WhatsAppCampaign": "Campanha WhatsApp",
         "WhatsAppCampaignContact": "Contato da Campanha WhatsApp",
-        "ChatwootAccountUserMembership": "Chat / Membro"
+        "ChatwootAccountUserMembership": "Chat / Conta / Agente"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Contas",
         "ChatwootAgent": "Chat / Agentes IA",
         "ChatwootContact": "Chat / Contatos",
-        "ChatwootContactInbox": "Chat / Inbox / Contato",
+        "ChatwootContactInbox": "Chat / Conta / Canal / Contato",
         "ChatwootConversation": "Chat / Conversas",
-        "ChatwootInbox": "Chat / Inboxes",
+        "ChatwootInbox": "Chat / Conta / Canais",
         "ChatwootMessage": "Chat / Mensagens",
         "ChatwootPlatform": "Chat / Plataformas",
         "ChatwootUser": "Chat / Usuários",
-        "ChatwootTeam": "Chat / Times",
+        "ChatwootTeam": "Chat / Conta / Times",
         "ChatwootSyncState": "Chat / Syncs",
         "ChatwootAccountWebhook": "Chat / Webhooks",
-        "ChatwootInboxIntegration": "Chat / Conexões",
+        "ChatwootInboxIntegration": "Chat / Conta / Conexões de Canal",
         "ChatwootLabel": "Chat / Etiquetas",
         "WahaPlatform": "Plataformas Waha",
         "WahaSession": "Sessões Waha",
@@ -43,11 +43,26 @@
         "WahaSessionLabel": "Etiquetas de Sessão",
         "WhatsAppCampaign": "Campanhas WhatsApp",
         "WhatsAppCampaignContact": "Contatos da Campanha WhatsApp",
-        "ChatwootAccountUserMembership": "Chat / Membros"
+        "ChatwootAccountUserMembership": "Chat / Conta / Agentes"
+    },
+    "labels": {
+        "Chat / Conversations": "Chat / Conversas",
+        "Chat / Messages": "Chat / Mensagens",
+        "Chat / Teams": "Chat / Conta / Times",
+        "Chat / Accounts": "Chat / Contas",
+        "Chat / Users": "Chat / Usuários",
+        "Chat / Agents": "Chat / Agentes",
+        "Chat / Account / Channels": "Chat / Conta / Canais",
+        "Chat / Session Labels": "Chat / Etiquetas de Sessão",
+        "Chat / Account / Inboxes": "Chat / Conta / Canais",
+        "Chat / Account / Agents": "Chat / Conta / Membros",
+        "Chat / Account / Memberships": "Chat / Conta / Membros",
+        "Chat / Inbox / Agents": "Chat / Conta / Canal / Agentes",
+        "Chat / Inbox / Contact": "Chat / Conta / Canal / Contato"
     },
     "navbarTabs": {
         "Conversations": "Chat / Conversas",
-        "Inbox": "Caixa de Entrada",
+        "Inbox": "Canal",
         "All": "Todas",
         "Unattended": "Não Atendidas",
         "Mentions": "Mencionadas",
@@ -58,6 +73,6 @@
         "SnoozedConversations": "Adiadas"
     },
     "listViewModes": {
-        "inbox": "Caixa de Entrada"
+        "inbox": "Canal"
     }
 }

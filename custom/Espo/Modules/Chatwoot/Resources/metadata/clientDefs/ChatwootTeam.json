@@ -5,7 +5,7 @@
         "detail": [
             {
                 "name": "chatwootAgents",
-                "label": "Agents",
+                "label": "Chat / Agents",
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,

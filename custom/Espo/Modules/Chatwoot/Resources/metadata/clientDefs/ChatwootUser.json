@@ -5,7 +5,7 @@
         "detail": [
             {
                 "name": "agents",
-                "label": "Agents",
+                "label": "Chat / Agents",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
@@ -15,7 +15,7 @@
             },
             {
                 "name": "accountUserMemberships",
-                "label": "Account Memberships",
+                "label": "Chat / Account / Agents",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,

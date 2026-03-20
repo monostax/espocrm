@@ -1,12 +1,19 @@
 {
     "controller": "controllers/record",
     "iconClass": "ti ti-plug-connected",
+    "duplicateDisabled": true,
+    "removeDisabled": true,
+    "mergeDisabled": true,
+    "deleteDisabled": true,
     "createDisabled": false,
+    "recordViews": {
+        "edit": "chatwoot:views/chatwoot-inbox-integration/record/edit"
+    },
     "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-inbox-integration/defaults-preparator",
     "modalViews": {
         "edit": "chatwoot:views/chatwoot-inbox-integration/modals/edit"
     },
-    "defaultSidePanelFieldList": ["teams"],
+    "defaultSidePanelFieldList": ["chatwootAccount", "chatwootInbox", "teams"],
     "dynamicLogic": {
         "fields": {
             "status": {
@@ -19,7 +26,27 @@
                     ]
                 }
             },
+            "whatsappName": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
             "team": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "chatwootInbox": {
                 "visible": {
                     "conditionGroup": [
                         {
@@ -207,7 +234,7 @@
         "detail": [
             {
                 "name": "wahaSessionLabels",
-                "label": "Session Labels",
+                "label": "Chat / Session Labels",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
@@ -225,4 +252,3 @@
         }
     }
 }
-

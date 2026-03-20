@@ -5,13 +5,13 @@
         "color": "Cor",
         "colorHex": "Cor Hex",
         "agent": "Agente",
-        "inboxIntegration": "Integração Inbox",
+        "inboxIntegration": "Conexão de Canal",
         "syncStatus": "Status Sincronização",
         "lastSyncError": "Último Erro de Sinc."
     },
     "links": {
         "agent": "Agente",
-        "inboxIntegration": "Integração Inbox"
+        "inboxIntegration": "Conexão de Canal"
     },
     "labels": {
         "Create WahaSessionLabel": "Cadastrar Etiqueta de Sessão"

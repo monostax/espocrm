@@ -55,6 +55,8 @@ class CleanupOnRemove
             return;
         }
 
+        $skipChatwootInboxCleanup = !empty($options['skipChatwootInboxCleanup']);
+
         $channelId = $entity->getId();
         $channelType = $entity->get('channelType');
         $this->log->info("ChatwootInboxIntegration cleanup: Starting external API cleanup for channel {$channelId} (type: {$channelType})");
@@ -65,7 +67,9 @@ class CleanupOnRemove
         }
 
         // Clean up Chatwoot Inbox (works for both channel types)
-        $this->cleanupChatwootInbox($entity);
+        if (!$skipChatwootInboxCleanup) {
+            $this->cleanupChatwootInbox($entity);
+        }
     }
 
     /**

@@ -9,8 +9,9 @@
         "wahaSessionName": "Sessão WAHA",
         "wahaSessionId": "ID da Sessão WAHA",
         "wahaAppId": "ID do App WAHA",
-        "chatwootInboxId": "ID da Caixa de Chat",
-        "chatwootInboxIdentifier": "Identificador da Caixa de Chat",
+        "chatwootInboxId": "ID do Canal de Chat",
+        "chatwootInboxIdentifier": "Identificador do Canal de Chat",
+        "chatwootInbox": "Chat / Conta / Canal",
         "whatsappId": "ID WhatsApp",
         "whatsappName": "Nome WhatsApp",
         "errorMessage": "Mensagem de Erro",
@@ -31,11 +32,12 @@
     "links": {
         "wahaPlatform": "Plataforma WAHA",
         "chatwootAccount": "Chat / Conta",
+        "chatwootInbox": "Chat / Conta / Canal",
         "oAuthAccount": "Conta Meta",
         "team": "Equipe"
     },
     "labels": {
-        "Create ChatwootInboxIntegration": "Cadastrar Conexão de Chat",
+        "Create ChatwootInboxIntegration": "Cadastrar Conexão de Canal",
         "WhatsApp Connection": "Conexão WhatsApp",
         "Connection Details": "Detalhes da Conexão",
         "Error": "Erro",
@@ -72,7 +74,7 @@
         "phoneNumber": "O número de telefone associado a esta conexão WhatsApp",
         "whatsappId": "O ID da conta WhatsApp (formato: 5511999999999@c.us)",
         "wahaSessionName": "O nome da sessão no WAHA",
-        "chatwootInboxIdentifier": "O identificador da caixa usado para webhooks",
+        "chatwootInboxIdentifier": "O identificador do canal usado para webhooks",
         "oAuthAccount": "A Conta OAuth Meta usada para autenticação com WhatsApp Cloud API",
         "businessAccountId": "A Conta Business do WhatsApp descoberta a partir da Conta OAuth Meta",
         "phoneNumberId": "O ID do Número de Telefone Meta para WhatsApp Cloud API",
@@ -89,9 +91,8 @@
         "channelDisconnected": "Canal desconectado.",
         "channelFailed": "Falha na configuração do canal.",
         "confirmDisconnect": "Tem certeza que deseja desconectar este canal? A sessão WhatsApp será parada.",
-        "confirmActivate": "Isso criará uma sessão WAHA e uma caixa de entrada de Chat. Continuar?",
+        "confirmActivate": "Isso criará uma sessão WAHA e um canal de Chat. Continuar?",
         "noWahaPlatform": "Por favor, selecione uma Plataforma WAHA.",
         "noChatwootAccount": "Por favor, selecione uma Conta de Chat."
     }
 }
-

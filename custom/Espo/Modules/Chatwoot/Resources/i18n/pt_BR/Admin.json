@@ -6,7 +6,7 @@
     "descriptions": {
         "chatwootPlatforms": "Gerenciar plataformas de chat",
         "chatwootAccounts": "Gerenciar contas de chat",
-        "chatwootInboxIntegrations": "Gerenciar caixas de entrada de chat",
+        "chatwootInboxIntegrations": "Gerenciar conexões de canal do chat",
         "chatwootUsers": "Gerenciar usuários de chat",
         "chatwootTeams": "Gerenciar times de chat",
         "chatwootWebhooks": "Gerenciar webhooks de chat",

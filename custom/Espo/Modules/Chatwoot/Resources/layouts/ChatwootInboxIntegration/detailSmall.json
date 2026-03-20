@@ -19,27 +19,17 @@
             ],
             [
                 {
-                    "name": "phoneNumber"
-                }
-            ],
-            [
-                {
-                    "name": "whatsappName"
-                }
-            ],
-            [
-                {
-                    "name": "chatwootAccount"
-                }
-            ],
-            [
-                {
                     "name": "oAuthAccount"
                 }
             ],
             [
                 {
                     "name": "businessAccountId"
+                }
+            ],
+            [
+                {
+                    "name": "phoneNumber"
                 }
             ],
             [

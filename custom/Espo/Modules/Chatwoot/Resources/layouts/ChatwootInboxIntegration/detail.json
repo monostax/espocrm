@@ -4,32 +4,30 @@
         "rows": [
             [
                 {
-                    "name": "name"
+                    "name": "name",
+                    "span": 4
                 },
                 {
-                    "name": "channelType"
+                    "name": "channelType",
+                    "span": 4
+                },
+                {
+                    "name": "status",
+                    "span": 4
                 }
             ],
             [
                 {
-                    "name": "chatwootAccount"
+                    "name": "oAuthAccount",
+                    "span": 4
                 },
                 {
-                    "name": "oAuthAccount"
-                }
-            ],
-            [
-                {
-                    "name": "status"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "businessAccountId"
+                    "name": "businessAccountId",
+                    "span": 4
                 },
                 {
-                    "name": "phoneNumber"
+                    "name": "phoneNumber",
+                    "span": 4
                 }
             ]
         ]

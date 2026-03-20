@@ -4,7 +4,7 @@
         "contactName": "Nome do Contato",
         "email": "Email",
         "identifier": "Identificador",
-        "chatwootInboxId": "ID da Inbox de Chat",
+        "chatwootInboxId": "ID do Canal de Chat",
         "chatwootCreatedAt": "Criado no Chat",
         "chatwootLastActivityAt": "Última Atividade no Chat",
         "availabilityStatus": "Status de Disponibilidade",
@@ -23,7 +23,7 @@
     "links": {
         "contact": "Contato",
         "chatwootAccount": "Chat / Conta",
-        "contactInboxes": "Chat / Inbox / Contato",
+        "contactInboxes": "Chat / Conta / Canal / Contato",
         "conversations": "Chat / Conversas",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",

@@ -10,7 +10,7 @@
         "lastSyncError": "Último Erro de Sincronização",
         "chatwootAccountUserId": "ID do Membro da Conta",
         "teams": "Permissão / Times",
-        "chatwootInboxes": "Chat / Caixas de Entrada"
+        "chatwootInboxes": "Chat / Conta / Canais"
     },
     "links": {
         "chatwootAccount": "Chat / Conta",
@@ -19,12 +19,13 @@
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "chatwootInboxes": "Chat / Caixas de Entrada"
+        "chatwootInboxes": "Chat / Conta / Canais"
     },
     "labels": {
         "Create ChatwootAccountUserMembership": "Cadastrar Membro da Conta",
         "Enable AI Profile": "Ativar Perfil IA",
         "Disable AI Profile": "Desativar Perfil IA",
+        "Chat / Account / Inboxes": "Chat / Conta / Canais",
         "Account Users": "Chat / Conta / Agentes"
     },
     "messages": {
@@ -47,6 +48,6 @@
     "tooltips": {
         "chatwootAccountUserId": "O ID do membro da conta no Chat. Este campo é preenchido automaticamente após a sincronização.",
         "chatwootAgent": "O registro do agente associado a este membro da conta, se houver.",
-        "chatwootInboxes": "As caixas de entrada às quais este membro da conta tem acesso. Gerenciado automaticamente pela sincronização de membros da caixa de entrada."
+        "chatwootInboxes": "Os canais aos quais este membro da conta tem acesso. Gerenciado automaticamente pela sincronização de membros de canal."
     }
 }

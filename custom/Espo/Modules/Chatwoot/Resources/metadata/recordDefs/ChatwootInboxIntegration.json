@@ -1,5 +1,6 @@
 {
     "readLoaderClassNameList": [],
     "listLoaderClassNameList": [],
-    "saverClassNameList": []
+    "saverClassNameList": [],
+    "deleteDisabled": true
 }

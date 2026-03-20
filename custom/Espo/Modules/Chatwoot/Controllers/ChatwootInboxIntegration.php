@@ -36,25 +36,34 @@ class ChatwootInboxIntegration extends Record
      */
     public function postActionCreate(Request $request, Response $response): stdClass
     {
-        // First, create the entity using parent logic
         $result = parent::postActionCreate($request, $response);
-
-        // Get the created entity ID
         $channelId = $result->id ?? null;
 
         if ($channelId) {
-            try {
-                // Activate the channel immediately
-                $service = $this->getChatwootInboxIntegrationService();
-                $entity = $service->activate($channelId);
+            $service = $this->getChatwootInboxIntegrationService();
 
-                // Return the updated entity data (with activation status)
-                return $entity->getValueMap();
+            try {
+                $entity = $service->activate($channelId);
+                $chatwootInboxRecordId = $service->findLinkedChatwootInboxRecordId($channelId);
+
+                if (!$chatwootInboxRecordId) {
+                    $service->removeIntegration($channelId);
+
+                    throw new Error("Activation failed: Chatwoot inbox was not linked.");
+                }
+
+                $valueMap = $entity->getValueMap();
+                $valueMap->chatwootInboxRecordId = $chatwootInboxRecordId;
+
+                return $valueMap;
             } catch (\Exception $e) {
-                // If activation fails, still return the created entity
-                // The error will be visible in the status/errorMessage fields
-                // User can retry activation manually
-                return $result;
+                $service->removeIntegration($channelId);
+
+                if ($e instanceof Error) {
+                    throw $e;
+                }
+
+                throw new Error($e->getMessage());
             }
         }
 

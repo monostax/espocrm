@@ -5,7 +5,7 @@
         "detail": [
             {
                 "name": "wahaSessionLabels",
-                "label": "Session Labels",
+                "label": "Chat / Session Labels",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,

@@ -1,11 +1,16 @@
 [
     {
         "name": "name",
+        "link": true,
         "width": 20
     },
     {
-        "name": "status",
-        "width": 12
+        "name": "chatwootInbox",
+        "width": 15
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 15
     },
     {
         "name": "channelType",
@@ -16,8 +21,8 @@
         "width": 15
     },
     {
-        "name": "chatwootAccount",
-        "width": 15
+        "name": "status",
+        "width": 12
     },
     {
         "name": "connectedAt",

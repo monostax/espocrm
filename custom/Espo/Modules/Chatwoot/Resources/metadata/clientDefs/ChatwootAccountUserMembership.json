@@ -59,7 +59,7 @@
         "detail": [
             {
                 "name": "chatwootInboxes",
-                "label": "Chat / Inboxes",
+                "label": "Chat / Account / Inboxes",
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,

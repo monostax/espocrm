@@ -46,6 +46,12 @@
         "isSystem": false,
         "scheduling": "*/5 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAccountMembersFromChatwoot"
+    },
+    "RemoveOrphanedInboxIntegrations": {
+        "name": "Remove Orphaned Inbox Integrations",
+        "isSystem": true,
+        "scheduling": "*/15 * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\RemoveOrphanedInboxIntegrations"
     }
 }
 

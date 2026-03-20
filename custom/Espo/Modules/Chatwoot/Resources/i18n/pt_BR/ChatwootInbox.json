@@ -1,8 +1,17 @@
 {
     "fields": {
-        "accountUserMemberships": "Membros da Caixa de Entrada"
+        "accountUserMemberships": "Chat / Conta / Canal / Agentes",
+        "chatwootInboxIntegration": "Conexão de Canal"
     },
     "links": {
-        "accountUserMemberships": "Membros da Caixa de Entrada"
+        "accountUserMemberships": "Chat / Conta / Canal / Agentes",
+        "chatwootInboxIntegration": "Conexão de Canal",
+        "conversations": "Conversas"
+    },
+    "labels": {
+        "tabChannelConnection": "Conexão",
+        "tabAgents": "Agentes",
+        "tabConversations": "Conversas",
+        "Create ChatwootInbox": "Cadastrar Canal de Chat"
     }
 }

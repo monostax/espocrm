@@ -12,7 +12,7 @@
         "detail": [
             {
                 "name": "conversations",
-                "label": "Conversations",
+                "label": "Chat / Conversations",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,

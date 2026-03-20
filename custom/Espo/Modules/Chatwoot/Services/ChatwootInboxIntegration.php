@@ -175,6 +175,7 @@ class ChatwootInboxIntegration
 
             $channel->set('chatwootInboxId', $inboxResult['id']);
             $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
+            $channel->set('chatwootInboxRecordId', $this->upsertLocalChatwootInbox($channel, $inboxResult));
 
             // Ensure clean internal slate for the session
             try {
@@ -424,6 +425,7 @@ class ChatwootInboxIntegration
 
             $channel->set('chatwootInboxId', $inboxResult['id']);
             $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
+            $channel->set('chatwootInboxRecordId', $this->upsertLocalChatwootInbox($channel, $inboxResult));
 
             // Set channel to ACTIVE immediately (no QR code step needed)
             $channel->set('status', 'ACTIVE');
@@ -747,6 +749,44 @@ class ChatwootInboxIntegration
         ];
     }
 
+    public function findLinkedChatwootInboxRecordId(string $channelId): ?string
+    {
+        $inbox = $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->where(['chatwootInboxIntegrationId' => $channelId])
+            ->findOne();
+
+        return $inbox ? $inbox->getId() : null;
+    }
+
+    public function removeIntegration(string $channelId): void
+    {
+        try {
+            $inboxList = $this->entityManager
+                ->getRDBRepository('ChatwootInbox')
+                ->where(['chatwootInboxIntegrationId' => $channelId])
+                ->find();
+
+            foreach ($inboxList as $inbox) {
+                $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
+            }
+        } catch (\Exception $e) {
+            $this->log->error("ChatwootInboxIntegration: Failed to cleanup linked inboxes for {$channelId}: " . $e->getMessage());
+        }
+
+        $channel = $this->entityManager->getEntityById(self::ENTITY_TYPE, $channelId);
+
+        if (!$channel) {
+            return;
+        }
+
+        try {
+            $this->entityManager->removeEntity($channel, ['cascadeParent' => true]);
+        } catch (\Exception $e) {
+            $this->log->error("ChatwootInboxIntegration: Failed to rollback integration {$channelId}: " . $e->getMessage());
+        }
+    }
+
     /**
      * Check and update channel status.
      * For QR code channels: polls WAHA session status.
@@ -979,6 +1019,58 @@ class ChatwootInboxIntegration
         }
 
         return json_decode($result, true);
+    }
+
+    private function upsertLocalChatwootInbox(Entity $channel, array $chatwootInbox): string
+    {
+        $remoteInboxId = $chatwootInbox['id'] ?? null;
+
+        if (!$remoteInboxId) {
+            throw new Error("Chatwoot inbox response did not include an inbox ID.");
+        }
+
+        $chatwootAccount = $channel->get('chatwootAccount');
+
+        if (!$chatwootAccount) {
+            throw new Error("Chatwoot Account not set.");
+        }
+
+        $chatwootAccountId = $chatwootAccount->getId();
+
+        $inbox = $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->where([
+                'chatwootInboxId' => (int) $remoteInboxId,
+                'chatwootAccountId' => $chatwootAccountId,
+            ])
+            ->findOne();
+
+        if (!$inbox) {
+            $inbox = $this->entityManager->getNewEntity('ChatwootInbox');
+        }
+
+        $inbox->set('name', $chatwootInbox['name'] ?? ('Inbox #' . $remoteInboxId));
+        $inbox->set('chatwootInboxId', (int) $remoteInboxId);
+        $inbox->set('chatwootAccountId', $chatwootAccountId);
+        $inbox->set('channelType', $chatwootInbox['channel_type'] ?? null);
+        $inbox->set('phoneNumber', $chatwootInbox['phone_number'] ?? ($channel->get('phoneNumber') ?? null));
+        $inbox->set('provider', $chatwootInbox['provider'] ?? null);
+        $inbox->set('medium', $chatwootInbox['medium'] ?? null);
+        $inbox->set('greetingEnabled', $chatwootInbox['greeting_enabled'] ?? false);
+        $inbox->set('greetingMessage', $chatwootInbox['greeting_message'] ?? null);
+        $inbox->set('avatarUrl', $chatwootInbox['avatar_url'] ?? null);
+        $inbox->set('inboxIdentifier', $chatwootInbox['inbox_identifier'] ?? null);
+        $inbox->set('lastSyncedAt', date('Y-m-d H:i:s'));
+        $inbox->set('chatwootInboxIntegrationId', $channel->getId());
+
+        $teamIds = $chatwootAccount->getLinkMultipleIdList('teams');
+        if (!empty($teamIds)) {
+            $inbox->set('teamsIds', $teamIds);
+        }
+
+        $this->entityManager->saveEntity($inbox, ['silent' => true]);
+
+        return $inbox->getId();
     }
 
     /**

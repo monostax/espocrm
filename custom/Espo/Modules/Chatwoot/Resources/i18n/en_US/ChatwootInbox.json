@@ -1,8 +1,16 @@
 {
     "fields": {
-        "accountUserMemberships": "Chat / Inbox / Agents"
+        "accountUserMemberships": "Chat / Inbox / Agents",
+        "chatwootInboxIntegration": "Channel Connection"
     },
     "links": {
-        "accountUserMemberships": "Chat / Inbox / Agents"
+        "accountUserMemberships": "Chat / Inbox / Agents",
+        "chatwootInboxIntegration": "Channel Connection"
+    },
+    "labels": {
+        "tabChannelConnection": "Channel Connection",
+        "tabAgents": "Agents",
+        "tabContacts": "Contacts",
+        "tabConversations": "Conversations"
     }
 }

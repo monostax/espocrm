@@ -1,63 +1,14 @@
 {
-    "controller": "controllers/record",
+    "controller": "chatwoot:controllers/chatwoot-inbox",
     "iconClass": "fas fa-inbox",
-    "color": "#6f42c1",
     "kanbanViewMode": false,
     "modalViews": {
-        "detail": "views/modals/detail"
+        "detail": "views/modals/detail",
+        "edit": "chatwoot:views/chatwoot-inbox/modals/edit"
     },
     "recordViews": {
+        "detail": "global:views/record/detail",
         "list": "views/record/list"
-    },
-    "bottomPanels": {
-        "detail": [
-            {
-                "name": "accountUserMemberships",
-                "label": "Chat / Inbox / Agents",
-                "view": "views/record/panels/relationship",
-                "select": true,
-                "create": false,
-                "order": 4,
-                "disabled": false
-            },
-            {
-                "name": "contactInboxes",
-                "label": "Chat / Inbox / Contact",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 5,
-                "disabled": false
-            },
-            {
-                "name": "conversations",
-                "label": "Conversations",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 6,
-                "disabled": false
-            }
-        ]
-    },
-    "relationshipPanels": {
-        "accountUserMemberships": {
-            "create": false,
-            "select": true,
-            "view": "views/record/panels/relationship"
-        },
-        "contactInboxes": {
-            "create": false,
-            "select": false,
-            "view": "views/record/panels/relationship"
-        },
-        "conversations": {
-            "create": false,
-            "select": false,
-            "view": "views/record/panels/relationship"
-        }
     }
 }
 

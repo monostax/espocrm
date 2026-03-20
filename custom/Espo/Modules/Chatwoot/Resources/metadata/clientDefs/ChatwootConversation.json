@@ -43,7 +43,7 @@
         "detail": [
             {
                 "name": "messages",
-                "label": "Messages",
+                "label": "Chat / Messages",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,

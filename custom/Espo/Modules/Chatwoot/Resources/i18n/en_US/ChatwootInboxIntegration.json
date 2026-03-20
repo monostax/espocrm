@@ -16,6 +16,7 @@
         "wahaAppId": "WAHA App ID",
         "chatwootInboxId": "Chat / Inbox ID",
         "chatwootInboxIdentifier": "Chat / Inbox Identifier",
+        "chatwootInbox": "Chat / Account / Channel",
         "whatsappId": "WhatsApp ID",
         "whatsappName": "WhatsApp Name",
         "errorMessage": "Error Message",
@@ -31,6 +32,7 @@
     "links": {
         "wahaPlatform": "WAHA Platform",
         "chatwootAccount": "Chat / Account",
+        "chatwootInbox": "Chat / Account / Channel",
         "oAuthAccount": "Meta Account",
         "team": "Team"
     },
@@ -94,4 +96,3 @@
         "noChatwootAccount": "Please select a Chat / Account."
     }
 }
-

@@ -107,6 +107,18 @@
             "maxLength": 255,
             "readOnly": true
         },
+        "chatwootInbox": {
+            "type": "link",
+            "readOnly": true
+        },
+        "chatwootInboxRecordId": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutEditDisabled": true
+        },
         "whatsappId": {
             "type": "varchar",
             "maxLength": 50,
@@ -250,4 +262,3 @@
         "links": ["chatwootInbox", "wahaSessionLabels"]
     }
 }
-

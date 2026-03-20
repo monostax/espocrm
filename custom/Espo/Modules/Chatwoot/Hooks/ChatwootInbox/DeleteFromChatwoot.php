@@ -158,4 +158,42 @@ class DeleteFromChatwoot
             );
         }
     }
+
+    /**
+     * Delete linked ChatwootInboxIntegration after inbox removal.
+     *
+     * The inbox itself was already removed locally and remotely in beforeRemove,
+     * so we skip only integration-side Chatwoot inbox API cleanup while still
+     * allowing WAHA cleanup to run.
+     *
+     * @param Entity $entity
+     * @param array<string, mixed> $options
+     */
+    public function afterRemove(Entity $entity, array $options): void
+    {
+        if (!empty($options['cascadeParent'])) {
+            return;
+        }
+
+        $integrationId = $entity->get('chatwootInboxIntegrationId');
+
+        if (!$integrationId) {
+            return;
+        }
+
+        $integration = $this->entityManager->getEntityById('ChatwootInboxIntegration', $integrationId);
+
+        if (!$integration) {
+            return;
+        }
+
+        try {
+            $this->entityManager->removeEntity($integration, ['skipChatwootInboxCleanup' => true]);
+        } catch (\Exception $e) {
+            $this->log->error(
+                'Failed to delete linked ChatwootInboxIntegration ' . $integrationId .
+                ' after ChatwootInbox removal: ' . $e->getMessage()
+            );
+        }
+    }
 }

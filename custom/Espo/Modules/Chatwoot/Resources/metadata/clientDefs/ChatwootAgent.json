@@ -72,7 +72,7 @@
         "detail": [
             {
                 "name": "chatwootTeams",
-                "label": "Teams",
+                "label": "Chat / Teams",
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,
@@ -90,4 +90,3 @@
         }
     }
 }
-

@@ -1,5 +1,6 @@
 [
     {
+        "tabLabel": "$Overview",
         "label": "Overview",
         "rows": [
             [
@@ -59,6 +60,86 @@
                 },
                 {
                     "name": "lastConversationSyncAt"
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabInboxes",
+        "name": "inboxesTab",
+        "rows": [
+            [
+                {
+                    "name": "inboxesList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "inboxes",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabUsers",
+        "name": "accountUsersTab",
+        "rows": [
+            [
+                {
+                    "name": "accountUserMembershipsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "accountUserMemberships",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabTeams",
+        "name": "teamsTab",
+        "rows": [
+            [
+                {
+                    "name": "chatwootTeamsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "chatwootTeams",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$label:tabLabels",
+        "name": "labelsTab",
+        "rows": [
+            [
+                {
+                    "name": "labelsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "labels",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
                 }
             ]
         ]

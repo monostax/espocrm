@@ -402,6 +402,10 @@ class CustomDetailRecordView extends DetailRecordView {
             return null;
         }
 
+        if (layoutItem.tabEntityType) {
+            return layoutItem.tabEntityType;
+        }
+
         // Look for relationship-list field in rows
         if (!layoutItem.rows || !Array.isArray(layoutItem.rows)) {
             return null;
