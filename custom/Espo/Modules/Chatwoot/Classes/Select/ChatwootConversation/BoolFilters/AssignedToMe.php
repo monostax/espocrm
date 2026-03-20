@@ -20,7 +20,7 @@ use Espo\ORM\Query\Part\Condition as Cond;
  * Bool filter to show only conversations assigned to the current user.
  *
  * The filter traverses the relationship chain:
- * ChatwootConversation.assigneeId -> ChatwootAgent.chatwootAgentId -> ChatwootUser.assignedUserId -> User
+ * ChatwootConversation.assigneeId -> ChatwootUser.chatwootUserId -> ChatwootUser.assignedUserId -> User
  *
  * @noinspection PhpUnused
  */
@@ -33,27 +33,26 @@ class AssignedToMe implements Filter
 
     public function apply(QueryBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void
     {
-        // Find all ChatwootAgent records where the linked ChatwootUser is assigned to the current user
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->select(['chatwootAgentId'])
-            ->leftJoin('chatwootUser')
+        // Find all ChatwootUser records assigned to the current user and get their platform user IDs
+        $chatwootUsers = $this->entityManager
+            ->getRDBRepository('ChatwootUser')
+            ->select(['chatwootUserId'])
             ->where([
-                'chatwootUser.assignedUserId' => $this->user->getId(),
-                'chatwootAgentId!=' => null,
+                'assignedUserId' => $this->user->getId(),
+                'chatwootUserId!=' => null,
             ])
             ->find();
 
-        $chatwootAgentIdList = [];
-        foreach ($agents as $agent) {
-            $agentId = $agent->get('chatwootAgentId');
-            if ($agentId !== null) {
-                $chatwootAgentIdList[] = $agentId;
+        $platformUserIdList = [];
+        foreach ($chatwootUsers as $chatwootUser) {
+            $platformUserId = $chatwootUser->get('chatwootUserId');
+            if ($platformUserId !== null) {
+                $platformUserIdList[] = (int) $platformUserId;
             }
         }
 
-        if (empty($chatwootAgentIdList)) {
-            // If the user has no linked agents, return no results
+        if (empty($platformUserIdList)) {
+            // If the user has no linked ChatwootUsers, return no results
             $orGroupBuilder->add(
                 Cond::equal(Cond::column('id'), null)
             );
@@ -63,7 +62,7 @@ class AssignedToMe implements Filter
         $orGroupBuilder->add(
             Cond::in(
                 Cond::column('assigneeId'),
-                $chatwootAgentIdList
+                $platformUserIdList
             )
         );
     }

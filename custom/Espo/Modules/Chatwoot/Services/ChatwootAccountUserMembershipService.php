@@ -322,16 +322,9 @@ class ChatwootAccountUserMembershipService
         $name = $chatwootUser->get('name') ?: $membership->get('name');
         $role = $membership->get('role') ?? 'agent';
 
-        // Generate a password that satisfies ValidateBeforeSync requirements
-        // (min 6 chars, at least 1 special char). This password is never actually
-        // used — createChatwootUserFirst() finds the existing user by email+platform
-        // and skips user creation entirely (Decision #9).
-        $generatedPassword = bin2hex(random_bytes(8)) . '!A1';
-
         $agentData = [
             'name' => $name,
             'email' => $email,
-            'password' => $generatedPassword,
             'chatwootAccountId' => $accountId,
             'role' => $role,
             'isAI' => true,
@@ -339,7 +332,7 @@ class ChatwootAccountUserMembershipService
 
         try {
             // Non-silent createEntity triggers full hook chain:
-            // CascadeTeamsFromAccount → ValidateAssignedUserTeam → ValidateBeforeSync →
+            // CascadeTeamsFromAccount → ValidateBeforeSync →
             // SyncWithChatwoot (creates user + agent on Chatwoot) → LinkToUser (upserts membership)
             $this->entityManager->createEntity('ChatwootAgent', $agentData);
 

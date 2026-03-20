@@ -5,7 +5,6 @@
         "email": "Email",
         "password": "Senha",
         "platform": "Plataforma",
-        "chatwootAccount": "Chat / Conta",
         "assignedUser": "Usuário Atribuído",
         "role": "Função",
         "chatwootUserId": "Chat / Usuário (ID)",
@@ -13,13 +12,12 @@
     },
     "links": {
         "platform": "Chat / Plataforma",
-        "chatwootAccount": "Chat / Conta",
         "assignedUser": "Usuário Atribuído",
         "agents": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "accountUserMemberships": "Membros da Conta"
+        "accountUserMemberships": "Chat / Conta / Agentes"
     },
     "labels": {
         "Create ChatwootUser": "Cadastrar Chat / Usuário"

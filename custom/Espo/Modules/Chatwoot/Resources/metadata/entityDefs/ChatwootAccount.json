@@ -144,11 +144,6 @@
             "entity": "ChatwootAgent",
             "foreign": "chatwootAccount"
         },
-        "chatwootUsers": {
-            "type": "hasMany",
-            "entity": "ChatwootUser",
-            "foreign": "chatwootAccount"
-        },
         "chatwootInboxIntegrations": {
             "type": "hasMany",
             "entity": "ChatwootInboxIntegration",
@@ -214,7 +209,6 @@
             "agents",
             "chatwootTeams",
             "syncStates",
-            "chatwootUsers",
             "conversations",
             "labels",
             "accountUserMemberships"

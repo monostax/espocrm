@@ -132,7 +132,6 @@ class CreateAutomationUser
                 'password' => $password,
                 'displayName' => $name,
                 'platformId' => $platformId,
-                'chatwootAccountId' => $chatwootAccount->getId(),
                 'chatwootUserId' => $chatwootUserId,
                 'teamsIds' => $teamsIds // Inherit Teams from ChatwootAccount
             ], [

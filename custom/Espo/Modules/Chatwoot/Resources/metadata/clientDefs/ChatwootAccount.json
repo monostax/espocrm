@@ -5,7 +5,7 @@
         "detail": [
             {
                 "name": "inboxes",
-                "label": "Inboxes",
+                "label": "Chat / Inboxes",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
@@ -21,16 +21,6 @@
                 "create": false,
                 "rowActionsView": "views/record/row-actions/relationship-no-remove",
                 "order": 2,
-                "disabled": false
-            },
-            {
-                "name": "agents",
-                "label": "Agents",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 3,
                 "disabled": false
             },
             {
@@ -54,18 +44,8 @@
                 "disabled": false
             },
             {
-                "name": "chatwootUsers",
-                "label": "Users",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 6,
-                "disabled": false
-            },
-            {
                 "name": "labels",
-                "label": "Labels",
+                "label": "Chat / Account / Labels",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
@@ -97,11 +77,6 @@
             "view": "views/record/panels/relationship"
         },
         "chatwootTeams": {
-            "create": false,
-            "select": false,
-            "view": "views/record/panels/relationship"
-        },
-        "chatwootUsers": {
             "create": false,
             "select": false,
             "view": "views/record/panels/relationship"

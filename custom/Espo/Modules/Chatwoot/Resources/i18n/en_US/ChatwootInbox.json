@@ -1,8 +1,8 @@
 {
     "fields": {
-        "accountUserMemberships": "Inbox Members"
+        "accountUserMemberships": "Chat / Inbox / Agents"
     },
     "links": {
-        "accountUserMemberships": "Inbox Members"
+        "accountUserMemberships": "Chat / Inbox / Agents"
     }
 }

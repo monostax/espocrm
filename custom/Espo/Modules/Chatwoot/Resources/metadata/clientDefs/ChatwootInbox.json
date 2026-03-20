@@ -13,17 +13,16 @@
         "detail": [
             {
                 "name": "accountUserMemberships",
-                "label": "Inbox Members",
+                "label": "Chat / Inbox / Agents",
                 "view": "views/record/panels/relationship",
-                "select": false,
+                "select": true,
                 "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
                 "order": 4,
                 "disabled": false
             },
             {
                 "name": "contactInboxes",
-                "label": "Contact Channels",
+                "label": "Chat / Inbox / Contact",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
@@ -46,7 +45,7 @@
     "relationshipPanels": {
         "accountUserMemberships": {
             "create": false,
-            "select": false,
+            "select": true,
             "view": "views/record/panels/relationship"
         },
         "contactInboxes": {

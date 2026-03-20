@@ -293,18 +293,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             // --- Safety guards ---
             $desiredMembershipIds = array_keys($membershipsToLink);
 
-            // Empty-response guard (Warning #3): If API returns empty but local memberships exist,
-            // skip destructive operations entirely.
-            if (count($members) === 0 && count($currentMembershipIds) > 0) {
-                $this->log->warning(
-                    "SyncInboxMembersFromChatwoot: Inbox {$chatwootInboxId} — " .
-                    'remote members list is empty but local memberships exist. ' .
-                    'Skipping removals to protect against API errors.'
-                );
-                return $stats;
-            }
-
-            // Partial-resolution guard (Warning #3): If some API members couldn't be resolved locally,
+            // Partial-resolution guard: If some API members couldn't be resolved locally,
             // only perform additions — skip the removal pass.
             $hasUnresolvedMembers = count($resolvedRemoteUserIds) < count($members);
 
@@ -323,12 +312,14 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                 : array_diff($currentMembershipIds, $desiredMembershipIds);
 
             // Add new membership links
+            // Pass skipHooks to prevent SyncInboxMembership hook from pushing back to Chatwoot
+            // (this data already came FROM Chatwoot).
             foreach ($membershipIdsToAdd as $membershipId) {
                 try {
                     $this->entityManager
                         ->getRDBRepository('ChatwootInbox')
                         ->getRelation($inbox, 'accountUserMemberships')
-                        ->relateById($membershipId);
+                        ->relateById($membershipId, null, ['skipHooks' => true]);
 
                     $stats['synced']++;
                     $this->log->debug("SyncInboxMembersFromChatwoot: Linked membership {$membershipId} to inbox {$inbox->getId()}");
@@ -341,12 +332,14 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             }
 
             // Remove old membership links
+            // Pass skipHooks to prevent SyncInboxMembership hook from pushing back to Chatwoot
+            // (this data already came FROM Chatwoot).
             foreach ($membershipIdsToRemove as $membershipId) {
                 try {
                     $this->entityManager
                         ->getRDBRepository('ChatwootInbox')
                         ->getRelation($inbox, 'accountUserMemberships')
-                        ->unrelateById($membershipId);
+                        ->unrelateById($membershipId, ['skipHooks' => true]);
 
                     $stats['synced']++;
                     $this->log->debug("SyncInboxMembersFromChatwoot: Unlinked membership {$membershipId} from inbox {$inbox->getId()}");

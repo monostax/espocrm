@@ -22,9 +22,7 @@
                 {
                     "name": "platform"
                 },
-                {
-                    "name": "chatwootAccount"
-                }
+                false
             ],
             [
                 {

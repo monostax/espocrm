@@ -114,29 +114,5 @@ class ValidateBeforeSync
             $entity->set('role', 'agent');
         }
 
-        // Validate password requirements if provided
-        $password = $entity->get('password');
-        if ($password) {
-            $this->validatePassword($password);
-        }
-    }
-
-    /**
-     * Validate password meets Chatwoot requirements.
-     * 
-     * @throws BadRequest
-     */
-    private function validatePassword(string $password): void
-    {
-        // Minimum 6 characters
-        if (strlen($password) < 6) {
-            throw new BadRequest('Password must be at least 6 characters long.');
-        }
-
-        // Must contain at least 1 special character
-        $specialChars = '!@#$%^&*()_+\-=\[\]{}|"\\/.,`<>:;?~\'';
-        if (!preg_match('/[' . preg_quote($specialChars, '/') . ']/', $password)) {
-            throw new BadRequest('Password must contain at least 1 special character (!@#$%^&*()_+-=[]{}|"/\.,`<>:;?~\').');
-        }
     }
 }

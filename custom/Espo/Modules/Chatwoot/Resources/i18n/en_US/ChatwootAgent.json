@@ -2,7 +2,6 @@
     "fields": {
         "name": "Name",
         "email": "Email",
-        "password": "Password",
         "availableName": "Available Name",
         "role": "Role",
         "availabilityStatus": "Availability Status",
@@ -18,14 +17,12 @@
         "confirmed": "Email Confirmed",
         "avatarUrl": "Avatar URL",
         "customRoleId": "Custom Role ID",
-        "chatwootAgentId": "Chat Agent ID",
         "chatwootAccount": "Chat Account",
         "chatwootUser": "Chat User",
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
         "lastSyncError": "Last Sync Error",
         "teams": "Teams",
-        "assignedUser": "Assigned User",
         "accountUserMembership": "Account Membership"
     },
     "links": {
@@ -34,11 +31,10 @@
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
         "teams": "Teams",
-        "assignedUser": "Assigned User",
         "accountUserMembership": "Account Membership"
     },
     "labels": {
-        "Create ChatwootAgent": "Create Agent",
+        "Create ChatwootAgent": "Create AI Agent",
         "AI Configuration": "AI Configuration"
     },
     "options": {
@@ -58,8 +54,7 @@
         }
     },
     "tooltips": {
-        "password": "Optional. If provided, a Chat / User will be created with these credentials so the agent can login to Chat immediately. Requirements: minimum 6 characters and at least 1 special character (!@#$%^&*()_+-=[]{}). If not provided, the agent will receive a confirmation email to set their password.",
-        "chatwootAgentId": "The agent ID in Chat. This field is automatically populated after sync.",
+
         "autoOffline": "Whether the agent's availability status is configured to go offline automatically when away.",
         "isAI": "Enable to configure this agent as an AI-powered agent.",
         "aiPrompt": "The system prompt that defines the AI agent's behavior and capabilities.",
@@ -67,8 +62,7 @@
         "calendarsToManage": "Select users whose calendars this AI agent can manage. The agent can check availability, create, update, and delete appointments for these calendars.",
         "confirmed": "Whether the agent has confirmed their email address in Chat.",
         "chatwootUser": "Link to the platform-level Chat / User if this agent corresponds to one.",
-        "customRoleId": "The custom role ID assigned to this agent in Chat, if any.",
-        "assignedUser": "The EspoCRM user linked to this agent's Chat / User. This field is managed automatically — to change it, update the Assigned User on the linked Chat / User record."
+        "customRoleId": "The custom role ID assigned to this agent in Chat, if any."
     },
     "presetFilters": {
         "available": "Available",

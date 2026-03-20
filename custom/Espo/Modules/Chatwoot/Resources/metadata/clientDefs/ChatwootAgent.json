@@ -9,7 +9,7 @@
         "list": "views/record/list"
     },
     "filterList": ["all", "available", "offline", "administrators"],
-    "boolFilterList": ["onlyMy"],
+    "boolFilterList": [],
     "dynamicLogic": {
         "fields": {
             "aiPrompt": {

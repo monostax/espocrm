@@ -28,7 +28,7 @@
             },
             {
                 "url": "#ChatwootAgent",
-                "label": "Agents",
+                "label": "AI Agents",
                 "iconClass": "fas fa-user-tie",
                 "description": "chatwootAgents"
             },

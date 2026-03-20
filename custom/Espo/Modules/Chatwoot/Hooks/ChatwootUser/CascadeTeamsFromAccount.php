@@ -28,6 +28,7 @@ use Espo\ORM\EntityManager;
 
 /**
  * Auto-cascades teams from the parent ChatwootAccount to this entity.
+ * Resolves the account via ChatwootAccountUserMembership join.
  * Ensures proper multi-tenant ACL isolation.
  * Runs early (order=1) so teams are set before validation hooks.
  */
@@ -41,6 +42,9 @@ class CascadeTeamsFromAccount
 
     /**
      * Cascade teams from parent ChatwootAccount before save.
+     * Resolves the account via membership lookup (oldest membership first).
+     * If no membership exists (e.g., isNew()), returns early — callers must
+     * set teamsIds explicitly on creation paths.
      * 
      * @param Entity $entity
      * @param array<string, mixed> $options
@@ -52,7 +56,19 @@ class CascadeTeamsFromAccount
             return;
         }
 
-        $accountId = $entity->get('chatwootAccountId');
+        // Resolve account via membership (Phase 8: replaces direct chatwootAccountId field)
+        $membership = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootUserId' => $entity->getId()])
+            ->order('createdAt', 'ASC')
+            ->findOne();
+
+        if (!$membership) {
+            // No membership yet (e.g., isNew()) — teams must be set by the caller
+            return;
+        }
+
+        $accountId = $membership->get('chatwootAccountId');
         if (!$accountId) {
             return;
         }

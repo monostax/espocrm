@@ -5,14 +5,12 @@
         "email": "Email",
         "password": "Password",
         "platform": "Platform",
-        "chatwootAccount": "Chat / Account",
         "assignedUser": "Assigned User",
         "chatwootUserId": "Chat / User ID",
         "teams": "Teams / Accounts"
     },
     "links": {
         "platform": "Chat / Platform",
-        "chatwootAccount": "Chat / Account",
         "assignedUser": "Assigned User",
         "agents": "Chat / Agents",
         "createdBy": "Created By",

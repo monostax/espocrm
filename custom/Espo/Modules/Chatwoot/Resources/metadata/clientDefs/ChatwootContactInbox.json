@@ -1,7 +1,6 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-inbox",
-    "color": "#17a2b8",
     "kanbanViewMode": false,
     "modalViews": {
         "detail": "views/modals/detail"

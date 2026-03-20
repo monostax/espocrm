@@ -1300,14 +1300,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $labels = [];
 
             if ($assigneeId) {
-                // Find ChatwootAgent by chatwootAgentId
-                $agent = $this->entityManager
-                    ->getRDBRepository('ChatwootAgent')
-                    ->where([
-                        'chatwootAgentId' => $assigneeId,
-                        'chatwootAccountId' => $conversation->get('chatwootAccountId'),
-                    ])
-                    ->findOne();
+                // Find ChatwootAgent by resolving through ChatwootUser (assigneeId is the platform user ID)
+                $agent = $this->findAgentByPlatformUserId($assigneeId, $conversation->get('chatwootAccountId'));
 
                 if ($agent) {
                     // Find WahaSessionLabel for this agent + inboxIntegration
@@ -1360,7 +1354,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                         }
                     }
                 } else {
-                    $this->log->debug("SyncConversationsFromChatwoot: ChatwootAgent with chatwootAgentId {$assigneeId} not found");
+                    $this->log->debug("SyncConversationsFromChatwoot: ChatwootAgent with platformUserId {$assigneeId} not found");
                 }
             } else {
                 // Unassigned - remove all agent labels
@@ -1608,6 +1602,34 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
         // WhatsApp chatId format for individual chats
         return $cleaned . '@c.us';
+    }
+
+    /**
+     * Find a ChatwootAgent by the Chatwoot platform user ID (assigneeId).
+     * Resolves through ChatwootUser: platformUserId -> ChatwootUser -> ChatwootAgent.
+     */
+    private function findAgentByPlatformUserId(int $platformUserId, ?string $accountId): ?Entity
+    {
+        if (!$accountId) {
+            return null;
+        }
+
+        // Find agents linked to a ChatwootUser whose chatwootUserId matches
+        $agents = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->leftJoin('chatwootUser')
+            ->where([
+                'chatwootUser.chatwootUserId' => $platformUserId,
+                'chatwootAccountId' => $accountId,
+            ])
+            ->find();
+
+        // Return the first match (should be at most one per account)
+        foreach ($agents as $agent) {
+            return $agent;
+        }
+
+        return null;
     }
 }
 

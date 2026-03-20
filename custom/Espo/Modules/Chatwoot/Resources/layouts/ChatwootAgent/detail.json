@@ -12,11 +12,9 @@
             ],
             [
                 {
-                    "name": "password"
-                },
-                {
                     "name": "chatwootAccount"
-                }
+                },
+                false
             ],
             [
                 {
@@ -50,11 +48,9 @@
             ],
             [
                 {
-                    "name": "assignedUser"
-                },
-                {
                     "name": "accountUserMembership"
-                }
+                },
+                false
             ]
         ]
     },
@@ -82,11 +78,9 @@
             ],
             [
                 {
-                    "name": "chatwootAgentId"
-                },
-                {
                     "name": "customRoleId"
-                }
+                },
+                false
             ]
         ]
     },

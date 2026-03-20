@@ -1984,6 +1984,58 @@ public function listInboxMembers(
 }
 
 /**
+ * Update inbox members in Chatwoot (replace-all semantics).
+ *
+ * Replaces the entire member list for the given inbox with the provided user IDs.
+ * Sending an empty array removes all members.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @param array<int> $userIds Chatwoot platform user IDs to set as inbox members
+ * @return array<int, array<string, mixed>> Updated list of inbox members
+ * @throws Error
+ */
+public function updateInboxMembers(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId,
+    array $userIds
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inbox_members';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $payload = json_encode([
+        'inbox_id' => $inboxId,
+        'user_ids' => $userIds,
+    ]);
+
+    $response = $this->executeRequest($url, 'PATCH', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to update inbox members in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (updateInboxMembers): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    // Response format: { "payload": [agents...] }
+    return $response['body']['payload'] ?? $response['body'];
+}
+
+/**
  * Get a conversation from Chatwoot.
  *
  * @param string $platformUrl The Chatwoot platform URL

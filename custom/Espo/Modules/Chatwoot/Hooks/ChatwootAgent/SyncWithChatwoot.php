@@ -33,9 +33,12 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
  * Hook to synchronize ChatwootAgent with Chatwoot Account API.
  * Creates or updates agent on Chatwoot BEFORE saving to database.
  * 
- * If a password is provided, it will first create a ChatwootUser via Platform API
- * (which sets up the user with credentials), then create the agent.
- * This ensures the agent is confirmed and can login immediately.
+ * For new agents, creates a ChatwootUser via Platform API (with a generated password)
+ * then creates the agent on the account. For existing agents, updates the agent
+ * properties (role, availability, auto_offline) via the Account API.
+ *
+ * The Chatwoot platform user ID is resolved from the linked ChatwootUser entity
+ * rather than stored directly on the agent.
  */
 class SyncWithChatwoot
 {
@@ -62,7 +65,7 @@ class SyncWithChatwoot
         }
 
         $isNew = $entity->isNew();
-        $chatwootAgentId = $entity->get('chatwootAgentId');
+        $platformUserId = $this->resolvePlatformUserId($entity);
 
         // Skip if no account is linked
         $accountId = $entity->get('chatwootAccountId');
@@ -105,26 +108,18 @@ class SyncWithChatwoot
             // Get platform access token for user creation
             $platformAccessToken = $platform->get('accessToken');
 
-            if ($isNew && !$chatwootAgentId) {
-                // Password is required for new agents to create ChatwootUser for SSO
-                $password = $entity->get('password');
-                
-                if (!$password) {
-                    throw new Error('Password is required to create a new agent.');
-                }
-                
+            if ($isNew && !$platformUserId) {
                 if (!$platformAccessToken) {
                     throw new Error('ChatwootPlatform does not have an access token configured.');
                 }
                 
-                // Create ChatwootUser first via Platform API (required for SSO)
+                // Create ChatwootUser first via Platform API
                 $chatwootUser = $this->createChatwootUserFirst(
                     $entity,
                     $platformUrl,
                     $platformAccessToken,
                     $platformId,
-                    $chatwootAccountId,
-                    $password
+                    $chatwootAccountId
                 );
                 
                 if (!$chatwootUser) {
@@ -135,9 +130,9 @@ class SyncWithChatwoot
                 
                 // Create new agent on Chatwoot
                 $this->createAgentOnChatwoot($entity, $platformUrl, $apiKey, $chatwootAccountId);
-            } elseif ($chatwootAgentId) {
+            } elseif ($platformUserId) {
                 // Update existing agent on Chatwoot (only certain fields can be updated)
-                $this->updateAgentOnChatwoot($entity, $platformUrl, $apiKey, $chatwootAccountId, $chatwootAgentId);
+                $this->updateAgentOnChatwoot($entity, $platformUrl, $apiKey, $chatwootAccountId, $platformUserId);
             }
 
             // Mark as synced
@@ -156,7 +151,7 @@ class SyncWithChatwoot
             $entity->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
             // For new agents, we should throw to prevent orphaned records
-            if ($isNew && !$chatwootAgentId) {
+            if ($isNew && !$platformUserId) {
                 throw new Error(
                     'Failed to create agent on Chatwoot: ' . $e->getMessage() . 
                     '. The agent was not created in EspoCRM to maintain synchronization.'
@@ -167,10 +162,10 @@ class SyncWithChatwoot
 
     /**
      * Create a ChatwootUser via Platform API before creating the agent.
-     * This ensures the user has credentials and can login immediately.
+     * If a user with the same email+platform already exists, reuses it.
      * ChatwootUser is platform-level, not account-level.
      * 
-     * @return Entity The created ChatwootUser entity
+     * @return Entity The created or existing ChatwootUser entity
      * @throws Error If ChatwootUser creation fails
      */
     private function createChatwootUserFirst(
@@ -178,8 +173,7 @@ class SyncWithChatwoot
         string $platformUrl,
         string $platformAccessToken,
         string $platformId,
-        int $chatwootAccountId,
-        string $password
+        int $chatwootAccountId
     ): Entity {
         $email = $agentEntity->get('email');
         $name = $agentEntity->get('name');
@@ -217,11 +211,16 @@ class SyncWithChatwoot
                 return $existingUser;
             }
 
+            // Generate a password that satisfies Chatwoot requirements
+            // (min 6 chars, at least 1 special char). The user will receive
+            // a confirmation email to set their own password.
+            $generatedPassword = bin2hex(random_bytes(8)) . '!A1';
+
             // Step 1: Create user on Chatwoot Platform API
             $userData = [
                 'name' => $name,
                 'email' => $email,
-                'password' => $password,
+                'password' => $generatedPassword,
                 'custom_attributes' => []
             ];
 
@@ -248,7 +247,7 @@ class SyncWithChatwoot
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
                 'name' => $name,
                 'email' => $email,
-                'password' => $password,
+                'password' => $generatedPassword,
                 'platformId' => $platformId,
                 'chatwootUserId' => $chatwootUserId,
             ], ['silent' => true]);
@@ -351,8 +350,6 @@ class SyncWithChatwoot
      */
     private function populateEntityFromChatwootAgent(Entity $entity, array $chatwootAgent): void
     {
-        $entity->set('chatwootAgentId', $chatwootAgent['id']);
-        
         if (isset($chatwootAgent['available_name'])) {
             $entity->set('availableName', $chatwootAgent['available_name']);
         }
@@ -377,15 +374,35 @@ class SyncWithChatwoot
     }
 
     /**
+     * Resolve the Chatwoot platform user ID from the agent's linked ChatwootUser.
+     */
+    private function resolvePlatformUserId(Entity $entity): ?int
+    {
+        $chatwootUserId = $entity->get('chatwootUserId');
+        if (!$chatwootUserId) {
+            return null;
+        }
+
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+        if (!$chatwootUser) {
+            return null;
+        }
+
+        $platformUserId = $chatwootUser->get('chatwootUserId');
+        return $platformUserId ? (int) $platformUserId : null;
+    }
+
+    /**
      * Update an existing agent on Chatwoot.
      * Note: Chatwoot Agent update API only allows updating role, availability_status, and auto_offline.
+     * The platformUserId is the Chatwoot platform user ID (same as agent ID in account-scoped APIs).
      */
     private function updateAgentOnChatwoot(
         Entity $entity,
         string $platformUrl,
         string $apiKey,
         int $chatwootAccountId,
-        int $chatwootAgentId
+        int $platformUserId
     ): void {
         // Check if relevant fields have changed
         $fieldsToCheck = ['role', 'availabilityStatus', 'autoOffline'];
@@ -402,7 +419,7 @@ class SyncWithChatwoot
             return;
         }
 
-        $this->log->info('Updating Chatwoot agent: ' . $chatwootAgentId);
+        $this->log->info('Updating Chatwoot agent (platformUserId=' . $platformUserId . ')');
 
         $agentData = [
             'role' => $entity->get('role') ?? 'agent',
@@ -420,7 +437,7 @@ class SyncWithChatwoot
             $platformUrl,
             $apiKey,
             $chatwootAccountId,
-            $chatwootAgentId,
+            $platformUserId,
             $agentData
         );
 
@@ -438,6 +455,6 @@ class SyncWithChatwoot
             $entity->set('availabilityStatus', $response['availability_status']);
         }
 
-        $this->log->info('Chatwoot agent updated successfully: ' . $chatwootAgentId);
+        $this->log->info('Chatwoot agent updated successfully (platformUserId=' . $platformUserId . ')');
     }
 }

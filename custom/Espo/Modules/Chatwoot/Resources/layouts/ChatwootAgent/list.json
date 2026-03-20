@@ -22,15 +22,11 @@
     },
     {
         "name": "chatwootAccount",
-        "width": 15
-    },
-    {
-        "name": "assignedUser",
-        "width": 15
+        "width": 20
     },
     {
         "name": "syncStatus",
-        "width": 10
+        "width": 12
     },
     {
         "name": "lastSyncedAt",

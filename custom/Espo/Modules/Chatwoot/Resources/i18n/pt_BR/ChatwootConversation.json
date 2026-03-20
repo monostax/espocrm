@@ -5,11 +5,11 @@
         "lastActivityAt": "Última Atividade",
         "messagesCount": "Qtd. Mensagens",
         "assigneeName": "Atribuído a",
-        "inboxName": "Chat / Caixa de Entrada",
+        "inboxName": "Chat / Inbox",
         "chatwootCreatedAt": "Criado no Chat",
         "chatwootConversationId": "ID da Conversa de Chat",
         "contactInbox": "Canal do Contato",
-        "inbox": "Chat / Caixa de Entrada",
+        "inbox": "Chat / Inbox",
         "chatwootContact": "Chat / Contato",
         "contact": "CRM / Contato",
         "chatwootAccount": "Chat / Conta",
@@ -25,7 +25,7 @@
         "contact": "CRM / Contato",
         "chatwootAccount": "Chat / Conta",
         "opportunities": "Oportunidades",
-        "inbox": "Chat / Caixa de Entrada",
+        "inbox": "Chat / Inbox",
         "messages": "Chat / Mensagens",
         "assignedUser": "Usuário Atribuído",
         "teams": "Permissão / Times"
@@ -41,14 +41,14 @@
     "labels": {
         "Create ChatwootConversation": "Cadastrar Conversa de Chat",
         "View Details": "Ver Detalhes",
-        "Conversations": "Conversas",
+        "Conversations": "Chat / Conversas",
         "Chat": "Chat",
         "Assign Agent": "Atribuir Agente",
         "Unassigned": "Não Atribuído",
         "More Options": "Mais Opções"
     },
     "tabs": {
-        "Conversation": "Conversa",
+        "Conversation": "Chat / Conversa",
         "Overview": "Visão Geral"
     },
     "messages": {
@@ -59,7 +59,7 @@
         "No conversations": "Nenhuma conversa",
         "No messages yet": "Nenhuma mensagem ainda",
         "Unable to load conversation": "Não foi possível carregar a conversa",
-        "conversations": "conversas"
+        "conversations": "Chat / Conversas"
     },
     "presetFilters": {
         "all": "Todas",

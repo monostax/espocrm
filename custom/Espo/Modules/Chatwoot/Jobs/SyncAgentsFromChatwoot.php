@@ -187,16 +187,28 @@ class SyncAgentsFromChatwoot implements JobDataLess
      */
     private function syncSingleAgent(array $chatwootAgent, string $espoAccountId, string $platformId, array $teamsIds = []): void
     {
-        $chatwootAgentId = (int) $chatwootAgent['id'];
+        $platformUserId = (int) $chatwootAgent['id'];
+        $email = $chatwootAgent['email'] ?? null;
 
-        // Check if ChatwootAgent already exists
-        $existingAgent = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where([
-                'chatwootAgentId' => $chatwootAgentId,
-                'chatwootAccountId' => $espoAccountId,
-            ])
-            ->findOne();
+        // Check if ChatwootAgent already exists by finding the ChatwootUser
+        // with this platform user ID, then looking for an agent linked to that
+        // user in this account.
+        $existingAgent = null;
+        $chatwootUser = $email
+            ? $this->entityManager->getRDBRepository('ChatwootUser')
+                ->where(['email' => $email, 'platformId' => $platformId])
+                ->findOne()
+            : null;
+
+        if ($chatwootUser) {
+            $existingAgent = $this->entityManager
+                ->getRDBRepository('ChatwootAgent')
+                ->where([
+                    'chatwootUserId' => $chatwootUser->getId(),
+                    'chatwootAccountId' => $espoAccountId,
+                ])
+                ->findOne();
+        }
 
         if ($existingAgent) {
             $this->updateExistingAgent($existingAgent, $chatwootAgent, $platformId, $teamsIds);
@@ -272,7 +284,6 @@ class SyncAgentsFromChatwoot implements JobDataLess
             'confirmed' => $chatwootAgent['confirmed'] ?? false,
             'avatarUrl' => $chatwootAgent['thumbnail'] ?? null,
             'customRoleId' => $chatwootAgent['custom_role_id'] ?? null,
-            'chatwootAgentId' => $chatwootAgent['id'],
             'chatwootAccountId' => $espoAccountId,
             'syncStatus' => 'synced',
             'lastSyncedAt' => date('Y-m-d H:i:s'),
@@ -328,48 +339,122 @@ class SyncAgentsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Mark agents that are no longer in Chatwoot as removed.
+     * Remove agents that are no longer in Chatwoot.
      *
-     * @param array<int> $seenAgentIds Chatwoot agent IDs that were seen in the sync
+     * When Chatwoot reports that an agent no longer exists for an account,
+     * the local ChatwootAgent record is deleted (not just error-marked).
+     * The associated membership is also removed. If the underlying
+     * ChatwootUser has no remaining memberships across any account,
+     * the ChatwootUser is removed as well (the platform user was deleted).
+     *
+     * @param array<int> $seenPlatformUserIds Platform user IDs that were seen in the sync
      */
-    private function markRemovedAgents(string $espoAccountId, array $seenAgentIds): void
+    private function markRemovedAgents(string $espoAccountId, array $seenPlatformUserIds): void
     {
-        if (empty($seenAgentIds)) {
+        if (empty($seenPlatformUserIds)) {
             return;
         }
 
-        // Find agents that weren't in the API response
-        $removedAgents = $this->entityManager
+        // Find all agents for this account
+        $allAgents = $this->entityManager
             ->getRDBRepository('ChatwootAgent')
-            ->where([
-                'chatwootAccountId' => $espoAccountId,
-                'chatwootAgentId!=' => $seenAgentIds,
-                'syncStatus!=' => 'error',
-            ])
+            ->where(['chatwootAccountId' => $espoAccountId])
             ->find();
 
+        // Filter to agents whose linked ChatwootUser's platform ID is NOT in the seen set
+        $removedAgents = [];
+        foreach ($allAgents as $agent) {
+            $userId = $agent->get('chatwootUserId');
+            if (!$userId) {
+                // Agent without a linked user is stale
+                $removedAgents[] = $agent;
+                continue;
+            }
+            $user = $this->entityManager->getEntityById('ChatwootUser', $userId);
+            $platformUserId = $user ? (int) $user->get('chatwootUserId') : 0;
+            if (!in_array($platformUserId, $seenPlatformUserIds, true)) {
+                $removedAgents[] = $agent;
+            }
+        }
+
         foreach ($removedAgents as $agent) {
-            $agent->set('syncStatus', 'error');
-            $agent->set('lastSyncError', 'Agent no longer exists in Chatwoot');
-            $agent->set('lastSyncedAt', date('Y-m-d H:i:s'));
-            $this->entityManager->saveEntity($agent, ['silent' => true]);
+            $agentName = $agent->get('name');
+            $chatwootUserId = $agent->get('chatwootUserId');
 
-            $this->log->info(
-                "SyncAgentsFromChatwoot: Marked agent {$agent->get('chatwootAgentId')} as removed"
-            );
-
-            // Propagate error status to the associated membership
-            if ($agent->get('chatwootUserId') && $agent->get('chatwootAccountId')) {
+            // Remove the associated membership first
+            if ($chatwootUserId && $agent->get('chatwootAccountId')) {
                 $membership = $this->membershipService->resolveMembershipForAgent($agent);
 
                 if ($membership) {
-                    $this->membershipService->updateSyncStatus(
-                        $membership,
-                        'error',
-                        'Linked agent no longer exists in Chatwoot'
-                    );
+                    try {
+                        $this->entityManager->removeEntity($membership);
+                        $this->log->info(
+                            "SyncAgentsFromChatwoot: Removed membership for agent '{$agentName}'"
+                        );
+                    } catch (\Exception $e) {
+                        $this->log->error(
+                            "SyncAgentsFromChatwoot: Failed to remove membership for agent '{$agentName}': " .
+                            $e->getMessage()
+                        );
+                    }
                 }
             }
+
+            // Remove the agent record
+            try {
+                $this->entityManager->removeEntity($agent);
+                $this->log->info(
+                    "SyncAgentsFromChatwoot: Removed agent '{$agentName}' (no longer in Chatwoot)"
+                );
+            } catch (\Exception $e) {
+                $this->log->error(
+                    "SyncAgentsFromChatwoot: Failed to remove agent '{$agentName}': " .
+                    $e->getMessage()
+                );
+            }
+
+            // Check if the ChatwootUser has any remaining memberships.
+            // If not, the platform user was deleted — remove the CRM record too.
+            if ($chatwootUserId) {
+                $this->removeOrphanedUser($chatwootUserId);
+            }
+        }
+    }
+
+    /**
+     * Remove a ChatwootUser if it has no remaining memberships across any account.
+     *
+     * A user with zero memberships means the platform-level user was deleted
+     * from Chatwoot, so the CRM record should be cleaned up.
+     */
+    private function removeOrphanedUser(string $chatwootUserId): void
+    {
+        $remainingMemberships = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootUserId' => $chatwootUserId])
+            ->count();
+
+        if ($remainingMemberships > 0) {
+            return;
+        }
+
+        $user = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+
+        if (!$user) {
+            return;
+        }
+
+        try {
+            $this->entityManager->removeEntity($user);
+            $this->log->info(
+                "SyncAgentsFromChatwoot: Removed orphaned ChatwootUser {$chatwootUserId} " .
+                "(no remaining memberships)"
+            );
+        } catch (\Exception $e) {
+            $this->log->error(
+                "SyncAgentsFromChatwoot: Failed to remove orphaned ChatwootUser {$chatwootUserId}: " .
+                $e->getMessage()
+            );
         }
     }
 

@@ -1,7 +1,7 @@
 {
     "scopeNames": {
         "ChatwootAccount": "Chat / Conta",
-        "ChatwootAgent": "Chat / Agente",
+        "ChatwootAgent": "Chat / Agente IA",
         "ChatwootContact": "Chat / Contato",
         "ChatwootContactInbox": "Chat / Contato / Canal",
         "ChatwootConversation": "Chat / Conversa",
@@ -24,9 +24,9 @@
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Contas",
-        "ChatwootAgent": "Chat / Agentes",
+        "ChatwootAgent": "Chat / Agentes IA",
         "ChatwootContact": "Chat / Contatos",
-        "ChatwootContactInbox": "Chat / Contato / Canais",
+        "ChatwootContactInbox": "Chat / Inbox / Contato",
         "ChatwootConversation": "Chat / Conversas",
         "ChatwootInbox": "Chat / Inboxes",
         "ChatwootMessage": "Chat / Mensagens",
@@ -46,7 +46,7 @@
         "ChatwootAccountUserMembership": "Chat / Membros"
     },
     "navbarTabs": {
-        "Conversations": "Conversas",
+        "Conversations": "Chat / Conversas",
         "Inbox": "Caixa de Entrada",
         "All": "Todas",
         "Unattended": "Não Atendidas",

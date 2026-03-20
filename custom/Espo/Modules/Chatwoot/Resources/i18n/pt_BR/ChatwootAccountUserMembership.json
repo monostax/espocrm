@@ -25,7 +25,7 @@
         "Create ChatwootAccountUserMembership": "Cadastrar Membro da Conta",
         "Enable AI Profile": "Ativar Perfil IA",
         "Disable AI Profile": "Desativar Perfil IA",
-        "Account Users": "Membros da Conta"
+        "Account Users": "Chat / Conta / Agentes"
     },
     "messages": {
         "confirmEnableAiProfile": "Isto criará um perfil de Agente do Chat com capacidades de IA para este membro da conta. Continuar?",

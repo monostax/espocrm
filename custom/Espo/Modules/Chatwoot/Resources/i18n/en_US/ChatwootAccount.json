@@ -1,14 +1,14 @@
 {
     "fields": {
-        "apiKey": "Account API Key",
-        "automationUser": "Automation User",
+        "apiKey": "API Key",
+        "automationUser": "Chat / User (Automation)",
         "autoPendingEnabled": "Auto-Pending Enabled",
-        "teams": "Teams"
+        "teams": "Chat / Teams"
     },
     "links": {
-        "automationUser": "Automation User",
-        "teams": "Teams",
-        "accountUserMemberships": "Account Memberships"
+        "automationUser": "Chat / User (Automation)",
+        "teams": "Chat / Account / Teams",
+        "accountUserMemberships": "Chat / Account / Users"
     },
     "tooltips": {
         "apiKey": "Account-level API token from Chat. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",

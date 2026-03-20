@@ -4,7 +4,7 @@
         "description": "Description",
         "color": "Color",
         "showOnSidebar": "Show on Sidebar",
-        "chatwootLabelId": "Chat / Label ID",
+        "chatwootLabelId": "Chat / Account / Label ID",
         "chatwootAccount": "Chat / Account",
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",

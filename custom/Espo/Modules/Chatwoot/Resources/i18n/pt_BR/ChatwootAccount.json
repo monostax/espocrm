@@ -13,6 +13,7 @@
         "apiKey": "Chave API da Conta"
     },
     "links": {
+        "automationUser": "Chat / Usuário (Automação)",
         "platform": "Plataforma",
         "chatwootTeams": "Chat / Times",
         "contacts": "Chat / Contatos",
@@ -23,10 +24,10 @@
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "automationUser": "Usuário de Automação",
-        "accountUserMemberships": "Membros da Conta"
+        "accountUserMemberships": "Chat / Conta / Agentes"
     },
     "labels": {
+        "Connections": "Chat / Conexões",
         "Create ChatwootAccount": "Cadastrar Conta de Chat"
     },
     "options": {

@@ -135,14 +135,8 @@ class UpdateChatLabel
             $labels = [];
 
             if ($assigneeId) {
-                // Find ChatwootAgent by chatwootAgentId
-                $agent = $this->entityManager
-                    ->getRDBRepository('ChatwootAgent')
-                    ->where([
-                        'chatwootAgentId' => $assigneeId,
-                        'chatwootAccountId' => $conversation->get('chatwootAccountId'),
-                    ])
-                    ->findOne();
+                // Find ChatwootAgent by resolving through ChatwootUser (assigneeId is the platform user ID)
+                $agent = $this->findAgentByPlatformUserId($assigneeId, $conversation->get('chatwootAccountId'));
 
                 if ($agent) {
                     // Find WahaSessionLabel for this agent + inboxIntegration
@@ -195,7 +189,7 @@ class UpdateChatLabel
                         }
                     }
                 } else {
-                    $this->log->debug("UpdateChatLabel: ChatwootAgent with chatwootAgentId {$assigneeId} not found");
+                    $this->log->debug("UpdateChatLabel: ChatwootAgent with platformUserId {$assigneeId} not found");
                 }
             } else {
                 // Unassigned - remove all agent labels
@@ -443,6 +437,32 @@ class UpdateChatLabel
             if ($integration) {
                 return $integration;
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find a ChatwootAgent by the Chatwoot platform user ID (assigneeId).
+     * Resolves through ChatwootUser: platformUserId -> ChatwootUser -> ChatwootAgent.
+     */
+    private function findAgentByPlatformUserId(int $platformUserId, ?string $accountId): ?Entity
+    {
+        if (!$accountId) {
+            return null;
+        }
+
+        $agents = $this->entityManager
+            ->getRDBRepository('ChatwootAgent')
+            ->leftJoin('chatwootUser')
+            ->where([
+                'chatwootUser.chatwootUserId' => $platformUserId,
+                'chatwootAccountId' => $accountId,
+            ])
+            ->find();
+
+        foreach ($agents as $agent) {
+            return $agent;
         }
 
         return null;

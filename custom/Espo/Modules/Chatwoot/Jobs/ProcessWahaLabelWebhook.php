@@ -129,8 +129,8 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        $chatwootAgentId = $agent->get('chatwootAgentId') ? (int) $agent->get('chatwootAgentId') : null;
-        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (chatwootAgentId: {$chatwootAgentId})");
+        $platformUserId = $this->resolvePlatformUserId($agent);
+        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (platformUserId: {$platformUserId})");
 
         // Find the conversation by phone number and inbox (with LID resolution if needed)
         $phoneNumber = $this->extractPhoneFromChatId($chatId, $channel);
@@ -151,19 +151,19 @@ class ProcessWahaLabelWebhook implements Job
 
         // Check if already assigned to this agent (cast to int for proper comparison)
         $currentAssigneeId = $conversation->get('assigneeId') ? (int) $conversation->get('assigneeId') : null;
-        if ($currentAssigneeId === $chatwootAgentId) {
-            $this->log->warning("ProcessWahaLabelWebhook: Conversation already assigned to agent {$chatwootAgentId}");
+        if ($currentAssigneeId === $platformUserId) {
+            $this->log->warning("ProcessWahaLabelWebhook: Conversation already assigned to agent (platformUserId={$platformUserId})");
             return;
         }
 
         // Update conversation assignee in CRM (with silent to prevent loop)
-        $conversation->set('assigneeId', $chatwootAgentId);
+        $conversation->set('assigneeId', $platformUserId);
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
 
-        $this->log->warning("ProcessWahaLabelWebhook: Updated conversation {$conversation->getId()} assignee to {$chatwootAgentId}");
+        $this->log->warning("ProcessWahaLabelWebhook: Updated conversation {$conversation->getId()} assignee to platformUserId={$platformUserId}");
 
         // Sync to Chatwoot
-        $this->syncAssignmentToChatwoot($conversation, $chatwootAgentId);
+        $this->syncAssignmentToChatwoot($conversation, $platformUserId);
     }
 
     /**
@@ -218,8 +218,8 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        $chatwootAgentId = $agent->get('chatwootAgentId') ? (int) $agent->get('chatwootAgentId') : null;
-        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (chatwootAgentId: {$chatwootAgentId})");
+        $platformUserId = $this->resolvePlatformUserId($agent);
+        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (platformUserId: {$platformUserId})");
 
         // Find the conversation by phone number and inbox (with LID resolution if needed)
         $phoneNumber = $this->extractPhoneFromChatId($chatId, $channel);
@@ -240,10 +240,10 @@ class ProcessWahaLabelWebhook implements Job
 
         // Only unassign if currently assigned to this agent (cast to int for proper comparison)
         $currentAssigneeId = $conversation->get('assigneeId') ? (int) $conversation->get('assigneeId') : null;
-        $this->log->warning("ProcessWahaLabelWebhook: Conversation {$conversation->getId()} currentAssigneeId={$currentAssigneeId}, chatwootAgentId={$chatwootAgentId}");
+        $this->log->warning("ProcessWahaLabelWebhook: Conversation {$conversation->getId()} currentAssigneeId={$currentAssigneeId}, platformUserId={$platformUserId}");
         
-        if ($currentAssigneeId !== $chatwootAgentId) {
-            $this->log->warning("ProcessWahaLabelWebhook: Conversation not assigned to agent {$chatwootAgentId} (current: {$currentAssigneeId}), not unassigning");
+        if ($currentAssigneeId !== $platformUserId) {
+            $this->log->warning("ProcessWahaLabelWebhook: Conversation not assigned to agent (platformUserId={$platformUserId}, current: {$currentAssigneeId}), not unassigning");
             return;
         }
 
@@ -431,5 +431,24 @@ class ProcessWahaLabelWebhook implements Job
         } catch (\Exception $e) {
             $this->log->error("ProcessWahaLabelWebhook: Failed to sync to Chatwoot: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Resolve the Chatwoot platform user ID from an agent's linked ChatwootUser.
+     */
+    private function resolvePlatformUserId(Entity $agent): ?int
+    {
+        $chatwootUserId = $agent->get('chatwootUserId');
+        if (!$chatwootUserId) {
+            return null;
+        }
+
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+        if (!$chatwootUser) {
+            return null;
+        }
+
+        $platformUserId = $chatwootUser->get('chatwootUserId');
+        return $platformUserId ? (int) $platformUserId : null;
     }
 }

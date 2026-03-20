@@ -32,7 +32,7 @@
     "SyncInboxMembersFromChatwoot": {
         "name": "Sync Inbox Members from Chatwoot",
         "isSystem": false,
-        "scheduling": "*/5 * * * *",
+        "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxMembersFromChatwoot"
     },
     "RepairAccountUserMembershipInvariants": {

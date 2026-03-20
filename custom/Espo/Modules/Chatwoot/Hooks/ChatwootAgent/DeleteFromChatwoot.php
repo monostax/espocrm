@@ -34,9 +34,12 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
  * This hook works for BOTH regular delete AND mass delete.
  * Deletes the agent from Chatwoot BEFORE deleting from EspoCRM.
  *
- * Also clears dangling chatwootAgentId on the associated membership
- * (Decision #11). The membership itself is NOT deleted — the user
- * is still a member of the account; only the agent reference is cleared.
+ * Also clears the agent link on the associated membership (Decision #11).
+ * The membership itself is NOT deleted — the user is still a member of
+ * the account; only the agent reference is cleared.
+ *
+ * The Chatwoot platform user ID is resolved from the linked ChatwootUser
+ * entity rather than stored directly on the agent.
  */
 class DeleteFromChatwoot
 {
@@ -67,16 +70,16 @@ class DeleteFromChatwoot
 
         $this->log->info('DELETE HOOK CALLED for ChatwootAgent: ' . $entity->getId());
         
-        $chatwootAgentId = $entity->get('chatwootAgentId');
+        $platformUserId = $this->resolvePlatformUserId($entity);
         
-        // If there's no chatwootAgentId, this agent was never synced to Chatwoot
+        // If there's no platform user ID, this agent was never synced to Chatwoot
         // Allow deletion from EspoCRM
-        if (!$chatwootAgentId) {
-            $this->log->info('ChatwootAgent ' . $entity->getId() . ' has no chatwootAgentId, skipping Chatwoot deletion');
+        if (!$platformUserId) {
+            $this->log->info('ChatwootAgent ' . $entity->getId() . ' has no linked ChatwootUser with chatwootUserId, skipping Chatwoot deletion');
             return;
         }
         
-        $this->log->info('Attempting to delete Chatwoot agent with ID: ' . $chatwootAgentId);
+        $this->log->info('Attempting to delete Chatwoot agent with platformUserId: ' . $platformUserId);
 
         $accountId = $entity->get('chatwootAccountId');
         if (!$accountId) {
@@ -127,30 +130,30 @@ class DeleteFromChatwoot
             }
 
             // Delete agent from Chatwoot
-            $this->log->info('Deleting Chatwoot agent: ' . $chatwootAgentId . ' from account ' . $chatwootAccountId);
+            $this->log->info('Deleting Chatwoot agent (platformUserId=' . $platformUserId . ') from account ' . $chatwootAccountId);
             
             $this->apiClient->deleteAgent(
                 $platformUrl,
                 $apiKey,
                 $chatwootAccountId,
-                $chatwootAgentId
+                $platformUserId
             );
             
-            $this->log->info('Successfully deleted Chatwoot agent: ' . $chatwootAgentId);
+            $this->log->info('Successfully deleted Chatwoot agent (platformUserId=' . $platformUserId . ')');
 
         } catch (\Exception $e) {
             // If the resource doesn't exist (404), allow deletion from EspoCRM
             // The agent is already gone from Chatwoot
             if (str_contains($e->getMessage(), '404') || str_contains($e->getMessage(), 'not found')) {
                 $this->log->warning(
-                    'Chatwoot agent ' . $chatwootAgentId . ' not found in Chatwoot (already deleted?). ' .
+                    'Chatwoot agent (platformUserId=' . $platformUserId . ') not found in Chatwoot (already deleted?). ' .
                     'Allowing deletion from EspoCRM.'
                 );
                 return;
             }
             
             $this->log->error(
-                'Failed to delete Chatwoot agent ' . $chatwootAgentId . ': ' . $e->getMessage()
+                'Failed to delete Chatwoot agent (platformUserId=' . $platformUserId . '): ' . $e->getMessage()
             );
             
             // Re-throw - this will prevent the database DELETE from happening
@@ -160,6 +163,25 @@ class DeleteFromChatwoot
                 'Please check if the agent still exists in Chatwoot or try again.'
             );
         }
+    }
+
+    /**
+     * Resolve the Chatwoot platform user ID from the agent's linked ChatwootUser.
+     */
+    private function resolvePlatformUserId(Entity $entity): ?int
+    {
+        $chatwootUserId = $entity->get('chatwootUserId');
+        if (!$chatwootUserId) {
+            return null;
+        }
+
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+        if (!$chatwootUser) {
+            return null;
+        }
+
+        $platformUserId = $chatwootUser->get('chatwootUserId');
+        return $platformUserId ? (int) $platformUserId : null;
     }
 
     /**

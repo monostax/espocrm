@@ -49,7 +49,7 @@
         "create": "cadastrar"
     },
     "navbarTabs": {
-        "Conversations": "Conversas",
+        "Conversations": "Chat / Conversas",
         "Inbox": "Caixa de Entrada",
         "All": "Todas",
         "Unattended": "Não Atendidas",

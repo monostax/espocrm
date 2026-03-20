@@ -23,10 +23,6 @@
             "type": "link",
             "required": true
         },
-        "chatwootAccount": {
-            "type": "link",
-            "required": false
-        },
         "assignedUser": {
             "type": "link",
             "required": false,
@@ -68,11 +64,6 @@
             "type": "belongsTo",
             "entity": "ChatwootPlatform",
             "foreign": "users"
-        },
-        "chatwootAccount": {
-            "type": "belongsTo",
-            "entity": "ChatwootAccount",
-            "foreign": "chatwootUsers"
         },
         "automationForAccount": {
             "type": "hasOne",
@@ -124,9 +115,6 @@
         },
         "platformId": {
             "columns": ["platformId", "deleted"]
-        },
-        "chatwootAccountId": {
-            "columns": ["chatwootAccountId", "deleted"]
         },
         "chatwootUserIdPlatformId": {
             "columns": ["chatwootUserId", "platformId", "deleted"]

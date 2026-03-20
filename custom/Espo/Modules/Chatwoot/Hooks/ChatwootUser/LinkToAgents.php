@@ -29,8 +29,7 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 
 /**
- * Hook to link ChatwootUser to matching ChatwootAgents after creation, and to
- * propagate assignedUserId changes to all linked agents (Decision #11).
+ * Hook to link ChatwootUser to matching ChatwootAgents after creation.
  *
  * This ensures bidirectional sync - when a user is created, any agents
  * with the same email across ALL accounts in the same platform get linked.
@@ -52,22 +51,15 @@ class LinkToAgents
     ) {}
 
     /**
-     * After a ChatwootUser is saved:
-     * 1. If assignedUserId changed, propagate to all already-linked agents (Decision #11).
-     * 2. Find and link matching unlinked ChatwootAgents across all accounts in the same platform.
+     * After a ChatwootUser is saved, find and link matching unlinked
+     * ChatwootAgents across all accounts in the same platform.
      *
      * @param Entity $entity
      * @param array<string, mixed> $options
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        // Branch 1: Propagate assignedUserId changes to already-linked agents (Decision #11).
-        // This runs before the unlinked-agent-linking loop — independent concerns.
-        if ($entity->isAttributeChanged('assignedUserId')) {
-            $this->propagateAssignmentToLinkedAgents($entity);
-        }
-
-        // Branch 2: Link unlinked agents by email match.
+        // Link unlinked agents by email match.
         $email = $entity->get('email');
         $platformId = $entity->get('platformId');
         $userId = $entity->getId();
@@ -109,9 +101,6 @@ class LinkToAgents
             $agent->set('chatwootUserId', $userId);
             $agent->set('confirmed', true); // User exists, so agent is confirmed
 
-            // Propagate ChatwootUser.assignedUserId to newly-linked agents
-            $agent->set('assignedUserId', $entity->get('assignedUserId'));
-
             $this->entityManager->saveEntity($agent, ['silent' => true]);
 
             // Upsert membership for each linked agent (idempotent)
@@ -128,42 +117,6 @@ class LinkToAgents
         if ($linkedCount > 0) {
             $this->log->info(
                 "LinkToAgents: Linked ChatwootUser {$userId} to {$linkedCount} ChatwootAgent(s) by email {$email} across platform {$platformId}"
-            );
-        }
-    }
-
-    /**
-     * Propagate assignedUserId change from ChatwootUser to all already-linked agents.
-     * This handles the case where an admin updates the assignment on a ChatwootUser
-     * that is already linked to agents (Decision #11).
-     *
-     * The agent save with ['silent' => true] still triggers LinkToUser.afterSave
-     * (which doesn't check silent), so the user→agent propagation in LinkToUser
-     * would fire redundantly. This is safe because the assignment would already
-     * match — the LinkToUser path would be a no-op.
-     */
-    private function propagateAssignmentToLinkedAgents(Entity $entity): void
-    {
-        $newAssignedUserId = $entity->get('assignedUserId');
-
-        $linkedAgents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where(['chatwootUserId' => $entity->getId()])
-            ->find();
-
-        $updatedCount = 0;
-        foreach ($linkedAgents as $agent) {
-            if ($agent->get('assignedUserId') !== $newAssignedUserId) {
-                $agent->set('assignedUserId', $newAssignedUserId);
-                $this->entityManager->saveEntity($agent, ['silent' => true]);
-                $updatedCount++;
-            }
-        }
-
-        if ($updatedCount > 0) {
-            $this->log->info(
-                "LinkToAgents: Propagated assignedUserId change to {$updatedCount} linked ChatwootAgent(s) for ChatwootUser {$entity->getId()}: " .
-                ($newAssignedUserId ?: 'null')
             );
         }
     }

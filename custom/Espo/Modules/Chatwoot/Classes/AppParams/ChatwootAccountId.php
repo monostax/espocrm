@@ -31,11 +31,8 @@ use Espo\Core\Utils\Log;
 /**
  * AppParam that provides the Chatwoot Account ID for the current user.
  *
- * Resolution path (Phase 5):
+ * Resolution path:
  *   EspoCRM User → ChatwootUser (via assignedUserId) → ChatwootAccountUserMembership → ChatwootAccount → chatwootAccountId (external int)
- *
- * Transition fallback:
- *   If no membership found, tries ChatwootUser.chatwootAccountId directly (backward compat, Phase 5-7 window).
  *
  * This is returned as part of the /api/v1/App/user response.
  */
@@ -89,19 +86,7 @@ class ChatwootAccountId implements AppParam
                 }
             }
 
-            // Step 4: Transition fallback — try direct ChatwootUser.chatwootAccountId.
-            // This is an EspoCRM entity ID, so it must be resolved to the external Chatwoot integer.
-            $accountEntityId = $chatwootUser->get('chatwootAccountId');
-            if ($accountEntityId) {
-                // Step 5: Log deprecation warning for observability (Decision #14).
-                $this->log->warning(
-                    'ChatwootAccountId: resolved via legacy ChatwootUser.chatwootAccountId fallback (no membership). ChatwootUser ID: {id}',
-                    ['id' => $chatwootUser->getId()]
-                );
-                return $this->resolveExternalAccountId($accountEntityId);
-            }
-
-            $this->log->debug("ChatwootAccountId: No membership or direct account link found for ChatwootUser " . $chatwootUser->getId());
+            $this->log->debug("ChatwootAccountId: No membership found for ChatwootUser " . $chatwootUser->getId());
             return null;
         } catch (\Exception $e) {
             $this->log->error(

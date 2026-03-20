@@ -267,7 +267,6 @@ class SeedChatwootAccount implements RebuildAction
                 'password' => $automationUserData['password'],
                 'displayName' => $automationUserData['name'],
                 'platformId' => $platform->getId(),
-                'chatwootAccountId' => $account->getId(),
                 'chatwootUserId' => $automationUserData['user_id'],
                 'teamsIds' => $teamsIds
             ], [

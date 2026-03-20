@@ -129,8 +129,18 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
 
         $list = [];
         foreach ($agents as $agent) {
+            // Resolve platform user ID through linked ChatwootUser
+            $platformUserId = null;
+            $userId = $agent->get('chatwootUserId');
+            if ($userId) {
+                $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
+                if ($chatwootUser) {
+                    $platformUserId = $chatwootUser->get('chatwootUserId');
+                }
+            }
+
             $list[] = (object) [
-                'id' => $agent->get('chatwootAgentId'),
+                'id' => $platformUserId,
                 'name' => $agent->get('name'),
                 'availableName' => $agent->get('availableName'),
                 'email' => $agent->get('email'),
