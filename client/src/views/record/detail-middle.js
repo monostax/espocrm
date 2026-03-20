@@ -35,16 +35,221 @@ import View from 'view';
  */
 class DetailMiddleRecordView extends View {
 
+    events = {
+        /** @this module:views/record/detail-middle */
+        'click .panel > .panel-heading': function (e) {
+            if (
+                $(e.target).closest('a, button, input, textarea, select, .action, .dropdown-menu').length
+            ) {
+                return;
+            }
+
+            const name = $(e.currentTarget).closest('.panel').attr('data-name');
+
+            if (!name) {
+                return;
+            }
+
+            this.togglePanelCollapsed(name);
+        },
+    }
+
     init() {
         this.recordHelper = this.options.recordHelper;
         this.scope = this.model.entityType;
+
+        this.applyStoredCollapseState();
     }
 
     data() {
         return {
             hiddenPanels: this.recordHelper.getHiddenPanels(),
             hiddenFields: this.recordHelper.getHiddenFields(),
+            collapsedPanels: this.getCollapsedPanels(),
         };
+    }
+
+    afterRender() {
+        Object.keys(this.getCollapsedPanels()).forEach(name => {
+            this.ensurePanelHeadingChevron(name);
+            this.applyPanelCollapsedState(name, this.isPanelCollapsed(name));
+        });
+
+        this.$el.find('> .panel[data-name]').each((i, el) => {
+            const name = $(el).attr('data-name');
+
+            if (!name) {
+                return;
+            }
+
+            if (this.recordHelper.getPanelStateParam(name, 'collapsed') === null) {
+                this.recordHelper.setPanelStateParam(name, 'collapsed', this.getPanelCollapsedStored(name));
+            }
+
+            this.ensurePanelHeadingChevron(name);
+            this.applyPanelCollapsedState(name, this.isPanelCollapsed(name));
+        });
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     */
+    ensurePanelHeadingChevron(name) {
+        if (!this.isRendered()) {
+            return;
+        }
+
+        const $panel = this.$el.find(`.panel[data-name="${name}"]`).first();
+
+        if (!$panel.length) {
+            return;
+        }
+
+        const $title = $panel.find('> .panel-heading > .panel-title').first();
+
+        if (!$title.length || $title.find('> .panel-collapse-chevron').length) {
+            return;
+        }
+
+        $title.prepend('<span class="panel-collapse-chevron fas"></span> ');
+    }
+
+    /**
+     * @private
+     */
+    applyStoredCollapseState() {
+        this.getCollapsiblePanelNameList().forEach(name => {
+            if (this.recordHelper.getPanelStateParam(name, 'collapsed') !== null) {
+                return;
+            }
+
+            this.recordHelper.setPanelStateParam(name, 'collapsed', this.getPanelCollapsedStored(name));
+        });
+    }
+
+    /**
+     * @private
+     * @return {string[]}
+     */
+    getCollapsiblePanelNameList() {
+        const layoutDefs = this.options.layoutDefs;
+
+        const panelList = Array.isArray(layoutDefs) ?
+            layoutDefs :
+            (Array.isArray(layoutDefs?.layout) ? layoutDefs.layout : []);
+
+        return panelList
+            .filter(panel => panel && panel.name && panel.label)
+            .map(panel => panel.name);
+    }
+
+    /**
+     * @private
+     * @return {Object.<string, boolean>}
+     */
+    getCollapsedPanels() {
+        const map = {};
+
+        this.getCollapsiblePanelNameList().forEach(name => {
+            map[name] = this.isPanelCollapsed(name);
+        });
+
+        return map;
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @return {boolean}
+     */
+    isPanelCollapsed(name) {
+        const value = this.recordHelper.getPanelStateParam(name, 'collapsed');
+
+        if (value === null) {
+            return this.getPanelCollapsedStored(name);
+        }
+
+        return !!value;
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @return {string}
+     */
+    getPanelCollapsedStorageKey(name) {
+        const userId = this.getUser().id || 'anonymous';
+
+        return `record-panel-collapse:${userId}:${this.scope}:middle:${name}`;
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @return {boolean}
+     */
+    getPanelCollapsedStored(name) {
+        try {
+            return localStorage.getItem(this.getPanelCollapsedStorageKey(name)) === 'true';
+        }
+        catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @param {boolean} collapsed
+     */
+    setPanelCollapsedStored(name, collapsed) {
+        try {
+            localStorage.setItem(this.getPanelCollapsedStorageKey(name), collapsed ? 'true' : 'false');
+        }
+        catch (e) {}
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     */
+    togglePanelCollapsed(name) {
+        const collapsed = !this.isPanelCollapsed(name);
+
+        this.recordHelper.setPanelStateParam(name, 'collapsed', collapsed);
+        this.setPanelCollapsedStored(name, collapsed);
+        this.applyPanelCollapsedState(name, collapsed);
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @param {boolean} collapsed
+     */
+    applyPanelCollapsedState(name, collapsed) {
+        if (!this.isRendered()) {
+            return;
+        }
+
+        this.ensurePanelHeadingChevron(name);
+
+        const $panel = this.$el.find(`.panel[data-name="${name}"]`).first();
+
+        if (!$panel.length) {
+            return;
+        }
+
+        $panel.toggleClass('is-collapsed', collapsed);
+        $panel.find('> .panel-body').toggleClass('hidden', collapsed);
+
+        const $icon = $panel.find('> .panel-heading .panel-collapse-chevron').first();
+
+        if ($icon.length) {
+            $icon
+                .toggleClass('fa-chevron-down', !collapsed)
+                .toggleClass('fa-chevron-right', collapsed);
+        }
     }
 
     /**

@@ -30,7 +30,7 @@ class RelationshipListFieldView extends BaseFieldView {
     // noinspection JSUnusedGlobalSymbols
     templateContent = `
         <div class="relationship-list-field">
-            <div class="panel panel-default panel-condensed">
+            <div class="panel panel-default panel-condensed{{#if isCollapsed}} is-collapsed{{/if}}">
                 <div class="panel-heading">
                     <div class="pull-right btn-group panel-actions-container">
                         {{#if showCreateButton}}
@@ -56,11 +56,12 @@ class RelationshipListFieldView extends BaseFieldView {
                         {{/if}}
                     </div>
                     <h4 class="panel-title">
-                        {{#if icon}}<span class="{{icon}}"{{#if iconColor}} style="color: {{iconColor}}"{{/if}}></span> {{/if}}
-                        <span>{{title}}</span>
+                        <span class="panel-collapse-chevron fas {{#if isCollapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></span>
+                        {{#if icon}}<span class="relationship-list-entity-icon {{icon}}"{{#if iconColor}} style="color: {{iconColor}}"{{/if}}></span> {{/if}}
+                        <span class="relationship-list-title-text">{{title}}</span>
                     </h4>
                 </div>
-                <div class="panel-body">
+                <div class="panel-body{{#if isCollapsed}} hidden{{/if}}">
                     {{#if hasId}}
                     <div class="relationship-list-container"></div>
                     {{else}}
@@ -103,7 +104,24 @@ class RelationshipListFieldView extends BaseFieldView {
     /** @type {string} */
     foreignEntityType = null;
 
+    /** @type {boolean} */
+    isCollapsed = false;
+
+    /** @type {string|null} */
+    collapseStorageKey = null;
+
     events = {
+        'click .panel-heading': function (e) {
+            if (
+                $(e.target).closest(
+                    '.panel-actions-container, .action, a, button, input, textarea, select, .dropdown-menu'
+                ).length
+            ) {
+                return;
+            }
+
+            this.toggleCollapsed();
+        },
         'click [data-action="createRelated"]': function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -133,6 +151,7 @@ class RelationshipListFieldView extends BaseFieldView {
             title: this.getTitle(),
             icon: this.getIcon(),
             iconColor: this.getIconColor(),
+            isCollapsed: this.isCollapsed,
         };
     }
 
@@ -258,6 +277,8 @@ class RelationshipListFieldView extends BaseFieldView {
             this.options.defs?.params?.rowActionsView ||
             "views/record/row-actions/relationship";
 
+        this.setupCollapsedState();
+
         const linkDefs = this.model.defs.links[this.link];
 
         if (!linkDefs) {
@@ -293,7 +314,63 @@ class RelationshipListFieldView extends BaseFieldView {
             this.getAcl().check(this.model.entityType, "edit");
     }
 
+    setupCollapsedState() {
+        const userId = this.getUser().id || "anonymous";
+        const panelKey = this.name || this.options.defs?.name || this.link;
+
+        this.collapseStorageKey =
+            `record-panel-collapse:${userId}:${this.model.entityType}:relationship-list:${panelKey}`;
+
+        this.isCollapsed = this.getCollapsedStored();
+    }
+
+    getCollapsedStored() {
+        try {
+            return localStorage.getItem(this.collapseStorageKey) === "true";
+        } catch (e) {
+            return false;
+        }
+    }
+
+    setCollapsedStored(value) {
+        try {
+            localStorage.setItem(this.collapseStorageKey, value ? "true" : "false");
+        } catch (e) {}
+    }
+
+    toggleCollapsed() {
+        this.isCollapsed = !this.isCollapsed;
+
+        this.setCollapsedStored(this.isCollapsed);
+        this.applyCollapsedState();
+    }
+
+    applyCollapsedState() {
+        if (!this.isRendered()) {
+            return;
+        }
+
+        const $panel = this.$el.find('.panel').first();
+
+        if (!$panel.length) {
+            return;
+        }
+
+        $panel.toggleClass('is-collapsed', this.isCollapsed);
+        $panel.find('> .panel-body').toggleClass('hidden', this.isCollapsed);
+
+        const $icon = $panel.find('> .panel-heading .panel-collapse-chevron').first();
+
+        if ($icon.length) {
+            $icon
+                .toggleClass('fa-chevron-down', !this.isCollapsed)
+                .toggleClass('fa-chevron-right', this.isCollapsed);
+        }
+    }
+
     afterRender() {
+        this.applyCollapsedState();
+
         // Only setup relationship panel if we have a link AND the model has an ID
         // (i.e., we're in detail/edit mode of an existing record, not create mode)
         if (this.link && this.model.id) {

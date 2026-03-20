@@ -209,6 +209,24 @@ class PanelsContainerRecordView extends View {
         },
         'click .panels-show-more-delimiter [data-action="showMorePanels"]': 'actionShowMorePanels',
         /** @this module:views/record/panels-container */
+        'click .panel > .panel-heading': function (e) {
+            if (
+                $(e.target).closest(
+                    '.panel-actions-container, .action, a, button, input, textarea, select, .dropdown-menu'
+                ).length
+            ) {
+                return;
+            }
+
+            const name = $(e.currentTarget).closest('.panel').attr('data-name');
+
+            if (!name) {
+                return;
+            }
+
+            this.togglePanelCollapsed(name);
+        },
+        /** @this module:views/record/panels-container */
         'click .tabs > button': function (e) {
             const tab = parseInt($(e.currentTarget).attr('data-tab'));
 
@@ -217,7 +235,181 @@ class PanelsContainerRecordView extends View {
     }
 
     afterRender() {
+        this.panelList.forEach(item => {
+            if (!this.isPanelCollapsible(item)) {
+                return;
+            }
+
+            this.applyPanelCollapsedState(item.name, this.isPanelCollapsed(item.name));
+        });
+
+        this.$el.find('> .panel[data-name]').each((i, el) => {
+            const name = $(el).attr('data-name');
+
+            if (!name || name === '_delimiter_') {
+                return;
+            }
+
+            this.applyPanelCollapsedState(name, this.isPanelCollapsed(name));
+        });
+
         this.adjustPanels();
+    }
+
+    /**
+     * @private
+     * @param {module:views/record/panels-container~panel} panel
+     * @return {boolean}
+     */
+    isPanelCollapsible(panel) {
+        if (!panel || !panel.name) {
+            return false;
+        }
+
+        return panel.name !== '_delimiter_';
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     */
+    ensurePanelHeading(panel) {
+        if (!this.isRendered()) {
+            return;
+        }
+
+        const $panel = this.$el.find(`.panel[data-name="${panel}"]`).first();
+
+        if (!$panel.length) {
+            return;
+        }
+
+        let $heading = $panel.find('> .panel-heading').first();
+
+        if (!$heading.length) {
+            const panelDef = this.panelList.find(it => it.name === panel) || {};
+            const title = panelDef.title || panelDef.label || this.translate('Details');
+
+            $heading = $('<div class="panel-heading"><h4 class="panel-title"></h4></div>');
+            $heading.find('> .panel-title').text(title);
+
+            $panel.prepend($heading);
+        }
+
+        const $title = $heading.find('> .panel-title').first();
+
+        if (!$title.find('> .panel-collapse-chevron').length) {
+            $title.prepend('<span class="panel-collapse-chevron fas"></span> ');
+        }
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     * @return {string}
+     */
+    getPanelCollapsedStorageKey(panel) {
+        const userId = this.getUser().id || 'anonymous';
+
+        return `record-panel-collapse:${userId}:${this.scope}:${this.name}:${panel}`;
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     * @return {boolean}
+     */
+    getPanelCollapsedStored(panel) {
+        try {
+            return localStorage.getItem(this.getPanelCollapsedStorageKey(panel)) === 'true';
+        }
+        catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     * @param {boolean} collapsed
+     */
+    setPanelCollapsedStored(panel, collapsed) {
+        try {
+            localStorage.setItem(this.getPanelCollapsedStorageKey(panel), collapsed ? 'true' : 'false');
+        }
+        catch (e) {}
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     * @return {boolean}
+     */
+    isPanelCollapsed(panel) {
+        const value = this.recordHelper.getPanelStateParam(panel, 'collapsed');
+
+        if (value === null) {
+            return this.getPanelCollapsedStored(panel);
+        }
+
+        return !!value;
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     * @param {boolean} collapsed
+     */
+    setPanelCollapsed(panel, collapsed) {
+        this.recordHelper.setPanelStateParam(panel, 'collapsed', collapsed);
+        this.setPanelCollapsedStored(panel, collapsed);
+
+        const item = this.panelList.find(it => it.name === panel);
+
+        if (item) {
+            item.collapsed = collapsed;
+        }
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     */
+    togglePanelCollapsed(panel) {
+        const collapsed = !this.isPanelCollapsed(panel);
+
+        this.setPanelCollapsed(panel, collapsed);
+        this.applyPanelCollapsedState(panel, collapsed);
+    }
+
+    /**
+     * @private
+     * @param {string} panel
+     * @param {boolean} collapsed
+     */
+    applyPanelCollapsedState(panel, collapsed) {
+        if (!this.isRendered()) {
+            return;
+        }
+
+        this.ensurePanelHeading(panel);
+
+        const $panel = this.$el.find(`.panel[data-name="${panel}"]`).first();
+
+        if (!$panel.length) {
+            return;
+        }
+
+        $panel.toggleClass('is-collapsed', collapsed);
+        $panel.find('> .panel-body').toggleClass('hidden', collapsed);
+
+        const $icon = $panel.find('> .panel-heading .panel-collapse-chevron').first();
+
+        if ($icon.length) {
+            $icon
+                .toggleClass('fa-chevron-down', !collapsed)
+                .toggleClass('fa-chevron-right', collapsed);
+        }
     }
 
     adjustPanels() {
@@ -892,6 +1084,15 @@ class PanelsContainerRecordView extends View {
                 p.isRightAfterDelimiter = true;
                 rightAfterDelimiter = false;
             }
+
+            if (!this.isPanelCollapsible(p)) {
+                return;
+            }
+
+            const collapsed = this.isPanelCollapsed(p.name);
+
+            this.recordHelper.setPanelStateParam(p.name, 'collapsed', collapsed);
+            p.collapsed = collapsed;
         });
 
         if (~index) {

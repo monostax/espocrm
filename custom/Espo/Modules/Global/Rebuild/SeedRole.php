@@ -158,6 +158,30 @@ class SeedRole implements RebuildAction
                         'delete' => 'no',
                         'stream' => 'no',
                     ],
+                'ChatwootInbox' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'ChatwootAccountUserMembership' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'ChatwootTeam' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'ChatwootLabel' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
                 'ChatwootConversation' => [
                     'create' => 'no',
                     'read' => 'team',

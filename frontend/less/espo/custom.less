@@ -5380,39 +5380,92 @@ html.is-iframe {
     margin-top: var(--vertical-gap);
 }
 
+.record {
+    .middle,
+    .side,
+    .bottom,
+    .relationship-list-field {
+        > .panel > .panel-heading {
+            cursor: pointer;
+            user-select: none;
+
+            .panel-collapse-chevron {
+                font-size: var(--10px);
+                opacity: 0.55;
+                flex-shrink: 0;
+                overflow: visible;
+                text-overflow: clip;
+            }
+        }
+
+        > .panel.is-collapsed > .panel-heading {
+             border-radius: var(--panel-border-radius);
+        }
+
+    }
+}
+
 .relationship-list-field {
     .panel.panel-condensed {
         margin-bottom: 0;
         > .panel-heading {
             padding: var(--8px) var(--12px);
             min-height: auto;
+            display: flex;
+            align-items: center;
 
             .panel-title {
+                order: 1;
                 padding: 0;
                 display: flex;
                 align-items: center;
                 gap: var(--6px);
+                flex: 1;
+                min-width: 0;
 
                 > span {
                     overflow: visible;    // Override default Espo styling
                     text-overflow: clip;
                 }
 
-                > span:first-child {      // Icon
+                > .panel-collapse-chevron {
+                    font-size: var(--10px);
+                    opacity: 0.55;
+                    flex-shrink: 0;
+                    width: 1.1em;
+                    text-align: center;
+                }
+
+                > .relationship-list-entity-icon {
                     opacity: 0.65;
                     font-size: var(--13px);
                     flex-shrink: 0;
                 }
 
-                > span:nth-child(2) {     // Text
+                > .relationship-list-title-text {
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
             }
 
-            .panel-actions-container {
+            > .btn-group.panel-actions-container {
+                order: 2;
+                margin-left: auto;
                 margin-top: 0;
                 margin-bottom: 0;
+                right: 0;
+                display: inline-flex;
+                align-items: center;
+
+                > .btn {
+                    margin-bottom: 0;
+                    vertical-align: middle;
+                }
+            }
+
+            > .pull-right.panel-actions-container {
+                float: none !important;
+                margin-left: auto;
             }
         }
 

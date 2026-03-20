@@ -106,6 +106,7 @@ class DetailBottomRecordView extends PanelsContainerRecordView {
                 name: 'stream',
                 label: 'Stream',
                 view: this.getMetadata().get(['clientDefs', this.scope, 'streamPanelView']) || 'views/stream/panel',
+                notRefreshable: true,
                 sticked: false,
                 hidden: !streamAllowed,
                 index: 2,

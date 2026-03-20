@@ -17,7 +17,7 @@
     </div>
     {{/if}}
     <div
-        class="panel panel-{{#if style}}{{style}}{{else}}default{{/if}} panel-{{name}} headered{{#if hidden}} hidden{{/if}}{{#if sticked}} sticked{{/if}}{{#if tabHidden}} tab-hidden{{/if}}"
+        class="panel panel-{{#if style}}{{style}}{{else}}default{{/if}} panel-{{name}} headered{{#if hidden}} hidden{{/if}}{{#if sticked}} sticked{{/if}}{{#if tabHidden}} tab-hidden{{/if}}{{#if collapsed}} is-collapsed{{/if}}"
         data-name="{{name}}"
         data-style="{{#if style}}{{style}}{{/if}}"
         data-tab="{{tabNumber}}"
@@ -26,6 +26,7 @@
             <div class="pull-right btn-group panel-actions-container">{{{var actionsViewKey ../this}}}</div>
 
             <h4 class="panel-title">
+            <span class="panel-collapse-chevron fas {{#if collapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></span>
             {{#unless notRefreshable}}
             <span
                 style="cursor: pointer; user-select: none;"
@@ -46,7 +47,7 @@
             </h4>
         </div>
 
-        <div class="panel-body{{#if isForm}} panel-body-form{{/if}}" data-name="{{name}}">
+        <div class="panel-body{{#if isForm}} panel-body-form{{/if}}{{#if collapsed}} hidden{{/if}}" data-name="{{name}}">
             {{{var name ../this}}}
         </div>
     </div>

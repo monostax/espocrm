@@ -3,15 +3,15 @@
 <% _.each(layout, function (panel, columnNumber) { %>
     <% hasHiddenPanel = panel.hidden || hasHiddenPanel; %>
     <div
-        class="panel panel-<%= panel.style %><%= panel.label ? ' headered' : '' %><%= panel.tabNumber ? ' tab-hidden' : '' %><% if (panel.name) { %>{{#if hiddenPanels.<%= panel.name %>}} hidden{{/if}}<% } %>"
+        class="panel panel-<%= panel.style %><%= panel.label ? ' headered' : '' %><%= panel.tabNumber ? ' tab-hidden' : '' %><% if (panel.name) { %>{{#if hiddenPanels.<%= panel.name %>}} hidden{{/if}}{{#if collapsedPanels.<%= panel.name %>}} is-collapsed{{/if}}<% } %>"
         <% if (panel.name) print('data-name="'+panel.name+'"') %>
         <% if (panel.style) print('data-style="'+panel.style+'"') %>
         data-tab="<%= panel.tabNumber %>"
     >
         <% if (panel.label) { %>
-        <div class="panel-heading"><h4 class="panel-title"><%= panel.label %></h4></div>
+        <div class="panel-heading"><h4 class="panel-title"><span class="panel-collapse-chevron fas <%= collapsedPanels[panel.name] ? 'fa-chevron-right' : 'fa-chevron-down' %>"></span> <%= panel.label %></h4></div>
         <% } %>
-        <div class="panel-body panel-body-form">
+        <div class="panel-body panel-body-form<% if (panel.name) { %>{{#if collapsedPanels.<%= panel.name %>}} hidden{{/if}}<% } %>">
 
         <% if (panel.noteText) { %>
         <div class="alert alert-<%= panel.noteStyle %>"><%= panel.noteText %></div>

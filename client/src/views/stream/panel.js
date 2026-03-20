@@ -776,6 +776,14 @@ class PanelStreamView extends RelationshipPanelView {
         this.actionList = [];
 
         this.actionList.push({
+            action: 'refresh',
+            text: this.translate('Refresh'),
+            onClick: () => this.actionRefresh(),
+        });
+
+        this.actionList.push(false);
+
+        this.actionList.push({
             action: 'viewPostList',
             text: this.translate('View Posts', 'labels', 'Note'),
             onClick: () => this.actionViewPostList(),
