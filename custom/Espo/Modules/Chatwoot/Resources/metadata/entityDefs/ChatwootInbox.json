@@ -19,7 +19,8 @@
         },
         "chatwootAccount": {
             "type": "link",
-            "required": true
+            "required": true,
+            "readOnlyAfterCreate": true
         },
         "channelType": {
             "type": "foreign",

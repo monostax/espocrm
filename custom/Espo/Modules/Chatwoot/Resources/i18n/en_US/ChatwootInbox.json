@@ -18,6 +18,7 @@
         "tabConversations": "Conversations"
     },
     "messages": {
-        "typeToConfirmValueInstruction": "Type {value} to confirm deletion."
+        "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",
+        "accountMembershipMustBelongToSameAccount": "Only account memberships from the same Chat Account can be linked to this Inbox."
     }
 }

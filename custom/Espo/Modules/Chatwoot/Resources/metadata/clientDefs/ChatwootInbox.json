@@ -21,15 +21,19 @@
         },
         "accountUserMemberships": {
             "unlinkDisabled": true,
-            "selectDisabled": true
+            "select": true,
+            "create": false,
+            "selectHandler": "chatwoot:handlers/chatwoot-inbox/select-account-user-membership"
         }
     },
     "sidePanels": {
         "detail": [
             {
                 "name": "accountUserMemberships",
+                "label": "Agentes",
                 "view": "views/record/panels/relationship",
-                "selectDisabled": true,
+                "select": true,
+                "create": false,
                 "unlinkDisabled": true,
                 "order": 1
             }
@@ -37,8 +41,10 @@
         "detailSmall": [
             {
                 "name": "accountUserMemberships",
+                "label": "Agentes",
                 "view": "views/record/panels/relationship",
-                "selectDisabled": true,
+                "select": true,
+                "create": false,
                 "unlinkDisabled": true,
                 "order": 1
             }
@@ -54,8 +60,3 @@
         }
     }
 }
-
-
-
-
-

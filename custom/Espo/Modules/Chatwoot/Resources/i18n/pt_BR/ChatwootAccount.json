@@ -34,6 +34,7 @@
         "Overview": "Visão Geral",
         "Create ChatwootAccount": "Criar Nova Conta",
         "Create Inbox Channel": "Adicionar Caixa de Entrada",
+        "Add Account User": "Adicionar Usuário da Conta",
         "inboxes": "Caixas de Entrada",
         "accountUserMemberships": "Agentes",
         "chatwootTeams": "Times",
@@ -74,6 +75,9 @@
         "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário de automação é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso."
     },
     "messages": {
-        "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao."
+        "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",
+        "accountUserMembershipUpserted": "Usuário da conta salvo com sucesso.",
+        "couldNotUpsertAccountUserMembership": "Não foi possível salvar o usuário da conta.",
+        "selectedUserMustHaveEmail": "O Usuário do CRM selecionado deve ter um endereço de e-mail."
     }
 }

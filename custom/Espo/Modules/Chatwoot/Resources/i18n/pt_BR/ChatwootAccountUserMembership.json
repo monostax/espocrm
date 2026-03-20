@@ -33,7 +33,8 @@
         "confirmEnableAiProfile": "Isto criará um perfil de Agente do Chat com capacidades de IA para este membro da conta. Continuar?",
         "confirmDisableAiProfile": "Isto desativará as capacidades de IA no perfil do Agente vinculado. O perfil do agente permanecerá vinculado, mas com a IA desligada. Continuar?",
         "aiProfileEnabled": "Perfil de Agente IA ativado com sucesso.",
-        "aiProfileDisabled": "Perfil de Agente IA desativado."
+        "aiProfileDisabled": "Perfil de Agente IA desativado.",
+        "inboxMustBelongToSameAccount": "Apenas inboxes do mesmo Chat Account podem ser vinculadas a este membro da conta."
     },
     "options": {
         "role": {

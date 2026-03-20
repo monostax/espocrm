@@ -61,7 +61,7 @@
                 "name": "chatwootInboxes",
                 "label": "Chat / Account / Inboxes",
                 "view": "views/record/panels/relationship",
-                "select": true,
+                "select": false,
                 "create": false,
                 "unlinkDisabled": true,
                 "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
@@ -72,7 +72,7 @@
     },
     "relationshipPanels": {
         "chatwootInboxes": {
-            "select": true,
+            "select": false,
             "create": false,
             "unlinkDisabled": true
         }

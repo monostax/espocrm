@@ -3,6 +3,161 @@ define(
     ["global:views/record/detail", "global:helpers/type-confirmation-dialog"],
     function (Dep, TypeConfirmationDialog) {
         return Dep.extend({
+            createMiddleView: function (callback) {
+                const el = this.getSelector() || "#" + this.id;
+
+                this.waitForView("middle");
+
+                this.getGridLayout((layout) => {
+                    const forcedTabIndex = this.getForcedChannelConnectionTabIndex(layout);
+
+                    if (
+                        this.hasTabs() &&
+                        this.options.isReturn &&
+                        forcedTabIndex === null &&
+                        this.isStoredTabForThisRecord()
+                    ) {
+                        this.selectStoredTab();
+                    }
+
+                    if (forcedTabIndex !== null) {
+                        this.currentTab = forcedTabIndex;
+                    }
+
+                    this.createView(
+                        "middle",
+                        this.middleView,
+                        {
+                            model: this.model,
+                            scope: this.scope,
+                            type: this.type,
+                            layoutDefs: layout,
+                            fullSelector: el + " .middle",
+                            layoutData: {
+                                model: this.model,
+                                hiddenPanels: this.recordHelper.getHiddenPanels(),
+                                collapsedPanels: {},
+                            },
+                            recordHelper: this.recordHelper,
+                            recordViewObject: this,
+                            panelFieldListMap: this.panelFieldListMap,
+                        },
+                        callback
+                    );
+                });
+            },
+
+            afterRender: function () {
+                Dep.prototype.afterRender.call(this);
+
+                const currentChannelType = this.model.get("channelType");
+
+                if (this.isQrCodeIntegration(currentChannelType)) {
+                    this.redirectToChannelConnectionTabForQrCode();
+
+                    return;
+                }
+
+                if (currentChannelType) {
+                    return;
+                }
+
+                const integrationId = this.model.get("chatwootInboxIntegrationId");
+
+                if (!integrationId) {
+                    return;
+                }
+
+                Espo.Ajax.getRequest(`ChatwootInboxIntegration/${integrationId}`, {
+                    select: "channelType",
+                })
+                    .then((data) => {
+                        const integrationChannelType = data && data.channelType;
+
+                        if (this.isQrCodeIntegration(integrationChannelType)) {
+                            this.redirectToChannelConnectionTabForQrCode();
+                        }
+                    })
+                    .catch(() => {});
+            },
+
+            getForcedChannelConnectionTabIndex: function (layout) {
+                if (!this.isQrCodeIntegration(this.model.get("channelType"))) {
+                    return null;
+                }
+
+                return this.getTabIndexByPanelName(layout, "channelConnectionTab");
+            },
+
+            isQrCodeIntegration: function (channelTypeValue) {
+                const channelType = (channelTypeValue || "").toLowerCase();
+
+                return channelType.includes("whatsapp") && channelType.includes("qrcode");
+            },
+
+            getTabIndexByPanelName: function (layout, panelName) {
+                if (!Array.isArray(layout)) {
+                    return null;
+                }
+
+                let tabIndex = 0;
+
+                for (let i = 0; i < layout.length; i++) {
+                    const panel = layout[i] || {};
+
+                    if (i > 0 && panel.tabBreak) {
+                        tabIndex++;
+                    }
+
+                    if (panel.name === panelName) {
+                        return tabIndex;
+                    }
+                }
+
+                return null;
+            },
+
+            redirectToChannelConnectionTabForQrCode: function () {
+                if (!this.hasTabs()) {
+                    return;
+                }
+
+                const middleView = this.getMiddleView();
+
+                if (!middleView) {
+                    return;
+                }
+
+                const applyTabRedirect = () => {
+                    if (!Array.isArray(middleView.panelList)) {
+                        return;
+                    }
+
+                    const channelConnectionPanel = middleView.panelList.find(
+                        (panel) => panel.name === "channelConnectionTab"
+                    );
+
+                    if (
+                        !channelConnectionPanel ||
+                        typeof channelConnectionPanel.tabNumber !== "number"
+                    ) {
+                        return;
+                    }
+
+                    if (this.currentTab !== channelConnectionPanel.tabNumber) {
+                        this.selectTab(channelConnectionPanel.tabNumber);
+                    }
+                };
+
+                if (typeof middleView.onPanelsReady === "function") {
+                    middleView.onPanelsReady(applyTabRedirect);
+
+                    return;
+                }
+
+                applyTabRedirect();
+            },
+
             delete: async function () {
                 const config = this.getTypeDeleteConfirmationConfig();
                 const confirmationValue = (this.model.get("name") || "").trim() || config.expectedValue;

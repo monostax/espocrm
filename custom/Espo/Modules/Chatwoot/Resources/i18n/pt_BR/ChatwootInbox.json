@@ -20,6 +20,7 @@
         "Create ChatwootInbox": "Cadastrar Canal de Chat"
     },
     "messages": {
-        "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao."
+        "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",
+        "accountMembershipMustBelongToSameAccount": "Apenas membros da conta do mesmo Chat Account podem ser vinculados a esta Inbox."
     }
 }

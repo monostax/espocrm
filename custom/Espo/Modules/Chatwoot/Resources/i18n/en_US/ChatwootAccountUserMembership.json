@@ -31,7 +31,8 @@
         "confirmEnableAiProfile": "This will create a Chat Agent profile with AI capabilities for this account member. Continue?",
         "confirmDisableAiProfile": "This will disable AI capabilities on the linked Agent profile. The agent profile will remain linked but with AI turned off. Continue?",
         "aiProfileEnabled": "AI Agent profile has been enabled successfully.",
-        "aiProfileDisabled": "AI Agent profile has been disabled."
+        "aiProfileDisabled": "AI Agent profile has been disabled.",
+        "inboxMustBelongToSameAccount": "Only inboxes from the same Chat Account can be linked to this Account Membership."
     },
     "options": {
         "role": {

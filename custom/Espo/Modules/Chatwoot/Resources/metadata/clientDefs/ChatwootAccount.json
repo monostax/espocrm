@@ -41,7 +41,7 @@
             },
             {
                 "name": "accountUserMemberships",
-                "view": "views/record/panels/relationship",
+                "view": "chatwoot:views/chatwoot-account/panels/account-user-memberships",
                 "label": "tabUsers",
                 "unlinkDisabled": true,
                 "selectDisabled": true,
@@ -76,7 +76,7 @@
             },
             {
                 "name": "accountUserMemberships",
-                "view": "views/record/panels/relationship",
+                "view": "chatwoot:views/chatwoot-account/panels/account-user-memberships",
                 "label": "tabUsers",
                 "unlinkDisabled": true,
                 "selectDisabled": true,

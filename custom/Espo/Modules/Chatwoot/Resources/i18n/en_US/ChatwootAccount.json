@@ -12,6 +12,7 @@
     },
     "labels": {
         "Create Inbox Channel": "Create Inbox Channel",
+        "Add Account User": "Add Account User",
         "tabInboxes": "Inboxes",
         "tabConnections": "Connections",
         "tabUsers": "Users",
@@ -24,6 +25,9 @@
         "autoPendingEnabled": "When enabled, conversations will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
     },
     "messages": {
-        "typeToConfirmValueInstruction": "Type {value} to confirm deletion."
+        "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",
+        "accountUserMembershipUpserted": "Account user saved successfully.",
+        "couldNotUpsertAccountUserMembership": "Could not save account user.",
+        "selectedUserMustHaveEmail": "Selected CRM User must have an email address."
     }
 }
