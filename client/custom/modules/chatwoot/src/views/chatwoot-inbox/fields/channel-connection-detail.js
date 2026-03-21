@@ -12,7 +12,7 @@ define("chatwoot:views/chatwoot-inbox/fields/channel-connection-detail", [
             Dep.prototype.setup.call(this);
 
             this.link = this.options.link || "chatwootInboxIntegration";
-            this.targetScope = "ChatwootInboxIntegration";
+            this.targetScope = this.options.targetScope || "ChatwootInboxIntegration";
             this.showRecordButtons = this.options.showRecordButtons;
             this.showEditButton = this.options.showEditButton;
 

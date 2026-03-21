@@ -5,6 +5,7 @@ namespace Espo\Modules\Chatwoot\Controllers;
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountMembershipOrchestrator;
 use stdClass;
@@ -21,6 +22,10 @@ class ChatwootAccount extends \Espo\Core\Templates\Controllers\Base
      */
     public function postActionAddUserMembership(Request $request, Response $response): stdClass
     {
+        if (!$this->acl->check('ChatwootAccountUserMembership', 'create')) {
+            throw new Forbidden('No create access to ChatwootAccountUserMembership.');
+        }
+
         $id = $request->getRouteParam('id');
         $payload = $request->getParsedBody();
 

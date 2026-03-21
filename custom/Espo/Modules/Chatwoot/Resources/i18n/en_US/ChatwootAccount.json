@@ -28,6 +28,10 @@
         "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",
         "accountUserMembershipUpserted": "Account user saved successfully.",
         "couldNotUpsertAccountUserMembership": "Could not save account user.",
-        "selectedUserMustHaveEmail": "Selected CRM User must have an email address."
+        "selectedUserMustHaveEmail": "Selected CRM User must have an email address.",
+        "selectedUserMustBelongToAccountTeam": "Selected CRM User must belong to the same team as the Chat Account.",
+        "chatwootUserAlreadyAssignedToAnotherUser": "This chat user is already assigned to a different CRM user.",
+        "noAccountAccess": "You do not have access to this Chat Account.",
+        "noUserAccess": "You do not have access to the selected CRM User."
     }
 }

@@ -78,6 +78,10 @@
         "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",
         "accountUserMembershipUpserted": "Usuário da conta salvo com sucesso.",
         "couldNotUpsertAccountUserMembership": "Não foi possível salvar o usuário da conta.",
-        "selectedUserMustHaveEmail": "O Usuário do CRM selecionado deve ter um endereço de e-mail."
+        "selectedUserMustHaveEmail": "O Usuário do CRM selecionado deve ter um endereço de e-mail.",
+        "selectedUserMustBelongToAccountTeam": "O Usuário do CRM selecionado deve pertencer ao mesmo time da Conta de Chat.",
+        "chatwootUserAlreadyAssignedToAnotherUser": "Este usuário de chat já está vinculado a outro usuário do CRM.",
+        "noAccountAccess": "Você não tem acesso a esta Conta de Chat.",
+        "noUserAccess": "Você não tem acesso ao Usuário do CRM selecionado."
     }
 }

@@ -64,6 +64,32 @@ class SyncWithChatwoot
             return;
         }
 
+        // Enforce CRM User email if a ChatwootUser is linked
+        $linkedChatwootUserId = $entity->get('chatwootUserId');
+        if ($linkedChatwootUserId) {
+            $linkedChatwootUser = $this->entityManager->getEntityById('ChatwootUser', $linkedChatwootUserId);
+            if ($linkedChatwootUser && $linkedChatwootUser->get('assignedUserId')) {
+                $crmUser = $this->entityManager->getEntityById('User', $linkedChatwootUser->get('assignedUserId'));
+                if ($crmUser) {
+                    $crmEmail = $this->extractCrmUserEmail($crmUser);
+
+                    if (!$crmEmail) {
+                        throw new Error('CRM User email is required for Chatwoot agent synchronization.');
+                    }
+
+                    if ($crmEmail !== $entity->get('email')) {
+                        $entity->set('email', $crmEmail);
+                    }
+
+                    // Keep ChatwootUser email in sync
+                    if ($crmEmail !== $linkedChatwootUser->get('email')) {
+                        $linkedChatwootUser->set('email', $crmEmail);
+                        $this->entityManager->saveEntity($linkedChatwootUser, ['silent' => true]);
+                    }
+                }
+            }
+        }
+
         $isNew = $entity->isNew();
         $platformUserId = $this->resolvePlatformUserId($entity);
 
@@ -456,5 +482,26 @@ class SyncWithChatwoot
         }
 
         $this->log->info('Chatwoot agent updated successfully (platformUserId=' . $platformUserId . ')');
+    }
+
+    private function extractCrmUserEmail(Entity $user): ?string
+    {
+        $email = $user->get('emailAddress');
+
+        if (!$email) {
+            $emailAddressData = $user->get('emailAddressData') ?? [];
+
+            if (is_array($emailAddressData) && !empty($emailAddressData)) {
+                $first = $emailAddressData[0] ?? null;
+
+                if (is_object($first)) {
+                    $email = (string) ($first->emailAddress ?? '');
+                } elseif (is_array($first)) {
+                    $email = (string) ($first['emailAddress'] ?? '');
+                }
+            }
+        }
+
+        return $email ?: null;
     }
 }

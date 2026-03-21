@@ -1,8 +1,5 @@
 {
     "fields": {
-        "channelType": {
-            "onlyAdmin": true
-        },
         "chatwootInboxId": {
             "onlyAdmin": true
         },

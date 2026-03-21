@@ -277,6 +277,36 @@ class ChatwootAccountUserMembershipService
             throw new \Espo\Core\Exceptions\BadRequest('Membership must have both a Chat Account and Chat User to enable AI profile.');
         }
 
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
+        if (!$chatwootUser) {
+            throw new \Espo\Core\Exceptions\BadRequest('Chat User not found.');
+        }
+
+        $assignedUserId = $chatwootUser->get('assignedUserId');
+
+        if (!$assignedUserId) {
+            throw new \Espo\Core\Exceptions\BadRequest(
+                'Chat User must be linked to a CRM User to create an AI agent profile.'
+            );
+        }
+
+        $crmUser = $this->entityManager->getEntityById('User', $assignedUserId);
+        if (!$crmUser) {
+            throw new \Espo\Core\Exceptions\BadRequest('CRM User linked to Chat User was not found.');
+        }
+
+        $email = $this->extractCrmUserEmail($crmUser);
+
+        if (!$email) {
+            throw new \Espo\Core\Exceptions\BadRequest('CRM User email is required to create an AI agent profile.');
+        }
+
+        // Keep ChatwootUser email in sync if it differed
+        if ($email !== $chatwootUser->get('email')) {
+            $chatwootUser->set('email', $email);
+            $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+        }
+
         // Check if a ChatwootAgent already exists for this (account, user) pair
         $existingAgent = $this->entityManager
             ->getRDBRepository('ChatwootAgent')
@@ -285,6 +315,19 @@ class ChatwootAccountUserMembershipService
                 'chatwootUserId' => $userId,
             ])
             ->findOne();
+
+        // Fallback: existing records may be linked by email but to a different ChatwootUser.
+        // Reuse that agent to avoid duplicate AI profiles on repeated activations.
+        if (!$existingAgent) {
+            $existingAgent = $this->entityManager
+                ->getRDBRepository('ChatwootAgent')
+                ->where([
+                    'chatwootAccountId' => $accountId,
+                    'email' => $email,
+                ])
+                ->order('createdAt', 'DESC')
+                ->findOne();
+        }
 
         if ($existingAgent) {
             if ($existingAgent->get('isAI')) {
@@ -313,12 +356,6 @@ class ChatwootAccountUserMembershipService
         }
 
         // No existing agent — create one via non-silent createEntity (triggers full hook chain)
-        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
-        if (!$chatwootUser) {
-            throw new \Espo\Core\Exceptions\BadRequest('Chat User not found.');
-        }
-
-        $email = $chatwootUser->get('email');
         $name = $chatwootUser->get('name') ?: $membership->get('name');
         $role = $membership->get('role') ?? 'agent';
 
@@ -431,5 +468,26 @@ class ChatwootAccountUserMembershipService
         }
 
         return $membership;
+    }
+
+    private function extractCrmUserEmail(Entity $user): ?string
+    {
+        $email = $user->get('emailAddress');
+
+        if (!$email) {
+            $emailAddressData = $user->get('emailAddressData') ?? [];
+
+            if (is_array($emailAddressData) && !empty($emailAddressData)) {
+                $first = $emailAddressData[0] ?? null;
+
+                if (is_object($first)) {
+                    $email = (string) ($first->emailAddress ?? '');
+                } elseif (is_array($first)) {
+                    $email = (string) ($first['emailAddress'] ?? '');
+                }
+            }
+        }
+
+        return $email ?: null;
     }
 }

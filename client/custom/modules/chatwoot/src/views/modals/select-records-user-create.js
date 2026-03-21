@@ -1,5 +1,5 @@
 import SelectRecordsModalView from 'views/modals/select-records';
-import RecordModal from 'helpers/record/modal';
+import RecordModal from 'helpers/record-modal';
 
 class SelectRecordsUserCreateModalView extends SelectRecordsModalView {
     noCreateScopeList = ['Team', 'Role', 'Portal']
@@ -46,36 +46,68 @@ class SelectRecordsUserCreateModalView extends SelectRecordsModalView {
                     this.close();
                 });
 
-                const recordView = view.getRecordView();
+                this.listenToOnce(view, 'after:render', () => {
+                    const recordView = view.getRecordView();
 
-                if (!recordView) {
-                    return;
-                }
-
-                ['isActive', 'phoneNumber', 'avatar', 'avatarColor', 'salutationName', 'userName'].forEach(
-                    field => recordView.hideField(field, true)
-                );
-
-                ['teams', 'defaultTeam'].forEach(field => recordView.setFieldReadOnly(field, true));
-
-                recordView.setFieldRequired('emailAddress');
-
-                const syncUserNameFromEmail = () => {
-                    const email = this.extractPrimaryEmail(recordView.model);
-
-                    if (!email) {
+                    if (!recordView) {
                         return;
                     }
 
-                    recordView.model.set('userName', email);
-                };
-
-                syncUserNameFromEmail();
-
-                this.listenTo(recordView.model, 'change:emailAddress', () => syncUserNameFromEmail());
-                this.listenTo(recordView.model, 'change:emailAddressData', () => syncUserNameFromEmail());
+                    this.applyUserCreateConstraints(recordView);
+                });
             },
         });
+    }
+
+    applyUserCreateConstraints(recordView) {
+        ['isActive', 'phoneNumber', 'avatar', 'userName', 'type', 'teams', 'defaultTeam'].forEach(
+            field => recordView.hideField(field, true)
+        );
+
+        recordView.model.set('type', 'regular');
+
+        recordView.setFieldRequired('emailAddress');
+
+        const nameFieldView = recordView.getFieldView('name');
+
+        if (nameFieldView && nameFieldView.$el) {
+            const $salutationSelect = nameFieldView.$el.find('[data-name="salutationName"]');
+
+            if ($salutationSelect.length) {
+                const $salutationColumn = $salutationSelect.closest('.col-sm-3, .col-xs-3');
+
+                $salutationColumn.addClass('hidden');
+
+                const $firstNameCol = nameFieldView.$el.find('[data-name="firstName"]').closest('.col-sm-4, .col-xs-4');
+                const $lastNameCol = nameFieldView.$el.find('[data-name="lastName"]').closest('.col-sm-5, .col-xs-5');
+
+                $firstNameCol.removeClass('col-sm-4 col-xs-4').addClass('col-sm-6 col-xs-6');
+                $lastNameCol.removeClass('col-sm-5 col-xs-5').addClass('col-sm-6 col-xs-6');
+            }
+        }
+
+        const avatarFieldView = recordView.getFieldView('avatar');
+
+        if (avatarFieldView && avatarFieldView.$el) {
+            const $colorSubField = avatarFieldView.$el.find('[data-sub-field="color"]');
+
+            $colorSubField.addClass('hidden');
+        }
+
+        const syncUserNameFromEmail = () => {
+            const email = this.extractPrimaryEmail(recordView.model);
+
+            if (!email) {
+                return;
+            }
+
+            recordView.model.set('userName', email);
+        };
+
+        syncUserNameFromEmail();
+
+        this.listenTo(recordView.model, 'change:emailAddress', () => syncUserNameFromEmail());
+        this.listenTo(recordView.model, 'change:emailAddressData', () => syncUserNameFromEmail());
     }
 
     extractPrimaryEmail(model) {

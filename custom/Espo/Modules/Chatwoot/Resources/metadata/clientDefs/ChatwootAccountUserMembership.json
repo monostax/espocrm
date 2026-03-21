@@ -55,18 +55,29 @@
             }
         }
     },
-    "bottomPanels": {
+    "sidePanels": {
         "detail": [
             {
                 "name": "chatwootInboxes",
-                "label": "Chat / Account / Inboxes",
+                "label": "tabInboxes",
                 "view": "views/record/panels/relationship",
+                "layout": "listSmall",
                 "select": false,
                 "create": false,
                 "unlinkDisabled": true,
-                "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
-                "order": 5,
-                "disabled": false
+                "order": 1
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "chatwootInboxes",
+                "label": "tabInboxes",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "select": false,
+                "create": false,
+                "unlinkDisabled": true,
+                "order": 1
             }
         ]
     },

@@ -66,6 +66,26 @@ define(
                                 "messages",
                                 "ChatwootAccount"
                             ),
+                            selectedUserMustBelongToAccountTeam: this.translate(
+                                "selectedUserMustBelongToAccountTeam",
+                                "messages",
+                                "ChatwootAccount"
+                            ),
+                            chatwootUserAlreadyAssignedToAnotherUser: this.translate(
+                                "chatwootUserAlreadyAssignedToAnotherUser",
+                                "messages",
+                                "ChatwootAccount"
+                            ),
+                            noAccountAccess: this.translate(
+                                "noAccountAccess",
+                                "messages",
+                                "ChatwootAccount"
+                            ),
+                            noUserAccess: this.translate(
+                                "noUserAccess",
+                                "messages",
+                                "ChatwootAccount"
+                            ),
                         };
 
                         const message =

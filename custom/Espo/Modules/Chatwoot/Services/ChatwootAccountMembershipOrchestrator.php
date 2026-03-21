@@ -13,7 +13,9 @@ namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
+use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Acl;
 use Espo\Core\Utils\Log;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -36,7 +38,8 @@ class ChatwootAccountMembershipOrchestrator
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private ChatwootAccountUserMembershipService $membershipService,
-        private Log $log
+        private Log $log,
+        private Acl $acl
     ) {}
 
     /**
@@ -46,10 +49,22 @@ class ChatwootAccountMembershipOrchestrator
      */
     public function addUserMembership(string $accountId, string $userId, string $role): Entity
     {
+        if (!$this->acl->check('ChatwootAccount', 'read')) {
+            throw new Forbidden('noAccountAccess');
+        }
+
+        if (!$this->acl->check('User', 'read')) {
+            throw new Forbidden('noUserAccess');
+        }
+
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
 
         if (!$account) {
             throw new NotFound('ChatwootAccount not found.');
+        }
+
+        if (!$this->acl->check($account, 'read')) {
+            throw new Forbidden('noAccountAccess');
         }
 
         $user = $this->entityManager->getEntityById('User', $userId);
@@ -57,6 +72,12 @@ class ChatwootAccountMembershipOrchestrator
         if (!$user) {
             throw new NotFound('CRM User not found.');
         }
+
+        if (!$this->acl->check($user, 'read')) {
+            throw new Forbidden('noUserAccess');
+        }
+
+        $this->assertUserBelongsToAccountTeam($account, $user);
 
         $platformId = $account->get('platformId');
         if (!$platformId) {
@@ -81,7 +102,11 @@ class ChatwootAccountMembershipOrchestrator
             throw new BadRequest('ChatwootPlatform is missing backend URL or access token.');
         }
 
-        $email = $this->extractUserEmail($user);
+        $email = $this->extractCrmUserEmail($user);
+
+        if (!$email) {
+            throw new BadRequest('selectedUserMustHaveEmail');
+        }
         $name = $user->get('name') ?: $user->get('userName') ?: $email;
         $teamsIds = $account->get('teamsIds') ?? [];
 
@@ -122,6 +147,11 @@ class ChatwootAccountMembershipOrchestrator
                     'chatwootUserId' => $createdRemoteUserId,
                     'teamsIds' => $teamsIds,
                 ], ['silent' => true]);
+            }
+
+            if ($chatwootUser->get('email') !== $email) {
+                $chatwootUser->set('email', $email);
+                $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
             }
 
             $chatwootUserId = $chatwootUser->getId();
@@ -226,36 +256,12 @@ class ChatwootAccountMembershipOrchestrator
                 }
             }
 
-            throw new Error('Failed to add account user membership: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * @throws BadRequest
-     */
-    private function extractUserEmail(Entity $user): string
-    {
-        $email = $user->get('emailAddress');
-
-        if (!$email) {
-            $emailAddressData = $user->get('emailAddressData') ?? [];
-
-            if (is_array($emailAddressData) && !empty($emailAddressData)) {
-                $first = $emailAddressData[0] ?? null;
-
-                if (is_object($first)) {
-                    $email = (string) ($first->emailAddress ?? '');
-                } elseif (is_array($first)) {
-                    $email = (string) ($first['emailAddress'] ?? '');
-                }
+            if ($e instanceof BadRequest || $e instanceof Forbidden || $e instanceof NotFound) {
+                throw $e;
             }
-        }
 
-        if (!$email) {
-            throw new BadRequest('selectedUserMustHaveEmail');
+            throw new Error('Failed to add account user membership.');
         }
-
-        return $email;
     }
 
     private function findChatwootUser(string $platformId, string $userId, string $email): ?Entity
@@ -273,7 +279,7 @@ class ChatwootAccountMembershipOrchestrator
             return $byAssigned;
         }
 
-        return $this->entityManager
+        $byEmail = $this->entityManager
             ->getRDBRepository('ChatwootUser')
             ->where([
                 'platformId' => $platformId,
@@ -281,6 +287,45 @@ class ChatwootAccountMembershipOrchestrator
             ])
             ->order('createdAt', 'DESC')
             ->findOne();
+
+        if (!$byEmail) {
+            return null;
+        }
+
+        $assignedUserId = $byEmail->get('assignedUserId');
+
+        if ($assignedUserId && $assignedUserId !== $userId) {
+            throw new Forbidden('chatwootUserAlreadyAssignedToAnotherUser');
+        }
+
+        if (!$assignedUserId) {
+            $byEmail->set('assignedUserId', $userId);
+            $this->entityManager->saveEntity($byEmail, ['silent' => true]);
+        }
+
+        return $byEmail;
+    }
+
+    /**
+     * @throws Forbidden
+     */
+    private function assertUserBelongsToAccountTeam(Entity $account, Entity $user): void
+    {
+        $accountTeamsIds = array_values(array_filter((array) ($account->get('teamsIds') ?? [])));
+
+        if (!$accountTeamsIds) {
+            return;
+        }
+
+        $userTeamsIds = array_values(array_filter((array) ($user->get('teamsIds') ?? [])));
+
+        if (!$userTeamsIds) {
+            throw new Forbidden('selectedUserMustBelongToAccountTeam');
+        }
+
+        if (!array_intersect($accountTeamsIds, $userTeamsIds)) {
+            throw new Forbidden('selectedUserMustBelongToAccountTeam');
+        }
     }
 
     /**
@@ -331,5 +376,26 @@ class ChatwootAccountMembershipOrchestrator
     private function generatePassword(): string
     {
         return bin2hex(random_bytes(8)) . '!A1';
+    }
+
+    private function extractCrmUserEmail(Entity $user): ?string
+    {
+        $email = $user->get('emailAddress');
+
+        if (!$email) {
+            $emailAddressData = $user->get('emailAddressData') ?? [];
+
+            if (is_array($emailAddressData) && !empty($emailAddressData)) {
+                $first = $emailAddressData[0] ?? null;
+
+                if (is_object($first)) {
+                    $email = (string) ($first->emailAddress ?? '');
+                } elseif (is_array($first)) {
+                    $email = (string) ($first['emailAddress'] ?? '');
+                }
+            }
+        }
+
+        return $email ?: null;
     }
 }

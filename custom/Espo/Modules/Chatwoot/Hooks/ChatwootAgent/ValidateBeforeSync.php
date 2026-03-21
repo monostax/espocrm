@@ -99,9 +99,33 @@ class ValidateBeforeSync
             throw new Error('ChatwootPlatform does not have a URL configured.');
         }
 
-        // Validate email is set for new agents (required by Chatwoot API)
+        // Ensure email is set for new agents (required by Chatwoot API).
+        // If linked ChatwootUser -> assigned CRM User exists, source email from CRM User.
         if ($entity->isNew() && !$entity->get('email')) {
-            throw new BadRequest('Email is required for ChatwootAgent.');
+            $chatwootUserId = $entity->get('chatwootUserId');
+
+            if ($chatwootUserId) {
+                $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+                $assignedUserId = $chatwootUser?->get('assignedUserId');
+
+                if ($assignedUserId) {
+                    $crmUser = $this->entityManager->getEntityById('User', $assignedUserId);
+                    $crmEmail = $crmUser ? $this->extractCrmUserEmail($crmUser) : null;
+
+                    if ($crmEmail) {
+                        $entity->set('email', $crmEmail);
+
+                        if ($chatwootUser && $chatwootUser->get('email') !== $crmEmail) {
+                            $chatwootUser->set('email', $crmEmail);
+                            $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+                        }
+                    }
+                }
+            }
+
+            if (!$entity->get('email')) {
+                throw new BadRequest('Email is required for ChatwootAgent.');
+            }
         }
 
         // Validate name is set for new agents
@@ -114,5 +138,26 @@ class ValidateBeforeSync
             $entity->set('role', 'agent');
         }
 
+    }
+
+    private function extractCrmUserEmail(Entity $user): ?string
+    {
+        $email = $user->get('emailAddress');
+
+        if (!$email) {
+            $emailAddressData = $user->get('emailAddressData') ?? [];
+
+            if (is_array($emailAddressData) && !empty($emailAddressData)) {
+                $first = $emailAddressData[0] ?? null;
+
+                if (is_object($first)) {
+                    $email = (string) ($first->emailAddress ?? '');
+                } elseif (is_array($first)) {
+                    $email = (string) ($first['emailAddress'] ?? '');
+                }
+            }
+        }
+
+        return $email ?: null;
     }
 }

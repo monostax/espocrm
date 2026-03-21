@@ -22,6 +22,7 @@
         "chatwootInboxes": "Chat / Account / Inboxes"
     },
     "labels": {
+        "tabInboxes": "Inboxes",
         "Create ChatwootAccountUserMembership": "Create Account User",
         "Enable AI Profile": "Enable AI Profile",
         "Disable AI Profile": "Disable AI Profile",

@@ -165,7 +165,7 @@ class SeedRole implements RebuildAction
                     'delete' => 'team',
                 ],
                 'ChatwootAccountUserMembership' => [
-                    'create' => 'no',
+                    'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',
                     'delete' => 'team',
@@ -560,7 +560,9 @@ class SeedRole implements RebuildAction
                 'ChatwootContact' => (object)[],
                 'ChatwootContactInbox' => (object)[],
                 'ChatwootConversation' => (object)[],
-                'ChatwootInbox' => (object)[],
+                'ChatwootInbox' => (object)[
+                    'channelType' => (object)['read' => 'yes', 'edit' => 'no'],
+                ],
                 'ChatwootMessage' => (object)[],
                 'ChatwootSyncState' => (object)[],
 

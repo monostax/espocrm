@@ -22,6 +22,7 @@
         "chatwootInboxes": "Chat / Conta / Caixas de Entrada"
     },
     "labels": {
+        "tabInboxes": "Caixas de Entrada",
         "tabUsers": "Agentes",
         "Create ChatwootAccountUserMembership": "Cadastrar Agente",
         "Enable AI Profile": "Ativar Perfil IA",
