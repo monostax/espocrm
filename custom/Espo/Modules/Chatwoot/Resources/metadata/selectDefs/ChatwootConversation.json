@@ -8,6 +8,11 @@
     "boolFilterClassNameMap": {
         "assignedToMe": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\BoolFilters\\AssignedToMe"
     },
+    "accessControlFilterClassNameMap": {
+        "all": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\AccessControlFilters\\ByMembershipInbox",
+        "onlyTeam": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\AccessControlFilters\\ByMembershipInbox",
+        "onlyOwn": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\AccessControlFilters\\ByMembershipInbox"
+    },
     "textFilterUseContainsAttributeList": ["name", "contactDisplayName", "contactPhoneNumber", "messages.content"]
 }
 
