@@ -4,7 +4,6 @@
         "Chatwoot": "Chat",
         "Inbox Integrations": "Inbox Integrations",
         "Users": "Users",
-        "Agents": "Agents",
         "Teams": "Teams",
         "Knowledge Base": "Knowledge Base",
         "WhatsApp Campaigns": "WhatsApp Campaigns",
@@ -13,7 +12,6 @@
     "descriptions": {
         "chatwootInboxIntegrations": "Manage Chat inbox integrations for WhatsApp and other channels",
         "chatwootUsers": "Manage Chat user accounts",
-        "chatwootAgents": "Manage Chat agents and their assignments",
         "chatwootTeams": "Manage Chat teams and team memberships",
         "knowledgeBase": "Manage AI-indexed Knowledge Base categories",
         "whatsAppCampaigns": "Manage WhatsApp marketing campaigns and bulk messaging",
@@ -22,7 +20,6 @@
     "keywords": {
         "chatwootInboxIntegrations": "whatsapp,inbox,integration,channel",
         "chatwootUsers": "user,account,chatwoot",
-        "chatwootAgents": "agent,support,representative",
         "chatwootTeams": "team,group,department",
         "knowledgeBase": "knowledge,base,ai,category,article",
         "whatsAppCampaigns": "whatsapp,campaign,bulk,message,template",

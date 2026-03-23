@@ -33,7 +33,10 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
  * Hook to delete ChatwootUser from Chatwoot Platform API.
  * This hook works for BOTH regular delete AND mass delete.
  * Deletes the user from Chatwoot BEFORE deleting from EspoCRM.
- * Also cascade deletes all linked ChatwootAgent records.
+ *
+ * After Phase 9, membership cascade deletion is handled by EspoCRM's built-in
+ * cascadeDelete.links on ChatwootUser (accountUserMemberships).
+ * The membership's own DeleteFromChatwoot hook handles Platform API detach.
  */
 class DeleteFromChatwootLegacy
 {
@@ -46,7 +49,8 @@ class DeleteFromChatwootLegacy
     ) {}
 
     /**
-     * Delete user from Chatwoot and cascade delete linked agents BEFORE entity is removed from database.
+     * Delete user from Chatwoot BEFORE entity is removed from database.
+     * Memberships are cascade-deleted by EspoCRM via cascadeDelete.links.
      * 
      * @param Entity $entity
      * @param array<string, mixed> $options
@@ -55,9 +59,6 @@ class DeleteFromChatwootLegacy
     public function beforeRemove(Entity $entity, array $options)
     {
         $this->log->info('DELETE HOOK CALLED for ChatwootUser: ' . $entity->getId());
-        
-        // First, cascade delete all linked ChatwootAgents
-        $this->cascadeDeleteAgents($entity);
         
         $chatwootUserId = $entity->get('chatwootUserId');
         
@@ -102,7 +103,6 @@ class DeleteFromChatwootLegacy
 
         } catch (\Exception $e) {
             // If the resource doesn't exist (404), allow deletion from EspoCRM
-            // The user is already gone from Chatwoot
             if (str_contains($e->getMessage(), '404') || str_contains($e->getMessage(), 'not found')) {
                 $this->log->warning(
                     'Chatwoot user ' . $chatwootUserId . ' not found in Chatwoot (already deleted?). ' .
@@ -115,53 +115,10 @@ class DeleteFromChatwootLegacy
                 'Failed to delete Chatwoot user ' . $chatwootUserId . ': ' . $e->getMessage()
             );
             
-            // Re-throw - this will prevent the database DELETE from happening
             throw new Error(
                 'Failed to delete user from Chatwoot: ' . $e->getMessage() . 
                 '. The user was not deleted from EspoCRM to maintain synchronization. ' .
                 'Please check if the user still exists in Chatwoot or try again.'
-            );
-        }
-    }
-
-    /**
-     * Cascade delete all ChatwootAgents linked to this ChatwootUser.
-     * This will trigger the ChatwootAgent delete hooks which will also
-     * remove the agents from Chatwoot.
-     */
-    private function cascadeDeleteAgents(Entity $entity): void
-    {
-        $userId = $entity->getId();
-        
-        // Find all ChatwootAgents linked to this user
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where(['chatwootUserId' => $userId])
-            ->find();
-
-        $count = 0;
-        foreach ($agents as $agent) {
-            try {
-                $this->log->info(
-                    'Cascade deleting ChatwootAgent ' . $agent->getId() . 
-                    ' (linked to ChatwootUser ' . $userId . ')'
-                );
-                
-                // This will trigger the ChatwootAgent delete hook
-                // which handles deleting from Chatwoot
-                $this->entityManager->removeEntity($agent);
-                $count++;
-            } catch (\Exception $e) {
-                $this->log->error(
-                    'Failed to cascade delete ChatwootAgent ' . $agent->getId() . ': ' . $e->getMessage()
-                );
-                // Continue with other agents even if one fails
-            }
-        }
-
-        if ($count > 0) {
-            $this->log->info(
-                'Cascade deleted ' . $count . ' ChatwootAgent(s) linked to ChatwootUser ' . $userId
             );
         }
     }

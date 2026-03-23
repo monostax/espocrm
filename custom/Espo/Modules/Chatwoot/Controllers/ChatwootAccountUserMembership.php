@@ -24,14 +24,14 @@ use stdClass;
  * Controller for ChatwootAccountUserMembership entity.
  *
  * Provides custom actions for enabling/disabling AI agent profiles
- * on membership entities (Phase 7).
+ * on membership entities.
  */
 class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Base
 {
     /**
      * POST ChatwootAccountUserMembership/:id/enableAiProfile
      *
-     * Creates or re-enables an AI agent profile for this membership.
+     * Enables the AI agent profile on this membership.
      *
      * @throws BadRequest
      * @throws Error
@@ -57,13 +57,9 @@ class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Bas
             throw new BadRequest("Membership must have both a Chat Account and Chat User linked.");
         }
 
-        // If agent already linked, check if AI is already enabled
-        $agentId = $membership->get('chatwootAgentId');
-        if ($agentId) {
-            $agent = $this->getEntityManager()->getEntityById('ChatwootAgent', $agentId);
-            if ($agent && $agent->get('isAI')) {
-                throw new BadRequest("AI profile is already enabled on the linked agent.");
-            }
+        // Check if AI is already enabled directly on the membership
+        if ($membership->get('isAI')) {
+            throw new BadRequest("AI profile is already enabled on this membership.");
         }
 
         $service = $this->getMembershipService();
@@ -75,8 +71,7 @@ class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Bas
     /**
      * POST ChatwootAccountUserMembership/:id/disableAiProfile
      *
-     * Disables AI capabilities on the linked agent profile.
-     * The agent entity and link are preserved (Decision #10).
+     * Disables AI capabilities on this membership.
      *
      * @throws BadRequest
      * @throws Error
@@ -97,20 +92,9 @@ class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Bas
             throw new NotFound("Membership not found.");
         }
 
-        // Validate: must have an agent linked
-        $agentId = $membership->get('chatwootAgentId');
-        if (!$agentId) {
-            throw new BadRequest("No agent profile is linked to this membership.");
-        }
-
-        // Validate: agent must have isAI = true
-        $agent = $this->getEntityManager()->getEntityById('ChatwootAgent', $agentId);
-        if (!$agent) {
-            throw new BadRequest("Linked agent profile not found.");
-        }
-
-        if (!$agent->get('isAI')) {
-            throw new BadRequest("AI profile is already disabled on the linked agent.");
+        // Check if AI is already disabled directly on the membership
+        if (!$membership->get('isAI')) {
+            throw new BadRequest("AI profile is already disabled on this membership.");
         }
 
         $service = $this->getMembershipService();

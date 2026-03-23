@@ -29,8 +29,8 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
- * Hook to sync ChatwootTeam agent membership with Chatwoot.
- * When an agent is linked/unlinked to a ChatwootTeam (from team side), sync to Chatwoot API.
+ * Hook to sync ChatwootTeam membership with Chatwoot.
+ * When a membership is linked/unlinked to a ChatwootTeam (from team side), sync to Chatwoot API.
  */
 class SyncTeamMembership
 {
@@ -43,11 +43,11 @@ class SyncTeamMembership
     ) {}
 
     /**
-     * Called when a ChatwootAgent is linked to this ChatwootTeam.
+     * Called when a ChatwootAccountUserMembership is linked to this ChatwootTeam.
      */
     public function afterRelate(Entity $entity, array $options, array $relationParams): void
     {
-        if (!isset($relationParams['relationName']) || $relationParams['relationName'] !== 'chatwootAgents') {
+        if (!isset($relationParams['relationName']) || $relationParams['relationName'] !== 'accountUserMemberships') {
             return;
         }
 
@@ -55,16 +55,16 @@ class SyncTeamMembership
             return;
         }
 
-        $agentId = $relationParams['foreignId'];
-        $this->syncAddAgentToTeam($entity, $agentId);
+        $membershipId = $relationParams['foreignId'];
+        $this->syncAddMembershipToTeam($entity, $membershipId);
     }
 
     /**
-     * Called when a ChatwootAgent is unlinked from this ChatwootTeam.
+     * Called when a ChatwootAccountUserMembership is unlinked from this ChatwootTeam.
      */
     public function afterUnrelate(Entity $entity, array $options, array $relationParams): void
     {
-        if (!isset($relationParams['relationName']) || $relationParams['relationName'] !== 'chatwootAgents') {
+        if (!isset($relationParams['relationName']) || $relationParams['relationName'] !== 'accountUserMemberships') {
             return;
         }
 
@@ -72,14 +72,14 @@ class SyncTeamMembership
             return;
         }
 
-        $agentId = $relationParams['foreignId'];
-        $this->syncRemoveAgentFromTeam($entity, $agentId);
+        $membershipId = $relationParams['foreignId'];
+        $this->syncRemoveMembershipFromTeam($entity, $membershipId);
     }
 
     /**
-     * Add agent to team in Chatwoot.
+     * Add membership to team in Chatwoot.
      */
-    private function syncAddAgentToTeam(Entity $team, string $agentEntityId): void
+    private function syncAddMembershipToTeam(Entity $team, string $membershipEntityId): void
     {
         $chatwootTeamId = $team->get('chatwootTeamId');
         if (!$chatwootTeamId) {
@@ -88,15 +88,15 @@ class SyncTeamMembership
         }
 
         try {
-            $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentEntityId);
-            if (!$agent) {
-                $this->log->warning('SyncTeamMembership (Team): ChatwootAgent not found: ' . $agentEntityId);
+            $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membershipEntityId);
+            if (!$membership) {
+                $this->log->warning('SyncTeamMembership (Team): ChatwootAccountUserMembership not found: ' . $membershipEntityId);
                 return;
             }
 
-            $platformUserId = $this->resolvePlatformUserId($agent);
+            $platformUserId = $this->resolvePlatformUserId($membership);
             if (!$platformUserId) {
-                $this->log->warning('SyncTeamMembership (Team): Agent has no linked ChatwootUser with chatwootUserId, cannot sync');
+                $this->log->warning('SyncTeamMembership (Team): Membership has no linked ChatwootUser with chatwootUserId, cannot sync');
                 return;
             }
 
@@ -106,7 +106,7 @@ class SyncTeamMembership
                 return;
             }
 
-            $this->log->info("SyncTeamMembership (Team): Adding agent (platformUserId={$platformUserId}) to team {$chatwootTeamId}");
+            $this->log->info("SyncTeamMembership (Team): Adding membership (platformUserId={$platformUserId}) to team {$chatwootTeamId}");
 
             $this->apiClient->addTeamMembers(
                 $credentials['platformUrl'],
@@ -116,17 +116,17 @@ class SyncTeamMembership
                 [$platformUserId]
             );
 
-            $this->log->info("SyncTeamMembership (Team): Successfully added agent (platformUserId={$platformUserId}) to team {$chatwootTeamId}");
+            $this->log->info("SyncTeamMembership (Team): Successfully added membership (platformUserId={$platformUserId}) to team {$chatwootTeamId}");
 
         } catch (\Exception $e) {
-            $this->log->error('SyncTeamMembership (Team): Failed to add agent to team: ' . $e->getMessage());
+            $this->log->error('SyncTeamMembership (Team): Failed to add membership to team: ' . $e->getMessage());
         }
     }
 
     /**
-     * Remove agent from team in Chatwoot.
+     * Remove membership from team in Chatwoot.
      */
-    private function syncRemoveAgentFromTeam(Entity $team, string $agentEntityId): void
+    private function syncRemoveMembershipFromTeam(Entity $team, string $membershipEntityId): void
     {
         $chatwootTeamId = $team->get('chatwootTeamId');
         if (!$chatwootTeamId) {
@@ -135,15 +135,15 @@ class SyncTeamMembership
         }
 
         try {
-            $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentEntityId);
-            if (!$agent) {
-                $this->log->warning('SyncTeamMembership (Team): ChatwootAgent not found: ' . $agentEntityId);
+            $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membershipEntityId);
+            if (!$membership) {
+                $this->log->warning('SyncTeamMembership (Team): ChatwootAccountUserMembership not found: ' . $membershipEntityId);
                 return;
             }
 
-            $platformUserId = $this->resolvePlatformUserId($agent);
+            $platformUserId = $this->resolvePlatformUserId($membership);
             if (!$platformUserId) {
-                $this->log->warning('SyncTeamMembership (Team): Agent has no linked ChatwootUser with chatwootUserId, cannot sync');
+                $this->log->warning('SyncTeamMembership (Team): Membership has no linked ChatwootUser with chatwootUserId, cannot sync');
                 return;
             }
 
@@ -153,7 +153,7 @@ class SyncTeamMembership
                 return;
             }
 
-            $this->log->info("SyncTeamMembership (Team): Removing agent (platformUserId={$platformUserId}) from team {$chatwootTeamId}");
+            $this->log->info("SyncTeamMembership (Team): Removing membership (platformUserId={$platformUserId}) from team {$chatwootTeamId}");
 
             $this->apiClient->removeTeamMembers(
                 $credentials['platformUrl'],
@@ -163,19 +163,19 @@ class SyncTeamMembership
                 [$platformUserId]
             );
 
-            $this->log->info("SyncTeamMembership (Team): Successfully removed agent (platformUserId={$platformUserId}) from team {$chatwootTeamId}");
+            $this->log->info("SyncTeamMembership (Team): Successfully removed membership (platformUserId={$platformUserId}) from team {$chatwootTeamId}");
 
         } catch (\Exception $e) {
-            $this->log->error('SyncTeamMembership (Team): Failed to remove agent from team: ' . $e->getMessage());
+            $this->log->error('SyncTeamMembership (Team): Failed to remove membership from team: ' . $e->getMessage());
         }
     }
 
     /**
-     * Resolve the Chatwoot platform user ID from the agent's linked ChatwootUser.
+     * Resolve the Chatwoot platform user ID from the membership's linked ChatwootUser.
      */
-    private function resolvePlatformUserId(Entity $agent): ?int
+    private function resolvePlatformUserId(Entity $membership): ?int
     {
-        $chatwootUserId = $agent->get('chatwootUserId');
+        $chatwootUserId = $membership->get('chatwootUserId');
         if (!$chatwootUserId) {
             return null;
         }

@@ -71,7 +71,7 @@
             "required": true,
             "readOnly": true
         },
-        "chatwootAgents": {
+        "accountUserMemberships": {
             "type": "linkMultiple"
         }
     },
@@ -95,10 +95,10 @@
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
         },
-        "chatwootAgents": {
+        "accountUserMemberships": {
             "type": "hasMany",
-            "entity": "ChatwootAgent",
-            "relationName": "chatwootAgentChatwootTeam",
+            "entity": "ChatwootAccountUserMembership",
+            "relationName": "chatwootAccountUserMembershipChatwootTeam",
             "foreign": "chatwootTeams"
         }
     },

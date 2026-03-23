@@ -16,11 +16,11 @@
             "foreign": "professionals",
             "relationName": "appointmentProfessional"
         },
-        "chatwootAgentsWithCalendarAccess": {
+        "accountUserMembershipsWithCalendarAccess": {
             "type": "hasMany",
-            "entity": "ChatwootAgent",
+            "entity": "ChatwootAccountUserMembership",
             "foreign": "calendarsToManage",
-            "relationName": "chatwootAgentCalendarUser"
+            "relationName": "chatwootAccountUserMembershipCalendarUser"
         }
     }
 }

@@ -40,15 +40,63 @@
                         }
                     ]
                 }
-            }
-        },
-        "panels": {
-            "aiProfile": {
+            },
+            "aiPrompt": {
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "isNotEmpty",
-                            "attribute": "chatwootAgentId"
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
+            "knowledgeBaseCategories": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
+            "calendarsToManage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
+            "transferScenarios": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "contextualTransferIsEnabled"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "contextualTransferIsEnabled"
+                        }
+                    ]
+                }
+            }
+        },
+        "panels": {
+            "aiConfiguration": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
                         }
                     ]
                 }
@@ -81,11 +129,30 @@
             }
         ]
     },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "chatwootTeams",
+                "label": "Chat / Teams",
+                "view": "views/record/panels/relationship",
+                "select": true,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
+                "order": 5,
+                "disabled": false
+            }
+        ]
+    },
     "relationshipPanels": {
         "chatwootInboxes": {
             "select": false,
             "create": false,
             "unlinkDisabled": true
+        },
+        "chatwootTeams": {
+            "create": false,
+            "select": true,
+            "view": "views/record/panels/relationship"
         }
     }
 }

@@ -36,7 +36,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
  * ChatwootAccountUserMembership table.
  *
  * Uses platform accessToken (not account apiKey) — novel credential path.
- * Runs every 5 minutes (Decision #7).
+ * Runs every 5 minutes.
  */
 class SyncAccountMembersFromChatwoot implements JobDataLess
 {
@@ -109,7 +109,7 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
             $accessToken = $platform->get('accessToken');
             $chatwootAccountId = $account->get('chatwootAccountId');
 
-            // Decision #12: falsy guard to catch both null and '' (empty string)
+            // Falsy guard to catch both null and '' (empty string)
             if (!$platformUrl || !$accessToken || !$chatwootAccountId) {
                 $this->log->warning(
                     "SyncAccountMembersFromChatwoot: Skipping account {$accountName} - " .
@@ -128,30 +128,15 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
                 $chatwootAccountId
             );
 
-            // --- Build remote-truth key set FIRST (Decision #10) ---
+            // --- Build remote-truth key set FIRST ---
             $remoteUserIds = [];
             foreach ($remoteAccountUsers as $remoteAccountUser) {
                 $remoteUserIds[] = (int) $remoteAccountUser['user_id'];
             }
 
-            // --- Empty-response guard ---
-            $localMemberships = $this->entityManager
-                ->getRDBRepository('ChatwootAccountUserMembership')
-                ->where(['chatwootAccountId' => $espoAccountId])
-                ->find();
-
-            $localMembershipList = iterator_to_array($localMemberships);
-
-            if (empty($remoteAccountUsers) && !empty($localMembershipList)) {
-                $this->log->warning(
-                    "SyncAccountMembersFromChatwoot: Account {$accountName} - " .
-                    'remote account_users list is empty but local memberships exist. ' .
-                    'Skipping stale-marking to protect against API errors.'
-                );
-                return;
-            }
-
             // --- Process each remote account_user ---
+            // Note: an empty remote list is valid (all users removed from Chatwoot account).
+            // The stale detection pass below will handle cleanup.
             $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'stale' => 0];
 
             foreach ($remoteAccountUsers as $remoteAccountUser) {
@@ -178,21 +163,7 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
                     continue;
                 }
 
-                // Optionally resolve ChatwootAgent to get agentId
-                $agentId = null;
-                $agent = $this->entityManager
-                    ->getRDBRepository('ChatwootAgent')
-                    ->where([
-                        'chatwootAccountId' => $espoAccountId,
-                        'chatwootUserId' => $localUser->getId(),
-                    ])
-                    ->findOne();
-
-                if ($agent) {
-                    $agentId = $agent->getId();
-                }
-
-                // Upsert membership with 5 params (Decision #8)
+                // Upsert membership
                 $existingMembership = $this->entityManager
                     ->getRDBRepository('ChatwootAccountUserMembership')
                     ->where([
@@ -207,7 +178,6 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
                     $espoAccountId,
                     $localUser->getId(),
                     $remoteRole,
-                    $agentId,
                     $remoteAccountUserId
                 );
 
@@ -221,7 +191,7 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
                 }
             }
 
-            // --- Stale detection + removal (Decision #10 redesigned) ---
+            // --- Stale detection + removal ---
             // Re-fetch local memberships (may have been created/updated above)
             $allLocalMemberships = $this->entityManager
                 ->getRDBRepository('ChatwootAccountUserMembership')
@@ -262,6 +232,11 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
                 }
             }
 
+            // --- Orphaned ChatwootUser cleanup ---
+            // Clean up ChatwootUsers in the platform that have zero memberships.
+            // Handles the case where memberships were deleted through a different path.
+            $this->cleanupOrphanedUsersForAccount($espoAccountId);
+
             $this->log->debug(
                 "SyncAccountMembersFromChatwoot: Account {$accountName} - " .
                 "created={$stats['created']}, updated={$stats['updated']}, " .
@@ -269,15 +244,29 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
             );
 
         } catch (\Exception $e) {
-            $this->log->error(
-                "SyncAccountMembersFromChatwoot: Sync failed for account {$accountName}: " .
-                $e->getMessage()
-            );
+            $message = $e->getMessage();
+
+            // Chatwoot is the source of truth. A 401 or 404 means the account
+            // or its credentials no longer exist in Chatwoot. Clean up all local
+            // memberships and orphaned ChatwootUsers for this account.
+            if ($this->isAccountGoneError($message)) {
+                $this->log->warning(
+                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned 401/404 — " .
+                    "account likely deleted from Chatwoot (source of truth). " .
+                    "Cleaning up local memberships and orphaned users."
+                );
+                $this->cleanupAccountMembershipsAndUsers($account);
+            } else {
+                $this->log->error(
+                    "SyncAccountMembersFromChatwoot: Sync failed for account {$accountName}: " .
+                    $message
+                );
+            }
         }
     }
 
     /**
-     * Remove a stale membership and its linked agent.
+     * Remove a stale membership.
      *
      * If the underlying ChatwootUser has no remaining memberships after
      * removal, the user record is deleted too (platform user was deleted).
@@ -286,27 +275,6 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
     {
         $membershipId = $membership->getId();
         $chatwootUserId = $membership->get('chatwootUserId');
-        $agentId = $membership->get('chatwootAgentId');
-
-        // Remove linked agent first (if any)
-        if ($agentId) {
-            $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
-
-            if ($agent) {
-                try {
-                    $this->entityManager->removeEntity($agent);
-                    $this->log->info(
-                        "SyncAccountMembersFromChatwoot: Removed stale agent {$agentId} " .
-                        "linked to membership {$membershipId}"
-                    );
-                } catch (\Exception $e) {
-                    $this->log->error(
-                        "SyncAccountMembersFromChatwoot: Failed to remove agent {$agentId}: " .
-                        $e->getMessage()
-                    );
-                }
-            }
-        }
 
         // Remove the membership
         try {
@@ -360,6 +328,144 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
             $this->log->error(
                 "SyncAccountMembersFromChatwoot: Failed to remove orphaned ChatwootUser {$chatwootUserId}: " .
                 $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Check if the error message indicates the Chatwoot account is gone (401/404).
+     */
+    private function isAccountGoneError(string $message): bool
+    {
+        return (bool) preg_match('/HTTP\s+(401|404)\b/', $message);
+    }
+
+    /**
+     * Clean up all memberships and orphaned ChatwootUsers when a Chatwoot account
+     * is gone (source of truth returned 401/404).
+     *
+     * Removes all memberships for the account, then cleans up any ChatwootUsers
+     * that have zero remaining memberships across all accounts in the platform.
+     */
+    private function cleanupAccountMembershipsAndUsers(Entity $account): void
+    {
+        $espoAccountId = $account->getId();
+        $accountName = $account->get('name');
+
+        // Remove all memberships for this account
+        $memberships = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootAccountId' => $espoAccountId])
+            ->find();
+
+        $removedCount = 0;
+        foreach ($memberships as $membership) {
+            $this->removeStaleMembership($membership);
+            $removedCount++;
+        }
+
+        if ($removedCount > 0) {
+            $this->log->info(
+                "SyncAccountMembersFromChatwoot: Removed {$removedCount} membership(s) for gone account '{$accountName}'"
+            );
+        }
+
+        // Clean up orphaned ChatwootUsers in this platform
+        $this->cleanupOrphanedUsersForAccount($espoAccountId);
+    }
+
+    /**
+     * Clean up orphaned memberships and ChatwootUsers in the account's platform.
+     *
+     * First removes memberships that reference deleted/gone ChatwootAccounts in
+     * this platform (dangling FKs from old accounts). Then removes any
+     * ChatwootUsers with zero remaining memberships.
+     */
+    private function cleanupOrphanedUsersForAccount(string $espoAccountId): void
+    {
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $espoAccountId);
+        if (!$account) {
+            return;
+        }
+
+        $platformId = $account->get('platformId');
+        if (!$platformId) {
+            return;
+        }
+
+        // Phase 1: Remove memberships on deleted accounts in this platform.
+        $this->cleanupMembershipsOnDeletedAccounts($platformId);
+
+        // Phase 2: Remove ChatwootUsers with zero remaining memberships.
+        $users = $this->entityManager
+            ->getRDBRepository('ChatwootUser')
+            ->where(['platformId' => $platformId])
+            ->find();
+
+        foreach ($users as $user) {
+            $remainingMemberships = $this->entityManager
+                ->getRDBRepository('ChatwootAccountUserMembership')
+                ->where(['chatwootUserId' => $user->getId()])
+                ->count();
+
+            if ($remainingMemberships === 0) {
+                try {
+                    $userName = $user->get('name');
+                    $this->entityManager->removeEntity($user);
+                    $this->log->info(
+                        "SyncAccountMembersFromChatwoot: Cleaned up orphaned ChatwootUser '{$userName}' " .
+                        "({$user->getId()}) — zero memberships in platform {$platformId}"
+                    );
+                } catch (\Exception $e) {
+                    $this->log->error(
+                        "SyncAccountMembersFromChatwoot: Failed to clean up ChatwootUser {$user->getId()}: " .
+                        $e->getMessage()
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Remove memberships that belong to soft-deleted ChatwootAccounts in a platform.
+     *
+     * Uses raw SQL because EspoCRM's ORM `find()` on ChatwootAccount already
+     * filters `deleted = 0`, so we can't join to deleted accounts with the ORM.
+     */
+    private function cleanupMembershipsOnDeletedAccounts(string $platformId): void
+    {
+        $pdo = $this->entityManager->getPDO();
+
+        $stmt = $pdo->prepare("
+            SELECT m.id
+            FROM chatwoot_account_user_membership m
+            INNER JOIN chatwoot_account a ON a.id = m.chatwoot_account_id
+            WHERE a.platform_id = ?
+              AND a.deleted = 1
+              AND m.deleted = 0
+        ");
+        $stmt->execute([$platformId]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+        if (empty($rows)) {
+            return;
+        }
+
+        $count = 0;
+        foreach ($rows as $membershipId) {
+            $membership = $this->entityManager->getEntityById(
+                'ChatwootAccountUserMembership',
+                $membershipId
+            );
+            if ($membership) {
+                $this->removeStaleMembership($membership);
+                $count++;
+            }
+        }
+
+        if ($count > 0) {
+            $this->log->info(
+                "SyncAccountMembersFromChatwoot: Removed {$count} dangling membership(s) on deleted accounts in platform {$platformId}"
             );
         }
     }

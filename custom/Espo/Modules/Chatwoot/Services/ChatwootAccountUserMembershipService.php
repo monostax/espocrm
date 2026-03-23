@@ -28,10 +28,11 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Centralized service for ChatwootAccountUserMembership upsert and resolution.
- * Used by 5+ callsites: LinkToUser, LinkToAgents, SyncAgentsFromChatwoot,
- * SyncInboxMembersFromChatwoot, BackfillAccountUserMemberships, and
- * RepairAccountUserMembershipInvariants.
+ * Centralized service for ChatwootAccountUserMembership upsert, resolution,
+ * and Chatwoot Platform API sync.
+ *
+ * All agent-specific fields (isAI, aiPrompt, email, availableName, etc.)
+ * now live directly on the membership entity.
  *
  * Uses constructor DI (no binding config needed; InjectableFactory auto-resolves).
  */
@@ -39,28 +40,27 @@ class ChatwootAccountUserMembershipService
 {
     public function __construct(
         private EntityManager $entityManager,
-        private Log $log
+        private Log $log,
+        private ChatwootApiClient $apiClient
     ) {}
 
     /**
      * Find-or-create a membership by (chatwootAccountId, chatwootUserId).
      *
      * - If not found: creates entity with name, role, syncStatus='synced', teams from account.
-     * - If found: updates role if changed. Always overwrites chatwootAgentId when $agentId
-     *   is provided (Decision #10 — prevents stale references after agent re-creation).
+     * - If found: updates role if changed.
      * - Saves with ['silent' => true] to avoid triggering API sync hooks.
      *
      * @param string $accountId EspoCRM ChatwootAccount entity ID
      * @param string $userId    EspoCRM ChatwootUser entity ID
      * @param string $role      'agent' or 'administrator'
-     * @param string|null $agentId EspoCRM ChatwootAgent entity ID (optional)
+     * @param int|null $chatwootAccountUserId Chatwoot account_user ID (optional)
      * @return Entity The upserted ChatwootAccountUserMembership entity
      */
     public function upsertMembership(
         string $accountId,
         string $userId,
         string $role,
-        ?string $agentId = null,
         ?int $chatwootAccountUserId = null
     ): Entity {
         $existing = $this->entityManager
@@ -72,34 +72,10 @@ class ChatwootAccountUserMembershipService
             ->findOne();
 
         if (!$existing) {
-            return $this->createMembership($accountId, $userId, $role, $agentId, $chatwootAccountUserId);
+            return $this->createMembership($accountId, $userId, $role, $chatwootAccountUserId);
         }
 
-        return $this->updateMembership($existing, $role, $agentId, $chatwootAccountUserId);
-    }
-
-    /**
-     * Resolve the membership entity for a given ChatwootAgent.
-     *
-     * @param Entity $agent ChatwootAgent entity
-     * @return Entity|null The membership, or null if agent lacks accountId/userId
-     */
-    public function resolveMembershipForAgent(Entity $agent): ?Entity
-    {
-        $accountId = $agent->get('chatwootAccountId');
-        $userId = $agent->get('chatwootUserId');
-
-        if (!$accountId || !$userId) {
-            return null;
-        }
-
-        return $this->entityManager
-            ->getRDBRepository('ChatwootAccountUserMembership')
-            ->where([
-                'chatwootAccountId' => $accountId,
-                'chatwootUserId' => $userId,
-            ])
-            ->findOne();
+        return $this->updateMembership($existing, $role, $chatwootAccountUserId);
     }
 
     /**
@@ -141,42 +117,9 @@ class ChatwootAccountUserMembershipService
     }
 
     /**
-     * Link an inbox to memberships resolved from a set of agent IDs.
-     * Agents without resolvable memberships are silently skipped.
-     *
-     * @param Entity $inbox     ChatwootInbox entity
-     * @param array<string> $agentIds  EspoCRM ChatwootAgent entity IDs
-     */
-    public function linkInboxToMemberships(Entity $inbox, array $agentIds): void
-    {
-        foreach ($agentIds as $agentId) {
-            $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
-
-            if (!$agent) {
-                continue;
-            }
-
-            $membership = $this->resolveMembershipForAgent($agent);
-
-            if (!$membership) {
-                continue;
-            }
-
-            // relateById is idempotent — EspoCRM checks the middle table with withDeleted()
-            // No SKIP_HOOKS needed: no hooks exist on accountUserMemberships relation in Phase 2
-            $this->entityManager
-                ->getRDBRepository('ChatwootInbox')
-                ->getRelation($inbox, 'accountUserMemberships')
-                ->relateById($membership->getId());
-        }
-    }
-
-    /**
      * Update sync lifecycle fields on a membership entity.
      *
      * Owns ONLY: syncStatus, lastSyncedAt, lastSyncError.
-     * Does NOT set chatwootAccountUserId — that is upsertMembership()'s responsibility
-     * (Decision #9: single owner per field).
      *
      * @param Entity $membership ChatwootAccountUserMembership entity
      * @param string $syncStatus The new sync status (e.g. 'synced', 'error')
@@ -211,58 +154,11 @@ class ChatwootAccountUserMembershipService
     }
 
     /**
-     * Create a new membership entity.
-     */
-    private function createMembership(
-        string $accountId,
-        string $userId,
-        string $role,
-        ?string $agentId,
-        ?int $chatwootAccountUserId = null
-    ): Entity {
-        // Load the ChatwootAccount to get teamsIds
-        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-        $teamsIds = $account ? $account->getLinkMultipleIdList('teams') : [];
-
-        // Load the ChatwootUser to get the name
-        $user = $this->entityManager->getEntityById('ChatwootUser', $userId);
-        $name = $user ? $user->get('name') : 'Unknown';
-
-        $data = [
-            'name' => $name,
-            'chatwootAccountId' => $accountId,
-            'chatwootUserId' => $userId,
-            'chatwootAgentId' => $agentId,
-            'role' => $role,
-            'syncStatus' => 'synced',
-            'teamsIds' => $teamsIds,
-        ];
-
-        if ($chatwootAccountUserId !== null) {
-            $data['chatwootAccountUserId'] = $chatwootAccountUserId;
-        }
-
-        $membership = $this->entityManager->createEntity(
-            'ChatwootAccountUserMembership',
-            $data,
-            ['silent' => true]
-        );
-
-        $this->log->info(
-            "ChatwootAccountUserMembershipService: Created membership for account={$accountId} user={$userId}" .
-            ($agentId ? " agent={$agentId}" : '')
-        );
-
-        return $membership;
-    }
-
-    /**
-     * Enable AI profile for a membership by creating or re-enabling a ChatwootAgent.
+     * Enable AI profile on a membership.
      *
-     * If an agent already exists for this (account, user) pair:
-     *   - If isAI is false: set isAI = true, link if needed
-     *   - If isAI is true: no-op
-     * If no agent exists: create one via non-silent createEntity (triggers full hook chain).
+     * Validates that the membership's ChatwootUser has an assignedUser with an email.
+     * Sets isAI = true on the membership. If the membership has no chatwootAccountUserId,
+     * calls syncAgentToChatwoot() to create the user/agent on Chatwoot.
      *
      * @param Entity $membership ChatwootAccountUserMembership entity
      * @return Entity The refreshed membership entity
@@ -307,129 +203,317 @@ class ChatwootAccountUserMembershipService
             $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
         }
 
-        // Check if a ChatwootAgent already exists for this (account, user) pair
-        $existingAgent = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where([
-                'chatwootAccountId' => $accountId,
-                'chatwootUserId' => $userId,
-            ])
-            ->findOne();
-
-        // Fallback: existing records may be linked by email but to a different ChatwootUser.
-        // Reuse that agent to avoid duplicate AI profiles on repeated activations.
-        if (!$existingAgent) {
-            $existingAgent = $this->entityManager
-                ->getRDBRepository('ChatwootAgent')
-                ->where([
-                    'chatwootAccountId' => $accountId,
-                    'email' => $email,
-                ])
-                ->order('createdAt', 'DESC')
-                ->findOne();
+        // Ensure the membership has the email populated so syncAgentToChatwoot()
+        // can use it. The membership.email varchar field may be null if the sync
+        // job hasn't run yet for this membership.
+        if (!$membership->get('email')) {
+            $membership->set('email', $email);
         }
 
-        if ($existingAgent) {
-            if ($existingAgent->get('isAI')) {
-                // Already enabled — no-op
-                $this->log->info(
-                    "enableAiProfile: Agent {$existingAgent->getId()} already has isAI=true for membership {$membership->getId()}"
-                );
-            } else {
-                // Re-enable AI on existing agent
-                $existingAgent->set('isAI', true);
-                $this->entityManager->saveEntity($existingAgent, ['silent' => true]);
+        // Set isAI on the membership
+        $membership->set('isAI', true);
 
-                $this->log->info(
-                    "enableAiProfile: Re-enabled isAI on existing agent {$existingAgent->getId()} for membership {$membership->getId()}"
+        // If membership has no chatwootAccountUserId, sync to Chatwoot to create user/agent
+        if (!$membership->get('chatwootAccountUserId')) {
+            try {
+                $this->syncAgentToChatwoot($membership);
+            } catch (\Throwable $e) {
+                $this->log->error(
+                    "enableAiProfile: Failed to sync agent to Chatwoot for membership {$membership->getId()}: " . $e->getMessage()
+                );
+                throw new \Espo\Core\Exceptions\BadRequest(
+                    'Failed to create AI agent profile on Chatwoot: ' . $e->getMessage()
                 );
             }
-
-            // Ensure membership has the agent linked
-            if ($membership->get('chatwootAgentId') !== $existingAgent->getId()) {
-                $membership->set('chatwootAgentId', $existingAgent->getId());
-                $this->entityManager->saveEntity($membership, ['silent' => true]);
-            }
-
-            // Reload to get fresh state
-            return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
         }
 
-        // No existing agent — create one via non-silent createEntity (triggers full hook chain)
-        $name = $chatwootUser->get('name') ?: $membership->get('name');
-        $role = $membership->get('role') ?? 'agent';
+        $this->entityManager->saveEntity($membership, ['silent' => true]);
 
-        $agentData = [
-            'name' => $name,
-            'email' => $email,
-            'chatwootAccountId' => $accountId,
-            'role' => $role,
-            'isAI' => true,
-        ];
+        $this->log->info(
+            "enableAiProfile: Enabled isAI on membership {$membership->getId()}"
+        );
 
-        try {
-            // Non-silent createEntity triggers full hook chain:
-            // CascadeTeamsFromAccount → ValidateBeforeSync →
-            // SyncWithChatwoot (creates user + agent on Chatwoot) → LinkToUser (upserts membership)
-            $this->entityManager->createEntity('ChatwootAgent', $agentData);
-
-            $this->log->info(
-                "enableAiProfile: Created new ChatwootAgent for membership {$membership->getId()}"
-            );
-        } catch (\Throwable $e) {
-            $this->log->error(
-                "enableAiProfile: Failed to create ChatwootAgent for membership {$membership->getId()}: " . $e->getMessage()
-            );
-
-            throw new \Espo\Core\Exceptions\BadRequest(
-                'Failed to create AI agent profile: ' . $e->getMessage()
-            );
-        }
-
-        // Reload membership — LinkToUser afterSave hook sets chatwootAgentId on it
+        // Reload to get fresh state
         return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
     }
 
     /**
-     * Disable AI profile on the linked agent without unlinking.
+     * Disable AI profile on a membership.
      *
-     * Sets agent.isAI = false. Does NOT null chatwootAgentId on membership —
-     * the link is preserved (Decision #10). Nulling chatwootAgentId is not durable
-     * because SyncAgentsFromChatwoot, SyncAccountMembersFromChatwoot, LinkToUser,
-     * and RepairAccountUserMembershipInvariants would all re-link within minutes.
+     * Sets isAI = false. Does not remove the agent from Chatwoot.
      *
      * @param Entity $membership ChatwootAccountUserMembership entity
      * @return Entity The refreshed membership entity
-     * @throws \Espo\Core\Exceptions\BadRequest
      */
     public function disableAiProfile(Entity $membership): Entity
     {
-        $agentId = $membership->get('chatwootAgentId');
-        if (!$agentId) {
-            throw new \Espo\Core\Exceptions\BadRequest('No agent profile is linked to this membership.');
+        $membership->set('isAI', false);
+        $this->entityManager->saveEntity($membership, ['silent' => true]);
+
+        $this->log->info(
+            "disableAiProfile: Disabled isAI on membership {$membership->getId()}"
+        );
+
+        // Reload to get fresh state
+        return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
+    }
+
+    /**
+     * Sync a membership as an agent to Chatwoot.
+     *
+     * Absorbs the old ChatwootAgent SyncWithChatwoot hook logic.
+     * Resolves platform credentials, creates platform user if needed,
+     * then creates/updates agent on the account API.
+     * Populates membership fields from the Chatwoot API response.
+     *
+     * @param Entity $membership ChatwootAccountUserMembership entity
+     */
+    public function syncAgentToChatwoot(Entity $membership): void
+    {
+        $accountId = $membership->get('chatwootAccountId');
+        $userId = $membership->get('chatwootUserId');
+
+        if (!$accountId || !$userId) {
+            throw new \RuntimeException('Membership must have chatwootAccountId and chatwootUserId to sync.');
         }
 
-        $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
-        if (!$agent) {
-            throw new \Espo\Core\Exceptions\BadRequest('Linked agent profile not found.');
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
+        if (!$account) {
+            throw new \RuntimeException("ChatwootAccount {$accountId} not found.");
         }
 
-        if (!$agent->get('isAI')) {
-            // Already disabled — no-op
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $account->get('platformId'));
+        if (!$platform) {
+            throw new \RuntimeException('ChatwootPlatform not found for account.');
+        }
+
+        $platformUrl = $platform->get('backendUrl');
+        $accessToken = $platform->get('accessToken');
+        $accountApiKey = $account->get('apiKey');
+        $chatwootAccountId = $account->get('chatwootAccountId');
+
+        if (!$platformUrl || !$accessToken || !$accountApiKey || !$chatwootAccountId) {
+            throw new \RuntimeException('Missing platform URL, access token, API key, or Chatwoot account ID.');
+        }
+
+        $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
+        if (!$chatwootUser) {
+            throw new \RuntimeException("ChatwootUser {$userId} not found.");
+        }
+
+        // Resolve email through a multi-step fallback chain:
+        // 1. Membership's email varchar field (populated by sync job from Chatwoot API)
+        // 2. ChatwootUser's assigned CRM User email (most reliable source)
+        // 3. ChatwootUser's email field (EspoCRM "email" type — stored in junction table,
+        //    may be empty if entity was created with ['silent' => true])
+        $email = $membership->get('email');
+
+        if (!$email) {
+            $assignedUserId = $chatwootUser->get('assignedUserId');
+            if ($assignedUserId) {
+                $crmUser = $this->entityManager->getEntityById('User', $assignedUserId);
+                if ($crmUser) {
+                    $email = $this->extractCrmUserEmail($crmUser);
+                }
+            }
+        }
+
+        if (!$email) {
+            $email = $chatwootUser->get('email');
+        }
+
+        $name = $membership->get('name') ?: $chatwootUser->get('name') ?: 'Agent';
+        $role = $membership->get('role') ?? 'agent';
+
+        $chatwootAccountUserId = $membership->get('chatwootAccountUserId');
+
+        if (!$chatwootAccountUserId) {
+            // --- Create path: create user on platform if needed, then create agent on account ---
+            $platformUserId = $chatwootUser->get('chatwootUserId');
+
+            if (!$platformUserId && $email) {
+                // Create platform user via Platform API
+                $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, [
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => bin2hex(random_bytes(16)),
+                ]);
+
+                $platformUserId = $userResponse['id'] ?? null;
+
+                if ($platformUserId) {
+                    $chatwootUser->set('chatwootUserId', $platformUserId);
+                    $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+                }
+            }
+
+            if (!$platformUserId) {
+                throw new \RuntimeException('Could not resolve or create platform user ID.');
+            }
+
+            // Create agent on the account API
+            $agentResponse = $this->apiClient->createAgent(
+                $platformUrl,
+                $accountApiKey,
+                $chatwootAccountId,
+                [
+                    'name' => $name,
+                    'email' => $email,
+                    'role' => $role,
+                    'availability_status' => $membership->get('availabilityStatus') ?? 'online',
+                    'auto_offline' => $membership->get('autoOffline') ?? true,
+                ]
+            );
+
+            // Populate membership fields from API response
+            $this->populateMembershipFromAgentResponse($membership, $agentResponse);
+
             $this->log->info(
-                "disableAiProfile: Agent {$agentId} already has isAI=false for membership {$membership->getId()}"
+                "syncAgentToChatwoot: Created agent on Chatwoot for membership {$membership->getId()}"
             );
         } else {
-            $agent->set('isAI', false);
-            $this->entityManager->saveEntity($agent, ['silent' => true]);
+            // --- Update path: update agent if relevant fields changed ---
+            $updateData = [];
 
-            $this->log->info(
-                "disableAiProfile: Disabled isAI on agent {$agentId} for membership {$membership->getId()}"
+            if ($membership->isAttributeChanged('role')) {
+                $updateData['role'] = $role;
+            }
+            if ($membership->isAttributeChanged('availabilityStatus')) {
+                $updateData['availability_status'] = $membership->get('availabilityStatus');
+            }
+            if ($membership->isAttributeChanged('autoOffline')) {
+                $updateData['auto_offline'] = $membership->get('autoOffline');
+            }
+
+            if (!empty($updateData)) {
+                $agentResponse = $this->apiClient->updateAgent(
+                    $platformUrl,
+                    $accountApiKey,
+                    $chatwootAccountId,
+                    $chatwootAccountUserId,
+                    $updateData
+                );
+
+                $this->populateMembershipFromAgentResponse($membership, $agentResponse);
+
+                $this->log->info(
+                    "syncAgentToChatwoot: Updated agent on Chatwoot for membership {$membership->getId()}"
+                );
+            }
+        }
+    }
+
+    /**
+     * Remove an agent from Chatwoot for a given membership.
+     *
+     * Resolves platformUserId via the membership's ChatwootUser,
+     * then calls the delete agent API. Handles 404 gracefully.
+     *
+     * @param Entity $membership ChatwootAccountUserMembership entity
+     */
+    public function removeAgentFromChatwoot(Entity $membership): void
+    {
+        $accountId = $membership->get('chatwootAccountId');
+        $chatwootAccountUserId = $membership->get('chatwootAccountUserId');
+
+        if (!$accountId || !$chatwootAccountUserId) {
+            $this->log->debug(
+                "removeAgentFromChatwoot: Skipping — membership {$membership->getId()} " .
+                "has no accountId or chatwootAccountUserId"
             );
+            return;
         }
 
-        // Reload membership to get fresh state
-        return $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membership->getId());
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
+        if (!$account) {
+            $this->log->warning("removeAgentFromChatwoot: ChatwootAccount {$accountId} not found.");
+            return;
+        }
+
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $account->get('platformId'));
+        if (!$platform) {
+            $this->log->warning("removeAgentFromChatwoot: ChatwootPlatform not found.");
+            return;
+        }
+
+        $platformUrl = $platform->get('backendUrl');
+        $accountApiKey = $account->get('apiKey');
+        $chatwootAccountId = $account->get('chatwootAccountId');
+
+        if (!$platformUrl || !$accountApiKey || !$chatwootAccountId) {
+            $this->log->warning("removeAgentFromChatwoot: Missing API credentials.");
+            return;
+        }
+
+        try {
+            $this->apiClient->deleteAgent(
+                $platformUrl,
+                $accountApiKey,
+                $chatwootAccountId,
+                $chatwootAccountUserId
+            );
+
+            $this->log->info(
+                "removeAgentFromChatwoot: Deleted agent {$chatwootAccountUserId} from Chatwoot " .
+                "for membership {$membership->getId()}"
+            );
+        } catch (\Exception $e) {
+            // 404 is fine — agent already gone
+            if (str_contains($e->getMessage(), '404')) {
+                $this->log->info(
+                    "removeAgentFromChatwoot: Agent {$chatwootAccountUserId} already gone from Chatwoot (404)"
+                );
+                return;
+            }
+
+            $this->log->error(
+                "removeAgentFromChatwoot: Failed to delete agent {$chatwootAccountUserId}: " .
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Create a new membership entity.
+     */
+    private function createMembership(
+        string $accountId,
+        string $userId,
+        string $role,
+        ?int $chatwootAccountUserId = null
+    ): Entity {
+        // Load the ChatwootAccount to get teamsIds
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
+        $teamsIds = $account ? $account->getLinkMultipleIdList('teams') : [];
+
+        // Load the ChatwootUser to get the name
+        $user = $this->entityManager->getEntityById('ChatwootUser', $userId);
+        $name = $user ? $user->get('name') : 'Unknown';
+
+        $data = [
+            'name' => $name,
+            'chatwootAccountId' => $accountId,
+            'chatwootUserId' => $userId,
+            'role' => $role,
+            'syncStatus' => 'synced',
+            'teamsIds' => $teamsIds,
+        ];
+
+        if ($chatwootAccountUserId !== null) {
+            $data['chatwootAccountUserId'] = $chatwootAccountUserId;
+        }
+
+        $membership = $this->entityManager->createEntity(
+            'ChatwootAccountUserMembership',
+            $data,
+            ['silent' => true]
+        );
+
+        $this->log->info(
+            "ChatwootAccountUserMembershipService: Created membership for account={$accountId} user={$userId}"
+        );
+
+        return $membership;
     }
 
     /**
@@ -438,19 +522,12 @@ class ChatwootAccountUserMembershipService
     private function updateMembership(
         Entity $membership,
         string $role,
-        ?string $agentId,
         ?int $chatwootAccountUserId = null
     ): Entity {
         $dirty = false;
 
         if ($membership->get('role') !== $role) {
             $membership->set('role', $role);
-            $dirty = true;
-        }
-
-        // Decision #10: Always overwrite chatwootAgentId when $agentId is provided
-        if ($agentId !== null && $membership->get('chatwootAgentId') !== $agentId) {
-            $membership->set('chatwootAgentId', $agentId);
             $dirty = true;
         }
 
@@ -468,6 +545,40 @@ class ChatwootAccountUserMembershipService
         }
 
         return $membership;
+    }
+
+    /**
+     * Populate membership fields from a Chatwoot agent API response.
+     */
+    private function populateMembershipFromAgentResponse(Entity $membership, array $response): void
+    {
+        if (isset($response['id'])) {
+            $membership->set('chatwootAccountUserId', (int) $response['id']);
+        }
+        if (isset($response['available_name'])) {
+            $membership->set('availableName', $response['available_name']);
+        }
+        if (isset($response['availability_status'])) {
+            $membership->set('availabilityStatus', $response['availability_status']);
+        }
+        if (isset($response['auto_offline'])) {
+            $membership->set('autoOffline', $response['auto_offline']);
+        }
+        if (isset($response['confirmed'])) {
+            $membership->set('confirmed', $response['confirmed']);
+        }
+        if (isset($response['thumbnail'])) {
+            $membership->set('avatarUrl', $response['thumbnail']);
+        }
+        if (isset($response['custom_role_id'])) {
+            $membership->set('customRoleId', $response['custom_role_id']);
+        }
+        if (isset($response['email'])) {
+            $membership->set('email', $response['email']);
+        }
+        if (isset($response['role'])) {
+            $membership->set('role', $response['role']);
+        }
     }
 
     private function extractCrmUserEmail(Entity $user): ?string

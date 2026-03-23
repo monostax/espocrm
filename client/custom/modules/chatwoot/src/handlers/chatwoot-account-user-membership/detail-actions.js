@@ -12,101 +12,30 @@
  * Detail action handler for ChatwootAccountUserMembership.
  *
  * Provides "Enable AI Profile" and "Disable AI Profile" toggle buttons.
- * The isAI state is fetched from the linked ChatwootAgent entity.
+ * The isAI state is read directly from the membership model (no separate agent entity).
  *
- * Enable: creates a new ChatwootAgent (or re-enables isAI on existing) via API action.
- * Disable: sets isAI=false on the linked agent without unlinking (Decision #10).
+ * Enable: sets isAI=true on the membership via API action.
+ * Disable: sets isAI=false on the membership via API action.
  */
 define('chatwoot:handlers/chatwoot-account-user-membership/detail-actions', [], function () {
 
     return class {
         constructor(view) {
             this.view = view;
-            /** @type {boolean|null} */
-            this._isAgentAI = null;
-            this._agentAIFetched = false;
-
-            // Fetch agent isAI state on init and on model changes
-            this._fetchAgentAIState();
-
-            this.view.listenTo(this.view.model, 'change:chatwootAgentId', () => {
-                this._agentAIFetched = false;
-                this._isAgentAI = null;
-                this._fetchAgentAIState();
-            });
-
-            this.view.listenTo(this.view.model, 'sync', () => {
-                this._agentAIFetched = false;
-                this._isAgentAI = null;
-                this._fetchAgentAIState();
-            });
         }
 
         /**
-         * Fetch the isAI state from the linked ChatwootAgent.
-         * @private
-         */
-        _fetchAgentAIState() {
-            const agentId = this.view.model.get('chatwootAgentId');
-
-            if (!agentId) {
-                this._isAgentAI = null;
-                this._agentAIFetched = true;
-                return;
-            }
-
-            Espo.Ajax.getRequest(`ChatwootAgent/${agentId}`, {select: 'isAI'})
-                .then(response => {
-                    this._isAgentAI = response.isAI || false;
-                    this._agentAIFetched = true;
-                    // Re-render to update button visibility
-                    if (this.view && this.view.isRendered()) {
-                        this.view.reRender();
-                    }
-                })
-                .catch(() => {
-                    this._isAgentAI = null;
-                    this._agentAIFetched = true;
-                });
-        }
-
-        /**
-         * Enable AI Profile is available when:
-         * - No agent linked (chatwootAgentId is empty) — will create a new agent
-         * - Agent linked but isAI is false — will re-enable AI
+         * Enable AI Profile is available when isAI is not true.
          */
         isEnableAiProfileAvailable() {
-            const agentId = this.view.model.get('chatwootAgentId');
-
-            // No agent linked — enable creates one
-            if (!agentId) {
-                return true;
-            }
-
-            // Agent linked — show enable only if isAI is false
-            if (this._agentAIFetched && this._isAgentAI === false) {
-                return true;
-            }
-
-            return false;
+            return this.view.model.get('isAI') !== true;
         }
 
         /**
-         * Disable AI Profile is available when:
-         * - Agent linked AND isAI is true
+         * Disable AI Profile is available when isAI is true.
          */
         isDisableAiProfileAvailable() {
-            const agentId = this.view.model.get('chatwootAgentId');
-
-            if (!agentId) {
-                return false;
-            }
-
-            if (this._agentAIFetched && this._isAgentAI === true) {
-                return true;
-            }
-
-            return false;
+            return this.view.model.get('isAI') === true;
         }
 
         enableAiProfile() {
@@ -127,9 +56,6 @@ define('chatwoot:handlers/chatwoot-account-user-membership/detail-actions', [], 
                                 this.view.translate('aiProfileEnabled', 'messages', 'ChatwootAccountUserMembership')
                             );
                             model.set(response);
-                            this._agentAIFetched = false;
-                            this._isAgentAI = null;
-                            this._fetchAgentAIState();
                             this.view.reRender();
                         })
                         .catch(xhr => {
@@ -161,9 +87,6 @@ define('chatwoot:handlers/chatwoot-account-user-membership/detail-actions', [], 
                                 this.view.translate('aiProfileDisabled', 'messages', 'ChatwootAccountUserMembership')
                             );
                             model.set(response);
-                            this._agentAIFetched = false;
-                            this._isAgentAI = null;
-                            this._fetchAgentAIState();
                             this.view.reRender();
                         })
                         .catch(xhr => {

@@ -28,7 +28,8 @@
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times",
-        "accountUserMemberships": "Agentes"
+        "accountUserMemberships": "Agentes",
+        "webhooks": "Webhooks"
     },
     "labels": {
         "Overview": "Visão Geral",
@@ -39,11 +40,13 @@
         "accountUserMemberships": "Agentes",
         "chatwootTeams": "Times",
         "labels": "Etiquetas",
+        "webhooks": "Webhooks",
         "tabInboxes": "Caixas de Entrada",
         "tabConnections": "Conexões de Canal",
         "tabUsers": "Agentes",
         "tabTeams": "Times",
         "tabLabels": "Etiquetas",
+        "tabWebhooks": "Webhooks",
         "Sync": "Chat / Sync",
         "Connections": "Chat / Conta / Conexões de Canal",
         "Chat / Account / Connections": "Chat / Conta / Conexões de Canal",

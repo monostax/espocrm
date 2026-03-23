@@ -6,19 +6,23 @@
     },
     {
         "name": "chatwootAccount",
-        "width": 18
+        "width": 16
     },
     {
         "name": "chatwootUser",
-        "width": 18
+        "width": 16
     },
     {
         "name": "role",
         "width": 10
     },
     {
-        "name": "chatwootAgent",
-        "width": 15
+        "name": "isAI",
+        "width": 8
+    },
+    {
+        "name": "availabilityStatus",
+        "width": 10
     },
     {
         "name": "syncStatus",
@@ -26,6 +30,6 @@
     },
     {
         "name": "lastSyncedAt",
-        "width": 11
+        "width": 12
     }
 ]

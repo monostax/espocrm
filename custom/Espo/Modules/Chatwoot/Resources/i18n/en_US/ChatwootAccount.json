@@ -8,7 +8,8 @@
     "links": {
         "automationUser": "Chat / User (Automation)",
         "teams": "Chat / Account / Teams",
-        "accountUserMemberships": "Chat / Account / Users"
+        "accountUserMemberships": "Chat / Account / Users",
+        "webhooks": "Chat / Account / Webhooks"
     },
     "labels": {
         "Create Inbox Channel": "Create Inbox Channel",
@@ -17,7 +18,8 @@
         "tabConnections": "Connections",
         "tabUsers": "Users",
         "tabTeams": "Teams",
-        "tabLabels": "Labels"
+        "tabLabels": "Labels",
+        "tabWebhooks": "Webhooks"
     },
     "tooltips": {
         "apiKey": "Account-level API token from Chat. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",

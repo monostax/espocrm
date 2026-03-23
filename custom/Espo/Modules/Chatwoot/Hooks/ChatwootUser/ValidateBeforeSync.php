@@ -91,16 +91,26 @@ class ValidateBeforeSync implements CreateHook
             throw new BadRequest('Name is required for ChatwootUser.');
         }
 
-        // Check for duplicate email in the same platform
-        $existingUser = $this->entityManager
-            ->getRDBRepository('ChatwootUser')
-            ->where([
-                'email' => $entity->get('email'),
-                'platformId' => $platformId,
-            ])
-            ->findOne();
+        // Check for duplicate email in the same platform.
+        // ChatwootUser.email is of EspoCRM type "email" which stores data in the
+        // email_address / entity_email_address junction tables — NOT as a column
+        // on chatwoot_user. A simple ->where(['email' => ...]) silently returns
+        // no results. We must query the junction tables explicitly.
+        $email = $entity->get('email');
+        $pdo = $this->entityManager->getPDO();
+        $stmt = $pdo->prepare("
+            SELECT cu.id
+            FROM chatwoot_user cu
+            INNER JOIN entity_email_address eea ON eea.entity_id = cu.id AND eea.entity_type = 'ChatwootUser' AND eea.deleted = 0
+            INNER JOIN email_address ea ON ea.id = eea.email_address_id AND ea.deleted = 0
+            WHERE ea.lower = LOWER(?)
+              AND cu.platform_id = ?
+              AND cu.deleted = 0
+            LIMIT 1
+        ");
+        $stmt->execute([$email, $platformId]);
 
-        if ($existingUser) {
+        if ($stmt->fetch(\PDO::FETCH_ASSOC)) {
             throw new BadRequest('A ChatwootUser with this email already exists on this platform.');
         }
     }

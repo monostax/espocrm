@@ -1,7 +1,6 @@
 {
     "scopeNames": {
         "ChatwootAccount": "Chat / Conta",
-        "ChatwootAgent": "Chat / Agente IA",
         "ChatwootContact": "Chat / Contato",
         "ChatwootContactInbox": "Chat / Contato / Canal",
         "ChatwootConversation": "Chat / Conversa",
@@ -24,7 +23,6 @@
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Contas",
-        "ChatwootAgent": "Chat / Agentes IA",
         "ChatwootContact": "Chat / Contatos",
         "ChatwootContactInbox": "Chat / Conta / Caixa de Entrada / Contato",
         "ChatwootConversation": "Chat / Conversas",

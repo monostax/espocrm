@@ -17,12 +17,16 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Automatically registers a Chatwoot webhook for WhatsApp delivery status
- * tracking when a new ChatwootAccount is created.
+ * Automatically registers Chatwoot webhooks when a new ChatwootAccount is created:
  *
- * Creates a ChatwootAccountWebhook entity subscribed to `message_updated` and
- * `message_created`, which triggers the SyncWithChatwoot hook to register it
- * on the Chatwoot side.
+ * 1. WhatsApp Delivery Status — subscribed to `message_updated` and `message_created`,
+ *    points to the CRM's DeliveryWebhook controller for campaign tracking.
+ *
+ * 2. Hatchet AI Agent — subscribed to `message_created`, points to the Hatchet
+ *    webhook ingest endpoint so incoming messages trigger the AI agent workflow.
+ *
+ * Each creates a ChatwootAccountWebhook entity which triggers the SyncWithChatwoot
+ * hook to register it on the Chatwoot side.
  */
 class RegisterDeliveryWebhook
 {
@@ -46,11 +50,20 @@ class RegisterDeliveryWebhook
             return;
         }
 
+        $this->registerDeliveryWebhook($entity, $chatwootAccountId);
+        $this->registerHatchetWebhook($entity, $chatwootAccountId);
+    }
+
+    /**
+     * Register WhatsApp Delivery Status webhook.
+     */
+    private function registerDeliveryWebhook(Entity $entity, int $chatwootAccountId): void
+    {
         $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
 
         if (!$crmBackendUrl) {
             $this->log->warning(
-                "RegisterDeliveryWebhook: Cannot register webhook for account {$entity->getId()} — " .
+                "RegisterDeliveryWebhook: Cannot register delivery webhook for account {$entity->getId()} — " .
                 "neither CRM_BACKEND_URL env nor siteUrl config is set."
             );
             return;
@@ -73,6 +86,45 @@ class RegisterDeliveryWebhook
         } catch (\Exception $e) {
             $this->log->error(
                 "RegisterDeliveryWebhook: Failed to register delivery webhook for account " .
+                "{$entity->getId()}: {$e->getMessage()}"
+            );
+        }
+    }
+
+    /**
+     * Register Hatchet AI Agent webhook.
+     *
+     * Sends `message_created` events to the Hatchet webhook ingest endpoint,
+     * which triggers the chatwoot-agent workflow for AI-powered responses.
+     * The URL is provided by the HATCHET_WEBHOOK_URL environment variable
+     * (internal k8s service URL).
+     */
+    private function registerHatchetWebhook(Entity $entity, int $chatwootAccountId): void
+    {
+        $hatchetWebhookUrl = getenv('HATCHET_CHATWOOT_WEBHOOK_URL');
+
+        if (!$hatchetWebhookUrl) {
+            $this->log->debug(
+                "RegisterDeliveryWebhook: HATCHET_CHATWOOT_WEBHOOK_URL not set, skipping Hatchet webhook for account {$entity->getId()}"
+            );
+            return;
+        }
+
+        try {
+            $this->entityManager->createEntity('ChatwootAccountWebhook', [
+                'name' => 'Hatchet AI Agent',
+                'accountId' => $entity->getId(),
+                'url' => $hatchetWebhookUrl,
+                'subscriptions' => ['message_created'],
+            ]);
+
+            $this->log->info(
+                "RegisterDeliveryWebhook: Registered Hatchet AI Agent webhook for account " .
+                "{$entity->getId()} (Chatwoot #{$chatwootAccountId}) at {$hatchetWebhookUrl}"
+            );
+        } catch (\Exception $e) {
+            $this->log->error(
+                "RegisterDeliveryWebhook: Failed to register Hatchet webhook for account " .
                 "{$entity->getId()}: {$e->getMessage()}"
             );
         }

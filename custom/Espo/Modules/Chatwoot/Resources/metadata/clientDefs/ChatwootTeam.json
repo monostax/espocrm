@@ -4,8 +4,8 @@
     "bottomPanels": {
         "detail": [
             {
-                "name": "chatwootAgents",
-                "label": "Chat / Agents",
+                "name": "accountUserMemberships",
+                "label": "Account Users",
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,
@@ -16,7 +16,7 @@
         ]
     },
     "relationshipPanels": {
-        "chatwootAgents": {
+        "accountUserMemberships": {
             "create": false,
             "select": true,
             "view": "views/record/panels/relationship"

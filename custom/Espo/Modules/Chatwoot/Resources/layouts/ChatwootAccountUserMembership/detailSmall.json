@@ -21,6 +21,16 @@
                 {
                     "name": "role"
                 }
+            ],
+            [
+                {
+                    "name": "isAI"
+                }
+            ],
+            [
+                {
+                    "name": "availabilityStatus"
+                }
             ]
         ]
     }

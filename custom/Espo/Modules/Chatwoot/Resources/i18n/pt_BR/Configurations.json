@@ -4,7 +4,6 @@
         "Chatwoot": "Chat",
         "Inbox Integrations": "Conexões de Canal",
         "Users": "Usuários",
-        "Agents": "Agentes",
         "Teams": "Times",
         "Knowledge Base": "Base de Conhecimento",
         "WhatsApp Campaigns": "Campanhas WhatsApp",
@@ -13,7 +12,6 @@
     "descriptions": {
         "chatwootInboxIntegrations": "Gerenciar conexões de canal do Chat para WhatsApp e outros canais",
         "chatwootUsers": "Gerenciar contas de usuários do Chat",
-        "chatwootAgents": "Gerenciar agentes do Chat e suas atribuições",
         "chatwootTeams": "Gerenciar equipes do Chat e membros das equipes",
         "knowledgeBase": "Gerenciar categorias da Base de Conhecimento indexadas por IA",
         "whatsAppCampaigns": "Gerenciar campanhas de marketing WhatsApp e envio em massa",
@@ -22,7 +20,6 @@
     "keywords": {
         "chatwootInboxIntegrations": "whatsapp,canal,conexão,integração",
         "chatwootUsers": "usuário,conta,chatwoot",
-        "chatwootAgents": "agente,suporte,representante",
         "chatwootTeams": "equipe,grupo,departamento",
         "knowledgeBase": "conhecimento,base,ia,categoria,artigo",
         "whatsAppCampaigns": "whatsapp,campanha,massa,mensagem,template",

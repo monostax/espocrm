@@ -17,27 +17,55 @@
                 {
                     "name": "role"
                 }
+            ],
+            [
+                {
+                    "name": "email"
+                },
+                {
+                    "name": "availableName"
+                }
             ]
         ]
     },
     {
-        "label": "AI Agent Profile",
-        "name": "aiProfile",
-        "dynamicLogicVisible": {
-            "conditionGroup": [
-                {
-                    "type": "isNotEmpty",
-                    "attribute": "chatwootAgentId"
-                }
-            ]
-        },
+        "label": "Agent State",
+        "name": "agentState",
         "rows": [
             [
                 {
-                    "name": "chatwootAgent"
+                    "name": "availabilityStatus"
                 },
                 {
-                    "name": "chatwootAccountUserId"
+                    "name": "autoOffline"
+                }
+            ],
+            [
+                {
+                    "name": "confirmed"
+                },
+                {
+                    "name": "avatarUrl"
+                }
+            ],
+            [
+                {
+                    "name": "customRoleId"
+                },
+                {
+                    "name": "isAI"
+                }
+            ],
+            [
+                {
+                    "name": "contextualTransferIsEnabled"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "transferScenarios",
+                    "fullWidth": true
                 }
             ]
         ]
@@ -62,6 +90,12 @@
             ],
             [
                 {
+                    "name": "chatwootAccountUserId"
+                },
+                false
+            ],
+            [
+                {
                     "name": "createdAt"
                 },
                 {
@@ -72,31 +106,42 @@
     },
     {
         "tabBreak": true,
-        "tabLabel": "AI Agent Profile",
-        "tabEntityType": "ChatwootAgent",
-        "name": "chatwootAgentTab",
+        "tabLabel": "AI Configuration",
+        "label": "AI Configuration",
+        "name": "aiConfiguration",
         "dynamicLogicVisible": {
             "conditionGroup": [
                 {
-                    "type": "isNotEmpty",
-                    "attribute": "chatwootAgentId"
+                    "type": "isTrue",
+                    "attribute": "isAI"
                 }
             ]
         },
         "rows": [
             [
                 {
-                    "name": "chatwootAgentDetail",
-                    "view": "chatwoot:views/chatwoot-inbox/fields/channel-connection-detail",
-                    "noLabel": true,
-                    "inlineEditDisabled": true,
-                    "span": 12,
-                    "options": {
-                        "link": "chatwootAgent",
-                        "targetScope": "ChatwootAgent",
-                        "showRecordButtons": true,
-                        "showEditButton": false
-                    }
+                    "name": "knowledgeBaseCategories",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "calendarsToManage",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "aiPrompt",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "ignoreGroups"
+                },
+                {
+                    "name": "ignoreStatusBroadcast"
                 }
             ]
         ]

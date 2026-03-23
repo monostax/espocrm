@@ -32,7 +32,7 @@ use Espo\ORM\EntityManager;
  * This enforces ACL by ensuring users can only be assigned to ChatwootUsers within ChatwootAccounts
  * they have team access to.
  *
- * Mirrors ChatwootAgent/ValidateAssignedUserTeam but at the authoritative write point (ChatwootUser).
+ * Validates at the authoritative write point (ChatwootUser).
  *
  * Runs after CascadeTeamsFromAccount (order=1) so teamsIds is already set.
  */

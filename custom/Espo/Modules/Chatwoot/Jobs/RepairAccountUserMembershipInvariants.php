@@ -33,11 +33,9 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
  * Scheduled job for ongoing invariant enforcement of ChatwootAccountUserMembership.
  * Runs after the initial BackfillAccountUserMemberships rebuild action has seeded data.
  *
- * Four checks per enabled account:
- *   Check 1 — Agents with users but no membership
- *   Check 2 — Memberships with stale or missing chatwootAgentId
- *   Check 3 — Inbox↔membership drift
- *   Check 4 — Orphaned memberships (log-only, no auto-delete in Phase 2)
+ * Two checks per enabled account:
+ *   Check 3 — Inbox↔membership FK integrity
+ *   Check 4 — Orphaned memberships (log-only, no auto-delete)
  */
 class RepairAccountUserMembershipInvariants implements JobDataLess
 {
@@ -100,8 +98,6 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
         $accountId = $account->getId();
 
         try {
-            $this->check1AgentsWithoutMembership($accountId);
-            $this->check2StaleMembershipAgentIds($accountId);
             $this->check3InboxMembershipDrift($accountId);
             $this->check4OrphanedMemberships($accountId);
         } catch (\Throwable $e) {
@@ -113,140 +109,11 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
     }
 
     /**
-     * Check 1 — Agents with users but no membership.
-     * Same logic as backfill Pass 1, scoped to this account.
-     */
-    private function check1AgentsWithoutMembership(string $accountId): void
-    {
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
-            ->where([
-                'chatwootAccountId' => $accountId,
-                'chatwootUserId!=' => [null, ''],
-            ])
-            ->find();
-
-        $repaired = 0;
-
-        foreach ($agents as $agent) {
-            try {
-                $userId = $agent->get('chatwootUserId');
-
-                // Check if membership already exists
-                $existing = $this->membershipService->resolveMembershipForAgent($agent);
-
-                if (!$existing) {
-                    $this->membershipService->upsertMembership(
-                        $accountId,
-                        $userId,
-                        $agent->get('role') ?? 'agent',
-                        $agent->getId()
-                    );
-                    $repaired++;
-                }
-            } catch (\Throwable $e) {
-                $this->log->warning(
-                    "RepairAccountUserMembershipInvariants: Check 1 error for agent {$agent->getId()}: " .
-                    $e->getMessage()
-                );
-            }
-        }
-
-        if ($repaired > 0) {
-            $this->log->info(
-                "RepairAccountUserMembershipInvariants: Check 1 — created {$repaired} missing membership(s) for account {$accountId}"
-            );
-        }
-    }
-
-    /**
-     * Check 2 — Memberships with stale or missing chatwootAgentId.
-     *
-     * Part A: Memberships where chatwootAgentId IS NULL — try to find matching agent.
-     * Part B: Memberships where chatwootAgentId IS NOT NULL — verify agent still exists.
-     *         If not, null it out (Decision #11 — prevents stale references).
-     */
-    private function check2StaleMembershipAgentIds(string $accountId): void
-    {
-        $repaired = 0;
-
-        // Part A: Missing chatwootAgentId
-        $membershipsNoAgent = $this->entityManager
-            ->getRDBRepository('ChatwootAccountUserMembership')
-            ->where([
-                'chatwootAccountId' => $accountId,
-                'chatwootAgentId' => null,
-            ])
-            ->find();
-
-        foreach ($membershipsNoAgent as $membership) {
-            try {
-                $userId = $membership->get('chatwootUserId');
-
-                $agent = $this->entityManager
-                    ->getRDBRepository('ChatwootAgent')
-                    ->where([
-                        'chatwootAccountId' => $accountId,
-                        'chatwootUserId' => $userId,
-                    ])
-                    ->findOne();
-
-                if ($agent) {
-                    $membership->set('chatwootAgentId', $agent->getId());
-                    $this->entityManager->saveEntity($membership, ['silent' => true]);
-                    $repaired++;
-                }
-            } catch (\Throwable $e) {
-                $this->log->warning(
-                    "RepairAccountUserMembershipInvariants: Check 2A error for membership {$membership->getId()}: " .
-                    $e->getMessage()
-                );
-            }
-        }
-
-        // Part B: Stale chatwootAgentId (agent no longer exists)
-        $membershipsWithAgent = $this->entityManager
-            ->getRDBRepository('ChatwootAccountUserMembership')
-            ->where([
-                'chatwootAccountId' => $accountId,
-                'chatwootAgentId!=' => null,
-            ])
-            ->find();
-
-        $staleCleared = 0;
-
-        foreach ($membershipsWithAgent as $membership) {
-            try {
-                $agentId = $membership->get('chatwootAgentId');
-                $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
-
-                if (!$agent) {
-                    $membership->set('chatwootAgentId', null);
-                    $this->entityManager->saveEntity($membership, ['silent' => true]);
-                    $staleCleared++;
-                }
-            } catch (\Throwable $e) {
-                $this->log->warning(
-                    "RepairAccountUserMembershipInvariants: Check 2B error for membership {$membership->getId()}: " .
-                    $e->getMessage()
-                );
-            }
-        }
-
-        if ($repaired > 0 || $staleCleared > 0) {
-            $this->log->info(
-                "RepairAccountUserMembershipInvariants: Check 2 — repaired={$repaired} staleCleared={$staleCleared} for account {$accountId}"
-            );
-        }
-    }
-
-    /**
      * Check 3 — Membership FK integrity on inbox-linked memberships.
      *
      * For each inbox in the account, loads accountUserMemberships and verifies:
      *   - chatwootUserId references an existing ChatwootUser entity
      *   - chatwootAccountId references an existing ChatwootAccount entity
-     *   - If chatwootAgentId is non-null, verifies the agent exists — clears to null if stale
      *
      * No add/remove reconciliation — that is solely owned by SyncInboxMembersFromChatwoot.
      */
@@ -257,7 +124,6 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
             ->where(['chatwootAccountId' => $accountId])
             ->find();
 
-        $staleAgentsCleared = 0;
         $orphanedUsers = 0;
         $orphanedAccounts = 0;
 
@@ -298,24 +164,6 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
                             );
                         }
                     }
-
-                    // If chatwootAgentId is non-null, verify it references an existing agent
-                    $agentId = $membership->get('chatwootAgentId');
-
-                    if ($agentId) {
-                        $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
-
-                        if (!$agent) {
-                            $membership->set('chatwootAgentId', null);
-                            $this->entityManager->saveEntity($membership, ['silent' => true]);
-                            $staleAgentsCleared++;
-
-                            $this->log->info(
-                                "RepairAccountUserMembershipInvariants: Check 3 — cleared stale chatwootAgentId={$agentId} " .
-                                "on membership {$membership->getId()} (inbox {$inbox->getId()})"
-                            );
-                        }
-                    }
                 }
             } catch (\Throwable $e) {
                 $this->log->warning(
@@ -325,9 +173,9 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
             }
         }
 
-        if ($staleAgentsCleared > 0 || $orphanedUsers > 0 || $orphanedAccounts > 0) {
+        if ($orphanedUsers > 0 || $orphanedAccounts > 0) {
             $this->log->info(
-                "RepairAccountUserMembershipInvariants: Check 3 — staleAgentsCleared={$staleAgentsCleared} " .
+                "RepairAccountUserMembershipInvariants: Check 3 — " .
                 "orphanedUsers={$orphanedUsers} orphanedAccounts={$orphanedAccounts} for account {$accountId}"
             );
         }
@@ -338,7 +186,7 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
      *
      * Queries memberships where the linked ChatwootAccount or ChatwootUser
      * no longer exists (soft-deleted). Logs warnings only — do not auto-delete
-     * in Phase 2 for safety.
+     * for safety.
      */
     private function check4OrphanedMemberships(string $accountId): void
     {
@@ -371,7 +219,7 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
 
         if ($orphaned > 0) {
             $this->log->info(
-                "RepairAccountUserMembershipInvariants: Check 4 — found {$orphaned} orphaned membership(s) for account {$accountId} (log only, no auto-delete in Phase 2)"
+                "RepairAccountUserMembershipInvariants: Check 4 — found {$orphaned} orphaned membership(s) for account {$accountId} (log only, no auto-delete)"
             );
         }
     }

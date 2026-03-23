@@ -139,11 +139,7 @@
             "entity": "ChatwootInbox",
             "foreign": "chatwootAccount"
         },
-        "agents": {
-            "type": "hasMany",
-            "entity": "ChatwootAgent",
-            "foreign": "chatwootAccount"
-        },
+
         "chatwootInboxIntegrations": {
             "type": "hasMany",
             "entity": "ChatwootInboxIntegration",
@@ -175,6 +171,11 @@
             "entity": "WhatsAppCampaignContact",
             "foreign": "chatwootAccount",
             "layoutRelationshipsDisabled": true
+        },
+        "webhooks": {
+            "type": "hasMany",
+            "entity": "ChatwootAccountWebhook",
+            "foreign": "account"
         }
     },
     "collection": {
@@ -196,22 +197,18 @@
             "columns": ["createdAt", "id"]
         }
     },
-    "webhooks": {
-        "type": "hasMany",
-        "entity": "ChatwootAccountWebhook",
-        "foreign": "account"
-    },
     "cascadeDelete": {
         "links": [
             "chatwootInboxIntegrations",
             "inboxes",
             "contacts",
-            "agents",
+
             "chatwootTeams",
             "syncStates",
             "conversations",
             "labels",
-            "accountUserMemberships"
+            "accountUserMemberships",
+            "webhooks"
         ]
     }
 }

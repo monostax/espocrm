@@ -25,8 +25,10 @@ namespace Espo\Modules\Chatwoot\Rebuild;
 
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Rebuild\RebuildAction;
+use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
@@ -44,6 +46,7 @@ class SeedChatwootAccount implements RebuildAction
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
+        private Config $config,
         private Log $log
     ) {}
 
@@ -119,6 +122,10 @@ class SeedChatwootAccount implements RebuildAction
             }
             
             $this->entityManager->saveEntity($existing, [SaveOption::SKIP_ALL => true]);
+
+            // Ensure webhooks exist (SKIP_ALL bypasses RegisterDeliveryWebhook hook)
+            $this->ensureWebhooks($existing);
+
             $this->log->info('SeedChatwootAccount: Updated default ChatwootAccount');
             return;
         }
@@ -170,10 +177,108 @@ class SeedChatwootAccount implements RebuildAction
                 }
             }
 
+            // Register webhooks (SKIP_ALL bypasses RegisterDeliveryWebhook hook)
+            $this->ensureWebhooks($account);
+
             $this->log->info('SeedChatwootAccount: Created default ChatwootAccount with Chatwoot ID: ' . $chatwootAccountId);
         } catch (\Exception $e) {
             $this->log->error('SeedChatwootAccount: Failed to create account - ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Ensure all required webhooks exist for the account.
+     *
+     * The RegisterDeliveryWebhook afterSave hook is skipped when saving with
+     * SKIP_ALL, so the seed script must handle this directly.
+     * Idempotent: each webhook is checked by name before creating.
+     */
+    private function ensureWebhooks(Entity $account): void
+    {
+        $chatwootAccountId = $account->get('chatwootAccountId');
+
+        if (!$chatwootAccountId) {
+            return;
+        }
+
+        $this->ensureWebhook(
+            $account,
+            'WhatsApp Delivery Status',
+            $this->buildDeliveryWebhookUrl($chatwootAccountId),
+            ['message_updated', 'message_created']
+        );
+
+        $this->ensureWebhook(
+            $account,
+            'Hatchet AI Agent',
+            getenv('HATCHET_CHATWOOT_WEBHOOK_URL') ?: null,
+            ['message_created']
+        );
+    }
+
+    /**
+     * Ensure a single webhook exists for the account by name.
+     * Idempotent: skips if a webhook with this name already exists.
+     *
+     * @param Entity $account The ChatwootAccount entity
+     * @param string $name Webhook name (used for idempotency check)
+     * @param string|null $url Webhook URL — skipped if null/empty
+     * @param array<string> $subscriptions Event subscriptions
+     */
+    private function ensureWebhook(Entity $account, string $name, ?string $url, array $subscriptions): void
+    {
+        if (!$url) {
+            $this->log->debug("SeedChatwootAccount: Skipping webhook '{$name}' — URL not configured.");
+            return;
+        }
+
+        $existing = $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $account->getId(),
+                'name' => $name,
+            ])
+            ->findOne();
+
+        if ($existing) {
+            return;
+        }
+
+        try {
+            $this->entityManager->createEntity('ChatwootAccountWebhook', [
+                'name' => $name,
+                'accountId' => $account->getId(),
+                'url' => $url,
+                'subscriptions' => $subscriptions,
+            ]);
+
+            $this->log->info(
+                "SeedChatwootAccount: Registered webhook '{$name}' for account " .
+                "{$account->getId()} at {$url}"
+            );
+        } catch (\Exception $e) {
+            $this->log->error(
+                "SeedChatwootAccount: Failed to register webhook '{$name}': {$e->getMessage()}"
+            );
+        }
+    }
+
+    /**
+     * Build the WhatsApp Delivery webhook URL from CRM backend URL.
+     */
+    private function buildDeliveryWebhookUrl(int $chatwootAccountId): ?string
+    {
+        $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
+
+        if (!$crmBackendUrl) {
+            $this->log->warning(
+                'SeedChatwootAccount: Cannot build delivery webhook URL — ' .
+                'neither CRM_BACKEND_URL env nor siteUrl config is set.'
+            );
+            return null;
+        }
+
+        return rtrim($crmBackendUrl, '/') . '/api/v1/WhatsAppDeliveryWebhook/' . $chatwootAccountId;
     }
 
     /**

@@ -87,7 +87,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
 
     /**
      * GET ChatwootConversation/action/agentsForAssignment?id={conversationId}
-     * Returns the list of agents available for assignment in the conversation's account.
+     * Returns the list of memberships available for assignment in the conversation's account.
      */
     public function getActionAgentsForAssignment(Request $request): object
     {
@@ -120,18 +120,18 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
             return (object) ['list' => []];
         }
 
-        // Fetch agents for this account
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
+        // Fetch memberships for this account
+        $memberships = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
             ->where(['chatwootAccountId' => $accountId])
             ->order('name')
             ->find();
 
         $list = [];
-        foreach ($agents as $agent) {
+        foreach ($memberships as $membership) {
             // Resolve platform user ID through linked ChatwootUser
             $platformUserId = null;
-            $userId = $agent->get('chatwootUserId');
+            $userId = $membership->get('chatwootUserId');
             if ($userId) {
                 $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
                 if ($chatwootUser) {
@@ -141,12 +141,12 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
 
             $list[] = (object) [
                 'id' => $platformUserId,
-                'name' => $agent->get('name'),
-                'availableName' => $agent->get('availableName'),
-                'email' => $agent->get('email'),
-                'availabilityStatus' => $agent->get('availabilityStatus'),
-                'avatarUrl' => $agent->get('avatarUrl'),
-                'role' => $agent->get('role'),
+                'name' => $membership->get('name'),
+                'availableName' => $membership->get('availableName'),
+                'email' => $membership->get('email'),
+                'availabilityStatus' => $membership->get('availabilityStatus'),
+                'avatarUrl' => $membership->get('avatarUrl'),
+                'role' => $membership->get('role'),
             ];
         }
 

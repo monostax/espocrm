@@ -26,6 +26,10 @@
         "inboxes": {
             "unlinkDisabled": true,
             "selectDisabled": true
+        },
+        "webhooks": {
+            "unlinkDisabled": true,
+            "selectDisabled": true
         }
     },
     "sidePanels": {
@@ -62,6 +66,15 @@
                 "unlinkDisabled": true,
                 "selectDisabled": true,
                 "order": 4
+            },
+            {
+                "name": "webhooks",
+                "view": "views/record/panels/relationship",
+                "label": "tabWebhooks",
+                "layout": "listSmall",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 5
             }
         ],
         "detailSmall": [
@@ -97,6 +110,15 @@
                 "unlinkDisabled": true,
                 "selectDisabled": true,
                 "order": 4
+            },
+            {
+                "name": "webhooks",
+                "view": "views/record/panels/relationship",
+                "label": "tabWebhooks",
+                "layout": "listSmall",
+                "unlinkDisabled": true,
+                "selectDisabled": true,
+                "order": 5
             }
         ]
     },

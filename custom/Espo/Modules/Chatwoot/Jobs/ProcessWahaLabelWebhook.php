@@ -79,7 +79,7 @@ class ProcessWahaLabelWebhook implements Job
 
     /**
      * Handle label.chat.added event.
-     * When a label is added to a chat on WhatsApp, assign the conversation to the corresponding agent.
+     * When a label is added to a chat on WhatsApp, assign the conversation to the corresponding membership.
      *
      * @param object $payload
      * @param Entity $channel
@@ -116,21 +116,21 @@ class ProcessWahaLabelWebhook implements Job
         $wahaSessionLabel = $wahaSessionLabelQuery->findOne();
 
         if (!$wahaSessionLabel) {
-            $this->log->warning("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not an agent label, ignoring");
+            $this->log->warning("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not a membership label, ignoring");
             return;
         }
 
-        // Get the agent
-        $agentId = $wahaSessionLabel->get('agentId');
-        $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
+        // Get the membership
+        $membershipId = $wahaSessionLabel->get('accountUserMembershipId');
+        $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membershipId);
 
-        if (!$agent) {
-            $this->log->warning("ProcessWahaLabelWebhook: ChatwootAgent {$agentId} not found");
+        if (!$membership) {
+            $this->log->warning("ProcessWahaLabelWebhook: ChatwootAccountUserMembership {$membershipId} not found");
             return;
         }
 
-        $platformUserId = $this->resolvePlatformUserId($agent);
-        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (platformUserId: {$platformUserId})");
+        $platformUserId = $this->resolvePlatformUserId($membership);
+        $this->log->warning("ProcessWahaLabelWebhook: Found membership '{$membership->get('name')}' (platformUserId: {$platformUserId})");
 
         // Find the conversation by phone number and inbox (with LID resolution if needed)
         $phoneNumber = $this->extractPhoneFromChatId($chatId, $channel);
@@ -149,10 +149,10 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        // Check if already assigned to this agent (cast to int for proper comparison)
+        // Check if already assigned to this membership (cast to int for proper comparison)
         $currentAssigneeId = $conversation->get('assigneeId') ? (int) $conversation->get('assigneeId') : null;
         if ($currentAssigneeId === $platformUserId) {
-            $this->log->warning("ProcessWahaLabelWebhook: Conversation already assigned to agent (platformUserId={$platformUserId})");
+            $this->log->warning("ProcessWahaLabelWebhook: Conversation already assigned to membership (platformUserId={$platformUserId})");
             return;
         }
 
@@ -168,7 +168,7 @@ class ProcessWahaLabelWebhook implements Job
 
     /**
      * Handle label.chat.deleted event.
-     * When a label is removed from a chat on WhatsApp, unassign the conversation if it was assigned to that agent.
+     * When a label is removed from a chat on WhatsApp, unassign the conversation if it was assigned to that membership.
      *
      * @param object $payload
      * @param Entity $channel
@@ -205,21 +205,21 @@ class ProcessWahaLabelWebhook implements Job
         $wahaSessionLabel = $wahaSessionLabelQuery->findOne();
 
         if (!$wahaSessionLabel) {
-            $this->log->warning("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not an agent label, ignoring");
+            $this->log->warning("ProcessWahaLabelWebhook: No WahaSessionLabel found for label {$labelId} - not a membership label, ignoring");
             return;
         }
 
-        // Get the agent
-        $agentId = $wahaSessionLabel->get('agentId');
-        $agent = $this->entityManager->getEntityById('ChatwootAgent', $agentId);
+        // Get the membership
+        $membershipId = $wahaSessionLabel->get('accountUserMembershipId');
+        $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membershipId);
 
-        if (!$agent) {
-            $this->log->warning("ProcessWahaLabelWebhook: ChatwootAgent {$agentId} not found");
+        if (!$membership) {
+            $this->log->warning("ProcessWahaLabelWebhook: ChatwootAccountUserMembership {$membershipId} not found");
             return;
         }
 
-        $platformUserId = $this->resolvePlatformUserId($agent);
-        $this->log->warning("ProcessWahaLabelWebhook: Found agent '{$agent->get('name')}' (platformUserId: {$platformUserId})");
+        $platformUserId = $this->resolvePlatformUserId($membership);
+        $this->log->warning("ProcessWahaLabelWebhook: Found membership '{$membership->get('name')}' (platformUserId: {$platformUserId})");
 
         // Find the conversation by phone number and inbox (with LID resolution if needed)
         $phoneNumber = $this->extractPhoneFromChatId($chatId, $channel);
@@ -238,12 +238,12 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        // Only unassign if currently assigned to this agent (cast to int for proper comparison)
+        // Only unassign if currently assigned to this membership (cast to int for proper comparison)
         $currentAssigneeId = $conversation->get('assigneeId') ? (int) $conversation->get('assigneeId') : null;
         $this->log->warning("ProcessWahaLabelWebhook: Conversation {$conversation->getId()} currentAssigneeId={$currentAssigneeId}, platformUserId={$platformUserId}");
         
         if ($currentAssigneeId !== $platformUserId) {
-            $this->log->warning("ProcessWahaLabelWebhook: Conversation not assigned to agent (platformUserId={$platformUserId}, current: {$currentAssigneeId}), not unassigning");
+            $this->log->warning("ProcessWahaLabelWebhook: Conversation not assigned to membership (platformUserId={$platformUserId}, current: {$currentAssigneeId}), not unassigning");
             return;
         }
 
@@ -434,11 +434,11 @@ class ProcessWahaLabelWebhook implements Job
     }
 
     /**
-     * Resolve the Chatwoot platform user ID from an agent's linked ChatwootUser.
+     * Resolve the Chatwoot platform user ID from a membership's linked ChatwootUser.
      */
-    private function resolvePlatformUserId(Entity $agent): ?int
+    private function resolvePlatformUserId(Entity $membership): ?int
     {
-        $chatwootUserId = $agent->get('chatwootUserId');
+        $chatwootUserId = $membership->get('chatwootUserId');
         if (!$chatwootUserId) {
             return null;
         }

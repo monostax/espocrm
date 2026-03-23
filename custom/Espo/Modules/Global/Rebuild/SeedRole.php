@@ -194,12 +194,6 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
-                'ChatwootAgent' => [
-                    'create' => 'yes',
-                    'read' => 'team',
-                    'edit' => 'team',
-                    'delete' => 'team',
-                ],
                 'WahaSessionLabel' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -640,13 +634,6 @@ class SeedRole implements RebuildAction
                 ...$tenantBase,
                 'data' => [
                     ...$tenantBase['data'],
-                    'ChatwootAgent' => [
-                        'create' => 'yes',
-                        'read' => 'team',
-                        'edit' => 'team',
-                        'delete' => 'team',
-                        'stream' => 'team',
-                    ],
                     'MsxGoogleCalendarUser' => [
                         'create' => 'yes',
                         'read' => 'team',

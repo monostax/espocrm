@@ -23,7 +23,7 @@
             "maxLength": 7,
             "readOnly": true
         },
-        "agent": {
+        "accountUserMembership": {
             "type": "link",
             "required": true
         },
@@ -59,9 +59,9 @@
         }
     },
     "links": {
-        "agent": {
+        "accountUserMembership": {
             "type": "belongsTo",
-            "entity": "ChatwootAgent",
+            "entity": "ChatwootAccountUserMembership",
             "foreign": "wahaSessionLabels"
         },
         "inboxIntegration": {
@@ -86,9 +86,9 @@
         "order": "desc"
     },
     "indexes": {
-        "uniqueAgentIntegration": {
+        "uniqueMembershipIntegration": {
             "unique": true,
-            "columns": ["agentId", "inboxIntegrationId", "deleted"]
+            "columns": ["accountUserMembershipId", "inboxIntegrationId", "deleted"]
         },
         "wahaLabelId": {
             "columns": ["wahaLabelId"]

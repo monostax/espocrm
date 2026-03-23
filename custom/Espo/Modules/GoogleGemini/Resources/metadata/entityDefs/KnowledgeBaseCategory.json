@@ -17,10 +17,10 @@
             "entity": "GeminiFileSearchStore",
             "foreign": "knowledgeBaseCategory"
         },
-        "chatwootAgents": {
+        "accountUserMemberships": {
             "type": "hasMany",
-            "entity": "ChatwootAgent",
-            "relationName": "chatwootAgentKnowledgeBaseCategory",
+            "entity": "ChatwootAccountUserMembership",
+            "relationName": "chatwootAccountUserMembershipKnowledgeBaseCategory",
             "foreign": "knowledgeBaseCategories"
         }
     }

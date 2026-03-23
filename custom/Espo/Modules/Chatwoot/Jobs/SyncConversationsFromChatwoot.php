@@ -1300,15 +1300,15 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $labels = [];
 
             if ($assigneeId) {
-                // Find ChatwootAgent by resolving through ChatwootUser (assigneeId is the platform user ID)
-                $agent = $this->findAgentByPlatformUserId($assigneeId, $conversation->get('chatwootAccountId'));
+                // Find membership by resolving through ChatwootUser (assigneeId is the platform user ID)
+                $membership = $this->findMembershipByPlatformUserId($assigneeId, $conversation->get('chatwootAccountId'));
 
-                if ($agent) {
-                    // Find WahaSessionLabel for this agent + inboxIntegration
+                if ($membership) {
+                    // Find WahaSessionLabel for this membership + inboxIntegration
                     $wahaSessionLabel = $this->entityManager
                         ->getRDBRepository('WahaSessionLabel')
                         ->where([
-                            'agentId' => $agent->getId(),
+                            'accountUserMembershipId' => $membership->getId(),
                             'inboxIntegrationId' => $inboxIntegration->getId(),
                         ])
                         ->findOne();
@@ -1320,28 +1320,28 @@ class SyncConversationsFromChatwoot implements JobDataLess
                             $apiKey,
                             $sessionName,
                             $wahaSessionLabel,
-                            $agent
+                            $membership
                         );
 
                         if ($validLabelId) {
                             $labels[] = ['id' => $validLabelId];
                             $this->log->info(
                                 "SyncConversationsFromChatwoot: Setting label {$validLabelId} " .
-                                "for chat {$chatId} (agent {$agent->get('name')})"
+                                "for chat {$chatId} (membership {$membership->get('name')})"
                             );
                         }
                     } else {
                         // No WahaSessionLabel exists - create one on-the-fly
                         $this->log->info(
-                            "SyncConversationsFromChatwoot: No WahaSessionLabel found for agent {$agent->getId()} " .
+                            "SyncConversationsFromChatwoot: No WahaSessionLabel found for membership {$membership->getId()} " .
                             "+ integration {$inboxIntegration->getId()}, creating..."
                         );
 
-                        $newLabelId = $this->createLabelForAgent(
+                        $newLabelId = $this->createLabelForMembership(
                             $platformUrl,
                             $apiKey,
                             $sessionName,
-                            $agent,
+                            $membership,
                             $inboxIntegration
                         );
 
@@ -1349,12 +1349,12 @@ class SyncConversationsFromChatwoot implements JobDataLess
                             $labels[] = ['id' => $newLabelId];
                             $this->log->info(
                                 "SyncConversationsFromChatwoot: Created and setting label {$newLabelId} " .
-                                "for chat {$chatId} (agent {$agent->get('name')})"
+                                "for chat {$chatId} (membership {$membership->get('name')})"
                             );
                         }
                     }
                 } else {
-                    $this->log->debug("SyncConversationsFromChatwoot: ChatwootAgent with platformUserId {$assigneeId} not found");
+                    $this->log->debug("SyncConversationsFromChatwoot: No membership found for platformUserId {$assigneeId}");
                 }
             } else {
                 // Unassigned - remove all agent labels
@@ -1384,22 +1384,22 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Create a new WAHA label for an agent and store the WahaSessionLabel record.
+     * Create a new WAHA label for a membership and store the WahaSessionLabel record.
      *
      * @return string|null The new label ID, or null if creation failed
      */
-    private function createLabelForAgent(
+    private function createLabelForMembership(
         string $platformUrl,
         string $apiKey,
         string $sessionName,
-        Entity $agent,
+        Entity $membership,
         Entity $inboxIntegration
     ): ?string {
         try {
-            // Generate label name based on agent type (AI or human)
-            $labelPrefix = $agent->get('isAI') ? '[✨]' : '[👤]';
-            $labelName = $labelPrefix . ' ' . $agent->get('name');
-            $color = abs(crc32($agent->getId())) % 20;
+            // Generate label name based on membership type (AI or human)
+            $labelPrefix = $membership->get('isAI') ? '[✨]' : '[👤]';
+            $labelName = $labelPrefix . ' ' . $membership->get('name');
+            $color = abs(crc32($membership->getId())) % 20;
             $colorHex = self::COLOR_MAP[$color] ?? '#64c4ff';
 
             // Create label in WAHA
@@ -1416,7 +1416,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $wahaLabelId = $wahaResponse['id'] ?? null;
 
             if (!$wahaLabelId) {
-                $this->log->error("SyncConversationsFromChatwoot: WAHA response missing label ID when creating label for agent {$agent->getId()}");
+                $this->log->error("SyncConversationsFromChatwoot: WAHA response missing label ID when creating label for membership {$membership->getId()}");
                 return null;
             }
 
@@ -1426,21 +1426,21 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 'wahaLabelId' => (string)$wahaLabelId,
                 'color' => $color,
                 'colorHex' => $wahaResponse['colorHex'] ?? $colorHex,
-                'agentId' => $agent->getId(),
+                'accountUserMembershipId' => $membership->getId(),
                 'inboxIntegrationId' => $inboxIntegration->getId(),
                 'teamsIds' => $inboxIntegration->getLinkMultipleIdList('teams'),
                 'syncStatus' => 'synced',
             ], ['silent' => true]);
 
             $this->log->info(
-                "SyncConversationsFromChatwoot: Created WahaSessionLabel for agent {$agent->getId()} with WAHA ID {$wahaLabelId}"
+                "SyncConversationsFromChatwoot: Created WahaSessionLabel for membership {$membership->getId()} with WAHA ID {$wahaLabelId}"
             );
 
             return (string)$wahaLabelId;
 
         } catch (\Exception $e) {
             $this->log->error(
-                "SyncConversationsFromChatwoot: Failed to create label for agent {$agent->getId()}: " . $e->getMessage()
+                "SyncConversationsFromChatwoot: Failed to create label for membership {$membership->getId()}: " . $e->getMessage()
             );
             return null;
         }
@@ -1457,7 +1457,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         string $apiKey,
         string $sessionName,
         Entity $wahaSessionLabel,
-        Entity $agent
+        Entity $membership
     ): ?string {
         $storedLabelId = $wahaSessionLabel->get('wahaLabelId');
 
@@ -1483,10 +1483,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 "SyncConversationsFromChatwoot: Label {$storedLabelId} not found in WAHA session {$sessionName}, recreating..."
             );
 
-            // Generate label name based on agent type (AI or human)
-            $labelPrefix = $agent->get('isAI') ? '[✨]' : '[👤]';
-            $labelName = $labelPrefix . ' ' . $agent->get('name');
-            $color = abs(crc32($agent->getId())) % 20;
+            // Generate label name based on membership type (AI or human)
+            $labelPrefix = $membership->get('isAI') ? '[✨]' : '[👤]';
+            $labelName = $labelPrefix . ' ' . $membership->get('name');
+            $color = abs(crc32($membership->getId())) % 20;
 
             // Create new label in WAHA
             $wahaResponse = $this->wahaApiClient->createLabel(
@@ -1605,18 +1605,18 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Find a ChatwootAgent by the Chatwoot platform user ID (assigneeId).
-     * Resolves through ChatwootUser: platformUserId -> ChatwootUser -> ChatwootAgent.
+     * Find a ChatwootAccountUserMembership by the Chatwoot platform user ID (assigneeId).
+     * Resolves through ChatwootUser: platformUserId -> ChatwootUser -> Membership.
      */
-    private function findAgentByPlatformUserId(int $platformUserId, ?string $accountId): ?Entity
+    private function findMembershipByPlatformUserId(int $platformUserId, ?string $accountId): ?Entity
     {
         if (!$accountId) {
             return null;
         }
 
-        // Find agents linked to a ChatwootUser whose chatwootUserId matches
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
+        // Find memberships linked to a ChatwootUser whose chatwootUserId matches
+        $memberships = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
             ->leftJoin('chatwootUser')
             ->where([
                 'chatwootUser.chatwootUserId' => $platformUserId,
@@ -1625,8 +1625,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ->find();
 
         // Return the first match (should be at most one per account)
-        foreach ($agents as $agent) {
-            return $agent;
+        foreach ($memberships as $membership) {
+            return $membership;
         }
 
         return null;

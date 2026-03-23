@@ -17,13 +17,13 @@ use Espo\ORM\EntityManager;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
 
 /**
- * Hook to update WhatsApp chat labels when a conversation is assigned to an agent.
+ * Hook to update WhatsApp chat labels when a conversation is assigned to a membership.
  * 
  * When assigneeId changes:
  *   1. Get the conversation's inbox and find the ChatwootInboxIntegration
  *   2. Build the WhatsApp chatId from contactPhoneNumber
- *   3. Find the ChatwootAgent by assigneeId (chatwootAgentId)
- *   4. Find the WahaSessionLabel for that agent + inboxIntegration
+ *   3. Find the ChatwootAccountUserMembership by assigneeId (via chatwootUser)
+ *   4. Find the WahaSessionLabel for that membership + inboxIntegration
  *   5. Verify label exists in WAHA (recreate if necessary)
  *   6. Call WAHA API to update the chat's labels
  */
@@ -68,7 +68,7 @@ class UpdateChatLabel
     }
 
     /**
-     * Update the WhatsApp chat label based on the assigned agent.
+     * Update the WhatsApp chat label based on the assigned membership.
      */
     private function updateChatLabelForConversation(Entity $conversation): void
     {
@@ -135,15 +135,15 @@ class UpdateChatLabel
             $labels = [];
 
             if ($assigneeId) {
-                // Find ChatwootAgent by resolving through ChatwootUser (assigneeId is the platform user ID)
-                $agent = $this->findAgentByPlatformUserId($assigneeId, $conversation->get('chatwootAccountId'));
+                // Find ChatwootAccountUserMembership by resolving through ChatwootUser (assigneeId is the platform user ID)
+                $membership = $this->findMembershipByPlatformUserId($assigneeId, $conversation->get('chatwootAccountId'));
 
-                if ($agent) {
-                    // Find WahaSessionLabel for this agent + inboxIntegration
+                if ($membership) {
+                    // Find WahaSessionLabel for this membership + inboxIntegration
                     $wahaSessionLabel = $this->entityManager
                         ->getRDBRepository('WahaSessionLabel')
                         ->where([
-                            'agentId' => $agent->getId(),
+                            'accountUserMembershipId' => $membership->getId(),
                             'inboxIntegrationId' => $inboxIntegration->getId(),
                         ])
                         ->findOne();
@@ -155,28 +155,28 @@ class UpdateChatLabel
                             $apiKey,
                             $sessionName,
                             $wahaSessionLabel,
-                            $agent
+                            $membership
                         );
 
                         if ($validLabelId) {
                             $labels[] = ['id' => $validLabelId];
                             $this->log->info(
                                 "UpdateChatLabel: Setting label {$validLabelId} " .
-                                "for chat {$chatId} (agent {$agent->get('name')})"
+                                "for chat {$chatId} (membership {$membership->get('name')})"
                             );
                         }
                     } else {
                         // No WahaSessionLabel exists - create one on-the-fly
                         $this->log->info(
-                            "UpdateChatLabel: No WahaSessionLabel found for agent {$agent->getId()} " .
+                            "UpdateChatLabel: No WahaSessionLabel found for membership {$membership->getId()} " .
                             "+ integration {$inboxIntegration->getId()}, creating..."
                         );
 
-                        $newLabelId = $this->createLabelForAgent(
+                        $newLabelId = $this->createLabelForMembership(
                             $platformUrl,
                             $apiKey,
                             $sessionName,
-                            $agent,
+                            $membership,
                             $inboxIntegration
                         );
 
@@ -184,15 +184,15 @@ class UpdateChatLabel
                             $labels[] = ['id' => $newLabelId];
                             $this->log->info(
                                 "UpdateChatLabel: Created and setting label {$newLabelId} " .
-                                "for chat {$chatId} (agent {$agent->get('name')})"
+                                "for chat {$chatId} (membership {$membership->get('name')})"
                             );
                         }
                     }
                 } else {
-                    $this->log->debug("UpdateChatLabel: ChatwootAgent with platformUserId {$assigneeId} not found");
+                    $this->log->debug("UpdateChatLabel: ChatwootAccountUserMembership with platformUserId {$assigneeId} not found");
                 }
             } else {
-                // Unassigned - remove all agent labels
+                // Unassigned - remove all membership labels
                 $this->log->info("UpdateChatLabel: Removing labels for chat {$chatId} (unassigned)");
             }
 
@@ -246,22 +246,22 @@ class UpdateChatLabel
     }
 
     /**
-     * Create a new WAHA label for an agent and store the WahaSessionLabel record.
+     * Create a new WAHA label for a membership and store the WahaSessionLabel record.
      *
      * @return string|null The new label ID, or null if creation failed
      */
-    private function createLabelForAgent(
+    private function createLabelForMembership(
         string $platformUrl,
         string $apiKey,
         string $sessionName,
-        Entity $agent,
+        Entity $membership,
         Entity $inboxIntegration
     ): ?string {
         try {
-            // Generate label name based on agent type (AI or human)
-            $labelPrefix = $agent->get('isAI') ? '[✨]' : '[👤]';
-            $labelName = $labelPrefix . ' ' . $agent->get('name');
-            $color = abs(crc32($agent->getId())) % 20;
+            // Generate label name based on membership type (AI or human)
+            $labelPrefix = $membership->get('isAI') ? '[✨]' : '[👤]';
+            $labelName = $labelPrefix . ' ' . $membership->get('name');
+            $color = abs(crc32($membership->getId())) % 20;
             $colorHex = self::COLOR_MAP[$color] ?? '#64c4ff';
 
             // Create label in WAHA
@@ -278,7 +278,7 @@ class UpdateChatLabel
             $wahaLabelId = $wahaResponse['id'] ?? null;
 
             if (!$wahaLabelId) {
-                $this->log->error("UpdateChatLabel: WAHA response missing label ID when creating label for agent {$agent->getId()}");
+                $this->log->error("UpdateChatLabel: WAHA response missing label ID when creating label for membership {$membership->getId()}");
                 return null;
             }
 
@@ -288,21 +288,21 @@ class UpdateChatLabel
                 'wahaLabelId' => (string)$wahaLabelId,
                 'color' => $color,
                 'colorHex' => $wahaResponse['colorHex'] ?? $colorHex,
-                'agentId' => $agent->getId(),
+                'accountUserMembershipId' => $membership->getId(),
                 'inboxIntegrationId' => $inboxIntegration->getId(),
                 'teamsIds' => $inboxIntegration->getLinkMultipleIdList('teams'),
                 'syncStatus' => 'synced',
             ], ['silent' => true]);
 
             $this->log->info(
-                "UpdateChatLabel: Created WahaSessionLabel for agent {$agent->getId()} with WAHA ID {$wahaLabelId}"
+                "UpdateChatLabel: Created WahaSessionLabel for membership {$membership->getId()} with WAHA ID {$wahaLabelId}"
             );
 
             return (string)$wahaLabelId;
 
         } catch (\Exception $e) {
             $this->log->error(
-                "UpdateChatLabel: Failed to create label for agent {$agent->getId()}: " . $e->getMessage()
+                "UpdateChatLabel: Failed to create label for membership {$membership->getId()}: " . $e->getMessage()
             );
             return null;
         }
@@ -319,7 +319,7 @@ class UpdateChatLabel
         string $apiKey,
         string $sessionName,
         Entity $wahaSessionLabel,
-        Entity $agent
+        Entity $membership
     ): ?string {
         $storedLabelId = $wahaSessionLabel->get('wahaLabelId');
 
@@ -345,10 +345,10 @@ class UpdateChatLabel
                 "UpdateChatLabel: Label {$storedLabelId} not found in WAHA session {$sessionName}, recreating..."
             );
 
-            // Generate label name based on agent type (AI or human)
-            $labelPrefix = $agent->get('isAI') ? '[✨]' : '[👤]';
-            $labelName = $labelPrefix . ' ' . $agent->get('name');
-            $color = abs(crc32($agent->getId())) % 20;
+            // Generate label name based on membership type (AI or human)
+            $labelPrefix = $membership->get('isAI') ? '[✨]' : '[👤]';
+            $labelName = $labelPrefix . ' ' . $membership->get('name');
+            $color = abs(crc32($membership->getId())) % 20;
 
             // Create new label in WAHA
             $wahaResponse = $this->wahaApiClient->createLabel(
@@ -443,17 +443,17 @@ class UpdateChatLabel
     }
 
     /**
-     * Find a ChatwootAgent by the Chatwoot platform user ID (assigneeId).
-     * Resolves through ChatwootUser: platformUserId -> ChatwootUser -> ChatwootAgent.
+     * Find a ChatwootAccountUserMembership by the Chatwoot platform user ID (assigneeId).
+     * Resolves through ChatwootUser: platformUserId -> ChatwootUser -> ChatwootAccountUserMembership.
      */
-    private function findAgentByPlatformUserId(int $platformUserId, ?string $accountId): ?Entity
+    private function findMembershipByPlatformUserId(int $platformUserId, ?string $accountId): ?Entity
     {
         if (!$accountId) {
             return null;
         }
 
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
+        $memberships = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
             ->leftJoin('chatwootUser')
             ->where([
                 'chatwootUser.chatwootUserId' => $platformUserId,
@@ -461,8 +461,8 @@ class UpdateChatLabel
             ])
             ->find();
 
-        foreach ($agents as $agent) {
-            return $agent;
+        foreach ($memberships as $membership) {
+            return $membership;
         }
 
         return null;

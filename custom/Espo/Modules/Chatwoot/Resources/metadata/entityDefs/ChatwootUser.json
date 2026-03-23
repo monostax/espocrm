@@ -70,11 +70,7 @@
             "entity": "ChatwootAccount",
             "foreign": "automationUser"
         },
-        "agents": {
-            "type": "hasMany",
-            "entity": "ChatwootAgent",
-            "foreign": "chatwootUser"
-        },
+
         "accountUserMemberships": {
             "type": "hasMany",
             "entity": "ChatwootAccountUserMembership",

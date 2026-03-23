@@ -20,14 +20,83 @@
             "type": "link",
             "required": true
         },
-        "chatwootAgent": {
-            "type": "link"
-        },
         "role": {
             "type": "enum",
             "options": ["agent", "administrator"],
             "default": "agent",
             "required": true
+        },
+        "email": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "availableName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "availabilityStatus": {
+            "type": "enum",
+            "options": ["available", "busy", "offline"],
+            "default": "offline",
+            "readOnly": true
+        },
+        "autoOffline": {
+            "type": "bool",
+            "default": true,
+            "readOnly": true
+        },
+        "confirmed": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true
+        },
+        "avatarUrl": {
+            "type": "url",
+            "readOnly": true
+        },
+        "customRoleId": {
+            "type": "int",
+            "readOnly": true
+        },
+        "isAI": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "aiPrompt": {
+            "type": "wysiwyg",
+            "tooltip": true,
+            "audited": true
+        },
+        "ignoreGroups": {
+            "type": "bool",
+            "default": false
+        },
+        "ignoreStatusBroadcast": {
+            "type": "bool",
+            "default": false
+        },
+        "contextualTransferIsEnabled": {
+            "type": "bool",
+            "default": false
+        },
+        "transferScenarios": {
+            "type": "text",
+            "rowsMin": 10
+        },
+        "knowledgeBaseCategories": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "calendarsToManage": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "chatwootTeams": {
+            "type": "linkMultiple"
         },
         "syncStatus": {
             "type": "enum",
@@ -85,9 +154,27 @@
             "entity": "ChatwootUser",
             "foreign": "accountUserMemberships"
         },
-        "chatwootAgent": {
-            "type": "belongsTo",
-            "entity": "ChatwootAgent",
+        "chatwootTeams": {
+            "type": "hasMany",
+            "entity": "ChatwootTeam",
+            "relationName": "chatwootAccountUserMembershipChatwootTeam",
+            "foreign": "accountUserMemberships"
+        },
+        "knowledgeBaseCategories": {
+            "type": "hasMany",
+            "entity": "KnowledgeBaseCategory",
+            "relationName": "chatwootAccountUserMembershipKnowledgeBaseCategory",
+            "foreign": "accountUserMemberships"
+        },
+        "calendarsToManage": {
+            "type": "hasMany",
+            "entity": "User",
+            "relationName": "chatwootAccountUserMembershipCalendarUser",
+            "foreign": "accountUserMembershipsWithCalendarAccess"
+        },
+        "wahaSessionLabels": {
+            "type": "hasMany",
+            "entity": "WahaSessionLabel",
             "foreign": "accountUserMembership"
         },
         "createdBy": {
@@ -136,7 +223,10 @@
     },
     "cascadeDelete": {
         "junctionTables": [
-            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootAccountUserMembershipId"}
+            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootAccountUserMembershipId"},
+            {"table": "ChatwootAccountUserMembershipChatwootTeam", "column": "chatwootAccountUserMembershipId"},
+            {"table": "ChatwootAccountUserMembershipKnowledgeBaseCategory", "column": "chatwootAccountUserMembershipId"},
+            {"table": "ChatwootAccountUserMembershipCalendarUser", "column": "chatwootAccountUserMembershipId"}
         ]
     }
 }

@@ -48,7 +48,7 @@ When deleting entities synced with remote APIs (Chatwoot, WAHA):
 ```
 ChatwootAccount (delete)
 ├── CascadeDelete: deletes children with cascadeParent:true
-│   ├── ChatwootAgent → DeleteFromChatwoot skipped (cascadeParent)
+│   ├── ChatwootAccountUserMembership → DeleteFromChatwoot skipped (cascadeParent)
 │   ├── ChatwootTeam → DeleteFromChatwoot skipped (cascadeParent)
 │   └── ChatwootInbox → CascadeDelete runs again
 │       └── ChatwootConversation → CascadeDelete runs again

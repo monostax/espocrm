@@ -10,7 +10,9 @@
                 {
                     "name": "status"
                 },
-                false
+                {
+                    "name": "platform"
+                }
             ],
             [
                 {
@@ -40,12 +42,6 @@
             ]
         },
         "rows": [
-            [
-                {
-                    "name": "platform"
-                },
-                false
-            ],
             [
                 {
                     "name": "automationUser"

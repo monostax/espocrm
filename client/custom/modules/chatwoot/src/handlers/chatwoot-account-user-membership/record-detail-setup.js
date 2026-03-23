@@ -11,9 +11,9 @@
 /**
  * Setup handler for ChatwootAccountUserMembership detail/edit views.
  *
- * - Hides syncInfo panel for non-admin users (same as ChatwootAgent handler).
- * - Hides aiProfile panel when no agent is linked (chatwootAgentId is empty).
- *   Dynamically shows/hides on model changes (after enableAiProfile action).
+ * - Hides metadata/sync panels for non-admin users (ported from ChatwootAgent handler).
+ * - Hides aiConfiguration tab when isAI is not true.
+ *   Dynamically shows/hides on model changes (after enableAiProfile/disableAiProfile actions).
  */
 define('chatwoot:handlers/chatwoot-account-user-membership/record-detail-setup', [], function () {
 
@@ -23,31 +23,32 @@ define('chatwoot:handlers/chatwoot-account-user-membership/record-detail-setup',
         }
 
         process() {
-            // Hide syncInfo panel for non-admin users
+            // Hide syncInfo and agentState panels for non-admin users
             if (!this.view.getUser().isAdmin()) {
                 this.view.hidePanel('syncInfo', true);
+                this.view.hidePanel('agentState', true);
             }
 
-            // Hide aiProfile panel when no agent is linked
-            this._updateAiProfilePanelVisibility();
+            // Hide aiConfiguration tab when isAI is not true
+            this._updateAiConfigurationVisibility();
 
-            // Listen for changes to chatwootAgentId to dynamically show/hide
-            this.view.listenTo(this.view.model, 'change:chatwootAgentId', () => {
-                this._updateAiProfilePanelVisibility();
+            // Listen for changes to isAI to dynamically show/hide
+            this.view.listenTo(this.view.model, 'change:isAI', () => {
+                this._updateAiConfigurationVisibility();
             });
         }
 
         /**
-         * Show or hide the aiProfile panel based on chatwootAgentId presence.
+         * Show or hide the aiConfiguration panel based on isAI value.
          * @private
          */
-        _updateAiProfilePanelVisibility() {
-            const agentId = this.view.model.get('chatwootAgentId');
+        _updateAiConfigurationVisibility() {
+            const isAI = this.view.model.get('isAI');
 
-            if (agentId) {
-                this.view.showPanel('aiProfile');
+            if (isAI === true) {
+                this.view.showPanel('aiConfiguration');
             } else {
-                this.view.hidePanel('aiProfile', true);
+                this.view.hidePanel('aiConfiguration', true);
             }
         }
     };

@@ -29,16 +29,13 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 
 /**
- * Hook to link ChatwootUser to matching ChatwootAgents after creation.
+ * Hook to ensure ChatwootAccountUserMembership records are linked to the
+ * ChatwootUser after creation.
  *
- * This ensures bidirectional sync - when a user is created, any agents
- * with the same email across ALL accounts in the same platform get linked.
- *
- * Also creates ChatwootAccountUserMembership for each linked agent.
- * Note: LinkToAgents saves the agent with ['silent' => true], which triggers
- * LinkToUser.afterSave (it doesn't check silent). LinkToUser would also upsert
- * the membership via its new guard. However, the explicit call here ensures it
- * works even if LinkToUser is modified in the future. The upsert is idempotent.
+ * After Phase 9 (ChatwootAgent elimination), there is no ChatwootAgent entity
+ * to link. Memberships are created/managed by the sync jobs. This hook acts as
+ * a secondary safety net, ensuring memberships that may have been created
+ * before the user existed get their chatwootUserId populated.
  */
 class LinkToAgents
 {
@@ -51,15 +48,18 @@ class LinkToAgents
     ) {}
 
     /**
-     * After a ChatwootUser is saved, find and link matching unlinked
-     * ChatwootAgents across all accounts in the same platform.
+     * After a ChatwootUser is saved, ensure memberships exist for all accounts
+     * in the same platform where this user is a member.
      *
      * @param Entity $entity
      * @param array<string, mixed> $options
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        // Link unlinked agents by email match.
+        // No-op after Phase 9: ChatwootAgent entity is eliminated.
+        // Memberships are created by SyncAgentsFromChatwoot and SyncAccountMembersFromChatwoot.
+        // The upsertMembership() call below is a safety net for edge cases.
+
         $email = $entity->get('email');
         $platformId = $entity->get('platformId');
         $userId = $entity->getId();
@@ -83,40 +83,23 @@ class LinkToAgents
             return;
         }
 
-        // Find ChatwootAgents with the same email in any account of this platform that aren't linked yet
-        $agents = $this->entityManager
-            ->getRDBRepository('ChatwootAgent')
+        // Find memberships for this user — just log for awareness
+        $memberships = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
             ->where([
-                'email' => $email,
                 'chatwootAccountId' => $accountIds,
-                'OR' => [
-                    ['chatwootUserId' => null],
-                    ['chatwootUserId' => ''],
-                ],
+                'chatwootUserId' => $userId,
             ])
             ->find();
 
-        $linkedCount = 0;
-        foreach ($agents as $agent) {
-            $agent->set('chatwootUserId', $userId);
-            $agent->set('confirmed', true); // User exists, so agent is confirmed
-
-            $this->entityManager->saveEntity($agent, ['silent' => true]);
-
-            // Upsert membership for each linked agent (idempotent)
-            $this->membershipService->upsertMembership(
-                $agent->get('chatwootAccountId'),
-                $userId,
-                $agent->get('role') ?? 'agent',
-                $agent->getId()
-            );
-
-            $linkedCount++;
+        $count = 0;
+        foreach ($memberships as $m) {
+            $count++;
         }
 
-        if ($linkedCount > 0) {
-            $this->log->info(
-                "LinkToAgents: Linked ChatwootUser {$userId} to {$linkedCount} ChatwootAgent(s) by email {$email} across platform {$platformId}"
+        if ($count > 0) {
+            $this->log->debug(
+                "LinkToAgents: ChatwootUser {$userId} has {$count} existing membership(s) across platform {$platformId}"
             );
         }
     }

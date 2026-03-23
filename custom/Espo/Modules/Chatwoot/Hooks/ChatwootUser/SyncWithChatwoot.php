@@ -34,7 +34,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 /**
  * Hook to synchronize ChatwootUser with Chatwoot Platform API.
  * Creates user on Chatwoot BEFORE saving to database.
- * ChatwootUser is now platform-level - attaching to accounts is done via ChatwootAgent.
+ * ChatwootUser is now platform-level - attaching to accounts is done via ChatwootAccountUserMembership.
  * This ensures the database only contains users that fully exist in Chatwoot.
  */
 class SyncWithChatwoot implements CreateHook
@@ -50,7 +50,7 @@ class SyncWithChatwoot implements CreateHook
     /**
      * Create user on Chatwoot BEFORE entity is saved to database.
      * The entity will be populated with chatwootUserId before the INSERT.
-     * Account attachment is now handled by ChatwootAgent creation.
+     * Account attachment is now handled by ChatwootAccountUserMembership creation.
      * 
      * @throws Error
      */

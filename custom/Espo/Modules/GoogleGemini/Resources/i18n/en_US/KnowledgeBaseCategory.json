@@ -5,7 +5,7 @@
     },
     "links": {
         "geminiFileSearchStore": "AI Knowledge Store",
-        "chatwootAgents": "AI Agents"
+        "accountUserMemberships": "AI Agents"
     },
     "labels": {
         "AI Indexing": "AI Indexing"

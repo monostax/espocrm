@@ -4,33 +4,18 @@
     "bottomPanels": {
         "detail": [
             {
-                "name": "agents",
-                "label": "Chat / Agents",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 5,
-                "disabled": false
-            },
-            {
                 "name": "accountUserMemberships",
                 "label": "Chat / Account / Agents",
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
                 "rowActionsView": "views/record/row-actions/relationship-no-remove",
-                "order": 6,
+                "order": 5,
                 "disabled": false
             }
         ]
     },
     "relationshipPanels": {
-        "agents": {
-            "create": false,
-            "select": false,
-            "view": "views/record/panels/relationship"
-        },
         "accountUserMemberships": {
             "create": false,
             "select": false,

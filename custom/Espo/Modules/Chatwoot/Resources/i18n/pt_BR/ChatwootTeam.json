@@ -6,11 +6,11 @@
         "account": "Chat / Conta",
         "chatwootTeamId": "Chat / Time (ID)",
         "isMember": "É Membro",
-        "chatwootAgents": "Chat / Agentes"
+        "accountUserMemberships": "Chat / Agentes"
     },
     "links": {
         "account": "Chat / Conta",
-        "chatwootAgents": "Chat / Agentes",
+        "accountUserMemberships": "Chat / Agentes",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Permissão / Times"

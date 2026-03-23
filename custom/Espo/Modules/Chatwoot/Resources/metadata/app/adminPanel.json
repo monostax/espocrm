@@ -27,12 +27,6 @@
                 "description": "chatwootUsers"
             },
             {
-                "url": "#ChatwootAgent",
-                "label": "AI Agents",
-                "iconClass": "fas fa-user-tie",
-                "description": "chatwootAgents"
-            },
-            {
                 "url": "#ChatwootAccountUserMembership",
                 "label": "Account Users",
                 "iconClass": "ti ti-user-shield",
@@ -72,4 +66,3 @@
         "order": 30
     }
 }
-

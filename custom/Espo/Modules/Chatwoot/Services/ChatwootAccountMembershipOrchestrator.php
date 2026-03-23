@@ -279,14 +279,33 @@ class ChatwootAccountMembershipOrchestrator
             return $byAssigned;
         }
 
-        $byEmail = $this->entityManager
-            ->getRDBRepository('ChatwootUser')
-            ->where([
-                'platformId' => $platformId,
-                'email' => $email,
-            ])
-            ->order('createdAt', 'DESC')
-            ->findOne();
+        // Fallback: look up by email using EspoCRM's email address lookup.
+        // ChatwootUser.email is of EspoCRM type "email" which stores data in the
+        // email_address / entity_email_address junction tables — NOT as a column
+        // on chatwoot_user. A simple ->where(['email' => ...]) silently returns
+        // no results. We must query the junction tables explicitly.
+        $byEmail = null;
+
+        if ($email) {
+            $pdo = $this->entityManager->getPDO();
+            $stmt = $pdo->prepare("
+                SELECT cu.id
+                FROM chatwoot_user cu
+                INNER JOIN entity_email_address eea ON eea.entity_id = cu.id AND eea.entity_type = 'ChatwootUser' AND eea.deleted = 0
+                INNER JOIN email_address ea ON ea.id = eea.email_address_id AND ea.deleted = 0
+                WHERE ea.lower = LOWER(?)
+                  AND cu.platform_id = ?
+                  AND cu.deleted = 0
+                ORDER BY cu.created_at DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$email, $platformId]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if ($row) {
+                $byEmail = $this->entityManager->getEntityById('ChatwootUser', $row['id']);
+            }
+        }
 
         if (!$byEmail) {
             return null;
