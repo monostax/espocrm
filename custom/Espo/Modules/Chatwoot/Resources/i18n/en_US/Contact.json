@@ -1,0 +1,13 @@
+{
+    "labels": {
+        "Send Message": "Send Message",
+        "Select Channel": "Select Channel",
+        "Open in New Tab": "Open in New Tab",
+        "Open in Drawer": "Open in Chat",
+        "Start Chat": "Start Chat",
+        "Start in New Tab": "Start in New Tab",
+        "No channels available": "No chat channels available for this contact",
+        "Creating conversation...": "Creating conversation...",
+        "Failed to create conversation": "Failed to create conversation"
+    }
+}

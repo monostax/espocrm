@@ -143,6 +143,15 @@
             "accountId": ":accountId"
         },
         "noAuth": true
+    },
+    {
+        "route": "/ChatwootContactInbox/:id/createConversation",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootContactInbox",
+            "action": "createConversation",
+            "id": ":id"
+        }
     }
 ]
 

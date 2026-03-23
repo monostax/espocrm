@@ -1,0 +1,13 @@
+{
+    "labels": {
+        "Send Message": "Enviar Mensagem",
+        "Select Channel": "Selecionar Canal",
+        "Open in New Tab": "Abrir em Nova Aba",
+        "Open in Drawer": "Abrir no Chat",
+        "Start Chat": "Iniciar Chat",
+        "Start in New Tab": "Iniciar em Nova Aba",
+        "No channels available": "Nenhum canal de chat disponível para este contato",
+        "Creating conversation...": "Criando conversa...",
+        "Failed to create conversation": "Falha ao criar conversa"
+    }
+}

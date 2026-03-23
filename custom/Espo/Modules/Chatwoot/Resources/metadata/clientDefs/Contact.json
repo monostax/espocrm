@@ -1,4 +1,30 @@
 {
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "name": "sendMessage",
+                    "label": "Send Message",
+                    "style": "default",
+                    "iconHtml": "<span class=\"fas fa-paper-plane fa-sm\"></span>",
+                    "handler": "chatwoot:handlers/contact/detail-actions",
+                    "actionFunction": "sendMessage",
+                    "checkVisibilityFunction": "isSendMessageAvailable"
+                }
+            ]
+        }
+    },
+    "detailActionList": [
+        {
+            "name": "sendMessage",
+            "label": "Send Message",
+            "handler": "chatwoot:handlers/contact/detail-actions",
+            "actionFunction": "sendMessage",
+            "checkVisibilityFunction": "isSendMessageAvailable",
+            "groupIndex": 0
+        }
+    ],
     "bottomPanels": {
         "detail": [
             {
