@@ -72,6 +72,7 @@
                 "view": "views/record/panels/relationship",
                 "label": "tabWebhooks",
                 "layout": "listSmall",
+                "aclScope": "ChatwootAccountWebhook",
                 "unlinkDisabled": true,
                 "selectDisabled": true,
                 "order": 5
@@ -116,6 +117,7 @@
                 "view": "views/record/panels/relationship",
                 "label": "tabWebhooks",
                 "layout": "listSmall",
+                "aclScope": "ChatwootAccountWebhook",
                 "unlinkDisabled": true,
                 "selectDisabled": true,
                 "order": 5

@@ -15,6 +15,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Acl;
 use Espo\Core\Utils\Log;
 use Espo\ORM\Entity;
@@ -330,13 +331,13 @@ class ChatwootAccountMembershipOrchestrator
      */
     private function assertUserBelongsToAccountTeam(Entity $account, Entity $user): void
     {
-        $accountTeamsIds = array_values(array_filter((array) ($account->get('teamsIds') ?? [])));
+        $accountTeamsIds = $this->extractEntityTeamIds($account);
 
         if (!$accountTeamsIds) {
             return;
         }
 
-        $userTeamsIds = array_values(array_filter((array) ($user->get('teamsIds') ?? [])));
+        $userTeamsIds = $this->extractEntityTeamIds($user);
 
         if (!$userTeamsIds) {
             throw new Forbidden('selectedUserMustBelongToAccountTeam');
@@ -345,6 +346,25 @@ class ChatwootAccountMembershipOrchestrator
         if (!array_intersect($accountTeamsIds, $userTeamsIds)) {
             throw new Forbidden('selectedUserMustBelongToAccountTeam');
         }
+    }
+
+    /**
+     * Extract team IDs from an entity in a way that works for both regular entities
+     * and User entities (where teams are stored via team_user relation).
+     *
+     * @return string[]
+     */
+    private function extractEntityTeamIds(Entity $entity): array
+    {
+        if ($entity instanceof CoreEntity) {
+            $teamIds = array_values(array_filter($entity->getLinkMultipleIdList('teams')));
+
+            if ($teamIds) {
+                return $teamIds;
+            }
+        }
+
+        return array_values(array_filter((array) ($entity->get('teamsIds') ?? [])));
     }
 
     /**
