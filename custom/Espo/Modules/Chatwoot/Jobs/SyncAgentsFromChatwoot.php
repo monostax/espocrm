@@ -129,12 +129,12 @@ class SyncAgentsFromChatwoot implements JobDataLess
         } catch (\Exception $e) {
             $message = $e->getMessage();
 
-            // Chatwoot is the source of truth. A 401 or 404 means the account
-            // or its API key no longer exists in Chatwoot. Clean up all local
-            // memberships and orphaned ChatwootUsers for this account.
+            // Chatwoot is the source of truth. Only 404 means the account is
+            // gone in Chatwoot and local memberships/users should be cleaned.
+            // 401 can be transient/token issues and must not trigger cleanup.
             if ($this->isAccountGoneError($message)) {
                 $this->log->warning(
-                    "SyncAgentsFromChatwoot: Account {$accountName} returned 401/404 — " .
+                    "SyncAgentsFromChatwoot: Account {$accountName} returned 404 — " .
                     "account likely deleted from Chatwoot (source of truth). " .
                     "Cleaning up local memberships and orphaned users."
                 );
@@ -414,6 +414,10 @@ class SyncAgentsFromChatwoot implements JobDataLess
             return;
         }
 
+        if ($this->isAutomationUser($user)) {
+            return;
+        }
+
         try {
             $this->entityManager->removeEntity($user);
             $this->log->info(
@@ -429,11 +433,11 @@ class SyncAgentsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Check if the error message indicates the Chatwoot account is gone (401/404).
+     * Check if the error message indicates the Chatwoot account is gone (404).
      */
     private function isAccountGoneError(string $message): bool
     {
-        return (bool) preg_match('/HTTP\s+(401|404)\b/', $message);
+        return (bool) preg_match('/HTTP\s+404\b/', $message);
     }
 
     /**
@@ -507,6 +511,10 @@ class SyncAgentsFromChatwoot implements JobDataLess
                 ->count();
 
             if ($remainingMemberships === 0) {
+                if ($this->isAutomationUser($user)) {
+                    continue;
+                }
+
                 try {
                     $userName = $user->get('name');
                     $this->entityManager->removeEntity($user);
@@ -577,5 +585,18 @@ class SyncAgentsFromChatwoot implements JobDataLess
     private function getAccountTeamsIds(Entity $account): array
     {
         return $account->getLinkMultipleIdList('teams');
+    }
+
+    private function isAutomationUser(Entity $user): bool
+    {
+        $name = (string) ($user->get('name') ?? '');
+        if (strpos($name, 'Automation User - ') === 0) {
+            return true;
+        }
+
+        $email = (string) ($user->get('email') ?? '');
+
+        return strpos($email, 'automation.') === 0
+            && strpos($email, '@chatwoot.local') !== false;
     }
 }

@@ -48,8 +48,23 @@ class CustomNavbarSiteView extends NavbarSiteView {
         }
 
         return tabList.filter((item) => {
+            if (item === "ChatwootConversation") {
+                return false;
+            }
+
             if (!item || typeof item !== "object") {
                 return true;
+            }
+
+            if (item.scope === "ChatwootConversation") {
+                return false;
+            }
+
+            if (
+                typeof item.url === "string" &&
+                item.url.includes("ChatwootConversation")
+            ) {
+                return false;
             }
 
             if (item.type === "divider" && item.text === "$Conversations") {
@@ -905,4 +920,3 @@ class CustomNavbarSiteView extends NavbarSiteView {
 }
 
 export default CustomNavbarSiteView;
-

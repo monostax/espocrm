@@ -27,6 +27,7 @@ use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -46,6 +47,7 @@ class SeedChatwootAccount implements RebuildAction
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
+        private ChatwootAccountUserMembershipService $membershipService,
         private Config $config,
         private Log $log
     ) {}
@@ -92,8 +94,8 @@ class SeedChatwootAccount implements RebuildAction
             // Update to ensure linked to default platform
             $existing->set('platformId', $platform->getId());
             
-            // If apiKey or automationUser is missing, try to create automation user
-            if ((!$existing->get('apiKey') || !$existing->get('automationUserId')) && $existing->get('chatwootAccountId')) {
+            // If apiKey/automation linkage is missing or broken, bootstrap automation user.
+            if ($this->needsAutomationBootstrap($existing) && $existing->get('chatwootAccountId')) {
                 $automationUserData = $this->createAutomationUser(
                     $backendUrl,
                     $accessToken,
@@ -115,6 +117,7 @@ class SeedChatwootAccount implements RebuildAction
                     
                     if ($chatwootUser) {
                         $existing->set('automationUserId', $chatwootUser->getId());
+                        $this->ensureAutomationMembership($existing, $chatwootUser, $automationUserData);
                     }
                     
                     $this->log->info('SeedChatwootAccount: Added automation user to existing account');
@@ -173,6 +176,7 @@ class SeedChatwootAccount implements RebuildAction
                 
                 if ($chatwootUser) {
                     $account->set('automationUserId', $chatwootUser->getId());
+                    $this->ensureAutomationMembership($account, $chatwootUser, $automationUserData);
                     $this->entityManager->saveEntity($account, [SaveOption::SKIP_ALL => true]);
                 }
             }
@@ -217,11 +221,11 @@ class SeedChatwootAccount implements RebuildAction
     }
 
     /**
-     * Ensure a single webhook exists for the account by name.
-     * Idempotent: skips if a webhook with this name already exists.
+     * Ensure a single webhook exists for the account.
+     * Uses a deterministic per-account ID for idempotency across rebuilds.
      *
      * @param Entity $account The ChatwootAccount entity
-     * @param string $name Webhook name (used for idempotency check)
+     * @param string $name Webhook name
      * @param string|null $url Webhook URL — skipped if null/empty
      * @param array<string> $subscriptions Event subscriptions
      */
@@ -245,15 +249,17 @@ class SeedChatwootAccount implements RebuildAction
         }
 
         try {
-            $this->entityManager->createEntity('ChatwootAccountWebhook', [
-                'name' => $name,
-                'accountId' => $account->getId(),
-                'url' => $url,
-                'subscriptions' => $subscriptions,
-            ]);
+            $webhookId = $this->buildWebhookId($account->getId(), $name);
+            $webhook = $this->entityManager->getNewEntity('ChatwootAccountWebhook');
+            $webhook->set('id', $webhookId);
+            $webhook->set('name', $name);
+            $webhook->set('accountId', $account->getId());
+            $webhook->set('url', $url);
+            $webhook->set('subscriptions', $subscriptions);
+            $this->entityManager->saveEntity($webhook);
 
             $this->log->info(
-                "SeedChatwootAccount: Registered webhook '{$name}' for account " .
+                "SeedChatwootAccount: Registered webhook '{$name}' (ID: {$webhookId}) for account " .
                 "{$account->getId()} at {$url}"
             );
         } catch (\Exception $e) {
@@ -261,6 +267,11 @@ class SeedChatwootAccount implements RebuildAction
                 "SeedChatwootAccount: Failed to register webhook '{$name}': {$e->getMessage()}"
             );
         }
+    }
+
+    private function buildWebhookId(string $accountId, string $name): string
+    {
+        return substr(sha1('seed-webhook|' . $accountId . '|' . $name), 0, 17);
     }
 
     /**
@@ -323,7 +334,7 @@ class SeedChatwootAccount implements RebuildAction
             }
 
             // Add user to account as administrator
-            $this->apiClient->attachUserToAccount(
+            $accountUserResponse = $this->apiClient->attachUserToAccount(
                 $backendUrl,
                 $platformAccessToken,
                 $chatwootAccountId,
@@ -338,7 +349,8 @@ class SeedChatwootAccount implements RebuildAction
                 'email' => $email,
                 'password' => $password,
                 'name' => $name,
-                'access_token' => $userResponse['access_token'] ?? null
+                'access_token' => $userResponse['access_token'] ?? null,
+                'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
             ];
         } catch (\Exception $e) {
             // User might already exist
@@ -390,6 +402,58 @@ class SeedChatwootAccount implements RebuildAction
             $this->log->error('SeedChatwootAccount: Failed to create ChatwootUser entity: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Ensure automation user has a membership so it is not treated as orphan.
+     *
+     * @param array<string, mixed> $automationUserData
+     */
+    private function ensureAutomationMembership(Entity $account, Entity $chatwootUser, array $automationUserData): void
+    {
+        try {
+            $accountUserId = isset($automationUserData['account_user_id'])
+                ? (int) $automationUserData['account_user_id']
+                : null;
+
+            $this->membershipService->upsertMembership(
+                $account->getId(),
+                $chatwootUser->getId(),
+                'administrator',
+                $accountUserId
+            );
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                'SeedChatwootAccount: Failed to ensure automation membership: ' . $e->getMessage()
+            );
+        }
+    }
+
+    private function needsAutomationBootstrap(Entity $account): bool
+    {
+        if (!$account->get('apiKey')) {
+            return true;
+        }
+
+        $automationUserId = $account->get('automationUserId');
+        if (!$automationUserId) {
+            return true;
+        }
+
+        $automationUser = $this->entityManager->getEntityById('ChatwootUser', $automationUserId);
+        if (!$automationUser) {
+            return true;
+        }
+
+        $membership = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->where([
+                'chatwootAccountId' => $account->getId(),
+                'chatwootUserId' => $automationUserId,
+            ])
+            ->findOne();
+
+        return !$membership;
     }
 
     /**

@@ -383,9 +383,5 @@ class SyncInboxesFromChatwoot implements JobDataLess
     {
         return $account->getLinkMultipleIdList('teams');
     }
+
 }
-
-
-
-
-

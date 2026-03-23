@@ -268,7 +268,7 @@ class SyncWithChatwoot
         $chatwootUserId = $userResponse['id'];
 
         // Attach user to account as administrator
-        $this->apiClient->attachUserToAccount(
+        $accountUserResponse = $this->apiClient->attachUserToAccount(
             $platformUrl,
             $accessToken,
             $chatwootAccountId,
@@ -284,7 +284,8 @@ class SyncWithChatwoot
             'email' => $email,
             'password' => $password,
             'name' => $name,
-            'access_token' => $userResponse['access_token'] ?? null
+            'access_token' => $userResponse['access_token'] ?? null,
+            'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
         ];
     }
 

@@ -27,6 +27,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Hooks\ChatwootAccount\SyncWithChatwoot;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 
 /**
  * Creates the ChatwootUser entity in EspoCRM after the ChatwootAccount is saved.
@@ -39,7 +40,8 @@ class CreateAutomationUser
 
     public function __construct(
         private EntityManager $entityManager,
-        private Log $log
+        private Log $log,
+        private ChatwootAccountUserMembershipService $membershipService
     ) {}
 
     /**
@@ -83,6 +85,17 @@ class CreateAutomationUser
                 // Link the ChatwootUser to the ChatwootAccount
                 $entity->set('automationUserId', $chatwootUser->getId());
                 $this->entityManager->saveEntity($entity, ['silent' => true, 'skipHooks' => true]);
+
+                $accountUserId = isset($automationUserData['account_user_id'])
+                    ? (int) $automationUserData['account_user_id']
+                    : null;
+
+                $this->membershipService->upsertMembership(
+                    $entity->getId(),
+                    $chatwootUser->getId(),
+                    'administrator',
+                    $accountUserId
+                );
                 
                 $this->log->info(
                     'Created and linked ChatwootUser entity for automation user: ' . 

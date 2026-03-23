@@ -332,41 +332,82 @@ class ChatwootAccountUserMembershipService
             $platformUserId = $chatwootUser->get('chatwootUserId');
 
             if (!$platformUserId && $email) {
-                // Create platform user via Platform API
-                $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, [
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => bin2hex(random_bytes(16)),
-                ]);
+                try {
+                    // Create platform user via Platform API
+                    $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, [
+                        'name' => $name,
+                        'email' => $email,
+                        'password' => bin2hex(random_bytes(16)),
+                    ]);
 
-                $platformUserId = $userResponse['id'] ?? null;
+                    $platformUserId = $userResponse['id'] ?? null;
 
-                if ($platformUserId) {
-                    $chatwootUser->set('chatwootUserId', $platformUserId);
-                    $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+                    if ($platformUserId) {
+                        $chatwootUser->set('chatwootUserId', $platformUserId);
+                        $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+                    }
+                } catch (\Throwable $e) {
+                    // If the user already exists on Chatwoot, continue and let createAgent()
+                    // attach/reuse by email. If that also conflicts, recover from listAgents().
+                    if ($this->isDuplicateChatwootEntityError($e->getMessage())) {
+                        $this->log->warning(
+                            "syncAgentToChatwoot: Chatwoot user already exists for email {$email}; " .
+                            "continuing with agent reconciliation. Error: " . $e->getMessage()
+                        );
+                    } else {
+                        throw $e;
+                    }
                 }
             }
 
-            if (!$platformUserId) {
+            if (!$platformUserId && !$email) {
                 throw new \RuntimeException('Could not resolve or create platform user ID.');
             }
 
-            // Create agent on the account API
-            $agentResponse = $this->apiClient->createAgent(
-                $platformUrl,
-                $accountApiKey,
-                $chatwootAccountId,
-                [
-                    'name' => $name,
-                    'email' => $email,
-                    'role' => $role,
-                    'availability_status' => $membership->get('availabilityStatus') ?? 'online',
-                    'auto_offline' => $membership->get('autoOffline') ?? true,
-                ]
-            );
+            try {
+                // Create agent on the account API
+                $agentResponse = $this->apiClient->createAgent(
+                    $platformUrl,
+                    $accountApiKey,
+                    $chatwootAccountId,
+                    [
+                        'name' => $name,
+                        'email' => $email,
+                        'role' => $role,
+                        'availability_status' => $membership->get('availabilityStatus') ?? 'online',
+                        'auto_offline' => $membership->get('autoOffline') ?? true,
+                    ]
+                );
 
-            // Populate membership fields from API response
-            $this->populateMembershipFromAgentResponse($membership, $agentResponse);
+                // Populate membership fields from API response
+                $this->populateMembershipFromAgentResponse($membership, $agentResponse);
+
+                if (!$chatwootUser->get('chatwootUserId') && isset($agentResponse['id'])) {
+                    $chatwootUser->set('chatwootUserId', (int) $agentResponse['id']);
+                    $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+                }
+            } catch (\Throwable $e) {
+                if (!$email || !$this->isDuplicateChatwootEntityError($e->getMessage())) {
+                    throw $e;
+                }
+
+                $existingAgent = $this->findAgentByEmail($platformUrl, $accountApiKey, (int) $chatwootAccountId, $email);
+
+                if (!$existingAgent) {
+                    throw $e;
+                }
+
+                $this->populateMembershipFromAgentResponse($membership, $existingAgent);
+
+                if (!$chatwootUser->get('chatwootUserId') && isset($existingAgent['id'])) {
+                    $chatwootUser->set('chatwootUserId', (int) $existingAgent['id']);
+                    $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
+                }
+
+                $this->log->info(
+                    "syncAgentToChatwoot: Reused existing Chatwoot agent for membership {$membership->getId()} by email {$email}"
+                );
+            }
 
             $this->log->info(
                 "syncAgentToChatwoot: Created agent on Chatwoot for membership {$membership->getId()}"
@@ -600,5 +641,41 @@ class ChatwootAccountUserMembershipService
         }
 
         return $email ?: null;
+    }
+
+    /**
+     * Treats known 422 uniqueness responses as recoverable duplicate conflicts.
+     */
+    private function isDuplicateChatwootEntityError(string $message): bool
+    {
+        $normalized = strtolower($message);
+
+        return str_contains($normalized, 'already been taken') ||
+            str_contains($normalized, 'already exists') ||
+            str_contains($normalized, 'has already been taken');
+    }
+
+    /**
+     * Find an existing Chatwoot account agent by email.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function findAgentByEmail(
+        string $platformUrl,
+        string $accountApiKey,
+        int $chatwootAccountId,
+        string $email
+    ): ?array {
+        $agents = $this->apiClient->listAgents($platformUrl, $accountApiKey, $chatwootAccountId);
+
+        foreach ($agents as $agent) {
+            $agentEmail = strtolower(trim((string) ($agent['email'] ?? '')));
+
+            if ($agentEmail !== '' && $agentEmail === strtolower(trim($email))) {
+                return $agent;
+            }
+        }
+
+        return null;
     }
 }

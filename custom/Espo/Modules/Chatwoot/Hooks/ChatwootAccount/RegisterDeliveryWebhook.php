@@ -40,18 +40,29 @@ class RegisterDeliveryWebhook
 
     public function afterSave(Entity $entity, array $options): void
     {
-        if (!$entity->isNew()) {
-            return;
-        }
-
         $chatwootAccountId = $entity->get('chatwootAccountId');
 
         if (!$chatwootAccountId) {
             return;
         }
 
+        // Idempotent: each register method checks if the webhook already exists.
+        // This allows safe execution on every save and self-heals missing webhooks.
         $this->registerDeliveryWebhook($entity, $chatwootAccountId);
         $this->registerHatchetWebhook($entity, $chatwootAccountId);
+    }
+
+    private function webhookExists(Entity $entity, string $name): bool
+    {
+        $existing = $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $entity->getId(),
+                'name' => $name,
+            ])
+            ->findOne();
+
+        return (bool) $existing;
     }
 
     /**
@@ -59,6 +70,10 @@ class RegisterDeliveryWebhook
      */
     private function registerDeliveryWebhook(Entity $entity, int $chatwootAccountId): void
     {
+        if ($this->webhookExists($entity, 'WhatsApp Delivery Status')) {
+            return;
+        }
+
         $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
 
         if (!$crmBackendUrl) {
@@ -101,6 +116,10 @@ class RegisterDeliveryWebhook
      */
     private function registerHatchetWebhook(Entity $entity, int $chatwootAccountId): void
     {
+        if ($this->webhookExists($entity, 'Hatchet AI Agent')) {
+            return;
+        }
+
         $hatchetWebhookUrl = getenv('HATCHET_CHATWOOT_WEBHOOK_URL');
 
         if (!$hatchetWebhookUrl) {
