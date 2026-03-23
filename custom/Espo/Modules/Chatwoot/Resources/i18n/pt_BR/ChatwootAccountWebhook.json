@@ -14,7 +14,8 @@
         "teams": "Permissão / Times"
     },
     "labels": {
-        "Create ChatwootAccountWebhook": "Cadastrar Webhook de Chat / Conta"
+        "Create ChatwootAccountWebhook": "Cadastrar Webhook de Chat / Conta",
+        "tabWebhooks": "Webhooks"
     },
     "options": {
         "subscriptions": {

@@ -8,6 +8,10 @@
         "Start in New Tab": "Iniciar em Nova Aba",
         "No channels available": "Nenhum canal de chat disponível para este contato",
         "Creating conversation...": "Criando conversa...",
-        "Failed to create conversation": "Falha ao criar conversa"
+        "Failed to create conversation": "Falha ao criar conversa",
+        "New Conversation": "Nova Conversa",
+        "Initiating conversation...": "Iniciando conversa...",
+        "Failed to initiate conversation": "Falha ao iniciar conversa",
+        "Contact has no phone number": "Contato não possui número de telefone para este canal"
     }
 }

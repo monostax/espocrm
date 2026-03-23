@@ -53,6 +53,7 @@ define('chatwoot:handlers/contact/detail-actions', [], function () {
                     contactId: this.view.model.id,
                     contactName: this.view.model.get('name'),
                     chatwootAccountEntityId: chatwootAccountEntityId,
+                    contactPhoneNumber: this.view.model.get('phoneNumber'),
                 },
                 (view) => {
                     view.render();

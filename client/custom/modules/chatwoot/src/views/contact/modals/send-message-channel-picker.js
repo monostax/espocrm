@@ -33,6 +33,9 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
         /** @type {Array} Processed channel list for template rendering */
         channels: [],
 
+        /** @type {Array} Available inboxes for new conversations */
+        availableInboxes: [],
+
         /** @type {boolean} Whether data is still loading */
         isLoading: true,
 
@@ -49,6 +52,9 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 errorMessage: this.errorMessage,
                 hasChannels: this.channels.length > 0,
                 channels: this.channels,
+                hasAvailableInboxes: this.availableInboxes.length > 0,
+                availableInboxes: this.availableInboxes,
+                contactPhoneNumber: this.contactPhoneNumber,
             };
         },
 
@@ -66,8 +72,10 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
             this.contactName = this.options.contactName;
             this.chatwootAccountEntityId = this.options.chatwootAccountEntityId;
             this.chatwootAccountId = this.getHelper().getAppParam("chatwootAccountId");
+            this.contactPhoneNumber = this.options.contactPhoneNumber || null;
 
             this.channels = [];
+            this.availableInboxes = [];
             this.isLoading = true;
             this.hasError = false;
             this.errorMessage = null;
@@ -76,11 +84,12 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
         },
 
         /**
-         * Fetch ChatwootContactInboxes and ChatwootConversations in parallel,
-         * then merge them client-side.
+         * Fetch ChatwootContactInboxes, ChatwootConversations, and
+         * ChatwootInbox records (for channelType from the linked
+         * ChatwootInboxIntegration) in parallel, then merge client-side.
          */
         _loadData: function () {
-            var inboxPromise = Espo.Ajax.getRequest("ChatwootContactInbox", {
+            var contactInboxPromise = Espo.Ajax.getRequest("ChatwootContactInbox", {
                 where: [
                     {
                         type: "equals",
@@ -93,7 +102,7 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                         value: this.chatwootAccountEntityId,
                     },
                 ],
-                select: "id,inboxName,inboxChannelType,chatwootInboxId",
+                select: "id,inboxName,inboxChannelType,chatwootInboxId,inboxId",
                 maxSize: 200,
             });
 
@@ -116,16 +125,26 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 maxSize: 200,
             });
 
-            Promise.all([inboxPromise, conversationPromise])
+            var chatwootInboxPromise = Espo.Ajax.getRequest("ChatwootInbox", {
+                where: [
+                    {
+                        type: "equals",
+                        attribute: "chatwootAccountId",
+                        value: this.chatwootAccountEntityId,
+                    },
+                ],
+                select: "id,channelType,name,chatwootInboxId",
+                maxSize: 200,
+            });
+
+            Promise.all([contactInboxPromise, conversationPromise, chatwootInboxPromise])
                 .then(
                     function (results) {
-                        var inboxResponse = results[0];
-                        var conversationResponse = results[1];
+                        var contactInboxes = (results[0] && results[0].list) || [];
+                        var conversations = (results[1] && results[1].list) || [];
+                        var chatwootInboxes = (results[2] && results[2].list) || [];
 
-                        var inboxes = inboxResponse.list || [];
-                        var conversations = conversationResponse.list || [];
-
-                        this._processData(inboxes, conversations);
+                        this._processData(contactInboxes, conversations, chatwootInboxes);
 
                         this.isLoading = false;
                         this.reRender();
@@ -148,13 +167,13 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
         },
 
         /**
-         * Process raw inbox and conversation data into the channels array
-         * used by the template.
+         * Process raw data into the channels array used by the template.
          *
-         * Groups conversations by contactInboxId, takes the most recent
-         * (first after desc sort) per inbox.
+         * @param {Array} contactInboxes - ChatwootContactInbox records
+         * @param {Array} conversations - ChatwootConversation records (desc by lastActivityAt)
+         * @param {Array} chatwootInboxes - ChatwootInbox records (with channelType from ChatwootInboxIntegration)
          */
-        _processData: function (inboxes, conversations) {
+        _processData: function (contactInboxes, conversations, chatwootInboxes) {
             // Group conversations by contactInboxId — first one is the most recent
             var conversationMap = {};
             conversations.forEach(function (conv) {
@@ -164,20 +183,30 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 }
             });
 
-            this.channels = inboxes.map(
-                function (inbox) {
-                    var conversation = conversationMap[inbox.id] || null;
-                    var normalizedType = this._normalizeChannelType(
-                        inbox.inboxChannelType,
-                        inbox.inboxName
-                    );
+            // Map ChatwootInbox by id for channelType lookup
+            var inboxMap = {};
+            chatwootInboxes.forEach(function (cInbox) {
+                inboxMap[cInbox.id] = cInbox;
+            });
+
+            this.channels = contactInboxes.map(
+                function (contactInbox) {
+                    var conversation = conversationMap[contactInbox.id] || null;
+
+                    // Resolve channelType from linked ChatwootInbox
+                    // (which is a foreign field from ChatwootInboxIntegration)
+                    var chatwootInbox = contactInbox.inboxId ? inboxMap[contactInbox.inboxId] : null;
+                    var integrationChannelType = chatwootInbox ? chatwootInbox.channelType : null;
+
+                    var iconInfo = this._getChannelIcon(integrationChannelType);
 
                     return {
-                        contactInboxId: inbox.id,
-                        inboxName: inbox.inboxName || "Unknown Channel",
-                        inboxChannelType: inbox.inboxChannelType,
-                        channelTypeLabel: normalizedType,
-                        iconClass: this._getChannelIcon(normalizedType),
+                        contactInboxId: contactInbox.id,
+                        inboxName: contactInbox.inboxName || "Unknown Channel",
+                        inboxChannelType: contactInbox.inboxChannelType,
+                        channelTypeLabel: iconInfo.label,
+                        svgIconUrl: iconInfo.svgIconUrl,
+                        iconClass: iconInfo.iconClass,
                         hasConversation: !!conversation,
                         chatwootConversationId: conversation
                             ? conversation.chatwootConversationId
@@ -191,70 +220,134 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                     };
                 }.bind(this)
             );
+
+            // === Build available inboxes for "New Conversation" section ===
+
+            // Build a Set of chatwootInboxId (external int) from existing ContactInboxes
+            // for deduplication (Decision #15: use chatwootInboxId, not inboxId)
+            var existingChatwootInboxIds = {};
+            contactInboxes.forEach(function (ci) {
+                if (ci.chatwootInboxId) {
+                    existingChatwootInboxIds[ci.chatwootInboxId] = true;
+                }
+            });
+
+            // Filter inboxes: exclude already-linked ones, V1 only WhatsApp (Decision #16)
+            this.availableInboxes = chatwootInboxes
+                .filter(function (inbox) {
+                    // Skip inboxes already represented by a ContactInbox
+                    if (inbox.chatwootInboxId && existingChatwootInboxIds[inbox.chatwootInboxId]) {
+                        return false;
+                    }
+
+                    // V1: Only WhatsApp-type inboxes (Decision #16)
+                    var ct = (inbox.channelType || "").toLowerCase();
+                    if (!ct || (!ct.includes("whatsapp") && !ct.includes("waha"))) {
+                        return false;
+                    }
+
+                    return true;
+                })
+                .map(
+                    function (inbox) {
+                        var iconInfo = this._getChannelIcon(inbox.channelType);
+
+                        return {
+                            isNewInbox: true,
+                            inboxEntityId: inbox.id,
+                            chatwootInboxId: inbox.chatwootInboxId,
+                            inboxName: inbox.name || "Unknown Inbox",
+                            channelTypeLabel: iconInfo.label,
+                            svgIconUrl: iconInfo.svgIconUrl,
+                            iconClass: iconInfo.iconClass,
+                            hasPhoneNumber: !!this.contactPhoneNumber,
+                        };
+                    }.bind(this)
+                );
         },
 
         /**
-         * Normalize channel type to a simple lowercase key.
-         * Follows the inbox.js normalizeChannelType() pattern.
-         */
-        _normalizeChannelType: function (channelType, inboxName) {
-            if (channelType) {
-                var type = channelType.toLowerCase();
-                if (type.includes("whatsapp")) return "whatsapp";
-                if (type.includes("telegram")) return "telegram";
-                if (type.includes("instagram")) return "instagram";
-                if (type.includes("facebook") || type.includes("messenger"))
-                    return "facebook";
-                if (type.includes("email") || type.includes("mail"))
-                    return "email";
-                if (
-                    type.includes("web") ||
-                    type.includes("widget") ||
-                    type.includes("live")
-                )
-                    return "web";
-                if (type.includes("sms") || type.includes("twilio"))
-                    return "sms";
-                if (type.includes("api")) return "api";
-            }
-
-            if (inboxName) {
-                var name = inboxName.toLowerCase();
-                if (name.includes("whatsapp")) return "whatsapp";
-                if (name.includes("telegram")) return "telegram";
-                if (name.includes("instagram")) return "instagram";
-                if (name.includes("facebook") || name.includes("messenger"))
-                    return "facebook";
-                if (name.includes("email") || name.includes("mail"))
-                    return "email";
-                if (
-                    name.includes("web") ||
-                    name.includes("widget") ||
-                    name.includes("live")
-                )
-                    return "web";
-            }
-
-            return "default";
-        },
-
-        /**
-         * Get the icon class for a normalized channel type.
-         * Follows the inbox.js getChannelIcon() pattern.
+         * Get the icon for a channel using the ChatwootInboxIntegration channelType.
+         *
+         * Uses the same resolution logic as the svg-icon-enum field view
+         * on the ChatwootInbox sidepanel:
+         *   1. svgIconByValue exact match (e.g. "whatsappQrcode" → "whatsapp")
+         *   2. pickByContains fallback (e.g. value contains "whatsapp" → "whatsapp")
+         *   3. Font Awesome fallback for unknown types
+         *
+         * @param {string|null} channelType - ChatwootInboxIntegration.channelType (e.g. "whatsappQrcode", "whatsappCloudApi")
+         * @returns {{ svgIconUrl: string|null, iconClass: string|null, label: string }}
          */
         _getChannelIcon: function (channelType) {
-            var icons = {
-                whatsapp: "fab fa-whatsapp",
-                telegram: "fab fa-telegram",
-                instagram: "fab fa-instagram",
-                facebook: "fab fa-facebook-messenger",
+            // Exact value map — mirrors entityDefs ChatwootInbox.channelType.svgIconByValue
+            var svgIconByValue = {
+                whatsappQrcode: "whatsapp",
+                whatsappCloudApi: "whatsapp",
+            };
+
+            // Contains-based fallback — mirrors svg-icon-enum.js pickByContains
+            var containsMap = {
+                whatsapp: "whatsapp",
+                waha: "whatsapp",
+                telegram: "telegram",
+                instagram: "instagram",
+                facebook: "messenger",
+                messenger: "messenger",
+            };
+
+            // Icon name → SVG file — mirrors SVG_ICON_FILE_MAP in svg-icon-enum.js
+            var svgFileMap = {
+                whatsapp: "whatsapp.svg",
+                telegram: "telegram.svg",
+                instagram: "instagram.svg",
+                messenger: "messenger.svg",
+            };
+
+            // Font Awesome fallback for channels without SVG icons
+            var faIconMap = {
                 email: "fas fa-envelope",
                 web: "fas fa-globe",
                 sms: "fas fa-sms",
                 api: "fas fa-plug",
                 default: "fas fa-comment",
             };
-            return icons[channelType] || icons["default"];
+
+            var value = channelType || "";
+            var iconName = null;
+
+            // Step 1: Exact match (svgIconByValue)
+            iconName = svgIconByValue[value] || null;
+
+            // Step 2: Contains-based fallback
+            if (!iconName && value) {
+                var normalized = value.toLowerCase();
+                for (var needle in containsMap) {
+                    if (normalized.includes(needle)) {
+                        iconName = containsMap[needle];
+                        break;
+                    }
+                }
+            }
+
+            // Step 3: Resolve SVG file
+            var svgFile = iconName ? svgFileMap[iconName] : null;
+
+            if (svgFile) {
+                return {
+                    svgIconUrl: this.getBasePath() + "client/custom/modules/global/res/icons/" + svgFile,
+                    iconClass: null,
+                    label: iconName,
+                };
+            }
+
+            // Step 4: Font Awesome fallback
+            var label = value ? value.toLowerCase() : "default";
+
+            return {
+                svgIconUrl: null,
+                iconClass: faIconMap[label] || faIconMap["default"],
+                label: label,
+            };
         },
 
         /**
@@ -362,6 +455,90 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                         Espo.Ui.error(errorMsg);
                     }.bind(this)
                 );
+        },
+
+        /**
+         * Initiate a new conversation on an inbox for this Contact.
+         *
+         * POSTs to Contact/:id/initiateConversation with the inbox entity ID.
+         * Shows a loading spinner on the inbox row during creation.
+         */
+        _initiateConversation: function (inboxIndex, callback) {
+            var inbox = this.availableInboxes[inboxIndex];
+            if (!inbox) return;
+
+            // Show loading state on the row
+            var $row = this.$el.find('.channel-item[data-inbox-index="' + inboxIndex + '"]');
+            $row.addClass("is-creating");
+
+            Espo.Ajax.postRequest(
+                "Contact/" + this.contactId + "/initiateConversation",
+                { inboxId: inbox.inboxEntityId }
+            )
+                .then(
+                    function (response) {
+                        $row.removeClass("is-creating");
+
+                        if (callback) {
+                            callback(response);
+                        }
+                    }.bind(this)
+                )
+                .catch(
+                    function (xhr) {
+                        $row.removeClass("is-creating");
+
+                        var errorMsg = this.translate(
+                            "Failed to initiate conversation",
+                            "labels",
+                            "Contact"
+                        );
+                        if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+
+                        Espo.Ui.error(errorMsg);
+                    }.bind(this)
+                );
+        },
+
+        /**
+         * Handle "Open in New Tab" for a new inbox row.
+         * Initiates conversation first, then opens tab.
+         */
+        actionOpenTabNewInbox: function (data) {
+            var inboxIndex = parseInt(data.inboxIndex, 10);
+
+            this._initiateConversation(
+                inboxIndex,
+                function (response) {
+                    this._openInNewTab(
+                        response.chatwootAccountIdExternal || this.chatwootAccountId,
+                        response.chatwootConversationId
+                    );
+                    this.close();
+                }.bind(this)
+            );
+        },
+
+        /**
+         * Handle "Open in Drawer" for a new inbox row.
+         * Initiates conversation first, then opens drawer.
+         */
+        actionOpenDrawerNewInbox: function (data) {
+            var inboxIndex = parseInt(data.inboxIndex, 10);
+
+            this._initiateConversation(
+                inboxIndex,
+                function (response) {
+                    this.close();
+                    this._openInDrawer(
+                        response.chatwootConversationId,
+                        response.chatwootAccountIdExternal || this.chatwootAccountId,
+                        response.id
+                    );
+                }.bind(this)
+            );
         },
 
         /**

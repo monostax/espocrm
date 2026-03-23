@@ -8,6 +8,10 @@
         "Start in New Tab": "Start in New Tab",
         "No channels available": "No chat channels available for this contact",
         "Creating conversation...": "Creating conversation...",
-        "Failed to create conversation": "Failed to create conversation"
+        "Failed to create conversation": "Failed to create conversation",
+        "New Conversation": "New Conversation",
+        "Initiating conversation...": "Initiating conversation...",
+        "Failed to initiate conversation": "Failed to initiate conversation",
+        "Contact has no phone number": "Contact has no phone number for this channel"
     }
 }

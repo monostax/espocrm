@@ -14,7 +14,8 @@
         "teams": "Teams"
     },
     "labels": {
-        "Create ChatwootAccountWebhook": "Create Chat / Account Webhook"
+        "Create ChatwootAccountWebhook": "Create Chat / Account Webhook",
+        "tabWebhooks": "Webhooks"
     },
     "options": {
         "subscriptions": {

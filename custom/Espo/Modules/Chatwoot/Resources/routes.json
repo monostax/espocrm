@@ -152,6 +152,15 @@
             "action": "createConversation",
             "id": ":id"
         }
+    },
+    {
+        "route": "/Contact/:id/initiateConversation",
+        "method": "post",
+        "params": {
+            "controller": "ContactChatwoot",
+            "action": "initiateConversation",
+            "id": ":id"
+        }
     }
 ]
 

@@ -18,6 +18,8 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
 
         template: "chatwoot:chatwoot-conversation/modals/conversation-drawer",
 
+        scope: "ChatwootConversation",
+
         backdrop: true,
 
         fitHeight: true,

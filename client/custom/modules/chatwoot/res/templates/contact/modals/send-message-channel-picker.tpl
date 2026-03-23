@@ -107,6 +107,33 @@
     font-size: 14px;
 }
 
+.channel-picker-modal .channel-section-header {
+    padding: 10px 15px 6px 15px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    border-top: 1px solid #e8e8e8;
+    margin-top: 4px;
+}
+
+.channel-picker-modal .channel-item.is-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.channel-picker-modal .channel-item.is-disabled .channel-actions {
+    display: none;
+}
+
+.channel-picker-modal .channel-item .no-phone-hint {
+    font-size: 11px;
+    color: #999;
+    margin-left: 12px;
+    white-space: nowrap;
+}
+
 .channel-picker-modal .loading-state {
     display: flex;
     flex-direction: column;
@@ -158,7 +185,11 @@
         {{#each channels}}
         <li class="channel-item" data-index="{{@index}}">
             <div class="channel-icon">
+                {{#if svgIconUrl}}
+                <img src="{{svgIconUrl}}" alt="" width="18" height="18">
+                {{else}}
                 <i class="{{iconClass}}"></i>
+                {{/if}}
             </div>
             <div class="channel-info">
                 <div class="channel-name">{{inboxName}}</div>
@@ -188,14 +219,55 @@
         </li>
         {{/each}}
     </ul>
-    {{else}}
+    {{/if}}
+    {{#if hasAvailableInboxes}}
+    <div class="channel-section-header">
+        {{translate 'New Conversation' category='labels' scope='Contact'}}
+    </div>
+    <ul class="channel-list">
+        {{#each availableInboxes}}
+        <li class="channel-item{{#unless hasPhoneNumber}} is-disabled{{/unless}}" data-inbox-index="{{@index}}">
+            <div class="channel-icon">
+                {{#if svgIconUrl}}
+                <img src="{{svgIconUrl}}" alt="" width="18" height="18">
+                {{else}}
+                <i class="{{iconClass}}"></i>
+                {{/if}}
+            </div>
+            <div class="channel-info">
+                <div class="channel-name">{{inboxName}}</div>
+                <div class="channel-type">{{channelTypeLabel}}</div>
+            </div>
+            {{#if hasPhoneNumber}}
+            <div class="channel-actions">
+                <button class="btn btn-default btn-sm action" data-action="openTabNewInbox" data-inbox-index="{{@index}}" title="{{translate 'Start in New Tab' category='labels' scope='Contact'}}">
+                    <i class="fas fa-external-link-alt"></i> {{translate 'Start in New Tab' category='labels' scope='Contact'}}
+                </button>
+                <button class="btn btn-primary btn-sm action" data-action="openDrawerNewInbox" data-inbox-index="{{@index}}" title="{{translate 'Start Chat' category='labels' scope='Contact'}}">
+                    <i class="fas fa-plus-circle"></i> {{translate 'Start Chat' category='labels' scope='Contact'}}
+                </button>
+            </div>
+            {{else}}
+            <span class="no-phone-hint">{{translate 'Contact has no phone number' category='labels' scope='Contact'}}</span>
+            {{/if}}
+            <div class="channel-item-loading">
+                <span class="fas fa-spinner fa-spin"></span>
+                &nbsp;{{translate 'Initiating conversation...' category='labels' scope='Contact'}}
+            </div>
+        </li>
+        {{/each}}
+    </ul>
+    {{/if}}
+    {{#unless hasChannels}}
+    {{#unless hasAvailableInboxes}}
     <div class="empty-state">
         <i class="fas fa-comment-slash"></i>
         <div class="empty-state-text">
             {{translate 'No channels available' category='labels' scope='Contact'}}
         </div>
     </div>
-    {{/if}}
+    {{/unless}}
+    {{/unless}}
     {{/if}}
     {{/if}}
 </div>
