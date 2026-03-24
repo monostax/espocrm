@@ -205,6 +205,22 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             };
         },
 
+        /**
+         * This view renders its own conversation markup in the template, so
+         * we skip the base row-builder to avoid waiting on list row views that
+         * don't exist in this layout.
+         */
+        buildRows: function (callback) {
+            this.checkedList = [];
+            this.rowList = [];
+
+            if (typeof callback === "function") {
+                callback();
+            }
+
+            this.trigger("after:build-rows");
+        },
+
         // WebSocket debounce interval (ms)
         webSocketDebounceInterval: 500,
 
@@ -1660,4 +1676,3 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
         },
     });
 });
-

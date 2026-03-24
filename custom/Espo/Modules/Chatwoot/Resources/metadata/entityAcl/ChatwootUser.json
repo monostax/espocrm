@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "teams": {
+            "nonAdminReadOnly": true
+        }
+    },
+    "links": {
+        "teams": {
+            "nonAdminReadOnly": true
+        }
+    }
+}

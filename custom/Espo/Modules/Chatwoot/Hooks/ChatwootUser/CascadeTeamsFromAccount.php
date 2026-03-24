@@ -56,6 +56,11 @@ class CascadeTeamsFromAccount
             return;
         }
 
+        // Respect explicit team updates (admins can edit teams directly).
+        if ($entity->isAttributeChanged('teamsIds')) {
+            return;
+        }
+
         // Resolve account via membership (Phase 8: replaces direct chatwootAccountId field)
         $membership = $this->entityManager
             ->getRDBRepository('ChatwootAccountUserMembership')

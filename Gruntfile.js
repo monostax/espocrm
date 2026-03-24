@@ -353,6 +353,10 @@ module.exports = (grunt) => {
         cp.execSync("node js/transpile");
     });
 
+    grunt.registerTask("transpile-custom-modules", () => {
+        cp.execSync("node js/transpile-custom-modules", {stdio: "inherit"});
+    });
+
     grunt.registerTask("chmod-folders", () => {
         cp.execSync("find . -type d -exec chmod 755 {} +", {
             cwd: "build/EspoCRM-" + pkg.version,
@@ -557,6 +561,7 @@ return '${version}';
         "prepare-lib-original",
         "clean:transpiled",
         "transpile",
+        "transpile-custom-modules",
         "bundle",
         "bundle-templates",
         "uglify:bundle",

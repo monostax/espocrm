@@ -246,16 +246,21 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
         } catch (\Exception $e) {
             $message = $e->getMessage();
 
-            // Chatwoot is the source of truth. Only 404 means the account
-            // is gone in Chatwoot and local memberships/users should be cleaned.
-            // 401 can be transient/token issues and must not trigger cleanup.
-            if ($this->isAccountGoneError($message)) {
+            // Destructive cleanup requires a confirmed 404:
+            // 1) account endpoint returned 404; and
+            // 2) users API is reachable (to avoid proxy fallback 404s).
+            if ($this->isConfirmedAccountGone($account, $message)) {
                 $this->log->warning(
-                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned 404 — " .
+                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned confirmed 404 — " .
                     "account likely deleted from Chatwoot (source of truth). " .
                     "Cleaning up local memberships and orphaned users."
                 );
                 $this->cleanupAccountMembershipsAndUsers($account);
+            } elseif ($this->isAccountGoneError($message)) {
+                $this->log->warning(
+                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned 404 but Users API probe failed. " .
+                    "Skipping destructive cleanup to avoid false positives."
+                );
             } else {
                 $this->log->error(
                     "SyncAccountMembersFromChatwoot: Sync failed for account {$accountName}: " .
@@ -342,6 +347,39 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
     private function isAccountGoneError(string $message): bool
     {
         return (bool) preg_match('/HTTP\s+404\b/', $message);
+    }
+
+    /**
+     * Confirm account-gone condition before destructive cleanup.
+     *
+     * A raw 404 is not enough because proxies can emit generic 404 responses
+     * when backend services are unavailable. We require Users API reachability
+     * to validate that Chatwoot platform endpoints are actually responding.
+     */
+    private function isConfirmedAccountGone(Entity $account, string $message): bool
+    {
+        if (!$this->isAccountGoneError($message)) {
+            return false;
+        }
+
+        $platformId = $account->get('platformId');
+        if (!$platformId) {
+            return false;
+        }
+
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
+        if (!$platform) {
+            return false;
+        }
+
+        $platformUrl = $platform->get('backendUrl');
+        $accessToken = $platform->get('accessToken');
+
+        if (!$platformUrl || !$accessToken) {
+            return false;
+        }
+
+        return $this->apiClient->isUsersApiReachable($platformUrl, $accessToken);
     }
 
     /**

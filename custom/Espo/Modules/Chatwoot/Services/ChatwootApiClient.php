@@ -219,6 +219,35 @@ class ChatwootApiClient
     }
 
     /**
+     * Check if the Platform Users API is reachable.
+     *
+     * Used as a safety probe before destructive cleanup when account endpoints
+     * return 404. If this endpoint is not reachable, the 404 is treated as
+     * unconfirmed (e.g. proxy fallback) and cleanup should be skipped.
+     *
+     * @param string $platformUrl
+     * @param string $accessToken
+     * @return bool
+     */
+    public function isUsersApiReachable(string $platformUrl, string $accessToken): bool
+    {
+        $url = rtrim($platformUrl, '/') . '/platform/api/v1/users';
+
+        $headers = [
+            'api_access_token: ' . $accessToken,
+            'Content-Type: application/json'
+        ];
+
+        try {
+            $response = $this->executeRequest($url, 'GET', null, $headers);
+            return $response['code'] >= 200 && $response['code'] < 300;
+        } catch (Error $e) {
+            $this->log->warning('Chatwoot API Error (isUsersApiReachable): ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Update account on Chatwoot.
      *
      * @param string $platformUrl
@@ -2701,4 +2730,3 @@ public function deleteConversation(
         }
     }
 }
-
