@@ -349,6 +349,10 @@ class ConditionChecker
             if ($attribute === '$user.rolesIds') {
                 return $this->user->getLinkMultipleIdList('roles');
             }
+
+            if ($attribute === '$user.featureVerticals') {
+                return $this->options->featureVerticals;
+            }
         }
 
         return $this->entity->get($attribute);

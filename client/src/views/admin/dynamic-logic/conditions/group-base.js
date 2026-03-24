@@ -97,6 +97,10 @@ export default class DynamicLogicConditionGroupBaseView extends View {
         'click > div.group-bottom [data-action="addCurrentUserRoles"]': function () {
             this.addCurrentUserRoles();
         },
+        /** @this {DynamicLogicConditionGroupBaseView} */
+        'click > div.group-bottom [data-action="addCurrentUserFeatureVerticals"]': function () {
+            this.addCurrentUserFeatureVerticals();
+        },
     }
 
     setup() {
@@ -173,6 +177,10 @@ export default class DynamicLogicConditionGroupBaseView extends View {
 
             if (item.attribute === '$user.rolesIds') {
                 fieldType = 'currentUserRoles';
+            }
+
+            if (item.attribute === '$user.featureVerticals') {
+                fieldType = 'currentUserFeatureVerticals';
             }
 
             if (fieldType) {
@@ -303,6 +311,22 @@ export default class DynamicLogicConditionGroupBaseView extends View {
             data: {
                 type: 'contains',
                 field: 'roles',
+            },
+        });
+    }
+
+    addCurrentUserFeatureVerticals() {
+        const i = this.getIndexForNewItem();
+        const key = this.getKey(i);
+
+        this.addItemContainer(i);
+        this.addViewDataListItem(i, key);
+
+        this.createItemView(i, key, {
+            attribute: '$user.featureVerticals',
+            data: {
+                type: 'has',
+                field: 'featureVerticals',
             },
         });
     }

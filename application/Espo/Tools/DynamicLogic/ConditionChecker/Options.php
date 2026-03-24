@@ -33,7 +33,11 @@ use DateTimeZone;
 
 readonly class Options
 {
+    /**
+     * @param string[] $featureVerticals
+     */
     public function __construct(
         public DateTimeZone $timezone = new DateTimeZone('UTC'),
+        public array $featureVerticals = [],
     ) {}
 }

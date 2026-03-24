@@ -63,6 +63,11 @@
                 tabindex="0"
                 data-action="addCurrentUserRoles"
             >${{translate 'User' scope='scopeNames'}}.{{translate 'roles' category='fields' scope='User'}}</a></li>
+            <li><a
+                role="button"
+                tabindex="0"
+                data-action="addCurrentUserFeatureVerticals"
+            >${{translate 'User' scope='scopeNames'}}.{{translate 'featureVerticals' category='fields' scope='User'}}</a></li>
         </ul>
     </div>
 </div>

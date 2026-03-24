@@ -112,6 +112,10 @@ export default class DynamicLogicConditionsStringGroupBaseView extends View {
     }
 
     getFieldType(item) {
+        if (item.attribute === '$user.featureVerticals') {
+            return 'currentUserFeatureVerticals';
+        }
+
         return this.getMetadata()
             .get(['entityDefs', this.scope, 'fields', item.attribute, 'type']) || 'base';
     }

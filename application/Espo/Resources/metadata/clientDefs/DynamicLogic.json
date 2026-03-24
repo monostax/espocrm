@@ -278,6 +278,18 @@
         "currentUserRoles": {
             "view": "views/admin/dynamic-logic/conditions/field-types/current-user-roles",
             "typeList": ["contains", "notContains"]
+        },
+        "currentUserFeatureVerticals": {
+            "view": "global:views/admin/dynamic-logic/conditions/field-types/current-user-feature-verticals",
+            "typeList": ["has", "notHas"],
+            "conditionTypes": {
+                "has": {
+                    "itemView": "global:views/admin/dynamic-logic/conditions-string/item-current-user-feature-verticals"
+                },
+                "notHas": {
+                    "itemView": "global:views/admin/dynamic-logic/conditions-string/item-current-user-feature-verticals"
+                }
+            }
         }
     },
     "conditionTypes": {

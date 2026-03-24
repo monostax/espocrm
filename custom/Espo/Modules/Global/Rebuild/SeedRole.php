@@ -212,6 +212,12 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'ChatwootContactInbox' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'User' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -536,7 +542,9 @@ class SeedRole implements RebuildAction
                 'KnowledgeBaseCategory' => (object)[],
                 'Lead' => (object)[],
                 'Meeting' => (object)[],
-                'Opportunity' => (object)[],
+                'Opportunity' => (object)[
+                    'account' => (object)['read' => 'no', 'edit' => 'no'],
+                ],
                 'TargetListCategory' => (object)[],
                 'TargetList' => (object)[],
                 'Task' => (object)[],
@@ -620,6 +628,29 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                         'stream' => 'team',
                 ]],
+                'fieldData' => [
+                    'Opportunity' => (object)[
+                        'account' => (object)['read' => 'yes', 'edit' => 'yes'],
+                    ],
+                ],
+            ],
+            [
+                'staticId' => 'tenant-clinica',
+                'name' => 'tenant-clinica',
+                'data' => [
+                    'FeatureClinicaBasePaciente' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'own',
+                        'stream' => 'team',
+                    ],
+                ],
+                'fieldData' => [
+                    'Opportunity' => (object)[
+                        'account' => (object)['read' => 'no', 'edit' => 'no'],
+                    ],
+                ],
             ],
             // Tenant role - base role for tenant users
             [

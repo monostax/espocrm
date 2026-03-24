@@ -3,6 +3,7 @@
         "tenant": "Tenant",
         "tenant-admin": "Tenant Admin",
         "tenant-b2b": "Tenant B2B",
+        "tenant-clinica": "Tenant Clinica",
         "tenant-user-api": "Tenant / User API"
     }
 }

@@ -4,5 +4,8 @@
     },
     "buildVersion": {
         "className": "Espo\\Modules\\Global\\Classes\\AppParams\\BuildVersion"
+    },
+    "userFeatureVerticals": {
+        "className": "Espo\\Modules\\Global\\Classes\\AppParams\\UserFeatureVerticals"
     }
 }

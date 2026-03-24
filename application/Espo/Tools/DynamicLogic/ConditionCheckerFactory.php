@@ -32,6 +32,7 @@ namespace Espo\Tools\DynamicLogic;
 use DateTimeZone;
 use Espo\Core\Utils\Config\ApplicationConfig;
 use Espo\Entities\User;
+use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\ORM\Entity;
 use Espo\Tools\DynamicLogic\ConditionChecker\Options;
 use Exception;
@@ -46,6 +47,7 @@ class ConditionCheckerFactory
     public function __construct(
         private User $user,
         private ApplicationConfig $applicationConfig,
+        private ?FeatureVerticalChecker $featureVerticalChecker = null,
     ) {}
 
     /**
@@ -59,11 +61,22 @@ class ConditionCheckerFactory
             throw new RuntimeException('', 0, $e);
         }
 
+        $featureVerticals = [];
+
+        if ($this->featureVerticalChecker) {
+            try {
+                $featureVerticals = $this->featureVerticalChecker->getVerticals($this->user);
+            } catch (Exception) {
+                $featureVerticals = [];
+            }
+        }
+
         return new ConditionChecker(
             entity: $entity,
             user: $this->user,
             options: new Options(
                 timezone: $timezone,
+                featureVerticals: $featureVerticals,
             ),
         );
     }

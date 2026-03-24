@@ -1,0 +1,10 @@
+{
+    "b2b": {
+        "roleStaticId": "tenant-b2b",
+        "label": "B2B"
+    },
+    "clinica": {
+        "roleStaticId": "tenant-clinica",
+        "label": "Clinica"
+    }
+}

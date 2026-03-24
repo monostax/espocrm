@@ -280,6 +280,10 @@ class DynamicLogic {
             if (attribute === '$user.rolesIds') {
                 return this.recordView.getUser().getRoleIdList();
             }
+
+            if (attribute === '$user.featureVerticals') {
+                return this.recordView.getHelper().getAppParam('userFeatureVerticals') || [];
+            }
         }
 
         if (preSave) {
