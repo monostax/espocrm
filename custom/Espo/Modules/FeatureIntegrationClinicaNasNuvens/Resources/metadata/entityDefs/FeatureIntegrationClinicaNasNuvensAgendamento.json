@@ -4,12 +4,12 @@
             "type": "varchar",
             "maxLength": 255
         },
-        "pacienteId": {
+        "agendamentoId": {
             "type": "varchar",
             "maxLength": 100,
             "required": true
         },
-        "contact": {
+        "paciente": {
             "type": "link"
         },
         "credential": {
@@ -20,109 +20,92 @@
             "options": ["pending", "synced", "error"],
             "default": "pending"
         },
-        "ativo": {
-            "type": "bool",
-            "readOnly": true
-        },
-        "cpfcnpj": {
+        "idPaciente": {
             "type": "varchar",
-            "maxLength": 32,
+            "maxLength": 100,
             "readOnly": true
         },
-        "dataNascimento": {
+        "idProfissional": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "idConvenio": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "idEspecialidade": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "idUnidade": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "idSala": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "data": {
             "type": "date",
             "readOnly": true
         },
-        "email": {
-            "type": "email",
-            "readOnly": true
-        },
-        "telefone": {
+        "horaInicio": {
             "type": "varchar",
             "maxLength": 32,
             "readOnly": true
         },
-        "celular": {
+        "horaFim": {
             "type": "varchar",
             "maxLength": 32,
             "readOnly": true
         },
-        "sexo": {
-            "type": "varchar",
-            "maxLength": 20,
+        "status": {
+            "type": "enum",
+            "options": ["agendado", "confirmado", "atendido", "cancelado", "falta", "remarcado", "encaixe", "bloqueado"],
             "readOnly": true
         },
-        "nomeMae": {
-            "type": "varchar",
-            "maxLength": 255,
-            "readOnly": true
-        },
-        "nomePai": {
-            "type": "varchar",
-            "maxLength": 255,
-            "readOnly": true
-        },
-        "estadoCivil": {
-            "type": "varchar",
-            "maxLength": 60,
-            "readOnly": true
-        },
-        "profissao": {
+        "tipoAtendimento": {
             "type": "varchar",
             "maxLength": 120,
             "readOnly": true
         },
-        "endereco": {
+        "profissional": {
             "type": "varchar",
             "maxLength": 255,
             "readOnly": true
         },
-        "numero": {
+        "convenio": {
             "type": "varchar",
-            "maxLength": 20,
+            "maxLength": 255,
             "readOnly": true
         },
-        "complemento": {
+        "especialidade": {
             "type": "varchar",
-            "maxLength": 100,
+            "maxLength": 255,
             "readOnly": true
         },
-        "bairro": {
+        "sala": {
             "type": "varchar",
-            "maxLength": 100,
+            "maxLength": 255,
             "readOnly": true
         },
-        "cidade": {
+        "unidade": {
             "type": "varchar",
-            "maxLength": 120,
-            "readOnly": true
-        },
-        "estado": {
-            "type": "varchar",
-            "maxLength": 10,
-            "readOnly": true
-        },
-        "cep": {
-            "type": "varchar",
-            "maxLength": 16,
+            "maxLength": 255,
             "readOnly": true
         },
         "observacao": {
             "type": "text",
             "readOnly": true
         },
-        "convenio": {
-            "type": "varchar",
-            "maxLength": 120,
-            "readOnly": true
-        },
-        "numeroConvenio": {
-            "type": "varchar",
-            "maxLength": 80,
-            "readOnly": true
-        },
-        "validadeConvenio": {
-            "type": "date",
+        "procedimentos": {
+            "type": "jsonArray",
+            "view": "views/fields/text",
             "readOnly": true
         },
         "createdAt": {
@@ -149,20 +132,15 @@
         }
     },
     "links": {
-        "contact": {
+        "paciente": {
             "type": "belongsTo",
-            "entity": "Contact",
-            "foreign": "clinicaNasNuvensPacientes"
+            "entity": "FeatureIntegrationClinicaNasNuvensPaciente",
+            "foreign": "agendamentos"
         },
         "credential": {
             "type": "belongsTo",
             "entity": "Credential",
-            "foreign": "clinicaNasNuvensPacientes"
-        },
-        "agendamentos": {
-            "type": "hasMany",
-            "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
-            "foreign": "paciente"
+            "foreign": "clinicaNasNuvensAgendamentos"
         },
         "createdBy": {
             "type": "belongsTo",
@@ -184,29 +162,25 @@
         "order": "desc",
         "textFilterFields": [
             "name",
-            "pacienteId",
-            "cpfcnpj",
-            "email",
-            "telefone",
-            "celular",
-            "cidade",
-            "estado",
-            "bairro",
+            "agendamentoId",
+            "idPaciente",
+            "status",
+            "profissional",
             "convenio",
-            "numeroConvenio",
-            "contact"
+            "especialidade",
+            "paciente"
         ]
     },
     "indexes": {
-        "contactId": {
-            "columns": ["contactId"]
+        "pacienteId": {
+            "columns": ["pacienteId"]
         },
         "credentialId": {
             "columns": ["credentialId"]
         },
-        "pacienteIdCredential": {
+        "agendamentoIdCredential": {
             "unique": true,
-            "columns": ["pacienteId", "credentialId", "deleted"]
+            "columns": ["agendamentoId", "credentialId", "deleted"]
         }
     }
 }

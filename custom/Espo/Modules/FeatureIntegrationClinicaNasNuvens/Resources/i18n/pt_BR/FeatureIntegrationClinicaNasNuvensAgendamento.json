@@ -1,0 +1,56 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica nas Nuvens / Agendamento",
+        "Create FeatureIntegrationClinicaNasNuvensAgendamento": "Criar Âncora de Agendamento",
+        "Overview": "Visão Geral",
+        "Professional": "Profissional",
+        "Location": "Local",
+        "Raw": "Campos Brutos"
+    },
+    "fields": {
+        "name": "Nome",
+        "agendamentoId": "ID Remoto do Agendamento",
+        "paciente": "Paciente",
+        "credential": "Credencial",
+        "syncStatus": "Status de Sincronização",
+        "idPaciente": "ID Remoto do Paciente",
+        "idProfissional": "ID Remoto do Profissional",
+        "idConvenio": "ID Remoto do Convênio",
+        "idEspecialidade": "ID Remoto da Especialidade",
+        "idUnidade": "ID Remoto da Unidade",
+        "idSala": "ID Remoto da Sala",
+        "data": "Data",
+        "horaInicio": "Hora de Início",
+        "horaFim": "Hora de Fim",
+        "status": "Status",
+        "tipoAtendimento": "Tipo de Atendimento",
+        "profissional": "Profissional",
+        "convenio": "Convênio",
+        "especialidade": "Especialidade",
+        "sala": "Sala",
+        "unidade": "Unidade",
+        "observacao": "Observação",
+        "procedimentos": "Procedimentos"
+    },
+    "links": {
+        "paciente": "Paciente",
+        "credential": "Credencial"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        },
+        "status": {
+            "agendado": "Agendado",
+            "confirmado": "Confirmado",
+            "atendido": "Atendido",
+            "cancelado": "Cancelado",
+            "falta": "Falta",
+            "remarcado": "Remarcado",
+            "encaixe": "Encaixe",
+            "bloqueado": "Bloqueado"
+        }
+    }
+}

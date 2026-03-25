@@ -1,0 +1,23 @@
+[
+    "name",
+    "agendamentoId",
+    "paciente",
+    "credential",
+    "status",
+    "syncStatus",
+    "data",
+    "horaInicio",
+    "horaFim",
+    "tipoAtendimento",
+    "profissional",
+    "convenio",
+    "especialidade",
+    "idPaciente",
+    "idProfissional",
+    "idConvenio",
+    "idEspecialidade",
+    "idUnidade",
+    "idSala",
+    "createdAt",
+    "modifiedAt"
+]

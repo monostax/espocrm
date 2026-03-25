@@ -4,6 +4,7 @@ namespace Espo\Modules\FeatureIntegrationClinicaNasNuvens\Services;
 
 use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Record\FindParams;
 use Espo\Core\Record\ReadParams;
@@ -11,6 +12,7 @@ use Espo\Core\Record\Service as RecordService;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Select\SearchParams;
 use Espo\ORM\Entity;
+use stdClass;
 use Throwable;
 
 /**
@@ -106,6 +108,16 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
         }
 
         return $result;
+    }
+
+    public function create(stdClass $data, CreateParams $params): Entity
+    {
+        $entity = parent::create($data, $params);
+
+        $this->enrichEntities([$entity], true);
+        $this->persistPacienteAfterCreate($entity);
+
+        return $entity;
     }
 
     private function assertSearchParamsUseStorableFields(SearchParams $searchParams): void
@@ -364,6 +376,22 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
         } catch (Throwable $e) {
             $this->log->warning(
                 "FeatureIntegrationClinicaNasNuvensPaciente: failed to persist hydrated fields for '" .
+                $entity->getId() . "': " . $e->getMessage()
+            );
+        }
+    }
+
+    private function persistPacienteAfterCreate(Entity $entity): void
+    {
+        try {
+            $this->entityManager->saveEntity($entity, [
+                SaveOption::SILENT => true,
+                SaveOption::SKIP_HOOKS => true,
+                SaveOption::SKIP_MODIFIED_BY => true,
+            ]);
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensPaciente: failed to persist create-time enrichment for '" .
                 $entity->getId() . "': " . $e->getMessage()
             );
         }

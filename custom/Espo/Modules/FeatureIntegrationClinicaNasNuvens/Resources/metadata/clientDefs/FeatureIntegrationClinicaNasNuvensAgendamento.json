@@ -1,0 +1,6 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-calendar-check",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy"]
+}

@@ -15,7 +15,7 @@ class SeedCredentialTypeClinicaNasNuvens implements RebuildAction
 
     public function process(): void
     {
-        $this->log->info('FeatureIntegrationClinicaNasNuvens: Seeding credential type...');
+        $this->log->info('FeatureIntegrationClinicaNasNuvens: Seeding credential types...');
 
         $schema = [
             'type' => 'object',
@@ -32,21 +32,52 @@ class SeedCredentialTypeClinicaNasNuvens implements RebuildAction
             'required' => ['clientId', 'clientSecret', 'clinicCid'],
         ];
 
-        $config = [
-            'name' => 'Clinica Nas Nuvens',
-            'code' => 'clinicaNasNuvens',
-            'category' => 'basicAuth',
-            'description' => 'Clínica nas Nuvens API credentials (Basic Auth + clinic CID header).',
-            'schema' => json_encode($schema),
-            'encryptionFields' => json_encode(['clientSecret', 'clinicCid']),
-            'requiresRotation' => true,
-            'rotationDays' => 90,
-            'isSystem' => true,
+        $configList = [
+            [
+                'name' => 'Clinica Nas Nuvens',
+                'code' => 'clinicaNasNuvens',
+                'category' => 'basicAuth',
+                'description' => 'Clínica nas Nuvens API credentials (Basic Auth + clinic CID header).',
+                'schema' => json_encode($schema),
+                'encryptionFields' => json_encode(['clientSecret', 'clinicCid']),
+                'requiresRotation' => true,
+                'rotationDays' => 90,
+                'isSystem' => true,
+            ],
+            [
+                'name' => 'Clinica Nas Nuvens (Web)',
+                'code' => 'clinicaNasNuvens-web',
+                'category' => 'formAuth',
+                'description' => 'Clínica nas Nuvens web login session (email/password form auth).',
+                'schema' => json_encode([
+                    'type' => 'object',
+                    'properties' => [
+                        'username' => ['type' => 'string', 'title' => 'Username/Email'],
+                        'password' => ['type' => 'string', 'title' => 'Password'],
+                        'loginUrl' => [
+                            'type' => 'string',
+                            'title' => 'Login URL',
+                            'default' => 'https://clinicanasnuvens.b2clogin.com/clinicanasnuvens.onmicrosoft.com/b2c_1_login/oauth2/v2.0/authorize?ope=openid+profile+offline_access+openid+bf9d0710-a7af-4af2-99ea-508a19f338d5&response_type=code&redirect_uri=https%3A%2F%2Fapp.clinicanasnuvens.com.br%2Fb2c%2Flogin&state=B2C_1_login&client_id=bf9d0710-a7af-4af2-99ea-508a19f338d5&response_mode=query',
+                        ],
+                        'usernameField' => ['type' => 'string', 'title' => 'Username Field Name', 'default' => 'email'],
+                        'passwordField' => ['type' => 'string', 'title' => 'Password Field Name', 'default' => 'password'],
+                        'additionalFields' => ['type' => 'object', 'title' => 'Additional Form Fields', 'additionalProperties' => true],
+                        'testUrl' => ['type' => 'string', 'title' => 'Test URL for Health Check', 'default' => 'https://app.clinicanasnuvens.com.br/agenda/index'],
+                        'sessionCookies' => ['type' => 'string', 'title' => 'Session Cookies (auto-managed)'],
+                    ],
+                    'required' => ['username', 'password', 'loginUrl'],
+                ]),
+                'encryptionFields' => json_encode(['password', 'sessionCookies']),
+                'requiresRotation' => true,
+                'rotationDays' => 90,
+                'isSystem' => true,
+            ],
         ];
 
-        $result = $this->seedCredentialType($config);
-
-        $this->log->info("FeatureIntegrationClinicaNasNuvens: Credential type seeding completed ({$result})");
+        foreach ($configList as $config) {
+            $result = $this->seedCredentialType($config);
+            $this->log->info("FeatureIntegrationClinicaNasNuvens: Credential type '{$config['code']}' seeding completed ({$result})");
+        }
     }
 
     /**

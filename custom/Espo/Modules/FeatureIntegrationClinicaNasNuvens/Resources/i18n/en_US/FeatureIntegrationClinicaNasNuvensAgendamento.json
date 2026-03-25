@@ -1,0 +1,56 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica nas Nuvens / Agendamento",
+        "Create FeatureIntegrationClinicaNasNuvensAgendamento": "Create Agendamento Anchor",
+        "Overview": "Overview",
+        "Professional": "Professional",
+        "Location": "Location",
+        "Raw": "Raw Fields"
+    },
+    "fields": {
+        "name": "Name",
+        "agendamentoId": "Remote Agendamento ID",
+        "paciente": "Patient",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "idPaciente": "Remote Paciente ID",
+        "idProfissional": "Remote Professional ID",
+        "idConvenio": "Remote Insurance ID",
+        "idEspecialidade": "Remote Specialty ID",
+        "idUnidade": "Remote Unit ID",
+        "idSala": "Remote Room ID",
+        "data": "Date",
+        "horaInicio": "Start Time",
+        "horaFim": "End Time",
+        "status": "Status",
+        "tipoAtendimento": "Service Type",
+        "profissional": "Professional",
+        "convenio": "Insurance",
+        "especialidade": "Specialty",
+        "sala": "Room",
+        "unidade": "Unit",
+        "observacao": "Notes",
+        "procedimentos": "Procedures"
+    },
+    "links": {
+        "paciente": "Patient",
+        "credential": "Credential"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        },
+        "status": {
+            "agendado": "Scheduled",
+            "confirmado": "Confirmed",
+            "atendido": "Attended",
+            "cancelado": "Canceled",
+            "falta": "No Show",
+            "remarcado": "Rescheduled",
+            "encaixe": "Overbooked",
+            "bloqueado": "Blocked"
+        }
+    }
+}

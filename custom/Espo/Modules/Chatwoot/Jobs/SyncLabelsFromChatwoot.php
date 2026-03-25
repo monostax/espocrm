@@ -150,7 +150,28 @@ class SyncLabelsFromChatwoot implements JobDataLess
     private function reconcileDeletedLabels(Entity $account, array $presentLabelIds): void
     {
         $accountId = $account->getId();
-        
+
+        // Safety check: if API returned 0 labels, don't delete all local labels.
+        // This is almost always an API error, not a legitimate empty state.
+        if (empty($presentLabelIds)) {
+            $existingCount = $this->entityManager
+                ->getRDBRepository('ChatwootLabel')
+                ->where([
+                    'chatwootAccountId' => $accountId,
+                    'syncStatus' => 'synced',
+                ])
+                ->count();
+
+            if ($existingCount > 0) {
+                $this->log->warning(
+                    "SyncLabelsFromChatwoot: API returned 0 labels but {$existingCount} " .
+                    "local labels exist for account {$accountId}. " .
+                    "Skipping destructive cleanup to prevent data loss."
+                );
+                return;
+            }
+        }
+
         // Find labels in DB that are NOT in the present list
         // We only check synced labels to avoid deleting pending ones
         $labelsToDelete = $this->entityManager

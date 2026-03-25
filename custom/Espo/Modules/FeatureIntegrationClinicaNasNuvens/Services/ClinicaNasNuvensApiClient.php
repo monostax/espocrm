@@ -83,6 +83,55 @@ class ClinicaNasNuvensApiClient implements
     }
 
     /**
+     * Get a single agenda item from CNN API.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    public function getAgendaById(Entity $credential, string $agendamentoId): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+
+        $baseUrl = rtrim((string) ($config['baseUrl'] ?? self::DEFAULT_BASE_URL), '/');
+        $clientId = (string) ($config['clientId'] ?? $config['client_id'] ?? '');
+        $clientSecret = (string) ($config['clientSecret'] ?? $config['client_secret'] ?? '');
+        $clinicCid = (string) ($config['clinicCid'] ?? $config['clinicCID'] ?? $config['cid'] ?? $config['clinicToken'] ?? '');
+
+        if ($clientId === '' || $clientSecret === '' || $clinicCid === '') {
+            throw new Error('Credential config must contain clientId, clientSecret and clinicCid.');
+        }
+
+        $url = $baseUrl . '/agenda/' . rawurlencode($agendamentoId);
+
+        $attempt = 0;
+
+        while ($attempt < self::MAX_ATTEMPTS) {
+            $attempt++;
+
+            $result = $this->request($url, $clientId, $clientSecret, $clinicCid);
+
+            if ($result['ok']) {
+                return $this->mapAgendaPayload($result['payload']);
+            }
+
+            $retryable = $result['retryable'];
+
+            if (!$retryable || $attempt >= self::MAX_ATTEMPTS) {
+                $status = $result['status'];
+                $message = $result['message'];
+
+                throw new Error(
+                    "Clínica nas Nuvens request failed for agenda '{$agendamentoId}' (HTTP {$status}): {$message}"
+                );
+            }
+
+            usleep(self::RETRY_BACKOFF_MS * $attempt * 1000);
+        }
+
+        throw new Error("Clínica nas Nuvens request failed for agenda '{$agendamentoId}'.");
+    }
+
+    /**
      * @return array{ok: bool, status: int, retryable: bool, payload: array<string, mixed>, message: string}
      */
     private function request(string $url, string $clientId, string $clientSecret, string $clinicCid): array
@@ -228,6 +277,64 @@ class ClinicaNasNuvensApiClient implements
             'convenio' => $source['convenio'] ?? null,
             'numeroConvenio' => $source['numeroConvenio'] ?? null,
             'validadeConvenio' => $source['validadeConvenio'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapAgendaPayload(array $payload): array
+    {
+        $source = $payload;
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $source = $payload['data'];
+        }
+
+        $procedimentos = [];
+        if (isset($source['procedimentos']) && is_array($source['procedimentos'])) {
+            $procedimentos = array_values($source['procedimentos']);
+        }
+
+        $name = $source['name'] ?? $source['titulo'] ?? $source['nomePaciente'] ?? null;
+
+        $status = $source['status'] ?? $source['situacao'] ?? $source['statusAgendamento'] ?? null;
+
+        $toStringOrNull = static function ($value): ?string {
+            if ($value === null) {
+                return null;
+            }
+
+            if (is_scalar($value)) {
+                $trimmed = trim((string) $value);
+
+                return $trimmed !== '' ? $trimmed : null;
+            }
+
+            return null;
+        };
+
+        return [
+            'agendamentoId' => $toStringOrNull($source['id'] ?? $source['agendamentoId'] ?? null),
+            'name' => $toStringOrNull($name),
+            'idPaciente' => $toStringOrNull($source['idPaciente'] ?? null),
+            'idProfissional' => $toStringOrNull($source['idProfissional'] ?? null),
+            'idConvenio' => $toStringOrNull($source['idConvenio'] ?? null),
+            'idEspecialidade' => $toStringOrNull($source['idEspecialidade'] ?? null),
+            'idUnidade' => $toStringOrNull($source['idUnidade'] ?? null),
+            'idSala' => $toStringOrNull($source['idSala'] ?? null),
+            'data' => $toStringOrNull($source['data'] ?? null),
+            'horaInicio' => $toStringOrNull($source['horaInicio'] ?? null),
+            'horaFim' => $toStringOrNull($source['horaFim'] ?? null),
+            'status' => $toStringOrNull($status),
+            'tipoAtendimento' => $toStringOrNull($source['tipoAtendimento'] ?? null),
+            'profissional' => $toStringOrNull($source['profissional'] ?? $source['nomeProfissional'] ?? null),
+            'convenio' => $toStringOrNull($source['convenio'] ?? null),
+            'especialidade' => $toStringOrNull($source['especialidade'] ?? null),
+            'sala' => $toStringOrNull($source['sala'] ?? null),
+            'unidade' => $toStringOrNull($source['unidade'] ?? null),
+            'observacao' => $toStringOrNull($source['observacao'] ?? $source['observacoes'] ?? null),
+            'procedimentos' => $procedimentos,
         ];
     }
 

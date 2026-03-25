@@ -161,6 +161,11 @@ class SyncInboxesFromChatwoot implements JobDataLess
     /**
      * Remove ChatwootInbox records that no longer exist in Chatwoot.
      *
+     * SAFETY: If the API returned 0 inboxes but local inboxes exist, this is
+     * almost certainly an API error (auth failure, timeout, etc.), not a
+     * legitimate "all inboxes were deleted" scenario. We bail out to prevent
+     * catastrophic data loss including cascaded ChatwootInboxIntegration deletes.
+     *
      * @param string $espoAccountId
      * @param array<int> $chatwootInboxIds Valid Chatwoot inbox IDs
      * @return int Number of deleted records
@@ -175,7 +180,19 @@ class SyncInboxesFromChatwoot implements JobDataLess
             ->where(['chatwootAccountId' => $espoAccountId])
             ->find();
 
-        foreach ($existingInboxes as $inbox) {
+        $existingList = iterator_to_array($existingInboxes);
+
+        // Safety check: refuse to treat an empty API response as "delete all".
+        if (empty($chatwootInboxIds) && !empty($existingList)) {
+            $this->log->warning(
+                "SyncInboxesFromChatwoot: API returned 0 inboxes but " . count($existingList) .
+                " local inboxes exist for account {$espoAccountId}. " .
+                "Skipping destructive cleanup to prevent data loss."
+            );
+            return 0;
+        }
+
+        foreach ($existingList as $inbox) {
             $inboxChatwootId = $inbox->get('chatwootInboxId');
             
             // If this inbox's chatwootInboxId is not in the list from Chatwoot, delete it

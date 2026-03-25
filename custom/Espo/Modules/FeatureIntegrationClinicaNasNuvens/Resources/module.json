@@ -1,6 +1,6 @@
 {
     "name": "FeatureIntegrationClinicaNasNuvens",
-    "description": "Clínica nas Nuvens integration with Paciente anchors",
+    "description": "Clínica nas Nuvens integration with Paciente and Agendamento anchors",
     "version": "1.0.0",
     "order": 27,
     "jsTranspiled": true

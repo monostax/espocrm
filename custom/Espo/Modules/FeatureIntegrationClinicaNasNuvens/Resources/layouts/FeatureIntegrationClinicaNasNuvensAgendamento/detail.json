@@ -1,0 +1,34 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "agendamentoId"}],
+            [{"name": "paciente"}, {"name": "credential"}],
+            [{"name": "status"}, {"name": "syncStatus"}],
+            [{"name": "data"}, {"name": "horaInicio"}],
+            [{"name": "horaFim"}, {"name": "tipoAtendimento"}]
+        ]
+    },
+    {
+        "label": "Professional",
+        "rows": [
+            [{"name": "profissional"}, {"name": "idProfissional"}],
+            [{"name": "especialidade"}, {"name": "idEspecialidade"}],
+            [{"name": "convenio"}, {"name": "idConvenio"}]
+        ]
+    },
+    {
+        "label": "Location",
+        "rows": [
+            [{"name": "unidade"}, {"name": "idUnidade"}],
+            [{"name": "sala"}, {"name": "idSala"}]
+        ]
+    },
+    {
+        "label": "Raw",
+        "rows": [
+            [{"name": "idPaciente"}, false],
+            [{"name": "observacao", "fullWidth": true}, false]
+        ]
+    }
+]

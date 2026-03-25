@@ -1,0 +1,11 @@
+[
+    {"name": "name", "link": true, "width": 18},
+    {"name": "agendamentoId", "width": 12},
+    {"name": "paciente", "width": 14},
+    {"name": "status", "width": 10},
+    {"name": "syncStatus", "width": 10},
+    {"name": "data", "width": 10},
+    {"name": "horaInicio", "width": 8},
+    {"name": "horaFim", "width": 8},
+    {"name": "modifiedAt", "width": 10}
+]
