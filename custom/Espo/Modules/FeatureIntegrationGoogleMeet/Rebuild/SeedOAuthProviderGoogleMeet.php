@@ -45,6 +45,7 @@ class SeedOAuthProviderGoogleMeet implements RebuildAction
     private function updateProvider(OAuthProvider $provider): void
     {
         $provider->set('name', self::PROVIDER_NAME);
+        $provider->set('provider', 'google-meet');
         $provider->set('isActive', true);
         $provider->set('isGloballyShared', true);
         $provider->set('authorizationEndpoint', 'https://accounts.google.com/o/oauth2/v2/auth');
@@ -62,6 +63,7 @@ class SeedOAuthProviderGoogleMeet implements RebuildAction
 
         $provider->set('id', self::PROVIDER_ID);
         $provider->set('name', self::PROVIDER_NAME);
+        $provider->set('provider', 'google-meet');
         $provider->set('isActive', true);
         $provider->set('isGloballyShared', true);
         $provider->set('authorizationEndpoint', 'https://accounts.google.com/o/oauth2/v2/auth');

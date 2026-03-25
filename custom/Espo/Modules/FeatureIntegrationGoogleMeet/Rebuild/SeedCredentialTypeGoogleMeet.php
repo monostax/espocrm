@@ -48,9 +48,6 @@ class SeedCredentialTypeGoogleMeet implements RebuildAction
                 ],
                 'required' => [],
             ]),
-            'uiConfig' => json_encode([
-                'fields' => [],
-            ]),
             'tokenFieldMapping' => json_encode([
                 'accessToken' => 'access_token',
                 'refreshToken' => 'refresh_token',
@@ -80,7 +77,6 @@ class SeedCredentialTypeGoogleMeet implements RebuildAction
                 'category' => $config['category'],
                 'description' => $config['description'] ?? null,
                 'schema' => $config['schema'],
-                'uiConfig' => $config['uiConfig'] ?? null,
                 'tokenFieldMapping' => $config['tokenFieldMapping'] ?? null,
                 'encryptionFields' => $config['encryptionFields'] ?? '[]',
                 'requiresRotation' => $config['requiresRotation'] ?? false,
@@ -100,7 +96,6 @@ class SeedCredentialTypeGoogleMeet implements RebuildAction
             'category' => $config['category'],
             'description' => $config['description'] ?? null,
             'schema' => $config['schema'],
-            'uiConfig' => $config['uiConfig'] ?? null,
             'tokenFieldMapping' => $config['tokenFieldMapping'] ?? null,
             'encryptionFields' => $config['encryptionFields'] ?? '[]',
             'requiresRotation' => $config['requiresRotation'] ?? false,

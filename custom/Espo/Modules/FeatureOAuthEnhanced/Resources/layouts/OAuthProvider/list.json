@@ -1,2 +1,1 @@
-["name", "isActive", "teams", "assignedUsers"]
-
+["name", "provider", "isActive", "teams", "assignedUsers"]

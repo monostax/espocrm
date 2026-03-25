@@ -1,5 +1,17 @@
 {
     "fields": {
+        "provider": {
+            "type": "enum",
+            "options": [
+                "meta-whatsapp",
+                "google-calendar",
+                "google-meet",
+                "meta-instagram",
+                "other"
+            ],
+            "default": "other",
+            "maxLength": 20
+        },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
@@ -50,4 +62,3 @@
         }
     }
 }
-

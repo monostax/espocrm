@@ -1,8 +1,18 @@
 {
     "fields": {
+        "provider": "Provedor",
         "teams": "Times",
         "assignedUsers": "Usuários Responsáveis",
         "isGloballyShared": "É Compartilhado Globalmente"
+    },
+    "options": {
+        "provider": {
+            "meta-whatsapp": "Meta (WhatsApp)",
+            "google-calendar": "Google (Calendar)",
+            "google-meet": "Google (Meet)",
+            "meta-instagram": "Meta (Instagram)",
+            "other": "Outro"
+        }
     },
     "links": {
         "teams": "Times",
@@ -10,4 +20,3 @@
         "credentialTypes": "Tipos de Credencial"
     }
 }
-

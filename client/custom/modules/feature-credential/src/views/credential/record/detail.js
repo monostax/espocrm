@@ -7,7 +7,7 @@ define("feature-credential:views/credential/record/detail", [
             Dep.prototype.setup.call(this);
 
             // When switching to edit mode inline, ensure the config field
-            // has its uiConfig loaded for proper form rendering.
+            // has its schema loaded for proper form rendering.
             this.listenTo(this.model, 'change:credentialTypeId', function () {
                 var configView = this.getFieldView('config');
 

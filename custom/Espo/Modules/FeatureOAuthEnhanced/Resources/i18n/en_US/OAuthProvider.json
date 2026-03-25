@@ -1,8 +1,18 @@
 {
     "fields": {
+        "provider": "Provider",
         "teams": "Teams",
         "assignedUsers": "Assigned Users",
         "isGloballyShared": "Is Globally Shared"
+    },
+    "options": {
+        "provider": {
+            "meta-whatsapp": "Meta (WhatsApp)",
+            "google-calendar": "Google (Calendar)",
+            "google-meet": "Google (Meet)",
+            "meta-instagram": "Meta (Instagram)",
+            "other": "Other"
+        }
     },
     "links": {
         "teams": "Teams",
@@ -10,4 +20,3 @@
         "credentialTypes": "Credential Types"
     }
 }
-

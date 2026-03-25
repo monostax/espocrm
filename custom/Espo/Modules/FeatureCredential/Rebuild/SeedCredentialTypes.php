@@ -60,14 +60,13 @@ class SeedCredentialTypes implements RebuildAction
             ->findOne();
 
         if ($existing) {
-            // Update if system type (allow updating schema/uiConfig)
+            // Update if system type (schema is canonical)
             if ($existing->get('isSystem')) {
                 $existing->set([
                     'name' => $config['name'],
                     'category' => $config['category'],
                     'description' => $config['description'] ?? null,
                     'schema' => $config['schema'],
-                    'uiConfig' => $config['uiConfig'] ?? null,
                     'tokenFieldMapping' => $config['tokenFieldMapping'] ?? null,
                     'healthCheckConfig' => $config['healthCheckConfig'] ?? null,
                     'encryptionFields' => $config['encryptionFields'] ?? '[]',
@@ -92,7 +91,6 @@ class SeedCredentialTypes implements RebuildAction
             'category' => $config['category'],
             'description' => $config['description'] ?? null,
             'schema' => $config['schema'],
-            'uiConfig' => $config['uiConfig'] ?? null,
             'tokenFieldMapping' => $config['tokenFieldMapping'] ?? null,
             'healthCheckConfig' => $config['healthCheckConfig'] ?? null,
             'encryptionFields' => $config['encryptionFields'] ?? '[]',
@@ -109,6 +107,7 @@ class SeedCredentialTypes implements RebuildAction
 
     private function getCredentialTypeDefinitions(): array
     {
+        // Schema is the canonical source for UI + validation behavior.
         return [
             [
                 'name' => 'Username / Password',
@@ -466,6 +465,26 @@ class SeedCredentialTypes implements RebuildAction
                 ]),
                 'encryptionFields' => json_encode([]),
                 'requiresRotation' => false,
+                'rotationDays' => 90,
+                'isSystem' => true,
+            ],
+            [
+                'name' => 'Clinica Nas Núvens',
+                'code' => 'cnn',
+                'category' => 'basicAuth',
+                'description' => 'Credenciais da API Clínica nas Nuvens usando autenticação HTTP Basic (client_id/client_secret) e token da clínica no header clinicaNasNuvens-cid.',
+                'schema' => json_encode([
+                    'type' => 'object',
+                    'properties' => [
+                        'clientId' => ['type' => 'string', 'title' => 'Client ID'],
+                        'clientSecret' => ['type' => 'string', 'title' => 'Client Secret'],
+                        'clinicCid' => ['type' => 'string', 'title' => 'Token da Clínica (clinicaNasNuvens-cid)'],
+                        'baseUrl' => ['type' => 'string', 'title' => 'URL Base da API', 'default' => 'https://api.clinicanasnuvens.com.br'],
+                    ],
+                    'required' => ['clientId', 'clientSecret', 'clinicCid'],
+                ]),
+                'encryptionFields' => json_encode(['clientSecret', 'clinicCid']),
+                'requiresRotation' => true,
                 'rotationDays' => 90,
                 'isSystem' => true,
             ],

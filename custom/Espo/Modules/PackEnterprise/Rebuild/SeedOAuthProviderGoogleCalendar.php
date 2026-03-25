@@ -50,6 +50,7 @@ class SeedOAuthProviderGoogleCalendar implements RebuildAction
     private function updateProvider(OAuthProvider $provider, array $teamIds): void
     {
         $provider->set('name', self::PROVIDER_NAME);
+        $provider->set('provider', 'google-calendar');
         $provider->set('isActive', true);
         $provider->set('isGloballyShared', true);
         $provider->set('authorizationEndpoint', 'https://accounts.google.com/o/oauth2/v2/auth');
@@ -71,6 +72,7 @@ class SeedOAuthProviderGoogleCalendar implements RebuildAction
 
         $provider->set('id', self::PROVIDER_ID);
         $provider->set('name', self::PROVIDER_NAME);
+        $provider->set('provider', 'google-calendar');
         $provider->set('isActive', true);
         $provider->set('isGloballyShared', true);
         $provider->set('authorizationEndpoint', 'https://accounts.google.com/o/oauth2/v2/auth');

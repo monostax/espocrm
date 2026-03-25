@@ -48,12 +48,6 @@
             ],
             [
                 {
-                    "name": "uiConfig",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
                     "name": "encryptionFields",
                     "fullWidth": true
                 }
@@ -62,4 +56,3 @@
         "label": "Configuration Schema"
     }
 ]
-

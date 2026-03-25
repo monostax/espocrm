@@ -2,6 +2,7 @@
     {
         "rows": [
             [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "provider" }, false],
             [{ "name": "clientId" }, { "name": "clientSecret" }],
             [
                 { "name": "isGloballyShared" },
@@ -28,4 +29,3 @@
         "rows": [[{ "name": "description" }]]
     }
 ]
-

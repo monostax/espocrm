@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\FeatureCredential\\Rebuild\\SeedCredentialTypes"
+        "Espo\\Modules\\FeatureCredential\\Rebuild\\SeedCredentialTypes",
+        "Espo\\Modules\\FeatureCredential\\Rebuild\\SeedProviderEnum"
     ]
 }

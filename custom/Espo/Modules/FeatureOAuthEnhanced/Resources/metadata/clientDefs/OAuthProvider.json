@@ -1,5 +1,8 @@
 {
     "aclFieldLevel": "yes",
-    "mandatoryFields": ["teams", "assignedUsers"]
+    "mandatoryFields": ["teams", "assignedUsers"],
+    "recordViews": {
+        "detail": "feature-oauth-enhanced:views/o-auth-provider/record/detail",
+        "edit": "feature-oauth-enhanced:views/o-auth-provider/record/edit"
+    }
 }
-

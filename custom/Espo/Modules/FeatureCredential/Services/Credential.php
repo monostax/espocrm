@@ -14,6 +14,8 @@ use Espo\Services\Record;
 
 class Credential extends Record
 {
+    private const ENABLE_OPTIONAL_SCHEMA_VALUE_VALIDATION = false;
+
     public function loadAdditionalFields(Entity $entity): void
     {
         parent::loadAdditionalFields($entity);
@@ -30,9 +32,13 @@ class Credential extends Record
 
     public function create(\stdClass $data, ?CreateParams $params = null): Entity
     {
-        // Validate config against schema before creation
-        if (!empty($data->credentialTypeId) && !empty($data->config)) {
-            $this->validateConfig($data->credentialTypeId, $data->config);
+        // Validate config against schema before creation.
+        if (isset($data->credentialTypeId) && $data->credentialTypeId !== '') {
+            $this->validateConfig(
+                (string) $data->credentialTypeId,
+                $data->config ?? null,
+                isset($data->oAuthAccountId) ? (string) $data->oAuthAccountId : null
+            );
         }
 
         $entity = parent::create($data, $params);
@@ -52,9 +58,25 @@ class Credential extends Record
 
         $previousConfig = $entity->get('config');
 
-        // Validate config if it's being updated
-        if (!empty($data->credentialTypeId) && !empty($data->config)) {
-            $this->validateConfig($data->credentialTypeId, $data->config);
+        // Validate when relevant inputs change (config, credential type, OAuth account linkage).
+        if (
+            property_exists($data, 'config') ||
+            property_exists($data, 'credentialTypeId') ||
+            property_exists($data, 'oAuthAccountId')
+        ) {
+            $credentialTypeId = isset($data->credentialTypeId) && $data->credentialTypeId !== ''
+                ? (string) $data->credentialTypeId
+                : (string) $entity->get('credentialTypeId');
+
+            if ($credentialTypeId !== '') {
+                $this->validateConfig(
+                    $credentialTypeId,
+                    property_exists($data, 'config') ? $data->config : $entity->get('config'),
+                    property_exists($data, 'oAuthAccountId')
+                        ? ($data->oAuthAccountId ? (string) $data->oAuthAccountId : null)
+                        : ($entity->get('oAuthAccountId') ? (string) $entity->get('oAuthAccountId') : null)
+                );
+            }
         }
 
         $entity = parent::update($id, $data, $params);
@@ -190,11 +212,11 @@ class Credential extends Record
     /**
      * Validate config against credential type schema.
      *
-     * For OAuth-backed types, fields listed in tokenFieldMapping are excluded
-     * from the required check since they are resolved at runtime from the
-     * linked OAuthAccount.
+     * For OAuth-backed types, required fields marked with source=oauth are
+     * excluded from manual config checks and validated through linked
+     * OAuth account resolution.
      */
-    protected function validateConfig(string $credentialTypeId, $config): void
+    protected function validateConfig(string $credentialTypeId, $config, ?string $oAuthAccountId = null): void
     {
         $credentialType = $this->entityManager->getEntity('CredentialType', $credentialTypeId);
         if (!$credentialType) {
@@ -206,35 +228,122 @@ class Credential extends Record
             return;
         }
 
-        $schemaData = json_decode($schema, true);
-        if (!$schemaData) {
+        $schemaData = is_string($schema) ? json_decode($schema, true) : (array) $schema;
+        if (!$schemaData || !is_array($schemaData)) {
             return;
         }
 
-        $configData = is_string($config) ? json_decode($config, true) : (array) $config;
-
-        // Determine which fields are provided by OAuth (should be skipped in validation)
-        $oAuthProvidedFields = [];
-        $mappingRaw = $credentialType->get('tokenFieldMapping');
-
-        if ($mappingRaw) {
-            $mapping = is_string($mappingRaw) ? json_decode($mappingRaw, true) : (array) $mappingRaw;
-
-            if (is_array($mapping)) {
-                $oAuthProvidedFields = array_keys($mapping);
-            }
+        if (!is_array($schemaData['properties'] ?? null)) {
+            $schemaData['properties'] = [];
         }
 
-        // Basic validation - check required fields (skip OAuth-provided ones)
+        $configData = $this->normalizeConfigData($config);
+        $oauthRequiredFields = [];
+
+        // Authoritative required validation from schema.
         if (!empty($schemaData['required'])) {
             foreach ($schemaData['required'] as $field) {
-                if (in_array($field, $oAuthProvidedFields, true)) {
+                if (!is_string($field) || $field === '') {
+                    continue;
+                }
+
+                $propertySchema = $schemaData['properties'][$field] ?? null;
+
+                if (is_array($propertySchema) && ($propertySchema['source'] ?? null) === 'oauth') {
+                    $oauthRequiredFields[] = $field;
                     continue;
                 }
 
                 if (!isset($configData[$field]) || $configData[$field] === '') {
                     throw new Error("Required field '{$field}' is missing");
                 }
+            }
+        }
+
+        if (!empty($oauthRequiredFields)) {
+            $this->assertOAuthSourceCanBeResolved($oAuthAccountId, $oauthRequiredFields);
+        }
+
+        if (self::ENABLE_OPTIONAL_SCHEMA_VALUE_VALIDATION) {
+            $this->validateOptionalSchemaConstraints($schemaData, $configData);
+        }
+    }
+
+    private function normalizeConfigData($config): array
+    {
+        if ($config === null || $config === '') {
+            return [];
+        }
+
+        if (is_string($config)) {
+            $decoded = json_decode($config, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_array($config)) {
+            return $config;
+        }
+
+        if ($config instanceof \stdClass) {
+            return (array) $config;
+        }
+
+        return [];
+    }
+
+    private function assertOAuthSourceCanBeResolved(?string $oAuthAccountId, array $oauthRequiredFields): void
+    {
+        if (!$oAuthAccountId) {
+            throw new Error(
+                "OAuth account is required to resolve OAuth-sourced required fields: '" .
+                implode("', '", $oauthRequiredFields) .
+                "'"
+            );
+        }
+
+        $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
+
+        if (!$oAuthAccount) {
+            throw new Error("OAuth account '{$oAuthAccountId}' not found for OAuth-sourced required fields");
+        }
+    }
+
+    private function validateOptionalSchemaConstraints(array $schemaData, array $configData): void
+    {
+        foreach ($schemaData['properties'] as $field => $propertySchema) {
+            if (!is_array($propertySchema) || !array_key_exists($field, $configData)) {
+                continue;
+            }
+
+            $value = $configData[$field];
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if (isset($propertySchema['enum']) && is_array($propertySchema['enum'])) {
+                if (!in_array($value, $propertySchema['enum'], true)) {
+                    throw new Error("Field '{$field}' has an invalid value");
+                }
+            }
+
+            if (!isset($propertySchema['type']) || !is_string($propertySchema['type'])) {
+                continue;
+            }
+
+            $isTypeValid = match ($propertySchema['type']) {
+                'string' => is_string($value),
+                'integer' => is_int($value),
+                'number' => is_int($value) || is_float($value),
+                'boolean' => is_bool($value),
+                'array' => is_array($value),
+                'object' => is_array($value) || $value instanceof \stdClass,
+                default => true,
+            };
+
+            if (!$isTypeValid) {
+                throw new Error("Field '{$field}' has an invalid type");
             }
         }
     }

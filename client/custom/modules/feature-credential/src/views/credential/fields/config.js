@@ -1,23 +1,30 @@
-define("feature-credential:views/credential/fields/config", ["views/fields/text"], function (
+define("feature-credential:views/credential/fields/config", [
+    "views/fields/text",
+    "feature-credential:views/credential/fields/schema-ui-adapter",
+], function (
     Dep,
+    SchemaUiAdapter,
 ) {
     /**
      * Custom field view for Credential.config that dynamically renders
-     * form inputs based on the linked CredentialType's uiConfig.
-     *
-     * Supported uiConfig field types:
-     *   text, password, textarea, int, enum, checkbox, json, array
+     * form inputs based on the linked CredentialType's schema.
      */
     return Dep.extend({
 
         // Cache of fetched CredentialType data keyed by ID.
         _credentialTypeCache: null,
 
-        // Parsed uiConfig fields array.
+        // Parsed schema-derived UI fields array.
         uiFields: null,
 
-        // Parsed schema object (for required field validation).
+        // Parsed schema object (canonical required-field source).
         schema: null,
+
+        // Schema-derived required fields.
+        requiredFields: null,
+
+        // Fields sourced from OAuth (manual input skipped).
+        oauthSourcedFields: null,
 
         // Whether we're in fallback (raw JSON) mode.
         isFallback: false,
@@ -63,6 +70,8 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
             this._credentialTypeCache = {};
             this.uiFields = null;
             this.schema = null;
+            this.requiredFields = [];
+            this.oauthSourcedFields = [];
             this.isFallback = false;
 
             this.listenTo(this.model, 'change:credentialTypeId', function () {
@@ -81,7 +90,7 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
         },
 
         /**
-         * Fetch CredentialType record and parse uiConfig + schema.
+         * Fetch CredentialType record and parse schema.
          * @returns {Promise}
          */
         loadUiConfig: function () {
@@ -90,6 +99,8 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
             if (!credentialTypeId) {
                 this.uiFields = null;
                 this.schema = null;
+                this.requiredFields = [];
+                this.oauthSourcedFields = [];
                 this.isFallback = false;
                 return Promise.resolve();
             }
@@ -99,51 +110,52 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                 var cached = this._credentialTypeCache[credentialTypeId];
                 this.uiFields = cached.uiFields;
                 this.schema = cached.schema;
-                this.isFallback = !this.uiFields || this.uiFields.length === 0;
+                this.requiredFields = cached.requiredFields || [];
+                this.oauthSourcedFields = cached.oauthSourcedFields || [];
+                this.isFallback = !this.hasUsableUiFields();
                 return Promise.resolve();
             }
 
             return Espo.Ajax.getRequest('CredentialType/' + credentialTypeId)
                 .then(function (response) {
-                    var uiFields = null;
-                    var schema = null;
+                    var schema = SchemaUiAdapter.parseSchema(response.schema);
+                    var requiredFields = SchemaUiAdapter.extractRequiredFields(schema);
+                    var oauthSourcedFields = SchemaUiAdapter.extractOauthSourcedFields(schema);
 
-                    try {
-                        if (response.uiConfig) {
-                            var uiConfig = typeof response.uiConfig === 'string'
-                                ? JSON.parse(response.uiConfig)
-                                : response.uiConfig;
-                            uiFields = uiConfig.fields || null;
-                        }
-                    } catch (e) {
-                        console.warn('Failed to parse uiConfig for CredentialType', credentialTypeId, e);
-                    }
+                    var schemaUi = SchemaUiAdapter.buildFieldsFromSchema(
+                        schema,
+                        response.encryptionFields
+                    );
 
-                    try {
-                        if (response.schema) {
-                            schema = typeof response.schema === 'string'
-                                ? JSON.parse(response.schema)
-                                : response.schema;
-                        }
-                    } catch (e) {
-                        console.warn('Failed to parse schema for CredentialType', credentialTypeId, e);
-                    }
+                    var uiFields = schemaUi && schemaUi.fields && schemaUi.fields.length > 0
+                        ? schemaUi.fields
+                        : null;
 
                     this._credentialTypeCache[credentialTypeId] = {
                         uiFields: uiFields,
                         schema: schema,
+                        requiredFields: requiredFields,
+                        oauthSourcedFields: oauthSourcedFields,
                     };
 
                     this.uiFields = uiFields;
                     this.schema = schema;
-                    this.isFallback = !this.uiFields || this.uiFields.length === 0;
+                    this.requiredFields = requiredFields;
+                    this.oauthSourcedFields = oauthSourcedFields;
+                    this.isFallback = !this.hasUsableUiFields();
                 }.bind(this))
                 .catch(function (err) {
                     console.error('Failed to load CredentialType', credentialTypeId, err);
                     this.uiFields = null;
                     this.schema = null;
+                    this.requiredFields = [];
+                    this.oauthSourcedFields = [];
                     this.isFallback = true;
                 }.bind(this));
+        },
+
+        hasUsableUiFields: function () {
+            return !!(this.uiFields && this.uiFields.length > 0);
         },
 
         /**
@@ -175,7 +187,7 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
             var raw = this.model.get(this.name);
 
             data.isFallback = this.isFallback;
-            data.hasUiFields = this.uiFields && this.uiFields.length > 0;
+            data.hasUiFields = this.hasUsableUiFields();
             data.isNotEmpty = !!raw;
 
             // Raw value for fallback mode.
@@ -186,11 +198,15 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
             }
 
             // Build field values for detail mode.
-            if (!this.isFallback && this.uiFields && this.uiFields.length > 0) {
+            if (!this.isFallback && this.hasUsableUiFields()) {
                 data.hasFields = Object.keys(configValues).length > 0 || this.uiFields.length > 0;
                 data.fieldValues = [];
 
                 this.uiFields.forEach(function (field) {
+                    if (field.skip === true && !configValues.hasOwnProperty(field.name)) {
+                        return;
+                    }
+
                     var value = configValues[field.name];
                     var displayValue;
 
@@ -240,7 +256,7 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                 return;
             }
 
-            if (!this.uiFields || this.uiFields.length === 0) {
+            if (!this.hasUsableUiFields()) {
                 return;
             }
 
@@ -255,8 +271,10 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                 var currentValue = (value !== undefined && value !== null) ? value : defaultValue;
                 var fieldName = field.name;
                 var label = field.label || field.name;
-                var isRequired = this.schema && this.schema.required &&
-                    this.schema.required.indexOf(fieldName) !== -1;
+                var isRequired = this.requiredFields.indexOf(fieldName) !== -1 &&
+                    this.oauthSourcedFields.indexOf(fieldName) === -1;
+                var isOAuthManaged = field.source === 'oauth';
+                var isReadOnly = !!field.readOnly;
 
                 var $group = $('<div>').addClass('form-group').attr('data-config-field', fieldName);
                 var $label = $('<label>')
@@ -277,6 +295,9 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                             .attr('type', 'text')
                             .addClass('form-control')
                             .attr('data-config-name', fieldName)
+                            .prop('readonly', isReadOnly)
+                            .prop('disabled', field.skip === true)
+                            .attr('placeholder', isOAuthManaged ? this.translate('oAuthManagedValueHint', 'messages', 'Credential') : '')
                             .val(currentValue || '');
                         break;
 
@@ -286,6 +307,8 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                             .attr('type', 'password')
                             .addClass('form-control')
                             .attr('data-config-name', fieldName)
+                            .prop('readonly', isReadOnly)
+                            .prop('disabled', field.skip === true)
                             .val(currentValue || '');
 
                         var $toggleBtn = $('<span>')
@@ -322,6 +345,8 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                             .addClass('form-control')
                             .attr('rows', 4)
                             .attr('data-config-name', fieldName)
+                            .prop('readonly', isReadOnly)
+                            .prop('disabled', field.skip === true)
                             .val(currentValue || '');
                         break;
 
@@ -330,13 +355,16 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                             .attr('type', 'number')
                             .addClass('form-control')
                             .attr('data-config-name', fieldName)
+                            .prop('readonly', isReadOnly)
+                            .prop('disabled', field.skip === true)
                             .val(currentValue !== '' ? currentValue : '');
                         break;
 
                     case 'enum':
                         $input = $('<select>')
                             .addClass('form-control')
-                            .attr('data-config-name', fieldName);
+                            .attr('data-config-name', fieldName)
+                            .prop('disabled', field.skip === true || isReadOnly);
 
                         $input.append($('<option>').val('').text(''));
 
@@ -358,7 +386,8 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                     case 'checkbox':
                         $input = $('<input>')
                             .attr('type', 'checkbox')
-                            .attr('data-config-name', fieldName);
+                            .attr('data-config-name', fieldName)
+                            .prop('disabled', field.skip === true || isReadOnly);
 
                         if (currentValue === true || currentValue === 'true' || currentValue === 1) {
                             $input.prop('checked', true);
@@ -381,7 +410,9 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                         $input = $('<textarea>')
                             .addClass('form-control')
                             .attr('rows', 6)
-                            .attr('data-config-name', fieldName);
+                            .attr('data-config-name', fieldName)
+                            .prop('readonly', isReadOnly)
+                            .prop('disabled', field.skip === true);
 
                         if (typeof currentValue === 'object' && currentValue !== null) {
                             $input.val(JSON.stringify(currentValue, null, 2));
@@ -396,6 +427,8 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                             .attr('type', 'text')
                             .addClass('form-control')
                             .attr('data-config-name', fieldName)
+                            .prop('readonly', isReadOnly)
+                            .prop('disabled', field.skip === true)
                             .val(currentValue || '');
                         break;
                 }
@@ -438,6 +471,10 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
                 var fieldName = field.name;
                 var $el;
 
+                if (field.skip === true || field.readOnly === true) {
+                    return;
+                }
+
                 if (field.type === 'checkbox') {
                     $el = this.$el.find('[data-config-name="' + fieldName + '"]');
                     config[fieldName] = $el.is(':checked');
@@ -472,7 +509,7 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
          * @returns {boolean} true if validation fails.
          */
         validateConfigRequired: function () {
-            if (this.isFallback || !this.schema || !this.schema.required || !this.uiFields) {
+            if (this.isFallback || !this.requiredFields || this.requiredFields.length === 0 || !this.uiFields) {
                 return false;
             }
 
@@ -486,20 +523,9 @@ define("feature-credential:views/credential/fields/config", ["views/fields/text"
 
             var hasError = false;
 
-            // Also check tokenFieldMapping — fields sourced from OAuth should
-            // not be required in the form.
-            var oauthSourcedFields = [];
-            if (this.schema && this.schema.properties) {
-                Object.keys(this.schema.properties).forEach(function (key) {
-                    if (this.schema.properties[key].source === 'oauth') {
-                        oauthSourcedFields.push(key);
-                    }
-                }.bind(this));
-            }
-
-            this.schema.required.forEach(function (fieldName) {
+            this.requiredFields.forEach(function (fieldName) {
                 // Skip fields sourced from OAuth.
-                if (oauthSourcedFields.indexOf(fieldName) !== -1) {
+                if (this.oauthSourcedFields.indexOf(fieldName) !== -1) {
                     return;
                 }
 

@@ -6,7 +6,7 @@ define("feature-credential:views/credential/record/edit", ["views/record/edit"],
             Dep.prototype.setup.call(this);
 
             // When credentialType changes, force config field to re-render
-            // so it picks up the new uiConfig.
+            // so it picks up the new schema-driven configuration.
             this.listenTo(this.model, 'change:credentialTypeId', function () {
                 var configView = this.getFieldView('config');
 
