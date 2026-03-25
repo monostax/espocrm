@@ -1,0 +1,8 @@
+{
+    "fields": {
+        "clinicaNasNuvens_pacienteId": "Clínica nas Nuvens Paciente ID"
+    },
+    "links": {
+        "clinicaNasNuvensPacientes": "Clínica nas Nuvens Pacientes"
+    }
+}

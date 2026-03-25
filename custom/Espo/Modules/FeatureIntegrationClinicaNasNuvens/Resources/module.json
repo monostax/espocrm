@@ -1,0 +1,7 @@
+{
+    "name": "FeatureIntegrationClinicaNasNuvens",
+    "description": "Clínica nas Nuvens integration with Paciente anchors",
+    "version": "1.0.0",
+    "order": 27,
+    "jsTranspiled": true
+}

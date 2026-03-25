@@ -1,0 +1,6 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-user-injured",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy"]
+}

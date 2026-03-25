@@ -1,0 +1,49 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica nas Nuvens / Paciente",
+        "Create FeatureIntegrationClinicaNasNuvensPaciente": "Create Paciente Anchor",
+        "Overview": "Overview",
+        "Address": "Address",
+        "Additional": "Additional"
+    },
+    "fields": {
+        "name": "Name",
+        "pacienteId": "Remote Paciente ID",
+        "contact": "Contact",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "ativo": "Active",
+        "cpfcnpj": "CPF/CNPJ",
+        "dataNascimento": "Birth Date",
+        "email": "Email",
+        "telefone": "Phone",
+        "celular": "Mobile",
+        "sexo": "Gender",
+        "nomeMae": "Mother Name",
+        "nomePai": "Father Name",
+        "estadoCivil": "Marital Status",
+        "profissao": "Profession",
+        "endereco": "Address",
+        "numero": "Number",
+        "complemento": "Complement",
+        "bairro": "District",
+        "cidade": "City",
+        "estado": "State",
+        "cep": "ZIP",
+        "observacao": "Notes",
+        "convenio": "Insurance",
+        "numeroConvenio": "Insurance Number",
+        "validadeConvenio": "Insurance Expiration"
+    },
+    "links": {
+        "contact": "Contact",
+        "credential": "Credential"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    }
+}

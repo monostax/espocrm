@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "clinicaNasNuvens_pacienteId": {
+            "type": "varchar",
+            "maxLength": 100
+        }
+    },
+    "links": {
+        "clinicaNasNuvensPacientes": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensPaciente",
+            "foreign": "contact"
+        }
+    }
+}

@@ -1,0 +1,32 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "pacienteId"}],
+            [{"name": "contact"}, {"name": "credential"}],
+            [{"name": "syncStatus"}, {"name": "ativo"}],
+            [{"name": "cpfcnpj"}, {"name": "dataNascimento"}],
+            [{"name": "email"}, {"name": "telefone"}],
+            [{"name": "celular"}, {"name": "sexo"}]
+        ]
+    },
+    {
+        "label": "Address",
+        "rows": [
+            [{"name": "endereco"}, {"name": "numero"}],
+            [{"name": "complemento"}, {"name": "bairro"}],
+            [{"name": "cidade"}, {"name": "estado"}],
+            [{"name": "cep"}, false]
+        ]
+    },
+    {
+        "label": "Additional",
+        "rows": [
+            [{"name": "nomeMae"}, {"name": "nomePai"}],
+            [{"name": "estadoCivil"}, {"name": "profissao"}],
+            [{"name": "convenio"}, {"name": "numeroConvenio"}],
+            [{"name": "validadeConvenio"}, false],
+            [{"name": "observacao", "fullWidth": true}, false]
+        ]
+    }
+]

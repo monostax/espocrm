@@ -1,0 +1,207 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "pacienteId": {
+            "type": "varchar",
+            "maxLength": 100,
+            "required": true
+        },
+        "contact": {
+            "type": "link"
+        },
+        "credential": {
+            "type": "link"
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "ativo": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "cpfcnpj": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "dataNascimento": {
+            "type": "date",
+            "readOnly": true
+        },
+        "email": {
+            "type": "email",
+            "readOnly": true
+        },
+        "telefone": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "celular": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "sexo": {
+            "type": "varchar",
+            "maxLength": 20,
+            "readOnly": true
+        },
+        "nomeMae": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "nomePai": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "estadoCivil": {
+            "type": "varchar",
+            "maxLength": 60,
+            "readOnly": true
+        },
+        "profissao": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true
+        },
+        "endereco": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "numero": {
+            "type": "varchar",
+            "maxLength": 20,
+            "readOnly": true
+        },
+        "complemento": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "bairro": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "cidade": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true
+        },
+        "estado": {
+            "type": "varchar",
+            "maxLength": 10,
+            "readOnly": true
+        },
+        "cep": {
+            "type": "varchar",
+            "maxLength": 16,
+            "readOnly": true
+        },
+        "observacao": {
+            "type": "text",
+            "readOnly": true
+        },
+        "convenio": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true
+        },
+        "numeroConvenio": {
+            "type": "varchar",
+            "maxLength": 80,
+            "readOnly": true
+        },
+        "validadeConvenio": {
+            "type": "date",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "clinicaNasNuvensPacientes"
+        },
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "clinicaNasNuvensPacientes"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "pacienteId",
+            "cpfcnpj",
+            "email",
+            "telefone",
+            "celular",
+            "cidade",
+            "estado",
+            "bairro",
+            "convenio",
+            "numeroConvenio",
+            "contact"
+        ]
+    },
+    "indexes": {
+        "contactId": {
+            "columns": ["contactId"]
+        },
+        "credentialId": {
+            "columns": ["credentialId"]
+        },
+        "pacienteIdCredential": {
+            "unique": true,
+            "columns": ["pacienteId", "credentialId", "deleted"]
+        }
+    }
+}
