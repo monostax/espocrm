@@ -87,19 +87,7 @@ class FeatureIntegrationClinicaNasNuvensFaturamento extends RecordService implem
     {
         $this->assertSearchParamsUseStorableFields($searchParams);
 
-        $result = parent::find($searchParams, $params);
-
-        $entities = [];
-
-        foreach ($result->getCollection() as $entity) {
-            $entities[] = $entity;
-        }
-
-        if ($entities !== []) {
-            $this->enrichEntities($entities, false);
-        }
-
-        return $result;
+        return parent::find($searchParams, $params);
     }
 
     public function create(stdClass $data, CreateParams $params): Entity

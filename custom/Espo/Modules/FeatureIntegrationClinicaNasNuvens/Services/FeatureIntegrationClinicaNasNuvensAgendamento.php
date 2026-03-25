@@ -124,19 +124,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     {
         $this->assertSearchParamsUseStorableFields($searchParams);
 
-        $result = parent::find($searchParams, $params);
-
-        $entities = [];
-
-        foreach ($result->getCollection() as $entity) {
-            $entities[] = $entity;
-        }
-
-        if ($entities !== []) {
-            $this->enrichEntities($entities, false);
-        }
-
-        return $result;
+        return parent::find($searchParams, $params);
     }
 
     public function create(stdClass $data, CreateParams $params): Entity
@@ -240,8 +228,11 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             return;
         }
 
+        $teamIdList = $this->extractTeamIdList($entity);
+
         $this->enrichEntities([$entity], true);
-        $this->discoverAndCreateFaturamentoAnchors($entity, $this->extractTeamIdList($entity));
+        $this->persistAgendamentoAfterCreate($entity);
+        $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
     }
 
     private function assertAgendamentoExistsBeforeCreate(string $agendamentoId, ?Entity $credential): void
@@ -625,6 +616,42 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
         if (is_array($teamIdList) && $teamIdList !== []) {
             return array_values(array_filter($teamIdList, fn ($id) => is_string($id) && $id !== ''));
+        }
+
+        $entityId = $this->normalizeNullableString($entity->getId());
+
+        if (!$entityId) {
+            return [];
+        }
+
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select(['teamId'])
+            ->from('EntityTeam')
+            ->where([
+                'entityType' => 'FeatureIntegrationClinicaNasNuvensAgendamento',
+                'entityId' => $entityId,
+                'deleted' => false,
+            ])
+            ->build();
+
+        $collection = $this->entityManager
+            ->getRDBRepository('EntityTeam')
+            ->clone($query)
+            ->find();
+
+        $resolved = [];
+
+        foreach ($collection as $row) {
+            $teamId = $this->normalizeNullableString($row->get('teamId'));
+
+            if ($teamId) {
+                $resolved[] = $teamId;
+            }
+        }
+
+        if ($resolved !== []) {
+            return array_values(array_unique($resolved));
         }
 
         return [];
@@ -1066,6 +1093,41 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             );
 
             return null;
+        }
+    }
+
+    /**
+     * Populate virtual display fields for already-synced entities without
+     * hitting the external CNN API. Used by find() to avoid unnecessary
+     * API calls for records that are already hydrated.
+     */
+    private function populateDisplayFieldsFromDb(Entity $entity): void
+    {
+        $credentialId = $this->normalizeNullableString($entity->get('credentialId'));
+
+        if ($credentialId) {
+            $credential = $this->entityManager->getEntityById('Credential', $credentialId);
+
+            if ($credential) {
+                $entity->set('credentialName', $credential->get('name'));
+            }
+        }
+
+        $localPacienteAnchor = $this->findLocalPacienteAnchor(
+            $entity->get('idPaciente'),
+            $credentialId,
+        );
+
+        if ($localPacienteAnchor['localId'] !== null) {
+            $entity->set('pacienteId', $localPacienteAnchor['localId']);
+            $entity->set('pacienteName', $localPacienteAnchor['localName']);
+        }
+
+        $billingSnapshot = $this->findLatestFaturamentoSnapshot($entity);
+
+        if ($billingSnapshot !== null) {
+            $entity->set('valor', $billingSnapshot['valor']);
+            $entity->set('valorCurrency', $billingSnapshot['valorCurrency']);
         }
     }
 

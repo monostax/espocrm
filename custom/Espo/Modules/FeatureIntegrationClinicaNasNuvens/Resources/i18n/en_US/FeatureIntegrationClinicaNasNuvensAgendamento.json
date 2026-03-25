@@ -52,6 +52,7 @@
             "finalizado": "Finalized",
             "em_espera": "On Hold",
             "cancelado": "Canceled",
+            "cancelado_paciente": "Canceled by Patient",
             "falta": "No Show",
             "remarcado": "Rescheduled",
             "encaixe": "Overbooked",

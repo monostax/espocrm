@@ -87,6 +87,7 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
         $entity = parent::read($id, $params);
 
         $this->enrichEntities([$entity], true);
+        $this->hydrateRelatedAgendamentosAndFaturamentos($entity);
 
         return $entity;
     }
@@ -95,19 +96,7 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
     {
         $this->assertSearchParamsUseStorableFields($searchParams);
 
-        $result = parent::find($searchParams, $params);
-
-        $entities = [];
-
-        foreach ($result->getCollection() as $entity) {
-            $entities[] = $entity;
-        }
-
-        if ($entities !== []) {
-            $this->enrichEntities($entities, false);
-        }
-
-        return $result;
+        return parent::find($searchParams, $params);
     }
 
     public function create(stdClass $data, CreateParams $params): Entity
@@ -375,6 +364,42 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
 
         if (is_array($teamIdList) && $teamIdList !== []) {
             return array_values(array_filter($teamIdList, fn ($id) => is_string($id) && $id !== ''));
+        }
+
+        $entityId = $this->normalizeNullableString($entity->getId());
+
+        if (!$entityId) {
+            return [];
+        }
+
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select(['teamId'])
+            ->from('EntityTeam')
+            ->where([
+                'entityType' => 'FeatureIntegrationClinicaNasNuvensPaciente',
+                'entityId' => $entityId,
+                'deleted' => false,
+            ])
+            ->build();
+
+        $collection = $this->entityManager
+            ->getRDBRepository('EntityTeam')
+            ->clone($query)
+            ->find();
+
+        $resolved = [];
+
+        foreach ($collection as $row) {
+            $teamId = $this->normalizeNullableString($row->get('teamId'));
+
+            if ($teamId) {
+                $resolved[] = $teamId;
+            }
+        }
+
+        if ($resolved !== []) {
+            return array_values(array_unique($resolved));
         }
 
         return [];
@@ -669,5 +694,82 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
         $credentialMap = $this->getCredentialHelper()->getAccessibleCredentialMapByIds([$credentialId]);
 
         return $credentialMap[$credentialId] ?? null;
+    }
+
+    /**
+     * Hydrate all linked Agendamentos and Faturamentos for this Paciente.
+     *
+     * Runs on read() so that when a user views a Paciente detail page, all
+     * related anchors are refreshed with the latest remote data behind the
+     * scenes.
+     *
+     * The initial render already shows stored DB values (fast). This method
+     * re-syncs every linked record regardless of syncStatus for freshness.
+     * enrichEntities() uses shouldSkipBlankHydrationValue internally, so
+     * existing non-blank field values are never overwritten with blanks.
+     */
+    private function hydrateRelatedAgendamentosAndFaturamentos(Entity $paciente): void
+    {
+        $pacienteLocalId = $this->normalizeNullableString($paciente->getId());
+
+        if (!$pacienteLocalId) {
+            return;
+        }
+
+        /** @var FeatureIntegrationClinicaNasNuvensAgendamento $agendamentoService */
+        $agendamentoService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensAgendamento');
+
+        $agendamentos = $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensAgendamento')
+            ->where([
+                'pacienteId' => $pacienteLocalId,
+                'deleted' => false,
+            ])
+            ->find();
+
+        foreach ($agendamentos as $agendamento) {
+            $id = $agendamento->getId();
+
+            if (!is_string($id) || $id === '') {
+                continue;
+            }
+
+            try {
+                $agendamentoService->hydrateAfterImport($id);
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensPaciente: failed to hydrate related agendamento '" .
+                    $id . "' for paciente '" . $pacienteLocalId . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        /** @var FeatureIntegrationClinicaNasNuvensFaturamento $faturamentoService */
+        $faturamentoService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensFaturamento');
+
+        $faturamentos = $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensFaturamento')
+            ->where([
+                'pacienteId' => $pacienteLocalId,
+                'deleted' => false,
+            ])
+            ->find();
+
+        foreach ($faturamentos as $faturamento) {
+            $id = $faturamento->getId();
+
+            if (!is_string($id) || $id === '') {
+                continue;
+            }
+
+            try {
+                $faturamentoService->hydrateAfterImport($id);
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensPaciente: failed to hydrate related faturamento '" .
+                    $id . "' for paciente '" . $pacienteLocalId . "': " . $e->getMessage()
+                );
+            }
+        }
     }
 }

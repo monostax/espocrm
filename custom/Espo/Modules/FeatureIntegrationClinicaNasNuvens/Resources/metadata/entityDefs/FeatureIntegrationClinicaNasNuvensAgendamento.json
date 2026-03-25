@@ -64,7 +64,7 @@
         },
         "status": {
             "type": "enum",
-            "options": ["agendado", "confirmado", "atendido", "finalizado", "em_espera", "cancelado", "falta", "remarcado", "encaixe", "bloqueado"],
+            "options": ["agendado", "confirmado", "atendido", "finalizado", "em_espera", "cancelado", "cancelado_paciente", "falta", "remarcado", "encaixe", "bloqueado"],
             "displayAsLabel": true,
             "labelType": "state",
             "style": {
@@ -74,6 +74,7 @@
                 "finalizado": "success",
                 "em_espera": "warning",
                 "cancelado": "danger",
+                "cancelado_paciente": "danger",
                 "falta": "warning",
                 "remarcado": "info",
                 "encaixe": "primary",

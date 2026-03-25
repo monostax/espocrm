@@ -52,6 +52,7 @@
             "finalizado": "Finalizado",
             "em_espera": "Em Espera",
             "cancelado": "Cancelado",
+            "cancelado_paciente": "Cancelado pelo Paciente",
             "falta": "Falta",
             "remarcado": "Remarcado",
             "encaixe": "Encaixe",
