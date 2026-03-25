@@ -5,7 +5,8 @@
         "Overview": "Visão Geral",
         "Professional": "Profissional",
         "Location": "Local",
-        "Raw": "Campos Brutos"
+        "Raw": "Campos Brutos",
+        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens"
     },
     "fields": {
         "name": "Nome",

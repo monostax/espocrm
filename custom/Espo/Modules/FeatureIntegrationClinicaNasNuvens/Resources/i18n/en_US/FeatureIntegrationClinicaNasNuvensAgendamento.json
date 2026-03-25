@@ -5,7 +5,8 @@
         "Overview": "Overview",
         "Professional": "Professional",
         "Location": "Location",
-        "Raw": "Raw Fields"
+        "Raw": "Raw Fields",
+        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens"
     },
     "fields": {
         "name": "Name",

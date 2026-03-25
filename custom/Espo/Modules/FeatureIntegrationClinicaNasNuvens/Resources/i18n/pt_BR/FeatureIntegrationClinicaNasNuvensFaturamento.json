@@ -3,7 +3,8 @@
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamento",
         "Create FeatureIntegrationClinicaNasNuvensFaturamento": "Conectar de Faturamento",
         "Overview": "Visão Geral",
-        "Raw": "Campos Brutos"
+        "Raw": "Campos Brutos",
+        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens"
     },
     "fields": {
         "name": "Nome",

@@ -2,5 +2,21 @@
     "controller": "controllers/record",
     "iconClass": "fas fa-file-invoice-dollar",
     "searchPanelDisabled": false,
-    "boolFilterList": ["onlyMy"]
+    "boolFilterList": ["onlyMy"],
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "openInClinicaNasNuvens",
+                    "name": "openInClinicaNasNuvens",
+                    "style": "default",
+                    "handler": "feature-integration-clinica-nas-nuvens:handlers/open-in-cnn",
+                    "actionFunction": "openInClinicaNasNuvens",
+                    "checkVisibilityFunction": "isOpenInClinicaNasNuvensVisible",
+                    "iconClass": "fas fa-external-link-alt"
+                }
+            ]
+        }
+    }
 }

@@ -4,7 +4,8 @@
         "Create FeatureIntegrationClinicaNasNuvensPaciente": "Create Paciente Anchor",
         "Overview": "Overview",
         "Address": "Address",
-        "Additional": "Additional"
+        "Additional": "Additional",
+        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens"
     },
     "fields": {
         "name": "Name",

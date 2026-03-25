@@ -4,7 +4,8 @@
         "Create FeatureIntegrationClinicaNasNuvensPaciente": "Conectar de Paciente",
         "Overview": "Visão Geral",
         "Address": "Endereço",
-        "Additional": "Adicional"
+        "Additional": "Adicional",
+        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens"
     },
     "fields": {
         "name": "Nome",

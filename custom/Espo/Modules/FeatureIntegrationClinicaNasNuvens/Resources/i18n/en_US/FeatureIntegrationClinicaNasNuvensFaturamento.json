@@ -3,7 +3,8 @@
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamento",
         "Create FeatureIntegrationClinicaNasNuvensFaturamento": "Create Faturamento Anchor",
         "Overview": "Overview",
-        "Raw": "Raw Fields"
+        "Raw": "Raw Fields",
+        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens"
     },
     "fields": {
         "name": "Name",
