@@ -1,14 +1,15 @@
 {
     "labels": {
-        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica nas Nuvens / Paciente",
-        "Create FeatureIntegrationClinicaNasNuvensPaciente": "Criar Âncora de Paciente",
+        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica Nas Nuvens / Paciente",
+        "Create FeatureIntegrationClinicaNasNuvensPaciente": "Conectar de Paciente",
         "Overview": "Visão Geral",
         "Address": "Endereço",
         "Additional": "Adicional"
     },
     "fields": {
         "name": "Nome",
-        "pacienteId": "ID Remoto do Paciente",
+        "pacienteId": "ID Paciente (Clínica Nas Nuvens)",
+        "status": "Status",
         "contact": "Contato",
         "credential": "Credencial",
         "syncStatus": "Status de Sincronização",
@@ -38,9 +39,20 @@
     "links": {
         "contact": "Contato",
         "credential": "Credencial",
-        "agendamentos": "Agendamentos"
+        "agendamentos": "Agendamentos",
+        "faturamentos": "Faturamentos"
     },
     "options": {
+        "status": {
+            "agendado": "Agendado",
+            "confirmado": "Confirmado",
+            "atendido": "Atendido",
+            "cancelado": "Cancelado",
+            "falta": "Falta",
+            "remarcado": "Remarcado",
+            "encaixe": "Encaixe",
+            "bloqueado": "Bloqueado"
+        },
         "syncStatus": {
             "pending": "Pendente",
             "synced": "Sincronizado",

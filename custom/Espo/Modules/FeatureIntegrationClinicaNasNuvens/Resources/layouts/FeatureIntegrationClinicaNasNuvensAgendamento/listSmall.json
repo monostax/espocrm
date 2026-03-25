@@ -1,0 +1,6 @@
+[
+    {"name": "horaInicio", "link": true},
+    {"name": "status"},
+    {"name": "statusFaturamento"},
+    {"name": "valor"}
+]

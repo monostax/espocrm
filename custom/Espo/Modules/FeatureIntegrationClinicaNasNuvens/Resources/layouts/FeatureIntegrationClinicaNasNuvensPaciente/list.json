@@ -1,10 +1,7 @@
 [
-    {"name": "name", "link": true, "width": 18},
+    {"name": "name", "link": true },
     {"name": "pacienteId", "width": 14},
     {"name": "contact", "width": 14},
-    {"name": "credential", "width": 14},
-    {"name": "syncStatus", "width": 10},
     {"name": "cpfcnpj", "width": 12},
-    {"name": "ativo", "width": 8},
-    {"name": "modifiedAt", "width": 12}
+    {"name": "ativo", "width": 8}
 ]

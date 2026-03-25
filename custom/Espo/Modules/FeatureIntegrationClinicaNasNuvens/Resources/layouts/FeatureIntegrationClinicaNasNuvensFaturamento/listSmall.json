@@ -1,0 +1,5 @@
+[
+    {"name": "dataFaturamento", "link": true},
+    {"name": "valor"},
+    {"name": "conta"}
+]

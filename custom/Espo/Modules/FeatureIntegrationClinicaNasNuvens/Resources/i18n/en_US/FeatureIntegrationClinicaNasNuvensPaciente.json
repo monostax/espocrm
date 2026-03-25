@@ -1,6 +1,6 @@
 {
     "labels": {
-        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica nas Nuvens / Paciente",
+        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica Nas Nuvens / Paciente",
         "Create FeatureIntegrationClinicaNasNuvensPaciente": "Create Paciente Anchor",
         "Overview": "Overview",
         "Address": "Address",
@@ -38,7 +38,8 @@
     "links": {
         "contact": "Contact",
         "credential": "Credential",
-        "agendamentos": "Appointments"
+        "agendamentos": "Appointments",
+        "faturamentos": "Billings"
     },
     "options": {
         "syncStatus": {

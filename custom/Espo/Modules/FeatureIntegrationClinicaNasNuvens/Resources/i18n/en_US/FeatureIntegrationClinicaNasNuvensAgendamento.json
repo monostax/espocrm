@@ -1,6 +1,6 @@
 {
     "labels": {
-        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica nas Nuvens / Agendamento",
+        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Agendamento",
         "Create FeatureIntegrationClinicaNasNuvensAgendamento": "Create Agendamento Anchor",
         "Overview": "Overview",
         "Professional": "Professional",
@@ -23,6 +23,7 @@
         "horaInicio": "Start Time",
         "horaFim": "End Time",
         "status": "Status",
+        "statusFaturamento": "Billing Status",
         "tipoAtendimento": "Service Type",
         "profissional": "Professional",
         "convenio": "Insurance",
@@ -30,11 +31,13 @@
         "sala": "Room",
         "unidade": "Unit",
         "observacao": "Notes",
-        "procedimentos": "Procedures"
+        "procedimentos": "Procedures",
+        "valor": "Amount"
     },
     "links": {
         "paciente": "Patient",
-        "credential": "Credential"
+        "credential": "Credential",
+        "faturamentos": "Faturamentos"
     },
     "options": {
         "syncStatus": {
@@ -46,11 +49,18 @@
             "agendado": "Scheduled",
             "confirmado": "Confirmed",
             "atendido": "Attended",
+            "finalizado": "Finalized",
+            "em_espera": "On Hold",
             "cancelado": "Canceled",
             "falta": "No Show",
             "remarcado": "Rescheduled",
             "encaixe": "Overbooked",
             "bloqueado": "Blocked"
+        },
+        "statusFaturamento": {
+            "CANCELADO": "Canceled",
+            "SEM_REGISTRO": "No Record",
+            "FATURADO": "Billed"
         }
     }
 }

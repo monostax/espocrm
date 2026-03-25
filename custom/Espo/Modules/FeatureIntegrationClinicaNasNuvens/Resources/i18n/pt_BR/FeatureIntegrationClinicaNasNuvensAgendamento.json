@@ -1,7 +1,7 @@
 {
     "labels": {
-        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica nas Nuvens / Agendamento",
-        "Create FeatureIntegrationClinicaNasNuvensAgendamento": "Criar Âncora de Agendamento",
+        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Agendamento",
+        "Create FeatureIntegrationClinicaNasNuvensAgendamento": "Conectar de Agendamento",
         "Overview": "Visão Geral",
         "Professional": "Profissional",
         "Location": "Local",
@@ -9,11 +9,11 @@
     },
     "fields": {
         "name": "Nome",
-        "agendamentoId": "ID Remoto do Agendamento",
+        "agendamentoId": "ID Agendamento (Clínica Nas Nuvens)",
         "paciente": "Paciente",
         "credential": "Credencial",
         "syncStatus": "Status de Sincronização",
-        "idPaciente": "ID Remoto do Paciente",
+        "idPaciente": "ID Paciente (Clínica Nas Nuvens)",
         "idProfissional": "ID Remoto do Profissional",
         "idConvenio": "ID Remoto do Convênio",
         "idEspecialidade": "ID Remoto da Especialidade",
@@ -23,6 +23,7 @@
         "horaInicio": "Hora de Início",
         "horaFim": "Hora de Fim",
         "status": "Status",
+        "statusFaturamento": "Status Faturamento",
         "tipoAtendimento": "Tipo de Atendimento",
         "profissional": "Profissional",
         "convenio": "Convênio",
@@ -30,11 +31,13 @@
         "sala": "Sala",
         "unidade": "Unidade",
         "observacao": "Observação",
-        "procedimentos": "Procedimentos"
+        "procedimentos": "Procedimentos",
+        "valor": "Valor"
     },
     "links": {
         "paciente": "Paciente",
-        "credential": "Credencial"
+        "credential": "Credencial",
+        "faturamentos": "Faturamentos"
     },
     "options": {
         "syncStatus": {
@@ -46,11 +49,18 @@
             "agendado": "Agendado",
             "confirmado": "Confirmado",
             "atendido": "Atendido",
+            "finalizado": "Finalizado",
+            "em_espera": "Em Espera",
             "cancelado": "Cancelado",
             "falta": "Falta",
             "remarcado": "Remarcado",
             "encaixe": "Encaixe",
             "bloqueado": "Bloqueado"
+        },
+        "statusFaturamento": {
+            "CANCELADO": "Cancelado",
+            "SEM_REGISTRO": "Sem Registro",
+            "FATURADO": "Faturado"
         }
     }
 }

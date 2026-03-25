@@ -259,8 +259,12 @@ class ClinicaNasNuvensApiClient implements
             'cpfcnpj' => $source['cpfcnpj'] ?? null,
             'dataNascimento' => $source['dataNascimento'] ?? null,
             'email' => $source['email'] ?? $contato['email'] ?? null,
-            'telefone' => $source['telefone'] ?? $contato['telefoneComercial'] ?? $contato['telefoneResidencial'] ?? null,
-            'celular' => $source['celular'] ?? $contato['telefoneCelular'] ?? null,
+            'telefone' => $this->normalizePhoneNumberWithBrazilPrefix(
+                $source['telefone'] ?? $contato['telefoneComercial'] ?? $contato['telefoneResidencial'] ?? null
+            ),
+            'celular' => $this->normalizePhoneNumberWithBrazilPrefix(
+                $source['celular'] ?? $contato['telefoneCelular'] ?? null
+            ),
             'sexo' => $source['sexo'] ?? null,
             'nomeMae' => $source['nomeMae'] ?? null,
             'nomePai' => $source['nomePai'] ?? null,
@@ -314,6 +318,14 @@ class ClinicaNasNuvensApiClient implements
             return null;
         };
 
+        $rawData = $toStringOrNull($source['data'] ?? null);
+        $rawHoraInicio = $toStringOrNull($source['horaInicio'] ?? null);
+        $rawHoraFim = $toStringOrNull($source['horaFim'] ?? null);
+
+        $data = $this->normalizeCrmDateTimeValue($rawData, null);
+        $horaInicio = $this->normalizeCrmDateTimeValue($rawHoraInicio, $rawData);
+        $horaFim = $this->normalizeCrmDateTimeValue($rawHoraFim, $rawData);
+
         return [
             'agendamentoId' => $toStringOrNull($source['id'] ?? $source['agendamentoId'] ?? null),
             'name' => $toStringOrNull($name),
@@ -323,9 +335,9 @@ class ClinicaNasNuvensApiClient implements
             'idEspecialidade' => $toStringOrNull($source['idEspecialidade'] ?? null),
             'idUnidade' => $toStringOrNull($source['idUnidade'] ?? null),
             'idSala' => $toStringOrNull($source['idSala'] ?? null),
-            'data' => $toStringOrNull($source['data'] ?? null),
-            'horaInicio' => $toStringOrNull($source['horaInicio'] ?? null),
-            'horaFim' => $toStringOrNull($source['horaFim'] ?? null),
+            'data' => $data,
+            'horaInicio' => $horaInicio,
+            'horaFim' => $horaFim,
             'status' => $toStringOrNull($status),
             'tipoAtendimento' => $toStringOrNull($source['tipoAtendimento'] ?? null),
             'profissional' => $toStringOrNull($source['profissional'] ?? $source['nomeProfissional'] ?? null),
@@ -336,6 +348,91 @@ class ClinicaNasNuvensApiClient implements
             'observacao' => $toStringOrNull($source['observacao'] ?? $source['observacoes'] ?? null),
             'procedimentos' => $procedimentos,
         ];
+    }
+
+    private function normalizeCrmDateTimeValue(?string $value, ?string $fallbackDate): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $trimmed) === 1) {
+            return $trimmed . ' 00:00:00';
+        }
+
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?$/', $trimmed, $match) === 1) {
+            return $match[1] . ' ' . $match[2] . ':' . ($match[3] ?? '00');
+        }
+
+        if (preg_match('/^(\d{2}:\d{2})(?::(\d{2}))?$/', $trimmed, $match) === 1) {
+            $datePart = $this->extractDatePart($fallbackDate);
+
+            if ($datePart === null) {
+                return null;
+            }
+
+            return $datePart . ' ' . $match[1] . ':' . ($match[2] ?? '00');
+        }
+
+        try {
+            return (new \DateTimeImmutable($trimmed))->format('Y-m-d H:i:s');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function extractDatePart(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})(?:$|[ T])/', $trimmed, $match) === 1) {
+            return $match[1];
+        }
+
+        try {
+            return (new \DateTimeImmutable($trimmed))->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function normalizePhoneNumberWithBrazilPrefix(mixed $value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $trimmed);
+
+        if (!is_string($digits) || $digits === '') {
+            return null;
+        }
+
+        if (strlen($digits) > 11 && str_starts_with($digits, '55')) {
+            $digits = substr($digits, 2);
+        }
+
+        return '+55' . $digits;
     }
 
     /**

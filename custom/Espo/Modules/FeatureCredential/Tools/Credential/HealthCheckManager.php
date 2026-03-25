@@ -123,9 +123,10 @@ class HealthCheckManager
     private function resolveChecker(Entity $credentialType): ?HealthCheckerInterface
     {
         $code = $credentialType->get('code');
+        $category = $credentialType->get('category');
 
         // 1. Try dedicated checker class by code.
-        $dedicatedClass = $this->getDedicatedCheckerClass($code);
+        $dedicatedClass = $code ? $this->getDedicatedCheckerClass($code) : null;
 
         if ($dedicatedClass && class_exists($dedicatedClass)) {
             $checker = $this->injectableFactory->create($dedicatedClass);
@@ -135,14 +136,25 @@ class HealthCheckManager
             }
         }
 
-        // 2. Fall back to GenericHttpHealthChecker if healthCheckConfig exists.
+        // 2. Try checker by credential category (e.g. formAuth).
+        $categoryClass = $category ? $this->getDedicatedCheckerClass($category) : null;
+
+        if ($categoryClass && class_exists($categoryClass)) {
+            $checker = $this->injectableFactory->create($categoryClass);
+
+            if ($checker instanceof HealthCheckerInterface) {
+                return $checker;
+            }
+        }
+
+        // 3. Fall back to GenericHttpHealthChecker if healthCheckConfig exists.
         $healthCheckConfig = $credentialType->get('healthCheckConfig');
 
         if ($healthCheckConfig) {
             return $this->injectableFactory->create(GenericHttpHealthChecker::class);
         }
 
-        // 3. No checker available.
+        // 4. No checker available.
         return null;
     }
 
@@ -156,7 +168,8 @@ class HealthCheckManager
      */
     private function getDedicatedCheckerClass(string $code): string
     {
-        $pascalCode = ucfirst($code);
+        $normalized = preg_replace('/[^a-zA-Z0-9]+/', ' ', $code) ?? '';
+        $pascalCode = str_replace(' ', '', ucwords(trim($normalized)));
 
         return self::CHECKER_NAMESPACE . $pascalCode . 'HealthChecker';
     }

@@ -112,12 +112,72 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
 
     public function create(stdClass $data, CreateParams $params): Entity
     {
+        $rawPacienteId = $this->extractRawPacienteIdFromInput($data);
+        $rawTeamIdList = $this->extractTeamIdListFromInput($data);
+        $preCreateCredential = null;
+
+        if ($rawPacienteId) {
+            $preCreateCredential = $this->resolveAccessibleCredentialFromInput($data, $rawTeamIdList);
+
+            if ($preCreateCredential) {
+                $existing = $this->findPacienteAnchorIncludingDeleted($rawPacienteId, $preCreateCredential->getId());
+
+                if ($existing) {
+                    $existing = $this->restorePacienteIfDeleted($existing);
+
+                    if ($existing) {
+                        $this->mergeTeamsIntoPacienteAnchor($existing, $rawTeamIdList);
+                        $this->enrichEntities([$existing], true);
+
+                        return $existing;
+                    }
+                }
+            }
+
+            $this->assertPacienteExistsBeforeCreate($rawPacienteId, $preCreateCredential);
+        }
+
         $entity = parent::create($data, $params);
 
         $this->enrichEntities([$entity], true);
-        $this->persistPacienteAfterCreate($entity);
+        $entity = $this->persistPacienteAfterCreate($entity);
 
         return $entity;
+    }
+
+    public function hydrateAfterImport(string $id): void
+    {
+        $entity = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensPaciente', $id);
+
+        if (!$entity) {
+            return;
+        }
+
+        $this->enrichEntities([$entity], true);
+    }
+
+    private function assertPacienteExistsBeforeCreate(string $pacienteId, ?Entity $credential): void
+    {
+        if (!$credential) {
+            throw new BadRequest(
+                "Cannot create paciente anchor '{$pacienteId}' without an accessible CNN credential."
+            );
+        }
+
+        try {
+            $payload = $this->getApiClient()->getPacienteById($credential, $pacienteId);
+        } catch (Throwable $e) {
+            throw new BadRequest(
+                "Cannot create paciente anchor '{$pacienteId}': invalid or non-existent remote paciente ID.",
+                previous: $e
+            );
+        }
+
+        if ($payload === []) {
+            throw new BadRequest(
+                "Cannot create paciente anchor '{$pacienteId}': invalid or non-existent remote paciente ID."
+            );
+        }
     }
 
     private function assertSearchParamsUseStorableFields(SearchParams $searchParams): void
@@ -277,7 +337,7 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
 
                         foreach ($pacienteMap[$pacienteId] as $entity) {
                             foreach ($payload as $field => $value) {
-                                if ($field === 'name' && ($value === null || $value === '')) {
+                                if ($this->shouldSkipBlankHydrationValue($entity, $field, $value)) {
                                     continue;
                                 }
 
@@ -320,6 +380,59 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
         return [];
     }
 
+    private function findPacienteAnchorIncludingDeleted(string $pacienteId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('FeatureIntegrationClinicaNasNuvensPaciente')
+            ->where([
+                'pacienteId' => $pacienteId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensPaciente')
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restorePacienteIfDeleted(Entity $paciente): ?Entity
+    {
+        if (!$paciente->get('deleted')) {
+            return $paciente;
+        }
+
+        $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensPaciente')
+            ->restoreDeleted($paciente->getId());
+
+        return $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensPaciente', $paciente->getId());
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function mergeTeamsIntoPacienteAnchor(Entity $paciente, array $teamIdList): void
+    {
+        $existingTeamIdList = $this->extractTeamIdList($paciente);
+        $mergedTeamIdList = array_values(array_unique(array_merge($existingTeamIdList, $teamIdList)));
+
+        if ($mergedTeamIdList === $existingTeamIdList) {
+            return;
+        }
+
+        $paciente->set('teamsIds', $mergedTeamIdList);
+
+        $this->entityManager->saveEntity($paciente, [
+            SaveOption::SILENT => true,
+            SaveOption::SKIP_HOOKS => true,
+            SaveOption::SKIP_MODIFIED_BY => true,
+        ]);
+    }
+
     private function getApiClient(): ClinicaNasNuvensApiClient
     {
         return $this->injectableFactory->create(ClinicaNasNuvensApiClient::class);
@@ -347,6 +460,10 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
             }
 
             $value = $payload[$field];
+
+            if ($this->shouldSkipBlankPersistValue($entity, $field, $value)) {
+                continue;
+            }
 
             if (is_array($value) || is_object($value)) {
                 continue;
@@ -381,7 +498,51 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
         }
     }
 
-    private function persistPacienteAfterCreate(Entity $entity): void
+    /**
+     * @param mixed $value
+     */
+    private function shouldSkipBlankHydrationValue(Entity $entity, string $field, $value): bool
+    {
+        if ($value !== null && (!is_string($value) || trim($value) !== '')) {
+            return false;
+        }
+
+        return $this->hasNonBlankValue($entity->get($field));
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function shouldSkipBlankPersistValue(Entity $entity, string $field, $value): bool
+    {
+        if ($value !== null && (!is_string($value) || trim($value) !== '')) {
+            return false;
+        }
+
+        return $this->hasNonBlankValue($entity->getFetched($field));
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function hasNonBlankValue($value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        return true;
+    }
+
+    private function persistPacienteAfterCreate(Entity $entity): Entity
     {
         try {
             $this->entityManager->saveEntity($entity, [
@@ -389,11 +550,124 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
                 SaveOption::SKIP_HOOKS => true,
                 SaveOption::SKIP_MODIFIED_BY => true,
             ]);
+
+            return $entity;
         } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            $pacienteId = $this->normalizeNullableString($entity->get('pacienteId'));
+            $credentialId = $this->normalizeNullableString($entity->get('credentialId'));
+
+            if (!$pacienteId || !$credentialId) {
+                throw $e;
+            }
+
+            $existing = $this->findPacienteAnchorIncludingDeleted($pacienteId, $credentialId);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $existing = $this->restorePacienteIfDeleted($existing);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $this->mergeTeamsIntoPacienteAnchor($existing, $this->extractTeamIdList($entity));
+
             $this->log->warning(
-                "FeatureIntegrationClinicaNasNuvensPaciente: failed to persist create-time enrichment for '" .
-                $entity->getId() . "': " . $e->getMessage()
+                "FeatureIntegrationClinicaNasNuvensPaciente: duplicate paciente anchor recovered for pacienteId '" .
+                $pacienteId . "' and credential '" . $credentialId . "'."
             );
+
+            return $existing;
         }
+    }
+
+    private function normalizeNullableString($value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed !== '' ? $trimmed : null;
+    }
+
+    private function extractRawPacienteIdFromInput(stdClass $data): ?string
+    {
+        if (!property_exists($data, 'pacienteId')) {
+            return null;
+        }
+
+        return $this->normalizeNullableString($data->pacienteId);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function extractTeamIdListFromInput(stdClass $data): array
+    {
+        if (!property_exists($data, 'teamsIds') || !is_array($data->teamsIds)) {
+            return [];
+        }
+
+        return array_values(array_filter($data->teamsIds, fn ($id) => is_string($id) && trim($id) !== ''));
+    }
+
+    private function isDuplicateConstraintViolation(Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+        $code = (string) $e->getCode();
+
+        if ($code === '23000') {
+            return true;
+        }
+
+        if (
+            str_contains($message, 'duplicate') ||
+            str_contains($message, 'unique') ||
+            str_contains($message, 'integrity constraint')
+        ) {
+            return true;
+        }
+
+        $previous = $e->getPrevious();
+
+        if ($previous instanceof Throwable) {
+            return $this->isDuplicateConstraintViolation($previous);
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function resolveAccessibleCredentialFromInput(stdClass $data, array $teamIdList): ?Entity
+    {
+        $credential = $this->getCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
+
+        if ($credential) {
+            return $credential;
+        }
+
+        if (!property_exists($data, 'credentialId')) {
+            return null;
+        }
+
+        $credentialId = $this->normalizeNullableString($data->credentialId);
+
+        if (!$credentialId) {
+            return null;
+        }
+
+        $credentialMap = $this->getCredentialHelper()->getAccessibleCredentialMapByIds([$credentialId]);
+
+        return $credentialMap[$credentialId] ?? null;
     }
 }

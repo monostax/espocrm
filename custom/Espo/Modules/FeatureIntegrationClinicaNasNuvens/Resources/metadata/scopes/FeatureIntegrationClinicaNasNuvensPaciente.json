@@ -5,7 +5,7 @@
     "acl": true,
     "aclPortal": false,
     "customizable": true,
-    "importable": false,
+    "importable": true,
     "notifications": false,
     "stream": false,
     "disabled": false,

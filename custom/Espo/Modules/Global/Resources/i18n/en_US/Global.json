@@ -61,6 +61,9 @@
         "Activities": "Activities",
         "CAIPlaybook": "Playbook",
         "FeatureClinicaBasePaciente": "Patient",
+        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica Nas Nuvens / Patient",
+        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Appointment",
+        "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Billing",
         "Funnel": "Funnel",
         "OpportunityStage": "Opportunity Stage",
         "SidenavConfig": "Custom Sidenav"
@@ -69,6 +72,9 @@
         "Activities": "Activities",
         "CAIPlaybook": "Playbooks",
         "FeatureClinicaBasePaciente": "Patients",
+        "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica Nas Nuvens / Patients",
+        "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Appointments",
+        "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Billings",
         "Funnel": "Funnels",
         "OpportunityStage": "Opportunity Stages",
         "SidenavConfig": "Custom Sidenav"

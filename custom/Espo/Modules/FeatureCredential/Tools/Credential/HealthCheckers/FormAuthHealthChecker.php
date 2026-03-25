@@ -127,6 +127,7 @@ class FormAuthHealthChecker implements HealthCheckerInterface
 
         $response = curl_exec($ch);
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $effectiveUrl = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
         $error = curl_error($ch);
         curl_close($ch);
 
@@ -142,6 +143,17 @@ class FormAuthHealthChecker implements HealthCheckerInterface
         }
 
         if ($httpCode === 200) {
+            // Detect login page redirects: many sites redirect expired sessions
+            // to a login page but still return HTTP 200. Check both the final URL
+            // and the response body for common login indicators.
+            if ($this->looksLikeLoginPage($testUrl, $effectiveUrl, $response ?? '')) {
+                return [
+                    'status' => 'unhealthy',
+                    'message' => "Session expired: redirected to login page ({$responseTimeMs}ms)",
+                    'responseTimeMs' => $responseTimeMs,
+                ];
+            }
+
             return [
                 'status' => 'healthy',
                 'message' => "HTTP 200 OK ({$responseTimeMs}ms)",
@@ -154,6 +166,58 @@ class FormAuthHealthChecker implements HealthCheckerInterface
             'message' => "HTTP {$httpCode} ({$responseTimeMs}ms)",
             'responseTimeMs' => $responseTimeMs,
         ];
+    }
+
+    /**
+     * Detect whether a 200 response is actually a login page rather than
+     * the expected authenticated content.
+     *
+     * Checks:
+     * 1. Whether the final URL differs from the test URL and contains login-related path segments
+     * 2. Whether the response body contains common login page indicators
+     */
+    private function looksLikeLoginPage(string $requestedUrl, string $effectiveUrl, string $body): bool
+    {
+        // Check if we were redirected to a different URL with login-related path
+        if ($effectiveUrl !== '' && $effectiveUrl !== $requestedUrl) {
+            $effectivePath = strtolower(parse_url($effectiveUrl, PHP_URL_PATH) ?? '');
+
+            if (
+                str_contains($effectivePath, '/login') ||
+                str_contains($effectivePath, '/signin') ||
+                str_contains($effectivePath, '/auth') ||
+                str_contains($effectivePath, '/sso')
+            ) {
+                return true;
+            }
+        }
+
+        // Check body for common login page markers
+        $lower = strtolower($body);
+
+        $loginIndicatorCount = 0;
+
+        $indicators = [
+            'name="password"',
+            'name="email"',
+            'name="login"',
+            'name="senha"',
+            'b2clogin.com',
+            'fazer login',
+            'sign in',
+            'entrar',
+            '<title>login',
+            '- login</title>',
+        ];
+
+        foreach ($indicators as $indicator) {
+            if (str_contains($lower, $indicator)) {
+                $loginIndicatorCount++;
+            }
+        }
+
+        // Require at least 2 indicators to avoid false positives
+        return $loginIndicatorCount >= 2;
     }
 
     /**

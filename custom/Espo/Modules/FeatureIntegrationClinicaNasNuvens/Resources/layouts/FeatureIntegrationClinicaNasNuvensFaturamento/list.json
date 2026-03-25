@@ -1,0 +1,11 @@
+[
+    {"name": "name", "link": true, "width": 18},
+    {"name": "faturamentoId", "width": 12},
+    {"name": "agendamento", "width": 12},
+    {"name": "paciente", "width": 12},
+    {"name": "valor", "width": 10},
+    {"name": "dataFaturamento", "width": 10},
+    {"name": "dataVencimento", "width": 10},
+    {"name": "syncStatus", "width": 10},
+    {"name": "modifiedAt", "width": 10}
+]

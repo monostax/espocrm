@@ -1,0 +1,147 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "faturamentoId": {
+            "type": "varchar",
+            "maxLength": 100,
+            "required": true
+        },
+        "agendamento": {
+            "type": "link"
+        },
+        "paciente": {
+            "type": "link"
+        },
+        "credential": {
+            "type": "link"
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "documento": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true
+        },
+        "dataFaturamento": {
+            "type": "date",
+            "readOnly": true
+        },
+        "profissionalNome": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "conta": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "valor": {
+            "type": "currency",
+            "readOnly": true
+        },
+        "parcela": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "dataVencimento": {
+            "type": "date",
+            "readOnly": true
+        },
+        "description": {
+            "type": "text",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        }
+    },
+    "links": {
+        "agendamento": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
+            "foreign": "faturamentos"
+        },
+        "paciente": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensPaciente",
+            "foreign": "faturamentos"
+        },
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "clinicaNasNuvensFaturamentos"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "faturamentoId",
+            "documento",
+            "profissionalNome",
+            "conta",
+            "parcela",
+            "description",
+            "paciente",
+            "agendamento"
+        ]
+    },
+    "indexes": {
+        "agendamentoId": {
+            "columns": ["agendamentoId"]
+        },
+        "pacienteId": {
+            "columns": ["pacienteId"]
+        },
+        "credentialId": {
+            "columns": ["credentialId"]
+        },
+        "faturamentoIdCredential": {
+            "unique": true,
+            "columns": ["faturamentoId", "credentialId", "deleted"]
+        }
+    }
+}

@@ -3,8 +3,59 @@
     "iconClass": "fas fa-user-injured",
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "agendamentos",
+                "label": "Agendamentos",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "createDisabled": true,
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 1
+            },
+            {
+                "name": "faturamentos",
+                "label": "Faturamentos",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "createDisabled": true,
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 2
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "agendamentos",
+                "label": "Agendamentos",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "createDisabled": true,
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 1
+            },
+            {
+                "name": "faturamentos",
+                "label": "Faturamentos",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "createDisabled": true,
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 2
+            }
+        ]
+    },
     "relationshipPanels": {
         "agendamentos": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-remove"
+        },
+        "faturamentos": {
             "create": false,
             "select": false,
             "rowActionsView": "views/record/row-actions/relationship-no-remove"

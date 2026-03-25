@@ -1,0 +1,36 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamento",
+        "Create FeatureIntegrationClinicaNasNuvensFaturamento": "Conectar de Faturamento",
+        "Overview": "Visão Geral",
+        "Raw": "Campos Brutos"
+    },
+    "fields": {
+        "name": "Nome",
+        "faturamentoId": "ID Fatura (Clínica Nas Nuvens)",
+        "agendamento": "Agendamento",
+        "paciente": "Paciente",
+        "credential": "Credencial",
+        "syncStatus": "Status de Sincronização",
+        "documento": "Documento",
+        "dataFaturamento": "Data do Faturamento",
+        "profissionalNome": "Profissional",
+        "conta": "Conta",
+        "valor": "Valor",
+        "parcela": "Parcela",
+        "dataVencimento": "Data de Vencimento",
+        "description": "Descrição"
+    },
+    "links": {
+        "agendamento": "Agendamento",
+        "paciente": "Paciente",
+        "credential": "Credencial"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    }
+}

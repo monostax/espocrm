@@ -4,6 +4,8 @@
     "paciente",
     "credential",
     "status",
+    "statusFaturamento",
+    "valor",
     "syncStatus",
     "data",
     "horaInicio",

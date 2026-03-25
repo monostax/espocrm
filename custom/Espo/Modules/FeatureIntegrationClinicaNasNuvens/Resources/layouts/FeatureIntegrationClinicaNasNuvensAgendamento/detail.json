@@ -4,7 +4,9 @@
         "rows": [
             [{"name": "name"}, {"name": "agendamentoId"}],
             [{"name": "paciente"}, {"name": "credential"}],
-            [{"name": "status"}, {"name": "syncStatus"}],
+            [{"name": "status"}, {"name": "statusFaturamento"}],
+            [{"name": "syncStatus"}, false],
+            [{"name": "valor"}, false],
             [{"name": "data"}, {"name": "horaInicio"}],
             [{"name": "horaFim"}, {"name": "tipoAtendimento"}]
         ]

@@ -1,0 +1,36 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamento",
+        "Create FeatureIntegrationClinicaNasNuvensFaturamento": "Create Faturamento Anchor",
+        "Overview": "Overview",
+        "Raw": "Raw Fields"
+    },
+    "fields": {
+        "name": "Name",
+        "faturamentoId": "Remote Faturamento ID",
+        "agendamento": "Agendamento",
+        "paciente": "Paciente",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "documento": "Document",
+        "dataFaturamento": "Billing Date",
+        "profissionalNome": "Professional",
+        "conta": "Account",
+        "valor": "Amount",
+        "parcela": "Installment",
+        "dataVencimento": "Due Date",
+        "description": "Description"
+    },
+    "links": {
+        "agendamento": "Agendamento",
+        "paciente": "Paciente",
+        "credential": "Credential"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    }
+}

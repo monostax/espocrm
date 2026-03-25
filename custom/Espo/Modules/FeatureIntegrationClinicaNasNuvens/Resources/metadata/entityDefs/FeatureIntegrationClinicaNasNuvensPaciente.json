@@ -38,13 +38,11 @@
             "readOnly": true
         },
         "telefone": {
-            "type": "varchar",
-            "maxLength": 32,
+            "type": "phone",
             "readOnly": true
         },
         "celular": {
-            "type": "varchar",
-            "maxLength": 32,
+            "type": "phone",
             "readOnly": true
         },
         "sexo": {
@@ -145,7 +143,8 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "view": "views/fields/teams"
+            "view": "views/fields/teams",
+            "required": true
         }
     },
     "links": {
@@ -162,6 +161,11 @@
         "agendamentos": {
             "type": "hasMany",
             "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
+            "foreign": "paciente"
+        },
+        "faturamentos": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensFaturamento",
             "foreign": "paciente"
         },
         "createdBy": {

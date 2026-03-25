@@ -47,6 +47,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'horaInicio',
         'horaFim',
         'status',
+        'statusFaturamento',
         'tipoAtendimento',
         'profissional',
         'convenio',
@@ -54,6 +55,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'sala',
         'unidade',
         'observacao',
+        'valor',
+        'valorCurrency',
         'syncStatus',
         'paciente',
         'pacienteId',
@@ -85,6 +88,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'horaInicio',
         'horaFim',
         'status',
+        'statusFaturamento',
         'tipoAtendimento',
         'profissional',
         'convenio',
@@ -137,8 +141,33 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
     public function create(stdClass $data, CreateParams $params): Entity
     {
+        $rawAgendamentoId = $this->extractRawAgendamentoIdFromInput($data);
         $rawPacienteId = $this->extractRawPacienteIdFromInput($data);
         $rawTeamIdList = $this->extractTeamIdListFromInput($data);
+        $preCreateCredential = null;
+
+        if ($rawAgendamentoId) {
+            $preCreateCredential = $this->resolveAccessibleCredentialFromInput($data, $rawTeamIdList);
+
+            if ($preCreateCredential) {
+                $preCreateCredentialId = $preCreateCredential->getId();
+                $existing = $this->findAgendamentoAnchorIncludingDeleted($rawAgendamentoId, $preCreateCredentialId);
+
+                if ($existing) {
+                    $existing = $this->restoreAgendamentoIfDeleted($existing);
+
+                    if ($existing) {
+                        $this->mergeTeamsIntoAgendamentoAnchor($existing, $rawTeamIdList);
+                        $this->discoverAndCreateFaturamentoAnchors($existing, $this->extractTeamIdList($existing));
+                        $this->enrichEntities([$existing], true);
+
+                        return $existing;
+                    }
+                }
+            }
+
+            $this->assertAgendamentoExistsBeforeCreate($rawAgendamentoId, $preCreateCredential);
+        }
 
         $entity = parent::create($data, $params);
 
@@ -148,12 +177,13 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $teamIdList = $rawTeamIdList;
         }
 
-        $credential = $this->getCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
+        $credential = $this->resolveAccessibleCredential($entity, $teamIdList);
 
         if (!$credential) {
             $entity->set('syncStatus', 'error');
 
-            $this->persistAgendamentoAfterCreate($entity);
+            $entity = $this->persistAgendamentoAfterCreate($entity);
+            $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
 
             $this->log->warning(
                 "FeatureIntegrationClinicaNasNuvensAgendamento: no accessible CNN credential on create for agendamento '" .
@@ -173,7 +203,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
         if (!$remotePacienteId) {
             $this->enrichEntities([$entity], true);
-            $this->persistAgendamentoAfterCreate($entity);
+            $entity = $this->persistAgendamentoAfterCreate($entity);
+            $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
 
             return $entity;
         }
@@ -195,9 +226,101 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         }
 
         $this->enrichEntities([$entity], true);
-        $this->persistAgendamentoAfterCreate($entity);
+        $entity = $this->persistAgendamentoAfterCreate($entity);
+        $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
 
         return $entity;
+    }
+
+    public function hydrateAfterImport(string $id): void
+    {
+        $entity = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensAgendamento', $id);
+
+        if (!$entity) {
+            return;
+        }
+
+        $this->enrichEntities([$entity], true);
+        $this->discoverAndCreateFaturamentoAnchors($entity, $this->extractTeamIdList($entity));
+    }
+
+    private function assertAgendamentoExistsBeforeCreate(string $agendamentoId, ?Entity $credential): void
+    {
+        if (!$credential) {
+            throw new BadRequest(
+                "Cannot create agendamento anchor '{$agendamentoId}' without an accessible CNN credential."
+            );
+        }
+
+        try {
+            $payload = $this->getApiClient()->getAgendaById($credential, $agendamentoId);
+        } catch (Throwable $e) {
+            throw new BadRequest(
+                "Cannot create agendamento anchor '{$agendamentoId}': invalid or non-existent remote agenda ID.",
+                previous: $e
+            );
+        }
+
+        $resolvedAgendamentoId = $this->normalizeNullableString($payload['agendamentoId'] ?? null);
+
+        if (!$resolvedAgendamentoId || $resolvedAgendamentoId !== $agendamentoId) {
+            throw new BadRequest(
+                "Cannot create agendamento anchor '{$agendamentoId}': invalid or non-existent remote agenda ID."
+            );
+        }
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function discoverAndCreateFaturamentoAnchors(Entity $agendamento, array $teamIdList): void
+    {
+        $agendamentoId = $this->normalizeNullableString($agendamento->get('agendamentoId'));
+
+        if (!$agendamentoId) {
+            return;
+        }
+
+        $webCredential = $this->getWebCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
+
+        if (!$webCredential) {
+            return;
+        }
+
+        try {
+            $faturamentoIdList = $this->getWebClient()->getFaturamentoIdsByAgendamentoId($webCredential, $agendamentoId);
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: failed to discover faturamentos for agendamento '" .
+                $agendamentoId . "' using web credential '" . $webCredential->getId() . "': " . $e->getMessage()
+            );
+
+            return;
+        }
+
+        if ($faturamentoIdList === []) {
+            return;
+        }
+
+        $faturamentoService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensFaturamento');
+        $webCredentialId = $webCredential->getId();
+
+        foreach ($faturamentoIdList as $faturamentoId) {
+            try {
+                $payload = (object) [
+                    'faturamentoId' => $faturamentoId,
+                    'credentialId' => $webCredentialId,
+                    'teamsIds' => $teamIdList,
+                ];
+
+                $faturamentoService->create($payload, CreateParams::create());
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento: failed to create faturamento anchor '" .
+                    $faturamentoId . "' for agendamento '" . $agendamentoId . "': " . $e->getMessage()
+                );
+            }
+        }
     }
 
     private function resolveRemotePacienteIdForCreate(?string $rawPacienteId, Entity $entity, Entity $credential): ?string
@@ -341,7 +464,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             }
 
             $teamIdList = $this->extractTeamIdList($entity);
-            $credential = $this->getCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
+            $credential = $this->resolveAccessibleCredential($entity, $teamIdList);
 
             if (!$credential) {
                 $entity->set('syncStatus', 'error');
@@ -393,26 +516,56 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                 foreach ($chunk as $agendamentoId) {
                     try {
                         $payload = $this->getApiClient()->getAgendaById($credential, $agendamentoId);
+                        $payload = $this->normalizeStatusPayload($payload);
 
                         foreach ($agendamentoMap[$agendamentoId] as $entity) {
-                            foreach ($payload as $field => $value) {
-                                if ($field === 'name' && ($value === null || $value === '')) {
+                            $entityPayload = $this->normalizeStatusFaturamentoPayload($payload, $entity, $agendamentoId);
+
+                            foreach ($entityPayload as $field => $value) {
+                                if ($field === 'agendamentoId') {
+                                    continue;
+                                }
+
+                                if ($this->shouldSkipBlankHydrationValue($entity, $field, $value)) {
                                     continue;
                                 }
 
                                 $entity->set($field, $value);
                             }
 
-                            $generatedName = $this->generateName($entity, $payload);
-
-                            if ($generatedName !== null && $generatedName !== '') {
-                                $entity->set('name', $generatedName);
-                            }
-
                             $localPacienteAnchor = $this->findLocalPacienteAnchor(
                                 $entity->get('idPaciente'),
                                 $credentialId,
                             );
+
+                            if ($persist && $localPacienteAnchor['localId'] === null) {
+                                $remotePacienteId = $this->normalizeNullableString($entity->get('idPaciente'));
+
+                                if ($remotePacienteId) {
+                                    try {
+                                        $paciente = $this->findOrRestoreOrCreatePacienteAnchor(
+                                            $remotePacienteId,
+                                            $credentialId,
+                                            $this->extractTeamIdList($entity),
+                                        );
+
+                                        if ($paciente) {
+                                            $this->updatePacienteAnchorCache($remotePacienteId, $credentialId, $paciente);
+
+                                            $localPacienteAnchor = [
+                                                'localId' => $paciente->getId(),
+                                                'localName' => $this->normalizeNullableString($paciente->get('name')),
+                                            ];
+                                        }
+                                    } catch (Throwable $e) {
+                                        $this->log->warning(
+                                            "FeatureIntegrationClinicaNasNuvensAgendamento: failed paciente upsert on read for agendamento '" .
+                                            $entity->getId() . "', credential '" . $credentialId . "', remote paciente '" .
+                                            $remotePacienteId . "': " . $e->getMessage()
+                                        );
+                                    }
+                                }
+                            }
 
                             $localPacienteId = $localPacienteAnchor['localId'];
                             $localPacienteName = $localPacienteAnchor['localName'];
@@ -421,16 +574,30 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
                             $entity->set('pacienteName', $localPacienteName);
 
+                            $generatedName = $this->generateName($entity, $payload, $localPacienteName);
+
+                            if ($generatedName !== null && $generatedName !== '') {
+                                $entity->set('name', $generatedName);
+                            }
+
+                            $billingSnapshot = $this->findLatestFaturamentoSnapshot($entity);
+
+                            if ($billingSnapshot !== null) {
+                                $entity->set('valor', $billingSnapshot['valor']);
+                                $entity->set('valorCurrency', $billingSnapshot['valorCurrency']);
+                            }
+
                             $entity->set('syncStatus', 'synced');
 
                             if ($persist) {
                                 $this->persistHydratedFields(
                                     $entity,
-                                    $payload,
+                                    $entityPayload,
                                     'synced',
                                     $credentialId,
                                     $localPacienteId,
                                     $generatedName,
+                                    $billingSnapshot,
                                 );
                             }
                         }
@@ -466,6 +633,11 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     private function getApiClient(): ClinicaNasNuvensApiClient
     {
         return $this->injectableFactory->create(ClinicaNasNuvensApiClient::class);
+    }
+
+    private function getWebClient(): ClinicaNasNuvensWebClient
+    {
+        return $this->injectableFactory->create(ClinicaNasNuvensWebClient::class);
     }
 
     private function findOrRestoreOrCreatePacienteAnchor(
@@ -582,9 +754,98 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         ]);
     }
 
-    private function persistAgendamentoAfterCreate(Entity $entity): void
+    private function persistAgendamentoAfterCreate(Entity $entity): Entity
     {
-        $this->entityManager->saveEntity($entity, [
+        try {
+            $this->entityManager->saveEntity($entity, [
+                SaveOption::SILENT => true,
+                SaveOption::SKIP_HOOKS => true,
+                SaveOption::SKIP_MODIFIED_BY => true,
+            ]);
+
+            return $entity;
+        } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            $agendamentoId = $this->normalizeNullableString($entity->get('agendamentoId'));
+            $credentialId = $this->normalizeNullableString($entity->get('credentialId'));
+
+            if (!$agendamentoId || !$credentialId) {
+                throw $e;
+            }
+
+            $existing = $this->findAgendamentoAnchorIncludingDeleted($agendamentoId, $credentialId);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $existing = $this->restoreAgendamentoIfDeleted($existing);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $this->mergeTeamsIntoAgendamentoAnchor($existing, $this->extractTeamIdList($entity));
+
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: duplicate agendamento anchor recovered for agendamentoId '" .
+                $agendamentoId . "' and credential '" . $credentialId . "'."
+            );
+
+            return $existing;
+        }
+    }
+
+    private function findAgendamentoAnchorIncludingDeleted(string $agendamentoId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('FeatureIntegrationClinicaNasNuvensAgendamento')
+            ->where([
+                'agendamentoId' => $agendamentoId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensAgendamento')
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restoreAgendamentoIfDeleted(Entity $agendamento): ?Entity
+    {
+        if (!$agendamento->get('deleted')) {
+            return $agendamento;
+        }
+
+        $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensAgendamento')
+            ->restoreDeleted($agendamento->getId());
+
+        return $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensAgendamento', $agendamento->getId());
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function mergeTeamsIntoAgendamentoAnchor(Entity $agendamento, array $teamIdList): void
+    {
+        $existingTeamIdList = $this->extractTeamIdList($agendamento);
+        $mergedTeamIdList = array_values(array_unique(array_merge($existingTeamIdList, $teamIdList)));
+
+        if ($mergedTeamIdList === $existingTeamIdList) {
+            return;
+        }
+
+        $agendamento->set('teamsIds', $mergedTeamIdList);
+
+        $this->entityManager->saveEntity($agendamento, [
             SaveOption::SILENT => true,
             SaveOption::SKIP_HOOKS => true,
             SaveOption::SKIP_MODIFIED_BY => true,
@@ -624,6 +885,15 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         }
 
         return $this->normalizeNullableString($data->idPaciente);
+    }
+
+    private function extractRawAgendamentoIdFromInput(stdClass $data): ?string
+    {
+        if (!property_exists($data, 'agendamentoId')) {
+            return null;
+        }
+
+        return $this->normalizeNullableString($data->agendamentoId);
     }
 
     /**
@@ -669,43 +939,230 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         return $this->injectableFactory->create(ClinicaNasNuvensCredentialHelper::class);
     }
 
-    private function generateName(Entity $entity, array $payload): ?string
+    private function getWebCredentialHelper(): ClinicaNasNuvensWebCredentialHelper
     {
-        $name = $payload['name'] ?? $entity->get('name');
+        return $this->injectableFactory->create(ClinicaNasNuvensWebCredentialHelper::class);
+    }
 
-        if (is_string($name)) {
-            $trimmedName = trim($name);
+    /**
+     * @param string[] $teamIdList
+     */
+    private function resolveAccessibleCredential(Entity $entity, array $teamIdList): ?Entity
+    {
+        $credential = $this->getCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
 
-            if ($trimmedName !== '') {
-                return $trimmedName;
+        if ($credential) {
+            return $credential;
+        }
+
+        $credentialId = $this->normalizeNullableString($entity->get('credentialId'));
+
+        if (!$credentialId) {
+            return null;
+        }
+
+        $credentialMap = $this->getCredentialHelper()->getAccessibleCredentialMapByIds([$credentialId]);
+
+        return $credentialMap[$credentialId] ?? null;
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function resolveAccessibleCredentialFromInput(stdClass $data, array $teamIdList): ?Entity
+    {
+        $credential = $this->getCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
+
+        if ($credential) {
+            return $credential;
+        }
+
+        if (!property_exists($data, 'credentialId')) {
+            return null;
+        }
+
+        $credentialId = $this->normalizeNullableString($data->credentialId);
+
+        if (!$credentialId) {
+            return null;
+        }
+
+        $credentialMap = $this->getCredentialHelper()->getAccessibleCredentialMapByIds([$credentialId]);
+
+        return $credentialMap[$credentialId] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function normalizeStatusPayload(array $payload): array
+    {
+        if (!array_key_exists('status', $payload)) {
+            return $payload;
+        }
+
+        $normalizedStatus = $this->getStatusEnumSync()
+            ->normalizeAndEnsureOption($this->normalizeNullableString($payload['status']));
+
+        $payload['status'] = $normalizedStatus;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function normalizeStatusFaturamentoPayload(array $payload, Entity $entity, string $agendamentoId): array
+    {
+        $statusFaturamento = $this->resolveStatusFaturamentoByAgendamentoId($entity, $agendamentoId);
+
+        if ($statusFaturamento === null) {
+            return $payload;
+        }
+
+        $normalizedStatus = $this->getStatusFaturamentoEnumSync()
+            ->normalizeAndEnsureOption($statusFaturamento);
+
+        if ($normalizedStatus === null) {
+            return $payload;
+        }
+
+        $payload['statusFaturamento'] = $normalizedStatus;
+
+        return $payload;
+    }
+
+    private function getStatusEnumSync(): AgendamentoStatusEnumSync
+    {
+        return $this->injectableFactory->create(AgendamentoStatusEnumSync::class);
+    }
+
+    private function getStatusFaturamentoEnumSync(): AgendamentoStatusFaturamentoEnumSync
+    {
+        return $this->injectableFactory->create(AgendamentoStatusFaturamentoEnumSync::class);
+    }
+
+    private function resolveStatusFaturamentoByAgendamentoId(Entity $entity, string $agendamentoId): ?string
+    {
+        if ($agendamentoId === '') {
+            return null;
+        }
+
+        $teamIdList = $this->extractTeamIdList($entity);
+        $webCredential = $this->getWebCredentialHelper()->findAccessibleCredentialForTeamIds($teamIdList);
+
+        if (!$webCredential) {
+            return null;
+        }
+
+        try {
+            return $this->getWebClient()->getStatusFaturamentoByAgendamentoId($webCredential, $agendamentoId);
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: failed to resolve faturamento status for agendamento '" .
+                $agendamentoId . "' using web credential '" . $webCredential->getId() . "': " . $e->getMessage()
+            );
+
+            return null;
+        }
+    }
+
+    private function generateName(Entity $entity, array $payload, ?string $_pacienteName): ?string
+    {
+        $agendamentoId = $this->normalizeNullableString($entity->get('agendamentoId'));
+
+        if (!$agendamentoId) {
+            $agendamentoId = $this->normalizeNullableString($payload['id'] ?? null);
+        }
+
+        if (!$agendamentoId) {
+            return null;
+        }
+
+        $label = '#' . $agendamentoId;
+        $startRaw = $this->normalizeNullableString($entity->get('horaInicio'))
+            ?? $this->normalizeNullableString($payload['horaInicio'] ?? null);
+        $endRaw = $this->normalizeNullableString($entity->get('horaFim'))
+            ?? $this->normalizeNullableString($payload['horaFim'] ?? null);
+        $dateRaw = $this->normalizeNullableString($entity->get('data'))
+            ?? $this->normalizeNullableString($payload['data'] ?? null);
+
+        $fallbackDate = $this->extractDatePart($dateRaw);
+        $startAt = $this->parseDateTimeWithFallbackDate($startRaw, $fallbackDate);
+
+        if ($startAt && $fallbackDate === null) {
+            $fallbackDate = $startAt->format('Y-m-d');
+        }
+
+        $endAt = $this->parseDateTimeWithFallbackDate($endRaw, $fallbackDate);
+
+        if ($startAt && $endAt) {
+            return $startAt->format('d/m/Y H:i') . ' - ' . $endAt->format('H:i') . ' ' . $label;
+        }
+
+        if ($startAt) {
+            return $startAt->format('d/m/Y H:i') . ' ' . $label;
+        }
+
+        return $label;
+    }
+
+    private function parseDateTimeWithFallbackDate(?string $value, ?string $fallbackDate): ?\DateTimeImmutable
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{2}:\d{2})(?::(\d{2}))?$/', $trimmed, $match) === 1) {
+            if (!$fallbackDate) {
+                return null;
+            }
+
+            $time = $match[1] . ':' . ($match[2] ?? '00');
+
+            try {
+                return new \DateTimeImmutable($fallbackDate . ' ' . $time);
+            } catch (Throwable $e) {
+                return null;
             }
         }
 
-        $agendamentoId = (string) ($entity->get('agendamentoId') ?? '');
-        $data = (string) ($entity->get('data') ?? '');
-        $horaInicio = (string) ($entity->get('horaInicio') ?? '');
+        try {
+            return new \DateTimeImmutable($trimmed);
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
 
-        $parts = [];
-
-        if ($data !== '') {
-            $parts[] = $data;
+    private function extractDatePart(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
         }
 
-        if ($horaInicio !== '') {
-            $parts[] = $horaInicio;
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
         }
 
-        if ($parts !== []) {
-            $prefix = $agendamentoId !== '' ? 'Agendamento #' . $agendamentoId : 'Agendamento';
-
-            return $prefix . ' · ' . implode(' ', $parts);
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $trimmed, $match) === 1) {
+            return $match[1];
         }
 
-        if ($agendamentoId !== '') {
-            return 'Agendamento #' . $agendamentoId;
+        try {
+            return (new \DateTimeImmutable($trimmed))->format('Y-m-d');
+        } catch (Throwable $e) {
+            return null;
         }
-
-        return null;
     }
 
     /**
@@ -755,6 +1212,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         string $credentialId,
         ?string $localPacienteId,
         ?string $generatedName,
+        ?array $billingSnapshot,
     ): void {
         if ($payload === []) {
             return;
@@ -768,6 +1226,10 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             }
 
             $value = $payload[$field];
+
+            if ($this->shouldSkipBlankPersistValue($entity, $field, $value)) {
+                continue;
+            }
 
             if (is_array($value)) {
                 if (!in_array($field, self::JSON_ARRAY_REMOTE_FIELDS, true)) {
@@ -808,6 +1270,16 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $toPersist['syncStatus'] = $syncStatus;
         }
 
+        if ($billingSnapshot !== null) {
+            if ($entity->getFetched('valor') !== $billingSnapshot['valor']) {
+                $toPersist['valor'] = $billingSnapshot['valor'];
+            }
+
+            if ($entity->getFetched('valorCurrency') !== $billingSnapshot['valorCurrency']) {
+                $toPersist['valorCurrency'] = $billingSnapshot['valorCurrency'];
+            }
+        }
+
         if ($toPersist === []) {
             return;
         }
@@ -839,5 +1311,88 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         }
 
         return json_encode($left) === json_encode($right);
+    }
+
+    /**
+     * @return array{valor: float, valorCurrency: string}|null
+     */
+    private function findLatestFaturamentoSnapshot(Entity $entity): ?array
+    {
+        $agendamentoLocalId = $this->normalizeNullableString($entity->getId());
+
+        if (!$agendamentoLocalId) {
+            return null;
+        }
+
+        $faturamento = $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensFaturamento')
+            ->select(['valor', 'valorCurrency'])
+            ->where([
+                'agendamentoId' => $agendamentoLocalId,
+                'deleted' => false,
+            ])
+            ->order('modifiedAt', 'DESC')
+            ->findOne();
+
+        if (!$faturamento) {
+            return null;
+        }
+
+        $valor = $faturamento->get('valor');
+
+        if (!is_int($valor) && !is_float($valor) && !(is_string($valor) && is_numeric($valor))) {
+            return null;
+        }
+
+        $currency = $this->normalizeNullableString($faturamento->get('valorCurrency')) ?? 'BRL';
+
+        return [
+            'valor' => (float) $valor,
+            'valorCurrency' => $currency,
+        ];
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function shouldSkipBlankHydrationValue(Entity $entity, string $field, $value): bool
+    {
+        if ($value !== null && (!is_string($value) || trim($value) !== '')) {
+            return false;
+        }
+
+        return $this->hasNonBlankValue($entity->get($field));
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function shouldSkipBlankPersistValue(Entity $entity, string $field, $value): bool
+    {
+        if ($value !== null && (!is_string($value) || trim($value) !== '')) {
+            return false;
+        }
+
+        return $this->hasNonBlankValue($entity->getFetched($field));
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function hasNonBlankValue($value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        return true;
     }
 }

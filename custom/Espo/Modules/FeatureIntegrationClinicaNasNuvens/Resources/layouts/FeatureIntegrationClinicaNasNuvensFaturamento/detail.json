@@ -1,0 +1,20 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "faturamentoId"}],
+            [{"name": "agendamento"}, {"name": "paciente"}],
+            [{"name": "credential"}, false],
+            [{"name": "syncStatus"}, {"name": "valor"}],
+            [{"name": "dataFaturamento"}, {"name": "dataVencimento"}],
+            [{"name": "documento"}, {"name": "parcela"}],
+            [{"name": "profissionalNome"}, {"name": "conta"}]
+        ]
+    },
+    {
+        "label": "Raw",
+        "rows": [
+            [{"name": "description", "fullWidth": true}, false]
+        ]
+    }
+]

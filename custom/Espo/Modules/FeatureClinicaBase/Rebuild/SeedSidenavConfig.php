@@ -26,6 +26,7 @@ namespace Espo\Modules\FeatureClinicaBase\Rebuild;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\Log;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
@@ -54,7 +55,7 @@ class SeedSidenavConfig implements RebuildAction
 
         $configId = $this->prepareId('feature-clinica', $toHash);
 
-        $existing = $this->entityManager->getEntityById('SidenavConfig', $configId);
+        $existing = $this->findExistingConfigIncludingDeleted($configId);
 
         $data = [
             'name' => 'Menu Clínica',
@@ -65,6 +66,7 @@ class SeedSidenavConfig implements RebuildAction
 
         try {
             if ($existing) {
+                $this->restoreIfDeleted($existing);
                 $existing->set($data);
                 $this->entityManager->saveEntity($existing, [
                     'modifiedById' => 'system',
@@ -81,9 +83,57 @@ class SeedSidenavConfig implements RebuildAction
                 ]);
                 $this->log->info("FeatureClinicaBase: Created SidenavConfig 'Clínica' (ID: '{$configId}')");
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->log->error("FeatureClinicaBase: Failed to upsert SidenavConfig: " . $e->getMessage());
+
+            $existing = $this->findExistingConfigIncludingDeleted($configId);
+
+            if ($existing) {
+                try {
+                    $this->restoreIfDeleted($existing);
+                    $existing->set($data);
+                    $this->entityManager->saveEntity($existing, [
+                        'modifiedById' => 'system',
+                        'skipWorkflow' => true,
+                    ]);
+                    $this->log->info(
+                        "FeatureClinicaBase: Recovered SidenavConfig upsert after conflict (ID: '{$configId}')"
+                    );
+                } catch (\Throwable $retryError) {
+                    $this->log->error(
+                        "FeatureClinicaBase: Retry upsert failed for SidenavConfig '{$configId}': " .
+                        $retryError->getMessage()
+                    );
+                }
+            }
         }
+    }
+
+    private function findExistingConfigIncludingDeleted(string $configId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('SidenavConfig')
+            ->where(['id' => $configId])
+            ->withDeleted()
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('SidenavConfig')
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restoreIfDeleted(Entity $existing): void
+    {
+        if (!$existing->get('deleted')) {
+            return;
+        }
+
+        $this->entityManager
+            ->getRDBRepository('SidenavConfig')
+            ->restoreDeleted($existing->getId());
     }
 
     private function getTabList(): array

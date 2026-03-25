@@ -2,6 +2,7 @@
 
 namespace tests\integration\Espo\Modules\FeatureIntegrationClinicaNasNuvens;
 
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\DeleteParams;
 use Espo\Core\Record\Service;
@@ -109,27 +110,32 @@ class AgendamentoCreateUpsertsPacienteTest extends BaseTestCase
         $this->assertSame($paciente->getId(), $reloadedAgendamento->get('pacienteId'));
     }
 
-    public function testCreateWithoutAccessibleCredentialKeepsAgendamentoAndSetsSyncStatusError(): void
+    public function testCreateWithoutAccessibleCredentialRejectsCreateBeforeSave(): void
     {
         $team = $this->createTeam('cnn-no-credential');
+        $agendamentoId = 'ag-create-no-credential-' . uniqid();
 
-        $agendamento = $this->createAgendamento([
-            'agendamentoId' => 'ag-create-no-credential-' . uniqid(),
-            'idPaciente' => 'remote-without-credential',
-            'teamsIds' => [$team->getId()],
-        ]);
+        $this->expectException(BadRequest::class);
+        $this->expectExceptionMessage("Cannot create agendamento anchor '{$agendamentoId}'");
 
-        $reloadedAgendamento = $this->getEntityManager()->getEntityById(
-            'FeatureIntegrationClinicaNasNuvensAgendamento',
-            $agendamento->getId(),
-        );
+        try {
+            $this->createAgendamento([
+                'agendamentoId' => $agendamentoId,
+                'idPaciente' => 'remote-without-credential',
+                'teamsIds' => [$team->getId()],
+            ]);
+        } finally {
+            $created = $this->getEntityManagerInstance()
+                ->getRDBRepository('FeatureIntegrationClinicaNasNuvensAgendamento')
+                ->where([
+                    'agendamentoId' => $agendamentoId,
+                    'deleted' => false,
+                ])
+                ->findOne();
 
-        $this->assertNotNull($reloadedAgendamento);
-        $this->assertSame('error', $reloadedAgendamento->get('syncStatus'));
-        $this->assertNull($reloadedAgendamento->get('credentialId'));
-        $this->assertNull($reloadedAgendamento->get('pacienteId'));
-
-        $this->assertSame(0, $this->countPacienteAnchorsByRemotePacienteId('remote-without-credential'));
+            $this->assertNull($created);
+            $this->assertSame(0, $this->countPacienteAnchorsByRemotePacienteId('remote-without-credential'));
+        }
     }
 
     public function testCreateConcurrentLikeDuplicateScenarioKeepsSinglePacienteAnchor(): void

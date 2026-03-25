@@ -1,0 +1,17 @@
+[
+    "name",
+    "faturamentoId",
+    "agendamento",
+    "paciente",
+    "credential",
+    "syncStatus",
+    "documento",
+    "profissionalNome",
+    "conta",
+    "parcela",
+    "valor",
+    "dataFaturamento",
+    "dataVencimento",
+    "createdAt",
+    "modifiedAt"
+]
