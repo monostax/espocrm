@@ -1,0 +1,9 @@
+{
+    "controller": "feature-integration-clinica-nas-nuvens:controllers/no-create-route",
+    "iconClass": "fas fa-notes-medical",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy"],
+    "views": {
+        "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
+    }
+}

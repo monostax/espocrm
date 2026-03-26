@@ -6,7 +6,12 @@
         "Professional": "Professional",
         "Location": "Location",
         "Raw": "Raw Fields",
-        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens"
+        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens",
+        "enrichDownstreams": "Enrich All Related",
+        "enrichingDownstreams": "Enriching related entities...",
+        "enrichDownstreamsSuccess": "Successfully enriched {enriched} related entities.",
+        "enrichDownstreamsPartial": "Enriched {enriched} entities, but {errors} failed.",
+        "enrichDownstreamsFailed": "Failed to enrich related entities."
     },
     "fields": {
         "name": "Name",
@@ -21,6 +26,8 @@
         "idConvenio": "Remote Insurance ID",
         "idTipoConvenio": "Remote Insurance Type ID",
         "convenioTipoAnchor": "Insurance Type",
+        "idTipoConsulta": "Remote Consultation Type ID",
+        "consultaTipoAnchor": "Consultation Type",
         "idEspecialidade": "Remote Specialty ID",
         "idUnidade": "Remote Unit ID",
         "idSala": "Remote Room ID",
@@ -37,7 +44,14 @@
         "unidade": "Unit",
         "observacao": "Notes",
         "procedimentos": "Procedures",
-        "valor": "Amount"
+        "valorFaturamentos": "Billing Amount",
+        "valorProcedimentos": "Procedures Amount",
+        "valorFinanceiro": "Financial Amount"
+    },
+    "tooltips": {
+        "valorFaturamentos": "Amount from the latest billing record linked to this appointment.",
+        "valorProcedimentos": "Amount computed from the procedure pricing linked to the appointment's insurance type: sum of (patient price + insurance price) x quantity.",
+        "valorFinanceiro": "Final financial amount. Uses the Billing Amount when available, otherwise falls back to the Procedures Amount. If neither is available, defaults to zero."
     },
     "links": {
         "paciente": "Patient",
@@ -45,7 +59,11 @@
         "credential": "Credential",
         "faturamentos": "Faturamentos",
         "procedimentoItens": "Procedures",
-        "convenioTipoAnchor": "Insurance Type"
+        "convenioTipoAnchor": "Insurance Type",
+        "consultaTipoAnchor": "Consultation Type"
+    },
+    "massActions": {
+        "enrichDownstreams": "Enrich All Related"
     },
     "options": {
         "syncStatus": {

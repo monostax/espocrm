@@ -3,6 +3,16 @@
     "iconClass": "fas fa-calendar-check",
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
+    "massActionList": ["__APPEND__", "enrichDownstreams"],
+    "checkAllResultMassActionList": ["__APPEND__", "enrichDownstreams"],
+    "massActionDefs": {
+        "enrichDownstreams": {
+            "handler": "feature-integration-clinica-nas-nuvens:handlers/mass-enrich-downstreams",
+            "actionFunction": "actionEnrichDownstreams",
+            "acl": "read",
+            "groupIndex": 5
+        }
+    },
     "views": {
         "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
     },
@@ -18,6 +28,15 @@
                     "actionFunction": "openInClinicaNasNuvens",
                     "checkVisibilityFunction": "isOpenInClinicaNasNuvensVisible",
                     "iconClass": "fas fa-external-link-alt"
+                },
+                {
+                    "label": "enrichDownstreams",
+                    "name": "enrichDownstreams",
+                    "style": "default",
+                    "handler": "feature-integration-clinica-nas-nuvens:handlers/enrich-downstreams",
+                    "actionFunction": "enrichDownstreams",
+                    "checkVisibilityFunction": "isEnrichDownstreamsVisible",
+                    "iconClass": "fas fa-sync-alt"
                 }
             ]
         }

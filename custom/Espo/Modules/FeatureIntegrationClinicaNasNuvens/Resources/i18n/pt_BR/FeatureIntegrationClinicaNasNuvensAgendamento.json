@@ -6,7 +6,12 @@
         "Professional": "Profissional",
         "Location": "Local",
         "Raw": "Campos Brutos",
-        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens"
+        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens",
+        "enrichDownstreams": "Atualizar",
+        "enrichingDownstreams": "Consultando Clínica Nas Nuvens...",
+        "enrichDownstreamsSuccess": "Enriquecidas {enriched} entidades relacionadas com sucesso.",
+        "enrichDownstreamsPartial": "Enriquecidas {enriched} entidades, mas {errors} falharam.",
+        "enrichDownstreamsFailed": "Falha ao enriquecer entidades relacionadas."
     },
     "fields": {
         "name": "Nome",
@@ -21,6 +26,8 @@
         "idConvenio": "ID Remoto do Convênio",
         "idTipoConvenio": "ID Tipo de Convênio (Clínica Nas Nuvens)",
         "convenioTipoAnchor": "Tipo de Convênio",
+        "idTipoConsulta": "ID Tipo de Consulta (Clínica Nas Nuvens)",
+        "consultaTipoAnchor": "Tipo de Consulta",
         "idEspecialidade": "ID Remoto da Especialidade",
         "idUnidade": "ID Remoto da Unidade",
         "idSala": "ID Remoto da Sala",
@@ -37,7 +44,14 @@
         "unidade": "Unidade",
         "observacao": "Observação",
         "procedimentos": "Procedimentos",
-        "valor": "Valor"
+        "valorFaturamentos": "Valor Faturamentos",
+        "valorProcedimentos": "Valor Procedimentos",
+        "valorFinanceiro": "Valor Financeiro"
+    },
+    "tooltips": {
+        "valorFaturamentos": "Valor obtido a partir do último faturamento registrado para este agendamento.",
+        "valorProcedimentos": "Valor calculado a partir da precificação dos procedimentos vinculados ao tipo de convênio do agendamento: soma de (preço paciente + preço convênio) x quantidade.",
+        "valorFinanceiro": "Valor financeiro final. Usa o Valor Faturamentos quando disponível, caso contrário usa o Valor Procedimentos. Se nenhum estiver disponível, será zero."
     },
     "links": {
         "paciente": "Paciente",
@@ -45,7 +59,11 @@
         "credential": "Credencial",
         "faturamentos": "Faturamentos",
         "procedimentoItens": "Procedimentos",
-        "convenioTipoAnchor": "Tipo de Convênio"
+        "convenioTipoAnchor": "Tipo de Convênio",
+        "consultaTipoAnchor": "Tipo de Consulta"
+    },
+    "massActions": {
+        "enrichDownstreams": "Atualizar"
     },
     "options": {
         "syncStatus": {

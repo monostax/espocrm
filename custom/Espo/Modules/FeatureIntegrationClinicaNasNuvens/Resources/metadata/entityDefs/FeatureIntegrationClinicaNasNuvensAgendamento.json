@@ -49,7 +49,15 @@
             "maxLength": 100,
             "readOnly": true
         },
+        "idTipoConsulta": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
         "convenioTipoAnchor": {
+            "type": "link"
+        },
+        "consultaTipoAnchor": {
             "type": "link"
         },
         "idEspecialidade": {
@@ -152,9 +160,20 @@
             "view": "views/fields/text",
             "readOnly": true
         },
-        "valor": {
+        "valorFaturamentos": {
             "type": "currency",
-            "readOnly": true
+            "readOnly": true,
+            "tooltip": true
+        },
+        "valorProcedimentos": {
+            "type": "currency",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "valorFinanceiro": {
+            "type": "currency",
+            "readOnly": true,
+            "tooltip": true
         },
         "createdAt": {
             "type": "datetime",
@@ -196,6 +215,11 @@
             "entity": "FeatureIntegrationClinicaNasNuvensConvenioTipo",
             "foreign": "agendamentos"
         },
+        "consultaTipoAnchor": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensConsultaTipo",
+            "foreign": "agendamentos"
+        },
         "credential": {
             "type": "belongsTo",
             "entity": "Credential",
@@ -234,6 +258,7 @@
             "agendamentoId",
             "idPaciente",
             "idPessoaExecutor",
+            "idTipoConsulta",
             "status",
             "statusFaturamento",
             "profissional",
@@ -254,6 +279,9 @@
         },
         "convenioTipoAnchorId": {
             "columns": ["convenioTipoAnchorId"]
+        },
+        "consultaTipoAnchorId": {
+            "columns": ["consultaTipoAnchorId"]
         },
         "agendamentoIdCredential": {
             "unique": true,

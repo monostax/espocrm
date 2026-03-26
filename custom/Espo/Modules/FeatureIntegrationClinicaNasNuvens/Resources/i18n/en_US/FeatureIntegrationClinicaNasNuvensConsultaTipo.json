@@ -1,0 +1,26 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensConsultaTipo": "Clínica Nas Nuvens / Consulta Tipo",
+        "Create FeatureIntegrationClinicaNasNuvensConsultaTipo": "Create Consulta Tipo Anchor",
+        "Overview": "Overview"
+    },
+    "fields": {
+        "name": "Name",
+        "consultaTipoId": "Remote Consulta Tipo ID",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "ativo": "Active",
+        "reconsulta": "Follow-up"
+    },
+    "links": {
+        "credential": "Credential",
+        "agendamentos": "Appointments"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    }
+}

@@ -230,6 +230,55 @@ class ClinicaNasNuvensApiClient implements
     }
 
     /**
+     * Get a single consulta tipo from CNN API.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    public function getTipoConsultaById(Entity $credential, string $consultaTipoId): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+
+        $baseUrl = rtrim((string) ($config['baseUrl'] ?? self::DEFAULT_BASE_URL), '/');
+        $clientId = (string) ($config['clientId'] ?? $config['client_id'] ?? '');
+        $clientSecret = (string) ($config['clientSecret'] ?? $config['client_secret'] ?? '');
+        $clinicCid = (string) ($config['clinicCid'] ?? $config['clinicCID'] ?? $config['cid'] ?? $config['clinicToken'] ?? '');
+
+        if ($clientId === '' || $clientSecret === '' || $clinicCid === '') {
+            throw new Error('Credential config must contain clientId, clientSecret and clinicCid.');
+        }
+
+        $url = $baseUrl . '/tipo-consulta/' . rawurlencode($consultaTipoId);
+
+        $attempt = 0;
+
+        while ($attempt < self::MAX_ATTEMPTS) {
+            $attempt++;
+
+            $result = $this->request($url, $clientId, $clientSecret, $clinicCid);
+
+            if ($result['ok']) {
+                return $this->mapTipoConsultaPayload($result['payload']);
+            }
+
+            $retryable = $result['retryable'];
+
+            if (!$retryable || $attempt >= self::MAX_ATTEMPTS) {
+                $status = $result['status'];
+                $message = $result['message'];
+
+                throw new Error(
+                    "Clínica nas Nuvens request failed for tipo-consulta '{$consultaTipoId}' (HTTP {$status}): {$message}"
+                );
+            }
+
+            usleep(self::RETRY_BACKOFF_MS * $attempt * 1000);
+        }
+
+        throw new Error("Clínica nas Nuvens request failed for tipo-consulta '{$consultaTipoId}'.");
+    }
+
+    /**
      * Get a single executor agenda (profissional) from CNN API.
      *
      * @return array<string, mixed>
@@ -578,6 +627,7 @@ class ClinicaNasNuvensApiClient implements
             'idPessoaExecutor' => $toStringOrNull($source['idPessoaExecutor'] ?? $source['idpessoaExecutor'] ?? null),
             'idConvenio' => $toStringOrNull($source['idConvenio'] ?? null),
             'idTipoConvenio' => $toStringOrNull($source['idTipoConvenio'] ?? null),
+            'idTipoConsulta' => $toStringOrNull($source['idTipoConsulta'] ?? null),
             'idEspecialidade' => $toStringOrNull($source['idEspecialidade'] ?? null),
             'idUnidade' => $toStringOrNull($source['idUnidade'] ?? null),
             'idSala' => $toStringOrNull($source['idSala'] ?? null),
@@ -638,6 +688,25 @@ class ClinicaNasNuvensApiClient implements
             'ativo' => $this->normalizeNullableBool($source['ativo'] ?? null),
             'beneficio' => $this->normalizeNullableBool($source['beneficio'] ?? null),
             'particular' => $this->normalizeNullableBool($source['particular'] ?? null),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapTipoConsultaPayload(array $payload): array
+    {
+        $source = $payload;
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $source = $payload['data'];
+        }
+
+        return [
+            'consultaTipoId' => $this->normalizeNullableScalarString($source['id'] ?? $source['consultaTipoId'] ?? null),
+            'name' => $this->normalizeNullableScalarString($source['nome'] ?? $source['name'] ?? null),
+            'ativo' => $this->normalizeNullableBool($source['ativo'] ?? null),
+            'reconsulta' => $this->normalizeNullableBool($source['reconsulta'] ?? null),
         ];
     }
 

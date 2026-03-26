@@ -5,8 +5,8 @@
             [{"name": "name"}, {"name": "agendamentoId"}],
             [{"name": "paciente"}, {"name": "credential"}],
             [{"name": "status"}, {"name": "statusFaturamento"}],
-            [{"name": "syncStatus"}, false],
-            [{"name": "valor"}, false],
+            [{"name": "syncStatus"}, {"name": "valorFinanceiro"}],
+            [{"name": "valorFaturamentos"}, {"name": "valorProcedimentos"}],
             [{"name": "data"}, {"name": "horaInicio"}],
             [{"name": "horaFim"}, {"name": "tipoAtendimento"}]
         ]
@@ -17,7 +17,9 @@
             [{"name": "profissional"}, {"name": "idProfissional"}],
             [{"name": "profissionalAnchor"}, {"name": "idPessoaExecutor"}],
             [{"name": "especialidade"}, {"name": "idEspecialidade"}],
-            [{"name": "convenio"}, {"name": "idConvenio"}]
+            [{"name": "convenio"}, {"name": "idConvenio"}],
+            [{"name": "convenioTipoAnchor"}, {"name": "idTipoConvenio"}],
+            [{"name": "consultaTipoAnchor"}, {"name": "idTipoConsulta"}]
         ]
     },
     {

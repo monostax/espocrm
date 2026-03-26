@@ -29,6 +29,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     use Di\LogSetter;
 
     private const PROCEDIMENTO_TIPO_ENTITY_TYPE = 'FeatureIntegrationClinicaNasNuvensProcedimentoTipo';
+    private const CONVENIO_TIPO_ENTITY_TYPE = 'FeatureIntegrationClinicaNasNuvensConvenioTipo';
+    private const CONSULTA_TIPO_ENTITY_TYPE = 'FeatureIntegrationClinicaNasNuvensConsultaTipo';
     private const AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE = 'FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento';
 
     private const ENRICHMENT_BATCH_SIZE = 25;
@@ -45,6 +47,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'idPessoaExecutor',
         'idConvenio',
         'idTipoConvenio',
+        'idTipoConsulta',
         'idEspecialidade',
         'idUnidade',
         'idSala',
@@ -60,8 +63,12 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'sala',
         'unidade',
         'observacao',
-        'valor',
-        'valorCurrency',
+        'valorFaturamentos',
+        'valorFaturamentosCurrency',
+        'valorProcedimentos',
+        'valorProcedimentosCurrency',
+        'valorFinanceiro',
+        'valorFinanceiroCurrency',
         'syncStatus',
         'paciente',
         'pacienteId',
@@ -69,6 +76,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'profissionalAnchorId',
         'convenioTipoAnchor',
         'convenioTipoAnchorId',
+        'consultaTipoAnchor',
+        'consultaTipoAnchorId',
         'credential',
         'credentialId',
         'createdAt',
@@ -91,6 +100,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'idProfissional',
         'idPessoaExecutor',
         'idConvenio',
+        'idTipoConvenio',
+        'idTipoConsulta',
         'idEspecialidade',
         'idUnidade',
         'idSala',
@@ -125,6 +136,16 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
      * @var array<string, array{localId: ?string, localName: ?string}>
      */
     private array $profissionalAnchorCache = [];
+
+    /**
+     * @var array<string, array{localId: ?string, localName: ?string}>
+     */
+    private array $convenioTipoAnchorCache = [];
+
+    /**
+     * @var array<string, array{localId: ?string, localName: ?string}>
+     */
+    private array $consultaTipoAnchorCache = [];
 
     public function read(string $id, ReadParams $params): Entity
     {
@@ -294,6 +315,182 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         $this->enrichEntities([$entity], true);
         $this->persistAgendamentoAfterCreate($entity);
         $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
+    }
+
+    /**
+     * Enrich all downstream entities related to this Agendamento.
+     *
+     * Re-enriches the Agendamento itself, then triggers enrichment (via
+     * hydrateAfterImport or read) for every related Paciente, Profissional,
+     * ConvenioTipo, Faturamento, and ProcedimentoTipo anchor.
+     *
+     * @return array{enriched: string[], errors: string[]}
+     */
+    public function enrichDownstreams(string $id): array
+    {
+        $enriched = [];
+        $errors = [];
+
+        // 1. Re-enrich the Agendamento itself (and discover new faturamentos).
+        $entity = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensAgendamento', $id);
+
+        if (!$entity) {
+            $errors[] = 'Agendamento not found.';
+
+            return ['enriched' => $enriched, 'errors' => $errors];
+        }
+
+        $teamIdList = $this->extractTeamIdList($entity);
+
+        $this->enrichEntities([$entity], true);
+        $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
+
+        $enriched[] = 'Agendamento';
+
+        // Re-read entity to get fresh links after enrichment.
+        $entity = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensAgendamento', $id);
+
+        if (!$entity) {
+            return ['enriched' => $enriched, 'errors' => $errors];
+        }
+
+        // 2. Enrich Paciente.
+        $pacienteId = $this->normalizeNullableString($entity->get('pacienteId'));
+
+        if ($pacienteId) {
+            try {
+                $pacienteService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensPaciente');
+                $pacienteService->hydrateAfterImport($pacienteId);
+                $enriched[] = 'Paciente';
+            } catch (Throwable $e) {
+                $errors[] = 'Paciente: ' . $e->getMessage();
+
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento::enrichDownstreams: failed to enrich paciente '" .
+                    $pacienteId . "' for agendamento '" . $id . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        // 3. Enrich Profissional.
+        $profissionalId = $this->normalizeNullableString($entity->get('profissionalAnchorId'));
+
+        if ($profissionalId) {
+            try {
+                $profissionalService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensProfissional');
+                $profissionalService->hydrateAfterImport($profissionalId);
+                $enriched[] = 'Profissional';
+            } catch (Throwable $e) {
+                $errors[] = 'Profissional: ' . $e->getMessage();
+
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento::enrichDownstreams: failed to enrich profissional '" .
+                    $profissionalId . "' for agendamento '" . $id . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        // 4. Enrich ConvenioTipo.
+        $convenioTipoId = $this->normalizeNullableString($entity->get('convenioTipoAnchorId'));
+
+        if ($convenioTipoId) {
+            try {
+                $convenioTipoService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensConvenioTipo');
+                $convenioTipoService->hydrateAfterImport($convenioTipoId);
+                $enriched[] = 'ConvenioTipo';
+            } catch (Throwable $e) {
+                $errors[] = 'ConvenioTipo: ' . $e->getMessage();
+
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento::enrichDownstreams: failed to enrich convenio tipo '" .
+                    $convenioTipoId . "' for agendamento '" . $id . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        // 5. Enrich ConsultaTipo.
+        $consultaTipoId = $this->normalizeNullableString($entity->get('consultaTipoAnchorId'));
+
+        if ($consultaTipoId) {
+            try {
+                $consultaTipoService = $this->recordServiceContainer->get(self::CONSULTA_TIPO_ENTITY_TYPE);
+                $consultaTipoService->hydrateAfterImport($consultaTipoId);
+                $enriched[] = 'ConsultaTipo';
+            } catch (Throwable $e) {
+                $errors[] = 'ConsultaTipo: ' . $e->getMessage();
+
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento::enrichDownstreams: failed to enrich consulta tipo '" .
+                    $consultaTipoId . "' for agendamento '" . $id . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        // 6. Enrich Faturamentos.
+        $faturamentos = $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensFaturamento')
+            ->where([
+                'agendamentoId' => $id,
+                'deleted' => false,
+            ])
+            ->find();
+
+        $faturamentoService = $this->recordServiceContainer->get('FeatureIntegrationClinicaNasNuvensFaturamento');
+
+        foreach ($faturamentos as $faturamento) {
+            $faturamentoLocalId = $this->normalizeNullableString($faturamento->getId());
+
+            if (!$faturamentoLocalId) {
+                continue;
+            }
+
+            try {
+                $faturamentoService->hydrateAfterImport($faturamentoLocalId);
+                $enriched[] = 'Faturamento';
+            } catch (Throwable $e) {
+                $errors[] = 'Faturamento (' . $faturamentoLocalId . '): ' . $e->getMessage();
+
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento::enrichDownstreams: failed to enrich faturamento '" .
+                    $faturamentoLocalId . "' for agendamento '" . $id . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        // 7. Enrich ProcedimentoTipos (via AgendamentoProcedimento junction).
+        $procedimentoItens = $this->entityManager
+            ->getRDBRepository(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE)
+            ->where([
+                'agendamentoId' => $id,
+                'deleted' => false,
+            ])
+            ->find();
+
+        $procedimentoTipoService = $this->recordServiceContainer->get(self::PROCEDIMENTO_TIPO_ENTITY_TYPE);
+        $enrichedProcedimentoTipoIds = [];
+
+        foreach ($procedimentoItens as $item) {
+            $procedimentoTipoId = $this->normalizeNullableString($item->get('procedimentoTipoId'));
+
+            if (!$procedimentoTipoId || in_array($procedimentoTipoId, $enrichedProcedimentoTipoIds, true)) {
+                continue;
+            }
+
+            try {
+                $procedimentoTipoService->hydrateAfterImport($procedimentoTipoId);
+                $enrichedProcedimentoTipoIds[] = $procedimentoTipoId;
+                $enriched[] = 'ProcedimentoTipo';
+            } catch (Throwable $e) {
+                $errors[] = 'ProcedimentoTipo (' . $procedimentoTipoId . '): ' . $e->getMessage();
+
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento::enrichDownstreams: failed to enrich procedimento tipo '" .
+                    $procedimentoTipoId . "' for agendamento '" . $id . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        return ['enriched' => $enriched, 'errors' => $errors];
     }
 
     private function createProfissionalAnchorForImport(
@@ -838,6 +1035,84 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                                 $entity->set('profissional', $localProfissionalName);
                             }
 
+                            $localConvenioTipoAnchor = $this->findLocalConvenioTipoAnchor(
+                                $this->normalizeNullableString($entity->get('idTipoConvenio')),
+                                $credentialId,
+                            );
+
+                            if ($persist && $localConvenioTipoAnchor['localId'] === null) {
+                                $remoteConvenioTipoId = $this->normalizeNullableString($entity->get('idTipoConvenio'));
+
+                                if ($remoteConvenioTipoId) {
+                                    try {
+                                        $convenioTipo = $this->findOrRestoreOrCreateConvenioTipoAnchor(
+                                            $remoteConvenioTipoId,
+                                            $credentialId,
+                                            $this->extractTeamIdList($entity),
+                                        );
+
+                                        if ($convenioTipo) {
+                                            $this->updateConvenioTipoAnchorCache($remoteConvenioTipoId, $credentialId, $convenioTipo);
+
+                                            $localConvenioTipoAnchor = [
+                                                'localId' => $convenioTipo->getId(),
+                                                'localName' => $this->normalizeNullableString($convenioTipo->get('name')),
+                                            ];
+                                        }
+                                    } catch (Throwable $e) {
+                                        $this->log->warning(
+                                            "FeatureIntegrationClinicaNasNuvensAgendamento: failed convenio tipo upsert on read for agendamento '" .
+                                            $entity->getId() . "', credential '" . $credentialId . "', remote convenio tipo '" .
+                                            $remoteConvenioTipoId . "': " . $e->getMessage()
+                                        );
+                                    }
+                                }
+                            }
+
+                            $localConvenioTipoId = $localConvenioTipoAnchor['localId'];
+
+                            $entity->set('convenioTipoAnchorId', $localConvenioTipoId);
+                            $entity->set('convenioTipoAnchorName', $localConvenioTipoAnchor['localName']);
+
+                            $localConsultaTipoAnchor = $this->findLocalConsultaTipoAnchor(
+                                $this->normalizeNullableString($entity->get('idTipoConsulta')),
+                                $credentialId,
+                            );
+
+                            if ($persist && $localConsultaTipoAnchor['localId'] === null) {
+                                $remoteConsultaTipoId = $this->normalizeNullableString($entity->get('idTipoConsulta'));
+
+                                if ($remoteConsultaTipoId) {
+                                    try {
+                                        $consultaTipo = $this->findOrRestoreOrCreateConsultaTipoAnchor(
+                                            $remoteConsultaTipoId,
+                                            $credentialId,
+                                            $this->extractTeamIdList($entity),
+                                        );
+
+                                        if ($consultaTipo) {
+                                            $this->updateConsultaTipoAnchorCache($remoteConsultaTipoId, $credentialId, $consultaTipo);
+
+                                            $localConsultaTipoAnchor = [
+                                                'localId' => $consultaTipo->getId(),
+                                                'localName' => $this->normalizeNullableString($consultaTipo->get('name')),
+                                            ];
+                                        }
+                                    } catch (Throwable $e) {
+                                        $this->log->warning(
+                                            "FeatureIntegrationClinicaNasNuvensAgendamento: failed consulta tipo upsert on read for agendamento '" .
+                                            $entity->getId() . "', credential '" . $credentialId . "', remote consulta tipo '" .
+                                            $remoteConsultaTipoId . "': " . $e->getMessage()
+                                        );
+                                    }
+                                }
+                            }
+
+                            $localConsultaTipoId = $localConsultaTipoAnchor['localId'];
+
+                            $entity->set('consultaTipoAnchorId', $localConsultaTipoId);
+                            $entity->set('consultaTipoAnchorName', $localConsultaTipoAnchor['localName']);
+
                             $generatedName = $this->generateName($entity, $payload, $localPacienteName);
 
                             if ($generatedName !== null && $generatedName !== '') {
@@ -847,8 +1122,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                             $billingSnapshot = $this->findLatestFaturamentoSnapshot($entity);
 
                             if ($billingSnapshot !== null) {
-                                $entity->set('valor', $billingSnapshot['valor']);
-                                $entity->set('valorCurrency', $billingSnapshot['valorCurrency']);
+                                $entity->set('valorFaturamentos', $billingSnapshot['valor']);
+                                $entity->set('valorFaturamentosCurrency', $billingSnapshot['valorCurrency']);
                             }
 
                             $entity->set('syncStatus', 'synced');
@@ -861,6 +1136,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                                     $credentialId,
                                     $localPacienteId,
                                     $localProfissionalId,
+                                    $localConvenioTipoId,
+                                    $localConsultaTipoId,
                                     $generatedName,
                                     $billingSnapshot,
                                 );
@@ -870,6 +1147,16 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                                     $entityPayload,
                                     $credentialId,
                                 );
+
+                                $procedimentosSnapshot = $this->computeValorProcedimentos($entity, $localConvenioTipoId);
+
+                                if ($procedimentosSnapshot !== null) {
+                                    $entity->set('valorProcedimentos', $procedimentosSnapshot['valor']);
+                                    $entity->set('valorProcedimentosCurrency', $procedimentosSnapshot['valorCurrency']);
+                                }
+
+                                $this->computeAndSetValorFinanceiro($entity, $billingSnapshot, $procedimentosSnapshot);
+                                $this->persistValorFields($entity, $billingSnapshot, $procedimentosSnapshot);
                             }
                         }
                     } catch (Throwable $e) {
@@ -1365,6 +1652,342 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             'localId' => $paciente->getId(),
             'localName' => is_string($name) && trim($name) !== '' ? trim($name) : null,
         ];
+    }
+
+    /**
+     * @return array{localId: ?string, localName: ?string}
+     */
+    private function findLocalConvenioTipoAnchor(?string $remoteConvenioTipoId, ?string $credentialId): array
+    {
+        if (!$remoteConvenioTipoId || !$credentialId) {
+            return ['localId' => null, 'localName' => null];
+        }
+
+        $cacheKey = $credentialId . '::' . $remoteConvenioTipoId;
+
+        if (isset($this->convenioTipoAnchorCache[$cacheKey])) {
+            return $this->convenioTipoAnchorCache[$cacheKey];
+        }
+
+        $convenioTipo = $this->entityManager
+            ->getRDBRepository(self::CONVENIO_TIPO_ENTITY_TYPE)
+            ->select(['id', 'name'])
+            ->where([
+                'convenioTipoId' => $remoteConvenioTipoId,
+                'credentialId' => $credentialId,
+                'deleted' => false,
+            ])
+            ->findOne();
+
+        $resolved = [
+            'localId' => $convenioTipo?->getId(),
+            'localName' => $convenioTipo && is_string($convenioTipo->get('name')) && trim((string) $convenioTipo->get('name')) !== ''
+                ? trim((string) $convenioTipo->get('name'))
+                : null,
+        ];
+
+        $this->convenioTipoAnchorCache[$cacheKey] = $resolved;
+
+        return $resolved;
+    }
+
+    private function updateConvenioTipoAnchorCache(string $remoteConvenioTipoId, string $credentialId, Entity $convenioTipo): void
+    {
+        $cacheKey = $credentialId . '::' . $remoteConvenioTipoId;
+
+        $name = $convenioTipo->get('name');
+
+        $this->convenioTipoAnchorCache[$cacheKey] = [
+            'localId' => $convenioTipo->getId(),
+            'localName' => is_string($name) && trim($name) !== '' ? trim($name) : null,
+        ];
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function findOrRestoreOrCreateConvenioTipoAnchor(
+        string $remoteConvenioTipoId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        $convenioTipo = $this->findConvenioTipoAnchorIncludingDeleted($remoteConvenioTipoId, $credentialId);
+
+        if ($convenioTipo) {
+            $convenioTipo = $this->restoreConvenioTipoIfDeleted($convenioTipo);
+
+            if ($convenioTipo) {
+                $this->mergeTeamsIntoConvenioTipoAnchor($convenioTipo, $teamIdList);
+            }
+
+            return $convenioTipo;
+        }
+
+        return $this->createConvenioTipoAnchorWithConflictRecovery(
+            $remoteConvenioTipoId,
+            $credentialId,
+            $teamIdList,
+        );
+    }
+
+    private function findConvenioTipoAnchorIncludingDeleted(string $convenioTipoId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from(self::CONVENIO_TIPO_ENTITY_TYPE)
+            ->where([
+                'convenioTipoId' => $convenioTipoId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->order('deleted', 'ASC')
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository(self::CONVENIO_TIPO_ENTITY_TYPE)
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restoreConvenioTipoIfDeleted(Entity $convenioTipo): ?Entity
+    {
+        if (!$convenioTipo->get('deleted')) {
+            return $convenioTipo;
+        }
+
+        $this->entityManager
+            ->getRDBRepository(self::CONVENIO_TIPO_ENTITY_TYPE)
+            ->restoreDeleted($convenioTipo->getId());
+
+        return $this->entityManager->getEntityById(self::CONVENIO_TIPO_ENTITY_TYPE, $convenioTipo->getId());
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function mergeTeamsIntoConvenioTipoAnchor(Entity $convenioTipo, array $teamIdList): void
+    {
+        $existingTeamIdList = $this->extractTeamIdListForEntity($convenioTipo, self::CONVENIO_TIPO_ENTITY_TYPE);
+        $mergedTeamIdList = array_values(array_unique(array_merge($existingTeamIdList, $teamIdList)));
+
+        if ($mergedTeamIdList === $existingTeamIdList) {
+            return;
+        }
+
+        $convenioTipo->set('teamsIds', $mergedTeamIdList);
+
+        $this->entityManager->saveEntity($convenioTipo, [
+            SaveOption::SILENT => true,
+            SaveOption::SKIP_HOOKS => true,
+            SaveOption::SKIP_MODIFIED_BY => true,
+        ]);
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function createConvenioTipoAnchorWithConflictRecovery(
+        string $remoteConvenioTipoId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        try {
+            return $this->entityManager->createEntity(self::CONVENIO_TIPO_ENTITY_TYPE, [
+                'convenioTipoId' => $remoteConvenioTipoId,
+                'credentialId' => $credentialId,
+                'teamsIds' => $teamIdList,
+                'syncStatus' => 'pending',
+            ], [
+                SaveOption::SILENT => true,
+            ]);
+        } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            $existing = $this->findConvenioTipoAnchorIncludingDeleted($remoteConvenioTipoId, $credentialId);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $existing = $this->restoreConvenioTipoIfDeleted($existing);
+
+            if ($existing) {
+                $this->mergeTeamsIntoConvenioTipoAnchor($existing, $teamIdList);
+            }
+
+            return $existing;
+        }
+    }
+
+    /**
+     * @return array{localId: ?string, localName: ?string}
+     */
+    private function findLocalConsultaTipoAnchor(?string $remoteConsultaTipoId, ?string $credentialId): array
+    {
+        if (!$remoteConsultaTipoId || !$credentialId) {
+            return ['localId' => null, 'localName' => null];
+        }
+
+        $cacheKey = $credentialId . '::' . $remoteConsultaTipoId;
+
+        if (isset($this->consultaTipoAnchorCache[$cacheKey])) {
+            return $this->consultaTipoAnchorCache[$cacheKey];
+        }
+
+        $consultaTipo = $this->entityManager
+            ->getRDBRepository(self::CONSULTA_TIPO_ENTITY_TYPE)
+            ->select(['id', 'name'])
+            ->where([
+                'consultaTipoId' => $remoteConsultaTipoId,
+                'credentialId' => $credentialId,
+                'deleted' => false,
+            ])
+            ->findOne();
+
+        $resolved = [
+            'localId' => $consultaTipo?->getId(),
+            'localName' => $consultaTipo && is_string($consultaTipo->get('name')) && trim((string) $consultaTipo->get('name')) !== ''
+                ? trim((string) $consultaTipo->get('name'))
+                : null,
+        ];
+
+        $this->consultaTipoAnchorCache[$cacheKey] = $resolved;
+
+        return $resolved;
+    }
+
+    private function updateConsultaTipoAnchorCache(string $remoteConsultaTipoId, string $credentialId, Entity $consultaTipo): void
+    {
+        $cacheKey = $credentialId . '::' . $remoteConsultaTipoId;
+
+        $name = $consultaTipo->get('name');
+
+        $this->consultaTipoAnchorCache[$cacheKey] = [
+            'localId' => $consultaTipo->getId(),
+            'localName' => is_string($name) && trim($name) !== '' ? trim($name) : null,
+        ];
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function findOrRestoreOrCreateConsultaTipoAnchor(
+        string $remoteConsultaTipoId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        $consultaTipo = $this->findConsultaTipoAnchorIncludingDeleted($remoteConsultaTipoId, $credentialId);
+
+        if ($consultaTipo) {
+            $consultaTipo = $this->restoreConsultaTipoIfDeleted($consultaTipo);
+
+            if ($consultaTipo) {
+                $this->mergeTeamsIntoConsultaTipoAnchor($consultaTipo, $teamIdList);
+            }
+
+            return $consultaTipo;
+        }
+
+        return $this->createConsultaTipoAnchorWithConflictRecovery(
+            $remoteConsultaTipoId,
+            $credentialId,
+            $teamIdList,
+        );
+    }
+
+    private function findConsultaTipoAnchorIncludingDeleted(string $consultaTipoId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from(self::CONSULTA_TIPO_ENTITY_TYPE)
+            ->where([
+                'consultaTipoId' => $consultaTipoId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->order('deleted', 'ASC')
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository(self::CONSULTA_TIPO_ENTITY_TYPE)
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restoreConsultaTipoIfDeleted(Entity $consultaTipo): ?Entity
+    {
+        if (!$consultaTipo->get('deleted')) {
+            return $consultaTipo;
+        }
+
+        $this->entityManager
+            ->getRDBRepository(self::CONSULTA_TIPO_ENTITY_TYPE)
+            ->restoreDeleted($consultaTipo->getId());
+
+        return $this->entityManager->getEntityById(self::CONSULTA_TIPO_ENTITY_TYPE, $consultaTipo->getId());
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function mergeTeamsIntoConsultaTipoAnchor(Entity $consultaTipo, array $teamIdList): void
+    {
+        $existingTeamIdList = $this->extractTeamIdListForEntity($consultaTipo, self::CONSULTA_TIPO_ENTITY_TYPE);
+        $mergedTeamIdList = array_values(array_unique(array_merge($existingTeamIdList, $teamIdList)));
+
+        if ($mergedTeamIdList === $existingTeamIdList) {
+            return;
+        }
+
+        $consultaTipo->set('teamsIds', $mergedTeamIdList);
+
+        $this->entityManager->saveEntity($consultaTipo, [
+            SaveOption::SILENT => true,
+            SaveOption::SKIP_HOOKS => true,
+            SaveOption::SKIP_MODIFIED_BY => true,
+        ]);
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function createConsultaTipoAnchorWithConflictRecovery(
+        string $remoteConsultaTipoId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        try {
+            return $this->entityManager->createEntity(self::CONSULTA_TIPO_ENTITY_TYPE, [
+                'consultaTipoId' => $remoteConsultaTipoId,
+                'credentialId' => $credentialId,
+                'teamsIds' => $teamIdList,
+                'syncStatus' => 'pending',
+            ], [
+                SaveOption::SILENT => true,
+            ]);
+        } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            $existing = $this->findConsultaTipoAnchorIncludingDeleted($remoteConsultaTipoId, $credentialId);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $existing = $this->restoreConsultaTipoIfDeleted($existing);
+
+            if ($existing) {
+                $this->mergeTeamsIntoConsultaTipoAnchor($existing, $teamIdList);
+            }
+
+            return $existing;
+        }
     }
 
     /**
@@ -1987,12 +2610,42 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             }
         }
 
+        $localConvenioTipoAnchor = $this->findLocalConvenioTipoAnchor(
+            $this->normalizeNullableString($entity->get('idTipoConvenio')),
+            $credentialId,
+        );
+
+        if ($localConvenioTipoAnchor['localId'] !== null) {
+            $entity->set('convenioTipoAnchorId', $localConvenioTipoAnchor['localId']);
+            $entity->set('convenioTipoAnchorName', $localConvenioTipoAnchor['localName']);
+        }
+
+        $localConsultaTipoAnchor = $this->findLocalConsultaTipoAnchor(
+            $this->normalizeNullableString($entity->get('idTipoConsulta')),
+            $credentialId,
+        );
+
+        if ($localConsultaTipoAnchor['localId'] !== null) {
+            $entity->set('consultaTipoAnchorId', $localConsultaTipoAnchor['localId']);
+            $entity->set('consultaTipoAnchorName', $localConsultaTipoAnchor['localName']);
+        }
+
         $billingSnapshot = $this->findLatestFaturamentoSnapshot($entity);
 
         if ($billingSnapshot !== null) {
-            $entity->set('valor', $billingSnapshot['valor']);
-            $entity->set('valorCurrency', $billingSnapshot['valorCurrency']);
+            $entity->set('valorFaturamentos', $billingSnapshot['valor']);
+            $entity->set('valorFaturamentosCurrency', $billingSnapshot['valorCurrency']);
         }
+
+        $localConvenioTipoIdForPricing = $localConvenioTipoAnchor['localId'];
+        $procedimentosSnapshot = $this->computeValorProcedimentos($entity, $localConvenioTipoIdForPricing);
+
+        if ($procedimentosSnapshot !== null) {
+            $entity->set('valorProcedimentos', $procedimentosSnapshot['valor']);
+            $entity->set('valorProcedimentosCurrency', $procedimentosSnapshot['valorCurrency']);
+        }
+
+        $this->computeAndSetValorFinanceiro($entity, $billingSnapshot, $procedimentosSnapshot);
     }
 
     private function generateName(Entity $entity, array $payload, ?string $_pacienteName): ?string
@@ -2197,6 +2850,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         string $credentialId,
         ?string $localPacienteId,
         ?string $localProfissionalId,
+        ?string $localConvenioTipoId,
+        ?string $localConsultaTipoId,
         ?string $generatedName,
         ?array $billingSnapshot,
     ): void {
@@ -2256,17 +2911,25 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $toPersist['profissionalAnchorId'] = $localProfissionalId;
         }
 
+        if ($entity->getFetched('convenioTipoAnchorId') !== $localConvenioTipoId) {
+            $toPersist['convenioTipoAnchorId'] = $localConvenioTipoId;
+        }
+
+        if ($entity->getFetched('consultaTipoAnchorId') !== $localConsultaTipoId) {
+            $toPersist['consultaTipoAnchorId'] = $localConsultaTipoId;
+        }
+
         if ($entity->getFetched('syncStatus') !== $syncStatus) {
             $toPersist['syncStatus'] = $syncStatus;
         }
 
         if ($billingSnapshot !== null) {
-            if ($entity->getFetched('valor') !== $billingSnapshot['valor']) {
-                $toPersist['valor'] = $billingSnapshot['valor'];
+            if ($entity->getFetched('valorFaturamentos') !== $billingSnapshot['valor']) {
+                $toPersist['valorFaturamentos'] = $billingSnapshot['valor'];
             }
 
-            if ($entity->getFetched('valorCurrency') !== $billingSnapshot['valorCurrency']) {
-                $toPersist['valorCurrency'] = $billingSnapshot['valorCurrency'];
+            if ($entity->getFetched('valorFaturamentosCurrency') !== $billingSnapshot['valorCurrency']) {
+                $toPersist['valorFaturamentosCurrency'] = $billingSnapshot['valorCurrency'];
             }
         }
 
@@ -2340,6 +3003,180 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             'valor' => (float) $valor,
             'valorCurrency' => $currency,
         ];
+    }
+
+    /**
+     * Compute the total valor from ProcedimentoConvenio pricing rows for all
+     * AgendamentoProcedimento items linked to this agendamento.
+     *
+     * For each item: (precoPaciente + precoConvenio) * quantidade.
+     *
+     * @return array{valor: float, valorCurrency: string}|null
+     */
+    private function computeValorProcedimentos(Entity $entity, ?string $localConvenioTipoId): ?array
+    {
+        $agendamentoLocalId = $this->normalizeNullableString($entity->getId());
+
+        if (!$agendamentoLocalId || !$localConvenioTipoId) {
+            return null;
+        }
+
+        $agendamentoProcedimentos = $this->entityManager
+            ->getRDBRepository(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE)
+            ->select(['procedimentoTipoId', 'quantidade'])
+            ->where([
+                'agendamentoId' => $agendamentoLocalId,
+                'deleted' => false,
+            ])
+            ->find();
+
+        $total = 0.0;
+        $hasAnyPricing = false;
+
+        foreach ($agendamentoProcedimentos as $item) {
+            $procedimentoTipoLocalId = $this->normalizeNullableString($item->get('procedimentoTipoId'));
+
+            if (!$procedimentoTipoLocalId) {
+                continue;
+            }
+
+            $quantidade = $item->get('quantidade');
+            $quantidade = is_int($quantidade) && $quantidade > 0 ? $quantidade : 1;
+
+            $pricingRow = $this->entityManager
+                ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProcedimentoConvenio')
+                ->select(['precoPaciente', 'precoConvenio'])
+                ->where([
+                    'procedimentoTipoId' => $procedimentoTipoLocalId,
+                    'convenioTipoId' => $localConvenioTipoId,
+                    'deleted' => false,
+                    'isActive' => true,
+                ])
+                ->findOne();
+
+            if (!$pricingRow) {
+                continue;
+            }
+
+            $precoPaciente = $this->normalizeNumericValue($pricingRow->get('precoPaciente'));
+            $precoConvenio = $this->normalizeNumericValue($pricingRow->get('precoConvenio'));
+
+            $lineTotal = ($precoPaciente + $precoConvenio) * $quantidade;
+            $total += $lineTotal;
+            $hasAnyPricing = true;
+        }
+
+        if (!$hasAnyPricing) {
+            return null;
+        }
+
+        return [
+            'valor' => round($total, 2),
+            'valorCurrency' => 'BRL',
+        ];
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeNumericValue($value): float
+    {
+        if ($value === null) {
+            return 0.0;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * Compute valorFinanceiro: valorFaturamentos if present, else valorProcedimentos, else 0.
+     *
+     * @param array{valor: float, valorCurrency: string}|null $billingSnapshot
+     * @param array{valor: float, valorCurrency: string}|null $procedimentosSnapshot
+     */
+    private function computeAndSetValorFinanceiro(
+        Entity $entity,
+        ?array $billingSnapshot,
+        ?array $procedimentosSnapshot,
+    ): void {
+        if ($billingSnapshot !== null && $billingSnapshot['valor'] > 0) {
+            $entity->set('valorFinanceiro', $billingSnapshot['valor']);
+            $entity->set('valorFinanceiroCurrency', $billingSnapshot['valorCurrency']);
+
+            return;
+        }
+
+        if ($procedimentosSnapshot !== null && $procedimentosSnapshot['valor'] > 0) {
+            $entity->set('valorFinanceiro', $procedimentosSnapshot['valor']);
+            $entity->set('valorFinanceiroCurrency', $procedimentosSnapshot['valorCurrency']);
+
+            return;
+        }
+
+        $entity->set('valorFinanceiro', 0.0);
+        $entity->set('valorFinanceiroCurrency', 'BRL');
+    }
+
+    /**
+     * Persist valorProcedimentos and valorFinanceiro after enrichment.
+     *
+     * @param array{valor: float, valorCurrency: string}|null $billingSnapshot
+     * @param array{valor: float, valorCurrency: string}|null $procedimentosSnapshot
+     */
+    private function persistValorFields(
+        Entity $entity,
+        ?array $billingSnapshot,
+        ?array $procedimentosSnapshot,
+    ): void {
+        $toPersist = [];
+
+        if ($procedimentosSnapshot !== null) {
+            if ($entity->getFetched('valorProcedimentos') !== $procedimentosSnapshot['valor']) {
+                $toPersist['valorProcedimentos'] = $procedimentosSnapshot['valor'];
+            }
+
+            if ($entity->getFetched('valorProcedimentosCurrency') !== $procedimentosSnapshot['valorCurrency']) {
+                $toPersist['valorProcedimentosCurrency'] = $procedimentosSnapshot['valorCurrency'];
+            }
+        }
+
+        $currentValorFinanceiro = $entity->get('valorFinanceiro');
+        $currentValorFinanceiroCurrency = $entity->get('valorFinanceiroCurrency');
+
+        if ($entity->getFetched('valorFinanceiro') !== $currentValorFinanceiro) {
+            $toPersist['valorFinanceiro'] = $currentValorFinanceiro;
+        }
+
+        if ($entity->getFetched('valorFinanceiroCurrency') !== $currentValorFinanceiroCurrency) {
+            $toPersist['valorFinanceiroCurrency'] = $currentValorFinanceiroCurrency;
+        }
+
+        if ($toPersist === []) {
+            return;
+        }
+
+        $entity->set($toPersist);
+
+        try {
+            $this->entityManager->saveEntity($entity, [
+                SaveOption::SILENT => true,
+                SaveOption::SKIP_HOOKS => true,
+                SaveOption::SKIP_MODIFIED_BY => true,
+            ]);
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: failed to persist valor fields for '" .
+                $entity->getId() . "': " . $e->getMessage()
+            );
+        }
     }
 
     /**

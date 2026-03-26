@@ -1,3 +1,8 @@
 {
-    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General"
+    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
+    "massActions": {
+        "enrichDownstreams": {
+            "implementationClassName": "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Classes\\MassAction\\FeatureIntegrationClinicaNasNuvensAgendamento\\MassEnrichDownstreams"
+        }
+    }
 }

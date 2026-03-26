@@ -1,0 +1,26 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensConsultaTipo": "Clínica Nas Nuvens / Tipo de Consulta",
+        "Create FeatureIntegrationClinicaNasNuvensConsultaTipo": "Conectar Tipo de Consulta",
+        "Overview": "Visão Geral"
+    },
+    "fields": {
+        "name": "Nome",
+        "consultaTipoId": "ID Tipo de Consulta (Clínica Nas Nuvens)",
+        "credential": "Credencial",
+        "syncStatus": "Status de Sincronização",
+        "ativo": "Ativo",
+        "reconsulta": "Reconsulta"
+    },
+    "links": {
+        "credential": "Credencial",
+        "agendamentos": "Agendamentos"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    }
+}
