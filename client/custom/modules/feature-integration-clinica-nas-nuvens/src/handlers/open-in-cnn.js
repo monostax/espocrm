@@ -3,9 +3,13 @@
  * Resolves the correct CNN URL based on the entity type and opens it
  * in a new browser tab.
  *
+ * Note: iframe embedding is not possible because the CNN server sets
+ * X-Frame-Options: SAMEORIGIN and redirects HTTPS to HTTP (mixed content).
+ *
  *   Paciente    -> /paciente/visualiza/{pacienteId}
  *   Agendamento -> /agenda/resumo-completo/{agendamentoId}
  *   Faturamento -> /faturamento/{faturamentoId}
+ *   ProcedimentoTipo -> /procedimento/{procedimentoTipoId}
  */
 define(["action-handler"], (Dep) => {
 

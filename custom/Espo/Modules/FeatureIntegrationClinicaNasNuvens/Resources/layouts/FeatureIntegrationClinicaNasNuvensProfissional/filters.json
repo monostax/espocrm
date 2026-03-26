@@ -1,0 +1,17 @@
+[
+    "name",
+    "profissionalId",
+    "idPessoa",
+    "cpfcnpj",
+    "email",
+    "tipoExecutor",
+    "profissional",
+    "profissionalCodigo",
+    "registroProfissional",
+    "especialidadesTexto",
+    "credential",
+    "syncStatus",
+    "ativo",
+    "createdAt",
+    "modifiedAt"
+]

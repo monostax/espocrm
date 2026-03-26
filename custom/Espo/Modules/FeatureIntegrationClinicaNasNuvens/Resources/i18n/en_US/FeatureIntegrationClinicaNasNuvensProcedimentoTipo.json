@@ -17,7 +17,8 @@
     },
     "links": {
         "credential": "Credential",
-        "convenioPrecificacoes": "Convenio Pricing Rows"
+        "convenioPrecificacoes": "Convenio Pricing Rows",
+        "agendamentoItens": "Appointments"
     },
     "options": {
         "syncStatus": {

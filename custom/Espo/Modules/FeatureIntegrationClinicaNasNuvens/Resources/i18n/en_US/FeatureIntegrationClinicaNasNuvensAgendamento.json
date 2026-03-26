@@ -12,11 +12,15 @@
         "name": "Name",
         "agendamentoId": "Remote Agendamento ID",
         "paciente": "Patient",
+        "profissionalAnchor": "Professional Anchor",
         "credential": "Credential",
         "syncStatus": "Sync Status",
         "idPaciente": "Remote Paciente ID",
         "idProfissional": "Remote Professional ID",
+        "idPessoaExecutor": "Remote Executor Pessoa ID",
         "idConvenio": "Remote Insurance ID",
+        "idTipoConvenio": "Remote Insurance Type ID",
+        "convenioTipoAnchor": "Insurance Type",
         "idEspecialidade": "Remote Specialty ID",
         "idUnidade": "Remote Unit ID",
         "idSala": "Remote Room ID",
@@ -37,8 +41,11 @@
     },
     "links": {
         "paciente": "Patient",
+        "profissionalAnchor": "Professional Anchor",
         "credential": "Credential",
-        "faturamentos": "Faturamentos"
+        "faturamentos": "Faturamentos",
+        "procedimentoItens": "Procedures",
+        "convenioTipoAnchor": "Insurance Type"
     },
     "options": {
         "syncStatus": {
@@ -49,12 +56,14 @@
         "status": {
             "agendado": "Scheduled",
             "confirmado": "Confirmed",
+            "confirmado_paciente": "Confirmed by Patient",
             "atendido": "Attended",
             "finalizado": "Finalized",
             "em_espera": "On Hold",
             "cancelado": "Canceled",
             "cancelado_paciente": "Canceled by Patient",
             "falta": "No Show",
+            "faltou": "Missed",
             "remarcado": "Rescheduled",
             "encaixe": "Overbooked",
             "bloqueado": "Blocked"

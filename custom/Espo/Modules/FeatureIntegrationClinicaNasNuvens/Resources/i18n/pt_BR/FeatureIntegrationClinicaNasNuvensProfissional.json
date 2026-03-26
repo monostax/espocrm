@@ -1,0 +1,43 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensProfissional": "Clínica Nas Nuvens / Profissional",
+        "Create FeatureIntegrationClinicaNasNuvensProfissional": "Conectar Profissional",
+        "Overview": "Visão Geral",
+        "Contact": "Contato",
+        "Professional": "Profissional"
+    },
+    "fields": {
+        "name": "Nome",
+        "profissionalId": "ID Profissional (Clínica Nas Nuvens)",
+        "idPessoa": "ID Pessoa (Clínica Nas Nuvens)",
+        "credential": "Credencial",
+        "syncStatus": "Status de Sincronização",
+        "ativo": "Ativo",
+        "tipoExecutor": "Tipo de Executor",
+        "cpfcnpj": "CPF/CNPJ",
+        "email": "E-mail",
+        "telefoneCelular": "Telefone Celular",
+        "telefoneComercial": "Telefone Comercial",
+        "telefoneResidencial": "Telefone Residencial",
+        "telefoneRecados": "Telefone Recados",
+        "profissional": "Profissional",
+        "profissionalCodigo": "Código Profissional",
+        "cbo": "CBO",
+        "registroProfissional": "Registro Profissional",
+        "especialidades": "Especialidades (JSON)",
+        "especialidadesTexto": "Especialidades",
+        "clinicas": "Clínicas"
+    },
+    "links": {
+        "credential": "Credencial",
+        "agendamentos": "Agendamentos",
+        "faturamentos": "Faturamentos"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "RepairFaturadoAgendamentosWithoutFaturamento": {
+        "name": "CNN: Repair Faturado Agendamentos Without Faturamento",
+        "isSystem": false,
+        "scheduling": "0 */6 * * *",
+        "jobClassName": "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Jobs\\RepairFaturadoAgendamentosWithoutFaturamento"
+    }
+}

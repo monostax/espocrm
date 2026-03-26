@@ -16,6 +16,8 @@
     "especialidade",
     "idPaciente",
     "idProfissional",
+    "idPessoaExecutor",
+    "profissionalAnchor",
     "idConvenio",
     "idEspecialidade",
     "idUnidade",

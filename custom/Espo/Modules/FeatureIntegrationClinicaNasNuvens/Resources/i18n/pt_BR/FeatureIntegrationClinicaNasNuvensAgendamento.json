@@ -12,11 +12,15 @@
         "name": "Nome",
         "agendamentoId": "ID Agendamento (Clínica Nas Nuvens)",
         "paciente": "Paciente",
+        "profissionalAnchor": "Âncora de Profissional",
         "credential": "Credencial",
         "syncStatus": "Status de Sincronização",
         "idPaciente": "ID Paciente (Clínica Nas Nuvens)",
         "idProfissional": "ID Remoto do Profissional",
+        "idPessoaExecutor": "ID Pessoa Executor (Clínica Nas Nuvens)",
         "idConvenio": "ID Remoto do Convênio",
+        "idTipoConvenio": "ID Tipo de Convênio (Clínica Nas Nuvens)",
+        "convenioTipoAnchor": "Tipo de Convênio",
         "idEspecialidade": "ID Remoto da Especialidade",
         "idUnidade": "ID Remoto da Unidade",
         "idSala": "ID Remoto da Sala",
@@ -37,8 +41,11 @@
     },
     "links": {
         "paciente": "Paciente",
+        "profissionalAnchor": "Âncora de Profissional",
         "credential": "Credencial",
-        "faturamentos": "Faturamentos"
+        "faturamentos": "Faturamentos",
+        "procedimentoItens": "Procedimentos",
+        "convenioTipoAnchor": "Tipo de Convênio"
     },
     "options": {
         "syncStatus": {
@@ -49,12 +56,14 @@
         "status": {
             "agendado": "Agendado",
             "confirmado": "Confirmado",
+            "confirmado_paciente": "Confirmado pelo Paciente",
             "atendido": "Atendido",
             "finalizado": "Finalizado",
             "em_espera": "Em Espera",
             "cancelado": "Cancelado",
             "cancelado_paciente": "Cancelado pelo Paciente",
             "falta": "Falta",
+            "faltou": "Faltou",
             "remarcado": "Remarcado",
             "encaixe": "Encaixe",
             "bloqueado": "Bloqueado"

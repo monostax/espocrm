@@ -2,6 +2,7 @@
     "name",
     "faturamentoId",
     "agendamento",
+    "profissionalAnchor",
     "paciente",
     "credential",
     "syncStatus",

@@ -14,7 +14,8 @@
         "particular": "Particular"
     },
     "links": {
-        "credential": "Credencial"
+        "credential": "Credencial",
+        "agendamentos": "Agendamentos"
     },
     "options": {
         "syncStatus": {

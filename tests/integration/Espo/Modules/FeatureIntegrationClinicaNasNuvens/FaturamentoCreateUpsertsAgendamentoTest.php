@@ -69,7 +69,17 @@ class FaturamentoCreateUpsertsAgendamentoTest extends BaseTestCase
                 'agendamentoId' => 'ag-remoto-1',
                 'name' => 'Agendamento #ag-remoto-1',
                 'idPaciente' => null,
+                'idProfissional' => 'remote-prof-1',
+                'idPessoaExecutor' => 'remote-pessoa-prof-1',
             ],
+        ]);
+
+        $profissional = $this->getEntityManager()->createEntity('FeatureIntegrationClinicaNasNuvensProfissional', [
+            'name' => 'Profissional Existing',
+            'profissionalId' => 'remote-prof-1',
+            'idPessoa' => 'remote-pessoa-prof-1',
+            'credentialId' => $apiCredential->getId(),
+            'teamsIds' => [$teamA->getId()],
         ]);
 
         $agendamento = $this->getEntityManager()->createEntity('FeatureIntegrationClinicaNasNuvensAgendamento', [
@@ -91,6 +101,7 @@ class FaturamentoCreateUpsertsAgendamentoTest extends BaseTestCase
         $this->assertNotNull($reloadedFaturamento);
         $this->assertSame($webCredential->getId(), $reloadedFaturamento->get('credentialId'));
         $this->assertSame($agendamento->getId(), $reloadedFaturamento->get('agendamentoId'));
+        $this->assertSame($profissional->getId(), $reloadedFaturamento->get('profissionalAnchorId'));
         $this->assertSame(146.00, (float) $reloadedFaturamento->get('valor'));
         $this->assertSame('BRL', $reloadedFaturamento->get('valorCurrency'));
         $this->assertSame('2026-03-25', $reloadedFaturamento->get('dataFaturamento'));

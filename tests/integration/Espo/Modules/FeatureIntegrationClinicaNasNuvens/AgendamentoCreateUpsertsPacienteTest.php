@@ -201,6 +201,32 @@ class AgendamentoCreateUpsertsPacienteTest extends BaseTestCase
         $this->assertSame($credential->getId(), $reloaded->get('credentialId'));
     }
 
+    public function testCreateLinksExistingProfissionalAnchorUsingIdPessoaExecutor(): void
+    {
+        $team = $this->createTeam('cnn-prof-link-team');
+        $credential = $this->createCredentialForTeam($team);
+
+        $profissional = $this->getEntityManager()->createEntity('FeatureIntegrationClinicaNasNuvensProfissional', [
+            'name' => 'Profissional Local',
+            'profissionalId' => 'remote-profissional-link-1',
+            'idPessoa' => 'remote-pessoa-executor-1',
+            'credentialId' => $credential->getId(),
+            'teamsIds' => [$team->getId()],
+        ]);
+
+        $agendamento = $this->createAgendamento([
+            'agendamentoId' => 'ag-prof-link-' . uniqid(),
+            'idPaciente' => 'remote-prof-link-paciente',
+            'idPessoaExecutor' => 'remote-pessoa-executor-1',
+            'teamsIds' => [$team->getId()],
+        ]);
+
+        $reloaded = $this->getEntityManager()->getEntityById('FeatureIntegrationClinicaNasNuvensAgendamento', $agendamento->getId());
+
+        $this->assertNotNull($reloaded);
+        $this->assertSame($profissional->getId(), $reloaded->get('profissionalAnchorId'));
+    }
+
     private function getEntityManagerInstance(): EntityManager
     {
         return $this->getEntityManager();

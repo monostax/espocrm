@@ -10,6 +10,7 @@
         "name": "Name",
         "faturamentoId": "Remote Faturamento ID",
         "agendamento": "Agendamento",
+        "profissionalAnchor": "Professional Anchor",
         "paciente": "Paciente",
         "credential": "Credential",
         "syncStatus": "Sync Status",
@@ -24,6 +25,7 @@
     },
     "links": {
         "agendamento": "Agendamento",
+        "profissionalAnchor": "Professional Anchor",
         "paciente": "Paciente",
         "credential": "Credential"
     },

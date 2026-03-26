@@ -1,0 +1,9 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "agendamento"}, {"name": "procedimentoTipo"}],
+            [{"name": "procedimentoNome"}, {"name": "quantidade"}]
+        ]
+    }
+]

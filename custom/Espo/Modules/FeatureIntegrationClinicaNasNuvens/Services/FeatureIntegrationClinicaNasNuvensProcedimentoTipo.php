@@ -626,6 +626,7 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
                 'convenioTipoId' => $convenioTipoId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager
@@ -729,6 +730,7 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
                 'credentialId' => $credentialId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager

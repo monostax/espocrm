@@ -13,6 +13,9 @@
         "agendamento": {
             "type": "link"
         },
+        "profissionalAnchor": {
+            "type": "link"
+        },
         "paciente": {
             "type": "link"
         },
@@ -90,6 +93,11 @@
             "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
             "foreign": "faturamentos"
         },
+        "profissionalAnchor": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensProfissional",
+            "foreign": "faturamentos"
+        },
         "paciente": {
             "type": "belongsTo",
             "entity": "FeatureIntegrationClinicaNasNuvensPaciente",
@@ -136,6 +144,9 @@
         },
         "pacienteId": {
             "columns": ["pacienteId"]
+        },
+        "profissionalAnchorId": {
+            "columns": ["profissionalAnchorId"]
         },
         "credentialId": {
             "columns": ["credentialId"]

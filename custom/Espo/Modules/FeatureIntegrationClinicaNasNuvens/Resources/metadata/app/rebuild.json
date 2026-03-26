@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\SeedCredentialTypeClinicaNasNuvens"
+        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\SeedCredentialTypeClinicaNasNuvens",
+        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\SeedScheduledJobs"
     ]
 }

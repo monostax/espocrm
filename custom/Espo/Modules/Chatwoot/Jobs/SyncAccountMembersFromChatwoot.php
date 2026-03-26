@@ -258,20 +258,17 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
         } catch (\Exception $e) {
             $message = $e->getMessage();
 
-            // Destructive cleanup requires a confirmed 404:
-            // 1) account endpoint returned 404; and
-            // 2) users API is reachable (to avoid proxy fallback 404s).
-            if ($this->isConfirmedAccountGone($account, $message)) {
+            // SAFETY: Never perform destructive cleanup from a sync job error handler.
+            // A 404 during a Chatwoot redeployment is transient — the ingress returns 404
+            // while the new pod starts, but the Platform API may already be reachable,
+            // causing isConfirmedAccountGone() to produce false positives.
+            // If an account is truly deleted from Chatwoot, an admin should clean it up
+            // manually via the CRM UI.
+            if ($this->isAccountGoneError($message)) {
                 $this->log->warning(
-                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned confirmed 404 — " .
-                    "account likely deleted from Chatwoot (source of truth). " .
-                    "Cleaning up local memberships and orphaned users."
-                );
-                $this->cleanupAccountMembershipsAndUsers($account);
-            } elseif ($this->isAccountGoneError($message)) {
-                $this->log->warning(
-                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned 404 but Users API probe failed. " .
-                    "Skipping destructive cleanup to avoid false positives."
+                    "SyncAccountMembersFromChatwoot: Account {$accountName} returned 404. " .
+                    "This may be a transient error during Chatwoot redeployment. " .
+                    "No destructive cleanup will be performed automatically."
                 );
             } else {
                 $this->log->error(
@@ -359,78 +356,6 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
     private function isAccountGoneError(string $message): bool
     {
         return (bool) preg_match('/HTTP\s+404\b/', $message);
-    }
-
-    /**
-     * Confirm account-gone condition before destructive cleanup.
-     *
-     * A raw 404 is not enough because proxies can emit generic 404 responses
-     * when backend services are unavailable. We require Users API reachability
-     * to validate that Chatwoot platform endpoints are actually responding.
-     */
-    private function isConfirmedAccountGone(Entity $account, string $message): bool
-    {
-        if (!$this->isAccountGoneError($message)) {
-            return false;
-        }
-
-        $platformId = $account->get('platformId');
-        if (!$platformId) {
-            return false;
-        }
-
-        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $platformId);
-        if (!$platform) {
-            return false;
-        }
-
-        $platformUrl = $platform->get('backendUrl');
-        $accessToken = $platform->get('accessToken');
-
-        if (!$platformUrl || !$accessToken) {
-            return false;
-        }
-
-        return $this->apiClient->isUsersApiReachable($platformUrl, $accessToken);
-    }
-
-    /**
-     * Clean up all memberships and orphaned ChatwootUsers when a Chatwoot account
-     * is gone (source of truth returned 401/404).
-     *
-     * Removes all memberships for the account, then cleans up ChatwootUsers
-     * that were directly affected (have zero remaining memberships).
-     *
-     * SAFETY: Only cleans up users whose memberships were removed in THIS pass.
-     * Does NOT scan all users in the platform to avoid cross-account cascade.
-     */
-    private function cleanupAccountMembershipsAndUsers(Entity $account): void
-    {
-        $espoAccountId = $account->getId();
-        $accountName = $account->get('name');
-
-        // Remove all memberships for this account
-        $memberships = $this->entityManager
-            ->getRDBRepository('ChatwootAccountUserMembership')
-            ->where(['chatwootAccountId' => $espoAccountId])
-            ->find();
-
-        $removedCount = 0;
-        foreach ($memberships as $membership) {
-            $this->removeStaleMembership($membership);
-            $removedCount++;
-        }
-
-        if ($removedCount > 0) {
-            $this->log->info(
-                "SyncAccountMembersFromChatwoot: Removed {$removedCount} membership(s) for gone account '{$accountName}'"
-            );
-        }
-
-        // NOTE: Cross-account orphan cleanup removed. removeStaleMembership()
-        // already calls removeOrphanedUser() for each affected user, which is
-        // sufficient. Scanning all users in the platform caused cross-account
-        // cascade deletions when other accounts hadn't synced yet.
     }
 
     private function isAutomationUser(Entity $user): bool

@@ -1,0 +1,18 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento": "Clínica Nas Nuvens / Procedimento de Agendamento",
+        "Create FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento": "Criar Procedimento de Agendamento",
+        "Overview": "Visão Geral"
+    },
+    "fields": {
+        "name": "Nome",
+        "agendamento": "Agendamento",
+        "procedimentoTipo": "Tipo de Procedimento",
+        "quantidade": "Quantidade",
+        "procedimentoNome": "Procedimento"
+    },
+    "links": {
+        "agendamento": "Agendamento",
+        "procedimentoTipo": "Tipo de Procedimento"
+    }
+}

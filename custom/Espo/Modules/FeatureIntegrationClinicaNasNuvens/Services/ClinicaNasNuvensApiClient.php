@@ -230,6 +230,152 @@ class ClinicaNasNuvensApiClient implements
     }
 
     /**
+     * Get a single executor agenda (profissional) from CNN API.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    public function getExecutorAgendaById(Entity $credential, string $profissionalId): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+
+        $baseUrl = rtrim((string) ($config['baseUrl'] ?? self::DEFAULT_BASE_URL), '/');
+        $clientId = (string) ($config['clientId'] ?? $config['client_id'] ?? '');
+        $clientSecret = (string) ($config['clientSecret'] ?? $config['client_secret'] ?? '');
+        $clinicCid = (string) ($config['clinicCid'] ?? $config['clinicCID'] ?? $config['cid'] ?? $config['clinicToken'] ?? '');
+
+        if ($clientId === '' || $clientSecret === '' || $clinicCid === '') {
+            throw new Error('Credential config must contain clientId, clientSecret and clinicCid.');
+        }
+
+        $url = $baseUrl . '/executor-agenda/' . rawurlencode($profissionalId);
+
+        $attempt = 0;
+
+        while ($attempt < self::MAX_ATTEMPTS) {
+            $attempt++;
+
+            $result = $this->request($url, $clientId, $clientSecret, $clinicCid);
+
+            if ($result['ok']) {
+                return $this->mapExecutorAgendaPayload($result['payload']);
+            }
+
+            $retryable = $result['retryable'];
+
+            if (!$retryable || $attempt >= self::MAX_ATTEMPTS) {
+                $status = $result['status'];
+                $message = $result['message'];
+
+                throw new Error(
+                    "Clínica nas Nuvens request failed for executor-agenda '{$profissionalId}' (HTTP {$status}): {$message}"
+                );
+            }
+
+            usleep(self::RETRY_BACKOFF_MS * $attempt * 1000);
+        }
+
+        throw new Error("Clínica nas Nuvens request failed for executor-agenda '{$profissionalId}'.");
+    }
+
+    /**
+     * Resolve executor-agenda ID from a pessoa ID.
+     *
+     * @return ?string
+     * @throws Error
+     */
+    public function resolveExecutorAgendaIdByPessoaId(Entity $credential, string $idPessoa): ?string
+    {
+        $config = $this->extractCredentialConfig($credential);
+
+        $baseUrl = rtrim((string) ($config['baseUrl'] ?? self::DEFAULT_BASE_URL), '/');
+        $clientId = (string) ($config['clientId'] ?? $config['client_id'] ?? '');
+        $clientSecret = (string) ($config['clientSecret'] ?? $config['client_secret'] ?? '');
+        $clinicCid = (string) ($config['clinicCid'] ?? $config['clinicCID'] ?? $config['cid'] ?? $config['clinicToken'] ?? '');
+
+        if ($clientId === '' || $clientSecret === '' || $clinicCid === '') {
+            throw new Error('Credential config must contain clientId, clientSecret and clinicCid.');
+        }
+
+        $resolvedPessoaId = $this->normalizeNullableScalarString($idPessoa);
+
+        if ($resolvedPessoaId === null) {
+            return null;
+        }
+
+        $currentPage = 1;
+        $totalPages = 1;
+
+        while ($currentPage <= $totalPages) {
+            $query = http_build_query([
+                'pagina' => $currentPage,
+                'registrosPorPagina' => 100,
+            ], '', '&', PHP_QUERY_RFC3986);
+
+            $url = $baseUrl . '/executor-agenda/lista' . ($query !== '' ? '?' . $query : '');
+
+            $attempt = 0;
+
+            while ($attempt < self::MAX_ATTEMPTS) {
+                $attempt++;
+
+                $result = $this->request($url, $clientId, $clientSecret, $clinicCid);
+
+                if ($result['ok']) {
+                    $payload = $result['payload'];
+                    $source = $payload;
+
+                    if (isset($payload['data']) && is_array($payload['data'])) {
+                        $source = $payload['data'];
+                    }
+
+                    $lista = isset($source['lista']) && is_array($source['lista']) ? $source['lista'] : [];
+
+                    foreach ($lista as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+
+                        $rowPessoaId = $this->normalizeNullableScalarString($row['idpessoa'] ?? null);
+
+                        if ($rowPessoaId !== $resolvedPessoaId) {
+                            continue;
+                        }
+
+                        return $this->normalizeNullableScalarString($row['id'] ?? null);
+                    }
+
+                    $pageValue = $source['pagina'] ?? $currentPage;
+                    $totalPagesValue = $source['totalPaginas'] ?? $currentPage;
+
+                    $currentPage = max((int) $pageValue, $currentPage);
+                    $totalPages = max((int) $totalPagesValue, $currentPage);
+
+                    break;
+                }
+
+                $retryable = $result['retryable'];
+
+                if (!$retryable || $attempt >= self::MAX_ATTEMPTS) {
+                    $status = $result['status'];
+                    $message = $result['message'];
+
+                    throw new Error(
+                        "Clínica nas Nuvens request failed for executor-agenda/lista pessoa '{$resolvedPessoaId}' " .
+                        "(HTTP {$status}): {$message}"
+                    );
+                }
+
+                usleep(self::RETRY_BACKOFF_MS * $attempt * 1000);
+            }
+
+            $currentPage++;
+        }
+
+        return null;
+    }
+
+    /**
      * @return array{ok: bool, status: int, retryable: bool, payload: array<string, mixed>, message: string}
      */
     private function request(string $url, string $clientId, string $clientSecret, string $clinicCid): array
@@ -428,8 +574,10 @@ class ClinicaNasNuvensApiClient implements
             'agendamentoId' => $toStringOrNull($source['id'] ?? $source['agendamentoId'] ?? null),
             'name' => $toStringOrNull($name),
             'idPaciente' => $toStringOrNull($source['idPaciente'] ?? null),
-            'idProfissional' => $toStringOrNull($source['idProfissional'] ?? null),
+            'idProfissional' => $toStringOrNull($source['idProfissional'] ?? $source['idExecutorAgenda'] ?? null),
+            'idPessoaExecutor' => $toStringOrNull($source['idPessoaExecutor'] ?? $source['idpessoaExecutor'] ?? null),
             'idConvenio' => $toStringOrNull($source['idConvenio'] ?? null),
+            'idTipoConvenio' => $toStringOrNull($source['idTipoConvenio'] ?? null),
             'idEspecialidade' => $toStringOrNull($source['idEspecialidade'] ?? null),
             'idUnidade' => $toStringOrNull($source['idUnidade'] ?? null),
             'idSala' => $toStringOrNull($source['idSala'] ?? null),
@@ -490,6 +638,73 @@ class ClinicaNasNuvensApiClient implements
             'ativo' => $this->normalizeNullableBool($source['ativo'] ?? null),
             'beneficio' => $this->normalizeNullableBool($source['beneficio'] ?? null),
             'particular' => $this->normalizeNullableBool($source['particular'] ?? null),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapExecutorAgendaPayload(array $payload): array
+    {
+        $source = $payload;
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $source = $payload['data'];
+        }
+
+        $contato = isset($source['contato']) && is_array($source['contato']) ? $source['contato'] : [];
+        $profissionalSaude = isset($source['profissionalSaude']) && is_array($source['profissionalSaude'])
+            ? $source['profissionalSaude']
+            : [];
+
+        $especialidades = [];
+        $especialidadesNomeList = [];
+
+        if (isset($profissionalSaude['especialidades']) && is_array($profissionalSaude['especialidades'])) {
+            foreach ($profissionalSaude['especialidades'] as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $especialidadeId = $this->normalizeNullableScalarString($row['id'] ?? null);
+                $especialidadeNome = $this->normalizeNullableScalarString($row['nome'] ?? $row['name'] ?? null);
+
+                if ($especialidadeNome !== null) {
+                    $especialidadesNomeList[] = $especialidadeNome;
+                }
+
+                if ($especialidadeId === null && $especialidadeNome === null) {
+                    continue;
+                }
+
+                $especialidades[] = [
+                    'id' => $especialidadeId,
+                    'nome' => $especialidadeNome,
+                ];
+            }
+        }
+
+        return [
+            'profissionalId' => $this->normalizeNullableScalarString($source['id'] ?? $source['profissionalId'] ?? null),
+            'idPessoa' => $this->normalizeNullableScalarString($source['idpessoa'] ?? $source['idPessoa'] ?? null),
+            'name' => $this->normalizeNullableScalarString($source['nome'] ?? $source['name'] ?? null),
+            'ativo' => $this->normalizeNullableBool($source['ativo'] ?? null),
+            'tipoExecutor' => $this->normalizeNullableScalarString($source['tipoExecutor'] ?? null),
+            'cpfcnpj' => $this->normalizeNullableScalarString($source['cpfcnpj'] ?? null),
+            'email' => $this->normalizeNullableScalarString($contato['email'] ?? $source['email'] ?? null),
+            'telefoneCelular' => $this->normalizePhoneNumberWithBrazilPrefix($contato['telefoneCelular'] ?? null),
+            'telefoneComercial' => $this->normalizePhoneNumberWithBrazilPrefix($contato['telefoneComercial'] ?? null),
+            'telefoneResidencial' => $this->normalizePhoneNumberWithBrazilPrefix($contato['telefoneResidencial'] ?? null),
+            'telefoneRecados' => $this->normalizePhoneNumberWithBrazilPrefix($contato['telefoneRecados'] ?? null),
+            'profissional' => $this->normalizeNullableBool($source['profissional'] ?? null),
+            'profissionalCodigo' => $this->normalizeNullableScalarString($profissionalSaude['codigo'] ?? null),
+            'cbo' => $this->normalizeNullableScalarString($profissionalSaude['cbo'] ?? null),
+            'registroProfissional' => $this->normalizeNullableScalarString($profissionalSaude['registroProfissional'] ?? null),
+            'clinicas' => $this->normalizeNullableScalarString($profissionalSaude['clinicas'] ?? null),
+            'especialidades' => $especialidades,
+            'especialidadesTexto' => $especialidadesNomeList !== []
+                ? implode(', ', array_values(array_unique($especialidadesNomeList)))
+                : null,
         ];
     }
 

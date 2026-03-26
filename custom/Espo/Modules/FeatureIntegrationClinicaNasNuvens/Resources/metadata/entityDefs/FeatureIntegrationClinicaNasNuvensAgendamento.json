@@ -13,6 +13,9 @@
         "paciente": {
             "type": "link"
         },
+        "profissionalAnchor": {
+            "type": "link"
+        },
         "credential": {
             "type": "link"
         },
@@ -31,10 +34,23 @@
             "maxLength": 100,
             "readOnly": true
         },
+        "idPessoaExecutor": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
         "idConvenio": {
             "type": "varchar",
             "maxLength": 100,
             "readOnly": true
+        },
+        "idTipoConvenio": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "convenioTipoAnchor": {
+            "type": "link"
         },
         "idEspecialidade": {
             "type": "varchar",
@@ -65,18 +81,20 @@
         },
         "status": {
             "type": "enum",
-            "options": ["agendado", "confirmado", "atendido", "finalizado", "em_espera", "cancelado", "cancelado_paciente", "falta", "remarcado", "encaixe", "bloqueado"],
+            "options": ["agendado", "confirmado", "confirmado_paciente", "atendido", "finalizado", "em_espera", "cancelado", "cancelado_paciente", "falta", "faltou", "remarcado", "encaixe", "bloqueado"],
             "displayAsLabel": true,
             "labelType": "state",
             "style": {
                 "agendado": "primary",
                 "confirmado": "info",
+                "confirmado_paciente": "info",
                 "atendido": "success",
                 "finalizado": "success",
                 "em_espera": "warning",
                 "cancelado": "danger",
                 "cancelado_paciente": "danger",
                 "falta": "warning",
+                "faltou": "warning",
                 "remarcado": "info",
                 "encaixe": "primary",
                 "bloqueado": "default"
@@ -168,6 +186,16 @@
             "entity": "FeatureIntegrationClinicaNasNuvensPaciente",
             "foreign": "agendamentos"
         },
+        "profissionalAnchor": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensProfissional",
+            "foreign": "agendamentos"
+        },
+        "convenioTipoAnchor": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensConvenioTipo",
+            "foreign": "agendamentos"
+        },
         "credential": {
             "type": "belongsTo",
             "entity": "Credential",
@@ -176,6 +204,11 @@
         "faturamentos": {
             "type": "hasMany",
             "entity": "FeatureIntegrationClinicaNasNuvensFaturamento",
+            "foreign": "agendamento"
+        },
+        "procedimentoItens": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento",
             "foreign": "agendamento"
         },
         "createdBy": {
@@ -200,6 +233,7 @@
             "name",
             "agendamentoId",
             "idPaciente",
+            "idPessoaExecutor",
             "status",
             "statusFaturamento",
             "profissional",
@@ -212,8 +246,14 @@
         "pacienteId": {
             "columns": ["pacienteId"]
         },
+        "profissionalAnchorId": {
+            "columns": ["profissionalAnchorId"]
+        },
         "credentialId": {
             "columns": ["credentialId"]
+        },
+        "convenioTipoAnchorId": {
+            "columns": ["convenioTipoAnchorId"]
         },
         "agendamentoIdCredential": {
             "unique": true,

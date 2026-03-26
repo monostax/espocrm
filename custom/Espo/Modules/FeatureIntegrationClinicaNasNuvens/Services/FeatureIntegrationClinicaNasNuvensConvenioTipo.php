@@ -397,6 +397,7 @@ class FeatureIntegrationClinicaNasNuvensConvenioTipo extends RecordService imple
                 'credentialId' => $credentialId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager

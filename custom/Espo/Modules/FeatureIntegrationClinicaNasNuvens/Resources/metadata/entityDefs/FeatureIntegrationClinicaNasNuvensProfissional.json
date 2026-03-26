@@ -1,0 +1,173 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "profissionalId": {
+            "type": "varchar",
+            "maxLength": 100,
+            "required": true,
+            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id"
+        },
+        "idPessoa": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "credential": {
+            "type": "link"
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "ativo": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "tipoExecutor": {
+            "type": "varchar",
+            "maxLength": 40,
+            "readOnly": true
+        },
+        "cpfcnpj": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "email": {
+            "type": "email",
+            "readOnly": true
+        },
+        "telefoneCelular": {
+            "type": "phone",
+            "readOnly": true
+        },
+        "telefoneComercial": {
+            "type": "phone",
+            "readOnly": true
+        },
+        "telefoneResidencial": {
+            "type": "phone",
+            "readOnly": true
+        },
+        "telefoneRecados": {
+            "type": "phone",
+            "readOnly": true
+        },
+        "profissional": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "profissionalCodigo": {
+            "type": "varchar",
+            "maxLength": 60,
+            "readOnly": true
+        },
+        "cbo": {
+            "type": "varchar",
+            "maxLength": 60,
+            "readOnly": true
+        },
+        "registroProfissional": {
+            "type": "varchar",
+            "maxLength": 60,
+            "readOnly": true
+        },
+        "especialidades": {
+            "type": "jsonArray",
+            "readOnly": true
+        },
+        "especialidadesTexto": {
+            "type": "text",
+            "readOnly": true
+        },
+        "clinicas": {
+            "type": "text",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        }
+    },
+    "links": {
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "clinicaNasNuvensProfissionais"
+        },
+        "agendamentos": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
+            "foreign": "profissionalAnchor"
+        },
+        "faturamentos": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensFaturamento",
+            "foreign": "profissionalAnchor"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "profissionalId",
+            "idPessoa",
+            "cpfcnpj",
+            "email",
+            "profissionalCodigo",
+            "registroProfissional",
+            "especialidadesTexto",
+            "credential"
+        ]
+    },
+    "indexes": {
+        "credentialId": {
+            "columns": ["credentialId"]
+        },
+        "idPessoaCredential": {
+            "columns": ["idPessoa", "credentialId", "deleted"]
+        },
+        "profissionalIdCredential": {
+            "unique": true,
+            "columns": ["profissionalId", "credentialId", "deleted"]
+        }
+    }
+}

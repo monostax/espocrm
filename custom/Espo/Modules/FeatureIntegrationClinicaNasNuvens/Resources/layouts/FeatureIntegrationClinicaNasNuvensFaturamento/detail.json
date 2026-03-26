@@ -8,7 +8,8 @@
             [{"name": "syncStatus"}, {"name": "valor"}],
             [{"name": "dataFaturamento"}, {"name": "dataVencimento"}],
             [{"name": "documento"}, {"name": "parcela"}],
-            [{"name": "profissionalNome"}, {"name": "conta"}]
+            [{"name": "profissionalNome"}, {"name": "conta"}],
+            [{"name": "profissionalAnchor"}, false]
         ]
     },
     {

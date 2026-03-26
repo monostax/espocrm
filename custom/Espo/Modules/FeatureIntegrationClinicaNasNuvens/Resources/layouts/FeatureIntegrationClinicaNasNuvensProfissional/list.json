@@ -1,0 +1,9 @@
+[
+    {"name": "name", "link": true, "width": 24},
+    {"name": "profissionalId", "width": 16},
+    {"name": "idPessoa", "width": 14},
+    {"name": "profissionalCodigo", "width": 12},
+    {"name": "registroProfissional", "width": 12},
+    {"name": "ativo", "width": 8},
+    {"name": "credential", "width": 14}
+]

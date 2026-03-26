@@ -1,0 +1,28 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "profissionalId"}],
+            [{"name": "idPessoa"}, {"name": "credential"}],
+            [{"name": "syncStatus"}, {"name": "ativo"}],
+            [{"name": "tipoExecutor"}, {"name": "profissional"}],
+            [{"name": "cpfcnpj"}, {"name": "email"}],
+            [{"name": "profissionalCodigo"}, {"name": "registroProfissional"}],
+            [{"name": "cbo"}, false]
+        ]
+    },
+    {
+        "label": "Contact",
+        "rows": [
+            [{"name": "telefoneCelular"}, {"name": "telefoneComercial"}],
+            [{"name": "telefoneResidencial"}, {"name": "telefoneRecados"}]
+        ]
+    },
+    {
+        "label": "Professional",
+        "rows": [
+            [{"name": "especialidadesTexto", "fullWidth": true}, false],
+            [{"name": "clinicas", "fullWidth": true}, false]
+        ]
+    }
+]

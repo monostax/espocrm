@@ -1,0 +1,94 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "agendamento": {
+            "type": "link"
+        },
+        "procedimentoTipo": {
+            "type": "link"
+        },
+        "quantidade": {
+            "type": "int",
+            "default": 1,
+            "min": 1
+        },
+        "procedimentoNome": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        }
+    },
+    "links": {
+        "agendamento": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
+            "foreign": "procedimentoItens"
+        },
+        "procedimentoTipo": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensProcedimentoTipo",
+            "foreign": "agendamentoItens"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "agendamento",
+            "procedimentoTipo",
+            "procedimentoNome"
+        ]
+    },
+    "indexes": {
+        "agendamentoId": {
+            "columns": ["agendamentoId"]
+        },
+        "procedimentoTipoId": {
+            "columns": ["procedimentoTipoId"]
+        },
+        "agendamentoProcedimentoTipo": {
+            "unique": true,
+            "columns": ["agendamentoId", "procedimentoTipoId", "deleted"]
+        }
+    }
+}

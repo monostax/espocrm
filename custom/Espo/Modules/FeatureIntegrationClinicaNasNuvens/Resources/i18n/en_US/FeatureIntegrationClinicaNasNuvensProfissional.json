@@ -1,0 +1,43 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensProfissional": "Clínica Nas Nuvens / Professional",
+        "Create FeatureIntegrationClinicaNasNuvensProfissional": "Create Professional Anchor",
+        "Overview": "Overview",
+        "Contact": "Contact",
+        "Professional": "Professional"
+    },
+    "fields": {
+        "name": "Name",
+        "profissionalId": "Remote Professional ID",
+        "idPessoa": "Remote Pessoa ID",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "ativo": "Active",
+        "tipoExecutor": "Executor Type",
+        "cpfcnpj": "CPF/CNPJ",
+        "email": "Email",
+        "telefoneCelular": "Mobile Phone",
+        "telefoneComercial": "Business Phone",
+        "telefoneResidencial": "Home Phone",
+        "telefoneRecados": "Message Phone",
+        "profissional": "Professional",
+        "profissionalCodigo": "Professional Code",
+        "cbo": "CBO",
+        "registroProfissional": "Professional Registration",
+        "especialidades": "Specialties (JSON)",
+        "especialidadesTexto": "Specialties",
+        "clinicas": "Clinics"
+    },
+    "links": {
+        "credential": "Credential",
+        "agendamentos": "Appointments",
+        "faturamentos": "Billings"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    }
+}

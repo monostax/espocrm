@@ -15,6 +15,7 @@
         "label": "Professional",
         "rows": [
             [{"name": "profissional"}, {"name": "idProfissional"}],
+            [{"name": "profissionalAnchor"}, {"name": "idPessoaExecutor"}],
             [{"name": "especialidade"}, {"name": "idEspecialidade"}],
             [{"name": "convenio"}, {"name": "idConvenio"}]
         ]

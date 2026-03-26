@@ -416,6 +416,7 @@ class FeatureIntegrationClinicaNasNuvensPaciente extends RecordService implement
                 'credentialId' => $credentialId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager

@@ -1,0 +1,6 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-layer-group",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy"]
+}

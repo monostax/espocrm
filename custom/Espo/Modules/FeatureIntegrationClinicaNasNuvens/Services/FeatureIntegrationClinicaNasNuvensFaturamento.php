@@ -488,6 +488,7 @@ class FeatureIntegrationClinicaNasNuvensFaturamento extends RecordService implem
             ->from('FeatureIntegrationClinicaNasNuvensAgendamento')
             ->where($where)
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->order('createdAt', 'ASC')
             ->build();
 
@@ -508,6 +509,7 @@ class FeatureIntegrationClinicaNasNuvensFaturamento extends RecordService implem
                 'credentialId' => $credentialId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager

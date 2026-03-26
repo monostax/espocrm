@@ -33,6 +33,16 @@
                 "selectDisabled": true,
                 "unlinkDisabled": true,
                 "order": 1
+            },
+            {
+                "name": "procedimentoItens",
+                "label": "Procedimentos",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "createDisabled": true,
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 2
             }
         ],
         "detailSmall": [
@@ -45,11 +55,26 @@
                 "selectDisabled": true,
                 "unlinkDisabled": true,
                 "order": 1
+            },
+            {
+                "name": "procedimentoItens",
+                "label": "Procedimentos",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "createDisabled": true,
+                "selectDisabled": true,
+                "unlinkDisabled": true,
+                "order": 2
             }
         ]
     },
     "relationshipPanels": {
         "faturamentos": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-remove"
+        },
+        "procedimentoItens": {
             "create": false,
             "select": false,
             "rowActionsView": "views/record/row-actions/relationship-no-remove"

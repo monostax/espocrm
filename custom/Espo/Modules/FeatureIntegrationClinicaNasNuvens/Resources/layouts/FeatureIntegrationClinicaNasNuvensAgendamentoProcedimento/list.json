@@ -1,0 +1,7 @@
+[
+    {"name": "name", "link": true, "width": 25},
+    {"name": "agendamento", "width": 20},
+    {"name": "procedimentoTipo", "width": 20},
+    {"name": "procedimentoNome", "width": 20},
+    {"name": "quantidade", "width": 8}
+]

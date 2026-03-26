@@ -28,6 +28,9 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 {
     use Di\LogSetter;
 
+    private const PROCEDIMENTO_TIPO_ENTITY_TYPE = 'FeatureIntegrationClinicaNasNuvensProcedimentoTipo';
+    private const AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE = 'FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento';
+
     private const ENRICHMENT_BATCH_SIZE = 25;
 
     /**
@@ -39,7 +42,9 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'agendamentoId',
         'idPaciente',
         'idProfissional',
+        'idPessoaExecutor',
         'idConvenio',
+        'idTipoConvenio',
         'idEspecialidade',
         'idUnidade',
         'idSala',
@@ -60,6 +65,10 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'syncStatus',
         'paciente',
         'pacienteId',
+        'profissionalAnchor',
+        'profissionalAnchorId',
+        'convenioTipoAnchor',
+        'convenioTipoAnchorId',
         'credential',
         'credentialId',
         'createdAt',
@@ -80,6 +89,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         'name',
         'idPaciente',
         'idProfissional',
+        'idPessoaExecutor',
         'idConvenio',
         'idEspecialidade',
         'idUnidade',
@@ -111,6 +121,11 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
      */
     private array $pacienteAnchorCache = [];
 
+    /**
+     * @var array<string, array{localId: ?string, localName: ?string}>
+     */
+    private array $profissionalAnchorCache = [];
+
     public function read(string $id, ReadParams $params): Entity
     {
         $entity = parent::read($id, $params);
@@ -131,6 +146,8 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     {
         $rawAgendamentoId = $this->extractRawAgendamentoIdFromInput($data);
         $rawPacienteId = $this->extractRawPacienteIdFromInput($data);
+        $rawProfissionalId = $this->extractRawProfissionalIdFromInput($data);
+        $rawPessoaExecutorId = $this->extractRawPessoaExecutorIdFromInput($data);
         $rawTeamIdList = $this->extractTeamIdListFromInput($data);
         $preCreateCredential = null;
 
@@ -213,6 +230,38 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             );
         }
 
+        try {
+            $resolvedProfissionalRefs = $this->resolveRemoteProfissionalRefsForCreate(
+                $rawProfissionalId,
+                $rawPessoaExecutorId,
+                $entity,
+                $credential,
+            );
+
+            $remoteProfissionalId = $resolvedProfissionalRefs['idProfissional'];
+            $remotePessoaExecutorId = $resolvedProfissionalRefs['idPessoaExecutor'];
+
+            if ($remoteProfissionalId || $remotePessoaExecutorId) {
+                $profissional = $this->findOrRestoreOrCreateProfissionalAnchor(
+                    $remoteProfissionalId,
+                    $remotePessoaExecutorId,
+                    $credentialId,
+                    $teamIdList,
+                );
+
+                if ($profissional) {
+                    $entity->set('profissionalAnchorId', $profissional->getId());
+
+                    $this->updateProfissionalAnchorCache($credentialId, $profissional);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: failed profissional upsert on create for agendamento '" .
+                $entity->getId() . "', credential '" . $credentialId . "': " . $e->getMessage()
+            );
+        }
+
         $this->enrichEntities([$entity], true);
         $entity = $this->persistAgendamentoAfterCreate($entity);
         $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
@@ -229,10 +278,89 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         }
 
         $teamIdList = $this->extractTeamIdList($entity);
+        $credential = $this->resolveAccessibleCredential($entity, $teamIdList);
+
+        if ($credential) {
+            $credentialId = $credential->getId();
+
+            if ($entity->get('credentialId') !== $credentialId) {
+                $entity->set('credentialId', $credentialId);
+            }
+
+            $this->createProfissionalAnchorForImport($entity, $credential, $credentialId, $teamIdList);
+            $this->createPacienteAnchorForImport($entity, $credential, $credentialId, $teamIdList);
+        }
 
         $this->enrichEntities([$entity], true);
         $this->persistAgendamentoAfterCreate($entity);
         $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
+    }
+
+    private function createProfissionalAnchorForImport(
+        Entity $entity,
+        Entity $credential,
+        string $credentialId,
+        array $teamIdList,
+    ): void {
+        try {
+            $resolvedProfissionalRefs = $this->resolveRemoteProfissionalRefsForCreate(
+                null,
+                null,
+                $entity,
+                $credential,
+            );
+
+            $remoteProfissionalId = $resolvedProfissionalRefs['idProfissional'];
+            $remotePessoaExecutorId = $resolvedProfissionalRefs['idPessoaExecutor'];
+
+            if ($remoteProfissionalId || $remotePessoaExecutorId) {
+                $profissional = $this->findOrRestoreOrCreateProfissionalAnchor(
+                    $remoteProfissionalId,
+                    $remotePessoaExecutorId,
+                    $credentialId,
+                    $teamIdList,
+                );
+
+                if ($profissional) {
+                    $entity->set('profissionalAnchorId', $profissional->getId());
+
+                    $this->updateProfissionalAnchorCache($credentialId, $profissional);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: failed profissional upsert on import for agendamento '" .
+                $entity->getId() . "', credential '" . $credentialId . "': " . $e->getMessage()
+            );
+        }
+    }
+
+    private function createPacienteAnchorForImport(
+        Entity $entity,
+        Entity $credential,
+        string $credentialId,
+        array $teamIdList,
+    ): void {
+        try {
+            $remotePacienteId = $this->resolveRemotePacienteIdForCreate(null, $entity, $credential);
+
+            if (!$remotePacienteId) {
+                return;
+            }
+
+            $paciente = $this->findOrRestoreOrCreatePacienteAnchor($remotePacienteId, $credentialId, $teamIdList);
+
+            if ($paciente) {
+                $entity->set('pacienteId', $paciente->getId());
+
+                $this->updatePacienteAnchorCache($remotePacienteId, $credentialId, $paciente);
+            }
+        } catch (Throwable $e) {
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: failed paciente upsert on import for agendamento '" .
+                $entity->getId() . "', credential '" . $credentialId . "': " . $e->getMessage()
+            );
+        }
     }
 
     private function assertAgendamentoExistsBeforeCreate(string $agendamentoId, ?Entity $credential): void
@@ -351,6 +479,76 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
             return null;
         }
+    }
+
+    /**
+     * @param ?string $rawProfissionalId
+     * @param ?string $rawPessoaExecutorId
+     * @return array{idProfissional: ?string, idPessoaExecutor: ?string}
+     */
+    private function resolveRemoteProfissionalRefsForCreate(
+        ?string $rawProfissionalId,
+        ?string $rawPessoaExecutorId,
+        Entity $entity,
+        Entity $credential,
+    ): array {
+        $resolvedProfissionalId = $rawProfissionalId
+            ?? $this->normalizeNullableString($entity->get('idProfissional'));
+        $resolvedPessoaExecutorId = $rawPessoaExecutorId
+            ?? $this->normalizeNullableString($entity->get('idPessoaExecutor'));
+
+        $credentialId = $this->normalizeNullableString($credential->getId());
+
+        if (!$resolvedProfissionalId && $resolvedPessoaExecutorId && $credentialId) {
+            $existing = $this->findProfissionalAnchorByPessoaIncludingDeleted($resolvedPessoaExecutorId, $credentialId);
+
+            if ($existing) {
+                $resolvedProfissionalId = $this->normalizeNullableString($existing->get('profissionalId'));
+            }
+        }
+
+        $agendamentoId = $this->normalizeNullableString($entity->get('agendamentoId'));
+
+        if ((!$resolvedProfissionalId || !$resolvedPessoaExecutorId) && $agendamentoId) {
+            try {
+                $payload = $this->getApiClient()->getAgendaById($credential, $agendamentoId);
+
+                $resolvedProfissionalId = $resolvedProfissionalId
+                    ?? $this->normalizeNullableString($payload['idProfissional'] ?? null);
+                $resolvedPessoaExecutorId = $resolvedPessoaExecutorId
+                    ?? $this->normalizeNullableString($payload['idPessoaExecutor'] ?? null);
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento: failed to resolve remote profissional refs from agenda '" .
+                    $agendamentoId . "' on create: " . $e->getMessage()
+                );
+            }
+        }
+
+        if (!$resolvedProfissionalId && $resolvedPessoaExecutorId) {
+            try {
+                $resolvedProfissionalId = $this->getApiClient()
+                    ->resolveExecutorAgendaIdByPessoaId($credential, $resolvedPessoaExecutorId);
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento: failed to resolve executor-agenda id from idPessoaExecutor '" .
+                    $resolvedPessoaExecutorId . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        if ($resolvedProfissionalId) {
+            $entity->set('idProfissional', $resolvedProfissionalId);
+        }
+
+        if ($resolvedPessoaExecutorId) {
+            $entity->set('idPessoaExecutor', $resolvedPessoaExecutorId);
+        }
+
+        return [
+            'idProfissional' => $resolvedProfissionalId,
+            'idPessoaExecutor' => $resolvedPessoaExecutorId,
+        ];
     }
 
     private function assertSearchParamsUseStorableFields(SearchParams $searchParams): void
@@ -565,6 +763,81 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
                             $entity->set('pacienteName', $localPacienteName);
 
+                            $localProfissionalAnchor = $this->findLocalProfissionalAnchor(
+                                $this->normalizeNullableString($entity->get('idProfissional')),
+                                $this->normalizeNullableString($entity->get('idPessoaExecutor')),
+                                $credentialId,
+                            );
+
+                            if ($persist && $localProfissionalAnchor['localId'] === null) {
+                                try {
+                                    $enrichIdProfissional = $this->normalizeNullableString($entity->get('idProfissional'));
+                                    $enrichIdPessoaExecutor = $this->normalizeNullableString($entity->get('idPessoaExecutor'));
+
+                                    if (!$enrichIdProfissional && $enrichIdPessoaExecutor) {
+                                        try {
+                                            $enrichIdProfissional = $this->getApiClient()
+                                                ->resolveExecutorAgendaIdByPessoaId($credential, $enrichIdPessoaExecutor);
+
+                                            if ($enrichIdProfissional) {
+                                                $entity->set('idProfissional', $enrichIdProfissional);
+                                            }
+                                        } catch (Throwable $e) {
+                                            $this->log->warning(
+                                                "FeatureIntegrationClinicaNasNuvensAgendamento: failed to resolve profissionalId " .
+                                                "from idPessoaExecutor '" . $enrichIdPessoaExecutor . "' for agendamento '" .
+                                                $entity->getId() . "': " . $e->getMessage()
+                                            );
+                                        }
+                                    }
+
+                                    $profissional = $this->findOrRestoreOrCreateProfissionalAnchor(
+                                        $enrichIdProfissional,
+                                        $enrichIdPessoaExecutor,
+                                        $credentialId,
+                                        $this->extractTeamIdList($entity),
+                                    );
+
+                                    if ($profissional) {
+                                        $this->updateProfissionalAnchorCache($credentialId, $profissional);
+
+                                        $localProfissionalAnchor = [
+                                            'localId' => $profissional->getId(),
+                                            'localName' => $this->normalizeNullableString($profissional->get('name')),
+                                        ];
+
+                                        $resolvedProfissionalId = $this->normalizeNullableString($profissional->get('profissionalId'));
+                                        $resolvedPessoaExecutorId = $this->normalizeNullableString($profissional->get('idPessoa'));
+
+                                        if ($resolvedProfissionalId !== null) {
+                                            $entity->set('idProfissional', $resolvedProfissionalId);
+                                        }
+
+                                        if ($resolvedPessoaExecutorId !== null) {
+                                            $entity->set('idPessoaExecutor', $resolvedPessoaExecutorId);
+                                        }
+                                    }
+                                } catch (Throwable $e) {
+                                    $this->log->warning(
+                                        "FeatureIntegrationClinicaNasNuvensAgendamento: failed profissional upsert on read for agendamento '" .
+                                        $entity->getId() . "', credential '" . $credentialId . "': " . $e->getMessage()
+                                    );
+                                }
+                            }
+
+                            $localProfissionalId = $localProfissionalAnchor['localId'];
+                            $localProfissionalName = $localProfissionalAnchor['localName'];
+
+                            $entity->set('profissionalAnchorId', $localProfissionalId);
+                            $entity->set('profissionalAnchorName', $localProfissionalName);
+
+                            if (
+                                $localProfissionalName !== null &&
+                                !$this->hasNonBlankValue($entity->get('profissional'))
+                            ) {
+                                $entity->set('profissional', $localProfissionalName);
+                            }
+
                             $generatedName = $this->generateName($entity, $payload, $localPacienteName);
 
                             if ($generatedName !== null && $generatedName !== '') {
@@ -587,8 +860,15 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                                     'synced',
                                     $credentialId,
                                     $localPacienteId,
+                                    $localProfissionalId,
                                     $generatedName,
                                     $billingSnapshot,
+                                );
+
+                                $this->syncAgendamentoProcedimentoTipoLinks(
+                                    $entity,
+                                    $entityPayload,
+                                    $credentialId,
                                 );
                             }
                         }
@@ -612,6 +892,14 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
      */
     private function extractTeamIdList(Entity $entity): array
     {
+        return $this->extractTeamIdListForEntity($entity, 'FeatureIntegrationClinicaNasNuvensAgendamento');
+    }
+
+    /**
+     * @return string[]
+     */
+    private function extractTeamIdListForEntity(Entity $entity, string $entityType): array
+    {
         $teamIdList = $entity->get('teamsIds');
 
         if (is_array($teamIdList) && $teamIdList !== []) {
@@ -629,7 +917,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             ->select(['teamId'])
             ->from('EntityTeam')
             ->where([
-                'entityType' => 'FeatureIntegrationClinicaNasNuvensAgendamento',
+                'entityType' => $entityType,
                 'entityId' => $entityId,
                 'deleted' => false,
             ])
@@ -738,6 +1026,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                 'credentialId' => $credentialId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager
@@ -779,6 +1068,192 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             SaveOption::SKIP_HOOKS => true,
             SaveOption::SKIP_MODIFIED_BY => true,
         ]);
+    }
+
+    private function findOrRestoreOrCreateProfissionalAnchor(
+        ?string $remoteProfissionalId,
+        ?string $remotePessoaExecutorId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        $profissional = null;
+
+        if ($remoteProfissionalId) {
+            $profissional = $this->findProfissionalAnchorIncludingDeleted($remoteProfissionalId, $credentialId);
+        }
+
+        if (!$profissional && $remotePessoaExecutorId) {
+            $profissional = $this->findProfissionalAnchorByPessoaIncludingDeleted($remotePessoaExecutorId, $credentialId);
+        }
+
+        if ($profissional) {
+            $profissional = $this->restoreProfissionalIfDeleted($profissional);
+
+            if ($profissional) {
+                $this->mergeTeamsIntoProfissionalAnchor($profissional, $teamIdList);
+            }
+
+            return $profissional;
+        }
+
+        if (!$remoteProfissionalId && $remotePessoaExecutorId) {
+            return null;
+        }
+
+        if (!$remoteProfissionalId) {
+            return null;
+        }
+
+        return $this->createProfissionalAnchorWithConflictRecovery(
+            $remoteProfissionalId,
+            $remotePessoaExecutorId,
+            $credentialId,
+            $teamIdList,
+        );
+    }
+
+    private function createProfissionalAnchorWithConflictRecovery(
+        string $remoteProfissionalId,
+        ?string $remotePessoaExecutorId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        try {
+            return $this->entityManager->createEntity('FeatureIntegrationClinicaNasNuvensProfissional', [
+                'profissionalId' => $remoteProfissionalId,
+                'idPessoa' => $remotePessoaExecutorId,
+                'credentialId' => $credentialId,
+                'teamsIds' => $teamIdList,
+                'syncStatus' => 'pending',
+            ], [
+                SaveOption::SILENT => true,
+            ]);
+        } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            $this->log->warning(
+                "FeatureIntegrationClinicaNasNuvensAgendamento: duplicate profissional anchor race for remote profissional '" .
+                $remoteProfissionalId . "' and credential '" . $credentialId . "', retrying lookup."
+            );
+
+            $existing = $this->findProfissionalAnchorIncludingDeleted($remoteProfissionalId, $credentialId);
+
+            if (!$existing && $remotePessoaExecutorId) {
+                $existing = $this->findProfissionalAnchorByPessoaIncludingDeleted($remotePessoaExecutorId, $credentialId);
+            }
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $existing = $this->restoreProfissionalIfDeleted($existing);
+
+            if ($existing) {
+                $this->mergeTeamsIntoProfissionalAnchor($existing, $teamIdList);
+            }
+
+            return $existing;
+        }
+    }
+
+    private function findProfissionalAnchorIncludingDeleted(string $remoteProfissionalId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('FeatureIntegrationClinicaNasNuvensProfissional')
+            ->where([
+                'profissionalId' => $remoteProfissionalId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->order('deleted', 'ASC')
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProfissional')
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function findProfissionalAnchorByPessoaIncludingDeleted(string $remotePessoaExecutorId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('FeatureIntegrationClinicaNasNuvensProfissional')
+            ->where([
+                'idPessoa' => $remotePessoaExecutorId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->order('deleted', 'ASC')
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProfissional')
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restoreProfissionalIfDeleted(Entity $profissional): ?Entity
+    {
+        if (!$profissional->get('deleted')) {
+            return $profissional;
+        }
+
+        $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProfissional')
+            ->restoreDeleted($profissional->getId());
+
+        return $this->entityManager
+            ->getEntityById('FeatureIntegrationClinicaNasNuvensProfissional', $profissional->getId());
+    }
+
+    /**
+     * @param string[] $agendamentoTeamIdList
+     */
+    private function mergeTeamsIntoProfissionalAnchor(Entity $profissional, array $agendamentoTeamIdList): void
+    {
+        $existingTeamIdList = $this->extractTeamIdList($profissional);
+
+        $mergedTeamIdList = array_values(array_unique(array_merge($existingTeamIdList, $agendamentoTeamIdList)));
+
+        if ($mergedTeamIdList === $existingTeamIdList) {
+            return;
+        }
+
+        $profissional->set('teamsIds', $mergedTeamIdList);
+
+        $this->entityManager->saveEntity($profissional, [
+            SaveOption::SILENT => true,
+            SaveOption::SKIP_HOOKS => true,
+            SaveOption::SKIP_MODIFIED_BY => true,
+        ]);
+    }
+
+    private function updateProfissionalAnchorCache(string $credentialId, Entity $profissional): void
+    {
+        $name = $profissional->get('name');
+
+        $resolved = [
+            'localId' => $profissional->getId(),
+            'localName' => is_string($name) && trim($name) !== '' ? trim($name) : null,
+        ];
+
+        $profissionalId = $this->normalizeNullableString($profissional->get('profissionalId'));
+
+        if ($profissionalId) {
+            $this->profissionalAnchorCache[$credentialId . '::pid::' . $profissionalId] = $resolved;
+        }
+
+        $idPessoa = $this->normalizeNullableString($profissional->get('idPessoa'));
+
+        if ($idPessoa) {
+            $this->profissionalAnchorCache[$credentialId . '::pessoa::' . $idPessoa] = $resolved;
+        }
     }
 
     private function persistAgendamentoAfterCreate(Entity $entity): Entity
@@ -837,6 +1312,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                 'credentialId' => $credentialId,
             ])
             ->withDeleted()
+            ->order('deleted', 'ASC')
             ->build();
 
         return $this->entityManager
@@ -892,15 +1368,367 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     }
 
     /**
+     * @param array<string, mixed> $payload
+     */
+    private function syncAgendamentoProcedimentoTipoLinks(Entity $agendamento, array $payload, string $credentialId): void
+    {
+        $agendamentoLocalId = $this->normalizeNullableString($agendamento->getId());
+
+        if ($agendamentoLocalId === null) {
+            return;
+        }
+
+        $aggregatedRows = $this->collectProcedimentoTipoAggregatesFromPayload($payload);
+
+        $teamIdList = $this->extractTeamIdList($agendamento);
+        $processedProcedimentoTipoIds = [];
+
+        foreach ($aggregatedRows as $remoteProcedimentoTipoId => $row) {
+            try {
+                $procedimentoTipo = $this->findOrRestoreOrCreateProcedimentoTipoAnchor(
+                    $remoteProcedimentoTipoId,
+                    $credentialId,
+                    $teamIdList,
+                );
+
+                if (!$procedimentoTipo) {
+                    continue;
+                }
+
+                $procedimentoTipoLocalId = $this->normalizeNullableString($procedimentoTipo->getId());
+
+                if ($procedimentoTipoLocalId === null) {
+                    continue;
+                }
+
+                $processedProcedimentoTipoIds[] = $procedimentoTipoLocalId;
+
+                $child = $this->findAgendamentoProcedimentoIncludingDeleted($agendamentoLocalId, $procedimentoTipoLocalId);
+
+                if (!$child) {
+                    $child = $this->createAgendamentoProcedimentoWithConflictRecovery(
+                        $agendamentoLocalId,
+                        $procedimentoTipoLocalId,
+                        $teamIdList,
+                    );
+                }
+
+                if (!$child) {
+                    continue;
+                }
+
+                if ((bool) $child->get('deleted')) {
+                    $this->entityManager
+                        ->getRDBRepository(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE)
+                        ->restoreDeleted($child->getId());
+
+                    $reloaded = $this->entityManager->getEntityById(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE, $child->getId());
+
+                    if ($reloaded instanceof Entity) {
+                        $child = $reloaded;
+                    }
+                }
+
+                $child->set([
+                    'agendamentoId' => $agendamentoLocalId,
+                    'procedimentoTipoId' => $procedimentoTipoLocalId,
+                    'quantidade' => $row['quantidade'],
+                    'procedimentoNome' => $row['nome'],
+                    'teamsIds' => $teamIdList,
+                ]);
+
+                $this->entityManager->saveEntity($child, [
+                    SaveOption::SILENT => true,
+                    SaveOption::SKIP_MODIFIED_BY => true,
+                ]);
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "FeatureIntegrationClinicaNasNuvensAgendamento: failed to sync procedimento tipo links for agendamento '" .
+                    $agendamentoLocalId . "', credential '" . $credentialId . "', procedimentoTipoId '" .
+                    $remoteProcedimentoTipoId . "': " . $e->getMessage()
+                );
+            }
+        }
+
+        $processedProcedimentoTipoIds = array_values(array_unique($processedProcedimentoTipoIds));
+
+        $activeRows = $this->entityManager
+            ->getRDBRepository(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE)
+            ->where([
+                'agendamentoId' => $agendamentoLocalId,
+                'deleted' => false,
+            ])
+            ->find();
+
+        foreach ($activeRows as $activeRow) {
+            $procedimentoTipoId = $this->normalizeNullableString($activeRow->get('procedimentoTipoId'));
+
+            if ($procedimentoTipoId !== null && in_array($procedimentoTipoId, $processedProcedimentoTipoIds, true)) {
+                continue;
+            }
+
+            $this->entityManager->removeEntity($activeRow, [
+                SaveOption::SILENT => true,
+                SaveOption::SKIP_MODIFIED_BY => true,
+            ]);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, array{quantidade: int, nome: ?string}>
+     */
+    private function collectProcedimentoTipoAggregatesFromPayload(array $payload): array
+    {
+        $procedimentos = $payload['procedimentos'] ?? null;
+
+        if (!is_array($procedimentos)) {
+            return [];
+        }
+
+        $aggregated = [];
+
+        foreach ($procedimentos as $procedimento) {
+            if (!is_array($procedimento)) {
+                continue;
+            }
+
+            $procedimentoTipoId = $this->normalizeNullableString($procedimento['idTipoProcedimento'] ?? null);
+
+            if ($procedimentoTipoId === null) {
+                continue;
+            }
+
+            $quantidade = $this->normalizeProcedimentoQuantidade($procedimento['quantidade'] ?? null);
+            $nome = $this->normalizeNullableString($procedimento['nome'] ?? null);
+
+            if (!array_key_exists($procedimentoTipoId, $aggregated)) {
+                $aggregated[$procedimentoTipoId] = [
+                    'quantidade' => 0,
+                    'nome' => $nome,
+                ];
+            }
+
+            $aggregated[$procedimentoTipoId]['quantidade'] += $quantidade;
+
+            if ($aggregated[$procedimentoTipoId]['nome'] === null && $nome !== null) {
+                $aggregated[$procedimentoTipoId]['nome'] = $nome;
+            }
+        }
+
+        return $aggregated;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeProcedimentoQuantidade($value): int
+    {
+        if ($value === null) {
+            return 1;
+        }
+
+        if (is_int($value)) {
+            return $value > 0 ? $value : 1;
+        }
+
+        if (is_float($value)) {
+            $normalized = (int) round($value);
+
+            return $normalized > 0 ? $normalized : 1;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '' || !is_numeric($trimmed)) {
+                return 1;
+            }
+
+            $normalized = (int) round((float) $trimmed);
+
+            return $normalized > 0 ? $normalized : 1;
+        }
+
+        return 1;
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function findOrRestoreOrCreateProcedimentoTipoAnchor(
+        string $remoteProcedimentoTipoId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        $procedimentoTipo = $this->findProcedimentoTipoAnchorIncludingDeleted($remoteProcedimentoTipoId, $credentialId);
+
+        if ($procedimentoTipo) {
+            $procedimentoTipo = $this->restoreProcedimentoTipoIfDeleted($procedimentoTipo);
+
+            if ($procedimentoTipo) {
+                $this->mergeTeamsIntoProcedimentoTipoAnchor($procedimentoTipo, $teamIdList);
+            }
+
+            return $procedimentoTipo;
+        }
+
+        return $this->createProcedimentoTipoAnchorWithConflictRecovery(
+            $remoteProcedimentoTipoId,
+            $credentialId,
+            $teamIdList,
+        );
+    }
+
+    private function findProcedimentoTipoAnchorIncludingDeleted(string $procedimentoTipoId, string $credentialId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from(self::PROCEDIMENTO_TIPO_ENTITY_TYPE)
+            ->where([
+                'procedimentoTipoId' => $procedimentoTipoId,
+                'credentialId' => $credentialId,
+            ])
+            ->withDeleted()
+            ->order('deleted', 'ASC')
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository(self::PROCEDIMENTO_TIPO_ENTITY_TYPE)
+            ->clone($query)
+            ->findOne();
+    }
+
+    private function restoreProcedimentoTipoIfDeleted(Entity $procedimentoTipo): ?Entity
+    {
+        if (!$procedimentoTipo->get('deleted')) {
+            return $procedimentoTipo;
+        }
+
+        $this->entityManager
+            ->getRDBRepository(self::PROCEDIMENTO_TIPO_ENTITY_TYPE)
+            ->restoreDeleted($procedimentoTipo->getId());
+
+        return $this->entityManager->getEntityById(self::PROCEDIMENTO_TIPO_ENTITY_TYPE, $procedimentoTipo->getId());
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function mergeTeamsIntoProcedimentoTipoAnchor(Entity $procedimentoTipo, array $teamIdList): void
+    {
+        $existingTeamIdList = $this->extractTeamIdListForEntity($procedimentoTipo, self::PROCEDIMENTO_TIPO_ENTITY_TYPE);
+        $mergedTeamIdList = array_values(array_unique(array_merge($existingTeamIdList, $teamIdList)));
+
+        if ($mergedTeamIdList === $existingTeamIdList) {
+            return;
+        }
+
+        $procedimentoTipo->set('teamsIds', $mergedTeamIdList);
+
+        $this->entityManager->saveEntity($procedimentoTipo, [
+            SaveOption::SILENT => true,
+            SaveOption::SKIP_HOOKS => true,
+            SaveOption::SKIP_MODIFIED_BY => true,
+        ]);
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function createProcedimentoTipoAnchorWithConflictRecovery(
+        string $remoteProcedimentoTipoId,
+        string $credentialId,
+        array $teamIdList,
+    ): ?Entity {
+        try {
+            return $this->entityManager->createEntity(self::PROCEDIMENTO_TIPO_ENTITY_TYPE, [
+                'procedimentoTipoId' => $remoteProcedimentoTipoId,
+                'credentialId' => $credentialId,
+                'teamsIds' => $teamIdList,
+                'syncStatus' => 'pending',
+            ], [
+                SaveOption::SILENT => true,
+            ]);
+        } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            $existing = $this->findProcedimentoTipoAnchorIncludingDeleted($remoteProcedimentoTipoId, $credentialId);
+
+            if (!$existing) {
+                throw $e;
+            }
+
+            $existing = $this->restoreProcedimentoTipoIfDeleted($existing);
+
+            if ($existing) {
+                $this->mergeTeamsIntoProcedimentoTipoAnchor($existing, $teamIdList);
+            }
+
+            return $existing;
+        }
+    }
+
+    private function findAgendamentoProcedimentoIncludingDeleted(
+        string $agendamentoLocalId,
+        string $procedimentoTipoLocalId,
+    ): ?Entity {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE)
+            ->where([
+                'agendamentoId' => $agendamentoLocalId,
+                'procedimentoTipoId' => $procedimentoTipoLocalId,
+            ])
+            ->withDeleted()
+            ->order('deleted', 'ASC')
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE)
+            ->clone($query)
+            ->findOne();
+    }
+
+    /**
+     * @param string[] $teamIdList
+     */
+    private function createAgendamentoProcedimentoWithConflictRecovery(
+        string $agendamentoLocalId,
+        string $procedimentoTipoLocalId,
+        array $teamIdList,
+    ): ?Entity {
+        try {
+            return $this->entityManager->createEntity(self::AGENDAMENTO_PROCEDIMENTO_ENTITY_TYPE, [
+                'agendamentoId' => $agendamentoLocalId,
+                'procedimentoTipoId' => $procedimentoTipoLocalId,
+                'teamsIds' => $teamIdList,
+            ], [
+                SaveOption::SILENT => true,
+            ]);
+        } catch (Throwable $e) {
+            if (!$this->isDuplicateConstraintViolation($e)) {
+                throw $e;
+            }
+
+            return $this->findAgendamentoProcedimentoIncludingDeleted($agendamentoLocalId, $procedimentoTipoLocalId);
+        }
+    }
+
+    /**
      * @param mixed $value
      */
     private function normalizeNullableString($value): ?string
     {
-        if (!is_string($value)) {
+        if (!is_scalar($value)) {
             return null;
         }
 
-        $trimmed = trim($value);
+        $trimmed = trim((string) $value);
 
         return $trimmed !== '' ? $trimmed : null;
     }
@@ -912,6 +1740,24 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         }
 
         return $this->normalizeNullableString($data->idPaciente);
+    }
+
+    private function extractRawProfissionalIdFromInput(stdClass $data): ?string
+    {
+        if (!property_exists($data, 'idProfissional')) {
+            return null;
+        }
+
+        return $this->normalizeNullableString($data->idProfissional);
+    }
+
+    private function extractRawPessoaExecutorIdFromInput(stdClass $data): ?string
+    {
+        if (!property_exists($data, 'idPessoaExecutor')) {
+            return null;
+        }
+
+        return $this->normalizeNullableString($data->idPessoaExecutor);
     }
 
     private function extractRawAgendamentoIdFromInput(stdClass $data): ?string
@@ -1123,6 +1969,24 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $entity->set('pacienteName', $localPacienteAnchor['localName']);
         }
 
+        $localProfissionalAnchor = $this->findLocalProfissionalAnchor(
+            $this->normalizeNullableString($entity->get('idProfissional')),
+            $this->normalizeNullableString($entity->get('idPessoaExecutor')),
+            $credentialId,
+        );
+
+        if ($localProfissionalAnchor['localId'] !== null) {
+            $entity->set('profissionalAnchorId', $localProfissionalAnchor['localId']);
+            $entity->set('profissionalAnchorName', $localProfissionalAnchor['localName']);
+
+            if (
+                $localProfissionalAnchor['localName'] !== null &&
+                !$this->hasNonBlankValue($entity->get('profissional'))
+            ) {
+                $entity->set('profissional', $localProfissionalAnchor['localName']);
+            }
+        }
+
         $billingSnapshot = $this->findLatestFaturamentoSnapshot($entity);
 
         if ($billingSnapshot !== null) {
@@ -1265,6 +2129,65 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     }
 
     /**
+     * @return array{localId: ?string, localName: ?string}
+     */
+    private function findLocalProfissionalAnchor(
+        ?string $remoteProfissionalId,
+        ?string $remotePessoaExecutorId,
+        ?string $credentialId,
+    ): array {
+        if ((!$remoteProfissionalId && !$remotePessoaExecutorId) || !$credentialId) {
+            return ['localId' => null, 'localName' => null];
+        }
+
+        if ($remoteProfissionalId) {
+            $cacheKeyByProfissional = $credentialId . '::pid::' . $remoteProfissionalId;
+
+            if (isset($this->profissionalAnchorCache[$cacheKeyByProfissional])) {
+                return $this->profissionalAnchorCache[$cacheKeyByProfissional];
+            }
+        }
+
+        if ($remotePessoaExecutorId) {
+            $cacheKeyByPessoa = $credentialId . '::pessoa::' . $remotePessoaExecutorId;
+
+            if (isset($this->profissionalAnchorCache[$cacheKeyByPessoa])) {
+                return $this->profissionalAnchorCache[$cacheKeyByPessoa];
+            }
+        }
+
+        $queryWhere = [
+            'credentialId' => $credentialId,
+            'deleted' => false,
+        ];
+
+        if ($remoteProfissionalId) {
+            $queryWhere['profissionalId'] = $remoteProfissionalId;
+        } elseif ($remotePessoaExecutorId) {
+            $queryWhere['idPessoa'] = $remotePessoaExecutorId;
+        }
+
+        $profissional = $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProfissional')
+            ->select(['id', 'name', 'profissionalId', 'idPessoa'])
+            ->where($queryWhere)
+            ->findOne();
+
+        $resolved = [
+            'localId' => $profissional?->getId(),
+            'localName' => $profissional && is_string($profissional->get('name')) && trim((string) $profissional->get('name')) !== ''
+                ? trim((string) $profissional->get('name'))
+                : null,
+        ];
+
+        if ($profissional) {
+            $this->updateProfissionalAnchorCache($credentialId, $profissional);
+        }
+
+        return $resolved;
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     private function persistHydratedFields(
@@ -1273,6 +2196,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         string $syncStatus,
         string $credentialId,
         ?string $localPacienteId,
+        ?string $localProfissionalId,
         ?string $generatedName,
         ?array $billingSnapshot,
     ): void {
@@ -1326,6 +2250,10 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
 
         if ($entity->getFetched('pacienteId') !== $localPacienteId) {
             $toPersist['pacienteId'] = $localPacienteId;
+        }
+
+        if ($entity->getFetched('profissionalAnchorId') !== $localProfissionalId) {
+            $toPersist['profissionalAnchorId'] = $localProfissionalId;
         }
 
         if ($entity->getFetched('syncStatus') !== $syncStatus) {

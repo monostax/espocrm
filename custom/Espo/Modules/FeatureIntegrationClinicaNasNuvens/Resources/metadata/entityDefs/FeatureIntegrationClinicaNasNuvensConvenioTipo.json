@@ -60,6 +60,11 @@
             "entity": "Credential",
             "foreign": "clinicaNasNuvensConvenioTipos"
         },
+        "agendamentos": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensAgendamento",
+            "foreign": "convenioTipoAnchor"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
