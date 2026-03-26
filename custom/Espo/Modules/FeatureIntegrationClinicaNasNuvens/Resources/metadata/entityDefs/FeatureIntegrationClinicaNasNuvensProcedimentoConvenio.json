@@ -1,0 +1,102 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "procedimentoTipo": {
+            "type": "link"
+        },
+        "convenioTipo": {
+            "type": "link"
+        },
+        "codigoTipoProcedimentoConvenio": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "isActive": {
+            "type": "bool"
+        },
+        "convenioName": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "precoPaciente": {
+            "type": "currency"
+        },
+        "precoConvenio": {
+            "type": "currency"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        }
+    },
+    "links": {
+        "procedimentoTipo": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensProcedimentoTipo",
+            "foreign": "convenioPrecificacoes"
+        },
+        "convenioTipo": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensConvenioTipo"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "isActive",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "codigoTipoProcedimentoConvenio",
+            "procedimentoTipo",
+            "convenioTipo",
+            "convenioName"
+        ]
+    },
+    "indexes": {
+        "procedimentoTipoId": {
+            "columns": ["procedimentoTipoId"]
+        },
+        "convenioTipoId": {
+            "columns": ["convenioTipoId"]
+        },
+        "procedimentoTipoConvenio": {
+            "unique": true,
+            "columns": ["procedimentoTipoId", "convenioTipoId", "deleted"]
+        }
+    }
+}

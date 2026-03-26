@@ -1,0 +1,11 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "procedimentoTipo"}, {"name": "convenioTipo"}],
+            [{"name": "convenioName"}, {"name": "isActive"}],
+            [{"name": "precoPaciente"}, {"name": "precoConvenio"}],
+            [{"name": "codigoTipoProcedimentoConvenio"}, false]
+        ]
+    }
+]

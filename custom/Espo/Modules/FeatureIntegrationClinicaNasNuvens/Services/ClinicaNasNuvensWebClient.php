@@ -21,6 +21,8 @@ class ClinicaNasNuvensWebClient implements
         'https://app.clinicanasnuvens.com.br/lancamentos/detalhesConta?codigoDetalhe=%s';
     private const RESUMO_AGENDA_FINANCEIRO_URL_TEMPLATE =
         'https://app.clinicanasnuvens.com.br/resumoAgenda-financeiro?codigoAgenda=%s';
+    private const PROCEDIMENTO_URL_TEMPLATE =
+        'https://app.clinicanasnuvens.com.br/procedimento/%s?page=1&ativo=';
     private const TIMEOUT_SECONDS = 20;
     private const CONNECT_TIMEOUT_SECONDS = 8;
     private const USER_AGENT =
@@ -119,6 +121,68 @@ class ClinicaNasNuvensWebClient implements
         $snapshot = $this->getResumoAgendaFinanceiroSnapshotByAgendamentoId($credential, $agendamentoId);
 
         return $snapshot['statusFaturamento'];
+    }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, telemetry: array<string, int>}
+     */
+    public function getProcedimentoConvenioPricingByProcedimentoId(Entity $credential, string $procedimentoTipoId): array
+    {
+        $url = sprintf(self::PROCEDIMENTO_URL_TEMPLATE, rawurlencode($procedimentoTipoId));
+        $config = $this->extractCredentialConfig($credential);
+        $cookies = $this->normalizeNullableString($config['sessionCookies'] ?? null);
+
+        if (!$cookies) {
+            throw new Error("Missing session cookies for credential '{$credential->getId()}'.");
+        }
+
+        $firstAttempt = $this->requestDetailsPage($url, $cookies);
+        $firstValidation = $this->validateProcedimentoHtml($firstAttempt['status'], $firstAttempt['body']);
+
+        if ($firstValidation['valid']) {
+            $rows = $this->parseProcedimentoConvenioPricingHtml($firstAttempt['body']);
+
+            return [
+                'rows' => $rows,
+                'telemetry' => [
+                    'attempts' => 1,
+                    'rowsParsed' => count($rows),
+                ],
+            ];
+        }
+
+        if (!$firstValidation['authLike']) {
+            throw new Error(
+                "Invalid procedimento HTML response for '{$procedimentoTipoId}': {$firstValidation['reason']}"
+            );
+        }
+
+        $refreshedCookies = $this->refreshCredentialSessionCookies($credential);
+
+        if (!$refreshedCookies) {
+            throw new Error(
+                "Web session refresh failed for credential '{$credential->getId()}' while loading procedimento '{$procedimentoTipoId}'."
+            );
+        }
+
+        $retryAttempt = $this->requestDetailsPage($url, $refreshedCookies);
+        $retryValidation = $this->validateProcedimentoHtml($retryAttempt['status'], $retryAttempt['body']);
+
+        if (!$retryValidation['valid']) {
+            throw new Error(
+                "Invalid procedimento HTML response after retry for '{$procedimentoTipoId}': {$retryValidation['reason']}"
+            );
+        }
+
+        $rows = $this->parseProcedimentoConvenioPricingHtml($retryAttempt['body']);
+
+        return [
+            'rows' => $rows,
+            'telemetry' => [
+                'attempts' => 2,
+                'rowsParsed' => count($rows),
+            ],
+        ];
     }
 
     /**
@@ -374,6 +438,68 @@ class ClinicaNasNuvensWebClient implements
     }
 
     /**
+     * @return array{valid:bool, authLike:bool, reason:string}
+     */
+    protected function validateProcedimentoHtml(int $status, string $html): array
+    {
+        $normalizedHtml = strtolower($html);
+
+        if ($status !== 200) {
+            return [
+                'valid' => false,
+                'authLike' => $status === 401 || $status === 403,
+                'reason' => "HTTP {$status}",
+            ];
+        }
+
+        if ($normalizedHtml === '') {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'empty-response',
+            ];
+        }
+
+        if (
+            str_contains($normalizedHtml, 'attention required') &&
+            str_contains($normalizedHtml, 'cloudflare')
+        ) {
+            return [
+                'valid' => false,
+                'authLike' => true,
+                'reason' => 'cloudflare-challenge',
+            ];
+        }
+
+        if (
+            str_contains($normalizedHtml, 'b2clogin.com') ||
+            str_contains($normalizedHtml, 'name="password"') ||
+            str_contains($normalizedHtml, 'name="email"') ||
+            str_contains($normalizedHtml, 'fazer login')
+        ) {
+            return [
+                'valid' => false,
+                'authLike' => true,
+                'reason' => 'login-page-detected',
+            ];
+        }
+
+        if (!str_contains($normalizedHtml, 'id="convenios"') && !str_contains($normalizedHtml, "id='convenios'")) {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'non-target-html',
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'authLike' => false,
+            'reason' => 'ok',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function parseDetalhesContaHtml(string $html, string $faturamentoId): array
@@ -474,6 +600,92 @@ class ClinicaNasNuvensWebClient implements
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function parseProcedimentoConvenioPricingHtml(string $html): array
+    {
+        $document = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        libxml_clear_errors();
+
+        foreach ($document->childNodes as $node) {
+            if ($node->nodeType === XML_PI_NODE) {
+                $document->removeChild($node);
+
+                break;
+            }
+        }
+
+        $xpath = new DOMXPath($document);
+        $rows = $xpath->query("//*[@id='convenios']/tbody/tr");
+
+        if (!$rows) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($rows as $row) {
+            if (!($row instanceof \DOMElement)) {
+                continue;
+            }
+
+            $codigoTipoProcedimentoConvenio = $this->extractSingleNodeAttribute(
+                $xpath,
+                ".//input[@type='hidden' and contains(@name, '.codigoTipoProcedimentoConvenio')][1]",
+                'value',
+                $row,
+            ) ?? $this->extractSingleNodeAttribute($xpath, "td[2]/input[@type='hidden'][1]", 'value', $row);
+            $codigoTipoConvenio = $this->normalizeNullableString(
+                $this->extractSingleNodeAttribute(
+                    $xpath,
+                    ".//input[@type='hidden' and contains(@name, '.codigoTipoConvenio')][1]",
+                    'value',
+                    $row,
+                ) ?? $this->extractSingleNodeAttribute($xpath, "td[2]/input[@type='hidden'][2]", 'value', $row)
+            );
+
+            if ($codigoTipoConvenio === null) {
+                continue;
+            }
+
+            $checkbox = $xpath->query(
+                ".//input[@type='checkbox' and contains(@name, '.ativo')][1]",
+                $row,
+            )?->item(0);
+
+            if (!($checkbox instanceof \DOMElement)) {
+                $checkbox = $xpath->query("td[2]/input[@type='checkbox'][1]", $row)?->item(0);
+            }
+
+            $precoPacienteRaw = $this->extractSingleNodeAttribute(
+                $xpath,
+                ".//input[@type='text' and contains(@name, '.valorPaciente')][1]",
+                'value',
+                $row,
+            ) ?? $this->extractSingleNodeAttribute($xpath, "td[3]/input[@type='text'][1]", 'value', $row);
+
+            $precoConvenioRaw = $this->extractSingleNodeAttribute(
+                $xpath,
+                ".//input[@type='text' and contains(@name, '.valorConvenio')][1]",
+                'value',
+                $row,
+            ) ?? $this->extractSingleNodeAttribute($xpath, "td[4]/input[@type='text'][1]", 'value', $row);
+
+            $result[] = [
+                'codigoTipoProcedimentoConvenio' => $codigoTipoProcedimentoConvenio,
+                'codigoTipoConvenio' => $codigoTipoConvenio,
+                'isActive' => $checkbox instanceof \DOMElement && $checkbox->hasAttribute('checked'),
+                'precoPaciente' => $this->normalizeBrazilianMoney($precoPacienteRaw),
+                'precoConvenio' => $this->normalizeBrazilianMoney($precoConvenioRaw),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * @param string[] $faturamentoIdList
      */
     private function resolveStatusFaturamento(array $faturamentoIdList, ?string $alertText): ?string
@@ -521,6 +733,27 @@ class ClinicaNasNuvensWebClient implements
         return $value !== null ? html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8') : null;
     }
 
+    private function extractSingleNodeAttribute(
+        DOMXPath $xpath,
+        string $selector,
+        string $attribute,
+        ?\DOMNode $contextNode = null,
+    ): ?string {
+        $nodeList = $xpath->query($selector, $contextNode);
+
+        if (!$nodeList || $nodeList->length === 0) {
+            return null;
+        }
+
+        $node = $nodeList->item(0);
+
+        if (!($node instanceof \DOMElement)) {
+            return null;
+        }
+
+        return $this->normalizeNullableString($node->getAttribute($attribute));
+    }
+
     private function normalizeBrazilianDate(?string $value): ?string
     {
         $normalized = $this->normalizeNullableString($value);
@@ -558,8 +791,20 @@ class ClinicaNasNuvensWebClient implements
             return null;
         }
 
-        $sanitized = str_replace('.', '', $sanitized);
-        $sanitized = str_replace(',', '.', $sanitized);
+        $hasComma = str_contains($sanitized, ',');
+        $hasDot = str_contains($sanitized, '.');
+
+        if ($hasComma && $hasDot) {
+            // pt-BR format (e.g. 1.234,56)
+            $sanitized = str_replace('.', '', $sanitized);
+            $sanitized = str_replace(',', '.', $sanitized);
+        } elseif ($hasComma) {
+            // comma decimal format (e.g. 123,45)
+            $sanitized = str_replace(',', '.', $sanitized);
+        } else {
+            // dot decimal format (e.g. 123.45)
+            $sanitized = str_replace(',', '', $sanitized);
+        }
 
         if (!is_numeric($sanitized)) {
             return null;

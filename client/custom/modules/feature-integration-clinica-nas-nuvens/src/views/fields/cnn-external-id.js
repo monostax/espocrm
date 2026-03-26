@@ -13,6 +13,7 @@ define(["views/fields/varchar"], (Dep) => {
         pacienteId: "paciente/visualiza",
         agendamentoId: "agenda/resumo-completo",
         faturamentoId: "faturamento",
+        procedimentoTipoId: "procedimento",
     };
 
     return class extends Dep {

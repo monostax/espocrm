@@ -1,0 +1,11 @@
+[
+    "name",
+    "convenioTipoId",
+    "credential",
+    "syncStatus",
+    "ativo",
+    "beneficio",
+    "particular",
+    "createdAt",
+    "modifiedAt"
+]

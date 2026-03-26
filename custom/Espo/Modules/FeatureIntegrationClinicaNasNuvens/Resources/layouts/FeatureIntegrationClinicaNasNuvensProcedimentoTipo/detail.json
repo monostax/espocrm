@@ -1,0 +1,16 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "procedimentoTipoId"}],
+            [{"name": "credential"}, {"name": "syncStatus"}],
+            [{"name": "ativo"}, false]
+        ]
+    },
+    {
+        "label": "Raw",
+        "rows": [
+            [{"name": "especialidades", "fullWidth": true}, false]
+        ]
+    }
+]

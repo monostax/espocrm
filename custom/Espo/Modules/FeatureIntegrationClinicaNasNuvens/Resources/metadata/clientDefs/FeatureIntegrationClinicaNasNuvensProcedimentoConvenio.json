@@ -1,0 +1,6 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-hand-holding-usd",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy"]
+}

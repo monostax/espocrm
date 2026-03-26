@@ -1,0 +1,26 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensConvenioTipo": "Clínica Nas Nuvens / Convenio Tipo",
+        "Create FeatureIntegrationClinicaNasNuvensConvenioTipo": "Create Convenio Tipo Anchor",
+        "Overview": "Overview"
+    },
+    "fields": {
+        "name": "Name",
+        "convenioTipoId": "Remote Convenio Tipo ID",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "ativo": "Active",
+        "beneficio": "Benefit",
+        "particular": "Private"
+    },
+    "links": {
+        "credential": "Credential"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    }
+}

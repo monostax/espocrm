@@ -1,6 +1,6 @@
 {
     "controller": "feature-integration-clinica-nas-nuvens:controllers/no-create-route",
-    "iconClass": "fas fa-user-injured",
+    "iconClass": "fas fa-stethoscope",
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
     "views": {
@@ -25,56 +25,31 @@
     "sidePanels": {
         "detail": [
             {
-                "name": "agendamentos",
-                "label": "Agendamentos",
+                "name": "convenioPrecificacoes",
+                "label": "ConvenioPricing",
                 "view": "views/record/panels/relationship",
                 "layout": "listSmall",
                 "createDisabled": true,
                 "selectDisabled": true,
                 "unlinkDisabled": true,
                 "order": 1
-            },
-            {
-                "name": "faturamentos",
-                "label": "Faturamentos",
-                "view": "views/record/panels/relationship",
-                "layout": "listSmall",
-                "createDisabled": true,
-                "selectDisabled": true,
-                "unlinkDisabled": true,
-                "order": 2
             }
         ],
         "detailSmall": [
             {
-                "name": "agendamentos",
-                "label": "Agendamentos",
+                "name": "convenioPrecificacoes",
+                "label": "ConvenioPricing",
                 "view": "views/record/panels/relationship",
                 "layout": "listSmall",
                 "createDisabled": true,
                 "selectDisabled": true,
                 "unlinkDisabled": true,
                 "order": 1
-            },
-            {
-                "name": "faturamentos",
-                "label": "Faturamentos",
-                "view": "views/record/panels/relationship",
-                "layout": "listSmall",
-                "createDisabled": true,
-                "selectDisabled": true,
-                "unlinkDisabled": true,
-                "order": 2
             }
         ]
     },
     "relationshipPanels": {
-        "agendamentos": {
-            "create": false,
-            "select": false,
-            "rowActionsView": "views/record/row-actions/relationship-no-remove"
-        },
-        "faturamentos": {
+        "convenioPrecificacoes": {
             "create": false,
             "select": false,
             "rowActionsView": "views/record/row-actions/relationship-no-remove"

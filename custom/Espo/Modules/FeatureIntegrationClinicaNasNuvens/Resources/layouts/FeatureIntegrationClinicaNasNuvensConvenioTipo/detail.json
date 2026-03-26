@@ -1,0 +1,11 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "convenioTipoId"}],
+            [{"name": "credential"}, {"name": "syncStatus"}],
+            [{"name": "ativo"}, {"name": "beneficio"}],
+            [{"name": "particular"}, false]
+        ]
+    }
+]

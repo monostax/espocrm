@@ -1,0 +1,11 @@
+[
+    "procedimentoTipo",
+    "convenioTipo",
+    "convenioName",
+    "codigoTipoProcedimentoConvenio",
+    "isActive",
+    "precoPaciente",
+    "precoConvenio",
+    "createdAt",
+    "modifiedAt"
+]

@@ -22,6 +22,10 @@ define(["action-handler"], (Dep) => {
             field: "faturamentoId",
             path: "faturamento",
         },
+        FeatureIntegrationClinicaNasNuvensProcedimentoTipo: {
+            field: "procedimentoTipoId",
+            path: "procedimento",
+        },
     };
 
     return class extends Dep {

@@ -1,0 +1,6 @@
+[
+    {"name": "convenioName", "link": true},
+    {"name": "isActive"},
+    {"name": "precoPaciente"},
+    {"name": "precoConvenio"}
+]

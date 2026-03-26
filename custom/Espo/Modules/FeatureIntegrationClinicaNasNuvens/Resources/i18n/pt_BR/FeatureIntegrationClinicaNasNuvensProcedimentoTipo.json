@@ -1,0 +1,29 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensProcedimentoTipo": "Clínica Nas Nuvens / Tipo de Procedimento",
+        "Create FeatureIntegrationClinicaNasNuvensProcedimentoTipo": "Conectar Tipo de Procedimento",
+        "Overview": "Visão Geral",
+        "Raw": "Campos Brutos",
+        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens",
+        "ConvenioPricing": "Precificação por Convênio"
+    },
+    "fields": {
+        "name": "Nome",
+        "procedimentoTipoId": "ID Tipo de Procedimento (Clínica Nas Nuvens)",
+        "credential": "Credencial",
+        "syncStatus": "Status de Sincronização",
+        "ativo": "Ativo",
+        "especialidades": "Especialidades"
+    },
+    "links": {
+        "credential": "Credencial",
+        "convenioPrecificacoes": "Precificações de Convênio"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensConvenioTipo": "Clínica Nas Nuvens / Tipo de Convênio",
+        "Create FeatureIntegrationClinicaNasNuvensConvenioTipo": "Conectar Tipo de Convênio",
+        "Overview": "Visão Geral"
+    },
+    "fields": {
+        "name": "Nome",
+        "convenioTipoId": "ID Tipo de Convênio (Clínica Nas Nuvens)",
+        "credential": "Credencial",
+        "syncStatus": "Status de Sincronização",
+        "ativo": "Ativo",
+        "beneficio": "Benefício",
+        "particular": "Particular"
+    },
+    "links": {
+        "credential": "Credencial"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pendente",
+            "synced": "Sincronizado",
+            "error": "Erro"
+        }
+    }
+}

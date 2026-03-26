@@ -1,0 +1,29 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensProcedimentoTipo": "Clínica Nas Nuvens / Procedimento Tipo",
+        "Create FeatureIntegrationClinicaNasNuvensProcedimentoTipo": "Create Procedimento Tipo Anchor",
+        "Overview": "Overview",
+        "Raw": "Raw Fields",
+        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens",
+        "ConvenioPricing": "Convenio Pricing"
+    },
+    "fields": {
+        "name": "Name",
+        "procedimentoTipoId": "Remote Procedimento Tipo ID",
+        "credential": "Credential",
+        "syncStatus": "Sync Status",
+        "ativo": "Active",
+        "especialidades": "Specialties"
+    },
+    "links": {
+        "credential": "Credential",
+        "convenioPrecificacoes": "Convenio Pricing Rows"
+    },
+    "options": {
+        "syncStatus": {
+            "pending": "Pending",
+            "synced": "Synced",
+            "error": "Error"
+        }
+    }
+}

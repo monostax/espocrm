@@ -1,0 +1,10 @@
+[
+    {"name": "convenioName", "link": true, "width": 22},
+    {"name": "procedimentoTipo", "width": 14},
+    {"name": "convenioTipo", "width": 14},
+    {"name": "codigoTipoProcedimentoConvenio", "width": 12},
+    {"name": "isActive", "width": 8},
+    {"name": "precoPaciente", "width": 10},
+    {"name": "precoConvenio", "width": 10},
+    {"name": "modifiedAt", "width": 10}
+]

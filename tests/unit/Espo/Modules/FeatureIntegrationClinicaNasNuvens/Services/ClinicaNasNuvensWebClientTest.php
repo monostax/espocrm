@@ -157,10 +157,152 @@ class ClinicaNasNuvensWebClientTest extends TestCase
         $this->assertSame('FATURADO', $snapshot['statusFaturamento']);
     }
 
+    public function testProcedimentoConvenioParserNormalizesRows(): void
+    {
+        $resolver = $this->createMock(CredentialResolver::class);
+        $healthCheckManager = $this->createMock(HealthCheckManager::class);
+        $entityManager = $this->createMock(EntityManager::class);
+
+        $client = new TestableClinicaNasNuvensWebClient($resolver, $healthCheckManager, $entityManager);
+        $rows = $client->parseProcedimentoConvenioPricingPublic($this->getProcedimentoFixtureHtml());
+
+        $this->assertCount(3, $rows);
+
+        $this->assertSame('proc-conv-1001', $rows[0]['codigoTipoProcedimentoConvenio']);
+        $this->assertSame('convenio-1', $rows[0]['codigoTipoConvenio']);
+        $this->assertTrue($rows[0]['isActive']);
+        $this->assertSame(150.25, $rows[0]['precoPaciente']);
+        $this->assertSame(125.00, $rows[0]['precoConvenio']);
+
+        $this->assertNull($rows[1]['codigoTipoProcedimentoConvenio']);
+        $this->assertSame('convenio-2', $rows[1]['codigoTipoConvenio']);
+        $this->assertFalse($rows[1]['isActive']);
+        $this->assertSame(0.00, $rows[1]['precoPaciente']);
+        $this->assertSame(0.00, $rows[1]['precoConvenio']);
+
+        $this->assertSame('convenio-3', $rows[2]['codigoTipoConvenio']);
+        $this->assertTrue($rows[2]['isActive']);
+        $this->assertNull($rows[2]['precoPaciente']);
+        $this->assertSame(89.50, $rows[2]['precoConvenio']);
+    }
+
+    public function testProcedimentoConvenioParserReturnsEmptyListWhenNoRows(): void
+    {
+        $resolver = $this->createMock(CredentialResolver::class);
+        $healthCheckManager = $this->createMock(HealthCheckManager::class);
+        $entityManager = $this->createMock(EntityManager::class);
+
+        $client = new TestableClinicaNasNuvensWebClient($resolver, $healthCheckManager, $entityManager);
+        $rows = $client->parseProcedimentoConvenioPricingPublic('<html><body><table id="convenios"><tbody></tbody></table></body></html>');
+
+        $this->assertSame([], $rows);
+    }
+
+    public function testProcedimentoConvenioParserHandlesNestedInputsAndDotDecimalFormat(): void
+    {
+        $resolver = $this->createMock(CredentialResolver::class);
+        $healthCheckManager = $this->createMock(HealthCheckManager::class);
+        $entityManager = $this->createMock(EntityManager::class);
+
+        $client = new TestableClinicaNasNuvensWebClient($resolver, $healthCheckManager, $entityManager);
+
+        $html = '<html><body><table id="convenios"><tbody>' .
+            '<tr>' .
+            '<td><input type="checkbox" name="precificacao[6].ativo" checked="checked"></td>' .
+            '<td><input type="hidden" name="precificacao[6].codigoTipoProcedimentoConvenio" value="11975368">' .
+            '<input type="hidden" name="precificacao[6].codigoTipoConvenio" value="56552">COOFLONA</td>' .
+            '<td><div class="input-group"><input type="text" name="precificacao[6].valorPaciente" value="0.00"></div></td>' .
+            '<td><div class="input-group"><input type="text" name="precificacao[6].valorConvenio" value="950.00"></div></td>' .
+            '</tr>' .
+            '<tr>' .
+            '<td><input type="checkbox" name="precificacao[8].ativo" checked="checked"></td>' .
+            '<td><input type="hidden" name="precificacao[8].codigoTipoProcedimentoConvenio" value="10802577">' .
+            '<input type="hidden" name="precificacao[8].codigoTipoConvenio" value="57565">ECO MAIS</td>' .
+            '<td><div class="input-group"><input type="text" name="precificacao[8].valorPaciente" value="451.20"></div></td>' .
+            '<td><div class="input-group"><input type="text" name="precificacao[8].valorConvenio" value="0.00"></div></td>' .
+            '</tr>' .
+            '</tbody></table></body></html>';
+
+        $rows = $client->parseProcedimentoConvenioPricingPublic($html);
+
+        $this->assertCount(2, $rows);
+        $this->assertSame('56552', $rows[0]['codigoTipoConvenio']);
+        $this->assertTrue($rows[0]['isActive']);
+        $this->assertSame(0.00, $rows[0]['precoPaciente']);
+        $this->assertSame(950.00, $rows[0]['precoConvenio']);
+        $this->assertSame(451.20, $rows[1]['precoPaciente']);
+    }
+
+    public function testValidateProcedimentoHtmlRequiresConveniosTable(): void
+    {
+        $resolver = $this->createMock(CredentialResolver::class);
+        $healthCheckManager = $this->createMock(HealthCheckManager::class);
+        $entityManager = $this->createMock(EntityManager::class);
+
+        $client = new TestableClinicaNasNuvensWebClient($resolver, $healthCheckManager, $entityManager);
+
+        $valid = $client->validateProcedimentoHtmlPublic(200, '<html><body><table id="convenios"></table></body></html>');
+        $invalid = $client->validateProcedimentoHtmlPublic(200, '<html><body><h1>Sem tabela</h1></body></html>');
+        $authLike = $client->validateProcedimentoHtmlPublic(200, '<html><body><input name="password"></body></html>');
+
+        $this->assertTrue($valid['valid']);
+        $this->assertFalse($invalid['valid']);
+        $this->assertSame('non-target-html', $invalid['reason']);
+        $this->assertFalse($authLike['valid']);
+        $this->assertTrue($authLike['authLike']);
+        $this->assertSame('login-page-detected', $authLike['reason']);
+    }
+
+    public function testProcedimentoPricingRetriesOnceAfterAuthLikeHtml(): void
+    {
+        $resolver = $this->createMock(CredentialResolver::class);
+        $resolver->method('resolve')
+            ->willReturn((object) ['sessionCookies' => 'cookie=initial']);
+
+        $healthCheckManager = $this->createMock(HealthCheckManager::class);
+        $entityManager = $this->createMock(EntityManager::class);
+
+        $credential = $this->createMock(Entity::class);
+        $credential->method('getId')->willReturn('cred-web-proc-1');
+        $credential->method('get')->willReturnMap([
+            ['config', null],
+        ]);
+
+        $client = new TestableClinicaNasNuvensWebClient($resolver, $healthCheckManager, $entityManager);
+        $client->setRequestResponses([
+            [
+                'status' => 200,
+                'body' => '<html><body><input name="password"></body></html>',
+                'message' => 'ok',
+            ],
+            [
+                'status' => 200,
+                'body' => $this->getProcedimentoFixtureHtml(),
+                'message' => 'ok',
+            ],
+        ]);
+        $client->setRefreshCookies('cookie=refreshed');
+
+        $payload = $client->getProcedimentoConvenioPricingByProcedimentoId($credential, 'proc-100');
+
+        $this->assertSame(2, $client->getRequestCallCount());
+        $this->assertSame(1, $client->getRefreshCallCount());
+        $this->assertCount(3, $payload['rows']);
+        $this->assertSame(2, $payload['telemetry']['attempts']);
+    }
+
     private function getFixtureHtml(): string
     {
         $path = dirname(__DIR__, 4) .
             '/testData/FeatureIntegrationClinicaNasNuvens/ClinicaNasNuvensFaturamentoDetalhesConta.html';
+
+        return (string) file_get_contents($path);
+    }
+
+    private function getProcedimentoFixtureHtml(): string
+    {
+        $path = dirname(__DIR__, 4) .
+            '/testData/FeatureIntegrationClinicaNasNuvens/ClinicaNasNuvensProcedimentoConvenios.html';
 
         return (string) file_get_contents($path);
     }
@@ -211,6 +353,22 @@ class TestableClinicaNasNuvensWebClient extends ClinicaNasNuvensWebClient
     public function parseResumoSnapshotPublic(string $html): array
     {
         return $this->parseResumoAgendaFinanceiroSnapshotHtml($html);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function parseProcedimentoConvenioPricingPublic(string $html): array
+    {
+        return $this->parseProcedimentoConvenioPricingHtml($html);
+    }
+
+    /**
+     * @return array{valid:bool, authLike:bool, reason:string}
+     */
+    public function validateProcedimentoHtmlPublic(int $status, string $html): array
+    {
+        return $this->validateProcedimentoHtml($status, $html);
     }
 
     protected function requestDetailsPage(string $url, string $cookies): array

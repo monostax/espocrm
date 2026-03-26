@@ -1,0 +1,96 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "convenioTipoId": {
+            "type": "varchar",
+            "maxLength": 100,
+            "required": true,
+            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id"
+        },
+        "credential": {
+            "type": "link"
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending"
+        },
+        "ativo": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "beneficio": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "particular": {
+            "type": "bool",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        }
+    },
+    "links": {
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "clinicaNasNuvensConvenioTipos"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "convenioTipoId",
+            "credential"
+        ]
+    },
+    "indexes": {
+        "credentialId": {
+            "columns": ["credentialId"]
+        },
+        "convenioTipoIdCredential": {
+            "unique": true,
+            "columns": ["convenioTipoId", "credentialId", "deleted"]
+        }
+    }
+}

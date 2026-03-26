@@ -1,0 +1,9 @@
+[
+    {"name": "name", "link": true, "width": 25},
+    {"name": "convenioTipoId", "width": 20},
+    {"name": "ativo", "width": 10},
+    {"name": "beneficio", "width": 10},
+    {"name": "particular", "width": 10},
+    {"name": "credential", "width": 15},
+    {"name": "syncStatus", "width": 10}
+]

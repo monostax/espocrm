@@ -1,0 +1,21 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensProcedimentoConvenio": "Clínica Nas Nuvens / Precificação de Convênio",
+        "Create FeatureIntegrationClinicaNasNuvensProcedimentoConvenio": "Criar Precificação de Convênio",
+        "Overview": "Visão Geral"
+    },
+    "fields": {
+        "name": "Nome",
+        "procedimentoTipo": "Tipo de Procedimento",
+        "convenioTipo": "Tipo de Convênio",
+        "codigoTipoProcedimentoConvenio": "Código Tipo Procedimento Convênio",
+        "isActive": "Ativo",
+        "convenioName": "Nome do Convênio",
+        "precoPaciente": "Preço Paciente",
+        "precoConvenio": "Preço Convênio"
+    },
+    "links": {
+        "procedimentoTipo": "Tipo de Procedimento",
+        "convenioTipo": "Tipo de Convênio"
+    }
+}

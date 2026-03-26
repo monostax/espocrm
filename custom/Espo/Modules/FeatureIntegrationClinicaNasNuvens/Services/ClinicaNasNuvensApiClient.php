@@ -132,6 +132,104 @@ class ClinicaNasNuvensApiClient implements
     }
 
     /**
+     * Get a single procedimento tipo from CNN API.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    public function getTipoProcedimentoById(Entity $credential, string $procedimentoTipoId): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+
+        $baseUrl = rtrim((string) ($config['baseUrl'] ?? self::DEFAULT_BASE_URL), '/');
+        $clientId = (string) ($config['clientId'] ?? $config['client_id'] ?? '');
+        $clientSecret = (string) ($config['clientSecret'] ?? $config['client_secret'] ?? '');
+        $clinicCid = (string) ($config['clinicCid'] ?? $config['clinicCID'] ?? $config['cid'] ?? $config['clinicToken'] ?? '');
+
+        if ($clientId === '' || $clientSecret === '' || $clinicCid === '') {
+            throw new Error('Credential config must contain clientId, clientSecret and clinicCid.');
+        }
+
+        $url = $baseUrl . '/tipo-procedimento/' . rawurlencode($procedimentoTipoId);
+
+        $attempt = 0;
+
+        while ($attempt < self::MAX_ATTEMPTS) {
+            $attempt++;
+
+            $result = $this->request($url, $clientId, $clientSecret, $clinicCid);
+
+            if ($result['ok']) {
+                return $this->mapTipoProcedimentoPayload($result['payload']);
+            }
+
+            $retryable = $result['retryable'];
+
+            if (!$retryable || $attempt >= self::MAX_ATTEMPTS) {
+                $status = $result['status'];
+                $message = $result['message'];
+
+                throw new Error(
+                    "Clínica nas Nuvens request failed for tipo-procedimento '{$procedimentoTipoId}' (HTTP {$status}): {$message}"
+                );
+            }
+
+            usleep(self::RETRY_BACKOFF_MS * $attempt * 1000);
+        }
+
+        throw new Error("Clínica nas Nuvens request failed for tipo-procedimento '{$procedimentoTipoId}'.");
+    }
+
+    /**
+     * Get a single convenio tipo from CNN API.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    public function getTipoConvenioById(Entity $credential, string $convenioTipoId): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+
+        $baseUrl = rtrim((string) ($config['baseUrl'] ?? self::DEFAULT_BASE_URL), '/');
+        $clientId = (string) ($config['clientId'] ?? $config['client_id'] ?? '');
+        $clientSecret = (string) ($config['clientSecret'] ?? $config['client_secret'] ?? '');
+        $clinicCid = (string) ($config['clinicCid'] ?? $config['clinicCID'] ?? $config['cid'] ?? $config['clinicToken'] ?? '');
+
+        if ($clientId === '' || $clientSecret === '' || $clinicCid === '') {
+            throw new Error('Credential config must contain clientId, clientSecret and clinicCid.');
+        }
+
+        $url = $baseUrl . '/tipo-convenio/' . rawurlencode($convenioTipoId);
+
+        $attempt = 0;
+
+        while ($attempt < self::MAX_ATTEMPTS) {
+            $attempt++;
+
+            $result = $this->request($url, $clientId, $clientSecret, $clinicCid);
+
+            if ($result['ok']) {
+                return $this->mapTipoConvenioPayload($result['payload']);
+            }
+
+            $retryable = $result['retryable'];
+
+            if (!$retryable || $attempt >= self::MAX_ATTEMPTS) {
+                $status = $result['status'];
+                $message = $result['message'];
+
+                throw new Error(
+                    "Clínica nas Nuvens request failed for tipo-convenio '{$convenioTipoId}' (HTTP {$status}): {$message}"
+                );
+            }
+
+            usleep(self::RETRY_BACKOFF_MS * $attempt * 1000);
+        }
+
+        throw new Error("Clínica nas Nuvens request failed for tipo-convenio '{$convenioTipoId}'.");
+    }
+
+    /**
      * @return array{ok: bool, status: int, retryable: bool, payload: array<string, mixed>, message: string}
      */
     private function request(string $url, string $clientId, string $clientSecret, string $clinicCid): array
@@ -348,6 +446,103 @@ class ClinicaNasNuvensApiClient implements
             'observacao' => $toStringOrNull($source['observacao'] ?? $source['observacoes'] ?? null),
             'procedimentos' => $procedimentos,
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapTipoProcedimentoPayload(array $payload): array
+    {
+        $source = $payload;
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $source = $payload['data'];
+        }
+
+        $especialidades = [];
+
+        if (isset($source['especialidades']) && is_array($source['especialidades'])) {
+            $especialidades = array_values($source['especialidades']);
+        }
+
+        return [
+            'procedimentoTipoId' => $this->normalizeNullableScalarString($source['id'] ?? $source['procedimentoTipoId'] ?? null),
+            'name' => $this->normalizeNullableScalarString($source['nome'] ?? $source['name'] ?? null),
+            'ativo' => $this->normalizeNullableBool($source['ativo'] ?? null),
+            'especialidades' => $especialidades,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapTipoConvenioPayload(array $payload): array
+    {
+        $source = $payload;
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $source = $payload['data'];
+        }
+
+        return [
+            'convenioTipoId' => $this->normalizeNullableScalarString($source['id'] ?? $source['convenioTipoId'] ?? null),
+            'name' => $this->normalizeNullableScalarString($source['nome'] ?? $source['name'] ?? null),
+            'ativo' => $this->normalizeNullableBool($source['ativo'] ?? null),
+            'beneficio' => $this->normalizeNullableBool($source['beneficio'] ?? null),
+            'particular' => $this->normalizeNullableBool($source['particular'] ?? null),
+        ];
+    }
+
+    private function normalizeNullableScalarString(mixed $value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $value);
+
+        return $trimmed !== '' ? $trimmed : null;
+    }
+
+    private function normalizeNullableBool(mixed $value): ?bool
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            if ((int) $value === 1) {
+                return true;
+            }
+
+            if ((int) $value === 0) {
+                return false;
+            }
+
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = strtolower(trim($value));
+
+            if ($trimmed === '') {
+                return null;
+            }
+
+            if (in_array($trimmed, ['1', 'true', 'sim', 'yes', 'y', 's'], true)) {
+                return true;
+            }
+
+            if (in_array($trimmed, ['0', 'false', 'nao', 'não', 'no', 'n'], true)) {
+                return false;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeCrmDateTimeValue(?string $value, ?string $fallbackDate): ?string

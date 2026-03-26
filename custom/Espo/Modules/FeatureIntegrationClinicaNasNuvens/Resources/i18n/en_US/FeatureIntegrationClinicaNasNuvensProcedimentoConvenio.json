@@ -1,0 +1,21 @@
+{
+    "labels": {
+        "FeatureIntegrationClinicaNasNuvensProcedimentoConvenio": "Clínica Nas Nuvens / Convenio Pricing",
+        "Create FeatureIntegrationClinicaNasNuvensProcedimentoConvenio": "Create Convenio Pricing Row",
+        "Overview": "Overview"
+    },
+    "fields": {
+        "name": "Name",
+        "procedimentoTipo": "Procedimento Tipo",
+        "convenioTipo": "Convenio Tipo",
+        "codigoTipoProcedimentoConvenio": "Procedimento Convenio Type Code",
+        "isActive": "Active",
+        "convenioName": "Convenio Name",
+        "precoPaciente": "Patient Price",
+        "precoConvenio": "Convenio Price"
+    },
+    "links": {
+        "procedimentoTipo": "Procedimento Tipo",
+        "convenioTipo": "Convenio Tipo"
+    }
+}
