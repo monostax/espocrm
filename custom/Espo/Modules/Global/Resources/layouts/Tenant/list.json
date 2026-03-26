@@ -1,0 +1,15 @@
+[
+    {
+        "name": "name",
+        "width": 40,
+        "link": true
+    },
+    {
+        "name": "baseUserTeam",
+        "width": 35
+    },
+    {
+        "name": "createdAt",
+        "width": 25
+    }
+]

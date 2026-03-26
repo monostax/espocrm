@@ -273,6 +273,12 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'Tenant' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'OpportunityStage' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -550,6 +556,7 @@ class SeedRole implements RebuildAction
                 'Task' => (object)[],
                 'Activities' => (object)[],
                 'Funnel' => (object)[],
+                'Tenant' => (object)[],
                 'OpportunityStage' => (object)[],
 
                 'WhatsAppBusinessAccount' => (object)[],

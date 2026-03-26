@@ -1,0 +1,101 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "pattern": "$noBadCharacters",
+            "maxLength": 100,
+            "trim": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "baseUserTeam": {
+            "type": "link",
+            "view": "views/fields/link"
+        },
+        "otherUserTeams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        },
+        "otherUserTeamsIds": {
+            "type": "jsonArray",
+            "notStorable": true
+        },
+        "otherUserTeamsNames": {
+            "type": "jsonObject",
+            "notStorable": true
+        },
+        "users": {
+            "type": "linkMultiple",
+            "view": "views/fields/assigned-users"
+        },
+        "usersIds": {
+            "type": "jsonArray",
+            "notStorable": true
+        },
+        "usersNames": {
+            "type": "jsonObject",
+            "notStorable": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "baseUserTeam": {
+            "type": "belongsTo",
+            "entity": "Team",
+            "foreign": "tenantsAsBaseUserTeam"
+        },
+        "otherUserTeams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "foreign": "tenantsAsOtherUserTeam",
+            "relationName": "tenantOtherUserTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "users": {
+            "type": "hasMany",
+            "entity": "User",
+            "foreign": "tenants",
+            "relationName": "tenantUser",
+            "layoutRelationshipsDisabled": true
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "baseUserTeamId": {
+            "columns": ["baseUserTeamId"]
+        }
+    }
+}

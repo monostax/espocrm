@@ -4,6 +4,17 @@
             "type": "hasMany",
             "entity": "Funnel",
             "foreign": "team"
+        },
+        "tenantsAsBaseUserTeam": {
+            "type": "hasMany",
+            "entity": "Tenant",
+            "foreign": "baseUserTeam"
+        },
+        "tenantsAsOtherUserTeam": {
+            "type": "hasMany",
+            "entity": "Tenant",
+            "foreign": "otherUserTeams",
+            "relationName": "tenantOtherUserTeam"
         }
     }
 }

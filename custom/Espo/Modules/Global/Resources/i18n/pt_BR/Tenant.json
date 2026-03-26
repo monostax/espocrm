@@ -1,0 +1,27 @@
+{
+    "scopeNames": {
+        "Tenant": "Ambiente"
+    },
+    "scopeNamesPlural": {
+        "Tenant": "Ambientes"
+    },
+    "labels": {
+        "Create Tenant": "Criar Ambiente"
+    },
+    "links": {
+        "baseUserTeam": "Time Base de Usuários",
+        "otherUserTeams": "Outros Times de Usuários",
+        "users": "Usuários"
+    },
+    "fields": {
+        "name": "Nome",
+        "description": "Descrição",
+        "baseUserTeam": "Time Base de Usuários",
+        "otherUserTeams": "Outros Times de Usuários",
+        "users": "Usuários",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    }
+}

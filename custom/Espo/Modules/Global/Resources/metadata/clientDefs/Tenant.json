@@ -1,7 +1,39 @@
 {
     "controller": "controllers/record",
-    "boolFilterList": ["onlyMy"],
-    "iconClass": "ti ti-building"
+    "iconClass": "ti ti-building",
+    "defaultSidePanelDisabled": true,
+    "dynamicLogic": {
+        "fields": {
+            "baseUserTeam": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "description": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "relationshipPanels": {
+        "otherUserTeams": {
+            "view": "views/record/panels/relationship"
+        },
+        "users": {
+            "view": "views/record/panels/relationship"
+        }
+    }
 }
 
 

@@ -1,0 +1,9 @@
+{
+    "labels": {
+        "Tenant Management": "Tenant Management",
+        "Tenants": "Tenants"
+    },
+    "descriptions": {
+        "manageTenants": "Manage tenant records, base teams, and memberships"
+    }
+}

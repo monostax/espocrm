@@ -1,0 +1,11 @@
+[
+    {
+        "name": "name",
+        "width": 55,
+        "link": true
+    },
+    {
+        "name": "baseUserTeam",
+        "width": 45
+    }
+]

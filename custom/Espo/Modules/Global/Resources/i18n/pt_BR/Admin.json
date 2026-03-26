@@ -1,0 +1,9 @@
+{
+    "labels": {
+        "Tenant Management": "Gestão de Ambientes",
+        "Tenants": "Ambientes"
+    },
+    "descriptions": {
+        "manageTenants": "Gerenciar registros de ambientes, time base e associações"
+    }
+}

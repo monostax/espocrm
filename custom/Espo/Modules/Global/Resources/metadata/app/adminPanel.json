@@ -9,6 +9,18 @@
                 "iconClass": "fas fa-tasks"
             }
         ]
+    },
+    "tenantManagement": {
+        "label": "Tenant Management",
+        "itemList": [
+            {
+                "url": "#Tenant",
+                "label": "Tenants",
+                "description": "manageTenants",
+                "iconClass": "ti ti-building"
+            }
+        ],
+        "order": 40
     }
 }
 

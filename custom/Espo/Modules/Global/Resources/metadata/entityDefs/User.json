@@ -21,6 +21,12 @@
             "entity": "ChatwootAccountUserMembership",
             "foreign": "calendarsToManage",
             "relationName": "chatwootAccountUserMembershipCalendarUser"
+        },
+        "tenants": {
+            "type": "hasMany",
+            "entity": "Tenant",
+            "foreign": "users",
+            "relationName": "tenantUser"
         }
     }
 }

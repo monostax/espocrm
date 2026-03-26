@@ -1,0 +1,17 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                }
+            ],
+            [
+                {
+                    "name": "baseUserTeam"
+                }
+            ]
+        ]
+    }
+]

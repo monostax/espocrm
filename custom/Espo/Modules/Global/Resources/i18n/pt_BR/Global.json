@@ -32,6 +32,7 @@
         "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Agendamento",
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamento",
         "Funnel": "Funil de Venda",
+        "Tenant": "Ambiente",
         "OpportunityStage": "Estágio da Oportunidade",
         "Appointment": "Agendamento",
         "SidenavConfig": "Menu Lateral"
@@ -44,6 +45,7 @@
         "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Agendamentos",
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamentos",
         "Funnel": "Funil de Venda",
+        "Tenant": "Ambientes",
         "Appointment": "Agendamentos",
         "OpportunityStage": "Etapas do Funil",
         "SidenavConfig": "Menu Lateral"
