@@ -1,0 +1,6 @@
+{
+    "entity": true,
+    "layouts": true,
+    "acl": true,
+    "module": "FeatureIntegrationClinicaNasNuvens"
+}

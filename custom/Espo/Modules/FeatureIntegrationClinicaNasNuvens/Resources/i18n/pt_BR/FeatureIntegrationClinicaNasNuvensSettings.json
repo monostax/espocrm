@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Create FeatureIntegrationClinicaNasNuvensSettings": "Criar Configuração Clínica Nas Nuvens"
+    },
+    "fields": {
+        "tenant": "Ambiente",
+        "apiCredential": "Credencial API",
+        "webCredential": "Credencial Web"
+    },
+    "links": {
+        "tenant": "Ambiente",
+        "apiCredential": "Credencial API",
+        "webCredential": "Credencial Web"
+    }
+}

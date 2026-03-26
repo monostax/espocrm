@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "tenant": {
+            "type": "link",
+            "required": true
+        },
+        "apiCredential": {
+            "type": "link",
+            "required": true
+        },
+        "webCredential": {
+            "type": "link",
+            "required": true
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "clinicaNasNuvensSettings"
+        },
+        "apiCredential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "clinicaNasNuvensApiSettings"
+        },
+        "webCredential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "clinicaNasNuvensWebSettings"
+        }
+    },
+    "indexes": {
+        "tenantId": {
+            "columns": ["tenantId", "deleted"],
+            "unique": true
+        }
+    }
+}

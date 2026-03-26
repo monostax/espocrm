@@ -25,6 +25,7 @@ use Espo\ORM\EntityManager;
 class SyncUserTeams
 {
     public static int $order = 20;
+    private const INTERNAL_SYNC_OPTION = 'tenantMembershipSyncInternal';
 
     public function __construct(
         private EntityManager $entityManager
@@ -36,6 +37,10 @@ class SyncUserTeams
      */
     public function afterRelate(Entity $entity, array $options, array $relationParams): void
     {
+        if (!empty($options[self::INTERNAL_SYNC_OPTION])) {
+            return;
+        }
+
         if (($relationParams['relationName'] ?? null) !== 'users') {
             return;
         }
@@ -71,7 +76,7 @@ class SyncUserTeams
             return;
         }
 
-        $userTeamsRelation->relateById($baseTeamId, null, ['skipHooks' => true]);
+        $userTeamsRelation->relateById($baseTeamId, null, [self::INTERNAL_SYNC_OPTION => true]);
     }
 
     /**
@@ -80,6 +85,10 @@ class SyncUserTeams
      */
     public function afterUnrelate(Entity $entity, array $options, array $relationParams): void
     {
+        if (!empty($options[self::INTERNAL_SYNC_OPTION])) {
+            return;
+        }
+
         if (($relationParams['relationName'] ?? null) !== 'users') {
             return;
         }
@@ -114,7 +123,7 @@ class SyncUserTeams
         $teamIdsToActuallyRemove = array_intersect($teamIdsToRemove, $currentUserTeamIds);
 
         foreach ($teamIdsToActuallyRemove as $teamId) {
-            $userTeamsRelation->unrelateById($teamId, ['skipHooks' => true]);
+            $userTeamsRelation->unrelateById($teamId, [self::INTERNAL_SYNC_OPTION => true]);
         }
     }
 

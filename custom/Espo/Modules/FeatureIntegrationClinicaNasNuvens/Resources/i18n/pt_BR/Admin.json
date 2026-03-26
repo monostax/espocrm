@@ -1,0 +1,9 @@
+{
+    "labels": {
+        "Clínica Nas Nuvens": "Clínica Nas Nuvens",
+        "Integrations": "Integrações"
+    },
+    "descriptions": {
+        "manageClinicaNasNuvensSettings": "Gerencie as credenciais da Clínica Nas Nuvens para cada Ambiente."
+    }
+}

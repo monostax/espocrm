@@ -1,0 +1,9 @@
+{
+    "links": {
+        "clinicaNasNuvensSettings": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationClinicaNasNuvensSettings",
+            "foreign": "tenant"
+        }
+    }
+}

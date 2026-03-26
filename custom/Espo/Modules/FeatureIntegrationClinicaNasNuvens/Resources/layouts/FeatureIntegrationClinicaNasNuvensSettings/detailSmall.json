@@ -1,0 +1,10 @@
+[
+    {
+        "label": "Basic",
+        "rows": [
+            [{"name": "tenant"}],
+            [{"name": "apiCredential"}],
+            [{"name": "webCredential"}]
+        ]
+    }
+]

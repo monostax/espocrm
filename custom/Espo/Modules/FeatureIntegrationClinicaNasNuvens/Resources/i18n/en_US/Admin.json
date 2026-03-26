@@ -1,0 +1,9 @@
+{
+    "labels": {
+        "Clínica Nas Nuvens": "Clínica Nas Nuvens",
+        "Integrations": "Integrations"
+    },
+    "descriptions": {
+        "manageClinicaNasNuvensSettings": "Manage Clínica Nas Nuvens credentials for each Tenant."
+    }
+}

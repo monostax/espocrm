@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Create FeatureIntegrationClinicaNasNuvensSettings": "Create Clinica Nas Nuvens Settings"
+    },
+    "fields": {
+        "tenant": "Tenant",
+        "apiCredential": "API Credential",
+        "webCredential": "Web Credential"
+    },
+    "links": {
+        "tenant": "Tenant",
+        "apiCredential": "API Credential",
+        "webCredential": "Web Credential"
+    }
+}

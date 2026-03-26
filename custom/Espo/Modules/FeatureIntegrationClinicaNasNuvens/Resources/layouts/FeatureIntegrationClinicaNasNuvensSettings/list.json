@@ -1,0 +1,5 @@
+[
+    {"name": "tenant", "width": 30},
+    {"name": "apiCredential", "width": 35},
+    {"name": "webCredential", "width": 35}
+]

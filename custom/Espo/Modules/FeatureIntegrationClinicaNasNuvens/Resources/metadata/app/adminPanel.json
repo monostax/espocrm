@@ -1,0 +1,14 @@
+{
+    "integrations": {
+        "label": "Integrations",
+        "itemList": [
+            {
+                "url": "#FeatureIntegrationClinicaNasNuvensSettings",
+                "label": "Clínica Nas Nuvens",
+                "description": "manageClinicaNasNuvensSettings",
+                "iconClass": "fas fa-cloud",
+                "order": 100
+            }
+        ]
+    }
+}
