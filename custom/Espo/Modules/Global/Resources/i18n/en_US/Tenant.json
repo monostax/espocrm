@@ -4,6 +4,7 @@
         "description": "Description",
         "baseUserTeam": "Base User Team",
         "otherUserTeams": "Other User Teams",
+        "clinicaNasNuvensSettings": "Clínica Nas Nuvens Profiles",
         "users": "Users",
         "createdAt": "Created At",
         "modifiedAt": "Modified At",
@@ -13,6 +14,7 @@
     "links": {
         "baseUserTeam": "Base User Team",
         "otherUserTeams": "Other User Teams",
+        "clinicaNasNuvensSettings": "Clínica Nas Nuvens Profiles",
         "users": "Users",
         "createdBy": "Created By",
         "modifiedBy": "Modified By"

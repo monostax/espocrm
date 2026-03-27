@@ -4,7 +4,7 @@
         "itemList": [
             {
                 "url": "#FeatureIntegrationClinicaNasNuvensSettings",
-                "label": "Clínica Nas Nuvens",
+                "label": "Clínica Nas Nuvens Profiles",
                 "description": "manageClinicaNasNuvensSettings",
                 "iconClass": "fas fa-cloud",
                 "order": 100

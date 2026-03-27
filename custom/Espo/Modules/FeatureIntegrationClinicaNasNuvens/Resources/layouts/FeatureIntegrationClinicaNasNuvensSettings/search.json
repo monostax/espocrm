@@ -1,5 +1,9 @@
 [
+    {"name": "name"},
     {"name": "tenant"},
+    {"name": "teams"},
+    {"name": "isActive"},
+    {"name": "migrationStatus"},
     {"name": "apiCredential"},
     {"name": "webCredential"}
 ]

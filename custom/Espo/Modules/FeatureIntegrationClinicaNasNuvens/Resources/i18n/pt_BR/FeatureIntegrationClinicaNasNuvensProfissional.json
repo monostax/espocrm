@@ -11,6 +11,7 @@
         "profissionalId": "ID Profissional (Clínica Nas Nuvens)",
         "idPessoa": "ID Pessoa (Clínica Nas Nuvens)",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "ativo": "Ativo",
         "tipoExecutor": "Tipo de Executor",
@@ -30,6 +31,7 @@
     },
     "links": {
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "agendamentos": "Agendamentos",
         "faturamentos": "Faturamentos"
     },

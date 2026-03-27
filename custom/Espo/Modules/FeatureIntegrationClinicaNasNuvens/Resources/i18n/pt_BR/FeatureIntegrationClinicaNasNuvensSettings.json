@@ -1,15 +1,32 @@
 {
     "labels": {
-        "Create FeatureIntegrationClinicaNasNuvensSettings": "Criar Configuração Clínica Nas Nuvens"
+        "FeatureIntegrationClinicaNasNuvensSettings": "Perfil de Integração Clínica Nas Nuvens",
+        "Create FeatureIntegrationClinicaNasNuvensSettings": "Criar Perfil de Integração"
     },
     "fields": {
+        "name": "Nome do Perfil",
+        "isActive": "Ativo",
+        "migrationStatus": "Status da Migração",
         "tenant": "Ambiente",
+        "teams": "Time de Escopo",
         "apiCredential": "Credencial API",
         "webCredential": "Credencial Web"
     },
     "links": {
         "tenant": "Ambiente",
+        "teams": "Time de Escopo",
         "apiCredential": "Credencial API",
         "webCredential": "Credencial Web"
+    },
+    "actions": {
+        "replaceCredential": "Trocar Credenciais"
+    },
+    "options": {
+        "migrationStatus": {
+            "idle": "Inativa",
+            "inProgress": "Em Andamento",
+            "completed": "Concluída",
+            "failed": "Falhou"
+        }
     }
 }

@@ -2,53 +2,69 @@
     "fields": {
         "name": {
             "type": "varchar",
-            "maxLength": 255
+            "maxLength": 255,
+            "readOnlyAfterCreate": true
         },
         "procedimentoTipoId": {
             "type": "varchar",
             "maxLength": 100,
             "required": true,
-            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id"
+            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id",
+            "readOnlyAfterCreate": true
         },
         "credential": {
-            "type": "link"
+            "type": "link",
+            "readOnlyAfterCreate": true
+        },
+        "settings": {
+            "type": "link",
+            "required": true,
+            "readOnlyAfterCreate": true
         },
         "syncStatus": {
             "type": "enum",
             "options": ["pending", "synced", "error"],
-            "default": "pending"
+            "default": "pending",
+            "readOnlyAfterCreate": true
         },
         "ativo": {
             "type": "bool",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "especialidades": {
             "type": "jsonArray",
             "view": "views/fields/text",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "createdAt": {
             "type": "datetime",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "modifiedAt": {
             "type": "datetime",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "createdBy": {
             "type": "link",
             "readOnly": true,
-            "view": "views/fields/user"
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
         },
         "modifiedBy": {
             "type": "link",
             "readOnly": true,
-            "view": "views/fields/user"
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
         },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
-            "required": true
+            "required": true,
+            "readOnlyAfterCreate": true
         }
     },
     "links": {
@@ -56,6 +72,10 @@
             "type": "belongsTo",
             "entity": "Credential",
             "foreign": "clinicaNasNuvensProcedimentoTipos"
+        },
+        "settings": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensSettings"
         },
         "createdBy": {
             "type": "belongsTo",
@@ -94,6 +114,9 @@
     "indexes": {
         "credentialId": {
             "columns": ["credentialId"]
+        },
+        "settingsId": {
+            "columns": ["settingsId"]
         },
         "procedimentoTipoIdCredential": {
             "unique": true,

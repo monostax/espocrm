@@ -7,7 +7,7 @@
         "gridRow": 1,
         "gridColSpan": 3,
         "rows": [
-            [{"name": "agendamentoId"}, {"name": "horaInicio"}], 
+            [{"name": "agendamentoId"}, {"name": "horaInicio"}, {"name": "horaFim"}],
             [{"name": "paciente"}, {"name": "consultaTipoAnchor"}],
             [{"name": "profissionalAnchor"}, {"name": "convenioTipoAnchor"}]
         ]
@@ -63,6 +63,26 @@
                     "span": 4,
                     "options": {
                         "link": "faturamentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "name": "contactConversationsPanel",
+        "label": false,
+        "gridRow": 5,
+        "rows": [
+            [
+                {
+                    "name": "contactConversationsList",
+                    "view": "chatwoot:views/contact/fields/contact-conversations-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "contactIdAttribute": "contactId",
                         "layout": "listSmall",
                         "recordsPerPage": 10
                     }

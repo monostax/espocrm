@@ -1,5 +1,8 @@
 {
     "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
+    "beforeReadHookClassNameList": [
+        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Classes\\RecordHooks\\FeatureIntegrationClinicaNasNuvensAgendamento\\PopulateContactFromPaciente"
+    ],
     "massActions": {
         "enrichDownstreams": {
             "implementationClassName": "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Classes\\MassAction\\FeatureIntegrationClinicaNasNuvensAgendamento\\MassEnrichDownstreams"

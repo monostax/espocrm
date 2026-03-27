@@ -1,0 +1,8 @@
+[
+    {
+        "rows": [
+            [{"name": "consultaTipoId"}],
+            [{"name": "settings", "required": true}]
+        ]
+    }
+]

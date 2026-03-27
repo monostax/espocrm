@@ -1,5 +1,9 @@
 [
-    {"name": "tenant", "width": 30},
-    {"name": "apiCredential", "width": 35},
-    {"name": "webCredential", "width": 35}
+    {"name": "tenant", "width": 20},
+    {"name": "name", "width": 20},
+    {"name": "teams", "width": 15},
+    {"name": "isActive", "width": 8},
+    {"name": "migrationStatus", "width": 12},
+    {"name": "apiCredential", "width": 12},
+    {"name": "webCredential", "width": 13}
 ]

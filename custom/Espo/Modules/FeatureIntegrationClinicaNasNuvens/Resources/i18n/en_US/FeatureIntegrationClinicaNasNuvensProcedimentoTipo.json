@@ -11,12 +11,14 @@
         "name": "Name",
         "procedimentoTipoId": "Remote Procedimento Tipo ID",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "syncStatus": "Sync Status",
         "ativo": "Active",
         "especialidades": "Specialties"
     },
     "links": {
         "credential": "Credential",
+        "settings": "Integration Profile",
         "convenioPrecificacoes": "Convenio Pricing Rows",
         "agendamentoItens": "Appointments"
     },

@@ -11,7 +11,9 @@
         "enrichingDownstreams": "Enriching related entities...",
         "enrichDownstreamsSuccess": "Successfully enriched {enriched} related entities.",
         "enrichDownstreamsPartial": "Enriched {enriched} entities, but {errors} failed.",
-        "enrichDownstreamsFailed": "Failed to enrich related entities."
+        "enrichDownstreamsFailed": "Failed to enrich related entities.",
+        "Send Message": "Send Message",
+        "No Contact linked": "No Contact linked"
     },
     "fields": {
         "name": "Name",
@@ -19,6 +21,7 @@
         "paciente": "Patient",
         "profissionalAnchor": "Professional Anchor",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "syncStatus": "Sync Status",
         "idPaciente": "Remote Paciente ID",
         "idProfissional": "Remote Professional ID",
@@ -57,6 +60,7 @@
         "paciente": "Patient",
         "profissionalAnchor": "Professional Anchor",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "faturamentos": "Faturamentos",
         "procedimentoItens": "Procedures",
         "convenioTipoAnchor": "Insurance Type",

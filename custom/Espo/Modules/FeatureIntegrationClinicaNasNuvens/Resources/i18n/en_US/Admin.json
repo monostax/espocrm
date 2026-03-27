@@ -1,9 +1,10 @@
 {
     "labels": {
         "Clínica Nas Nuvens": "Clínica Nas Nuvens",
+        "Clínica Nas Nuvens Profiles": "Clínica Nas Nuvens Profiles",
         "Integrations": "Integrations"
     },
     "descriptions": {
-        "manageClinicaNasNuvensSettings": "Manage Clínica Nas Nuvens credentials for each Tenant."
+        "manageClinicaNasNuvensSettings": "Manage Clínica Nas Nuvens integration profiles and credential pair replacements per Tenant scope team."
     }
 }

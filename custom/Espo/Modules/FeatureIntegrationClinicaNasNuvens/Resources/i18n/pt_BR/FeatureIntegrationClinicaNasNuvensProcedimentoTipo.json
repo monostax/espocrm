@@ -11,12 +11,14 @@
         "name": "Nome",
         "procedimentoTipoId": "ID Tipo de Procedimento (Clínica Nas Nuvens)",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "ativo": "Ativo",
         "especialidades": "Especialidades"
     },
     "links": {
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "convenioPrecificacoes": "Precificações de Convênio",
         "agendamentoItens": "Agendamentos"
     },

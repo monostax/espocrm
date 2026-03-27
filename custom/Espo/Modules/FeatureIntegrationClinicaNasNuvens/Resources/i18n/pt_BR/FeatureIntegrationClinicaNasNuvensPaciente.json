@@ -5,7 +5,8 @@
         "Overview": "Visão Geral",
         "Address": "Endereço",
         "Additional": "Adicional",
-        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens"
+        "openInClinicaNasNuvens": "Abrir na Clínica Nas Nuvens",
+        "Send Message": "Enviar Mensagem"
     },
     "fields": {
         "name": "Nome",
@@ -13,6 +14,7 @@
         "status": "Status",
         "contact": "Contato",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "ativo": "Ativo",
         "cpfcnpj": "CPF/CNPJ",
@@ -40,6 +42,7 @@
     "links": {
         "contact": "Contato",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "agendamentos": "Agendamentos",
         "faturamentos": "Faturamentos"
     },

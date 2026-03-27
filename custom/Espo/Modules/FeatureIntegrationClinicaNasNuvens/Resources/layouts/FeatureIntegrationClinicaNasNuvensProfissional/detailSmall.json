@@ -1,7 +1,8 @@
 [
     {
         "rows": [
-            [{"name": "profissionalId"}]
+            [{"name": "profissionalId"}],
+            [{"name": "settings", "required": true}]
         ]
     }
 ]

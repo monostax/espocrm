@@ -1,7 +1,8 @@
 [
     {
         "rows": [
-            [{"name": "convenioTipoId"}]
+            [{"name": "convenioTipoId"}],
+            [{"name": "settings", "required": true}]
         ]
     }
 ]

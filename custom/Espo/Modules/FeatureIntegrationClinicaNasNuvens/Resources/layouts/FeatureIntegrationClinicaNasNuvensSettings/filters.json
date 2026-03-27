@@ -1,5 +1,9 @@
 [
+    "name",
     "tenant",
+    "teams",
+    "isActive",
+    "migrationStatus",
     "apiCredential",
     "webCredential"
 ]

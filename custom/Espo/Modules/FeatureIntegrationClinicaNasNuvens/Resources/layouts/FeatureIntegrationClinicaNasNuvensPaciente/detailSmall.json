@@ -1,7 +1,8 @@
 [
     {
         "rows": [
-            [{"name": "pacienteId"}]
+            [{"name": "pacienteId"}],
+            [{"name": "settings", "required": true}]
         ]
     }
 ]

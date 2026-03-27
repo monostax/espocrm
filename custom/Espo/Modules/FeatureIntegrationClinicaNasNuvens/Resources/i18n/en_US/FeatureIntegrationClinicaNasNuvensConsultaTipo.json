@@ -8,12 +8,14 @@
         "name": "Name",
         "consultaTipoId": "Remote Consulta Tipo ID",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "syncStatus": "Sync Status",
         "ativo": "Active",
         "reconsulta": "Follow-up"
     },
     "links": {
         "credential": "Credential",
+        "settings": "Integration Profile",
         "agendamentos": "Appointments"
     },
     "options": {

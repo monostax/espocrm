@@ -22,11 +22,6 @@ class ClinicaNasNuvensCredentialHelper
     private const CREDENTIAL_TYPE_CODE_LIST = ['clinicaNasNuvens', 'cnn'];
 
     /**
-     * @var array<string, Entity|null>
-     */
-    private array $teamCredentialCache = [];
-
-    /**
      * @var string[]|null
      */
     private ?array $credentialTypeIdList = null;
@@ -34,6 +29,7 @@ class ClinicaNasNuvensCredentialHelper
     public function __construct(
         private EntityManager $entityManager,
         private Acl $acl,
+        private ClinicaNasNuvensIntegrationProfileResolver $integrationProfileResolver,
     ) {}
 
     /**
@@ -121,67 +117,27 @@ class ClinicaNasNuvensCredentialHelper
         return $map;
     }
 
-    /**
-     * Resolve the first accessible CNN credential from paciente team membership.
-     *
-     * Team order is preserved; first team with a valid credential wins.
-     *
-     * @param string[] $teamIdList
-     */
+    /** @param string[] $teamIdList */
     public function findAccessibleCredentialForTeamIds(array $teamIdList): ?Entity
     {
-        foreach ($teamIdList as $teamId) {
-            if (!is_string($teamId) || $teamId === '') {
-                continue;
-            }
+        $resolved = $this->integrationProfileResolver->resolveForTeamIds($teamIdList);
 
-            $credential = $this->findAccessibleCredentialForTeamId($teamId);
-
-            if ($credential) {
-                return $credential;
-            }
-        }
-
-        return null;
-    }
-
-    private function findAccessibleCredentialForTeamId(string $teamId): ?Entity
-    {
-        if (array_key_exists($teamId, $this->teamCredentialCache)) {
-            return $this->teamCredentialCache[$teamId];
-        }
-
-        $credentialTypeIdList = $this->getCredentialTypeIdList();
-
-        if ($credentialTypeIdList === []) {
-            $this->teamCredentialCache[$teamId] = null;
-
+        if ($resolved === null) {
             return null;
         }
 
-        $credentials = $this->entityManager
-            ->getRDBRepository('Credential')
-            ->select(['id', 'name'])
-            ->distinct()
-            ->join('teams', 'teams')
-            ->where([
-                'credentialTypeId' => $credentialTypeIdList,
-                'isActive' => true,
-                'teams.id' => $teamId,
-            ])
-            ->find();
+        $credential = $resolved['apiCredential'];
+        $credentialTypeId = $credential->get('credentialTypeId');
 
-        foreach ($credentials as $credential) {
-            if ($this->acl->check($credential, 'read')) {
-                $this->teamCredentialCache[$teamId] = $credential;
-
-                return $credential;
-            }
+        if (!is_string($credentialTypeId) || $credentialTypeId === '') {
+            throw new BadRequest('Resolved API credential has no type assigned.');
         }
 
-        $this->teamCredentialCache[$teamId] = null;
+        if (!in_array($credentialTypeId, $this->getCredentialTypeIdList(), true)) {
+            throw new BadRequest('Resolved profile API credential has incompatible type.');
+        }
 
-        return null;
+        return $credential;
     }
 
     /**

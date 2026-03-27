@@ -10,8 +10,45 @@
 
 define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
     "views/modal",
-    "chatwoot:chatwoot-sso-manager",
-], function (Dep, ChatwootSsoManager) {
+], function (Dep) {
+    /**
+     * Extract SSO credentials (email + sso_auth_token) from an SSO URL
+     * and append them to a target Chatwoot URL as query params.
+     *
+     * SSO URL format: https://chat.../app/login?email=X&sso_auth_token=Y
+     * Result: targetUrl?sso_email=X&sso_auth_token=Y
+     *
+     * The iframe-parent-bridge.js script on the Chatwoot side will detect
+     * these params and auto-login when the user lands on /app/login.
+     */
+    function buildChatwootUrlWithSso(chatwootBaseUrl, chatSsoUrl, cwPath) {
+        var targetUrl = chatwootBaseUrl + cwPath;
+
+        if (!chatSsoUrl) {
+            return targetUrl;
+        }
+
+        try {
+            var ssoUrlObj = new URL(chatSsoUrl);
+            var email = ssoUrlObj.searchParams.get("email");
+            var ssoToken = ssoUrlObj.searchParams.get("sso_auth_token");
+
+            if (email && ssoToken) {
+                var separator = targetUrl.includes("?") ? "&" : "?";
+                targetUrl +=
+                    separator +
+                    "sso_email=" +
+                    encodeURIComponent(email) +
+                    "&sso_auth_token=" +
+                    encodeURIComponent(ssoToken);
+            }
+        } catch (e) {
+            console.error("ConversationDrawer: Failed to parse SSO URL:", e);
+        }
+
+        return targetUrl;
+    }
+
     return Dep.extend({
         cssName: "conversation-drawer",
         className: "dialog conversation-drawer-dialog",
@@ -23,9 +60,6 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
         backdrop: true,
 
         fitHeight: true,
-
-        /** @type {function|null} SSO monitoring cleanup */
-        _ssoCleanup: null,
 
         data: function () {
             return {
@@ -80,51 +114,13 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
                 return;
             }
 
-            // Build the conversation path
+            // Build the conversation path with SSO params appended
             const cwPath = `/app/accounts/${chatwootAccountId}/inbox-view/conversation/${chatwootConversationId}`;
-
-            // Use the centralized SSO manager to determine the URL
-            const result = ChatwootSsoManager.getIframeUrl(
+            this.chatwootUrl = buildChatwootUrlWithSso(
                 chatwootBaseUrl,
                 chatSsoUrl,
                 cwPath,
             );
-
-            this.chatwootUrl = result.url;
-            this.chatwootBaseUrl = chatwootBaseUrl;
-
-            // If SSO is needed, set up monitoring BEFORE render
-            if (result.needsSso) {
-                this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
-                    chatwootBaseUrl: chatwootBaseUrl,
-                    pendingPath: result.pendingPath,
-                    ssoUrl: chatSsoUrl,
-                    getIframe: () => {
-                        var el = this.$el
-                            ? this.$el.find("iframe")[0]
-                            : null;
-                        return el || null;
-                    },
-                    onConfirmed: () => {
-                        console.log(
-                            "ConversationDrawer: SSO confirmed",
-                        );
-                    },
-                    onFailed: () => {
-                        console.error(
-                            "ConversationDrawer: SSO failed after retries",
-                        );
-                    },
-                });
-            }
-
-            // Clean up SSO monitoring when view is removed
-            this.once("remove", () => {
-                if (this._ssoCleanup) {
-                    this._ssoCleanup();
-                    this._ssoCleanup = null;
-                }
-            });
         },
 
         actionClose: function () {

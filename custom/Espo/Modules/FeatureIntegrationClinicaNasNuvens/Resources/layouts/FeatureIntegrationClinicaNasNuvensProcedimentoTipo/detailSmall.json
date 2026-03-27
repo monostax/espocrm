@@ -1,7 +1,8 @@
 [
     {
         "rows": [
-            [{"name": "procedimentoTipoId"}]
+            [{"name": "procedimentoTipoId"}],
+            [{"name": "settings", "required": true}]
         ]
     }
 ]

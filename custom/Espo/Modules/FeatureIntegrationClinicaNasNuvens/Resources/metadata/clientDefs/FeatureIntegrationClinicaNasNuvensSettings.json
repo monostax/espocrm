@@ -5,5 +5,8 @@
         "detail": "views/record/detail",
         "edit": "views/record/edit"
     },
+    "actions": {
+        "replaceCredential": true
+    },
     "iconClass": "fas fa-cogs"
 }

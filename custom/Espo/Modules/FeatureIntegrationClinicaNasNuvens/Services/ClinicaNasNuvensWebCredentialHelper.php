@@ -14,11 +14,6 @@ class ClinicaNasNuvensWebCredentialHelper
     private const CREDENTIAL_TYPE_CODE = 'clinicaNasNuvens-web';
 
     /**
-     * @var array<string, Entity|null>
-     */
-    private array $teamCredentialCache = [];
-
-    /**
      * @var string[]|null
      */
     private ?array $credentialTypeIdList = null;
@@ -26,6 +21,7 @@ class ClinicaNasNuvensWebCredentialHelper
     public function __construct(
         private EntityManager $entityManager,
         private Acl $acl,
+        private ClinicaNasNuvensIntegrationProfileResolver $integrationProfileResolver,
     ) {}
 
     /**
@@ -73,58 +69,24 @@ class ClinicaNasNuvensWebCredentialHelper
      */
     public function findAccessibleCredentialForTeamIds(array $teamIdList): ?Entity
     {
-        foreach ($teamIdList as $teamId) {
-            if (!is_string($teamId) || $teamId === '') {
-                continue;
-            }
+        $resolved = $this->integrationProfileResolver->resolveForTeamIds($teamIdList);
 
-            $credential = $this->findAccessibleCredentialForTeamId($teamId);
-
-            if ($credential) {
-                return $credential;
-            }
-        }
-
-        return null;
-    }
-
-    private function findAccessibleCredentialForTeamId(string $teamId): ?Entity
-    {
-        if (array_key_exists($teamId, $this->teamCredentialCache)) {
-            return $this->teamCredentialCache[$teamId];
-        }
-
-        $credentialTypeIdList = $this->getCredentialTypeIdList();
-
-        if ($credentialTypeIdList === []) {
-            $this->teamCredentialCache[$teamId] = null;
-
+        if ($resolved === null) {
             return null;
         }
 
-        $credentials = $this->entityManager
-            ->getRDBRepository('Credential')
-            ->select(['id', 'name'])
-            ->distinct()
-            ->join('teams', 'teams')
-            ->where([
-                'credentialTypeId' => $credentialTypeIdList,
-                'isActive' => true,
-                'teams.id' => $teamId,
-            ])
-            ->find();
+        $credential = $resolved['webCredential'];
+        $credentialTypeId = $credential->get('credentialTypeId');
 
-        foreach ($credentials as $credential) {
-            if ($this->acl->check($credential, 'read')) {
-                $this->teamCredentialCache[$teamId] = $credential;
-
-                return $credential;
-            }
+        if (!is_string($credentialTypeId) || $credentialTypeId === '') {
+            throw new BadRequest('Resolved Web credential has no type assigned.');
         }
 
-        $this->teamCredentialCache[$teamId] = null;
+        if (!in_array($credentialTypeId, $this->getCredentialTypeIdList(), true)) {
+            throw new BadRequest('Resolved profile Web credential has incompatible type.');
+        }
 
-        return null;
+        return $credential;
     }
 
     /**

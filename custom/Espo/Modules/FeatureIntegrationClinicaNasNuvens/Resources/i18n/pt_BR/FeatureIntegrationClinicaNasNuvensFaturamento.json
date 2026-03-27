@@ -13,6 +13,7 @@
         "profissionalAnchor": "Profissional",
         "paciente": "Paciente",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "documento": "Documento",
         "dataFaturamento": "Data do Faturamento",
@@ -27,7 +28,8 @@
         "agendamento": "Agendamento",
         "profissionalAnchor": "Profissional",
         "paciente": "Paciente",
-        "credential": "Credencial"
+        "credential": "Credencial",
+        "settings": "Perfil de Integração"
     },
     "options": {
         "syncStatus": {

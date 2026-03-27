@@ -3,6 +3,9 @@
     "iconClass": "fas fa-user-injured",
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
+    "defaultSidePanelFieldLists": {
+        "edit": []
+    },
     "views": {
         "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
     },
@@ -18,10 +21,29 @@
                     "actionFunction": "openInClinicaNasNuvens",
                     "checkVisibilityFunction": "isOpenInClinicaNasNuvensVisible",
                     "iconClass": "fas fa-external-link-alt"
+                },
+                {
+                    "name": "sendMessage",
+                    "label": "Send Message",
+                    "style": "default",
+                    "iconHtml": "<span class=\"fas fa-paper-plane fa-sm\"></span>",
+                    "handler": "chatwoot:handlers/contact-linked-entity/detail-actions",
+                    "actionFunction": "sendMessage",
+                    "checkVisibilityFunction": "isSendMessageAvailable"
                 }
             ]
         }
     },
+    "detailActionList": [
+        {
+            "name": "sendMessage",
+            "label": "Send Message",
+            "handler": "chatwoot:handlers/contact-linked-entity/detail-actions",
+            "actionFunction": "sendMessage",
+            "checkVisibilityFunction": "isSendMessageAvailable",
+            "groupIndex": 0
+        }
+    ],
     "sidePanels": {
         "detail": [
             {

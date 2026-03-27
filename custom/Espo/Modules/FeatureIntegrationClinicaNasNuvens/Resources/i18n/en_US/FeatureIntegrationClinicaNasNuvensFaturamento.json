@@ -13,6 +13,7 @@
         "profissionalAnchor": "Professional Anchor",
         "paciente": "Paciente",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "syncStatus": "Sync Status",
         "documento": "Document",
         "dataFaturamento": "Billing Date",
@@ -27,7 +28,8 @@
         "agendamento": "Agendamento",
         "profissionalAnchor": "Professional Anchor",
         "paciente": "Paciente",
-        "credential": "Credential"
+        "credential": "Credential",
+        "settings": "Integration Profile"
     },
     "options": {
         "syncStatus": {

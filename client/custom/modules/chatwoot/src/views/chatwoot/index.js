@@ -27,15 +27,44 @@
  ************************************************************************/
 
 import View from "view";
-import ChatwootSsoManager from "chatwoot:chatwoot-sso-manager";
+
+/**
+ * Extract SSO credentials (email + sso_auth_token) from an SSO URL
+ * and append them to a target Chatwoot URL as query params.
+ *
+ * The iframe-parent-bridge.js script on the Chatwoot side will detect
+ * these params and auto-login when the user lands on /app/login.
+ */
+function buildChatwootUrlWithSso(chatwootBaseUrl, chatSsoUrl, cwPath) {
+    let targetUrl = cwPath
+        ? `${chatwootBaseUrl}${cwPath}`
+        : chatwootBaseUrl;
+
+    if (!chatSsoUrl) {
+        return targetUrl;
+    }
+
+    try {
+        const ssoUrlObj = new URL(chatSsoUrl);
+        const email = ssoUrlObj.searchParams.get("email");
+        const ssoToken = ssoUrlObj.searchParams.get("sso_auth_token");
+
+        if (email && ssoToken) {
+            const separator = targetUrl.includes("?") ? "&" : "?";
+            targetUrl +=
+                `${separator}sso_email=${encodeURIComponent(email)}&sso_auth_token=${encodeURIComponent(ssoToken)}`;
+        }
+    } catch (e) {
+        console.error("ChatwootIndexView: Failed to parse SSO URL:", e);
+    }
+
+    return targetUrl;
+}
 
 class ChatwootIndexView extends View {
     template = "chatwoot:chatwoot/index";
 
     chatwootBaseUrl = null;
-
-    /** @type {function|null} SSO monitoring cleanup */
-    _ssoCleanup = null;
 
     setup() {
         // Get cwPath, SSO URL and frontend URL from options (passed from controller)
@@ -43,57 +72,18 @@ class ChatwootIndexView extends View {
         this.chatSsoUrl = this.options.chatSsoUrl || "";
         this.chatwootBaseUrl = this.options.chatwootFrontendUrl;
 
-        // Determine the iframe URL using the centralized SSO manager
-        const { url, needsSso, pendingPath } = ChatwootSsoManager.getIframeUrl(
+        // Build iframe URL with SSO params appended
+        this.chatwootUrl = buildChatwootUrlWithSso(
             this.chatwootBaseUrl,
             this.chatSsoUrl,
             this.cwPath,
         );
-
-        this.chatwootUrl = url;
-
-        // If SSO is needed, set up monitoring BEFORE render so we catch CHATWOOT_READY
-        if (needsSso) {
-            this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
-                chatwootBaseUrl: this.chatwootBaseUrl,
-                pendingPath: pendingPath,
-                ssoUrl: this.chatSsoUrl,
-                getIframe: () => {
-                    const el = this.$el ? this.$el.find("iframe")[0] : null;
-                    return el || null;
-                },
-                onConfirmed: () => {
-                    console.log(
-                        "ChatwootIndexView: SSO confirmed",
-                    );
-                },
-                onNavigated: (targetUrl) => {
-                    console.log(
-                        "ChatwootIndexView: Navigated to",
-                        targetUrl,
-                    );
-                },
-                onFailed: () => {
-                    console.error(
-                        "ChatwootIndexView: SSO failed after retries",
-                    );
-                },
-            });
-        }
 
         // Notify parent to switch to Chatwoot mode when this view is loaded
         this.notifyParentToChatwoot();
 
         // Listen for Chatwoot navigation updates from parent iframe
         this.setupChatwootListener();
-
-        // Clean up SSO monitoring when view is removed
-        this.once("remove", () => {
-            if (this._ssoCleanup) {
-                this._ssoCleanup();
-                this._ssoCleanup = null;
-            }
-        });
     }
 
     notifyParentToChatwoot() {

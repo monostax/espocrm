@@ -8,6 +8,7 @@
         "name": "Nome",
         "convenioTipoId": "ID Tipo de Convênio (Clínica Nas Nuvens)",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "ativo": "Ativo",
         "beneficio": "Benefício",
@@ -15,6 +16,7 @@
     },
     "links": {
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "agendamentos": "Agendamentos"
     },
     "options": {

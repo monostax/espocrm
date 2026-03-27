@@ -23,7 +23,6 @@
 import BaseFieldView from "views/fields/base";
 import AppParams from "app-params";
 import { inject } from "di";
-import ChatwootSsoManager from "chatwoot:chatwoot-sso-manager";
 
 /**
  * A field view that displays a Chatwoot conversation in an iframe.
@@ -51,9 +50,6 @@ class IframeConversationFieldView extends BaseFieldView {
     appParams;
 
     chatwootBaseUrl = null;
-
-    /** @type {function|null} SSO monitoring cleanup */
-    _ssoCleanup = null;
 
     templateContent = `
         {{#if hasConversation}}
@@ -113,21 +109,8 @@ class IframeConversationFieldView extends BaseFieldView {
 
         // Listen for model sync to re-render when data is loaded
         this.listenTo(this.model, "sync", () => {
-            // Clean up previous SSO monitoring before re-render
-            if (this._ssoCleanup) {
-                this._ssoCleanup();
-                this._ssoCleanup = null;
-            }
             if (this.isRendered()) {
                 this.reRender();
-            }
-        });
-
-        // Clean up SSO monitoring when view is removed
-        this.once("remove", () => {
-            if (this._ssoCleanup) {
-                this._ssoCleanup();
-                this._ssoCleanup = null;
             }
         });
     }
@@ -183,45 +166,35 @@ class IframeConversationFieldView extends BaseFieldView {
             };
         }
 
-        // Build the conversation path
+        // Build the conversation path with SSO params appended
         const cwPath = `/app/accounts/${chatwootAccountId}/inbox-view/conversation/${chatwootConversationId}`;
+        let chatwootUrl = `${this.chatwootBaseUrl}${cwPath}`;
 
-        // Use the centralized SSO manager to determine the URL
-        const { url, needsSso, pendingPath } =
-            ChatwootSsoManager.getIframeUrl(
-                this.chatwootBaseUrl,
-                this.chatSsoUrl,
-                cwPath,
-            );
+        // Append SSO credentials from the SSO URL as query params
+        // The iframe-parent-bridge.js script on the Chatwoot side will
+        // detect these params and auto-login when the user hits /app/login
+        if (this.chatSsoUrl) {
+            try {
+                const ssoUrlObj = new URL(this.chatSsoUrl);
+                const email = ssoUrlObj.searchParams.get("email");
+                const ssoToken = ssoUrlObj.searchParams.get("sso_auth_token");
 
-        // If SSO is needed, set up monitoring BEFORE render
-        if (needsSso) {
-            this._ssoCleanup = ChatwootSsoManager.setupSsoMonitoring({
-                chatwootBaseUrl: this.chatwootBaseUrl,
-                pendingPath: pendingPath,
-                ssoUrl: this.chatSsoUrl,
-                getIframe: () => {
-                    const el = this.$el
-                        ? this.$el.find("iframe")[0]
-                        : null;
-                    return el || null;
-                },
-                onConfirmed: () => {
-                    console.log(
-                        "IframeConversationFieldView: SSO confirmed",
-                    );
-                },
-                onFailed: () => {
-                    console.error(
-                        "IframeConversationFieldView: SSO failed after retries",
-                    );
-                },
-            });
+                if (email && ssoToken) {
+                    const separator = chatwootUrl.includes("?") ? "&" : "?";
+                    chatwootUrl +=
+                        `${separator}sso_email=${encodeURIComponent(email)}&sso_auth_token=${encodeURIComponent(ssoToken)}`;
+                }
+            } catch (e) {
+                console.error(
+                    "IframeConversationFieldView: Failed to parse SSO URL:",
+                    e,
+                );
+            }
         }
 
         return {
             hasConversation: true,
-            chatwootUrl: url,
+            chatwootUrl: chatwootUrl,
         };
     }
 

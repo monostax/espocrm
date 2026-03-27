@@ -11,14 +11,17 @@
         "enrichingDownstreams": "Consultando Clínica Nas Nuvens...",
         "enrichDownstreamsSuccess": "Enriquecidas {enriched} entidades relacionadas com sucesso.",
         "enrichDownstreamsPartial": "Enriquecidas {enriched} entidades, mas {errors} falharam.",
-        "enrichDownstreamsFailed": "Falha ao enriquecer entidades relacionadas."
+        "enrichDownstreamsFailed": "Falha ao enriquecer entidades relacionadas.",
+        "Send Message": "Enviar Mensagem",
+        "No Contact linked": "Nenhum Contato vinculado"
     },
     "fields": {
         "name": "Nome",
-        "agendamentoId": "ID Agendamento (Clínica Nas Nuvens)",
+        "agendamentoId": "ID Agendamento",
         "paciente": "Paciente",
         "profissionalAnchor": "Profissional",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "idPaciente": "ID Paciente (Clínica Nas Nuvens)",
         "idProfissional": "ID Remoto do Profissional",
@@ -46,7 +49,8 @@
         "procedimentos": "Procedimentos",
         "valorFaturamentos": "Valor Faturamentos",
         "valorProcedimentos": "Valor Procedimentos",
-        "valorFinanceiro": "Valor Financeiro"
+        "valorFinanceiro": "Valor Financeiro",
+        "contact": "Contato"
     },
     "tooltips": {
         "valorFaturamentos": "Valor obtido a partir do último faturamento registrado para este agendamento.",
@@ -57,6 +61,7 @@
         "paciente": "Paciente",
         "profissionalAnchor": "Profissional",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "faturamentos": "Faturamentos",
         "procedimentoItens": "Procedimentos",
         "convenioTipoAnchor": "Tipo de Convênio",

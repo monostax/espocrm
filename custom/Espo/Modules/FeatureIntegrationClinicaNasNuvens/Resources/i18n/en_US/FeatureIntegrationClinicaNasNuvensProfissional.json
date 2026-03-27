@@ -11,6 +11,7 @@
         "profissionalId": "Remote Professional ID",
         "idPessoa": "Remote Pessoa ID",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "syncStatus": "Sync Status",
         "ativo": "Active",
         "tipoExecutor": "Executor Type",
@@ -30,6 +31,7 @@
     },
     "links": {
         "credential": "Credential",
+        "settings": "Integration Profile",
         "agendamentos": "Appointments",
         "faturamentos": "Billings"
     },

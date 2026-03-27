@@ -2,7 +2,11 @@
     {
         "label": "Basic",
         "rows": [
+            [{"name": "name"}],
+            [{"name": "isActive"}],
             [{"name": "tenant"}],
+            [{"name": "teams"}],
+            [{"name": "migrationStatus"}],
             [{"name": "apiCredential"}],
             [{"name": "webCredential"}]
         ]

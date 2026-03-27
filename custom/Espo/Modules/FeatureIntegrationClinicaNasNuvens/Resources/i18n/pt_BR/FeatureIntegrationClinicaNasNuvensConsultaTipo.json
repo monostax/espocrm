@@ -8,12 +8,14 @@
         "name": "Nome",
         "consultaTipoId": "ID Tipo de Consulta (Clínica Nas Nuvens)",
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "syncStatus": "Status de Sincronização",
         "ativo": "Ativo",
         "reconsulta": "Reconsulta"
     },
     "links": {
         "credential": "Credencial",
+        "settings": "Perfil de Integração",
         "agendamentos": "Agendamentos"
     },
     "options": {

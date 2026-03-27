@@ -2,89 +2,114 @@
     "fields": {
         "name": {
             "type": "varchar",
-            "maxLength": 255
+            "maxLength": 255,
+            "readOnlyAfterCreate": true
         },
         "faturamentoId": {
             "type": "varchar",
             "maxLength": 100,
             "required": true,
-            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id"
+            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id",
+            "readOnlyAfterCreate": true
         },
         "agendamento": {
-            "type": "link"
+            "type": "link",
+            "readOnlyAfterCreate": true
         },
         "profissionalAnchor": {
-            "type": "link"
+            "type": "link",
+            "readOnlyAfterCreate": true
         },
         "paciente": {
-            "type": "link"
+            "type": "link",
+            "readOnlyAfterCreate": true
         },
         "credential": {
-            "type": "link"
+            "type": "link",
+            "readOnlyAfterCreate": true
+        },
+        "settings": {
+            "type": "link",
+            "required": true,
+            "readOnlyAfterCreate": true
         },
         "syncStatus": {
             "type": "enum",
             "options": ["pending", "synced", "error"],
-            "default": "pending"
+            "default": "pending",
+            "readOnlyAfterCreate": true
         },
         "documento": {
             "type": "varchar",
             "maxLength": 120,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "dataFaturamento": {
             "type": "date",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "profissionalNome": {
             "type": "varchar",
             "maxLength": 255,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "conta": {
             "type": "varchar",
             "maxLength": 255,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "valor": {
             "type": "currency",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "parcela": {
             "type": "varchar",
             "maxLength": 100,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "dataVencimento": {
             "type": "date",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "description": {
             "type": "text",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "createdAt": {
             "type": "datetime",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "modifiedAt": {
             "type": "datetime",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "createdBy": {
             "type": "link",
             "readOnly": true,
-            "view": "views/fields/user"
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
         },
         "modifiedBy": {
             "type": "link",
             "readOnly": true,
-            "view": "views/fields/user"
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
         },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
-            "required": true
+            "required": true,
+            "readOnlyAfterCreate": true
         }
     },
     "links": {
@@ -107,6 +132,10 @@
             "type": "belongsTo",
             "entity": "Credential",
             "foreign": "clinicaNasNuvensFaturamentos"
+        },
+        "settings": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensSettings"
         },
         "createdBy": {
             "type": "belongsTo",
@@ -150,6 +179,9 @@
         },
         "credentialId": {
             "columns": ["credentialId"]
+        },
+        "settingsId": {
+            "columns": ["settingsId"]
         },
         "faturamentoIdCredential": {
             "unique": true,

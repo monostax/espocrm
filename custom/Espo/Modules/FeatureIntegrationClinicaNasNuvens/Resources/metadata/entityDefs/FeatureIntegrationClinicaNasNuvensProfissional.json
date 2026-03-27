@@ -2,114 +2,144 @@
     "fields": {
         "name": {
             "type": "varchar",
-            "maxLength": 255
+            "maxLength": 255,
+            "readOnlyAfterCreate": true
         },
         "profissionalId": {
             "type": "varchar",
             "maxLength": 100,
             "required": true,
-            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id"
+            "view": "feature-integration-clinica-nas-nuvens:views/fields/cnn-external-id",
+            "readOnlyAfterCreate": true
         },
         "idPessoa": {
             "type": "varchar",
             "maxLength": 100,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "credential": {
-            "type": "link"
+            "type": "link",
+            "readOnlyAfterCreate": true
+        },
+        "settings": {
+            "type": "link",
+            "required": true,
+            "readOnlyAfterCreate": true
         },
         "syncStatus": {
             "type": "enum",
             "options": ["pending", "synced", "error"],
-            "default": "pending"
+            "default": "pending",
+            "readOnlyAfterCreate": true
         },
         "ativo": {
             "type": "bool",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "tipoExecutor": {
             "type": "varchar",
             "maxLength": 40,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "cpfcnpj": {
             "type": "varchar",
             "maxLength": 32,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "email": {
             "type": "email",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "telefoneCelular": {
             "type": "phone",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "telefoneComercial": {
             "type": "phone",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "telefoneResidencial": {
             "type": "phone",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "telefoneRecados": {
             "type": "phone",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "profissional": {
             "type": "bool",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "profissionalCodigo": {
             "type": "varchar",
             "maxLength": 60,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "cbo": {
             "type": "varchar",
             "maxLength": 60,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "registroProfissional": {
             "type": "varchar",
             "maxLength": 60,
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "especialidades": {
             "type": "jsonArray",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "especialidadesTexto": {
             "type": "text",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "clinicas": {
             "type": "text",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "createdAt": {
             "type": "datetime",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "modifiedAt": {
             "type": "datetime",
-            "readOnly": true
+            "readOnly": true,
+            "readOnlyAfterCreate": true
         },
         "createdBy": {
             "type": "link",
             "readOnly": true,
-            "view": "views/fields/user"
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
         },
         "modifiedBy": {
             "type": "link",
             "readOnly": true,
-            "view": "views/fields/user"
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
         },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
-            "required": true
+            "required": true,
+            "readOnlyAfterCreate": true
         }
     },
     "links": {
@@ -117,6 +147,10 @@
             "type": "belongsTo",
             "entity": "Credential",
             "foreign": "clinicaNasNuvensProfissionais"
+        },
+        "settings": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationClinicaNasNuvensSettings"
         },
         "agendamentos": {
             "type": "hasMany",
@@ -161,6 +195,9 @@
     "indexes": {
         "credentialId": {
             "columns": ["credentialId"]
+        },
+        "settingsId": {
+            "columns": ["settingsId"]
         },
         "idPessoaCredential": {
             "columns": ["idPessoa", "credentialId", "deleted"]

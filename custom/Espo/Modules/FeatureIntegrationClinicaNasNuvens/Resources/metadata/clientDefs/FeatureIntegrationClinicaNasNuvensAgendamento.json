@@ -17,9 +17,9 @@
         "detail": "global:views/record/detail"
     },
     "defaultSidePanelFieldLists": {
-        "detail": ["status", "statusFaturamento", "teams"],
-        "edit": ["status", "teams"],
-        "detailSmall": ["status", "teams"]
+        "detail": ["status", "statusFaturamento","contact", "teams"],
+        "edit": ["status", "statusFaturamento","contact", "teams"],
+        "detailSmall": ["status", "statusFaturamento","contact", "teams"]
     },
     "views": {
         "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
@@ -45,11 +45,38 @@
                     "actionFunction": "enrichDownstreams",
                     "checkVisibilityFunction": "isEnrichDownstreamsVisible",
                     "iconClass": "fas fa-sync-alt"
+                },
+                {
+                    "name": "sendMessage",
+                    "label": "Send Message",
+                    "style": "default",
+                    "iconHtml": "<span class=\"fas fa-paper-plane fa-sm\"></span>",
+                    "handler": "chatwoot:handlers/contact-linked-entity/detail-actions",
+                    "actionFunction": "sendMessage",
+                    "checkVisibilityFunction": "isSendMessageAvailable"
                 }
             ]
         }
     },
+    "detailActionList": [
+        {
+            "name": "sendMessage",
+            "label": "Send Message",
+            "handler": "chatwoot:handlers/contact-linked-entity/detail-actions",
+            "actionFunction": "sendMessage",
+            "checkVisibilityFunction": "isSendMessageAvailable",
+            "groupIndex": 0
+        }
+    ],
     "sidePanels": {
+        "detail": [
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "order": 3
+            }
+        ],
         "detailSmall": [
             {
                 "name": "faturamentos",

@@ -3,6 +3,9 @@
     "iconClass": "fas fa-file-invoice-dollar",
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
+    "defaultSidePanelFieldLists": {
+        "edit": []
+    },
     "views": {
         "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
     },

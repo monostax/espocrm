@@ -1,5 +1,6 @@
 [
+    {"name": "name", "link": true},
     {"name": "tenant"},
-    {"name": "apiCredential"},
-    {"name": "webCredential"}
+    {"name": "isActive"},
+    {"name": "migrationStatus"}
 ]

@@ -1,15 +1,32 @@
 {
     "labels": {
-        "Create FeatureIntegrationClinicaNasNuvensSettings": "Create Clinica Nas Nuvens Settings"
+        "FeatureIntegrationClinicaNasNuvensSettings": "Clínica Nas Nuvens Integration Profile",
+        "Create FeatureIntegrationClinicaNasNuvensSettings": "Create Integration Profile"
     },
     "fields": {
+        "name": "Profile Name",
+        "isActive": "Active",
+        "migrationStatus": "Migration Status",
         "tenant": "Tenant",
+        "teams": "Scope Team",
         "apiCredential": "API Credential",
         "webCredential": "Web Credential"
     },
     "links": {
         "tenant": "Tenant",
+        "teams": "Scope Team",
         "apiCredential": "API Credential",
         "webCredential": "Web Credential"
+    },
+    "actions": {
+        "replaceCredential": "Replace Credentials"
+    },
+    "options": {
+        "migrationStatus": {
+            "idle": "Idle",
+            "inProgress": "In Progress",
+            "completed": "Completed",
+            "failed": "Failed"
+        }
     }
 }

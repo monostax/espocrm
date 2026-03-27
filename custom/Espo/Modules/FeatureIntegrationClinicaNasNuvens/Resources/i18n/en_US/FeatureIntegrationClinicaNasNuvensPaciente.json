@@ -5,13 +5,15 @@
         "Overview": "Overview",
         "Address": "Address",
         "Additional": "Additional",
-        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens"
+        "openInClinicaNasNuvens": "Open in Clínica Nas Nuvens",
+        "Send Message": "Send Message"
     },
     "fields": {
         "name": "Name",
         "pacienteId": "Remote Paciente ID",
         "contact": "Contact",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "syncStatus": "Sync Status",
         "ativo": "Active",
         "cpfcnpj": "CPF/CNPJ",
@@ -39,6 +41,7 @@
     "links": {
         "contact": "Contact",
         "credential": "Credential",
+        "settings": "Integration Profile",
         "agendamentos": "Appointments",
         "faturamentos": "Billings"
     },

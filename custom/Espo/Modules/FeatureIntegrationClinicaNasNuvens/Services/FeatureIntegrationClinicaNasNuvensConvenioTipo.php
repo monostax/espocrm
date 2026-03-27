@@ -11,6 +11,7 @@ use Espo\Core\Record\FindParams;
 use Espo\Core\Record\ReadParams;
 use Espo\Core\Record\Service as RecordService;
 use Espo\Core\Select\SearchParams;
+use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Services\ClinicaNasNuvensIntegrationProfileResolver;
 use Espo\ORM\Entity;
 use stdClass;
 use Throwable;
@@ -77,6 +78,33 @@ class FeatureIntegrationClinicaNasNuvensConvenioTipo extends RecordService imple
 
     public function create(stdClass $data, CreateParams $params): Entity
     {
+        $settingsId = $this->normalizeNullableString($data->settingsId ?? null);
+
+        if (!$settingsId && property_exists($data, 'settings')) {
+            $rawSettings = $data->settings;
+
+            if (is_string($rawSettings)) {
+                $settingsId = $this->normalizeNullableString($rawSettings);
+            }
+
+            if ($rawSettings instanceof stdClass && property_exists($rawSettings, 'id')) {
+                $settingsId = $this->normalizeNullableString($rawSettings->id);
+            }
+        }
+
+        if ($settingsId) {
+            $resolved = $this->getProfileResolver()->resolveForProfileId($settingsId);
+            $profile = $resolved['profile'];
+
+            $data->settingsId = $settingsId;
+            $data->credentialId = $resolved['apiCredential']->getId();
+
+            $rawTeamIdList = $profile->get('teamsIds');
+            $data->teamsIds = is_array($rawTeamIdList)
+                ? array_values(array_filter($rawTeamIdList, fn ($id) => is_string($id) && trim($id) !== ''))
+                : [];
+        }
+
         $rawConvenioTipoId = $this->extractRawConvenioTipoIdFromInput($data);
         $rawTeamIdList = $this->extractTeamIdListFromInput($data);
         $preCreateCredential = null;
@@ -448,6 +476,11 @@ class FeatureIntegrationClinicaNasNuvensConvenioTipo extends RecordService imple
     private function getCredentialHelper(): ClinicaNasNuvensCredentialHelper
     {
         return $this->injectableFactory->create(ClinicaNasNuvensCredentialHelper::class);
+    }
+
+    private function getProfileResolver(): ClinicaNasNuvensIntegrationProfileResolver
+    {
+        return $this->injectableFactory->create(ClinicaNasNuvensIntegrationProfileResolver::class);
     }
 
     /**

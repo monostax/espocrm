@@ -1,5 +1,20 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "required": true
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "migrationStatus": {
+            "type": "enum",
+            "options": ["idle", "inProgress", "completed", "failed"],
+            "default": "idle",
+            "required": true
+        },
         "tenant": {
             "type": "link",
             "required": true
@@ -11,6 +26,29 @@
         "webCredential": {
             "type": "link",
             "required": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
         }
     },
     "links": {
@@ -28,12 +66,47 @@
             "type": "belongsTo",
             "entity": "Credential",
             "foreign": "clinicaNasNuvensWebSettings"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
         }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name"
+        ]
     },
     "indexes": {
         "tenantId": {
-            "columns": ["tenantId", "deleted"],
-            "unique": true
+            "columns": ["tenantId"]
+        },
+        "name": {
+            "columns": ["name", "deleted"]
+        },
+        "apiCredentialId": {
+            "columns": ["apiCredentialId"]
+        },
+        "webCredentialId": {
+            "columns": ["webCredentialId"]
+        },
+        "tenantIsActive": {
+            "columns": ["tenantId", "isActive", "deleted"]
+        },
+        "migrationStatus": {
+            "columns": ["migrationStatus", "deleted"]
         }
     }
 }
