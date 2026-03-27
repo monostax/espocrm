@@ -27,7 +27,14 @@
         "status": {
             "type": "enum",
             "options": ["open", "pending", "snoozed", "resolved"],
-            "default": "open"
+            "default": "open",
+            "view": "views/fields/enum-styled",
+            "style": {
+                "open": "success",
+                "pending": "warning",
+                "snoozed": "info",
+                "resolved": "default"
+            }
         },
         "chatwootInboxId": { "type": "int" },
         "inboxName": { "type": "varchar", "maxLength": 255 },
@@ -54,6 +61,14 @@
         "lastMessageType": {
             "type": "enum",
             "options": ["incoming", "outgoing", "activity", "template"],
+            "readOnly": true
+        },
+        "lastMessageSentAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastMessageReceivedAt": {
+            "type": "datetime",
             "readOnly": true
         },
         "contactAvatarUrl": {

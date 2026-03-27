@@ -84,7 +84,7 @@ class ContactConversationsListFieldView extends BaseFieldView {
     /** @type {string} */
     contactIdAttribute = 'contactId';
     /** @type {string} */
-    layoutName = 'listSmall';
+    layoutName = 'listForContactPanel';
     /** @type {number} */
     recordsPerPage = 10;
     /** @type {string} */
@@ -236,20 +236,51 @@ class ContactConversationsListFieldView extends BaseFieldView {
                 collection: collection,
                 layoutName: this.layoutName,
                 type: 'listSmall',
+                selectable: true,
                 checkboxes: false,
-                rowActionsView: 'views/record/row-actions/view-only',
+                rowActionsView: false,
                 buttonsDisabled: true,
-                headerDisabled: true,
                 displayTotalCount: false,
                 skipBuildRows: true,
                 pagination: collection.maxSize < 200,
             }, (view) => {
+                this.listenTo(view, 'select', (model) => {
+                    this.openConversationDrawer(model);
+                });
+
                 collection.fetch().then(() => {
                     view.render();
                 });
             });
         });
     }
+    /**
+     * Open the Chatwoot conversation drawer for the selected conversation.
+     *
+     * @param {Object} model - The ChatwootConversation Backbone model.
+     */
+    openConversationDrawer(model) {
+        this.createView(
+            'conversationDrawer',
+            'chatwoot:views/chatwoot-conversation/modals/conversation-drawer',
+            {
+                chatwootConversationId: model.get('chatwootConversationId'),
+                chatwootAccountIdExternal: model.get('chatwootAccountIdExternal'),
+                contactName: model.get('contactDisplayName') || model.get('name'),
+                recordId: model.id,
+            },
+            (view) => {
+                view.render();
+
+                this.listenToOnce(view, 'close', () => {
+                    if (this.collection) {
+                        this.collection.fetch();
+                    }
+                });
+            }
+        );
+    }
+
     /**
      * Get select attributes from the layout to optimize the API query.
      *

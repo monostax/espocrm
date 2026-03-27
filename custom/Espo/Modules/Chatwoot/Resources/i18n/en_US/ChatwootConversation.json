@@ -17,7 +17,10 @@
         "lastMessageContent": "Last Message",
         "contactAvatarUrl": "Contact Avatar",
         "contactDisplayName": "Contact Name",
-        "inboxChannelType": "Channel Type"
+        "inboxChannelType": "Channel Type",
+        "lastMessageSentAt": "Last Sent",
+        "lastMessageReceivedAt": "Last Received",
+        "lastMessageType": "Last Message Type"
     },
     "options": {
         "status": {

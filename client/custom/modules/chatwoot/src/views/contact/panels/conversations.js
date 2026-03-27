@@ -19,6 +19,8 @@
  * Fetches conversations via the Contact's relationship endpoint:
  *   GET Contact/{contactId}/chatwootConversations
  *
+ * Clicking a row opens the Chatwoot conversation drawer (iframe).
+ *
  * Usage in clientDefs JSON:
  * {
  *     "sidePanels": {
@@ -34,8 +36,8 @@
  * }
  */
 define('chatwoot:views/contact/panels/conversations',
-    ['views/record/panels/bottom', 'collection'],
-    function (Dep, Collection) {
+    ['views/record/panels/bottom'],
+    function (Dep) {
 
     return Dep.extend({
 
@@ -47,7 +49,7 @@ define('chatwoot:views/contact/panels/conversations',
 
         rowActionsView: false,
 
-        layoutName: 'listSmall',
+        layoutName: 'listForContactPanel',
 
         recordsPerPage: 5,
 
@@ -76,12 +78,12 @@ define('chatwoot:views/contact/panels/conversations',
 
             this.wait(true);
 
-            this.collection = new Collection();
-            this.collection.entityType = 'ChatwootConversation';
-            this.collection.name = 'ChatwootConversation';
-            this.collection.maxSize = this.recordsPerPage;
+            this.getCollectionFactory().create('ChatwootConversation', function (collection) {
+                collection.maxSize = this.recordsPerPage;
+                this.collection = collection;
 
-            this.loadConversations();
+                this.loadConversations();
+            }.bind(this));
         },
 
         loadConversations: function () {
@@ -142,14 +144,65 @@ define('chatwoot:views/contact/panels/conversations',
                 collection: this.collection,
                 layoutName: this.layoutName,
                 listLayout: null,
+                selectable: true,
                 checkboxes: false,
                 rowActionsView: this.rowActionsView,
                 buttonsDisabled: true,
-                headerDisabled: true,
+                displayTotalCount: false,
                 el: this.getSelector() + ' .list-container',
             }, function (view) {
+                this.listenTo(view, 'select', function (model) {
+                    this.openConversationDrawer(model);
+                }.bind(this));
+
                 view.render();
-            });
+
+                // Make entire row clickable (not just <a> links).
+                this.$el.on('click', '.list-row', function (e) {
+                    if ($(e.target).closest('a.link').length) {
+                        // Already handled by the selectable handler.
+                        return;
+                    }
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    var id = $(e.currentTarget).attr('data-id');
+
+                    if (id && this.collection) {
+                        var model = this.collection.get(id);
+
+                        if (model) {
+                            this.openConversationDrawer(model);
+                        }
+                    }
+                }.bind(this));
+            }.bind(this));
+        },
+
+        /**
+         * Open the Chatwoot conversation drawer for the selected conversation.
+         *
+         * @param {Object} model - The ChatwootConversation Backbone model.
+         */
+        openConversationDrawer: function (model) {
+            this.createView(
+                'conversationDrawer',
+                'chatwoot:views/chatwoot-conversation/modals/conversation-drawer',
+                {
+                    chatwootConversationId: model.get('chatwootConversationId'),
+                    chatwootAccountIdExternal: model.get('chatwootAccountIdExternal'),
+                    contactName: model.get('contactDisplayName') || model.get('name'),
+                    recordId: model.id,
+                },
+                function (view) {
+                    view.render();
+
+                    this.listenToOnce(view, 'close', function () {
+                        this.loadConversations();
+                    }.bind(this));
+                }.bind(this)
+            );
         },
 
         actionRefreshConversations: function () {

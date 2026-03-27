@@ -1,0 +1,24 @@
+[
+    {
+        "name": "inboxChannelType",
+        "view": "global:views/fields/svg-icon-varchar-only",
+        "width": 10,
+        "align": "center",
+        "label": ""
+    },
+    {
+        "name": "status",
+        "link": true,
+        "width": 20
+    },
+    {
+        "name": "lastMessageReceivedAt",
+        "view": "views/fields/datetime-short",
+        "width": 25
+    },
+    {
+        "name": "lastMessageSentAt",
+        "view": "views/fields/datetime-short",
+        "width": 25
+    }
+]

@@ -13,7 +13,8 @@
         "enrichDownstreamsPartial": "Enriquecidas {enriched} entidades, mas {errors} falharam.",
         "enrichDownstreamsFailed": "Falha ao enriquecer entidades relacionadas.",
         "Send Message": "Enviar Mensagem",
-        "No Contact linked": "Nenhum Contato vinculado"
+        "No Contact linked": "Nenhum Contato vinculado",
+        "Conversations": "Conversas"
     },
     "fields": {
         "name": "Nome",

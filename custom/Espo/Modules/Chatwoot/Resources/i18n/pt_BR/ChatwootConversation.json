@@ -17,7 +17,10 @@
         "lastMessageContent": "Última Mensagem",
         "contactAvatarUrl": "Avatar do Contato",
         "contactDisplayName": "Nome do Contato",
-        "inboxChannelType": "Tipo de Canal"
+        "inboxChannelType": "Tipo de Canal",
+        "lastMessageSentAt": "Último Envio",
+        "lastMessageReceivedAt": "Último Recebimento",
+        "lastMessageType": "Tipo Última Msg"
     },
     "links": {
         "contactInbox": "Chat / Contato / Canal",

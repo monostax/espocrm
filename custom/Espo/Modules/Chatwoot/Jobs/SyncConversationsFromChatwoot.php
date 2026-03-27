@@ -932,6 +932,32 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Auto-pending logic: toggle status based on last message direction
             $this->applyAutoPendingLogic($conversation, $espoAccountId);
         }
+
+        // Update last outgoing (sent) message timestamp
+        $lastOutgoing = $messageRepo
+            ->where([
+                'conversationId' => $conversation->getId(),
+                'messageType' => 'outgoing',
+            ])
+            ->order('chatwootCreatedAt', 'DESC')
+            ->findOne();
+
+        if ($lastOutgoing && $lastOutgoing->get('chatwootCreatedAt')) {
+            $conversation->set('lastMessageSentAt', $lastOutgoing->get('chatwootCreatedAt'));
+        }
+
+        // Update last incoming (received) message timestamp
+        $lastIncoming = $messageRepo
+            ->where([
+                'conversationId' => $conversation->getId(),
+                'messageType' => 'incoming',
+            ])
+            ->order('chatwootCreatedAt', 'DESC')
+            ->findOne();
+
+        if ($lastIncoming && $lastIncoming->get('chatwootCreatedAt')) {
+            $conversation->set('lastMessageReceivedAt', $lastIncoming->get('chatwootCreatedAt'));
+        }
         
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
     }

@@ -13,7 +13,8 @@
         "enrichDownstreamsPartial": "Enriched {enriched} entities, but {errors} failed.",
         "enrichDownstreamsFailed": "Failed to enrich related entities.",
         "Send Message": "Send Message",
-        "No Contact linked": "No Contact linked"
+        "No Contact linked": "No Contact linked",
+        "Conversations": "Conversations"
     },
     "fields": {
         "name": "Name",

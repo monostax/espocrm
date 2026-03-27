@@ -83,7 +83,7 @@
                     "span": 4,
                     "options": {
                         "contactIdAttribute": "contactId",
-                        "layout": "listSmall",
+                        "layout": "listForContactPanel",
                         "recordsPerPage": 10
                     }
                 }
