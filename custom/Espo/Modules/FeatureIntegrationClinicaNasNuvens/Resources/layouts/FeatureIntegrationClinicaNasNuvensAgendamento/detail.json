@@ -1,39 +1,73 @@
 [
     {
-        "label": "Overview",
+        "tabLabel": "$Overview",
+        "name": "profissionalPanel",
+        "label": "Informações Gerais",
+        "panelIconClass": "fas fa-user-md",
+        "gridRow": 1,
+        "gridColSpan": 3,
         "rows": [
-            [{"name": "name"}, {"name": "agendamentoId"}],
-            [{"name": "paciente"}, {"name": "credential"}],
-            [{"name": "status"}, {"name": "statusFaturamento"}],
-            [{"name": "syncStatus"}, {"name": "valorFinanceiro"}],
-            [{"name": "valorFaturamentos"}, {"name": "valorProcedimentos"}],
-            [{"name": "data"}, {"name": "horaInicio"}],
-            [{"name": "horaFim"}, {"name": "tipoAtendimento"}]
+            [{"name": "agendamentoId"}, {"name": "horaInicio"}], 
+            [{"name": "paciente"}, {"name": "consultaTipoAnchor"}],
+            [{"name": "profissionalAnchor"}, {"name": "convenioTipoAnchor"}]
         ]
     },
     {
-        "label": "Professional",
+        "name": "especialidadePanel",
+        "label": "Valores (R$)",
+        "gridRow": 1,
         "rows": [
-            [{"name": "profissional"}, {"name": "idProfissional"}],
-            [{"name": "profissionalAnchor"}, {"name": "idPessoaExecutor"}],
-            [{"name": "especialidade"}, {"name": "idEspecialidade"}],
-            [{"name": "convenio"}, {"name": "idConvenio"}],
-            [{"name": "convenioTipoAnchor"}, {"name": "idTipoConvenio"}],
-            [{"name": "consultaTipoAnchor"}, {"name": "idTipoConsulta"}]
+            [{"name": "valorFinanceiro"}],
+            [{"name": "valorProcedimentos"}],
+            [{"name": "valorFaturamentos"}]
         ]
     },
     {
-        "label": "Location",
+        "name": "observacaoPanel",
+        "label": "Observação",
+        "gridRow": 2,
         "rows": [
-            [{"name": "unidade"}, {"name": "idUnidade"}],
-            [{"name": "sala"}, {"name": "idSala"}]
+            [{"name": "observacao", "fullWidth": true, "noLabel": true}]
         ]
     },
     {
-        "label": "Raw",
+        "name": "procedimentoItensPanel",
+        "label": false,
+        "gridRow": 3,
         "rows": [
-            [{"name": "idPaciente"}, false],
-            [{"name": "observacao", "fullWidth": true}, false]
+            [
+                {
+                    "name": "procedimentoItensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "procedimentoItens",
+                        "layout": "listSmallProcedimentoTipo",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "name": "faturamentoItensPanel",
+        "label": false,
+        "gridRow": 4,
+        "rows": [
+            [
+                {
+                    "name": "faturamentoItensList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "faturamentos",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
         ]
     }
 ]

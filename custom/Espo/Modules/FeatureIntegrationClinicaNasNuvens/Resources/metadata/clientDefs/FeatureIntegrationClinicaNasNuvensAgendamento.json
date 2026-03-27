@@ -13,6 +13,14 @@
             "groupIndex": 5
         }
     },
+    "recordViews": {
+        "detail": "global:views/record/detail"
+    },
+    "defaultSidePanelFieldLists": {
+        "detail": ["status", "statusFaturamento", "teams"],
+        "edit": ["status", "teams"],
+        "detailSmall": ["status", "teams"]
+    },
     "views": {
         "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
     },
@@ -42,28 +50,6 @@
         }
     },
     "sidePanels": {
-        "detail": [
-            {
-                "name": "faturamentos",
-                "label": "Faturamentos",
-                "view": "views/record/panels/relationship",
-                "layout": "listSmall",
-                "createDisabled": true,
-                "selectDisabled": true,
-                "unlinkDisabled": true,
-                "order": 1
-            },
-            {
-                "name": "procedimentoItens",
-                "label": "Procedimentos",
-                "view": "views/record/panels/relationship",
-                "layout": "listSmall",
-                "createDisabled": true,
-                "selectDisabled": true,
-                "unlinkDisabled": true,
-                "order": 2
-            }
-        ],
         "detailSmall": [
             {
                 "name": "faturamentos",

@@ -17,7 +17,7 @@
         "name": "Nome",
         "agendamentoId": "ID Agendamento (Clínica Nas Nuvens)",
         "paciente": "Paciente",
-        "profissionalAnchor": "Âncora de Profissional",
+        "profissionalAnchor": "Profissional",
         "credential": "Credencial",
         "syncStatus": "Status de Sincronização",
         "idPaciente": "ID Paciente (Clínica Nas Nuvens)",
@@ -55,7 +55,7 @@
     },
     "links": {
         "paciente": "Paciente",
-        "profissionalAnchor": "Âncora de Profissional",
+        "profissionalAnchor": "Profissional",
         "credential": "Credencial",
         "faturamentos": "Faturamentos",
         "procedimentoItens": "Procedimentos",

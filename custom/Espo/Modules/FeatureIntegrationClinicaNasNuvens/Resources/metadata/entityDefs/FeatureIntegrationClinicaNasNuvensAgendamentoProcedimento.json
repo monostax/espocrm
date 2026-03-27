@@ -19,6 +19,18 @@
             "type": "varchar",
             "maxLength": 255
         },
+        "precoPaciente": {
+            "type": "currency",
+            "readOnly": true
+        },
+        "precoConvenio": {
+            "type": "currency",
+            "readOnly": true
+        },
+        "valorTotal": {
+            "type": "currency",
+            "readOnly": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

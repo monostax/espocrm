@@ -78,3 +78,16 @@
     width: 1.1em;
     text-align: center;
 }
+
+.record .panel > .panel-heading > .panel-title > .panel-icon {
+    opacity: 0.65;
+    font-size: var(--13px);
+    flex-shrink: 0;
+    overflow: visible;
+    text-overflow: clip;
+    margin-right: var(--8px);
+}
+
+body .panel-default > .panel-heading {
+    padding-top: var(--4px);
+}

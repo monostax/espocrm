@@ -9,7 +9,10 @@
         "agendamento": "Agendamento",
         "procedimentoTipo": "Tipo de Procedimento",
         "quantidade": "Quantidade",
-        "procedimentoNome": "Procedimento"
+        "procedimentoNome": "Procedimento",
+        "precoPaciente": "Preço Paciente",
+        "precoConvenio": "Preço Convênio",
+        "valorTotal": "Valor Total"
     },
     "links": {
         "agendamento": "Agendamento",

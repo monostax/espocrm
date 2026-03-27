@@ -9,7 +9,10 @@
         "agendamento": "Appointment",
         "procedimentoTipo": "Procedure Type",
         "quantidade": "Quantity",
-        "procedimentoNome": "Procedure"
+        "procedimentoNome": "Procedure",
+        "precoPaciente": "Patient Price",
+        "precoConvenio": "Insurance Price",
+        "valorTotal": "Total Amount"
     },
     "links": {
         "agendamento": "Appointment",

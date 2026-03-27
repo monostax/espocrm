@@ -1,5 +1,6 @@
 /**
- * Custom detail view that adds entity icons to relationship tabs.
+ * Custom detail view that adds entity icons to relationship tabs
+ * and supports flexible grid panel layouts via `gridRow` in detail.json.
  */
 
 import DetailRecordView from "views/record/detail";
@@ -8,6 +9,19 @@ class CustomDetailRecordView extends DetailRecordView {
     template = "global:record/detail";
     middleView = "global:views/record/detail-middle";
     bottomView = "global:views/record/detail-bottom";
+
+    /**
+     * Grid layout: maps panel name -> gridRow number.
+     * Populated from detail.json `gridRow` properties.
+     * @private
+     */
+    _gridRowMap = null;
+
+    /**
+     * Grid layout: list of panel names that come from the bottom container.
+     * @private
+     */
+    _bottomGridPanelNames = null;
 
     /**
      * Mobile tab grouping configuration
@@ -110,6 +124,19 @@ class CustomDetailRecordView extends DetailRecordView {
     afterRender() {
         super.afterRender();
         this.initMobileTabGrouping();
+
+        // Grid layout: read gridRow from layout and apply.
+        setTimeout(() => {
+            this._readGridRowFromLayout();
+            this._injectGridStyles();
+            this.applyGridLayout();
+            this._applyPanelIcons();
+
+            // If there are bottom panels to grid, wait and re-apply.
+            if (this._bottomGridPanelNames && this._bottomGridPanelNames.length > 0) {
+                this._waitForBottomGridPanels();
+            }
+        }, 0);
     }
 
     /**
@@ -343,11 +370,33 @@ class CustomDetailRecordView extends DetailRecordView {
      * Override selectTab to recalculate overflow after tab change
      */
     selectTab(tab) {
-        super.selectTab(tab);
+        // If grid layout is active, use broader selectors for tab switching
+        // instead of super.selectTab which uses direct child selectors.
+        if (this._gridRowMap && Object.keys(this._gridRowMap).length > 0) {
+            this.currentTab = tab;
+            $('.popover.in').removeClass('in');
+
+            this.whenRendered().then(() => {
+                this.$el.find('.middle-tabs > button').removeClass('active');
+                this.$el.find(`.middle-tabs > button[data-tab="${tab}"]`).addClass('active');
+
+                // Broad selector for nested panels in grid columns.
+                this.$el.find('.middle .panel[data-tab]').addClass('tab-hidden');
+                this.$el.find(`.middle .panel[data-tab="${tab}"]`).removeClass('tab-hidden');
+
+                this._syncGridRowVisibility();
+                this.adjustMiddlePanels();
+                this._stripGridPanelClasses();
+                this.recordHelper.trigger('panel-show');
+            });
+
+            this.storeTab();
+        } else {
+            super.selectTab(tab);
+        }
 
         // Recalculate overflow after tab change (on mobile)
         if (this.hasTabs() && $(window).width() <= this.mobileTabBreakpoint) {
-            // Use setTimeout to wait for the DOM to update
             setTimeout(() => {
                 this.calculateTabOverflow();
             }, 0);
@@ -438,6 +487,28 @@ class CustomDetailRecordView extends DetailRecordView {
      * @param {Object} panel The panel definition from middlePanelDefsList
      * @return {string|null} The entity type or null
      */
+    findLayoutItem(panelName) {
+        if (!Array.isArray(this.detailLayout)) {
+            return null;
+        }
+
+        for (const [index, item] of this.detailLayout.entries()) {
+            const name = item.name || `panel-${index}`;
+
+            if (name === panelName) {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the entity type for a tab panel if it contains a relationship-list field.
+     *
+     * @param {Object} panel The panel definition from middlePanelDefsList
+     * @return {string|null} The entity type or null
+     */
     getTabEntityType(panel) {
         // Check if panel has a tabEntityType explicitly defined
         if (panel.tabEntityType) {
@@ -483,31 +554,409 @@ class CustomDetailRecordView extends DetailRecordView {
                 }
             }
         }
-
         return null;
     }
 
     /**
-     * Find a layout item by panel name in the original detailLayout.
-     *
-     * @param {string} panelName The panel name
-     * @return {Object|null} The layout item or null
+     * Apply panel icons from layout `panelIconClass` property.
+     * Injects an icon span into `.panel-title` after the existing collapse chevron,
+     * using the same style as `relationship-list-entity-icon` / `scope-icon`.
+     * @private
      */
-    findLayoutItem(panelName) {
-        if (!this.detailLayout || !Array.isArray(this.detailLayout)) {
-            return null;
+    _applyPanelIcons() {
+        if (!Array.isArray(this.detailLayout)) {
+            return;
         }
 
-        for (let i = 0; i < this.detailLayout.length; i++) {
-            const item = this.detailLayout[i];
-            const itemName = item.name || "panel-" + i.toString();
+        const $middle = this.$el.find('.middle').first();
 
-            if (itemName === panelName) {
-                return item;
+        if (!$middle.length) {
+            return;
+        }
+
+        this.detailLayout.forEach((item, index) => {
+            if (!item || !item.panelIconClass) {
+                return;
             }
+
+            const name = item.name || `panel-${index}`;
+            const $panel = $middle.find(`.panel[data-name="${name}"]`).first();
+
+            if (!$panel.length) {
+                return;
+            }
+
+            const $title = $panel.find('> .panel-heading > .panel-title').first();
+
+            if (!$title.length || $title.find('> .panel-icon').length) {
+                return;
+            }
+
+            const iconColor = item.panelIconColor
+                ? ` style="color: ${item.panelIconColor}"`
+                : '';
+
+            const $icon = $(`<span class="panel-icon ${item.panelIconClass}"${iconColor}></span>`);
+
+            // Insert icon right after the existing chevron.
+            const $chevron = $title.find('> .panel-collapse-chevron').first();
+
+            if ($chevron.length) {
+                $chevron.after($icon);
+            } else {
+                $title.prepend($icon);
+            }
+        });
+    }
+
+    /**
+     * Read gridRow definitions from middle layout and side panels metadata.
+     * @private
+     */
+    _readGridRowFromLayout() {
+        const gridRowMap = {};
+        const gridColSpanMap = {};
+        const bottomGridPanelNames = [];
+
+        if (Array.isArray(this.detailLayout)) {
+            this.detailLayout.forEach((item, index) => {
+                if (!item || typeof item.gridRow === "undefined") {
+                    return;
+                }
+
+                const row = Number(item.gridRow);
+
+                if (!Number.isFinite(row)) {
+                    return;
+                }
+
+                const name = item.name || `panel-${index}`;
+                gridRowMap[name] = row;
+
+                if (item.gridColSpan) {
+                    gridColSpanMap[name] = Number(item.gridColSpan) || 1;
+                }
+            });
         }
 
-        return null;
+        const sidePanelList =
+            this.getMetadata().get([
+                "clientDefs",
+                this.scope,
+                "sidePanels",
+                this.type,
+            ]) || [];
+
+        if (Array.isArray(sidePanelList)) {
+            sidePanelList.forEach((item) => {
+                if (!item || !item.name || typeof item.gridRow === "undefined") {
+                    return;
+                }
+
+                const row = Number(item.gridRow);
+
+                if (!Number.isFinite(row)) {
+                    return;
+                }
+
+                gridRowMap[item.name] = row;
+                bottomGridPanelNames.push(item.name);
+
+                if (item.gridColSpan) {
+                    gridColSpanMap[item.name] = Number(item.gridColSpan) || 1;
+                }
+            });
+        }
+
+        this._gridRowMap = gridRowMap;
+        this._gridColSpanMap = gridColSpanMap;
+        this._bottomGridPanelNames = bottomGridPanelNames;
+    }
+
+    /**
+     * Inject shared CSS rules for grid-row panel layout.
+     * @private
+     */
+    _injectGridStyles() {
+        const styleId = "global-detail-grid-row-style";
+
+        if (document.getElementById(styleId)) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+            .record .panels-grid-row {
+                width: 100%;
+            }
+
+            .record .panels-grid-row .panels-grid-col {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .record .panels-grid-row .panels-grid-col > .panel {
+                margin-bottom: 0;
+                flex: 1;
+            }
+
+            .record .panels-grid-row .panels-grid-col > .panel.is-collapsed {
+                flex: none;
+            }
+
+            /* Mirror framework chevron/heading styles for grid-nested panels. */
+            .record .panels-grid-row .panels-grid-col > .panel > .panel-heading .panel-collapse-chevron {
+                font-size: var(--10px);
+                margin-right: var(--6px);
+                opacity: 0.55;
+                flex-shrink: 0;
+                overflow: visible;
+                text-overflow: clip;
+            }
+
+            @media (max-width: 991px) {
+                .record .panels-grid-row {
+                    flex-direction: column;
+                }
+                .record .panels-grid-row .panels-grid-col > .panel {
+                    flex: none;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    /**
+     * Retry grid application while bottom relationship panels are rendering.
+     * @private
+     */
+    _waitForBottomGridPanels() {
+        let attempt = 0;
+        const maxAttempts = 20;
+        const interval = 100;
+
+        const timer = setInterval(() => {
+            if (!this.isRendered()) {
+                clearInterval(timer);
+                return;
+            }
+
+            attempt++;
+            this.applyGridLayout();
+
+            const $bottom = this.$el.find(".bottom").first();
+            const allFound = this._bottomGridPanelNames.every(
+                (name) => $bottom.find(`> .panel[data-name="${name}"]`).length > 0,
+            );
+
+            if (allFound || attempt >= maxAttempts) {
+                clearInterval(timer);
+            }
+        }, interval);
+
+        this.once("remove", () => clearInterval(timer));
+    }
+
+    applyGridLayout() {
+        const $middle = this.$el.find('.middle').first();
+
+        if (!$middle.length || !this._gridRowMap) {
+            return;
+        }
+
+        const gridRowMap = this._gridRowMap;
+        const panelNames = Object.keys(gridRowMap);
+
+        if (panelNames.length === 0) {
+            return;
+        }
+
+        // Clean up any previously created grid rows (for re-render).
+        $middle.find('.panels-grid-row').each(function () {
+            const $row = $(this);
+            $row.find('.panels-grid-col > .panel').each(function () {
+                $row.before(this);
+            });
+            $row.remove();
+        });
+
+        // Group panel names by gridRow number.
+        const rowGroups = {};
+
+        panelNames.forEach(name => {
+            const row = gridRowMap[name];
+            if (!rowGroups[row]) rowGroups[row] = [];
+            rowGroups[row].push(name);
+        });
+
+        // Sort row numbers.
+        const rowNumbers = Object.keys(rowGroups).map(Number).sort((a, b) => a - b);
+
+        // For each row group, wrap the panels in a flex row.
+        rowNumbers.forEach(rowNum => {
+            const names = rowGroups[rowNum];
+            const $panels = [];
+            let $firstPanel = null;
+
+            names.forEach(name => {
+                // Look in .middle first, then .bottom for relationship panels.
+                let $panel = $middle.find(`> .panel[data-name="${name}"]`);
+
+                if (!$panel.length && this._bottomGridPanelNames &&
+                    this._bottomGridPanelNames.indexOf(name) !== -1) {
+                    const $bottom = this.$el.find('.bottom').first();
+                    $panel = $bottom.find(`> .panel[data-name="${name}"]`);
+
+                    // Move bottom panel into .middle before the next grid row or at end.
+                    if ($panel.length) {
+                        $middle.append($panel);
+                    }
+                }
+
+                if ($panel.length) {
+                    $panels.push($panel);
+                    if (!$firstPanel) $firstPanel = $panel;
+                }
+            });
+
+            if ($panels.length <= 1) {
+                // Single panel = full width, just apply card styling.
+                if ($panels.length === 1) {
+                    $panels[0].css({
+                        'border-radius': 'var(--panel-border-radius)',
+                        'overflow': 'hidden',
+                        'margin-bottom': '10px',
+                    }).attr('data-grid-styled', '1');
+                }
+                return;
+            }
+
+            // Create flex row.
+            const $row = $(`<div class="panels-grid-row" data-grid-row="${rowNum}"></div>`);
+
+            $row.css({
+                'display': 'flex',
+                'gap': '10px',
+                'align-items': 'stretch',
+                'margin-bottom': '10px',
+            });
+
+            // Insert row where the first panel is.
+            $firstPanel.before($row);
+
+            // Move each panel into its own column container.
+            $panels.forEach($panel => {
+                const $col = $('<div class="panels-grid-col"></div>');
+                const panelName = $panel.attr('data-name');
+                const colSpan = (this._gridColSpanMap && this._gridColSpanMap[panelName]) || 1;
+
+                $col.css({
+                    'flex': String(colSpan),
+                    'min-width': '0',
+                });
+
+                // Card-like styling.
+                $panel.css({
+                    'border-radius': 'var(--panel-border-radius)',
+                    'overflow': 'hidden',
+                });
+
+                $col.append($panel);
+                $row.append($col);
+            });
+        });
+
+        // Sync tab visibility and strip stacking classes.
+        this._syncGridRowVisibility();
+        this._stripGridPanelClasses();
+    }
+
+    /**
+     * Remove stacking classes from grid panels.
+     * @private
+     */
+    _stripGridPanelClasses() {
+        const $middle = this.$el.find('.middle').first();
+
+        if (!$middle.length) return;
+
+        $middle.find('.panels-grid-row .panel, .panel[data-grid-styled]').each(function () {
+            $(this).removeClass('first in-middle last');
+        });
+    }
+
+    /**
+     * Sync visibility of grid rows based on panel tab-hidden state.
+     * @private
+     */
+    _syncGridRowVisibility() {
+        const $middle = this.$el.find('.middle').first();
+
+        $middle.find('.panels-grid-row').each(function () {
+            const $row = $(this);
+            let allHidden = true;
+
+            $row.find('.panel[data-tab]').each(function () {
+                if (!$(this).hasClass('tab-hidden')) {
+                    allHidden = false;
+                }
+            });
+
+            if (allHidden) {
+                $row.addClass('tab-hidden').hide();
+            } else {
+                $row.removeClass('tab-hidden').show();
+            }
+        });
+    }
+
+    /**
+     * Override adjustMiddlePanels to use broader selectors
+     * that work with panels nested inside grid column containers.
+     */
+    adjustMiddlePanels() {
+        if (!this.isRendered() || !this.$middle || !this.$middle.length) {
+            return;
+        }
+
+        // Use broader selector for grid-nested panels.
+        const $panels = this.$middle.find('.panel[data-tab]');
+        const $bottomPanels = this.$bottom ? this.$bottom.find('> .panel') : null;
+
+        $panels
+            .removeClass('first')
+            .removeClass('last')
+            .removeClass('in-middle');
+
+        const $visiblePanels = $panels.filter(':not(.tab-hidden):not(.hidden)');
+
+        $visiblePanels.each((i, el) => {
+            const $el = $(el);
+
+            if (i === $visiblePanels.length - 1) {
+                if ($bottomPanels && $bottomPanels.first().hasClass('sticked')) {
+                    if (i === 0) {
+                        $el.addClass('first');
+                        return;
+                    }
+                    $el.addClass('in-middle');
+                    return;
+                }
+                if (i === 0) {
+                    return;
+                }
+                $el.addClass('last');
+                return;
+            }
+
+            if (i === 0) {
+                $el.addClass('first');
+            } else {
+                $el.addClass('in-middle');
+            }
+        });
     }
 }
 

@@ -1996,6 +1996,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
     private function syncAgendamentoProcedimentoTipoLinks(Entity $agendamento, array $payload, string $credentialId): void
     {
         $agendamentoLocalId = $this->normalizeNullableString($agendamento->getId());
+        $localConvenioTipoId = $this->normalizeNullableString($agendamento->get('convenioTipoAnchorId'));
 
         if ($agendamentoLocalId === null) {
             return;
@@ -2052,11 +2053,31 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                     }
                 }
 
+                $precoPaciente = null;
+                $precoConvenio = null;
+                $valorTotal = null;
+
+                if ($localConvenioTipoId !== null) {
+                    $pricingRow = $this->findActiveProcedimentoConvenioPricingRow(
+                        $procedimentoTipoLocalId,
+                        $localConvenioTipoId,
+                    );
+
+                    if ($pricingRow !== null) {
+                        $precoPaciente = round($this->normalizeNumericValue($pricingRow->get('precoPaciente')), 2);
+                        $precoConvenio = round($this->normalizeNumericValue($pricingRow->get('precoConvenio')), 2);
+                        $valorTotal = round(($precoPaciente + $precoConvenio) * $row['quantidade'], 2);
+                    }
+                }
+
                 $child->set([
                     'agendamentoId' => $agendamentoLocalId,
                     'procedimentoTipoId' => $procedimentoTipoLocalId,
                     'quantidade' => $row['quantidade'],
                     'procedimentoNome' => $row['nome'],
+                    'precoPaciente' => $precoPaciente,
+                    'precoConvenio' => $precoConvenio,
+                    'valorTotal' => $valorTotal,
                     'teamsIds' => $teamIdList,
                 ]);
 
@@ -3043,16 +3064,10 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $quantidade = $item->get('quantidade');
             $quantidade = is_int($quantidade) && $quantidade > 0 ? $quantidade : 1;
 
-            $pricingRow = $this->entityManager
-                ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProcedimentoConvenio')
-                ->select(['precoPaciente', 'precoConvenio'])
-                ->where([
-                    'procedimentoTipoId' => $procedimentoTipoLocalId,
-                    'convenioTipoId' => $localConvenioTipoId,
-                    'deleted' => false,
-                    'isActive' => true,
-                ])
-                ->findOne();
+            $pricingRow = $this->findActiveProcedimentoConvenioPricingRow(
+                $procedimentoTipoLocalId,
+                $localConvenioTipoId,
+            );
 
             if (!$pricingRow) {
                 continue;
@@ -3074,6 +3089,24 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             'valor' => round($total, 2),
             'valorCurrency' => 'BRL',
         ];
+    }
+
+    private function findActiveProcedimentoConvenioPricingRow(
+        string $procedimentoTipoLocalId,
+        string $localConvenioTipoId,
+    ): ?Entity {
+        $pricingRow = $this->entityManager
+            ->getRDBRepository('FeatureIntegrationClinicaNasNuvensProcedimentoConvenio')
+            ->select(['precoPaciente', 'precoConvenio'])
+            ->where([
+                'procedimentoTipoId' => $procedimentoTipoLocalId,
+                'convenioTipoId' => $localConvenioTipoId,
+                'deleted' => false,
+                'isActive' => true,
+            ])
+            ->findOne();
+
+        return $pricingRow instanceof Entity ? $pricingRow : null;
     }
 
     /**

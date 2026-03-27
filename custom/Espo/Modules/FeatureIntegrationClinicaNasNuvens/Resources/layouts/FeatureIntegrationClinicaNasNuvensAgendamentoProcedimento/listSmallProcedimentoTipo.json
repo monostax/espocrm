@@ -1,6 +1,6 @@
 [
-    {"name": "procedimentoTipo", "link": true},
-    {"name": "procedimentoNome"},
+    {"name": "procedimentoTipo"},
+    {"name": "procedimentoNome", "link": false},
     {"name": "quantidade"},
     {"name": "precoPaciente"},
     {"name": "precoConvenio"},
