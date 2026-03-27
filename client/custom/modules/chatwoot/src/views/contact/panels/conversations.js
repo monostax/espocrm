@@ -64,6 +64,9 @@ define('chatwoot:views/contact/panels/conversations',
         setup: function () {
             Dep.prototype.setup.call(this);
 
+            this.titleHtml = '<span class="panel-icon ti ti-messages"></span> ' +
+                this.translate('Conversations', 'labels', this.model.entityType);
+
             this.contactIdAttribute = (this.options.defs || {}).contactIdAttribute || 'contactId';
 
             var contactId = this.model.get(this.contactIdAttribute);
