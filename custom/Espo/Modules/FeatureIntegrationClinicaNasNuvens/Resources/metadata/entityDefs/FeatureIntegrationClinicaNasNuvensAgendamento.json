@@ -121,7 +121,7 @@
         },
         "status": {
             "type": "enum",
-            "options": ["agendado", "confirmado", "confirmado_paciente", "atendido", "finalizado", "em_espera", "cancelado", "cancelado_paciente", "falta", "faltou", "remarcado", "encaixe", "bloqueado"],
+            "options": ["agendado", "confirmado", "confirmado_paciente", "atendido", "finalizado", "em_espera", "cancelado", "cancelado_paciente", "falta", "faltou", "remarcado", "encaixe", "bloqueado", "pagamento", "em_andamento", "pre_atendimento"],
             "displayAsLabel": true,
             "labelType": "state",
             "style": {
@@ -137,7 +137,10 @@
                 "faltou": "warning",
                 "remarcado": "info",
                 "encaixe": "primary",
-                "bloqueado": "default"
+                "bloqueado": "default",
+                "pagamento": "primary",
+                "em_andamento": "info",
+                "pre_atendimento": "primary"
             },
             "readOnly": true,
             "readOnlyAfterCreate": true

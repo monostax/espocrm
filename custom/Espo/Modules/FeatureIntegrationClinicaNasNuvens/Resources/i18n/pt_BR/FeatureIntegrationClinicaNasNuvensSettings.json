@@ -1,16 +1,33 @@
 {
     "labels": {
         "FeatureIntegrationClinicaNasNuvensSettings": "Perfil de Integração Clínica Nas Nuvens",
-        "Create FeatureIntegrationClinicaNasNuvensSettings": "Criar Perfil de Integração"
+        "Create FeatureIntegrationClinicaNasNuvensSettings": "Criar Perfil de Integração",
+        "requestCnnExport": "Solicitar Exportação",
+        "downloadCnnExport": "Baixar Exportação",
+        "requestCnnExportQueued": "Solicitação de exportação foi enfileirada.",
+        "downloadCnnExportQueued": "Download de exportação foi enfileirado.",
+        "requestCnnExportFailed": "Falha ao enfileirar solicitação de exportação.",
+        "downloadCnnExportFailed": "Falha ao enfileirar download de exportação.",
+        "importCsvData": "Importar Dados CSV",
+        "importCsvDataDialogTitle": "Importar Agendamentos do CSV",
+        "importCsvDataDialogBody": "Selecione o período de agendamentos para importar.",
+        "importCsvDataQueued": "Job de importação foi enfileirado com sucesso.",
+        "importCsvDataFailed": "Falha ao enfileirar job de importação.",
+        "Pipeline Jobs": "Jobs do Pipeline"
     },
     "fields": {
         "name": "Nome do Perfil",
         "isActive": "Ativo",
         "migrationStatus": "Status da Migração",
+        "exportStatus": "Status da Exportação",
+        "autoImportDateRange": "Importação Automática",
         "tenant": "Ambiente",
         "teams": "Time de Escopo",
         "apiCredential": "Credencial API",
-        "webCredential": "Credencial Web"
+        "webCredential": "Credencial Web",
+        "importStatus": "Status da Importação",
+        "dateFrom": "Data Início",
+        "dateTo": "Data Fim"
     },
     "links": {
         "tenant": "Ambiente",
@@ -19,11 +36,33 @@
         "webCredential": "Credencial Web"
     },
     "actions": {
-        "replaceCredential": "Trocar Credenciais"
+        "replaceCredential": "Trocar Credenciais",
+        "requestCnnExport": "Solicitar Exportação",
+        "downloadCnnExport": "Baixar Exportação",
+        "importCsvData": "Importar Dados CSV"
     },
     "options": {
         "migrationStatus": {
             "idle": "Inativa",
+            "inProgress": "Em Andamento",
+            "completed": "Concluída",
+            "failed": "Falhou"
+        },
+        "exportStatus": {
+            "idle": "Inativo",
+            "requesting": "Solicitando",
+            "downloading": "Baixando",
+            "completed": "Concluída",
+            "failed": "Falhou"
+        },
+        "autoImportDateRange": {
+            "none": "Nenhuma (Manual)",
+            "rolling30d": "Últimos 30 Dias",
+            "rolling90d": "Últimos 90 Dias",
+            "rolling365d": "Últimos 365 Dias"
+        },
+        "importStatus": {
+            "idle": "Inativo",
             "inProgress": "Em Andamento",
             "completed": "Concluída",
             "failed": "Falhou"

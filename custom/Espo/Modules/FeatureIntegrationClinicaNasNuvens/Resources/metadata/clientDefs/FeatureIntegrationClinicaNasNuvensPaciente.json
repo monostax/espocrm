@@ -4,7 +4,11 @@
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
     "defaultSidePanelFieldLists": {
+        "detail": ["teams"],
         "edit": []
+    },
+    "recordViews": {
+        "detail": "global:views/record/detail"
     },
     "views": {
         "list": "feature-integration-clinica-nas-nuvens:views/list-quick-create"
@@ -65,6 +69,12 @@
                 "selectDisabled": true,
                 "unlinkDisabled": true,
                 "order": 2
+            },
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "order": 3
             }
         ],
         "detailSmall": [

@@ -1,9 +1,10 @@
 [
-    {"name": "tenant", "width": 20},
-    {"name": "name", "width": 20},
-    {"name": "teams", "width": 15},
-    {"name": "isActive", "width": 8},
-    {"name": "migrationStatus", "width": 12},
-    {"name": "apiCredential", "width": 12},
-    {"name": "webCredential", "width": 13}
+    {"name": "tenant", "width": 18},
+    {"name": "name", "width": 18},
+    {"name": "teams", "width": 13},
+    {"name": "isActive", "width": 7},
+    {"name": "migrationStatus", "width": 11},
+    {"name": "exportStatus", "width": 11},
+    {"name": "apiCredential", "width": 11},
+    {"name": "webCredential", "width": 11}
 ]

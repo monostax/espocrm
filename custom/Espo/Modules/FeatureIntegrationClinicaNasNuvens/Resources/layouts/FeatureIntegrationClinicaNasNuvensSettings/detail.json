@@ -4,7 +4,8 @@
         "rows": [
             [{"name": "name"}, {"name": "isActive"}],
             [{"name": "tenant"}, {"name": "teams"}],
-            [{"name": "migrationStatus"}, false],
+            [{"name": "migrationStatus"}, {"name": "exportStatus"}],
+            [{"name": "autoImportDateRange"}, false],
             [{"name": "apiCredential"}, {"name": "webCredential"}]
         ]
     }

@@ -4,5 +4,17 @@
         "isSystem": false,
         "scheduling": "0 */6 * * *",
         "jobClassName": "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Jobs\\RepairFaturadoAgendamentosWithoutFaturamento"
+    },
+    "DispatchRequestCnnExport": {
+        "name": "CNN: Request Data Export",
+        "isSystem": false,
+        "scheduling": "0 4 * * *",
+        "jobClassName": "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Jobs\\DispatchRequestCnnExport"
+    },
+    "DispatchDownloadCnnExport": {
+        "name": "CNN: Download Data Export",
+        "isSystem": false,
+        "scheduling": "0 6 * * *",
+        "jobClassName": "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Jobs\\DispatchDownloadCnnExport"
     }
 }

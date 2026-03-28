@@ -15,6 +15,23 @@
             "default": "idle",
             "required": true
         },
+        "exportStatus": {
+            "type": "enum",
+            "options": ["idle", "requesting", "downloading", "completed", "failed"],
+            "default": "idle",
+            "readOnly": true
+        },
+        "importStatus": {
+            "type": "enum",
+            "options": ["idle", "inProgress", "completed", "failed"],
+            "default": "idle",
+            "readOnly": true
+        },
+        "autoImportDateRange": {
+            "type": "enum",
+            "options": ["none", "rolling30d", "rolling90d", "rolling365d"],
+            "default": "none"
+        },
         "tenant": {
             "type": "link",
             "required": true

@@ -10,7 +10,11 @@ use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Job\QueueName;
 use Espo\Core\Record\Service as RecordService;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
+use Espo\Core\ORM\Repository\Option\SaveOption;
+use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Jobs\DownloadCnnExport;
+use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Jobs\ImportCsvData;
 use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Jobs\RebindClinicaNasNuvensAnchorsToCredential;
+use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Jobs\RequestCnnExport;
 use Espo\ORM\Entity;
 
 /**
@@ -95,6 +99,134 @@ class FeatureIntegrationClinicaNasNuvensSettings extends RecordService
             'profileId' => $profileId,
             'message' => 'Credential replacement has been queued and write operations are now blocked for this profile scope.',
         ];
+    }
+
+    /**
+     * @return array{status: string}
+     */
+    public function requestCnnExport(string $profileId): array
+    {
+        $profile = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensSettings', $profileId);
+
+        if (!$profile) {
+            throw new NotFound('Integration profile not found.');
+        }
+
+        if (!$profile->get('isActive')) {
+            throw new BadRequest('Integration profile is inactive.');
+        }
+
+        $exportStatus = (string) ($profile->get('exportStatus') ?? 'idle');
+
+        if ($exportStatus === 'requesting' || $exportStatus === 'downloading') {
+            throw new BadRequest('An export operation is already in progress for this profile.');
+        }
+
+        $profile->set('exportStatus', 'requesting');
+        $this->entityManager->saveEntity($profile);
+
+        $this->getJobSchedulerFactory()
+            ->create()
+            ->setClassName(RequestCnnExport::class)
+            ->setData([
+                'profileId' => $profileId,
+                'attempt' => 1,
+            ])
+            ->setGroup('cnn-pipeline-' . $profileId)
+            ->schedule();
+
+        return ['status' => 'queued'];
+    }
+
+    /**
+     * @return array{status: string}
+     */
+    public function downloadCnnExport(string $profileId): array
+    {
+        $profile = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensSettings', $profileId);
+
+        if (!$profile) {
+            throw new NotFound('Integration profile not found.');
+        }
+
+        if (!$profile->get('isActive')) {
+            throw new BadRequest('Integration profile is inactive.');
+        }
+
+        $exportStatus = (string) ($profile->get('exportStatus') ?? 'idle');
+
+        if ($exportStatus === 'downloading') {
+            throw new BadRequest('A download operation is already in progress for this profile.');
+        }
+
+        $profile->set('exportStatus', 'downloading');
+        $this->entityManager->saveEntity($profile);
+
+        $this->getJobSchedulerFactory()
+            ->create()
+            ->setClassName(DownloadCnnExport::class)
+            ->setData([
+                'profileId' => $profileId,
+                'attempt' => 1,
+            ])
+            ->setGroup('cnn-pipeline-' . $profileId)
+            ->schedule();
+
+        return ['status' => 'queued'];
+    }
+
+    /**
+     * @return array{status: string}
+     */
+    public function importCsvData(string $profileId, string $dateFrom, string $dateTo): array
+    {
+        $profile = $this->entityManager->getEntityById('FeatureIntegrationClinicaNasNuvensSettings', $profileId);
+
+        if (!$profile) {
+            throw new NotFound('Integration profile not found.');
+        }
+
+        if (!$profile->get('isActive')) {
+            throw new BadRequest('Integration profile is inactive.');
+        }
+
+        $importStatus = (string) ($profile->get('importStatus') ?? 'idle');
+
+        if ($importStatus === 'inProgress') {
+            throw new BadRequest('An import operation is already in progress for this profile.');
+        }
+
+        // Validate dates.
+        $dateFromParsed = \DateTime::createFromFormat('Y-m-d', $dateFrom);
+        $dateToParsed = \DateTime::createFromFormat('Y-m-d', $dateTo);
+
+        if (!$dateFromParsed || $dateFromParsed->format('Y-m-d') !== $dateFrom) {
+            throw new BadRequest('Invalid dateFrom format. Expected YYYY-MM-DD.');
+        }
+
+        if (!$dateToParsed || $dateToParsed->format('Y-m-d') !== $dateTo) {
+            throw new BadRequest('Invalid dateTo format. Expected YYYY-MM-DD.');
+        }
+
+        if ($dateFromParsed > $dateToParsed) {
+            throw new BadRequest('dateFrom must be before or equal to dateTo.');
+        }
+
+        $profile->set('importStatus', 'inProgress');
+        $this->entityManager->saveEntity($profile, [SaveOption::SKIP_HOOKS => true]);
+
+        $this->getJobSchedulerFactory()
+            ->create()
+            ->setClassName(ImportCsvData::class)
+            ->setData([
+                'profileId' => $profileId,
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo,
+            ])
+            ->setGroup('cnn-pipeline-' . $profileId)
+            ->schedule();
+
+        return ['status' => 'queued'];
     }
 
     private function assertSameClinicByApiCredentials(string $oldApiCredentialId, string $newApiCredentialId): void

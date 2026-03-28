@@ -1,16 +1,33 @@
 {
     "labels": {
         "FeatureIntegrationClinicaNasNuvensSettings": "Clínica Nas Nuvens Integration Profile",
-        "Create FeatureIntegrationClinicaNasNuvensSettings": "Create Integration Profile"
+        "Create FeatureIntegrationClinicaNasNuvensSettings": "Create Integration Profile",
+        "requestCnnExport": "Request Export",
+        "downloadCnnExport": "Download Export",
+        "requestCnnExportQueued": "Export request has been queued.",
+        "downloadCnnExportQueued": "Export download has been queued.",
+        "requestCnnExportFailed": "Failed to queue export request.",
+        "downloadCnnExportFailed": "Failed to queue export download.",
+        "importCsvData": "Import CSV Data",
+        "importCsvDataDialogTitle": "Import Agendamentos from CSV",
+        "importCsvDataDialogBody": "Select the date range for agendamentos to import.",
+        "importCsvDataQueued": "Import job has been queued successfully.",
+        "importCsvDataFailed": "Failed to queue import job.",
+        "Pipeline Jobs": "Pipeline Jobs"
     },
     "fields": {
         "name": "Profile Name",
         "isActive": "Active",
         "migrationStatus": "Migration Status",
+        "exportStatus": "Export Status",
+        "autoImportDateRange": "Auto-Import Date Range",
         "tenant": "Tenant",
         "teams": "Scope Team",
         "apiCredential": "API Credential",
-        "webCredential": "Web Credential"
+        "webCredential": "Web Credential",
+        "importStatus": "Import Status",
+        "dateFrom": "Date From",
+        "dateTo": "Date To"
     },
     "links": {
         "tenant": "Tenant",
@@ -19,10 +36,32 @@
         "webCredential": "Web Credential"
     },
     "actions": {
-        "replaceCredential": "Replace Credentials"
+        "replaceCredential": "Replace Credentials",
+        "requestCnnExport": "Request Export",
+        "downloadCnnExport": "Download Export",
+        "importCsvData": "Import CSV Data"
     },
     "options": {
         "migrationStatus": {
+            "idle": "Idle",
+            "inProgress": "In Progress",
+            "completed": "Completed",
+            "failed": "Failed"
+        },
+        "exportStatus": {
+            "idle": "Idle",
+            "requesting": "Requesting",
+            "downloading": "Downloading",
+            "completed": "Completed",
+            "failed": "Failed"
+        },
+        "autoImportDateRange": {
+            "none": "None (Manual)",
+            "rolling30d": "Last 30 Days",
+            "rolling90d": "Last 90 Days",
+            "rolling365d": "Last 365 Days"
+        },
+        "importStatus": {
             "idle": "Idle",
             "inProgress": "In Progress",
             "completed": "Completed",

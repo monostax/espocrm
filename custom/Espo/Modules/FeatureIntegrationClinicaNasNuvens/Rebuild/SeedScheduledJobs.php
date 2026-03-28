@@ -20,6 +20,16 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'RepairFaturadoAgendamentosWithoutFaturamento',
             'scheduling' => '0 */6 * * *',
         ],
+        [
+            'name' => 'CNN: Request Data Export',
+            'job' => 'DispatchRequestCnnExport',
+            'scheduling' => '0 4 * * *',
+        ],
+        [
+            'name' => 'CNN: Download Data Export',
+            'job' => 'DispatchDownloadCnnExport',
+            'scheduling' => '0 6 * * *',
+        ],
     ];
 
     public function __construct(

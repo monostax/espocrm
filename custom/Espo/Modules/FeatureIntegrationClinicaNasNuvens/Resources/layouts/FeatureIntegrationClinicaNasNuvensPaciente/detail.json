@@ -1,32 +1,68 @@
 [
     {
-        "label": "Overview",
+        "tabLabel": "$Overview",
+        "name": "identificacaoPanel",
+        "label": "Identificação",
+        "panelIconClass": "fas fa-user-injured",
+        "gridRow": 1,
+        "gridColSpan": 3,
         "rows": [
-            [{"name": "name"}, {"name": "pacienteId"}],
-            [{"name": "contact"}, {"name": "credential"}],
-            [{"name": "syncStatus"}, {"name": "ativo"}],
-            [{"name": "cpfcnpj"}, {"name": "dataNascimento"}],
-            [{"name": "email"}, {"name": "telefone"}],
-            [{"name": "celular"}, {"name": "sexo"}]
+            [{"name": "name"}, {"name": "pacienteId"}, {"name": "ativo"}],
+            [{"name": "contact"}, {"name": "credential"}, {"name": "syncStatus"}]
         ]
     },
     {
-        "label": "Address",
+        "name": "contatoPanel",
+        "label": "Contato",
+        "panelIconClass": "fas fa-phone",
+        "gridRow": 1,
+        "rows": [
+            [{"name": "email"}],
+            [{"name": "telefone"}],
+            [{"name": "celular"}]
+        ]
+    },
+    {
+        "name": "dadosPessoaisPanel",
+        "label": "Dados Pessoais",
+        "panelIconClass": "fas fa-id-card",
+        "gridRow": 2,
+        "gridColSpan": 3,
+        "rows": [
+            [{"name": "cpfcnpj"}, {"name": "dataNascimento"}, {"name": "sexo"}],
+            [{"name": "nomeMae"}, {"name": "nomePai"}],
+            [{"name": "estadoCivil"}, {"name": "profissao"}]
+        ]
+    },
+    {
+        "name": "convenioPanel",
+        "label": "Convênio",
+        "panelIconClass": "fas fa-file-medical",
+        "gridRow": 2,
+        "rows": [
+            [{"name": "convenio"}],
+            [{"name": "numeroConvenio"}],
+            [{"name": "validadeConvenio"}]
+        ]
+    },
+    {
+        "name": "enderecoPanel",
+        "label": "Endereço",
+        "panelIconClass": "fas fa-map-marker-alt",
+        "gridRow": 3,
         "rows": [
             [{"name": "endereco"}, {"name": "numero"}],
-            [{"name": "complemento"}, {"name": "bairro"}],
+            [{"name": "bairro"}, {"name": "complemento"}],
             [{"name": "cidade"}, {"name": "estado"}],
             [{"name": "cep"}, false]
         ]
     },
     {
-        "label": "Additional",
+        "name": "observacaoPanel",
+        "label": "Observação",
+        "gridRow": 4,
         "rows": [
-            [{"name": "nomeMae"}, {"name": "nomePai"}],
-            [{"name": "estadoCivil"}, {"name": "profissao"}],
-            [{"name": "convenio"}, {"name": "numeroConvenio"}],
-            [{"name": "validadeConvenio"}, false],
-            [{"name": "observacao", "fullWidth": true}, false]
+            [{"name": "observacao", "fullWidth": true, "noLabel": true}]
         ]
     }
 ]

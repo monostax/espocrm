@@ -1,12 +1,59 @@
 {
     "controller": "controllers/record",
     "views": {
-        "list": "views/record/list",
-        "detail": "views/record/detail",
-        "edit": "views/record/edit"
+        "list": "views/list",
+        "detail": "views/detail",
+        "edit": "views/edit"
     },
     "actions": {
-        "replaceCredential": true
+        "replaceCredential": true,
+        "requestCnnExport": true,
+        "downloadCnnExport": true,
+        "importCsvData": true
+    },
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "requestCnnExport",
+                    "name": "requestCnnExport",
+                    "style": "default",
+                    "handler": "feature-integration-clinica-nas-nuvens:handlers/settings-export",
+                    "actionFunction": "requestCnnExport",
+                    "checkVisibilityFunction": "isRequestCnnExportVisible",
+                    "iconClass": "fas fa-cloud-upload-alt"
+                },
+                {
+                    "label": "downloadCnnExport",
+                    "name": "downloadCnnExport",
+                    "style": "default",
+                    "handler": "feature-integration-clinica-nas-nuvens:handlers/settings-export",
+                    "actionFunction": "downloadCnnExport",
+                    "checkVisibilityFunction": "isDownloadCnnExportVisible",
+                    "iconClass": "fas fa-cloud-download-alt"
+                },
+                {
+                    "label": "importCsvData",
+                    "name": "importCsvData",
+                    "style": "default",
+                    "handler": "feature-integration-clinica-nas-nuvens:handlers/settings-import-csv",
+                    "actionFunction": "importCsvData",
+                    "checkVisibilityFunction": "isImportCsvDataVisible",
+                    "iconClass": "fas fa-file-import"
+                }
+            ]
+        }
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "pipelineJobs",
+                "label": "Pipeline Jobs",
+                "view": "feature-integration-clinica-nas-nuvens:views/settings/panels/jobs",
+                "order": 1
+            }
+        ]
     },
     "iconClass": "fas fa-cogs"
 }

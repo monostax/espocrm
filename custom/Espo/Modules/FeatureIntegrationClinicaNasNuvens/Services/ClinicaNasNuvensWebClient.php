@@ -23,7 +23,14 @@ class ClinicaNasNuvensWebClient implements
         'https://app.clinicanasnuvens.com.br/resumoAgenda-financeiro?codigoAgenda=%s';
     private const PROCEDIMENTO_URL_TEMPLATE =
         'https://app.clinicanasnuvens.com.br/procedimento/%s?page=1&ativo=';
+    private const EXPORTACAO_LISTA_URL =
+        'https://app.clinicanasnuvens.com.br/exportacao/lista';
+    private const EXPORTACAO_SALVAR_URL =
+        'https://app.clinicanasnuvens.com.br/exportacao/salvar';
+    private const EXPORTACAO_DOWNLOAD_URL_TEMPLATE =
+        'https://app.clinicanasnuvens.com.br/exportacao/download/?codArquivo=%s';
     private const TIMEOUT_SECONDS = 20;
+    private const DOWNLOAD_TIMEOUT_SECONDS = 60;
     private const CONNECT_TIMEOUT_SECONDS = 8;
     private const USER_AGENT =
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' .
@@ -183,6 +190,148 @@ class ClinicaNasNuvensWebClient implements
                 'rowsParsed' => count($rows),
             ],
         ];
+    }
+
+    /**
+     * Get the file list from the most recent export row on the CNN exportação lista page.
+     *
+     * @return array<int, array{codigo: int, dataHoraCriacao: string}>
+     */
+    public function getExportFileList(Entity $credential): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+        $cookies = $this->normalizeNullableString($config['sessionCookies'] ?? null);
+
+        if (!$cookies) {
+            throw new Error("Missing session cookies for credential '{$credential->getId()}'.");
+        }
+
+        $firstAttempt = $this->requestDetailsPage(self::EXPORTACAO_LISTA_URL, $cookies);
+        $firstValidation = $this->validateExportacaoListaHtml($firstAttempt['status'], $firstAttempt['body']);
+
+        if ($firstValidation['valid']) {
+            return $this->parseExportacaoListaHtml($firstAttempt['body']);
+        }
+
+        if (!$firstValidation['authLike']) {
+            throw new Error(
+                "Invalid exportação lista HTML response: {$firstValidation['reason']}"
+            );
+        }
+
+        $refreshedCookies = $this->refreshCredentialSessionCookies($credential);
+
+        if (!$refreshedCookies) {
+            throw new Error(
+                "Web session refresh failed for credential '{$credential->getId()}' while loading exportação lista."
+            );
+        }
+
+        $retryAttempt = $this->requestDetailsPage(self::EXPORTACAO_LISTA_URL, $refreshedCookies);
+        $retryValidation = $this->validateExportacaoListaHtml($retryAttempt['status'], $retryAttempt['body']);
+
+        if (!$retryValidation['valid']) {
+            throw new Error(
+                "Invalid exportação lista HTML response after retry: {$retryValidation['reason']}"
+            );
+        }
+
+        return $this->parseExportacaoListaHtml($retryAttempt['body']);
+    }
+
+    /**
+     * POST to CNN exportação/salvar to request a new data export.
+     *
+     * @return array{success: bool, status: int, message: string}
+     */
+    public function requestNewExport(Entity $credential): array
+    {
+        $config = $this->extractCredentialConfig($credential);
+        $cookies = $this->normalizeNullableString($config['sessionCookies'] ?? null);
+
+        if (!$cookies) {
+            throw new Error("Missing session cookies for credential '{$credential->getId()}'.");
+        }
+
+        $firstAttempt = $this->requestPostPage(self::EXPORTACAO_SALVAR_URL, $cookies);
+        $firstValidation = $this->validateExportacaoSalvarResponse($firstAttempt['status'], $firstAttempt['body']);
+
+        if ($firstValidation['valid']) {
+            return ['success' => true, 'status' => $firstAttempt['status'], 'message' => 'ok'];
+        }
+
+        if (!$firstValidation['authLike']) {
+            return ['success' => false, 'status' => $firstAttempt['status'], 'message' => $firstValidation['reason']];
+        }
+
+        $refreshedCookies = $this->refreshCredentialSessionCookies($credential);
+
+        if (!$refreshedCookies) {
+            return ['success' => false, 'status' => 0, 'message' => 'Session refresh failed.'];
+        }
+
+        $retryAttempt = $this->requestPostPage(self::EXPORTACAO_SALVAR_URL, $refreshedCookies);
+        $retryValidation = $this->validateExportacaoSalvarResponse($retryAttempt['status'], $retryAttempt['body']);
+
+        if (!$retryValidation['valid']) {
+            return ['success' => false, 'status' => $retryAttempt['status'], 'message' => $retryValidation['reason']];
+        }
+
+        return ['success' => true, 'status' => $retryAttempt['status'], 'message' => 'ok'];
+    }
+
+    /**
+     * Download a single CNN export zip file to the given destination path.
+     *
+     * Uses CURLOPT_FILE to stream directly to disk to avoid memory issues with large files.
+     */
+    public function downloadExportFile(Entity $credential, int $codArquivo, string $destPath): void
+    {
+        $config = $this->extractCredentialConfig($credential);
+        $cookies = $this->normalizeNullableString($config['sessionCookies'] ?? null);
+
+        if (!$cookies) {
+            throw new Error("Missing session cookies for credential '{$credential->getId()}'.");
+        }
+
+        $url = sprintf(self::EXPORTACAO_DOWNLOAD_URL_TEMPLATE, $codArquivo);
+
+        $firstResult = $this->requestDownloadToFile($url, $cookies, $destPath);
+
+        if ($firstResult['valid']) {
+            return;
+        }
+
+        if (!$firstResult['authLike']) {
+            throw new Error(
+                "Download failed for codArquivo '{$codArquivo}': {$firstResult['reason']}"
+            );
+        }
+
+        // Clean up corrupted file from first attempt.
+        if (file_exists($destPath)) {
+            @unlink($destPath);
+        }
+
+        $refreshedCookies = $this->refreshCredentialSessionCookies($credential);
+
+        if (!$refreshedCookies) {
+            throw new Error(
+                "Web session refresh failed for credential '{$credential->getId()}' while downloading codArquivo '{$codArquivo}'."
+            );
+        }
+
+        $retryResult = $this->requestDownloadToFile($url, $refreshedCookies, $destPath);
+
+        if (!$retryResult['valid']) {
+            if (file_exists($destPath)) {
+                @unlink($destPath);
+            }
+
+            throw new Error(
+                "Download failed after retry for codArquivo '{$codArquivo}': {$retryResult['reason']}"
+            );
+        }
     }
 
     /**
@@ -497,6 +646,222 @@ class ClinicaNasNuvensWebClient implements
             'authLike' => false,
             'reason' => 'ok',
         ];
+    }
+
+    /**
+     * @return array{valid:bool, authLike:bool, reason:string}
+     */
+    protected function validateExportacaoListaHtml(int $status, string $html): array
+    {
+        $normalizedHtml = strtolower($html);
+
+        if ($status !== 200) {
+            return [
+                'valid' => false,
+                'authLike' => $status === 401 || $status === 403,
+                'reason' => "HTTP {$status}",
+            ];
+        }
+
+        if ($normalizedHtml === '') {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'empty-response',
+            ];
+        }
+
+        if (
+            str_contains($normalizedHtml, 'attention required') &&
+            str_contains($normalizedHtml, 'cloudflare')
+        ) {
+            return [
+                'valid' => false,
+                'authLike' => true,
+                'reason' => 'cloudflare-challenge',
+            ];
+        }
+
+        if (
+            str_contains($normalizedHtml, 'b2clogin.com') ||
+            str_contains($normalizedHtml, 'name="password"') ||
+            str_contains($normalizedHtml, 'name="email"') ||
+            str_contains($normalizedHtml, 'fazer login')
+        ) {
+            return [
+                'valid' => false,
+                'authLike' => true,
+                'reason' => 'login-page-detected',
+            ];
+        }
+
+        if (!str_contains($normalizedHtml, 'lista-exportacao')) {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'non-target-html',
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'authLike' => false,
+            'reason' => 'ok',
+        ];
+    }
+
+    /**
+     * @return array{valid:bool, authLike:bool, reason:string}
+     */
+    protected function validateExportacaoSalvarResponse(int $status, string $html): array
+    {
+        $normalizedHtml = strtolower($html);
+
+        // HTTP 200 or 302 with no login page content = success.
+        if ($status === 200 || $status === 302) {
+            if (
+                str_contains($normalizedHtml, 'b2clogin.com') ||
+                str_contains($normalizedHtml, 'name="password"') ||
+                str_contains($normalizedHtml, 'name="email"') ||
+                str_contains($normalizedHtml, 'fazer login')
+            ) {
+                return [
+                    'valid' => false,
+                    'authLike' => true,
+                    'reason' => 'login-page-detected',
+                ];
+            }
+
+            if (
+                str_contains($normalizedHtml, 'attention required') &&
+                str_contains($normalizedHtml, 'cloudflare')
+            ) {
+                return [
+                    'valid' => false,
+                    'authLike' => true,
+                    'reason' => 'cloudflare-challenge',
+                ];
+            }
+
+            return [
+                'valid' => true,
+                'authLike' => false,
+                'reason' => 'ok',
+            ];
+        }
+
+        if ($status === 401 || $status === 403) {
+            return [
+                'valid' => false,
+                'authLike' => true,
+                'reason' => "HTTP {$status}",
+            ];
+        }
+
+        return [
+            'valid' => false,
+            'authLike' => false,
+            'reason' => "HTTP {$status}",
+        ];
+    }
+
+    /**
+     * Parse the exportação lista page HTML to extract file info from the most recent export row.
+     *
+     * @return array<int, array{codigo: int, dataHoraCriacao: string}>
+     */
+    protected function parseExportacaoListaHtml(string $html): array
+    {
+        $document = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="UTF-8">' . $html);
+        libxml_clear_errors();
+
+        foreach ($document->childNodes as $node) {
+            if ($node->nodeType === XML_PI_NODE) {
+                $document->removeChild($node);
+
+                break;
+            }
+        }
+
+        $xpath = new DOMXPath($document);
+
+        // Diagnostic: count table rows.
+        $rowCount = $xpath->query('//table[@id="lista-exportacao"]/tbody/tr');
+        $this->log->info(
+            'parseExportacaoListaHtml: table rows found: ' . ($rowCount ? $rowCount->length : 0) .
+            ', html length: ' . strlen($html)
+        );
+
+        // Try the primary XPath.
+        $dataArquivosRaw = $this->extractSingleNodeAttribute(
+            $xpath,
+            '//table[@id="lista-exportacao"]/tbody/tr[1]/td[3]//a[contains(@class, "btn-baixar")]',
+            'data-arquivos',
+        );
+
+        // Fallback: try any a with data-arquivos anywhere in the table.
+        if ($dataArquivosRaw === null) {
+            $dataArquivosRaw = $this->extractSingleNodeAttribute(
+                $xpath,
+                '//table[@id="lista-exportacao"]//a[@data-arquivos]',
+                'data-arquivos',
+            );
+
+            if ($dataArquivosRaw !== null) {
+                $this->log->info('parseExportacaoListaHtml: Found data-arquivos via fallback XPath.');
+            }
+        }
+
+        if ($dataArquivosRaw === null) {
+            // Diagnostic: log first row HTML for debugging.
+            $firstRow = $xpath->query('//table[@id="lista-exportacao"]/tbody/tr[1]');
+
+            if ($firstRow && $firstRow->length > 0) {
+                $rowHtml = $document->saveHTML($firstRow->item(0));
+                $this->log->info(
+                    'parseExportacaoListaHtml: No data-arquivos found. First row HTML (truncated): ' .
+                    substr((string) $rowHtml, 0, 500)
+                );
+            } else {
+                $this->log->info('parseExportacaoListaHtml: No table rows found at all.');
+            }
+
+            return [];
+        }
+
+        $decoded = json_decode($dataArquivosRaw, true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($decoded as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $codigo = $item['codigo'] ?? null;
+            $dataHoraCriacao = $item['dataHoraCriacao'] ?? null;
+
+            if (!is_int($codigo) && !is_string($codigo)) {
+                continue;
+            }
+
+            if (!is_string($dataHoraCriacao)) {
+                continue;
+            }
+
+            $result[] = [
+                'codigo' => (int) $codigo,
+                'dataHoraCriacao' => $dataHoraCriacao,
+            ];
+        }
+
+        return $result;
     }
 
     /**
@@ -873,5 +1238,176 @@ class ClinicaNasNuvensWebClient implements
         }
 
         return [];
+    }
+
+    /**
+     * @return array{status:int, body:string, message:string}
+     */
+    private function requestPostPage(string $url, string $cookies): array
+    {
+        $ch = curl_init($url);
+
+        if ($ch === false) {
+            return [
+                'status' => 0,
+                'body' => '',
+                'message' => 'Could not initialize cURL.',
+            ];
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
+            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_COOKIE => $cookies,
+            CURLOPT_USERAGENT => self::USER_AGENT,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => '',
+            CURLOPT_HTTPHEADER => [
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Content-Type: application/x-www-form-urlencoded',
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false || $curlError !== '') {
+            return [
+                'status' => 0,
+                'body' => '',
+                'message' => $curlError !== '' ? $curlError : 'Unknown transport error.',
+            ];
+        }
+
+        return [
+            'status' => $status,
+            'body' => (string) $response,
+            'message' => 'ok',
+        ];
+    }
+
+    /**
+     * Download a file to disk via cURL streaming (CURLOPT_FILE).
+     *
+     * @return array{valid:bool, authLike:bool, reason:string}
+     */
+    private function requestDownloadToFile(string $url, string $cookies, string $destPath): array
+    {
+        $fp = @fopen($destPath, 'wb');
+
+        if ($fp === false) {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => "Could not open destination file for writing: {$destPath}",
+            ];
+        }
+
+        $ch = curl_init($url);
+
+        if ($ch === false) {
+            fclose($fp);
+
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'Could not initialize cURL.',
+            ];
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_FILE => $fp,
+            CURLOPT_TIMEOUT => self::DOWNLOAD_TIMEOUT_SECONDS,
+            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_COOKIE => $cookies,
+            CURLOPT_USERAGENT => self::USER_AGENT,
+            CURLOPT_HTTPHEADER => [
+                'Accept: */*',
+                'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            ],
+        ]);
+
+        curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        fclose($fp);
+
+        if ($curlError !== '') {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => "cURL error: {$curlError}",
+            ];
+        }
+
+        if ($status === 401 || $status === 403) {
+            return [
+                'valid' => false,
+                'authLike' => true,
+                'reason' => "HTTP {$status}",
+            ];
+        }
+
+        if ($status !== 200) {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => "HTTP {$status}",
+            ];
+        }
+
+        // Validate file exists and has content.
+        if (!file_exists($destPath) || filesize($destPath) === 0) {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'Downloaded file is empty.',
+            ];
+        }
+
+        // Check zip magic bytes (PK\x03\x04).
+        $header = file_get_contents($destPath, false, null, 0, 4);
+
+        if ($header === false || strlen($header) < 4) {
+            return [
+                'valid' => false,
+                'authLike' => false,
+                'reason' => 'Cannot read file header.',
+            ];
+        }
+
+        if ($header !== "\x50\x4B\x03\x04") {
+            // Likely an HTML auth page was downloaded instead of a zip.
+            $snippet = (string) file_get_contents($destPath, false, null, 0, 512);
+            $snippetLower = strtolower($snippet);
+
+            $isAuth = str_contains($snippetLower, 'b2clogin.com') ||
+                str_contains($snippetLower, 'name="password"') ||
+                str_contains($snippetLower, 'fazer login') ||
+                (str_contains($snippetLower, 'attention required') && str_contains($snippetLower, 'cloudflare'));
+
+            return [
+                'valid' => false,
+                'authLike' => $isAuth,
+                'reason' => $isAuth ? 'auth-page-downloaded' : 'invalid-zip-file',
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'authLike' => false,
+            'reason' => 'ok',
+        ];
     }
 }

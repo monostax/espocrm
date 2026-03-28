@@ -9,6 +9,7 @@
 /data/config-internal-override.php
 /data/state.php
 /data/tmp/*
+/data/cnn-exports/*
 /build
 /node_modules
 /npm-debug.log

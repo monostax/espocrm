@@ -62,11 +62,7 @@ class FeatureIntegrationClinicaNasNuvensConvenioTipo extends RecordService imple
 
     public function read(string $id, ReadParams $params): Entity
     {
-        $entity = parent::read($id, $params);
-
-        $this->enrichEntities([$entity], true);
-
-        return $entity;
+        return parent::read($id, $params);
     }
 
     public function find(SearchParams $searchParams, ?FindParams $params = null): RecordCollection
@@ -263,6 +259,8 @@ class FeatureIntegrationClinicaNasNuvensConvenioTipo extends RecordService imple
      */
     private function enrichEntities(array $entities, bool $persist): void
     {
+        return; // Enrichment disabled — data is populated by CSV ETL import.
+
         /** @var array<string, array<string, Entity[]>> $grouped */
         $grouped = [];
 

@@ -69,25 +69,5 @@
                 }
             ]
         ]
-    },
-    {
-        "name": "contactConversationsPanel",
-        "label": false,
-        "gridRow": 5,
-        "rows": [
-            [
-                {
-                    "name": "contactConversationsList",
-                    "view": "chatwoot:views/contact/fields/contact-conversations-list",
-                    "noLabel": true,
-                    "span": 4,
-                    "options": {
-                        "contactIdAttribute": "contactId",
-                        "layout": "listForContactPanel",
-                        "recordsPerPage": 10
-                    }
-                }
-            ]
-        ]
     }
 ]
