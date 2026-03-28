@@ -320,6 +320,11 @@ class ImportCsvData implements Job
             // Cleanup output directory.
             $this->cleanupOutputDir($csvOutputPath);
 
+            // Fire EspoCRM hooks (CurrencyConverted, ForeignFields, etc.)
+            // on all imported entities. Direct SQL bypasses the ORM, so hooks
+            // like currency conversion and link-name resolution don't run.
+            $this->fireHooksOnImportedEntities($profileId);
+
             // Mark import as completed.
             $profile = $this->entityManager->getEntityById(
                 'FeatureIntegrationClinicaNasNuvensSettings',
@@ -561,6 +566,48 @@ class ImportCsvData implements Job
         $this->log->info("ImportCsvData: DuckDB ETL completed. stdout: " . trim($stdout));
 
         return $csvOutputPath;
+    }
+
+    /**
+     * Re-save all imported entities through EspoCRM's ORM to fire hooks
+     * (CurrencyConverted, CurrencyDefault, ForeignFields, SyncContactPacienteId, etc.).
+     * Direct SQL import bypasses these, so computed/derived fields are missing.
+     */
+    private function fireHooksOnImportedEntities(string $profileId): void
+    {
+        // Entity types in dependency order (anchors first, then dependents).
+        $entityTypes = [
+            'FeatureIntegrationClinicaNasNuvensConsultaTipo',
+            'FeatureIntegrationClinicaNasNuvensConvenioTipo',
+            'FeatureIntegrationClinicaNasNuvensProcedimentoTipo',
+            'FeatureIntegrationClinicaNasNuvensProfissional',
+            'FeatureIntegrationClinicaNasNuvensPaciente',
+            'FeatureIntegrationClinicaNasNuvensAgendamento',
+            'FeatureIntegrationClinicaNasNuvensFaturamento',
+        ];
+
+        $saveOptions = [
+            SaveOption::SILENT => true,
+            SaveOption::SKIP_MODIFIED_BY => true,
+            SaveOption::IMPORT => true,
+        ];
+
+        foreach ($entityTypes as $entityType) {
+            $collection = $this->entityManager
+                ->getRDBRepository($entityType)
+                ->where(['settingsId' => $profileId])
+                ->find();
+
+            $count = 0;
+
+            foreach ($collection as $entity) {
+                $this->entityManager->saveEntity($entity, $saveOptions);
+                $count++;
+            }
+
+            $short = str_replace('FeatureIntegrationClinicaNasNuvens', '', $entityType);
+            $this->log->info("ImportCsvData: Fired hooks on {$count} {$short} entities.");
+        }
     }
 
     /**
