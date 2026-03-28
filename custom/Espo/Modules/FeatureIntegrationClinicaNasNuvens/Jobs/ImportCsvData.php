@@ -162,6 +162,9 @@ class ImportCsvData implements Job
             'paciente_id', 'status_faturamento', 'id_pessoa_executor', 'profissional_anchor_id',
             'id_tipo_convenio', 'convenio_tipo_anchor_id', 'id_tipo_consulta',
             'consulta_tipo_anchor_id', 'modified_at', 'settings_id',
+            'valor_procedimentos', 'valor_procedimentos_currency',
+            'valor_faturamentos', 'valor_faturamentos_currency',
+            'valor_financeiro', 'valor_financeiro_currency',
         ],
         'agendamento_procedimento' => [
             'name', 'quantidade', 'procedimento_nome', 'preco_paciente', 'preco_convenio',
@@ -319,11 +322,6 @@ class ImportCsvData implements Job
 
             // Cleanup output directory.
             $this->cleanupOutputDir($csvOutputPath);
-
-            // Fire EspoCRM hooks (CurrencyConverted, ForeignFields, etc.)
-            // on all imported entities. Direct SQL bypasses the ORM, so hooks
-            // like currency conversion and link-name resolution don't run.
-            $this->fireHooksOnImportedEntities($profileId);
 
             // Mark import as completed.
             $profile = $this->entityManager->getEntityById(
@@ -496,6 +494,17 @@ class ImportCsvData implements Job
             throw new \RuntimeException("Cannot resolve absolute path for: {$csvOutputPath}");
         }
 
+        // Sanitize critical CSVs before calling DuckDB.
+        $criticalCsvs = ['AGENDA.csv', 'PACIENTE.csv', 'FATURAMENTO.csv'];
+
+        foreach ($criticalCsvs as $csv) {
+            $filePath = $absCsvInputPath . '/' . $csv;
+
+            if (file_exists($filePath)) {
+                $this->sanitizeCsv($filePath);
+            }
+        }
+
         $absSqlScriptPath = realpath($sqlScriptPath);
 
         if (!$absSqlScriptPath) {
@@ -529,6 +538,11 @@ class ImportCsvData implements Job
         $fullSql = $setVars . "\n" . $sqlScript;
 
         $command = 'duckdb';
+
+        // Prefer absolute path if available (common in k8s/pods).
+        if (file_exists('/usr/local/bin/duckdb')) {
+            $command = '/usr/local/bin/duckdb';
+        }
 
         $this->log->info("ImportCsvData: Executing DuckDB ETL for profile '{$profileId}'.");
 
@@ -644,17 +658,77 @@ class ImportCsvData implements Job
                 'paciente_id',
                 $credentialId,
             ),
+            'procedimento_tipo' => $this->buildAnchorLookup(
+                $pdo,
+                'feature_integration_clinica_nas_nuvens_procedimento_tipo',
+                'procedimento_tipo_id',
+                $credentialId,
+            ),
         ];
 
-        // Fix agendamento.csv FK columns.
-        $agendamentoCsv = $csvOutputPath . '/agendamento.csv';
+        // Build direct ID translation maps (etl_id → db_id) for each anchor.
+        // Read each anchor CSV to get (etl_id → remote_id), then compose with
+        // the DB lookup (remote_id → db_id).
+        $idTranslations = [];
 
-        if (file_exists($agendamentoCsv)) {
-            $this->rewriteCsvForeignKeys($agendamentoCsv, [
+        $anchorCsvRemoteIdCol = [
+            'consulta_tipo' => 'consulta_tipo_id',
+            'convenio_tipo' => 'convenio_tipo_id',
+            'profissional' => 'profissional_id',
+            'paciente' => 'paciente_id',
+            'procedimento_tipo' => 'procedimento_tipo_id',
+            'agendamento' => 'agendamento_id',
+        ];
+
+        foreach ($anchorLookups as $key => $dbLookup) {
+            $anchorCsv = $csvOutputPath . '/' . $key . '.csv';
+            $remoteCol = $anchorCsvRemoteIdCol[$key] ?? null;
+
+            if (!$remoteCol || !file_exists($anchorCsv)) {
+                $idTranslations[$key] = [];
+
+                continue;
+            }
+
+            $idTranslations[$key] = $this->buildIdTranslation($anchorCsv, 'id', $remoteCol, $dbLookup);
+        }
+
+        // Also build translation for agendamento IDs (used in agendamento_procedimento + faturamento).
+        $agendamentoCsvPath = $csvOutputPath . '/agendamento.csv';
+
+        if (file_exists($agendamentoCsvPath)) {
+            $agendamentoDbLookup = $this->buildAnchorLookup(
+                $pdo,
+                'feature_integration_clinica_nas_nuvens_agendamento',
+                'agendamento_id',
+                $credentialId,
+            );
+
+            $idTranslations['agendamento'] = $this->buildIdTranslation(
+                $agendamentoCsvPath,
+                'id',
+                'agendamento_id',
+                $agendamentoDbLookup,
+            );
+        }
+
+        // Fix agendamento.csv FK columns.
+        if (file_exists($agendamentoCsvPath)) {
+            $this->rewriteCsvForeignKeys($agendamentoCsvPath, [
                 'consulta_tipo_anchor_id' => $anchorLookups['consulta_tipo'],
                 'convenio_tipo_anchor_id' => $anchorLookups['convenio_tipo'],
                 'profissional_anchor_id' => $anchorLookups['profissional'],
                 'paciente_id' => $anchorLookups['paciente'],
+            ]);
+        }
+
+        // Fix agendamento_procedimento.csv FK columns (direct ID translation).
+        $agendamentoProcCsv = $csvOutputPath . '/agendamento_procedimento.csv';
+
+        if (file_exists($agendamentoProcCsv)) {
+            $this->rewriteCsvDirectIds($agendamentoProcCsv, [
+                'agendamento_id' => $idTranslations['agendamento'] ?? [],
+                'procedimento_tipo_id' => $idTranslations['procedimento_tipo'] ?? [],
             ]);
         }
 
@@ -666,7 +740,132 @@ class ImportCsvData implements Job
                 'profissional_anchor_id' => $anchorLookups['profissional'],
                 'paciente_id' => $anchorLookups['paciente'],
             ]);
+
+            $this->rewriteCsvDirectIds($faturamentoCsv, [
+                'agendamento_id' => $idTranslations['agendamento'] ?? [],
+            ]);
         }
+    }
+
+    /**
+     * Build a translation map: etl_generated_id → actual_db_id.
+     * Reads the anchor CSV to get (etl_id → remote_id), then composes
+     * with the DB lookup (remote_id → db_id) to produce (etl_id → db_id).
+     *
+     * @param array<string, string> $dbLookup remote_id → db_id
+     * @return array<string, string> etl_id → db_id
+     */
+    private function buildIdTranslation(
+        string $csvPath,
+        string $idColumn,
+        string $remoteIdColumn,
+        array $dbLookup,
+    ): array {
+        $handle = fopen($csvPath, 'r');
+
+        if (!$handle) {
+            return [];
+        }
+
+        $header = fgetcsv($handle);
+
+        if (!$header) {
+            fclose($handle);
+
+            return [];
+        }
+
+        $colIndices = array_flip($header);
+        $idIdx = $colIndices[$idColumn] ?? null;
+        $remoteIdx = $colIndices[$remoteIdColumn] ?? null;
+
+        if ($idIdx === null || $remoteIdx === null) {
+            fclose($handle);
+
+            return [];
+        }
+
+        $map = [];
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $etlId = $row[$idIdx] ?? '';
+            $remoteId = $row[$remoteIdx] ?? '';
+
+            if ($etlId !== '' && $remoteId !== '' && isset($dbLookup[$remoteId])) {
+                $map[$etlId] = $dbLookup[$remoteId];
+            }
+        }
+
+        fclose($handle);
+
+        return $map;
+    }
+
+    /**
+     * Rewrite columns in a CSV by directly translating IDs (etl_id → db_id).
+     * Unlike rewriteCsvForeignKeys which uses a secondary remote ID column,
+     * this directly replaces the column value itself.
+     *
+     * @param array<string, array<string, string>> $columnMappings column_name → (old_id → new_id)
+     */
+    private function rewriteCsvDirectIds(string $csvPath, array $columnMappings): void
+    {
+        $handle = fopen($csvPath, 'r');
+
+        if (!$handle) {
+            return;
+        }
+
+        $header = fgetcsv($handle);
+
+        if (!$header) {
+            fclose($handle);
+
+            return;
+        }
+
+        $colIndices = array_flip($header);
+        $rows = [];
+        $modified = false;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            foreach ($columnMappings as $col => $lookup) {
+                $idx = $colIndices[$col] ?? null;
+
+                if ($idx === null) {
+                    continue;
+                }
+
+                $oldVal = $row[$idx] ?? '';
+
+                if ($oldVal !== '' && isset($lookup[$oldVal])) {
+                    $row[$idx] = $lookup[$oldVal];
+                    $modified = true;
+                }
+            }
+
+            $rows[] = $row;
+        }
+
+        fclose($handle);
+
+        if (!$modified) {
+            return;
+        }
+
+        $handle = fopen($csvPath, 'w');
+
+        if (!$handle) {
+            return;
+        }
+
+        fputcsv($handle, $header);
+
+        foreach ($rows as $row) {
+            fputcsv($handle, $row);
+        }
+
+        fclose($handle);
     }
 
     /**
@@ -1027,5 +1226,47 @@ class ImportCsvData implements Job
     private function escapeSqlString(string $value): string
     {
         return str_replace("'", "''", $value);
+    }
+
+    /**
+     * Robustly sanitize CSV files by doubling internal quotes that are not already escaped.
+     * This handles malformed rows where unescaped internal quotes break standard CSV parsing.
+     */
+    private function sanitizeCsv(string $filePath): void
+    {
+        if (!file_exists($filePath)) {
+            return;
+        }
+
+        $this->log->info("ImportCsvData: Sanitizing CSV: {$filePath}");
+
+        $tempPath = $filePath . '.tmp';
+        $handle = fopen($filePath, 'r');
+        $out = fopen($tempPath, 'w');
+
+        if (!$handle || !$out) {
+            $this->log->error("ImportCsvData: Failed to open files for sanitization: {$filePath}");
+
+            return;
+        }
+
+        // Regex for unescaped internal quotes:
+        // A quote (") is internal if it is:
+        // 1. NOT preceded by a comma or start of line: (?<!^|,)
+        // 2. NOT followed by a comma, newline, or end of string: (?!,|[\r\n]|$)
+        $regex = '/(?<!^|,)"+(?!,|[\r\n]|$)/';
+
+        while (($line = fgets($handle)) !== false) {
+            $sanitizedLine = preg_replace($regex, '""', $line);
+            fwrite($out, $sanitizedLine);
+        }
+
+        fclose($handle);
+        fclose($out);
+
+        // Replace original file with sanitized one.
+        if (!rename($tempPath, $filePath)) {
+            $this->log->error("ImportCsvData: Failed to replace sanitized CSV: {$filePath}");
+        }
     }
 }

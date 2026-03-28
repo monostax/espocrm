@@ -203,6 +203,13 @@ CREATE OR REPLACE TABLE src_dados_usuario AS
     );
 
 -- =============================================================================
+-- 1.1 Source table counts (to identify drops early)
+-- =============================================================================
+SELECT 'src_agenda count' AS table_name, count(*) AS row_count FROM src_agenda
+UNION ALL SELECT 'src_paciente count', count(*) FROM src_paciente
+UNION ALL SELECT 'src_faturamento count', count(*) FROM src_faturamento;
+
+-- =============================================================================
 -- 2. Filter AGENDA by date range
 -- =============================================================================
 CREATE OR REPLACE TABLE filtered_agenda AS
@@ -562,12 +569,15 @@ CREATE OR REPLACE TABLE out_agendamento AS
         lprof.espo_id AS profissional_anchor_id,
         CAST(pc.codtipoconvenio AS VARCHAR) AS id_tipo_convenio,
         lconv.espo_id AS convenio_tipo_anchor_id,
-        NULL AS valor_procedimentos,
-        NULL AS valor_procedimentos_currency,
-        NULL AS valor_faturamentos,
-        NULL AS valor_faturamentos_currency,
-        NULL AS valor_financeiro,
-        NULL AS valor_financeiro_currency,
+        -- valor_procedimentos: sum of procedimento pricing for this agenda
+        agg_proc.valor_procedimentos AS valor_procedimentos,
+        CASE WHEN agg_proc.valor_procedimentos IS NOT NULL THEN 'BRL' ELSE NULL END AS valor_procedimentos_currency,
+        -- valor_faturamentos: sum of faturamento.valor for this agenda
+        agg_fat.valor_faturamentos AS valor_faturamentos,
+        CASE WHEN agg_fat.valor_faturamentos IS NOT NULL THEN 'BRL' ELSE NULL END AS valor_faturamentos_currency,
+        -- valor_financeiro: prefer faturamentos, fall back to procedimentos
+        COALESCE(agg_fat.valor_faturamentos, agg_proc.valor_procedimentos) AS valor_financeiro,
+        CASE WHEN COALESCE(agg_fat.valor_faturamentos, agg_proc.valor_procedimentos) IS NOT NULL THEN 'BRL' ELSE NULL END AS valor_financeiro_currency,
         CAST(fa.codtipoconsulta AS VARCHAR) AS id_tipo_consulta,
         lcons.espo_id AS consulta_tipo_anchor_id,
         getvariable('settingsId') AS settings_id
@@ -590,7 +600,29 @@ CREATE OR REPLACE TABLE out_agendamento AS
     -- Local agenda (sala)
     LEFT JOIN src_local_agenda la ON CAST(fa.codlocalagenda AS VARCHAR) = CAST(la.codigo AS VARCHAR)
     -- First especialidade from procedimentos
-    LEFT JOIN agenda_first_especialidade afe ON CAST(fa.codigo AS VARCHAR) = CAST(afe.codagenda AS VARCHAR) AND afe.rn = 1;
+    LEFT JOIN agenda_first_especialidade afe ON CAST(fa.codigo AS VARCHAR) = CAST(afe.codagenda AS VARCHAR) AND afe.rn = 1
+    -- Aggregated procedimento values per agenda:
+    -- Uses actual charged prices from PROCEDIMENTO.valorunitariopaciente (not catalog prices).
+    LEFT JOIN (
+        SELECT
+            CAST(ap.codagenda AS VARCHAR) AS codagenda,
+            SUM(
+                COALESCE(CAST(pr.valorunitariopaciente AS DOUBLE), 0)
+                * COALESCE(CAST(pr.quantidade AS DOUBLE), 1)
+            ) AS valor_procedimentos
+        FROM src_agenda_procedimento ap
+        JOIN src_procedimento pr ON CAST(ap.codprocedimento AS VARCHAR) = CAST(pr.codigo AS VARCHAR)
+        GROUP BY CAST(ap.codagenda AS VARCHAR)
+    ) agg_proc ON CAST(fa.codigo AS VARCHAR) = agg_proc.codagenda
+    -- Aggregated faturamento values per agenda
+    LEFT JOIN (
+        SELECT
+            CAST(f.cod_agenda AS VARCHAR) AS cod_agenda,
+            SUM(CAST(f.valor AS DOUBLE)) AS valor_faturamentos
+        FROM src_faturamento f
+        WHERE f.valor IS NOT NULL
+        GROUP BY CAST(f.cod_agenda AS VARCHAR)
+    ) agg_fat ON CAST(fa.codigo AS VARCHAR) = agg_fat.cod_agenda;
 
 -- Lookup: agendamento CNN codigo → EspoCRM id
 CREATE OR REPLACE TABLE lookup_agendamento AS
