@@ -133,7 +133,8 @@ CREATE OR REPLACE TABLE src_convenio AS
 CREATE OR REPLACE TABLE src_tipo_procedimento AS
     SELECT * FROM read_csv(
         getvariable('csvInputPath') || '/TIPO_PROCEDIMENTO.csv',
-        auto_detect=true, header=true, all_varchar=false, strict_mode=false
+        header=true, delim=',', quote='"', escape='"',
+        strict_mode=false, ignore_errors=true, null_padding=true
     );
 
 CREATE OR REPLACE TABLE src_tipo_procedimento_convenio AS
@@ -614,13 +615,14 @@ CREATE OR REPLACE TABLE out_agendamento AS
         JOIN src_procedimento pr ON CAST(ap.codprocedimento AS VARCHAR) = CAST(pr.codigo AS VARCHAR)
         GROUP BY CAST(ap.codagenda AS VARCHAR)
     ) agg_proc ON CAST(fa.codigo AS VARCHAR) = agg_proc.codagenda
-    -- Aggregated faturamento values per agenda
+    -- Aggregated faturamento values per agenda (excluding reversed/estornados)
     LEFT JOIN (
         SELECT
             CAST(f.cod_agenda AS VARCHAR) AS cod_agenda,
             SUM(CAST(f.valor AS DOUBLE)) AS valor_faturamentos
         FROM src_faturamento f
         WHERE f.valor IS NOT NULL
+          AND f.codestorno IS NULL
         GROUP BY CAST(f.cod_agenda AS VARCHAR)
     ) agg_fat ON CAST(fa.codigo AS VARCHAR) = agg_fat.cod_agenda;
 
@@ -721,7 +723,9 @@ CREATE OR REPLACE TABLE out_faturamento AS
     -- Resolve profissional: faturamento.codProfissional is codpessoa of executor
     LEFT JOIN lookup_profissional_by_codpessoa lprof ON CAST(f.codProfissional AS VARCHAR) = lprof.codpessoa
     -- Profissional person name for display
-    LEFT JOIN src_pessoa prof_p ON CAST(f.codProfissional AS VARCHAR) = CAST(prof_p.codigo AS VARCHAR);
+    LEFT JOIN src_pessoa prof_p ON CAST(f.codProfissional AS VARCHAR) = CAST(prof_p.codigo AS VARCHAR)
+    -- Exclude reversed/estornados faturamentos
+    WHERE f.codestorno IS NULL;
 
 -- =============================================================================
 -- 12. EntityTeam rows (one per entity per team)

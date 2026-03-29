@@ -76,7 +76,7 @@
   },
   "options": {
     "status": {
-      "Failed": "Falhado",
+      "Failed": "Falhou",
       "In Process": "Em progresso",
       "Complete": "Completo",
       "Pending": "Pendente"

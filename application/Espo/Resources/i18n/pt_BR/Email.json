@@ -63,7 +63,7 @@
             "Sent": "Enviado",
             "Archived": "Arquivado",
             "Received": "Recebido",
-            "Failed": "Falhado"
+            "Failed": "Falhou"
         }
     },
     "labels": {

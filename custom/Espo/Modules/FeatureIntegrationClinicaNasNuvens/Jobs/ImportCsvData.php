@@ -166,6 +166,7 @@ class ImportCsvData implements Job
             'valor_faturamentos', 'valor_faturamentos_currency',
             'valor_financeiro', 'valor_financeiro_currency',
         ],
+
         'agendamento_procedimento' => [
             'name', 'quantidade', 'procedimento_nome', 'preco_paciente', 'preco_convenio',
             'valor_total', 'modified_at', 'preco_paciente_currency', 'preco_convenio_currency',
@@ -841,6 +842,11 @@ class ImportCsvData implements Job
                 if ($oldVal !== '' && isset($lookup[$oldVal])) {
                     $row[$idx] = $lookup[$oldVal];
                     $modified = true;
+                } elseif ($oldVal !== '') {
+                    // Defensive: NULL out unresolved IDs to prevent dangling
+                    // ETL-generated random IDs from corrupting existing records.
+                    $row[$idx] = '';
+                    $modified = true;
                 }
             }
 
@@ -958,6 +964,11 @@ class ImportCsvData implements Job
 
                 if ($remoteId !== '' && isset($lookup[$remoteId])) {
                     $row[$fkIdx] = $lookup[$remoteId];
+                    $modified = true;
+                } else {
+                    // Defensive: NULL out unresolved FKs to prevent dangling
+                    // ETL-generated random IDs from corrupting existing records.
+                    $row[$fkIdx] = '';
                     $modified = true;
                 }
             }
