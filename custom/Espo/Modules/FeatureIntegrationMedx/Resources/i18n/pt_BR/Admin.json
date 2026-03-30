@@ -1,0 +1,10 @@
+{
+    "labels": {
+        "MEDX": "MEDX",
+        "MEDX Profiles": "Perfis MEDX",
+        "Integrations": "Integrações"
+    },
+    "descriptions": {
+        "manageMedxSettings": "Gerencie os perfis de integração do MEDX e as credenciais web por time de escopo do Ambiente."
+    }
+}

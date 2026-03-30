@@ -1,0 +1,9 @@
+{
+    "links": {
+        "medxSettings": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationMedxSettings",
+            "foreign": "tenant"
+        }
+    }
+}

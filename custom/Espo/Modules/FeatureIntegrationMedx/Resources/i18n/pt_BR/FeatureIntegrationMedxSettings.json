@@ -1,0 +1,21 @@
+{
+    "labels": {
+        "FeatureIntegrationMedxSettings": "Perfil de Integração MEDX",
+        "Create FeatureIntegrationMedxSettings": "Criar Perfil de Integração"
+    },
+    "fields": {
+        "name": "Nome do Perfil",
+        "isActive": "Ativo",
+        "tenant": "Ambiente",
+        "teams": "Time de Escopo",
+        "webCredential": "Credencial Web"
+    },
+    "links": {
+        "tenant": "Ambiente",
+        "teams": "Time de Escopo",
+        "webCredential": "Credencial Web"
+    },
+    "actions": {
+        "replaceCredential": "Trocar Credencial"
+    }
+}

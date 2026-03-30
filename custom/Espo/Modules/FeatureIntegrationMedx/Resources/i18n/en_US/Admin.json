@@ -1,0 +1,10 @@
+{
+    "labels": {
+        "MEDX": "MEDX",
+        "MEDX Profiles": "MEDX Profiles",
+        "Integrations": "Integrations"
+    },
+    "descriptions": {
+        "manageMedxSettings": "Manage MEDX integration profiles and web credentials per Tenant scope team."
+    }
+}

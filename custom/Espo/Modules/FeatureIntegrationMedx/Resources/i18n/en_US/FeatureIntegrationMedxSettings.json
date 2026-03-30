@@ -1,0 +1,21 @@
+{
+    "labels": {
+        "FeatureIntegrationMedxSettings": "MEDX Integration Profile",
+        "Create FeatureIntegrationMedxSettings": "Create Integration Profile"
+    },
+    "fields": {
+        "name": "Profile Name",
+        "isActive": "Active",
+        "tenant": "Tenant",
+        "teams": "Scope Team",
+        "webCredential": "Web Credential"
+    },
+    "links": {
+        "tenant": "Tenant",
+        "teams": "Scope Team",
+        "webCredential": "Web Credential"
+    },
+    "actions": {
+        "replaceCredential": "Replace Credential"
+    }
+}

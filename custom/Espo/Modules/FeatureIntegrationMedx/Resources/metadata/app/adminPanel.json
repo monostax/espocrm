@@ -1,0 +1,14 @@
+{
+    "integrations": {
+        "label": "Integrations",
+        "itemList": [
+            {
+                "url": "#FeatureIntegrationMedxSettings",
+                "label": "MEDX Profiles",
+                "description": "manageMedxSettings",
+                "iconClass": "fas fa-notes-medical",
+                "order": 110
+            }
+        ]
+    }
+}

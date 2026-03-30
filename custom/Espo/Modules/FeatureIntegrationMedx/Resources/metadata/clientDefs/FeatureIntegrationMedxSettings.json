@@ -1,0 +1,9 @@
+{
+    "controller": "controllers/record",
+    "views": {
+        "list": "views/list",
+        "detail": "views/detail",
+        "edit": "views/edit"
+    },
+    "iconClass": "fas fa-cogs"
+}
