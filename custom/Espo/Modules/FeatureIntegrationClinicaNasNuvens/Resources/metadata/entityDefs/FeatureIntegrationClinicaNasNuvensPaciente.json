@@ -46,17 +46,12 @@
             "readOnly": true,
             "readOnlyAfterCreate": true
         },
-        "email": {
+        "emailAddress": {
             "type": "email",
             "readOnly": true,
             "readOnlyAfterCreate": true
         },
-        "telefone": {
-            "type": "phone",
-            "readOnly": true,
-            "readOnlyAfterCreate": true
-        },
-        "celular": {
+        "phoneNumber": {
             "type": "phone",
             "readOnly": true,
             "readOnlyAfterCreate": true
@@ -231,9 +226,8 @@
             "name",
             "pacienteId",
             "cpfcnpj",
-            "email",
-            "telefone",
-            "celular",
+            "emailAddress",
+            "phoneNumber",
             "cidade",
             "estado",
             "bairro",

@@ -1,6 +1,6 @@
 {
     "controller": "feature-integration-clinica-nas-nuvens:controllers/no-create-route",
-    "iconClass": "fas fa-user-md",
+    "iconClass": "fas fa-user-tie",
     "searchPanelDisabled": false,
     "boolFilterList": ["onlyMy"],
     "defaultSidePanelFieldLists": {

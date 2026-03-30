@@ -542,19 +542,28 @@ CREATE OR REPLACE TABLE out_paciente AS
     LEFT JOIN src_uf uf ON CAST(ci.codEstado AS VARCHAR) = CAST(uf.codigo AS VARCHAR)
     LEFT JOIN paciente_convenio_ranked pcr ON CAST(pac.codpessoa AS VARCHAR) = CAST(pcr.codpaciente AS VARCHAR) AND pcr.rn = 1;
 
--- Phone data for post-import ORM pass (EspoCRM phone fields use relational storage).
-CREATE OR REPLACE TABLE out_paciente_phones AS
+-- Phone + email data for post-import ORM pass.
+-- EspoCRM stores phone/email-type fields in relational tables (phone_number,
+-- entity_phone_number, email_address, entity_email_address). With standard
+-- field names (phoneNumber, emailAddress) the ORM hooks handle persistence.
+-- Outputs: paciente_id, phoneNumber, emailAddress
+CREATE OR REPLACE TABLE out_paciente_contact AS
     SELECT
         op.paciente_id,
-        CAST(COALESCE(NULLIF(ct.telefoneComercial, ''), ct.telefoneResidencial) AS VARCHAR) AS telefone,
-        CAST(ct.telefoneCelular AS VARCHAR) AS celular
+        CAST(COALESCE(
+            NULLIF(ct.telefoneCelular, ''),
+            NULLIF(ct.telefoneComercial, ''),
+            ct.telefoneResidencial
+        ) AS VARCHAR) AS phoneNumber,
+        CAST(ps.email AS VARCHAR) AS emailAddress
     FROM out_paciente op
     JOIN src_paciente_dedup pac ON CAST(pac.codpessoa AS VARCHAR) = op.paciente_id
     LEFT JOIN src_pessoa ps ON CAST(pac.codpessoa_fk AS VARCHAR) = CAST(ps.codigo AS VARCHAR)
     LEFT JOIN src_contato ct ON CAST(ps.codcontato AS VARCHAR) = CAST(ct.codigo AS VARCHAR)
-    WHERE ct.telefoneComercial IS NOT NULL
-       OR ct.telefoneResidencial IS NOT NULL
-       OR ct.telefoneCelular IS NOT NULL;
+    WHERE (ct.telefoneCelular IS NOT NULL
+        OR ct.telefoneComercial IS NOT NULL
+        OR ct.telefoneResidencial IS NOT NULL
+        OR (ps.email IS NOT NULL AND TRIM(CAST(ps.email AS VARCHAR)) != ''));
 
 -- Lookup: paciente CNN codpessoa → EspoCRM id
 CREATE OR REPLACE TABLE lookup_paciente AS
@@ -825,7 +834,7 @@ COPY out_procedimento_tipo TO '__CSV_OUTPUT_PATH__/procedimento_tipo.csv' (HEADE
 COPY out_procedimento_convenio TO '__CSV_OUTPUT_PATH__/procedimento_convenio.csv' (HEADER, DELIMITER ',');
 COPY out_profissional TO '__CSV_OUTPUT_PATH__/profissional.csv' (HEADER, DELIMITER ',');
 COPY out_paciente TO '__CSV_OUTPUT_PATH__/paciente.csv' (HEADER, DELIMITER ',');
-COPY out_paciente_phones TO '__CSV_OUTPUT_PATH__/paciente_phones.csv' (HEADER, DELIMITER ',');
+COPY out_paciente_contact TO '__CSV_OUTPUT_PATH__/paciente_contact.csv' (HEADER, DELIMITER ',');
 COPY out_agendamento TO '__CSV_OUTPUT_PATH__/agendamento.csv' (HEADER, DELIMITER ',');
 COPY out_agendamento_procedimento TO '__CSV_OUTPUT_PATH__/agendamento_procedimento.csv' (HEADER, DELIMITER ',');
 COPY out_faturamento TO '__CSV_OUTPUT_PATH__/faturamento.csv' (HEADER, DELIMITER ',');

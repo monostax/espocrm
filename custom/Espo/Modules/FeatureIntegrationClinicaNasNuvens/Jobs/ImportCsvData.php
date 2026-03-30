@@ -290,17 +290,19 @@ class ImportCsvData implements Job
                 $totalRows += $teamRows;
             }
 
-            // ORM pass for relational fields (phone) that cannot be inserted
-            // via raw SQL. EspoCRM stores phone-type fields in a separate
-            // relational table, so we must go through the ORM.
-            $phonesCsv = $csvOutputPath . '/paciente_phones.csv';
+            // ORM pass for phone/email relational fields.
+            // EspoCRM stores phoneNumber/emailAddress fields in separate
+            // relational tables. With the standard field names, the ORM
+            // afterSave hooks (PhoneNumber\Saver, EmailAddress\Saver)
+            // handle persistence automatically.
+            $contactCsv = $csvOutputPath . '/paciente_contact.csv';
 
-            if (file_exists($phonesCsv)) {
-                $phonesUpdated = $this->importPacientePhonesViaOrm(
-                    $phonesCsv,
+            if (file_exists($contactCsv)) {
+                $contactUpdated = $this->importPacienteContactViaOrm(
+                    $contactCsv,
                     $resolved['apiCredentialId'],
                 );
-                $this->log->info("ImportCsvData: Updated phone fields on {$phonesUpdated} pacientes via ORM.");
+                $this->log->info("ImportCsvData: Updated contact fields on {$contactUpdated} pacientes via ORM.");
             }
 
             // Cleanup output directory.
@@ -803,26 +805,31 @@ class ImportCsvData implements Job
     }
 
     /**
-     * Read paciente_phones.csv, compute deterministic paciente DB IDs,
-     * and set phone fields via EspoCRM ORM (phone-type fields use relational
-     * storage that raw SQL cannot populate).
+     * Read paciente_contact.csv, compute deterministic paciente DB IDs,
+     * and set phoneNumber/emailAddress fields via EspoCRM ORM.
+     *
+     * EspoCRM's PhoneNumber\Saver and EmailAddress\Saver process fields
+     * named "phoneNumber" and "emailAddress" respectively via afterSave hooks.
+     * The entity uses these standard names, so the ORM handles persistence
+     * to phone_number/entity_phone_number and email_address/entity_email_address
+     * relational tables automatically.
      *
      * Uses the same deterministic ID formula as the DuckDB ETL:
      *   id = substr(md5('pa::' . credentialId . '::' . remoteId), 0, 17)
      */
-    private function importPacientePhonesViaOrm(
+    private function importPacienteContactViaOrm(
         string $csvPath,
         string $credentialId,
     ): int {
         $handle = fopen($csvPath, 'r');
 
         if (!$handle) {
-            $this->log->warning("ImportCsvData: Cannot open paciente_phones CSV: {$csvPath}");
+            $this->log->warning("ImportCsvData: Cannot open paciente_contact CSV: {$csvPath}");
 
             return 0;
         }
 
-        // Read header: paciente_id, telefone, celular
+        // Read header: paciente_id, phoneNumber, emailAddress
         $header = fgetcsv($handle);
 
         if (!$header) {
@@ -839,10 +846,14 @@ class ImportCsvData implements Job
             }
 
             $remotePacienteId = $row[0] ?? '';
-            $telefone = $this->normalizePhoneNumber($row[1] ?? '');
-            $celular = $this->normalizePhoneNumber($row[2] ?? '');
+            $phoneNumber = $this->normalizePhoneNumber($row[1] ?? '');
+            $emailAddress = trim((string) ($row[2] ?? ''));
 
-            if (!$telefone && !$celular) {
+            if ($emailAddress === '') {
+                $emailAddress = null;
+            }
+
+            if (!$phoneNumber && !$emailAddress) {
                 continue;
             }
 
@@ -864,13 +875,13 @@ class ImportCsvData implements Job
 
             $changed = false;
 
-            if ($telefone && $entity->get('telefone') !== $telefone) {
-                $entity->set('telefone', $telefone);
+            if ($phoneNumber && $entity->get('phoneNumber') !== $phoneNumber) {
+                $entity->set('phoneNumber', $phoneNumber);
                 $changed = true;
             }
 
-            if ($celular && $entity->get('celular') !== $celular) {
-                $entity->set('celular', $celular);
+            if ($emailAddress && $entity->get('emailAddress') !== $emailAddress) {
+                $entity->set('emailAddress', $emailAddress);
                 $changed = true;
             }
 
@@ -881,13 +892,12 @@ class ImportCsvData implements Job
             try {
                 $this->entityManager->saveEntity($entity, [
                     SaveOption::SILENT => true,
-                    SaveOption::SKIP_HOOKS => true,
                     SaveOption::SKIP_MODIFIED_BY => true,
                 ]);
                 $updated++;
             } catch (Throwable $e) {
                 $this->log->warning(
-                    "ImportCsvData: Failed to save phone for paciente '{$entityId}': " . $e->getMessage()
+                    "ImportCsvData: Failed to save contact for paciente '{$entityId}': " . $e->getMessage()
                 );
             }
         }

@@ -17,9 +17,8 @@
         "panelIconClass": "fas fa-phone",
         "gridRow": 1,
         "rows": [
-            [{"name": "email"}],
-            [{"name": "telefone"}],
-            [{"name": "celular"}]
+            [{"name": "emailAddress"}],
+            [{"name": "phoneNumber"}]
         ]
     },
     {

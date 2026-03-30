@@ -551,12 +551,9 @@ class ClinicaNasNuvensApiClient implements
             'ativo' => $source['ativo'] ?? null,
             'cpfcnpj' => $source['cpfcnpj'] ?? null,
             'dataNascimento' => $source['dataNascimento'] ?? null,
-            'email' => $source['email'] ?? $contato['email'] ?? null,
-            'telefone' => $this->normalizePhoneNumberWithBrazilPrefix(
-                $source['telefone'] ?? $contato['telefoneComercial'] ?? $contato['telefoneResidencial'] ?? null
-            ),
-            'celular' => $this->normalizePhoneNumberWithBrazilPrefix(
-                $source['celular'] ?? $contato['telefoneCelular'] ?? null
+            'emailAddress' => $source['email'] ?? $contato['email'] ?? null,
+            'phoneNumber' => $this->normalizePhoneNumberWithBrazilPrefix(
+                $source['telefone'] ?? $contato['telefoneCelular'] ?? $contato['telefoneComercial'] ?? $contato['telefoneResidencial'] ?? null
             ),
             'sexo' => $source['sexo'] ?? null,
             'nomeMae' => $source['nomeMae'] ?? null,

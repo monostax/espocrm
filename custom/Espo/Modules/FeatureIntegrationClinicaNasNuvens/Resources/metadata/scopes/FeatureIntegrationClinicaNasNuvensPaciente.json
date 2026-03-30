@@ -1,7 +1,7 @@
 {
     "entity": true,
     "layouts": true,
-    "tab": false,
+    "tab": true,
     "acl": true,
     "aclPortal": false,
     "customizable": true,
