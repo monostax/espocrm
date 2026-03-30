@@ -14,8 +14,13 @@ use Throwable;
 /**
  * Job that imports CNN CSV export data into MySQL via DuckDB ETL.
  *
- * Pipeline: DuckDB reads raw CSVs → joins/transforms/generates IDs → outputs per-entity CSVs
- *           → PHP reads output CSVs → batch INSERT ... ON DUPLICATE KEY UPDATE into MySQL.
+ * Pipeline: DuckDB reads raw CSVs → joins/transforms/generates deterministic IDs
+ *           → outputs per-entity CSVs → PHP reads output CSVs → batch
+ *           INSERT ... ON DUPLICATE KEY UPDATE into MySQL.
+ *
+ * All entity IDs and FK references are deterministic (derived from
+ * credentialId + remoteId via MD5), so the DuckDB output CSVs contain
+ * correct FK values that can be inserted directly — no post-ETL fixup needed.
  *
  * Uses setGroup('cnn-pipeline-{profileId}') to serialize with download pipeline.
  */
@@ -81,8 +86,8 @@ class ImportCsvData implements Job
             'columns' => [
                 'id', 'name', 'deleted', 'paciente_id', 'sync_status',
                 'created_at', 'modified_at', 'contact_id', 'credential_id',
-                'created_by_id', 'modified_by_id', 'sexo', 'payload_hash',
-                'ativo', 'cpfcnpj', 'data_nascimento', 'telefone', 'celular',
+                'created_by_id', 'modified_by_id', 'sexo',
+                'ativo', 'cpfcnpj', 'data_nascimento',
                 'nome_mae', 'nome_pai', 'estado_civil', 'profissao',
                 'endereco', 'numero', 'complemento', 'bairro', 'cidade',
                 'estado', 'cep', 'observacao', 'convenio', 'numero_convenio',
@@ -98,7 +103,7 @@ class ImportCsvData implements Job
                 'status', 'tipo_atendimento', 'profissional', 'convenio',
                 'especialidade', 'sala', 'unidade', 'observacao', 'procedimentos',
                 'created_at', 'modified_at', 'paciente_id', 'credential_id',
-                'created_by_id', 'modified_by_id', 'valor', 'valor_currency',
+                'created_by_id', 'modified_by_id',
                 'status_faturamento', 'id_pessoa_executor', 'profissional_anchor_id',
                 'id_tipo_convenio', 'convenio_tipo_anchor_id',
                 'valor_procedimentos', 'valor_procedimentos_currency',
@@ -131,32 +136,40 @@ class ImportCsvData implements Job
     ];
 
     /**
-     * Columns to update on duplicate key (excluding id and unique constraint columns).
-     * The key for each entity matches the ENTITY_MAP keys.
+     * Columns to update on duplicate key.
+     * Includes 'id' so deterministic IDs replace time-based IDs on re-import.
+     * Also includes FK columns so child references stay consistent.
      *
      * @var array<string, string[]>
      */
     private const UPDATE_COLUMNS = [
-        'consulta_tipo' => ['name', 'sync_status', 'ativo', 'reconsulta', 'modified_at', 'settings_id'],
-        'convenio_tipo' => ['name', 'sync_status', 'ativo', 'beneficio', 'particular', 'modified_at', 'settings_id'],
-        'procedimento_tipo' => ['name', 'sync_status', 'ativo', 'especialidades', 'modified_at', 'settings_id'],
+        'consulta_tipo' => [
+            'id', 'name', 'sync_status', 'ativo', 'reconsulta', 'modified_at', 'settings_id',
+        ],
+        'convenio_tipo' => [
+            'id', 'name', 'sync_status', 'ativo', 'beneficio', 'particular', 'modified_at', 'settings_id',
+        ],
+        'procedimento_tipo' => [
+            'id', 'name', 'sync_status', 'ativo', 'especialidades', 'modified_at', 'settings_id',
+        ],
         'procedimento_convenio' => [
-            'name', 'is_active', 'convenio_name', 'preco_paciente', 'preco_convenio',
+            'id', 'name', 'is_active', 'convenio_name', 'preco_paciente', 'preco_convenio',
             'modified_at', 'preco_paciente_currency', 'preco_convenio_currency',
+            'procedimento_tipo_id', 'convenio_tipo_id',
         ],
         'profissional' => [
-            'name', 'id_pessoa', 'sync_status', 'ativo', 'tipo_executor', 'cpfcnpj',
+            'id', 'name', 'id_pessoa', 'sync_status', 'ativo', 'tipo_executor', 'cpfcnpj',
             'profissional', 'profissional_codigo', 'cbo', 'registro_profissional',
             'especialidades', 'especialidades_texto', 'clinicas', 'modified_at', 'settings_id',
         ],
         'paciente' => [
-            'name', 'sync_status', 'ativo', 'cpfcnpj', 'data_nascimento', 'telefone',
-            'celular', 'sexo', 'estado_civil', 'profissao', 'endereco', 'numero',
+            'id', 'name', 'sync_status', 'ativo', 'cpfcnpj', 'data_nascimento',
+            'sexo', 'estado_civil', 'profissao', 'endereco', 'numero',
             'complemento', 'bairro', 'cidade', 'estado', 'cep', 'convenio',
             'numero_convenio', 'validade_convenio', 'modified_at', 'settings_id',
         ],
         'agendamento' => [
-            'name', 'sync_status', 'id_paciente', 'id_profissional', 'id_convenio',
+            'id', 'name', 'sync_status', 'id_paciente', 'id_profissional', 'id_convenio',
             'id_especialidade', 'id_unidade', 'id_sala', 'data', 'hora_inicio', 'hora_fim',
             'status', 'profissional', 'convenio', 'especialidade', 'sala', 'observacao',
             'paciente_id', 'status_faturamento', 'id_pessoa_executor', 'profissional_anchor_id',
@@ -166,14 +179,13 @@ class ImportCsvData implements Job
             'valor_faturamentos', 'valor_faturamentos_currency',
             'valor_financeiro', 'valor_financeiro_currency',
         ],
-
         'agendamento_procedimento' => [
-            'name', 'quantidade', 'procedimento_nome', 'preco_paciente', 'preco_convenio',
+            'id', 'name', 'quantidade', 'procedimento_nome', 'preco_paciente', 'preco_convenio',
             'valor_total', 'modified_at', 'preco_paciente_currency', 'preco_convenio_currency',
-            'valor_total_currency',
+            'valor_total_currency', 'agendamento_id', 'procedimento_tipo_id',
         ],
         'faturamento' => [
-            'name', 'sync_status', 'documento', 'data_faturamento', 'profissional_nome',
+            'id', 'name', 'sync_status', 'documento', 'data_faturamento', 'profissional_nome',
             'valor', 'parcela', 'data_vencimento', 'description', 'valor_currency',
             'agendamento_id', 'paciente_id', 'profissional_anchor_id', 'modified_at', 'settings_id',
         ],
@@ -238,57 +250,14 @@ class ImportCsvData implements Job
                 $resolved['teamId'],
             );
 
-            // Import each entity CSV into MySQL.
-            // Anchor tables (consulta_tipo, convenio_tipo, etc.) are imported first.
-            // Then we resolve actual DB IDs and fix FK columns in dependent CSVs
-            // before importing agendamento/faturamento.
+            // Import all entity CSVs into MySQL.
+            // DuckDB generates deterministic IDs, so all FK references in the
+            // output CSVs are already correct — no post-ETL fixup needed.
+            // We import in ENTITY_MAP order which respects FK dependencies.
             $totalRows = 0;
             $pdo = $this->getPdo();
 
-            // Phase 1: Import anchor tables (everything except agendamento,
-            // agendamento_procedimento, faturamento, entity_team).
-            $dependentEntities = ['agendamento', 'agendamento_procedimento', 'faturamento'];
-
             foreach (self::ENTITY_MAP as $entityKey => $entityDef) {
-                if (in_array($entityKey, $dependentEntities, true)) {
-                    continue;
-                }
-
-                $csvFile = $csvOutputPath . '/' . $entityKey . '.csv';
-
-                if (!file_exists($csvFile)) {
-                    $this->log->warning("ImportCsvData: Output CSV not found: {$csvFile}. Skipping {$entityKey}.");
-
-                    continue;
-                }
-
-                $rowCount = $this->importEntityCsv(
-                    $pdo,
-                    $csvFile,
-                    $entityDef['table'],
-                    $entityDef['columns'],
-                    self::UPDATE_COLUMNS[$entityKey] ?? [],
-                );
-
-                $this->log->info(
-                    "ImportCsvData: Imported {$rowCount} rows into {$entityDef['table']}."
-                );
-
-                $totalRows += $rowCount;
-            }
-
-            // Phase 2: Resolve actual DB IDs for anchors and fix FK columns
-            // in dependent CSVs. The ETL generates new random IDs each run,
-            // but ON DUPLICATE KEY UPDATE keeps the original DB IDs.
-            $this->fixAnchorForeignKeys($pdo, $csvOutputPath, $resolved['apiCredentialId']);
-
-            // Phase 3: Import dependent tables with corrected FK columns.
-            foreach ($dependentEntities as $entityKey) {
-                if (!isset(self::ENTITY_MAP[$entityKey])) {
-                    continue;
-                }
-
-                $entityDef = self::ENTITY_MAP[$entityKey];
                 $csvFile = $csvOutputPath . '/' . $entityKey . '.csv';
 
                 if (!file_exists($csvFile)) {
@@ -319,6 +288,19 @@ class ImportCsvData implements Job
                 $teamRows = $this->importEntityTeamCsv($pdo, $entityTeamCsv);
                 $this->log->info("ImportCsvData: Imported {$teamRows} entity_team rows.");
                 $totalRows += $teamRows;
+            }
+
+            // ORM pass for relational fields (phone) that cannot be inserted
+            // via raw SQL. EspoCRM stores phone-type fields in a separate
+            // relational table, so we must go through the ORM.
+            $phonesCsv = $csvOutputPath . '/paciente_phones.csv';
+
+            if (file_exists($phonesCsv)) {
+                $phonesUpdated = $this->importPacientePhonesViaOrm(
+                    $phonesCsv,
+                    $resolved['apiCredentialId'],
+                );
+                $this->log->info("ImportCsvData: Updated phone fields on {$phonesUpdated} pacientes via ORM.");
             }
 
             // Cleanup output directory.
@@ -626,379 +608,6 @@ class ImportCsvData implements Job
     }
 
     /**
-     * After importing anchor tables, resolve the actual DB IDs and rewrite
-     * FK columns in the agendamento/faturamento CSVs. The DuckDB ETL generates
-     * fresh random IDs each run, but ON DUPLICATE KEY UPDATE preserves the
-     * original DB IDs, so the ETL's lookup tables are stale.
-     */
-    private function fixAnchorForeignKeys(PDO $pdo, string $csvOutputPath, string $credentialId): void
-    {
-        // Build lookup maps: remote_id → actual DB id for each anchor type.
-        $anchorLookups = [
-            'consulta_tipo' => $this->buildAnchorLookup(
-                $pdo,
-                'feature_integration_clinica_nas_nuvens_consulta_tipo',
-                'consulta_tipo_id',
-                $credentialId,
-            ),
-            'convenio_tipo' => $this->buildAnchorLookup(
-                $pdo,
-                'feature_integration_clinica_nas_nuvens_convenio_tipo',
-                'convenio_tipo_id',
-                $credentialId,
-            ),
-            'profissional' => $this->buildAnchorLookup(
-                $pdo,
-                'feature_integration_clinica_nas_nuvens_profissional',
-                'profissional_id',
-                $credentialId,
-            ),
-            'paciente' => $this->buildAnchorLookup(
-                $pdo,
-                'feature_integration_clinica_nas_nuvens_paciente',
-                'paciente_id',
-                $credentialId,
-            ),
-            'procedimento_tipo' => $this->buildAnchorLookup(
-                $pdo,
-                'feature_integration_clinica_nas_nuvens_procedimento_tipo',
-                'procedimento_tipo_id',
-                $credentialId,
-            ),
-        ];
-
-        // Build direct ID translation maps (etl_id → db_id) for each anchor.
-        // Read each anchor CSV to get (etl_id → remote_id), then compose with
-        // the DB lookup (remote_id → db_id).
-        $idTranslations = [];
-
-        $anchorCsvRemoteIdCol = [
-            'consulta_tipo' => 'consulta_tipo_id',
-            'convenio_tipo' => 'convenio_tipo_id',
-            'profissional' => 'profissional_id',
-            'paciente' => 'paciente_id',
-            'procedimento_tipo' => 'procedimento_tipo_id',
-            'agendamento' => 'agendamento_id',
-        ];
-
-        foreach ($anchorLookups as $key => $dbLookup) {
-            $anchorCsv = $csvOutputPath . '/' . $key . '.csv';
-            $remoteCol = $anchorCsvRemoteIdCol[$key] ?? null;
-
-            if (!$remoteCol || !file_exists($anchorCsv)) {
-                $idTranslations[$key] = [];
-
-                continue;
-            }
-
-            $idTranslations[$key] = $this->buildIdTranslation($anchorCsv, 'id', $remoteCol, $dbLookup);
-        }
-
-        // Also build translation for agendamento IDs (used in agendamento_procedimento + faturamento).
-        $agendamentoCsvPath = $csvOutputPath . '/agendamento.csv';
-
-        if (file_exists($agendamentoCsvPath)) {
-            $agendamentoDbLookup = $this->buildAnchorLookup(
-                $pdo,
-                'feature_integration_clinica_nas_nuvens_agendamento',
-                'agendamento_id',
-                $credentialId,
-            );
-
-            $idTranslations['agendamento'] = $this->buildIdTranslation(
-                $agendamentoCsvPath,
-                'id',
-                'agendamento_id',
-                $agendamentoDbLookup,
-            );
-        }
-
-        // Fix agendamento.csv FK columns.
-        if (file_exists($agendamentoCsvPath)) {
-            $this->rewriteCsvForeignKeys($agendamentoCsvPath, [
-                'consulta_tipo_anchor_id' => $anchorLookups['consulta_tipo'],
-                'convenio_tipo_anchor_id' => $anchorLookups['convenio_tipo'],
-                'profissional_anchor_id' => $anchorLookups['profissional'],
-                'paciente_id' => $anchorLookups['paciente'],
-            ]);
-        }
-
-        // Fix agendamento_procedimento.csv FK columns (direct ID translation).
-        $agendamentoProcCsv = $csvOutputPath . '/agendamento_procedimento.csv';
-
-        if (file_exists($agendamentoProcCsv)) {
-            $this->rewriteCsvDirectIds($agendamentoProcCsv, [
-                'agendamento_id' => $idTranslations['agendamento'] ?? [],
-                'procedimento_tipo_id' => $idTranslations['procedimento_tipo'] ?? [],
-            ]);
-        }
-
-        // Fix faturamento.csv FK columns.
-        $faturamentoCsv = $csvOutputPath . '/faturamento.csv';
-
-        if (file_exists($faturamentoCsv)) {
-            $this->rewriteCsvForeignKeys($faturamentoCsv, [
-                'profissional_anchor_id' => $anchorLookups['profissional'],
-                'paciente_id' => $anchorLookups['paciente'],
-            ]);
-
-            $this->rewriteCsvDirectIds($faturamentoCsv, [
-                'agendamento_id' => $idTranslations['agendamento'] ?? [],
-            ]);
-        }
-    }
-
-    /**
-     * Build a translation map: etl_generated_id → actual_db_id.
-     * Reads the anchor CSV to get (etl_id → remote_id), then composes
-     * with the DB lookup (remote_id → db_id) to produce (etl_id → db_id).
-     *
-     * @param array<string, string> $dbLookup remote_id → db_id
-     * @return array<string, string> etl_id → db_id
-     */
-    private function buildIdTranslation(
-        string $csvPath,
-        string $idColumn,
-        string $remoteIdColumn,
-        array $dbLookup,
-    ): array {
-        $handle = fopen($csvPath, 'r');
-
-        if (!$handle) {
-            return [];
-        }
-
-        $header = fgetcsv($handle);
-
-        if (!$header) {
-            fclose($handle);
-
-            return [];
-        }
-
-        $colIndices = array_flip($header);
-        $idIdx = $colIndices[$idColumn] ?? null;
-        $remoteIdx = $colIndices[$remoteIdColumn] ?? null;
-
-        if ($idIdx === null || $remoteIdx === null) {
-            fclose($handle);
-
-            return [];
-        }
-
-        $map = [];
-
-        while (($row = fgetcsv($handle)) !== false) {
-            $etlId = $row[$idIdx] ?? '';
-            $remoteId = $row[$remoteIdx] ?? '';
-
-            if ($etlId !== '' && $remoteId !== '' && isset($dbLookup[$remoteId])) {
-                $map[$etlId] = $dbLookup[$remoteId];
-            }
-        }
-
-        fclose($handle);
-
-        return $map;
-    }
-
-    /**
-     * Rewrite columns in a CSV by directly translating IDs (etl_id → db_id).
-     * Unlike rewriteCsvForeignKeys which uses a secondary remote ID column,
-     * this directly replaces the column value itself.
-     *
-     * @param array<string, array<string, string>> $columnMappings column_name → (old_id → new_id)
-     */
-    private function rewriteCsvDirectIds(string $csvPath, array $columnMappings): void
-    {
-        $handle = fopen($csvPath, 'r');
-
-        if (!$handle) {
-            return;
-        }
-
-        $header = fgetcsv($handle);
-
-        if (!$header) {
-            fclose($handle);
-
-            return;
-        }
-
-        $colIndices = array_flip($header);
-        $rows = [];
-        $modified = false;
-
-        while (($row = fgetcsv($handle)) !== false) {
-            foreach ($columnMappings as $col => $lookup) {
-                $idx = $colIndices[$col] ?? null;
-
-                if ($idx === null) {
-                    continue;
-                }
-
-                $oldVal = $row[$idx] ?? '';
-
-                if ($oldVal !== '' && isset($lookup[$oldVal])) {
-                    $row[$idx] = $lookup[$oldVal];
-                    $modified = true;
-                } elseif ($oldVal !== '') {
-                    // Defensive: NULL out unresolved IDs to prevent dangling
-                    // ETL-generated random IDs from corrupting existing records.
-                    $row[$idx] = '';
-                    $modified = true;
-                }
-            }
-
-            $rows[] = $row;
-        }
-
-        fclose($handle);
-
-        if (!$modified) {
-            return;
-        }
-
-        $handle = fopen($csvPath, 'w');
-
-        if (!$handle) {
-            return;
-        }
-
-        fputcsv($handle, $header);
-
-        foreach ($rows as $row) {
-            fputcsv($handle, $row);
-        }
-
-        fclose($handle);
-    }
-
-    /**
-     * Build a map of ETL-generated-id → actual-DB-id for an anchor table.
-     * The ETL output CSV and the DB table share the same remote_id column,
-     * so we can map: (ETL row remote_id → ETL row id) and
-     * (DB row remote_id → DB row id), then compose: ETL id → DB id.
-     *
-     * But since we don't have the ETL output anymore (it's already imported),
-     * we use the DuckDB lookup approach differently: the agendamento CSV
-     * references the ETL-generated anchor IDs. We need to map those to DB IDs.
-     *
-     * Simpler: query DB for (remote_id → id) and also read the ETL anchor CSV
-     * for (id → remote_id), then compose.
-     *
-     * Actually simplest: just return (remote_id → DB id). Then in the CSV
-     * rewrite, look up the remote_id from a secondary column.
-     *
-     * @return array<string, string> remote_id → actual DB id
-     */
-    private function buildAnchorLookup(
-        PDO $pdo,
-        string $tableName,
-        string $remoteIdColumn,
-        string $credentialId,
-    ): array {
-        $stmt = $pdo->prepare(
-            "SELECT `{$remoteIdColumn}` AS remote_id, id FROM `{$tableName}` " .
-            "WHERE deleted = 0 AND credential_id = ?"
-        );
-
-        $stmt->execute([$credentialId]);
-        $map = [];
-
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $map[$row['remote_id']] = $row['id'];
-        }
-
-        return $map;
-    }
-
-    /**
-     * Rewrite FK columns in a CSV file using anchor lookups.
-     * For each FK column, the ETL CSV also has a corresponding remote ID column
-     * (e.g., id_tipo_consulta for consulta_tipo_anchor_id). We use the remote
-     * ID to look up the correct DB anchor ID.
-     *
-     * @param array<string, array<string, string>> $fkMappings column_name → (remote_id → DB id)
-     */
-    private function rewriteCsvForeignKeys(string $csvPath, array $fkMappings): void
-    {
-        // Map FK columns to their corresponding remote ID columns in the CSV.
-        $fkToRemoteCol = [
-            'consulta_tipo_anchor_id' => 'id_tipo_consulta',
-            'convenio_tipo_anchor_id' => 'id_tipo_convenio',
-            'profissional_anchor_id' => 'id_profissional',
-            'paciente_id' => 'id_paciente',
-        ];
-
-        $handle = fopen($csvPath, 'r');
-
-        if (!$handle) {
-            return;
-        }
-
-        $header = fgetcsv($handle);
-
-        if (!$header) {
-            fclose($handle);
-
-            return;
-        }
-
-        // Find column indices.
-        $colIndices = array_flip($header);
-        $rows = [];
-        $modified = false;
-
-        while (($row = fgetcsv($handle)) !== false) {
-            foreach ($fkMappings as $fkCol => $lookup) {
-                $remoteCol = $fkToRemoteCol[$fkCol] ?? null;
-
-                if (!$remoteCol || !isset($colIndices[$fkCol]) || !isset($colIndices[$remoteCol])) {
-                    continue;
-                }
-
-                $fkIdx = $colIndices[$fkCol];
-                $remoteIdx = $colIndices[$remoteCol];
-                $remoteId = $row[$remoteIdx] ?? '';
-
-                if ($remoteId !== '' && isset($lookup[$remoteId])) {
-                    $row[$fkIdx] = $lookup[$remoteId];
-                    $modified = true;
-                } else {
-                    // Defensive: NULL out unresolved FKs to prevent dangling
-                    // ETL-generated random IDs from corrupting existing records.
-                    $row[$fkIdx] = '';
-                    $modified = true;
-                }
-            }
-
-            $rows[] = $row;
-        }
-
-        fclose($handle);
-
-        if (!$modified) {
-            return;
-        }
-
-        // Rewrite the CSV.
-        $handle = fopen($csvPath, 'w');
-
-        if (!$handle) {
-            return;
-        }
-
-        fputcsv($handle, $header);
-
-        foreach ($rows as $row) {
-            fputcsv($handle, $row);
-        }
-
-        fclose($handle);
-    }
-
-    /**
      * @param string[] $columns
      * @param string[] $updateColumns
      */
@@ -1191,6 +800,130 @@ class ImportCsvData implements Job
         $stmt->execute();
 
         return count($batch);
+    }
+
+    /**
+     * Read paciente_phones.csv, compute deterministic paciente DB IDs,
+     * and set phone fields via EspoCRM ORM (phone-type fields use relational
+     * storage that raw SQL cannot populate).
+     *
+     * Uses the same deterministic ID formula as the DuckDB ETL:
+     *   id = substr(md5('pa::' . credentialId . '::' . remoteId), 0, 17)
+     */
+    private function importPacientePhonesViaOrm(
+        string $csvPath,
+        string $credentialId,
+    ): int {
+        $handle = fopen($csvPath, 'r');
+
+        if (!$handle) {
+            $this->log->warning("ImportCsvData: Cannot open paciente_phones CSV: {$csvPath}");
+
+            return 0;
+        }
+
+        // Read header: paciente_id, telefone, celular
+        $header = fgetcsv($handle);
+
+        if (!$header) {
+            fclose($handle);
+
+            return 0;
+        }
+
+        $updated = 0;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            if (count($row) !== 3) {
+                continue;
+            }
+
+            $remotePacienteId = $row[0] ?? '';
+            $telefone = $this->normalizePhoneNumber($row[1] ?? '');
+            $celular = $this->normalizePhoneNumber($row[2] ?? '');
+
+            if (!$telefone && !$celular) {
+                continue;
+            }
+
+            if ($remotePacienteId === '') {
+                continue;
+            }
+
+            // Compute the deterministic EspoCRM ID — same formula as DuckDB ETL.
+            $entityId = substr(md5('pa::' . $credentialId . '::' . $remotePacienteId), 0, 17);
+
+            $entity = $this->entityManager->getEntityById(
+                'FeatureIntegrationClinicaNasNuvensPaciente',
+                $entityId,
+            );
+
+            if (!$entity) {
+                continue;
+            }
+
+            $changed = false;
+
+            if ($telefone && $entity->get('telefone') !== $telefone) {
+                $entity->set('telefone', $telefone);
+                $changed = true;
+            }
+
+            if ($celular && $entity->get('celular') !== $celular) {
+                $entity->set('celular', $celular);
+                $changed = true;
+            }
+
+            if (!$changed) {
+                continue;
+            }
+
+            try {
+                $this->entityManager->saveEntity($entity, [
+                    SaveOption::SILENT => true,
+                    SaveOption::SKIP_HOOKS => true,
+                    SaveOption::SKIP_MODIFIED_BY => true,
+                ]);
+                $updated++;
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    "ImportCsvData: Failed to save phone for paciente '{$entityId}': " . $e->getMessage()
+                );
+            }
+        }
+
+        fclose($handle);
+
+        return $updated;
+    }
+
+    /**
+     * Normalize a phone number string with Brazil +55 prefix.
+     * Strips non-digit characters, removes leading 55 if > 11 digits, prepends +55.
+     */
+    private function normalizePhoneNumber(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '' || $trimmed === 'NULL') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $trimmed);
+
+        if (!is_string($digits) || $digits === '') {
+            return null;
+        }
+
+        if (strlen($digits) > 11 && str_starts_with($digits, '55')) {
+            $digits = substr($digits, 2);
+        }
+
+        return '+55' . $digits;
     }
 
     private function cleanupOutputDir(string $csvOutputPath): void

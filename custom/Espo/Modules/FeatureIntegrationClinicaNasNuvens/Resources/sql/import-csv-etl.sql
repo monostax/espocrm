@@ -10,16 +10,24 @@
 --   webCredentialId – Web credential ID (varchar(17))
 --   settingsId     – Settings profile ID (varchar(17))
 --   teamId         – Team ID (varchar(17))
+--
+-- ID Generation: All entity IDs are DETERMINISTIC — derived via
+--   espo_id(seed) = substr(md5(seed), 1, 17)
+-- where seed = '{entity_prefix}::{credentialId}::{remoteId}'.
+-- This means the same CNN source data always produces the same EspoCRM IDs,
+-- making the import fully idempotent and eliminating the need for post-ETL
+-- FK fixup in PHP. FK columns within the DuckDB output CSVs are already
+-- correct and can be inserted directly into MySQL.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- Helper macro: generate EspoCRM-compatible 17-char hex IDs
--- Format: 8 hex from epoch_sec + 5 hex from microseconds + 4 random hex
+-- Helper macro: generate deterministic EspoCRM-compatible 17-char hex IDs
+-- Takes a seed string (e.g. 'ag::credentialId::12345') and produces a
+-- stable 17-char lowercase hex ID via MD5. Same seed → same ID every run,
+-- eliminating the need for post-ETL FK fixup in PHP.
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE MACRO espo_id() AS (
-    lpad(to_hex(epoch(now())::BIGINT), 8, '0')
-    || lpad(to_hex((epoch_us(now()) % 1000000)::BIGINT), 5, '0')
-    || substr(md5(random()::TEXT || gen_random_uuid()::TEXT), 1, 4)
+CREATE OR REPLACE MACRO espo_id(seed) AS (
+    substr(md5(seed), 1, 17)
 );
 
 -- ---------------------------------------------------------------------------
@@ -204,7 +212,30 @@ CREATE OR REPLACE TABLE src_dados_usuario AS
     );
 
 -- =============================================================================
--- 1.1 Source table counts (to identify drops early)
+-- 1.1 Deduplicate src_paciente by codpessoa
+-- =============================================================================
+-- PACIENTE.codpessoa is NOT unique: a patient can have multiple rows
+-- (e.g. re-registered, multi-clinic). Every join on codpessoa would fan out,
+-- producing duplicate/wrong names, values, and FK mappings.
+-- Fix: keep one row per codpessoa (prefer active, then most recently updated).
+-- NOTE: PACIENTE.csv has NO `codigo` column; use dataAlterado/dataCriado as tiebreaker.
+CREATE OR REPLACE TABLE src_paciente_dedup AS
+    SELECT * FROM (
+        SELECT
+            p.*,
+            ROW_NUMBER() OVER (
+                PARTITION BY CAST(p.codpessoa AS VARCHAR)
+                ORDER BY
+                    CASE WHEN CAST(p.ativo AS BOOLEAN) THEN 0 ELSE 1 END,
+                    p.dataAlterado DESC NULLS LAST,
+                    p.dataCriado DESC NULLS LAST
+            ) AS _rn
+        FROM src_paciente p
+    ) sub
+    WHERE _rn = 1;
+
+-- =============================================================================
+-- 1.2 Source table counts (to identify drops early)
 -- =============================================================================
 SELECT 'src_agenda count' AS table_name, count(*) AS row_count FROM src_agenda
 UNION ALL SELECT 'src_paciente count', count(*) FROM src_paciente
@@ -224,7 +255,7 @@ CREATE OR REPLACE TABLE filtered_agenda AS
 -- =============================================================================
 CREATE OR REPLACE TABLE out_consulta_tipo AS
     SELECT
-        espo_id() AS id,
+        espo_id('ct::' || getvariable('credentialId') || '::' || CAST(tc.codigo AS VARCHAR)) AS id,
         CAST(tc.nome AS VARCHAR) AS name,
         0 AS deleted,
         CAST(tc.codigo AS VARCHAR) AS consulta_tipo_id,
@@ -249,7 +280,7 @@ CREATE OR REPLACE TABLE lookup_consulta_tipo AS
 -- =============================================================================
 CREATE OR REPLACE TABLE out_convenio_tipo AS
     SELECT
-        espo_id() AS id,
+        espo_id('cv::' || getvariable('credentialId') || '::' || CAST(tc.codigo AS VARCHAR)) AS id,
         CAST(tc.nome AS VARCHAR) AS name,
         0 AS deleted,
         CAST(tc.codigo AS VARCHAR) AS convenio_tipo_id,
@@ -276,7 +307,7 @@ CREATE OR REPLACE TABLE lookup_convenio_tipo AS
 -- =============================================================================
 CREATE OR REPLACE TABLE out_procedimento_tipo AS
     SELECT
-        espo_id() AS id,
+        espo_id('pt::' || getvariable('credentialId') || '::' || CAST(tp.codtipoprocedimento AS VARCHAR)) AS id,
         CAST(tp.nome AS VARCHAR) AS name,
         0 AS deleted,
         CAST(tp.codtipoprocedimento AS VARCHAR) AS procedimento_tipo_id,
@@ -312,7 +343,7 @@ CREATE OR REPLACE TABLE out_procedimento_convenio AS
         FROM src_tipo_procedimento_convenio tpc
     )
     SELECT
-        espo_id() AS id,
+        espo_id('pc::' || lpt.espo_id || '::' || lct.espo_id) AS id,
         CAST(COALESCE(tc.nome, '') AS VARCHAR) || ' - ' || CAST(COALESCE(tp.nome, '') AS VARCHAR) AS name,
         0 AS deleted,
         CAST(d.codigo AS VARCHAR) AS codigo_tipo_procedimento_convenio,
@@ -344,15 +375,23 @@ CREATE OR REPLACE TABLE out_procedimento_convenio AS
 -- AGENDA_EXECUTOR.codpessoa → DADOS_USUARIO.codpessoa_fk → DADOS_USUARIO.codusuario → PROFISSIONAL_SAUDE.coddadosusuario
 
 CREATE OR REPLACE TABLE prof_saude_data AS
-    SELECT
-        ae.codigo AS executor_codigo,
-        ae.codpessoa AS executor_codpessoa,
-        ps.codprofissional,
-        ps.registro,
-        du.codcbo
-    FROM src_agenda_executor ae
-    LEFT JOIN src_dados_usuario du ON CAST(ae.codpessoa AS VARCHAR) = CAST(du.codpessoa_fk AS VARCHAR)
-    LEFT JOIN src_profissional_saude ps ON CAST(du.codusuario AS VARCHAR) = CAST(ps.coddadosusuario AS VARCHAR);
+    SELECT executor_codigo, executor_codpessoa, codprofissional, registro, codcbo
+    FROM (
+        SELECT
+            ae.codigo AS executor_codigo,
+            ae.codpessoa AS executor_codpessoa,
+            ps.codprofissional,
+            ps.registro,
+            du.codcbo,
+            ROW_NUMBER() OVER (
+                PARTITION BY CAST(ae.codigo AS VARCHAR)
+                ORDER BY ps.codprofissional DESC NULLS LAST
+            ) AS _rn
+        FROM src_agenda_executor ae
+        LEFT JOIN src_dados_usuario du ON CAST(ae.codpessoa AS VARCHAR) = CAST(du.codpessoa_fk AS VARCHAR)
+        LEFT JOIN src_profissional_saude ps ON CAST(du.codusuario AS VARCHAR) = CAST(ps.coddadosusuario AS VARCHAR)
+    ) sub
+    WHERE _rn = 1;
 
 -- Build especialidades JSON per profissional_saude.codprofissional
 CREATE OR REPLACE TABLE prof_especialidades AS
@@ -380,7 +419,7 @@ CREATE OR REPLACE TABLE prof_clinicas AS
 
 CREATE OR REPLACE TABLE out_profissional AS
     SELECT
-        espo_id() AS id,
+        espo_id('pr::' || getvariable('credentialId') || '::' || CAST(ae.codigo AS VARCHAR)) AS id,
         CAST(p.nomecompleto AS VARCHAR) AS name,
         0 AS deleted,
         CAST(ae.codigo AS VARCHAR) AS profissional_id,
@@ -414,9 +453,21 @@ CREATE OR REPLACE TABLE lookup_profissional AS
     FROM out_profissional;
 
 -- Lookup: profissional CNN codpessoa → EspoCRM id (for agenda join)
+-- Deduplicate by codpessoa to prevent fan-out: prefer active, then highest profissional_id.
 CREATE OR REPLACE TABLE lookup_profissional_by_codpessoa AS
-    SELECT id_pessoa AS codpessoa, id AS espo_id, profissional_id AS remote_id
-    FROM out_profissional;
+    SELECT codpessoa, espo_id, remote_id
+    FROM (
+        SELECT
+            id_pessoa AS codpessoa,
+            id AS espo_id,
+            profissional_id AS remote_id,
+            ROW_NUMBER() OVER (
+                PARTITION BY id_pessoa
+                ORDER BY ativo DESC, profissional_id DESC
+            ) AS _rn
+        FROM out_profissional
+    ) sub
+    WHERE _rn = 1;
 
 -- =============================================================================
 -- 8. Paciente (filtered to those referenced by in-range agendamentos)
@@ -442,7 +493,7 @@ CREATE OR REPLACE TABLE paciente_convenio_ranked AS
 
 CREATE OR REPLACE TABLE out_paciente AS
     SELECT
-        espo_id() AS id,
+        espo_id('pa::' || getvariable('credentialId') || '::' || CAST(pac.codpessoa AS VARCHAR)) AS id,
         CAST(ps.nomecompleto AS VARCHAR) AS name,
         0 AS deleted,
         CAST(pac.codpessoa AS VARCHAR) AS paciente_id,
@@ -454,7 +505,6 @@ CREATE OR REPLACE TABLE out_paciente AS
         NULL AS created_by_id,
         NULL AS modified_by_id,
         CAST(ps.sexo AS VARCHAR) AS sexo,
-        NULL AS payload_hash,
         CASE WHEN CAST(pac.ativo AS BOOLEAN) THEN 1 ELSE 0 END AS ativo,
         CAST(ps.cpfOuCnpj AS VARCHAR) AS cpfcnpj,
         CASE
@@ -462,8 +512,6 @@ CREATE OR REPLACE TABLE out_paciente AS
             THEN strftime(CAST(ps.dataNascimento AS DATE), '%Y-%m-%d')
             ELSE NULL
         END AS data_nascimento,
-        CAST(COALESCE(NULLIF(ct.telefoneComercial, ''), ct.telefoneResidencial) AS VARCHAR) AS telefone,
-        CAST(ct.telefoneCelular AS VARCHAR) AS celular,
         NULL AS nome_mae,
         NULL AS nome_pai,
         CAST(ps.estadocivil AS VARCHAR) AS estado_civil,
@@ -485,7 +533,7 @@ CREATE OR REPLACE TABLE out_paciente AS
         END AS validade_convenio,
         getvariable('settingsId') AS settings_id
     FROM needed_pacientes np
-    JOIN src_paciente pac ON np.codpessoa = CAST(pac.codpessoa AS VARCHAR)
+    JOIN src_paciente_dedup pac ON np.codpessoa = CAST(pac.codpessoa AS VARCHAR)
     -- PESSOA join via codpessoa_fk (NOT codpessoa; codpessoa_fk is the actual FK to PESSOA.codigo)
     LEFT JOIN src_pessoa ps ON CAST(pac.codpessoa_fk AS VARCHAR) = CAST(ps.codigo AS VARCHAR)
     LEFT JOIN src_contato ct ON CAST(ps.codcontato AS VARCHAR) = CAST(ct.codigo AS VARCHAR)
@@ -493,6 +541,20 @@ CREATE OR REPLACE TABLE out_paciente AS
     LEFT JOIN src_cidade ci ON CAST(ed.codcidade AS VARCHAR) = CAST(ci.codigo AS VARCHAR)
     LEFT JOIN src_uf uf ON CAST(ci.codEstado AS VARCHAR) = CAST(uf.codigo AS VARCHAR)
     LEFT JOIN paciente_convenio_ranked pcr ON CAST(pac.codpessoa AS VARCHAR) = CAST(pcr.codpaciente AS VARCHAR) AND pcr.rn = 1;
+
+-- Phone data for post-import ORM pass (EspoCRM phone fields use relational storage).
+CREATE OR REPLACE TABLE out_paciente_phones AS
+    SELECT
+        op.paciente_id,
+        CAST(COALESCE(NULLIF(ct.telefoneComercial, ''), ct.telefoneResidencial) AS VARCHAR) AS telefone,
+        CAST(ct.telefoneCelular AS VARCHAR) AS celular
+    FROM out_paciente op
+    JOIN src_paciente_dedup pac ON CAST(pac.codpessoa AS VARCHAR) = op.paciente_id
+    LEFT JOIN src_pessoa ps ON CAST(pac.codpessoa_fk AS VARCHAR) = CAST(ps.codigo AS VARCHAR)
+    LEFT JOIN src_contato ct ON CAST(ps.codcontato AS VARCHAR) = CAST(ct.codigo AS VARCHAR)
+    WHERE ct.telefoneComercial IS NOT NULL
+       OR ct.telefoneResidencial IS NOT NULL
+       OR ct.telefoneCelular IS NOT NULL;
 
 -- Lookup: paciente CNN codpessoa → EspoCRM id
 CREATE OR REPLACE TABLE lookup_paciente AS
@@ -517,7 +579,7 @@ CREATE OR REPLACE TABLE agenda_first_especialidade AS
 
 CREATE OR REPLACE TABLE out_agendamento AS
     SELECT
-        espo_id() AS id,
+        espo_id('ag::' || getvariable('credentialId') || '::' || CAST(fa.codigo AS VARCHAR)) AS id,
         CAST(COALESCE(pac_pessoa.nomecompleto, '') AS VARCHAR) AS name,
         0 AS deleted,
         CAST(fa.codigo AS VARCHAR) AS agendamento_id,
@@ -563,8 +625,6 @@ CREATE OR REPLACE TABLE out_agendamento AS
         getvariable('credentialId') AS credential_id,
         NULL AS created_by_id,
         NULL AS modified_by_id,
-        NULL AS valor,
-        NULL AS valor_currency,
         map_status_faturamento(CAST(fa.situacaofaturacao AS VARCHAR)) AS status_faturamento,
         CAST(fa.codpessoaexecucao AS VARCHAR) AS id_pessoa_executor,
         lprof.espo_id AS profissional_anchor_id,
@@ -584,7 +644,8 @@ CREATE OR REPLACE TABLE out_agendamento AS
         getvariable('settingsId') AS settings_id
     FROM filtered_agenda fa
     -- Patient person name: AGENDA.paciente_codpessoa → PACIENTE.codpessoa → PACIENTE.codpessoa_fk → PESSOA.codigo
-    LEFT JOIN src_paciente pac_link ON CAST(fa.paciente_codpessoa AS VARCHAR) = CAST(pac_link.codpessoa AS VARCHAR)
+    -- Uses deduplicated paciente to prevent fan-out when codpessoa has multiple rows.
+    LEFT JOIN src_paciente_dedup pac_link ON CAST(fa.paciente_codpessoa AS VARCHAR) = CAST(pac_link.codpessoa AS VARCHAR)
     LEFT JOIN src_pessoa pac_pessoa ON CAST(pac_link.codpessoa_fk AS VARCHAR) = CAST(pac_pessoa.codigo AS VARCHAR)
     -- Profissional lookup via codpessoaexecucao → AGENDA_EXECUTOR.codpessoa
     LEFT JOIN lookup_profissional_by_codpessoa lprof ON CAST(fa.codpessoaexecucao AS VARCHAR) = lprof.codpessoa
@@ -657,7 +718,7 @@ CREATE OR REPLACE TABLE out_agendamento_procedimento AS
         LEFT JOIN lookup_procedimento_tipo lpt ON CAST(pr.codtipoprocedimento AS VARCHAR) = lpt.remote_id
     )
     SELECT
-        espo_id() AS id,
+        espo_id('ap::' || b.agendamento_espo_id || '::' || b.procedimento_tipo_espo_id) AS id,
         COALESCE(b.procedimento_nome, '') AS name,
         0 AS deleted,
         b.quantidade,
@@ -684,7 +745,7 @@ CREATE OR REPLACE TABLE out_agendamento_procedimento AS
 -- =============================================================================
 CREATE OR REPLACE TABLE out_faturamento AS
     SELECT
-        espo_id() AS id,
+        espo_id('fa::' || getvariable('webCredentialId') || '::' || CAST(f.codigo AS VARCHAR)) AS id,
         CAST(f.codigo AS VARCHAR) AS name,
         0 AS deleted,
         CAST(f.codigo AS VARCHAR) AS faturamento_id,
@@ -764,6 +825,7 @@ COPY out_procedimento_tipo TO '__CSV_OUTPUT_PATH__/procedimento_tipo.csv' (HEADE
 COPY out_procedimento_convenio TO '__CSV_OUTPUT_PATH__/procedimento_convenio.csv' (HEADER, DELIMITER ',');
 COPY out_profissional TO '__CSV_OUTPUT_PATH__/profissional.csv' (HEADER, DELIMITER ',');
 COPY out_paciente TO '__CSV_OUTPUT_PATH__/paciente.csv' (HEADER, DELIMITER ',');
+COPY out_paciente_phones TO '__CSV_OUTPUT_PATH__/paciente_phones.csv' (HEADER, DELIMITER ',');
 COPY out_agendamento TO '__CSV_OUTPUT_PATH__/agendamento.csv' (HEADER, DELIMITER ',');
 COPY out_agendamento_procedimento TO '__CSV_OUTPUT_PATH__/agendamento_procedimento.csv' (HEADER, DELIMITER ',');
 COPY out_faturamento TO '__CSV_OUTPUT_PATH__/faturamento.csv' (HEADER, DELIMITER ',');
