@@ -1,0 +1,61 @@
+{
+    "controller": "feature-integration-medx:controllers/no-create-route",
+    "iconClass": "fas fa-user-injured",
+    "searchPanelDisabled": false,
+    "boolFilterList": ["onlyMy"],
+    "defaultSidePanelFieldLists": {
+        "detail": ["teams"],
+        "edit": []
+    },
+    "recordViews": {
+        "detail": "global:views/record/detail"
+    },
+    "views": {
+        "list": "feature-integration-medx:views/list-quick-create"
+    },
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "openInMedx",
+                    "name": "openInMedx",
+                    "style": "default",
+                    "handler": "feature-integration-medx:handlers/open-in-medx",
+                    "actionFunction": "openInMedx",
+                    "checkVisibilityFunction": "isOpenInMedxVisible",
+                    "iconClass": "fas fa-external-link-alt"
+                },
+                {
+                    "name": "sendMessage",
+                    "label": "Send Message",
+                    "style": "default",
+                    "iconHtml": "<span class=\"fas fa-paper-plane fa-sm\"></span>",
+                    "handler": "chatwoot:handlers/contact-linked-entity/detail-actions",
+                    "actionFunction": "sendMessage",
+                    "checkVisibilityFunction": "isSendMessageAvailable"
+                }
+            ]
+        }
+    },
+    "detailActionList": [
+        {
+            "name": "sendMessage",
+            "label": "Send Message",
+            "handler": "chatwoot:handlers/contact-linked-entity/detail-actions",
+            "actionFunction": "sendMessage",
+            "checkVisibilityFunction": "isSendMessageAvailable",
+            "groupIndex": 0
+        }
+    ],
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "order": 1
+            }
+        ]
+    }
+}

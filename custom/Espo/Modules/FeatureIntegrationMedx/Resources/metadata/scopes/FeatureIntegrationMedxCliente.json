@@ -1,0 +1,10 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": true,
+    "acl": true,
+    "customizable": true,
+    "importable": true,
+    "exportable": true,
+    "stream": false
+}

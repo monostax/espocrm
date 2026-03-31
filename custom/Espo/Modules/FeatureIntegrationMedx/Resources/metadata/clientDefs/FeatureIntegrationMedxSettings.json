@@ -5,5 +5,35 @@
         "detail": "views/detail",
         "edit": "views/edit"
     },
+    "actions": {
+        "replaceCredential": true,
+        "importClientes": true
+    },
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "importClientes",
+                    "name": "importClientes",
+                    "style": "default",
+                    "handler": "feature-integration-medx:handlers/settings-import",
+                    "actionFunction": "importClientes",
+                    "checkVisibilityFunction": "isImportClientesVisible",
+                    "iconClass": "fas fa-file-import"
+                }
+            ]
+        }
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "pipelineJobs",
+                "label": "Pipeline Jobs",
+                "view": "feature-integration-medx:views/settings/panels/jobs",
+                "order": 1
+            }
+        ]
+    },
     "iconClass": "fas fa-cogs"
 }

@@ -259,6 +259,22 @@ class MedxWebHealthChecker implements HealthCheckerInterface
             $errorData = json_decode($loginResponse['body'], true);
             $errorMsg = $errorData['Message'] ?? $loginResponse['body'];
 
+            // MEDX returns HTTP 400 with "já logado ... token <TOKEN>" when user already has an active session.
+            // Extract and reuse the existing token.
+            if (preg_match('/token\s+(\S+)/', $errorMsg, $tokenMatch)) {
+                $existingToken = trim($tokenMatch[1]);
+
+                $this->log->info(
+                    "MedxWebHealthChecker: User already logged in, reusing existing token."
+                );
+
+                return [
+                    'success' => true,
+                    'bearerToken' => $existingToken,
+                    'sessionCookies' => '',
+                ];
+            }
+
             return ['success' => false, 'error' => 'Login failed: ' . $errorMsg];
         }
 

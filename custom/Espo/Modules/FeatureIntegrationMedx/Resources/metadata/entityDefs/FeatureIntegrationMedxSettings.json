@@ -9,6 +9,36 @@
             "type": "bool",
             "default": true
         },
+        "migrationStatus": {
+            "type": "enum",
+            "options": ["idle", "inProgress", "completed", "failed"],
+            "default": "idle",
+            "required": true
+        },
+        "importStatus": {
+            "type": "enum",
+            "options": ["idle", "inProgress", "completed", "failed"],
+            "default": "idle",
+            "readOnly": true
+        },
+        "lastImportAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "totalImported": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "autoImportEnabled": {
+            "type": "bool",
+            "default": false
+        },
+        "autoImportDateRange": {
+            "type": "enum",
+            "options": ["none", "rolling30d", "rolling90d", "rolling365d"],
+            "default": "none"
+        },
         "tenant": {
             "type": "link",
             "required": true
@@ -86,6 +116,9 @@
         },
         "tenantIsActive": {
             "columns": ["tenantId", "isActive", "deleted"]
+        },
+        "migrationStatus": {
+            "columns": ["migrationStatus", "deleted"]
         }
     }
 }

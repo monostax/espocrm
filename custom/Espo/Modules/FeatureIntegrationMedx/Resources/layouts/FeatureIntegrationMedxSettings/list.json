@@ -1,0 +1,11 @@
+[
+    {"name": "tenant", "width": 18},
+    {"name": "name", "width": 18},
+    {"name": "teams", "width": 13},
+    {"name": "isActive", "width": 7},
+    {"name": "migrationStatus", "width": 11},
+    {"name": "importStatus", "width": 11},
+    {"name": "lastImportAt", "width": 12},
+    {"name": "totalImported", "width": 8},
+    {"name": "webCredential", "width": 12}
+]

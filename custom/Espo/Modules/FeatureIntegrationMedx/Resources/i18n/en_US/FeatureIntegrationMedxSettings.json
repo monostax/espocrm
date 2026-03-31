@@ -1,7 +1,12 @@
 {
     "labels": {
         "FeatureIntegrationMedxSettings": "MEDX Integration Profile",
-        "Create FeatureIntegrationMedxSettings": "Create Integration Profile"
+        "Create FeatureIntegrationMedxSettings": "Create Integration Profile",
+        "Pipeline Jobs": "Pipeline Jobs",
+        "importClientes": "Import Clientes",
+        "importClientesConfirm": "Are you sure you want to import clientes from MEDX for this profile?",
+        "importClientesQueued": "Import job has been queued.",
+        "importClientesFailed": "Failed to queue import job."
     },
     "fields": {
         "name": "Profile Name",
@@ -16,6 +21,7 @@
         "webCredential": "Web Credential"
     },
     "actions": {
-        "replaceCredential": "Replace Credential"
+        "replaceCredential": "Replace Credential",
+        "importClientes": "Import Clientes"
     }
 }

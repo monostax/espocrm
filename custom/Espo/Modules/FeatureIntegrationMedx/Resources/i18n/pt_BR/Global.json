@@ -1,8 +1,10 @@
 {
     "scopeNames": {
-        "FeatureIntegrationMedxSettings": "Configuração MEDX"
+        "FeatureIntegrationMedxSettings": "Configuração MEDX",
+        "FeatureIntegrationMedxCliente": "Cliente MEDX"
     },
     "scopeNamesPlural": {
-        "FeatureIntegrationMedxSettings": "Configurações MEDX"
+        "FeatureIntegrationMedxSettings": "Configurações MEDX",
+        "FeatureIntegrationMedxCliente": "Clientes MEDX"
     }
 }

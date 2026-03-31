@@ -1,0 +1,12 @@
+[
+    {
+        "label": "Basic",
+        "rows": [
+            [{"name": "name"}, {"name": "isActive"}],
+            [{"name": "tenant"}, {"name": "teams"}],
+            [{"name": "migrationStatus"}, {"name": "importStatus"}],
+            [{"name": "autoImportDateRange"}, {"name": "autoImportEnabled"}],
+            [{"name": "webCredential"}, false]
+        ]
+    }
+]

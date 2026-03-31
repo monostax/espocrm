@@ -1,0 +1,296 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnlyAfterCreate": true
+        },
+        "clienteId": {
+            "type": "varchar",
+            "maxLength": 100,
+            "required": true,
+            "view": "feature-integration-medx:views/fields/medx-external-id",
+            "readOnlyAfterCreate": true
+        },
+        "contact": {
+            "type": "link"
+        },
+        "credential": {
+            "type": "link",
+            "readOnlyAfterCreate": true
+        },
+        "settings": {
+            "type": "link",
+            "required": true,
+            "readOnlyAfterCreate": true
+        },
+        "syncStatus": {
+            "type": "enum",
+            "options": ["pending", "synced", "error"],
+            "default": "pending",
+            "readOnlyAfterCreate": true
+        },
+        "assinaturaId": {
+            "type": "int",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "cpfCgc": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "dataNascimento": {
+            "type": "date",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "emailAddress": {
+            "type": "email",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "celular": {
+            "type": "phone",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "telefoneResidencial": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "telefoneResidencial1": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "sexo": {
+            "type": "varchar",
+            "maxLength": 20,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "nomeSocial": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "estadoCivil": {
+            "type": "varchar",
+            "maxLength": 60,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "profissao": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "enderecoResidencial": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "bairroResidencial": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "cidadeResidencial": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "estadoResidencial": {
+            "type": "varchar",
+            "maxLength": 10,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "cepResidencial": {
+            "type": "varchar",
+            "maxLength": 16,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "idDoConvenio": {
+            "type": "int",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "convenio": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "numeroMatricula": {
+            "type": "varchar",
+            "maxLength": 80,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "numeroCns": {
+            "type": "varchar",
+            "maxLength": 40,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "observacoes": {
+            "type": "text",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "referencias": {
+            "type": "text",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "tags": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "vip": {
+            "type": "bool",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "malaDireta": {
+            "type": "bool",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "pendente": {
+            "type": "bool",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "excluiMkt": {
+            "type": "int",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "indicadoPor": {
+            "type": "int",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "comoConheceu": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "escolaridade": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "religiao": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "readOnlyAfterCreate": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "readOnlyAfterCreate": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnlyAfterCreate": true
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "medxClientes"
+        },
+        "credential": {
+            "type": "belongsTo",
+            "entity": "Credential",
+            "foreign": "medxClientes"
+        },
+        "settings": {
+            "type": "belongsTo",
+            "entity": "FeatureIntegrationMedxSettings"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "modifiedAt",
+        "order": "desc",
+        "textFilterFields": [
+            "name",
+            "clienteId",
+            "cpfCgc",
+            "emailAddress",
+            "celular",
+            "telefoneResidencial",
+            "cidadeResidencial",
+            "estadoResidencial",
+            "convenio",
+            "contact"
+        ]
+    },
+    "indexes": {
+        "contactId": {
+            "columns": ["contactId"]
+        },
+        "credentialId": {
+            "columns": ["credentialId"]
+        },
+        "settingsId": {
+            "columns": ["settingsId"]
+        },
+        "clienteIdCredential": {
+            "unique": true,
+            "columns": ["clienteId", "credentialId", "deleted"]
+        }
+    }
+}

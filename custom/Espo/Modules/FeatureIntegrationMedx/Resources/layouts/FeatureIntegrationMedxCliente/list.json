@@ -1,0 +1,12 @@
+[
+    {"name": "name", "link": true},
+    {"name": "clienteId", "width": 14},
+    {"name": "contact", "width": 14},
+    {"name": "cpfCgc", "width": 12},
+    {"name": "emailAddress", "width": 16},
+    {"name": "celular", "width": 14},
+    {"name": "cidadeResidencial", "width": 12},
+    {"name": "estadoResidencial", "width": 6},
+    {"name": "convenio", "width": 12},
+    {"name": "syncStatus", "width": 10}
+]

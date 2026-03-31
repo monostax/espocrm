@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\FeatureIntegrationMedx\\Rebuild\\SeedCredentialTypeMedx"
+        "Espo\\Modules\\FeatureIntegrationMedx\\Rebuild\\SeedCredentialTypeMedx",
+        "Espo\\Modules\\FeatureIntegrationMedx\\Rebuild\\SeedScheduledJobs"
     ]
 }

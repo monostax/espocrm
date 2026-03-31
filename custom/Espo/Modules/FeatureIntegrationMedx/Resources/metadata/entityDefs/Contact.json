@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "medx_clienteId": {
+            "type": "varchar",
+            "maxLength": 100
+        }
+    },
+    "links": {
+        "medxClientes": {
+            "type": "hasMany",
+            "entity": "FeatureIntegrationMedxCliente",
+            "foreign": "contact"
+        }
+    }
+}
