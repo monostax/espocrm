@@ -43,6 +43,7 @@ use Espo\Modules\Crm\Entities\CaseObj;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Name\Attribute;
 use Espo\Tools\Notification\HookProcessor\Params;
+use stdClass;
 
 class Service
 {
@@ -61,7 +62,7 @@ class Service
             ->setType(Notification::TYPE_MENTION_IN_POST)
             ->setData(['noteId' => $note->getId()])
             ->setUserId($userId)
-            ->setRelated(LinkParent::createFromEntity($note));
+            ->setRelated(LinkParent::fromEntity($note));
 
         $this->entityManager->saveEntity($notification);
     }
@@ -91,7 +92,7 @@ class Service
         $collection = $this->entityManager->getCollectionFactory()->create();
 
         $users = $this->entityManager
-            ->getRDBRepository(User::ENTITY_TYPE)
+            ->getRDBRepositoryByClass(User::class)
             ->select([
                 Attribute::ID,
                 User::ATTR_TYPE,
@@ -124,10 +125,11 @@ class Service
 
             $actionId = $params?->actionId;
 
-            if (
-                in_array($note->getType(), [Note::TYPE_ASSIGN, Note::TYPE_CREATE]) &&
-                ($note->getData()->assignedUserId ?? null) === $user->getId()
-            ) {
+            $isFeatured = false;
+
+            if ($this->isUserTargetAssignee($note, $user)) {
+                $isFeatured = true;
+
                 // Do not group notifications about assignment.
                 $actionId = null;
             }
@@ -137,15 +139,16 @@ class Service
             $notification
                 ->set(Attribute::ID, $this->idGenerator->generate())
                 ->set(Field::CREATED_AT, $now)
-                ->setData(['noteId' => $note->getId()])
+                ->setData([Notification::DATE_ATTR_NOTE_ID => $note->getId()])
                 ->setType(Notification::TYPE_NOTE)
                 ->setUserId($user->getId())
-                ->setRelated(LinkParent::createFromEntity($note))
+                ->setRelated(LinkParent::fromEntity($note))
                 ->setRelatedParent(
                     $note->getParentType() && $note->getParentId() ?
                         LinkParent::create($note->getParentType(), $note->getParentId()) : null
                 )
-                ->setActionId($actionId);
+                ->setActionId($actionId)
+                ->setIsFeatured($isFeatured);
 
             $collection[] = $notification;
         }
@@ -183,5 +186,38 @@ class Service
         }
 
         return true;
+    }
+
+
+    private function isUserTargetAssignee(Note $note, User $user): bool
+    {
+        if (!in_array($note->getType(), [Note::TYPE_ASSIGN, Note::TYPE_CREATE])) {
+            return false;
+        }
+
+        $noteData = $note->getData();
+
+        if (($noteData->{Note::DATA_ATTR_ASSIGNED_USER_ID} ?? null) === $user->getId()) {
+            return true;
+        }
+
+        $assignedUsers = $noteData->{Note::DATA_ATTR_ASSIGNED_USERS} ??
+            $noteData->{Note::DATA_ATTR_ADDED_ASSIGNED_USERS} ?? null;
+
+        if (!is_array($assignedUsers)) {
+            return false;
+        }
+
+        foreach ($assignedUsers as $item) {
+            if (!$item instanceof stdClass) {
+                continue;
+            }
+
+            if (($item->{Attribute::ID} ?? null) === $user->getId()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

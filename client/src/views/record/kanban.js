@@ -30,6 +30,10 @@
 
 import ListRecordView from 'views/record/list';
 import RecordModal from 'helpers/record-modal';
+import {inject} from 'di';
+import AppParams from 'app-params';
+import KanbanPipelineDropdownView from 'views/record/kanban/pipeline-dropdown';
+import PipelinesHelper from 'helpers/misc/pipelines';
 
 /**
  * A kanban record view.
@@ -95,6 +99,29 @@ class KanbanRecordView extends ListRecordView {
      * @type {Record.<string, string>}
      */
     styleMap
+
+    /**
+     * @private
+     * @type {boolean}
+     */
+    usePipeline = false
+
+    /**
+     * @private
+     * @type {string|null}
+     */
+    currentPipelineId = null
+
+    /**
+     * @private
+     * @type {{
+     *     id: string,
+     *     name: string,
+     *     stages: {id: string, name: string, style: string|null}[],
+     *     color: number|null,
+     * }[]}
+     */
+    pipelines
 
     /**
      * Layout item definitions.
@@ -186,7 +213,7 @@ class KanbanRecordView extends ListRecordView {
                 options.rootUrl = this.getRouter().getCurrentUrl();
             }
 
-            this.getRouter().navigate('#' + scope + '/view/' + id, {trigger: false});
+            this.getRouter().navigate(`#${scope}/view/${id}`, {trigger: false});
             this.getRouter().dispatch(scope, 'view', options);
         },
         /** @this KanbanRecordView */
@@ -274,7 +301,8 @@ class KanbanRecordView extends ListRecordView {
             this.displayTotalCount ||
             this.buttonList.length &&
             !this.buttonsDisabled ||
-            !!this._listSettingsHelper
+            !!this._listSettingsHelper ||
+            this.usePipeline
         );
 
         // noinspection JSValidateTypes
@@ -291,6 +319,7 @@ class KanbanRecordView extends ListRecordView {
             isEmptyList: this.collection.models.length === 0,
             totalCountFormatted: this.getNumberUtil().formatInt(this.collection.total),
             noDataDisabled: this._renderEmpty,
+            usePipeline: this.usePipeline,
         };
     }
 
@@ -327,11 +356,13 @@ class KanbanRecordView extends ListRecordView {
             throw new Error('Collection has not been injected into Record.List view.');
         }
 
-        this.listenTo(this.collection, 'sync', (c, response) => {
-            this.subCollectionList = undefined;
-
-            // noinspection JSUnresolvedReference
-            this.groupRawDataList = response.groups;
+        this.collection.onSync({
+            owner: this,
+            callback: o => {
+                this.subCollectionList = undefined;
+                // noinspection JSUnresolvedReference
+                this.groupRawDataList = o.response.groups;
+            },
         });
 
         this.layoutLoadCallbackList = [];
@@ -370,7 +401,16 @@ class KanbanRecordView extends ListRecordView {
                 this.orderDisabled = true;
             }
         }
+
+        if (!this.options.statusField && this.getMetadata().get(`scopes.${this.scope}.pipelines`)) {
+            this.usePipeline = true;
+        }
+
         this.setupStatusField();
+
+        if (this.usePipeline) {
+            this.setupPipeline();
+        }
 
         this.seedCollection = this.collection.clone();
         this.seedCollection.reset();
@@ -383,18 +423,18 @@ class KanbanRecordView extends ListRecordView {
         this.setupRowActionDefs();
         this.setupSettings();
 
-        this.listenTo(this.collection, 'sync', () => {
-            this._renderEmpty = false;
+        this.collection.onSync({
+            owner: this,
+            callback: () => {
+                this._renderEmpty = false;
 
-            this.buildRowsAndRender();
+                this.buildRowsAndRender();
+            },
         });
 
-        this.collection.listenTo(
-            this.collection,
-            'change:' + this.statusField,
-            this.onChangeGroup.bind(this),
-            this
-        );
+        this.listenTo(this.collection, `change:${this.statusField}`, (m, v, o) => {
+            this.onChangeGroup(m, v, o);
+        });
 
         this.buildRows();
 
@@ -409,9 +449,9 @@ class KanbanRecordView extends ListRecordView {
         } else {
             this.statusFieldIsEditable =
                 this.getAcl().checkScope(this.entityType, 'edit') &&
-                !this.getAcl().getScopeForbiddenFieldList(this.entityType, 'edit').includes(this.statusField) &&
-                !this.getMetadata().get(['clientDefs', this.scope, 'editDisabled']) &&
-                !this.getMetadata().get(['entityDefs', this.entityType, 'fields', this.statusField, 'readOnly']);
+                this.getAcl().checkField(this.entityType, this.statusField, 'edit') &&
+                !this.getMetadata().get(`clientDefs.${this.scope}.editDisabled`) &&
+                !this.getMetadata().get(`entityDefs.${this.entityType}.fields.${this.statusField}.readOnly`);
         }
 
         if ('canCreate' in this.options) {
@@ -445,13 +485,91 @@ class KanbanRecordView extends ListRecordView {
     /**
      * @private
      */
+    setupPipeline() {
+        this.pipelines = new PipelinesHelper().get(this.entityType);
+
+        this.currentPipelineId = this.getStorage().get('state', this.buildPipelineIdStorageKey());
+
+        if (!this.currentPipelineId) {
+            this.currentPipelineId = this.pipelines[0]?.id ?? null;
+        }
+
+        if (this.currentPipelineId && !this.pipelines.find(it => it.id === this.currentPipelineId)) {
+            this.currentPipelineId = null;
+        }
+
+        this.setPipelineWhere();
+        this.setupPipelineDropdown();
+    }
+
+    /**
+     * @private
+     */
+    setPipelineWhere() {
+        if (!this.currentPipelineId) {
+            this.collection.whereFunction = null;
+
+            return;
+        }
+
+        this.collection.whereFunction = () => {
+            return [
+                {
+                    type: 'equals',
+                    attribute: 'pipelineId',
+                    value: this.currentPipelineId,
+                }
+            ];
+        };
+    }
+
+    /**
+     * @private
+     */
+    setupPipelineDropdown() {
+        const state = {
+            pipelineId: this.currentPipelineId,
+            pipelines: this.pipelines,
+        };
+
+        const view = new KanbanPipelineDropdownView({
+            state: state,
+            onChange: async id => {
+                this.currentPipelineId = id;
+                state.pipelineId = id;
+
+                this.setPipelineWhere();
+
+                this.getStorage().set('state', this.buildPipelineIdStorageKey(), id);
+
+                await view.reRender();
+
+                Espo.Ui.notifyWait();
+
+                await this.collection.fetch({maxSize: this.collection.maxSize});
+
+                Espo.Ui.notify();
+            },
+        });
+
+        this.assignView('pipelineDropdown', view);
+    }
+
+    /**
+     * @private
+     */
     setupStatusField() {
         this.statusField = this.options.statusField || this.getMetadata().get(['scopes', this.scope, 'statusField']);
+
+        if (this.usePipeline) {
+            this.statusField = 'pipelineStageId';
+        }
 
         if (!this.statusField) {
             throw new Error(`No status field for entity type '${this.scope}'.`);
         }
 
+        // @todo Use options-provider.
         this.styleMap = /** @type {Record.<string, string>} */
             this.getMetadata().get(`entityDefs.${this.scope}.fields.${this.statusField}.style`) ?? {};
 
@@ -1252,6 +1370,7 @@ class KanbanRecordView extends ListRecordView {
         this.createView('moveOverDialog', 'views/modals/kanban-move-over', {
             model: model,
             statusField: this.statusField,
+            pipelineId: this.currentPipelineId,
         }, view => {
             view.render();
         });
@@ -1315,7 +1434,13 @@ class KanbanRecordView extends ListRecordView {
                 return this.getCreateAttributes(group);
             }
 
-            return Promise.resolve({[this.statusField]: group});
+            const attributes = {[this.statusField]: group};
+
+            if (this.usePipeline) {
+                attributes.pipelineId = this.currentPipelineId;
+            }
+
+            return Promise.resolve(attributes);
         };
 
         const attributes = await getCreateAttributes();
@@ -1519,6 +1644,14 @@ class KanbanRecordView extends ListRecordView {
      */
     setCanReOrder(canReOrder) {
         this.orderDisabled = !canReOrder;
+    }
+
+    /**
+     * @private
+     * @return {string}
+     */
+    buildPipelineIdStorageKey() {
+        return 'kanban-pipelineId-' + this.scope;
     }
 }
 

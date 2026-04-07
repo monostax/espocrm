@@ -87,6 +87,7 @@
         "Fail": "Fail",
         "Configuration Instructions": "Configuration Instructions",
         "Formula Sandbox": "Formula Sandbox",
+        "Pipelines": "Pipelines",
         "is recommended": "is recommended",
         "extension is missing": "extension is missing"
     },
@@ -205,6 +206,7 @@
         "dynamicLogicOptions": "Conditional options",
         "dynamicLogicInvalid": "Conditions making field invalid",
         "dynamicLogicReadOnlySaved": "Saved state conditions making field read-only",
+        "dynamicLogicCascading": "Cascading select",
         "probabilityMap": "Stage Probabilities (%)",
         "notActualOptions": "Not Actual Options",
         "activeOptions": "Active Options",
@@ -242,12 +244,17 @@
         "aclScope": "ACL Scope",
         "onlyAdmin": "Only for Admin",
         "notStorable": "Not Storable",
-        "itemsEditable": "Items Editable"
+        "itemsEditable": "Items Editable",
+        "openInNewTab": "Open in new tab",
+        "notLockable": "Not Lockable",
+        "protocolRequired": "Protocol Required",
+        "cascadeRemoval": "Cascade Removal"
     },
     "strings" : {
         "rebuildRequired": "Rebuild is required"
     },
     "messages": {
+        "noPipelinesEnabled": "No entity types have pipelines enabled.",
         "cacheIsDisabled": "Cache is disabled, the application will run slow. Enable cache in the [settings](#Admin/settings).",
         "formulaFunctions": "More functions can be found in [documentation]({documentationUrl}).",
         "rebuildRequired": "You need to run rebuild from CLI.",
@@ -323,7 +330,8 @@
         "pdfTemplates": "Templates for printing to PDF.",
         "formulaSandbox": "Write and test formula scripts.",
         "addressCountries": "Countries available for address fields.",
-        "oAuthProviders": "OAuth providers for integrations."
+        "oAuthProviders": "OAuth providers for integrations.",
+        "pipelines": "Configure multiple pipelines."
     },
     "keywords": {
         "settings": "system",

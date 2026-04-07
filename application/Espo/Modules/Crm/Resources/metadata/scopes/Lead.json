@@ -3,7 +3,8 @@
     "layouts": true,
     "tab": true,
     "acl": true,
-    "aclPortal": "recordAllOwnNo",
+    "aclPortal": true,
+    "aclPortalLevelList": ["all", "own", "no"],
     "module": "Crm",
     "customizable": true,
     "stream": true,
@@ -11,6 +12,7 @@
     "notifications": true,
     "object": true,
     "statusField": "status",
+    "statusFieldLocked": true,
     "hasPersonalData": true,
     "duplicateCheckFieldList": ["name", "emailAddress"]
 }

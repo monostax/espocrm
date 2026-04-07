@@ -420,8 +420,8 @@ class DefaultImporter implements Importer
             $subject = '(No Subject)';
         }
 
-        if (strlen($subject) > self::SUBJECT_MAX_LENGTH) {
-            $subject = substr($subject, 0, self::SUBJECT_MAX_LENGTH);
+        if (mb_strlen($subject) > self::SUBJECT_MAX_LENGTH) {
+            $subject = mb_substr($subject, 0, self::SUBJECT_MAX_LENGTH);
         }
 
         return $subject;
@@ -613,7 +613,7 @@ class DefaultImporter implements Importer
     {
         foreach ($inlineAttachmentList as $attachment) {
             $attachment->setTargetField('body');
-            $attachment->setRelated(LinkParent::createFromEntity($email));
+            $attachment->setRelated(LinkParent::fromEntity($email));
 
             $this->entityManager->saveEntity($attachment);
         }

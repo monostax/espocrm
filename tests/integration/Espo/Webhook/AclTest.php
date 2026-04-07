@@ -31,6 +31,7 @@ namespace tests\integration\Espo\Webhook;
 
 use Espo\Core\Api\ControllerActionProcessor;
 use Espo\Core\Api\ResponseWrapper;
+use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\ORM\EntityManager;
 use Espo\Core\Exceptions\Forbidden;
 
@@ -88,7 +89,7 @@ class AclTest extends \tests\integration\Core\BaseTestCase
                 'Content-Type' => 'application/json',
                 'X-Api-Key' => 'test-key',
             ],
-            '{"event":"Account.create", "url": "https://test"}'
+            '{"event":"Account.create", "url": "https://test.com"}'
         );
 
         $this->auth(null, null, null, 'ApiKey', $request);
@@ -126,7 +127,7 @@ class AclTest extends \tests\integration\Core\BaseTestCase
                 'Content-Type' => 'application/json',
                 'X-Api-Key' => 'test-key',
             ],
-            '{"event":"Account.create", "url": "https://test"}'
+            '{"event":"Account.create", "url": "https://test.com"}'
         );
 
         $this->auth(null, null, null, 'ApiKey', $request);
@@ -142,6 +143,10 @@ class AclTest extends \tests\integration\Core\BaseTestCase
 
     public function testApiUserHasAccess1()
     {
+        $configWriter = $this->getInjectableFactory()->create(ConfigWriter::class);
+        $configWriter->set('webhookAllowedAddressList', ['test.com:443']);
+        $configWriter->save();
+
         $this->createUser(
             [
                 'userName' => 'api',
@@ -164,7 +169,7 @@ class AclTest extends \tests\integration\Core\BaseTestCase
                 'Content-Type' => 'application/json',
                 'X-Api-Key' => 'test-key',
             ],
-            '{"event":"Account.create", "url": "https://test"}'
+            '{"event":"Account.create", "url": "https://test.com"}'
         );
 
         $this->auth(null, null, null, 'ApiKey', $request);
@@ -204,7 +209,7 @@ class AclTest extends \tests\integration\Core\BaseTestCase
 
         $webhook = $em->createEntity('Webhook', [
             'event' => 'Account.create',
-            'url' => 'https://test',
+            'url' => 'https://test.com',
             'userId' => $user->getId(),
         ]);
 

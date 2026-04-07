@@ -54,6 +54,7 @@ class Email extends Entity
     public const STATUS_SENT = 'Sent';
     public const STATUS_SENDING = 'Sending';
     public const STATUS_DRAFT = 'Draft';
+    public const STATUS_FAILED = 'Failed';
 
     public const RELATIONSHIP_EMAIL_USER = 'EmailUser';
     public const ALIAS_INBOX = 'emailUserInbox';
@@ -196,39 +197,6 @@ class Email extends Entity
         }
 
         $this->setInContainer('isUsers', false);
-    }
-
-    /**
-     * @deprecated As of v7.4. As the system user ID may be not constant in the future.
-     * @todo Remove in v10.0.
-     */
-    public function isManuallyArchived(): bool
-    {
-        if ($this->getStatus() !== Email::STATUS_ARCHIVED) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @todo Revise.
-     * @deprecated
-     */
-    public function addAttachment(Attachment $attachment): void
-    {
-        if (!$this->id) {
-            return;
-        }
-
-        $attachment->set('parentId', $this->id);
-        $attachment->set('parentType', Email::ENTITY_TYPE);
-
-        if (!$this->entityManager) {
-            throw new RuntimeException();
-        }
-
-        $this->entityManager->saveEntity($attachment);
     }
 
     public function hasBodyPlain(): bool

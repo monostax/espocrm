@@ -56,6 +56,15 @@ use stdClass;
 
 class SettingsService
 {
+    /**
+     * @var string[]
+     * @todo Do not use when these parameters moved away from the settings.
+     */
+    private array $ignoreUpdateParamList = [
+        'loginView',
+        'loginData',
+    ];
+
     public function __construct(
         private ApplicationState $applicationState,
         private Config $config,
@@ -87,13 +96,21 @@ class SettingsService
         $this->filterData($data);
         $this->loadAdditionalParams($data);
 
+        $metadataData = $this->getMetadataConfigData();
+
+        foreach (get_object_vars($metadataData) as $key => $value) {
+            $data->$key = $value;
+        }
+
         return $data;
     }
 
     /**
      * Get metadata to be used in config.
+     *
+     * @todo Move away from settings. Use some different approach.
      */
-    public function getMetadataConfigData(): stdClass
+    private function getMetadataConfigData(): stdClass
     {
         $data = (object) [];
 
@@ -208,6 +225,7 @@ class SettingsService
         }
 
         $ignoreItemList = array_merge(
+            $this->ignoreUpdateParamList,
             $this->access->getSystemParamList(),
             $this->access->getReadOnlyParamList(),
             $this->isRestrictedMode() && !$user->isSuperAdmin() ?

@@ -63,7 +63,7 @@ class DetailRecordView extends BaseRecordView {
      * @property {string} [inlineEditDisabled] Disable inline edit.
      * @property {boolean} [buttonsDisabled] Disable buttons.
      * @property {string} [navigateButtonsDisabled]
-     * @property {Object} [dynamicLogicDefs]
+     * @property {module:dynamic-logic~defs} [dynamicLogicDefs]
      * @property {module:view-record-helper} [recordHelper] A record helper. For a form state management.
      * @property {Object.<string, *>} [attributes]
      * @property {module:views/record/detail~button[]} [buttonList] Buttons.
@@ -141,6 +141,7 @@ class DetailRecordView extends BaseRecordView {
      * @property {string} [labelText] A label text (not-translatable).
      * @property {boolean} [noLabel] No label.
      * @property {string} [label] A translatable label (using the `fields` category).
+     * @property {string|null} [labelTranslation] A label translation path. As of v9.4.
      * @property {1|2|3|4} [span] A width.
      */
 
@@ -451,8 +452,7 @@ class DetailRecordView extends BaseRecordView {
      * Dynamic logic. Can be overridden by an option parameter.
      *
      * @protected
-     * @type {Object}
-     * @todo Add typedef.
+     * @type {module:dynamic-logic~defs}
      */
     dynamicLogicDefs = {}
 
@@ -846,7 +846,8 @@ class DetailRecordView extends BaseRecordView {
         if (this.duplicateAction) {
             if (
                 this.getAcl().check(this.entityType, 'create') &&
-                !this.getMetadata().get(['clientDefs', this.scope, 'duplicateDisabled'])
+                !this.getMetadata().get(['clientDefs', this.scope, 'duplicateDisabled']) &&
+                !this.getMetadata().get(['clientDefs', this.scope, 'createDisabled'])
             ) {
                 this.addDropdownItem({
                     label: 'Duplicate',
@@ -2001,7 +2002,7 @@ class DetailRecordView extends BaseRecordView {
         this.navigateButtonsDisabled = this.options.navigateButtonsDisabled ||
             this.navigateButtonsDisabled;
         this.portalLayoutDisabled = this.options.portalLayoutDisabled || this.portalLayoutDisabled;
-        this.dynamicLogicDefs = this.options.dynamicLogicDefs || this.dynamicLogicDefs;
+        this.dynamicLogicDefs = this.options.dynamicLogicDefs ?? this.dynamicLogicDefs;
 
         this.accessControlDisabled = this.options.accessControlDisabled || this.accessControlDisabled;
 
@@ -3272,6 +3273,10 @@ class DetailRecordView extends BaseRecordView {
                         }
                     }
 
+                    if (this.dynamicLogicDefs?.cascadingFields?.[name]) {
+                        o.cascadingLogic = this.dynamicLogicDefs?.cascadingFields?.[name];
+                    }
+
                     const cell = {
                         name: name + 'Field',
                         view: view,
@@ -3288,6 +3293,9 @@ class DetailRecordView extends BaseRecordView {
                     if ('labelText' in cellDefs) {
                         o.labelText = cellDefs.labelText;
                         cell.customLabel = cellDefs.labelText;
+                    } else if (cellDefs.labelTranslation) {
+                        o.labelText = this.getLanguage().translatePath(cellDefs.labelTranslation);
+                        cell.customLabel = o.labelText;
                     }
 
                     if ('customLabel' in cellDefs) {
@@ -3522,9 +3530,9 @@ class DetailRecordView extends BaseRecordView {
             url = this.returnUrl;
         } else {
             if (after === 'delete') {
-                url = this.options.rootUrl || '#' + this.scope;
+                url = this.options.rootUrl ?? `#${this.scope}`;
 
-                if (this.options.rootUrl) {
+                if (url !== `#${this.scope}`) {
                     this.getRouter().navigate(url, {trigger: true});
 
                     return;
@@ -3554,11 +3562,11 @@ class DetailRecordView extends BaseRecordView {
                     this.getRouter().dispatch(this.scope, 'view', options);
                 }
             } else {
-                url = this.options.rootUrl || '#' + this.scope;
+                url = this.options.rootUrl ?? '#' + this.scope;
             }
         }
 
-        if (this.returnDispatchParams) {
+        if (this.returnDispatchParams && this.returnDispatchParams.controller) {
             const controller = this.returnDispatchParams.controller;
             const action = this.returnDispatchParams.action;
             options = this.returnDispatchParams.options || {};

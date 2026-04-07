@@ -41,26 +41,26 @@ interface Crud
     /**
      * Create a record.
      *
-     * @return TEntity
+     * @return CreateResult<TEntity>
      */
-    public function create(stdClass $data, CreateParams $params): Entity;
+    public function create(stdClass $data, CreateParams $params): CreateResult;
 
     /**
      * Read a record.
      *
-     * @return TEntity
+     * @return ReadResult<TEntity>
      */
-    public function read(string $id, ReadParams $params): Entity;
+    public function read(string $id, ReadParams $params): ReadResult;
 
     /**
      * Update a record.
      *
-     * @return TEntity
+     * @return UpdateResult<TEntity>
      */
-    public function update(string $id, stdClass $data, UpdateParams $params): Entity;
+    public function update(string $id, stdClass $data, UpdateParams $params): UpdateResult;
 
     /**
      * Delete a record.
      */
-    public function delete(string $id, DeleteParams $params): void;
+    public function delete(string $id, DeleteParams $params): DeleteResult;
 }

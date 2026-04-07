@@ -32,6 +32,7 @@ import MainView from 'views/main';
 import SearchManager from 'search-manager';
 import RecordModal from 'helpers/record-modal';
 import Utils from 'utils';
+import PipelinesHelper from 'helpers/misc/pipelines';
 
 /**
  * A list view.
@@ -203,10 +204,10 @@ class ListView extends MainView {
         this.rootData = {};
 
         /**
-         * @type {string}
+         * @type {string|null}
          * @protected
          */
-        this._primaryFilter = this.options.params.primaryFilter;
+        this._primaryFilter = this.options.params.primaryFilter ?? null;
         this._fromAdmin = this.options.params.fromAdmin;
 
         this.setupModes();
@@ -284,12 +285,21 @@ class ListView extends MainView {
 
         if (viewModeList) {
             this.viewModeList = viewModeList;
-        }
-        else {
+        } else {
             this.viewModeList = [this.MODE_LIST];
 
-            if (this.getMetadata().get(['clientDefs', this.scope, 'kanbanViewMode'])) {
-                if (!~this.viewModeList.indexOf(this.MODE_KANBAN)) {
+            // @todo Mode defs in metadata. Availability is checked in a handler class.
+
+            if (
+                this.getMetadata().get(`clientDefs.${this.scope}.kanbanViewMode`) &&
+                !this.viewModeList.includes(this.MODE_KANBAN)
+            ) {
+                const pipelinesHelper = new PipelinesHelper();
+
+                if (
+                    !pipelinesHelper.isEnabled(this.scope) ||
+                    pipelinesHelper.get(this.scope).length
+                ) {
                     this.viewModeList.push(this.MODE_KANBAN);
                 }
             }
@@ -785,7 +795,8 @@ class ListView extends MainView {
      * params.options.categoryName = this.currentCategoryName;
      * ```
      *
-     * @param {Object} params Parameters to be modified.
+     * @param {{controller?: string, action?: string|null, options?: Record}} params Parameters to be modified.
+     * Unset `controller` if bypass return dispatching (to force to come back to the `returnUrl`).
      */
     prepareCreateReturnDispatchParams(params) {}
 

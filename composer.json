@@ -25,7 +25,6 @@
         "dragonmantank/cron-expression": "^3.4",
         "laminas/laminas-ldap": "2.20.x-dev#e7b9fe0e295f3898fb97d08b320654c92849918a",
         "monolog/monolog": "^3.9",
-        "zordius/lightncandy": "dev-espo#v1.2.5e",
         "composer/semver": "^3",
         "spatie/async": "^1.8.1",
         "symfony/process": "^7",
@@ -37,7 +36,6 @@
         "michelf/php-markdown": "^1.9",
         "robthree/twofactorauth": "^1.8",
         "nesbot/carbon": "^3.11.0",
-        "zbateson/mail-mime-parser": "^3.0",
         "phpoffice/phpspreadsheet": "^5.0",
         "doctrine/dbal": "^3.10",
         "league/flysystem-async-aws-s3": "^3.0",
@@ -55,7 +53,10 @@
         "psr/clock": "^1.0",
         "react/child-process": "^0.6.6",
         "lasserafn/php-initial-avatar-generator": "dev-update-image-lib#a46ab8f1427f93c5b37957e739205da7fcca0290",
-        "directorytree/imapengine": "^1.19"
+        "directorytree/imapengine": "^1.19",
+        "zbateson/mail-mime-parser": "^3.0",
+        "guzzlehttp/guzzle": "^7.10",
+        "devtheorem/php-handlebars": "^1.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.5",
@@ -86,15 +87,14 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "tests\\": "tests/",
+            "tests\\unit\\": "tests/unit/",
+            "tests\\integration\\": "tests/integration/",
+            "tests\\unit\\Espo\\": "tests/unit/Espo/",
+            "tests\\integration\\Espo\\": "tests/integration/Espo/",
             "EspoDev\\": "dev/"
         }
     },
     "repositories": [
-        {
-            "type": "git",
-            "url": "https://github.com/yurikuzn/lightncandy.git"
-        },
         {
             "type": "git",
             "url": "https://github.com/yurikuzn/laminas-ldap.git"

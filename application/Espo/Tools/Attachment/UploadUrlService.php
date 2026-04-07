@@ -72,7 +72,7 @@ class UploadUrlService
      */
     public function uploadImage(string $url, FieldData $data): Attachment
     {
-        if (!$this->urlCheck->isNotInternalUrl($url)) {
+        if (!$this->urlCheck->isUrlAndNotIternal($url)) {
             throw new ForbiddenSilent("Not allowed URL.");
         }
 
@@ -114,9 +114,20 @@ class UploadUrlService
     /**
      * @param non-empty-string $url
      * @return ?array{string, string} A type and contents.
+     * @throws ForbiddenSilent
      */
     private function getImageDataByUrl(string $url): ?array
     {
+        $resolve = $this->urlCheck->getCurlResolve($url);
+
+        if ($resolve === []) {
+            throw new ForbiddenSilent("Could not resolve the host.");
+        }
+
+        if ($resolve !== null && !$this->urlCheck->validateCurlResolveNotInternal($resolve)) {
+            throw new ForbiddenSilent("Forbidden host.");
+        }
+
         $type = null;
 
         if (!function_exists('curl_init')) {
@@ -144,6 +155,10 @@ class UploadUrlService
         $opts[\CURLOPT_PROTOCOLS] = \CURLPROTO_HTTPS | \CURLPROTO_HTTP;
         $opts[\CURLOPT_REDIR_PROTOCOLS] = \CURLPROTO_HTTPS;
 
+        if ($resolve) {
+            $opts[CURLOPT_RESOLVE] = $resolve;
+        }
+
         $ch = curl_init();
 
         curl_setopt_array($ch, $opts);
@@ -152,8 +167,6 @@ class UploadUrlService
         $response = curl_exec($ch);
 
         if ($response === false) {
-            curl_close($ch);
-
             return null;
         }
 
@@ -184,8 +197,6 @@ class UploadUrlService
 
             $type = $this->mimeType->getMimeTypeByExtension($extension);
         }
-
-        curl_close($ch);
 
         if (!$type) {
             return null;

@@ -36,8 +36,11 @@ use Espo\Core\Api\Response;
 use Espo\Core\Api\ResponseComposer;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Exceptions\NotFound;
+use Espo\Entities\Attachment;
 use Espo\Entities\Email;
 use Espo\Entities\User;
+use Espo\ORM\EntityManager;
 use Espo\Tools\Email\ImportEmlService;
 
 /**
@@ -45,10 +48,13 @@ use Espo\Tools\Email\ImportEmlService;
  */
 class PostImportEml implements Action
 {
+    private const string RELATED_TYPE = 'ImportEml';
+
     public function __construct(
         private Acl $acl,
         private User $user,
         private ImportEmlService $service,
+        private EntityManager $entityManager,
     ) {}
 
     public function process(Request $request): Response
@@ -61,9 +67,38 @@ class PostImportEml implements Action
             throw new BadRequest("No 'fileId'.");
         }
 
-        $email = $this->service->import($fileId, $this->user->getId());
+        $attachment = $this->getAttachment($fileId);
+
+        $email = $this->service->import($attachment, $this->user->getId());
 
         return ResponseComposer::json(['id' => $email->getId()]);
+    }
+
+    /**
+     * @throws NotFound
+     * @throws Forbidden
+     */
+    private function getAttachment(string $fileId): Attachment
+    {
+        $attachment = $this->entityManager->getRDBRepositoryByClass(Attachment::class)->getById($fileId);
+
+        if (!$attachment) {
+            throw new NotFound("Attachment not found.");
+        }
+
+        if (!$this->acl->checkEntityRead($attachment)) {
+            throw new Forbidden("No access to attachment.");
+        }
+
+        if ($attachment->getCreatedBy()?->getId() !== $this->user->getId()) {
+            throw new Forbidden("Attachment is not owned.");
+        }
+
+        if ($attachment->getRelatedType() !== self::RELATED_TYPE) {
+            throw new Forbidden("Attachment is not for import EML.");
+        }
+
+        return $attachment;
     }
 
     /**

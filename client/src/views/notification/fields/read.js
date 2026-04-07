@@ -36,6 +36,10 @@ class NotificationReadFieldView extends BaseFieldView {
 
     inlineEditDisabled = true
 
+    getAttributeList() {
+        return ['read'];
+    }
+
     data() {
         return {
             isRead: this.model.get('read'),

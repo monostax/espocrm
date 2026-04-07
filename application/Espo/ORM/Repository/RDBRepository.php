@@ -29,7 +29,8 @@
 
 namespace Espo\ORM\Repository;
 
-use Espo\Core\ORM\Repository\Option\SaveContext;
+use Espo\ORM\Defs\Params\RelationParam;
+use Espo\ORM\Repository\Option\SaveContext;
 use Espo\ORM\Defs\RelationDefs;
 use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
@@ -66,6 +67,13 @@ class RDBRepository implements Repository
 
     protected HookMediator $hookMediator;
     protected RDBTransactionManager $transactionManager;
+
+    /**
+     * To save and remove in a DB transaction.
+     *
+     * @since 10.0.0
+     */
+    protected bool $transactionalSave = false;
 
     public function __construct(
         protected string $entityType,
@@ -137,6 +145,29 @@ class RDBRepository implements Repository
             $options[SaveContext::NAME] = new SaveContext();
         }
 
+        $context = $options[SaveContext::NAME];
+
+        if ($context instanceof SaveContext) {
+            $context->setIsNew($entity->isNew());
+        }
+
+        if ($this->transactionalSave) {
+            $this->entityManager->getTransactionManager()->run(function () use ($entity, $options) {
+                $this->saveInternal($entity, $options);
+            });
+        } else {
+            $this->saveInternal($entity, $options);
+        }
+
+        $this->lateAfterSave($entity, $options);
+    }
+
+    /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    private function saveInternal(Entity $entity, array $options = []): void
+    {
         $this->processCheckEntity($entity);
 
         if ($entity instanceof BaseEntity) {
@@ -192,6 +223,13 @@ class RDBRepository implements Repository
     }
 
     /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    protected function lateAfterSave(Entity $entity, array $options): void
+    {}
+
+    /**
      * Restore a record flagged as deleted.
      */
     public function restoreDeleted(string $id): void
@@ -221,9 +259,34 @@ class RDBRepository implements Repository
      */
     public function remove(Entity $entity, array $options = []): void
     {
+        if ($this->transactionalSave) {
+            $this->entityManager->getTransactionManager()->run(function () use ($entity, $options) {
+                $this->removeInternal($entity, $options);
+            });
+        } else {
+            $this->removeInternal($entity, $options);
+        }
+
+        $this->lateAfterRemove($entity, $options);
+    }
+
+    /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    protected function lateAfterRemove(Entity $entity, array $options): void
+    {}
+
+    /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    private function removeInternal(Entity $entity, array $options = []): void
+    {
         $this->processCheckEntity($entity);
         $this->beforeRemove($entity, $options);
         $this->getMapper()->delete($entity);
+        $this->cascadeRemoveRelated($entity, $options);
         $this->afterRemove($entity, $options);
     }
 
@@ -495,19 +558,6 @@ class RDBRepository implements Repository
         $builder = new RDBSelectBuilder($this->entityManager, $this->entityType);
 
         return $builder;
-    }
-
-    /**
-     * Create a select builder.
-     *
-     * @return RDBSelectBuilder<TEntity>
-     *
-     * @deprecated Since v9.2.5. Use `createBuilder` instead.
-     * @todo Remove in v10.0.
-     */
-    protected function createSelectBuilder(): RDBSelectBuilder
-    {
-        return $this->createBuilder();
     }
 
     /**
@@ -785,5 +835,64 @@ class RDBRepository implements Repository
         }
 
         $mapper->deleteFromDb($this->entityType, $id, $onlyDeleted);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function cascadeRemoveRelated(Entity $entity, array $options): void
+    {
+        $relations = $this->entityManager
+            ->getDefs()
+            ->getEntity($this->entityType)
+            ->getRelationList();
+
+        foreach ($relations as $relation) {
+            if (!$relation->getParam(RelationParam::CASCADE_REMOVAL)) {
+                continue;
+            }
+
+            $this->cascadeRemoveRelation($entity, $relation, $options);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function cascadeRemoveRelation(Entity $entity, RelationDefs $relation, array $options): void
+    {
+        $foreignEntityType = $relation->tryGetForeignEntityType();
+        $foreign = $relation->tryGetForeignRelationName();
+
+        if (!$foreignEntityType || !$foreign) {
+            return;
+        }
+
+        $foreignType = $this->entityManager
+            ->getDefs()
+            ->tryGetEntity($foreignEntityType)
+            ?->tryGetRelation($foreign)
+            ?->getType();
+
+        if (!$foreignType) {
+            return;
+        }
+
+        if (!Util::isRelationshipEligibleForCascadeRemoval($relation->getType(), $foreignType)) {
+            return;
+        }
+
+        $link = $relation->getName();
+
+        $collection = $this->entityManager
+            ->getRelation($entity, $link)
+            ->sth()
+            ->find();
+
+        unset($options[SaveContext::NAME]);
+
+        foreach ($collection as $relatedEntity) {
+            $this->entityManager->removeEntity($relatedEntity, $options);
+        }
     }
 }

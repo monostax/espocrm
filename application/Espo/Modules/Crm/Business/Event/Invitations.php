@@ -129,7 +129,6 @@ class Invitations
         $subject = $htmlizer->render(
             $entity,
             $subjectTpl,
-            "$type-email-subject-{$entity->getEntityType()}",
             $data,
             true,
             true
@@ -138,7 +137,6 @@ class Invitations
         $body = $htmlizer->render(
             $entity,
             $bodyTpl,
-            "$type-email-body-{$entity->getEntityType()}",
             $data,
             false,
             true
@@ -151,7 +149,7 @@ class Invitations
             ->setSubject($subject)
             ->setBody($body)
             ->setIsHtml()
-            ->setParent(LinkParent::createFromEntity($entity));
+            ->setParent(LinkParent::fromEntity($entity));
 
         $attachmentName = ucwords($this->language->translateLabel($entity->getEntityType(), 'scopeNames')) . '.ics';
 
@@ -195,7 +193,7 @@ class Invitations
             $terminateAt = $dt->format(DateTimeUtil::SYSTEM_DATE_TIME_FORMAT);
         }
 
-        $uid->setTarget(LinkParent::createFromEntity($entity));
+        $uid->setTarget(LinkParent::fromEntity($entity));
         $uid->setTerminateAt(DateTimeField::fromString($terminateAt));
 
         $this->entityManager->saveEntity($uid);

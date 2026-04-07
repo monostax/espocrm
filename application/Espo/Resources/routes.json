@@ -356,6 +356,21 @@
         "actionClassName": "Espo\\Tools\\Notification\\Api\\GetGroup"
     },
     {
+        "route": "/Notification/group",
+        "method": "get",
+        "actionClassName": "Espo\\Tools\\Notification\\Api\\GetGroupAll"
+    },
+    {
+        "route": "/Notification/group/:id",
+        "method": "delete",
+        "actionClassName": "Espo\\Tools\\Notification\\Api\\DeleteGroup"
+    },
+    {
+        "route": "/Notification/group/:id/markRead",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\Notification\\Api\\MarkGroupRead"
+    },
+    {
         "route": "/EmailTemplate/:id/prepare",
         "method": "post",
         "actionClassName": "Espo\\Tools\\EmailTemplate\\Api\\PostPrepare"
@@ -684,5 +699,15 @@
             "id": ":id",
             "link": ":link"
         }
+    },
+    {
+        "route": "Pipeline/:id/move/:type",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\Pipeline\\Api\\PostMove"
+    },
+    {
+        "route": "PipelineStage/:id/move/:type",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\Pipeline\\Api\\PostStageMove"
     }
 ]

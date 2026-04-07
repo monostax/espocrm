@@ -41,12 +41,7 @@ class AssignNotificationItemView extends BaseNotificationItemView {
 
         this.messageData['entityType'] = this.translateEntityType(data.entityType);
 
-        this.messageData['entity'] =
-            $('<a>')
-                .attr('href', '#' + data.entityType + '/view/' + data.entityId)
-                .attr('data-id', data.entityId)
-                .attr('data-scope', data.entityType)
-                .text(data.entityName);
+        this.messageData['entity'] = 'field:related';
 
         this.messageData['user'] =
             $('<a>')

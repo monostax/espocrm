@@ -108,32 +108,6 @@ abstract class BaseQueryComposer implements QueryComposer
 
     protected const EXISTS_OPERATOR = 'EXISTS';
 
-    /** @var string[] */
-    private array $comparisonOperators = [
-        '!=s',
-        '=s',
-        '!=',
-        '!*',
-        '*',
-        '>=',
-        '<=',
-        '>',
-        '<',
-        '=',
-        '>=any',
-        '<=any',
-        '>any',
-        '<any',
-        '!=any',
-        '=any',
-        '>=all',
-        '<=all',
-        '>all',
-        '<all',
-        '!=all',
-        '=all',
-    ];
-
     /** @var array<string, string> */
     protected array $comparisonOperatorMap = [
         '!=s' => 'NOT IN',
@@ -2522,23 +2496,11 @@ abstract class BaseQueryComposer implements QueryComposer
      */
     private function splitWhereLeftItem(string $item): array
     {
-        if (preg_match('/^[a-z0-9]+$/i', $item)) {
-            return [$item, '=', '='];
-        }
+        [$expression, $operator] = Util::splitWhereKey($item);
 
-        foreach ($this->comparisonOperators as $operator) {
-            $sqlOperator = $this->comparisonOperatorMap[$operator] ?? $operator;
+        $sqlOperator = $this->comparisonOperatorMap[$operator] ?? $operator;
 
-            if (!str_ends_with($item, $operator)) {
-                continue;
-            }
-
-            $expression = trim(substr($item, 0, -strlen($operator)));
-
-            return [$expression, $sqlOperator, $operator];
-        }
-
-        return [$item, '=', '='];
+        return [$expression, $sqlOperator, $operator];
     }
 
     /**
@@ -3029,20 +2991,16 @@ abstract class BaseQueryComposer implements QueryComposer
 
     /**
      * Sanitize a string.
-     * @todo Make protected in v10.0.
-     * @deprecated As of v6.0. Not to be used outside.
      */
-    public function sanitize(string $string): string
+    protected function sanitize(string $string): string
     {
         return preg_replace('/[^A-Za-z0-9_]+/', '', $string) ?? '';
     }
 
     /**
      * Sanitize an alias for a SELECT statement.
-     * @todo Make protected in v10.0.
-     * @deprecated As of v6.0. Not to be used outside.
      */
-    public function sanitizeSelectAlias(string $string): string
+    protected function sanitizeSelectAlias(string $string): string
     {
         $string = preg_replace('/[^A-Za-z\r\n0-9_:\'" .,\-()]+/', '', $string) ?? '';
 

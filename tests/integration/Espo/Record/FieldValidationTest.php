@@ -95,7 +95,8 @@ class FieldValidationTest extends BaseTestCase
                     'name' => 'test'
                 ],
                 CreateParams::create()
-            );
+            )
+            ->getEntity();
 
         $this->expectException(BadRequest::class);
 
@@ -549,7 +550,7 @@ class FieldValidationTest extends BaseTestCase
 
         $account = $service->create((object) [
             'name' => 'Test',
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $isThrown = false;
 
@@ -716,5 +717,40 @@ class FieldValidationTest extends BaseTestCase
             $isThrown = true;
         }
         $this->assertFalse($isThrown);
+    }
+
+    /**
+     * @noinspection PhpUnhandledExceptionInspection
+     */
+    public function testDependsOn(): void
+    {
+        $app = $this->createApplication();
+
+        $this->setApplication($app);
+
+        $em = $this->getEntityManager();
+
+        $account = $em->createEntity('Account', [
+            'name' => 'Test',
+        ]);
+
+        $this->setFieldsDefs($app, 'Account', [
+            'description' => [
+                'required' => true,
+                'validationDependsOnFieldList' => ['name'],
+            ],
+        ]);
+
+        $this->setApplication($app);
+        $this->reCreateApplication();
+
+        $this->expectException(BadRequest::class);
+
+        $this->getContainer()
+            ->getByClass(ServiceContainer::class)
+            ->get('Account')
+            ->update($account->getId(), (object) [
+                'name' => 'Test 1',
+            ], UpdateParams::create());
     }
 }

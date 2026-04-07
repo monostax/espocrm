@@ -29,31 +29,52 @@
 
 namespace Espo\Core\Formula\Functions\EntityGroup;
 
-use Espo\Core\Formula\ArgumentList;
+use Espo\Core\Acl\SystemRestriction;
+use Espo\Core\Formula\EvaluatedArgumentList;
 use Espo\Core\Formula\Exceptions\BadArgumentType;
+use Espo\Core\Formula\Exceptions\Error;
+use Espo\Core\Formula\Exceptions\NotAllowedUsage;
+use Espo\Core\Formula\Exceptions\NotPassedEntity;
 use Espo\Core\Formula\Exceptions\TooFewArguments;
-use Espo\Core\Formula\Functions\BaseFunction;
+use Espo\Core\Formula\Func;
+use Espo\Core\ORM\Entity as CoreEntity;
+use Espo\ORM\Entity;
 
 /**
  * @noinspection PhpUnused
  */
-class ClearAttributeType extends BaseFunction
+class ClearAttributeType implements Func
 {
-    public function process(ArgumentList $args)
+    public function __construct(
+        private SystemRestriction $systemRestriction,
+        private ?Entity $entity = null,
+    ) {}
+
+    public function process(EvaluatedArgumentList $arguments): null
     {
-        if (count($args) < 1) {
+        $entity = $this->entity ?? throw new NotPassedEntity();
+
+        if (!$entity instanceof CoreEntity) {
+            throw new Error("Non-core entity.");
+        }
+
+        if (count($arguments) < 1) {
             throw TooFewArguments::create(1);
         }
 
-        $args = $this->evaluate($args);
-
-        $attribute = $args[0];
+        $attribute = $arguments[0];
 
         if (!is_string($attribute)) {
             throw BadArgumentType::create(1, 'string');
         }
 
-        $this->getEntity()->clear($attribute);
+        $entityType = $entity->getEntityType();
+
+        if (!$this->systemRestriction->checkAttributeWrite($entityType, $attribute)) {
+            throw new NotAllowedUsage("Cannot write restricted attribute $entityType.$attribute.");
+        }
+
+        $entity->clear($attribute);
 
         return null;
     }

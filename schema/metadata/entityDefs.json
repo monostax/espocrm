@@ -92,6 +92,10 @@
             "type": "boolean",
             "description": "Disable hooks. As of v8.2."
         },
+        "transactionalSave": {
+            "type": "boolean",
+            "description": "Enables record saving and removing in a DB transaction. As of v9.4."
+        },
         "entityClassName": {
             "type": "string",
             "description": "An entity. Should implement Espo\\ORM\\Entity. Usually should extend Espo\\Core\\ORM\\Entity. As of v8.2."
@@ -438,6 +442,27 @@
                         "properties": {
                             "type": {
                                 "anyOf": [
+                                    {"const": "enum"},
+                                    {"const": "multiEnum"},
+                                    {"const": "checklist"}
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "isSorted": {
+                                "type": "boolean",
+                                "description": "Sort the dropdown options alphabetically."
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
                                     {"const": "varchar"},
                                     {"const": "array"},
                                     {"const": "multiEnum"}
@@ -470,6 +495,10 @@
                             "copyToClipboard": {
                                 "type": "boolean",
                                 "description": "Display 'Copy to Clipboard' button."
+                            },
+                            "protocolRequired": {
+                                "type": "boolean",
+                                "description": "Require protocol. As of v9.4."
                             }
                         }
                     }
@@ -998,6 +1027,13 @@
                     "type": "boolean",
                     "description": "Always to perform validation, regardless whether field values are sent. As of v8.2."
                 },
+                "validationDependsOnFieldList": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Change of any of the listed fields triggers the validation. As of v9.4."
+                },
                 "validatorClassNameMap": {
                     "type": "object",
                     "description": "Validators defined as validation-type => class-name map. Classes should implement Espo\\Core\\FieldValidation\\Validator interface. If not defined for a type, metadata > fields > {fieldType} > validatorClassNameMap > {type} is used.",
@@ -1235,6 +1271,15 @@
                     },
                     "description": "Dependee attributes."
                 },
+                "massUpdateActionList": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Actions for mass update. Overrides the value from fields metadata."
+                },
+                "notLockable": {
+                    "type": "boolean",
+                    "description": "Is not locked when the record is locked. As of v9.4."
+                },
                 "select": {
                     "type": "object",
                     "description": "A custom complex expression to be used for the field when reading from DB. It's possible to define leftJoins and joins that are needed to be applied when the field is being selected.",
@@ -1333,11 +1378,6 @@
                                 "description": "Apply DISTINCT to the query."
                             }
                         }
-                    },
-                    "massUpdateActionList": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Actions for mass update. Overrides the value from fields metadata."
                     }
                 }
             }
@@ -1473,6 +1513,10 @@
                     "type": "boolean",
                     "description": "The link will be hidden from the user on the UI but not disabled."
                 },
+                "disabled": {
+                    "type": "boolean",
+                    "description": "Disables the link."
+                },
                 "apiSpecDisabled": {
                     "type": "boolean",
                     "description": "Do not print the link in the API specification. As of v9.3."
@@ -1593,6 +1637,28 @@
                             "deferredLoad": {
                                 "type": "boolean",
                                 "description": "When getting a related entity from an entity, it will be returned without loaded values. Values will be loaded on accessing. For belongsToParent there's the downside that it can return an entity even if it's deleted."
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
+                                    {"const": "hasMany"},
+                                    {"const": "hasChildren"},
+                                    {"const": "hasOne"},
+                                    {"const": "belongsTo"}
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "cascadeRemoval": {
+                                "type": "boolean",
+                                "description": "Cascade removal. Related records will be removed along with the parent record removal. Not allowed for many-to-many and many-to-one. As of v9.4."
                             }
                         }
                     }

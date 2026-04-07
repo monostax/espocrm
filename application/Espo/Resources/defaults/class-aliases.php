@@ -29,7 +29,7 @@
 
 // Aliases for backward compatibility or patches.
 $map = [
-    'Espo\\Core\\Hooks\\Base' => 'Espo\\Core\\Hook\\Deprecations\\BaseHook',
+    'Espo\\Core\\ORM\\Repository\\Option\\SaveContext' => 'Espo\\ORM\\Repository\\Option\\SaveContext',
     'Doctrine\\DBAL\\Platforms\\Keywords\\MariaDb102Keywords' => 'Espo\\Core\\Utils\\Database\\Dbal\\Platforms\\Keywords\\MariaDb102Keywords',
 ];
 

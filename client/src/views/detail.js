@@ -75,7 +75,7 @@ class DetailView extends MainView {
      *
      * @type {string}
      */
-    rootUrl = ''
+    rootUrl
 
     /**
      * Is return.
@@ -148,7 +148,7 @@ class DetailView extends MainView {
         this.headerView = this.options.headerView || this.headerView;
         this.recordView = this.options.recordView || this.recordView;
 
-        this.rootUrl = this.options.rootUrl || this.options.params.rootUrl || '#' + this.scope;
+        this.rootUrl = this.options.rootUrl ?? this.options.params.rootUrl ?? this.rootUrl ?? '#' + this.scope;
         this.isReturn = this.options.isReturn || this.options.params.isReturn || false;
 
         this.nameAttribute = this.getMetadata().get(`clientDefs.${this.entityType}.nameAttribute`) || 'name';
@@ -314,11 +314,11 @@ class DetailView extends MainView {
             o[option] = this.options[option];
         });
 
-        if (this.options.params && this.options.params.rootUrl) {
-            o.rootUrl = this.options.params.rootUrl;
-        }
+        const params = this.options.params ?? {};
 
-        if (this.options.params && this.options.params.rootData) {
+        o.rootUrl = this.rootUrl;
+
+        if (params.rootData) {
             o.rootData = this.options.params.rootData;
         }
 
@@ -408,6 +408,7 @@ class DetailView extends MainView {
             className: 'btn-s-wide',
             text: this.translate('Starred'),
             hidden: !isStarred,
+            style: 'text',
             //title: this.translate('Unstar'),
             onClick: () => this.actionUnstar(),
         }, true);
@@ -417,6 +418,7 @@ class DetailView extends MainView {
             iconHtml: '<span class="far fa-star fa-sm"></span>',
             className: 'btn-s-wide',
             text: this.translate('Star'),
+            style: 'text',
             //title: this.translate('Star'),
             hidden: isStarred || !this.model.has('isStarred'),
             onClick: () => this.actionStar(),

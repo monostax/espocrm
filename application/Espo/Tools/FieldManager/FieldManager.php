@@ -247,6 +247,8 @@ class FieldManager
 
         $type = $fieldDefs['type'] ?? $this->metadata->get(['entityDefs', $scope, 'fields', $name, 'type']);
 
+        $fieldDefs['type'] ??= $type;
+
         $this->processHook('beforeSave', $type, $scope, $name, $fieldDefs, ['isNew' => $isNew]);
 
         if ($this->metadata->get(['fields', $type, 'translatedOptions'])) {
@@ -405,6 +407,23 @@ class FieldManager
             }
         }
 
+        if (array_key_exists('dynamicLogicCascading', $fieldDefs)) {
+            if (!is_null($fieldDefs['dynamicLogicCascading'])) {
+                $logicDefs['cascadingFields'] ??= [];
+                $logicDefs['cascadingFields'][$name] = $fieldDefs['dynamicLogicCascading'];
+
+                $logicDefsToBeSet = true;
+            } else if (
+                $this->metadata->get(['logicDefs', $scope, 'cascadingFields', $name])
+            ) {
+                $this->prepareLogicDefsFields($logicDefs, $name);
+
+                $logicDefs['cascadingFields'][$name] = null;
+
+                $logicDefsToBeSet = true;
+            }
+        }
+
         if ($logicDefsToBeSet) {
             $this->metadata->set('logicDefs', $scope, $logicDefs);
 
@@ -548,6 +567,7 @@ class FieldManager
         $this->metadata->delete('logicDefs', $scope, [
             "fields.$name",
             "options.$name",
+            "cascadingFields.$name",
         ]);
 
         $this->metadata->save();
@@ -704,6 +724,12 @@ class FieldManager
                 FieldParam::TYPE => FieldType::JSON_OBJECT,
             ],
         ];
+
+        if ($this->metadata->get("scopes.$scope.lockable") === true) {
+            $additionalParamList['notLockable'] = [
+                FieldParam::TYPE => FieldType::BOOL,
+            ];
+        }
 
         $type = $fieldDefs[FieldParam::TYPE] ?? null;
 

@@ -33,6 +33,7 @@ class IdFieldView extends VarcharFieldView {
     searchTypeList = [
         'equals',
         'notEquals',
+        'isEmpty',
     ]
 }
 

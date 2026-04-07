@@ -101,7 +101,7 @@ class ListRecordView extends View {
      * @property {boolean} [forceSettings] Force settings. As of v9.2.0.
      * @property {boolean} [forceAllResultSelectable] Force select all result. As of v9.2.0.
      * @property {module:search-manager~whereItem} [allResultWhereItem] Where item for select all result. As of v9.2.0.
-     * @property {boolean} [storeSettings=true] To store settings. As of v9.4.0.
+     * @property {boolean} [storeSettings=true] To store settings. As of v10.0.0.
      */
 
     /**
@@ -656,12 +656,6 @@ class ListRecordView extends View {
             e.stopPropagation();
 
             this.actionQuickView({id: id});
-        },
-        /** @this ListRecordView */
-        'click [data-action="showMore"]': async function () {
-            this.showMoreRecords();
-
-            this.focusOnList();
         },
         'mousedown a.sort': function (e) {
             e.preventDefault();
@@ -2026,6 +2020,15 @@ class ListRecordView extends View {
             this.processLinkClick(target.dataset.id);
         });
 
+        this.addHandler('click', '[data-action="showMore"]', (e, target) => {
+            if (target.dataset.ownerCid && target.dataset.ownerCid  !== this.cid) {
+                return;
+            }
+
+            this.showMoreRecords();
+            this.focusOnList();
+        })
+
         if (typeof this.collection === 'undefined') {
             throw new Error('Collection has not been injected into views/record/list view.');
         }
@@ -2330,7 +2333,7 @@ class ListRecordView extends View {
 
     /** @private */
     setupMassActions() {
-        if (this.massActionsDisabled) {
+        if (this.massActionsDisabled || !this.checkboxes) {
             this.massActionList = [];
             this.checkAllResultMassActionList = [];
             this.massActionDefs = {};
@@ -2378,12 +2381,12 @@ class ListRecordView extends View {
         const metadataMassActionList = [
             ...this.getMetadata().get(['clientDefs', 'Global', 'massActionList']) || [],
             ...this.getMetadata().get(['clientDefs', this.scope, 'massActionList']) || [],
-        ];
+        ].filter((it, i, self) => self.indexOf(it) === i);
 
         const metadataCheckAllMassActionList = [
             ...this.getMetadata().get(['clientDefs', 'Global', 'checkAllResultMassActionList']) || [],
             ...this.getMetadata().get(['clientDefs', this.scope, 'checkAllResultMassActionList']) || [],
-        ];
+        ].filter((it, i, self) => self.indexOf(it) === i);
 
         metadataMassActionList.forEach(item => {
             const defs = /** @type {Espo.Utils~ActionAccessDefs & Espo.Utils~ActionAvailabilityDefs} */
@@ -2391,7 +2394,7 @@ class ListRecordView extends View {
 
             if (
                 !Espo.Utils.checkActionAvailability(this.getHelper(), defs) ||
-                !Espo.Utils.checkActionAccess(this.getAcl(), this.entityType, defs)
+                this.entityType && !Espo.Utils.checkActionAccess(this.getAcl(), this.entityType, defs)
             ) {
                 return;
             }
@@ -3254,7 +3257,7 @@ class ListRecordView extends View {
      */
     showMoreRecords(options, collection, $list, $showMore, callback) {
         collection = collection || this.collection;
-        $showMore =  $showMore || this.$el.find('.show-more');
+        $showMore =  $showMore || this.$el.find(`.show-more[data-owner-cid="${this.cid}"]`);
         $list = $list || this.$el.find(this.listContainerEl);
         options = options || {};
 
