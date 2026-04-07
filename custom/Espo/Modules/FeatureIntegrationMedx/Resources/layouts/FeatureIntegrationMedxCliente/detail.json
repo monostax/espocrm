@@ -2,20 +2,20 @@
     {
         "tabLabel": "$Overview",
         "name": "identificacaoPanel",
-        "label": "Conectar Cliente",
+        "label": "Identificação",
         "panelIconClass": "fas fa-user-injured",
         "gridRow": 1,
         "gridColSpan": 3,
         "rows": [
             [{"name": "name"}, {"name": "clienteId"}, {"name": "assinaturaId"}],
-            [{"name": "settings", "required": true}, {"name": "teams", "required": true}, {"name": "syncStatus"}]
+            [{"name": "contact"}, {"name": "credential"}, {"name": "syncStatus"}]
         ]
     },
     {
         "name": "contatoPanel",
         "label": "Contato",
         "panelIconClass": "fas fa-phone",
-        "gridRow": 2,
+        "gridRow": 1,
         "rows": [
             [{"name": "emailAddress"}],
             [{"name": "celular"}],
@@ -26,7 +26,7 @@
         "name": "dadosPessoaisPanel",
         "label": "Dados Pessoais",
         "panelIconClass": "fas fa-id-card",
-        "gridRow": 3,
+        "gridRow": 2,
         "gridColSpan": 3,
         "rows": [
             [{"name": "cpfCgc"}, {"name": "dataNascimento"}, {"name": "sexo"}],
@@ -35,9 +35,9 @@
     },
     {
         "name": "convenioPanel",
-        "label": "Convenio",
+        "label": "Convênio",
         "panelIconClass": "fas fa-file-medical",
-        "gridRow": 3,
+        "gridRow": 2,
         "rows": [
             [{"name": "convenio"}],
             [{"name": "idDoConvenio"}, {"name": "numeroMatricula"}],
@@ -47,9 +47,9 @@
     },
     {
         "name": "enderecoPanel",
-        "label": "Endereco",
+        "label": "Endereço",
         "panelIconClass": "fas fa-map-marker-alt",
-        "gridRow": 4,
+        "gridRow": 3,
         "rows": [
             [{"name": "enderecoResidencial"}, {"name": "bairroResidencial"}],
             [{"name": "cidadeResidencial"}, {"name": "estadoResidencial"}],
@@ -60,7 +60,7 @@
         "name": "detalhesPanel",
         "label": "Detalhes",
         "panelIconClass": "fas fa-tags",
-        "gridRow": 5,
+        "gridRow": 3,
         "rows": [
             [{"name": "escolaridade"}, {"name": "religiao"}],
             [{"name": "indicadoPor"}, {"name": "comoConheceu"}],
@@ -70,27 +70,18 @@
     },
     {
         "name": "observacaoPanel",
-        "label": "Observacao",
-        "gridRow": 6,
+        "label": "Observação",
+        "gridRow": 4,
         "rows": [
             [{"name": "observacoes", "fullWidth": true, "noLabel": true}]
         ]
     },
     {
         "name": "referenciasPanel",
-        "label": "Referencias",
-        "gridRow": 7,
+        "label": "Referências",
+        "gridRow": 5,
         "rows": [
             [{"name": "referencias", "fullWidth": true, "noLabel": true}]
-        ]
-    },
-    {
-        "name": "associacaoPanel",
-        "label": "Associacao",
-        "panelIconClass": "fas fa-link",
-        "gridRow": 8,
-        "rows": [
-            [{"name": "contact"}, {"name": "credential"}]
         ]
     }
 ]
