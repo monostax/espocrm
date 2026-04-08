@@ -27,9 +27,10 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-namespace Espo\Core\Upgrades\Migrations\V9_4;
+namespace Espo\Core\Upgrades\Migrations\V10_0;
 
 use Espo\Core\Upgrades\Migration\Script;
+use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Entities\Preferences;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
@@ -38,11 +39,13 @@ class AfterUpgrade implements Script
 {
     public function __construct(
         private EntityManager $entityManager,
+        private ConfigWriter $configWriter,
     ) {}
 
     public function run(): void
     {
         $this->updatePreferences();
+        $this->updateConfig();
     }
 
     private function updatePreferences(): void
@@ -70,5 +73,11 @@ class AfterUpgrade implements Script
             $preferences->set('notificationGrouping', true);
             $this->entityManager->saveEntity($preferences);
         }
+    }
+
+    private function updateConfig(): void
+    {
+        $this->configWriter->set('currencyNoJoinMode', true);
+        $this->configWriter->save();
     }
 }
