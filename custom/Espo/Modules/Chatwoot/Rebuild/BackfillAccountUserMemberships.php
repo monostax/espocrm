@@ -327,10 +327,16 @@ class BackfillAccountUserMemberships implements RebuildAction
 
         foreach ($orphanRows as $agent) {
             $orphanCount++;
-            $this->log->warning(
+            $this->log->debug(
                 "BackfillAccountUserMemberships: Pass 2 — orphan agent {$agent['id']} " .
                 "(name={$agent['name']}, accountId={$agent['chatwoot_account_id']}) " .
                 "has no chatwootUserId — cannot migrate to membership"
+            );
+        }
+
+        if ($orphanCount > 0) {
+            $this->log->info(
+                "BackfillAccountUserMemberships: Pass 2 — {$orphanCount} orphan agent(s) without chatwootUserId skipped (these are typically Automation Users)"
             );
         }
 

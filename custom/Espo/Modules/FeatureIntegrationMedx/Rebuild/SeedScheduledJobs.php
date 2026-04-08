@@ -16,11 +16,15 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'FeatureIntegrationMedx/ImportClientes',
             'scheduling' => '0 2 * * *',
         ],
-        [
-            'name' => 'MEDX: Rebind Anchors',
-            'job' => 'FeatureIntegrationMedx/RebindMedxAnchorsToCredential',
-            'scheduling' => '',
-        ],
+    ];
+
+    /**
+     * Jobs that were previously seeded but should be deactivated.
+     * RebindMedxAnchorsToCredential is triggered programmatically via JobSchedulerFactory,
+     * not via cron scheduling. An empty cron expression causes scheduler errors.
+     */
+    private const DEPRECATED_JOBS = [
+        'FeatureIntegrationMedx/RebindMedxAnchorsToCredential',
     ];
 
     public function __construct(
@@ -32,6 +36,10 @@ class SeedScheduledJobs implements RebuildAction
     {
         foreach (self::JOBS as $jobData) {
             $this->upsertJob($jobData);
+        }
+
+        foreach (self::DEPRECATED_JOBS as $jobName) {
+            $this->deactivateJob($jobName);
         }
     }
 
@@ -65,5 +73,20 @@ class SeedScheduledJobs implements RebuildAction
         ], [SaveOption::SKIP_ALL => true]);
 
         $this->log->info("SeedScheduledJobs [MEDX]: Created scheduled job '{$jobData['job']}'.");
+    }
+
+    private function deactivateJob(string $jobName): void
+    {
+        $existing = $this->entityManager
+            ->getRDBRepository(ScheduledJob::ENTITY_TYPE)
+            ->where(['job' => $jobName])
+            ->findOne();
+
+        if ($existing && $existing->get('status') === ScheduledJob::STATUS_ACTIVE) {
+            $existing->set('status', 'Inactive');
+            $this->entityManager->saveEntity($existing, [SaveOption::SKIP_ALL => true]);
+
+            $this->log->info("SeedScheduledJobs [MEDX]: Deactivated deprecated scheduled job '{$jobName}'.");
+        }
     }
 }

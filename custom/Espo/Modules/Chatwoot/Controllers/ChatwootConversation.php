@@ -10,21 +10,13 @@
 namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
-use Espo\Core\Di;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\ORM\EntityManager;
 
-class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base implements Di\EntityManagerAware
+class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
 {
-    use Di\EntityManagerSetter;
-
-    private function getEntityManager(): EntityManager
-    {
-        return $this->entityManager;
-    }
 
     /**
      * GET ChatwootConversation/action/statusCounts

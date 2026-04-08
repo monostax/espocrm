@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\PackEnterprise\\Rebuild\\SeedOAuthProviderGoogleCalendar"
+        "Espo\\Modules\\PackEnterprise\\Rebuild\\SeedOAuthProviderGoogleCalendar",
+        "Espo\\Modules\\PackEnterprise\\Rebuild\\CleanupDeprecatedScheduledJobs"
     ]
 }

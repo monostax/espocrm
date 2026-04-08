@@ -323,25 +323,34 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             if ($inboxIntegration) {
                 $desiredMembershipIdsForLabels = $desiredMembershipIds;
 
-                // Added memberships: create labels
-                $addedMembershipIds = array_diff($desiredMembershipIdsForLabels, $previousMembershipIds);
-
-                foreach ($addedMembershipIds as $membershipId) {
-                    if (isset($membershipsToLink[$membershipId])) {
-                        $this->createLabelForMembershipInbox($membershipsToLink[$membershipId], $inboxIntegration);
-                    }
-                }
-
-                // Removed memberships: delete labels
+                // Removed memberships: delete labels first to free up slots
                 $removedMembershipIds = array_diff($previousMembershipIds, $desiredMembershipIdsForLabels);
 
                 foreach ($removedMembershipIds as $membershipId) {
                     $this->deleteLabelForMembershipInbox($membershipId, $inboxIntegration);
                 }
 
+                // Added memberships: create labels
+                $addedMembershipIds = array_diff($desiredMembershipIdsForLabels, $previousMembershipIds);
+                $labelLimitReached = false;
+
+                foreach ($addedMembershipIds as $membershipId) {
+                    if ($labelLimitReached) {
+                        break;
+                    }
+                    if (isset($membershipsToLink[$membershipId])) {
+                        $labelLimitReached = !$this->createLabelForMembershipInbox($membershipsToLink[$membershipId], $inboxIntegration);
+                    }
+                }
+
                 // Reconcile labels for all desired memberships (create missing labels)
-                foreach ($membershipsToLink as $membership) {
-                    $this->reconcileLabelForMembershipInbox($membership, $inboxIntegration);
+                if (!$labelLimitReached) {
+                    foreach ($membershipsToLink as $membership) {
+                        if ($labelLimitReached) {
+                            break;
+                        }
+                        $labelLimitReached = !$this->reconcileLabelForMembershipInbox($membership, $inboxIntegration);
+                    }
                 }
             }
 
@@ -400,8 +409,10 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
     /**
      * Reconcile label for an existing membership-inbox combination (create if missing).
+     *
+     * @return bool True if successful or already exists, false if WAHA label limit reached.
      */
-    private function reconcileLabelForMembershipInbox(Entity $membership, Entity $inboxIntegration): void
+    private function reconcileLabelForMembershipInbox(Entity $membership, Entity $inboxIntegration): bool
     {
         // Check if label already exists
         $existingLabel = $this->entityManager
@@ -412,16 +423,20 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             ])
             ->findOne();
 
-        if (!$existingLabel) {
-            // Label doesn't exist, create it
-            $this->createLabelForMembershipInbox($membership, $inboxIntegration);
+        if ($existingLabel) {
+            return true;
         }
+
+        // Label doesn't exist, create it
+        return $this->createLabelForMembershipInbox($membership, $inboxIntegration);
     }
 
     /**
      * Create a WAHA label for a membership-inbox combination.
+     *
+     * @return bool True if successful or skipped (non-fatal), false if WAHA label limit reached.
      */
-    private function createLabelForMembershipInbox(Entity $membership, Entity $inboxIntegration): void
+    private function createLabelForMembershipInbox(Entity $membership, Entity $inboxIntegration): bool
     {
         try {
             // Check if label already exists
@@ -435,7 +450,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
             if ($existingLabel) {
                 $this->log->debug("SyncInboxMembersFromChatwoot: Label already exists for membership {$membership->getId()} + integration {$inboxIntegration->getId()}");
-                return;
+                return true;
             }
 
             // Get WAHA platform and session info
@@ -443,7 +458,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
             if (!$wahaPlatformId) {
                 $this->log->debug("SyncInboxMembersFromChatwoot: No wahaPlatformId for integration {$inboxIntegration->getId()}, skipping label creation");
-                return;
+                return true;
             }
 
             $wahaPlatform = $this->entityManager->getEntityById(
@@ -453,7 +468,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
             if (!$wahaPlatform) {
                 $this->log->debug("SyncInboxMembersFromChatwoot: WahaPlatform not found for integration {$inboxIntegration->getId()}");
-                return;
+                return true;
             }
 
             $platformUrl = $wahaPlatform->get('backendUrl');
@@ -462,7 +477,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
             if (!$platformUrl || !$apiKey || !$sessionName) {
                 $this->log->debug("SyncInboxMembersFromChatwoot: Missing WAHA credentials or session name");
-                return;
+                return true;
             }
 
             // Generate label name and color based on membership type
@@ -488,7 +503,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
             if (!$wahaLabelId) {
                 $this->log->error("SyncInboxMembersFromChatwoot: WAHA response missing label ID");
-                return;
+                return true;
             }
 
             // Create WahaSessionLabel record
@@ -504,9 +519,22 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             ], ['silent' => true]);
 
             $this->log->info("SyncInboxMembersFromChatwoot: Created WahaSessionLabel for membership {$membership->getId()} with WAHA ID {$wahaLabelId}");
+            return true;
 
         } catch (\Exception $e) {
-            $this->log->error("SyncInboxMembersFromChatwoot: Failed to create label for membership {$membership->getId()}: " . $e->getMessage());
+            $message = $e->getMessage();
+
+            // Detect WAHA label limit (WhatsApp allows max 20 labels per account)
+            if (str_contains($message, 'Maximum') && str_contains($message, 'labels allowed')) {
+                $this->log->warning(
+                    "SyncInboxMembersFromChatwoot: WAHA label limit reached for integration {$inboxIntegration->getId()} " .
+                    "(session: {$inboxIntegration->get('wahaSessionName')}). Remaining memberships will not get labels."
+                );
+                return false;
+            }
+
+            $this->log->error("SyncInboxMembersFromChatwoot: Failed to create label for membership {$membership->getId()}: " . $message);
+            return true;
         }
     }
 
