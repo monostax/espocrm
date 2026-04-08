@@ -65,6 +65,14 @@ class DeleteFromChatwoot
             return;
         }
 
+        // Skip if deletion originates from a sync job.
+        // When a sync job sees that Chatwoot no longer has this membership, it removes the
+        // CRM record to stay in sync — but calling back to Chatwoot is pointless (and dangerous)
+        // because the membership is already gone on the Chatwoot side.
+        if (!empty($options['skipChatwootSync'])) {
+            return;
+        }
+
         $this->log->info('DELETE HOOK CALLED for ChatwootAccountUserMembership: ' . $entity->getId());
 
         // --- Credential loading chain (Platform API path) ---

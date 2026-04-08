@@ -4,13 +4,16 @@ namespace Espo\Modules\PackEnterprise\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
+use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\PackEnterprise\Services\MsxGoogleCalendar as MsxGoogleCalendarService;
 use stdClass;
 
-class MsxGoogleCalendarUser extends \Espo\Core\Controllers\Record
+class MsxGoogleCalendarUser extends \Espo\Core\Controllers\Record implements Di\EntityManagerAware
 {
+    use Di\EntityManagerSetter;
+
     /**
      * POST MsxGoogleCalendarUser/:id/syncNow - Trigger an immediate sync.
      *

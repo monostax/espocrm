@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccountPhoneNumber as PhoneNumberService;
+use Espo\ORM\EntityManager;
 use stdClass;
 
 /**
@@ -30,10 +31,12 @@ use stdClass;
 class WhatsAppBusinessAccountPhoneNumber
 {
     private InjectableFactory $injectableFactory;
+    private EntityManager $entityManager;
 
-    public function __construct(InjectableFactory $injectableFactory)
+    public function __construct(InjectableFactory $injectableFactory, EntityManager $entityManager)
     {
         $this->injectableFactory = $injectableFactory;
+        $this->entityManager = $entityManager;
     }
 
     /**
@@ -164,7 +167,7 @@ class WhatsAppBusinessAccountPhoneNumber
         }
 
         // Get oAuthAccountId from the credential entity.
-        $entityManager = $this->injectableFactory->create(\Espo\ORM\EntityManager::class);
+        $entityManager = $this->entityManager;
         $credential = $entityManager->getEntityById('Credential', $credentialId);
 
         if (!$credential) {

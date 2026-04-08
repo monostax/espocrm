@@ -11,14 +11,20 @@ namespace Espo\Modules\FeaturePwaPush\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
-use Espo\Core\Controllers\Base;
 use Espo\Core\Utils\Config;
 
 /**
  * Controller for serving PWA manifest and service worker.
  */
-class PwaManifest extends Base
+class PwaManifest
 {
+    private Config $config;
+
+    public function __construct(Config $config)
+    {
+        $this->config = $config;
+    }
+
     /**
      * Get the web app manifest.
      */

@@ -11,12 +11,11 @@ namespace Espo\Modules\FeaturePwaPush\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
-use Espo\Core\Controllers\Base;
 
 /**
  * Controller for serving the service worker script.
  */
-class ServiceWorker extends Base
+class ServiceWorker
 {
     /**
      * Get the service worker JavaScript.

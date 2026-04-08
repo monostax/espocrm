@@ -205,49 +205,11 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
             }
 
             // --- Stale detection + removal ---
-            // Re-fetch local memberships (may have been created/updated above)
-            $allLocalMemberships = $this->entityManager
-                ->getRDBRepository('ChatwootAccountUserMembership')
-                ->where(['chatwootAccountId' => $espoAccountId])
-                ->find();
-
-            foreach ($allLocalMemberships as $membership) {
-                $userId = $membership->get('chatwootUserId');
-                $shouldRemove = false;
-
-                if (!$userId) {
-                    // Orphan membership — no linked user
-                    $shouldRemove = true;
-                } else {
-                    $localUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
-
-                    if (!$localUser) {
-                        // Orphan — ChatwootUser entity doesn't exist
-                        $shouldRemove = true;
-                    } else {
-                        $chatwootUserId = $localUser->get('chatwootUserId');
-
-                        if (!$chatwootUserId) {
-                            // Local user has no external Chatwoot user ID — can't verify
-                            continue;
-                        }
-
-                        if (!in_array($chatwootUserId, $remoteUserIds, true)) {
-                            // User was removed from the Chatwoot account
-                            $shouldRemove = true;
-                        }
-                    }
-                }
-
-                if ($shouldRemove) {
-                    $this->removeStaleMembership($membership);
-                    $stats['stale']++;
-                }
-            }
-
-            // NOTE: Cross-account orphan cleanup removed. Only directly affected users
-            // are cleaned up via removeStaleMembership() -> removeOrphanedUser() above.
-            // Scanning all users in the platform caused cross-account cascade deletions.
+            // SAFETY: We pass ['skipChatwootSync' => true] to removeEntity() so the
+            // DeleteFromChatwoot hook does NOT call back to Chatwoot. The membership is
+            // already gone on the Chatwoot side — calling back would be pointless and
+            // could cause cascading 401 failures if the API token was invalidated.
+            $this->removeStaleMembers($espoAccountId, $platformId, $remoteUserIds);
 
             $this->log->debug(
                 "SyncAccountMembersFromChatwoot: Account {$accountName} - " .
@@ -280,73 +242,52 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
     }
 
     /**
-     * Remove a stale membership.
+     * Remove memberships whose Chatwoot user is no longer in the remote response.
      *
-     * If the underlying ChatwootUser has no remaining memberships after
-     * removal, the user record is deleted too (platform user was deleted).
-     */
-    private function removeStaleMembership(Entity $membership): void
-    {
-        $membershipId = $membership->getId();
-        $chatwootUserId = $membership->get('chatwootUserId');
-
-        // Remove the membership
-        try {
-            $this->entityManager->removeEntity($membership);
-            $this->log->info(
-                "SyncAccountMembersFromChatwoot: Removed stale membership {$membershipId}"
-            );
-        } catch (\Exception $e) {
-            $this->log->error(
-                "SyncAccountMembersFromChatwoot: Failed to remove membership {$membershipId}: " .
-                $e->getMessage()
-            );
-        }
-
-        // If the ChatwootUser has no remaining memberships, remove it too
-        if ($chatwootUserId) {
-            $this->removeOrphanedUser($chatwootUserId);
-        }
-    }
-
-    /**
-     * Remove a ChatwootUser if it has no remaining memberships across any account.
+     * Uses ['skipChatwootSync' => true] so the DeleteFromChatwoot hook does NOT
+     * call back to Chatwoot — the membership is already gone on their side.
      *
-     * A user with zero memberships means the platform-level user was deleted
-     * from Chatwoot, so the CRM record should be cleaned up.
+     * @param array<int> $remoteUserIds Chatwoot user IDs seen in the current sync
      */
-    private function removeOrphanedUser(string $chatwootUserId): void
+    private function removeStaleMembers(string $espoAccountId, string $platformId, array $remoteUserIds): void
     {
-        $remainingMemberships = $this->entityManager
+        $allLocalMemberships = $this->entityManager
             ->getRDBRepository('ChatwootAccountUserMembership')
-            ->where(['chatwootUserId' => $chatwootUserId])
-            ->count();
+            ->where(['chatwootAccountId' => $espoAccountId])
+            ->find();
 
-        if ($remainingMemberships > 0) {
-            return;
-        }
+        foreach ($allLocalMemberships as $membership) {
+            $userId = $membership->get('chatwootUserId');
+            if (!$userId) {
+                continue;
+            }
 
-        $user = $this->entityManager->getEntityById('ChatwootUser', $chatwootUserId);
+            $localUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
+            if (!$localUser) {
+                continue;
+            }
 
-        if (!$user) {
-            return;
-        }
+            $chatwootUserId = $localUser->get('chatwootUserId');
+            if (!$chatwootUserId) {
+                continue;
+            }
 
-        if ($this->isAutomationUser($user)) {
-            return;
-        }
+            if (!in_array($chatwootUserId, $remoteUserIds, true)) {
+                $membershipName = $membership->get('name');
 
-        try {
-            $this->entityManager->removeEntity($user);
-            $this->log->info(
-                "SyncAccountMembersFromChatwoot: Removed orphaned ChatwootUser {$chatwootUserId} " .
-                "(chatwootUserId={$user->get('chatwootUserId')}, no remaining memberships)"
-            );
-        } catch (\Exception $e) {
-            $this->log->error(
-                "SyncAccountMembersFromChatwoot: Failed to remove orphaned ChatwootUser {$chatwootUserId}: " .
-                $e->getMessage()
-            );
+                try {
+                    $this->entityManager->removeEntity($membership, ['skipChatwootSync' => true]);
+                    $this->log->info(
+                        "SyncAccountMembersFromChatwoot: Removed stale membership '{$membershipName}' " .
+                        "(chatwootUserId={$chatwootUserId} no longer in remote response)"
+                    );
+                } catch (\Exception $e) {
+                    $this->log->error(
+                        "SyncAccountMembersFromChatwoot: Failed to remove membership {$membership->getId()}: " .
+                        $e->getMessage()
+                    );
+                }
+            }
         }
     }
 
@@ -358,16 +299,4 @@ class SyncAccountMembersFromChatwoot implements JobDataLess
         return (bool) preg_match('/HTTP\s+404\b/', $message);
     }
 
-    private function isAutomationUser(Entity $user): bool
-    {
-        $name = (string) ($user->get('name') ?? '');
-        if (strpos($name, 'Automation User - ') === 0) {
-            return true;
-        }
-
-        $email = (string) ($user->get('email') ?? '');
-
-        return strpos($email, 'automation.') === 0
-            && strpos($email, '@chatwoot.local') !== false;
-    }
 }
