@@ -32,6 +32,7 @@ namespace Espo\Core\Webhook;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Json;
+use Espo\Core\Utils\Security\UrlCheck;
 use Espo\Entities\Webhook;
 
 /**
@@ -42,8 +43,11 @@ class Sender
     private const CONNECT_TIMEOUT = 5;
     private const TIMEOUT = 10;
 
-    public function __construct(private Config $config)
-    {}
+    public function __construct(
+        private Config $config,
+        private UrlCheck $urlCheck,
+        private AddressUtil $addressUtil,
+    ) {}
 
     /**
      * @param array<int, mixed> $dataList
@@ -85,6 +89,30 @@ class Sender
             throw new Error("Webhook does not have URL.");
         }
 
+        if (!$this->urlCheck->isUrl($url)) {
+            throw new Error("'$url' is not valid URL.");
+        }
+
+        if (
+            !$this->addressUtil->isAllowedUrl($url) &&
+            !$this->urlCheck->isUrlAndNotIternal($url)
+        ) {
+            throw new Error("URL '$url' points to an internal host, not allowed.");
+        }
+
+        $resolve = $this->urlCheck->getCurlResolve($url);
+
+        if ($resolve === []) {
+            throw new Error("Could not resolve the host.");
+        }
+
+        /** @var string[] $allowedAddressList */
+        $allowedAddressList = $this->config->get('webhookAllowedAddressList') ?? [];
+
+        if ($resolve !== null && !$this->urlCheck->validateCurlResolveNotInternal($resolve, $allowedAddressList)) {
+            throw new Error("Forbidden host.");
+        }
+
         $handler = curl_init($url);
 
         if ($handler === false) {
@@ -102,6 +130,10 @@ class Sender
         curl_setopt($handler, \CURLOPT_REDIR_PROTOCOLS, \CURLPROTO_HTTPS);
         curl_setopt($handler, \CURLOPT_HTTPHEADER, $headerList);
         curl_setopt($handler, \CURLOPT_POSTFIELDS, $payload);
+
+        if ($resolve) {
+            curl_setopt($handler, CURLOPT_RESOLVE, $resolve);
+        }
 
         curl_exec($handler);
 
