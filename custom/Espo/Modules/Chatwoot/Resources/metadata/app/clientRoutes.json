@@ -1,4 +1,18 @@
 {
+    "ChatwootConversationBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/chatwoot-conversation-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
+    "OpportunityBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/opportunity-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
     "ChatwootInbox": {
         "params": {
             "controller": "chatwoot:controllers/chatwoot",

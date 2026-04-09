@@ -1,9 +1,33 @@
 <style>
 /* Modern Kanban Board Styles */
+.list-kanban-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: calc(100vh - 200px);
+    min-height: 500px;
+}
+
+.list-kanban-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.list-kanban-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.list-kanban-container::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1;
+    border-radius: 4px;
+}
+
+.list-kanban-container::-webkit-scrollbar-thumb:hover {
+    background-color: #a8a8a8;
+}
+
 .kanban-board {
-    display: flex;
+    display: inline-flex;
     gap: 1.5rem;
-    min-width: max-content;
     height: 100%;
     padding: 0.5rem;
 }
@@ -243,12 +267,10 @@
 }
 
 /* Override EspoCRM default kanban styles */
-.list-kanban-container {
-    overflow-x: auto;
-}
-
 .list-kanban {
     display: block !important;
+    width: fit-content;
+    min-width: 100%;
 }
 
 .kanban-head-container,

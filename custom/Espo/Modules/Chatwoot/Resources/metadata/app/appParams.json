@@ -10,5 +10,8 @@
     },
     "chatwootAccountEntityId": {
         "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootAccountEntityId"
+    },
+    "chatwootAccountName": {
+        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootAccountName"
     }
 }

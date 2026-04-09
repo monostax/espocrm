@@ -1,0 +1,7 @@
+{
+    "primaryFilterClassNameMap": {
+        "open": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\PrimaryFilters\\Open",
+        "won": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\PrimaryFilters\\Won",
+        "lost": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\PrimaryFilters\\Lost"
+    }
+}

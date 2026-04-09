@@ -164,17 +164,18 @@ define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item
 
         formatAmount: function (amount, currency) {
             if (!amount && amount !== 0) return null;
-            
+
             currency = currency || this.getConfig().get('defaultCurrency') || 'BRL';
             const decimalMark = this.getConfig().get('decimalMark') || ',';
             const thousandSeparator = this.getConfig().get('thousandSeparator') || '.';
-            
+
             const parts = parseFloat(amount).toFixed(2).split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, thousandSeparator);
-            
+
             const formattedNumber = parts.join(decimalMark);
-            
-            return currency + ' ' + formattedNumber;
+            const currencySymbol = this.getMetadata().get(['app', 'currency', 'symbolMap', currency]) || currency;
+
+            return currencySymbol + ' ' + formattedNumber;
         },
 
         formatCloseDate: function (closeDate) {

@@ -39,6 +39,17 @@
             "entity": "OpportunityStage",
             "view": "global:views/opportunity/fields/opportunity-stage"
         },
+        "opportunityStageStyle": {
+            "type": "foreign",
+            "link": "opportunityStage",
+            "field": "style",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "stageName": {
             "type": "varchar",
             "notStorable": true,
@@ -48,16 +59,39 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true
         },
-        "stageProbability": {
-            "type": "int",
-            "notStorable": true,
+        "status": {
+            "type": "enum",
+            "options": ["Open", "Won", "Lost"],
+            "default": "Open",
             "readOnly": true,
-            "min": 0,
-            "max": 100,
+            "displayAsLabel": true,
+            "labelType": "state",
+            "style": {
+                "Open": "default",
+                "Won": "success",
+                "Lost": "danger"
+            }
+        },
+        "stageProbability": {
+            "type": "foreign",
+            "link": "opportunityStage",
+            "field": "probability",
+            "readOnly": true,
+            "notStorable": true,
             "layoutListDisabled": true,
             "layoutDetailDisabled": true,
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "required": true,
+            "view": "views/fields/teams"
+        },
+        "assignedUser": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/assigned-user"
         }
     },
     "links": {
@@ -70,6 +104,12 @@
             "type": "belongsTo",
             "entity": "OpportunityStage",
             "foreign": "opportunities"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     },
     "indexes": {

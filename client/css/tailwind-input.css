@@ -7,6 +7,16 @@
 @source "../src";
 @source "../../html";
 
+/*
+ * Bootstrap compatibility overrides.
+ * Tailwind v4 generates utility classes like .collapse (visibility: collapse)
+ * and .container (max-width) that conflict with Bootstrap classes.
+ * These overrides are intentionally unlayered so they beat @layer utilities.
+ */
+.collapse {
+    visibility: visible;
+}
+
 /* Custom components */
 @layer components {
     /* Add custom component classes here */

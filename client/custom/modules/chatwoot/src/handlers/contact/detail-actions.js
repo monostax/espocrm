@@ -38,6 +38,7 @@ define('chatwoot:handlers/contact/detail-actions', [], function () {
          */
         sendMessage(data, event) {
             const chatwootAccountEntityId = this.view.getHelper().getAppParam('chatwootAccountEntityId');
+            const chatwootAccountName = this.view.getHelper().getAppParam('chatwootAccountName');
 
             if (!chatwootAccountEntityId) {
                 Espo.Ui.error(
@@ -53,6 +54,7 @@ define('chatwoot:handlers/contact/detail-actions', [], function () {
                     contactId: this.view.model.id,
                     contactName: this.view.model.get('name'),
                     chatwootAccountEntityId: chatwootAccountEntityId,
+                    chatwootAccountName: chatwootAccountName,
                     contactPhoneNumber: this.view.model.get('phoneNumber'),
                 },
                 (view) => {

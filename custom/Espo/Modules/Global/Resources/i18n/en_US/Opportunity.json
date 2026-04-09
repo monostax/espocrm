@@ -1,6 +1,7 @@
 {
     "fields": {
         "stage": "Stage (Deprecated)",
+        "status": "Status",
         "funnel": "Funnel",
         "opportunityStage": "Stage",
         "stageName": "Stage Name",
@@ -16,13 +17,26 @@
         "Drop here": "Drop here",
         "Show more": "Show more"
     },
+    "options": {
+        "status": {
+            "Open": "Open",
+            "Won": "Won",
+            "Lost": "Lost"
+        }
+    },
     "tooltips": {
         "stage": "This field is deprecated. Please use the 'Stage' link field instead, which allows custom stages.",
+        "status": "The current status of the opportunity. Automatically set based on the stage's probability (0 = Lost, 100 = Won, other = Open).",
         "funnel": "The sales funnel this opportunity belongs to. Stages will be filtered based on the selected funnel.",
         "opportunityStage": "The current stage of this opportunity. Stages are filtered by the selected funnel."
     },
     "messages": {
         "stageDeprecated": "The enum 'Stage' field has been replaced with a link to OpportunityStage. This allows custom stages with different probabilities and styles.",
         "selectFunnelFirst": "Please select a Funnel first."
+    },
+    "presetFilters": {
+        "open": "Open",
+        "won": "Won",
+        "lost": "Lost"
     }
 }

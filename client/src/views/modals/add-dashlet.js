@@ -66,8 +66,13 @@ class AddDashletModalView extends ModalView {
         this.translations = {};
 
         this.dashletList = dashletList.filter(item => {
+            const disabled = this.getMetadata().get(['dashlets', item, 'disabled']) || false;
             const aclScope = this.getMetadata().get(['dashlets', item, 'aclScope']) || null;
             const accessDataList = this.getMetadata().get(['dashlets', item, 'accessDataList']) || null;
+
+            if (disabled) {
+                return false;
+            }
 
             if (this.options.parentType === 'Settings') {
                 return true;

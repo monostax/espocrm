@@ -55,6 +55,16 @@
     text-transform: capitalize;
 }
 
+.channel-picker-modal .channel-meta {
+    font-size: 12px;
+    color: #999;
+}
+
+.channel-picker-modal .channel-account {
+    color: #666;
+    font-weight: 500;
+}
+
 .channel-picker-modal .channel-actions {
     display: flex;
     gap: 6px;
@@ -193,7 +203,12 @@
             </div>
             <div class="channel-info">
                 <div class="channel-name">{{inboxName}}</div>
-                <div class="channel-type">{{channelTypeLabel}}</div>
+                <div class="channel-meta">
+                    <span class="channel-type">{{channelTypeLabel}}</span>
+                    {{#if chatwootAccountName}}
+                    <span class="channel-account">• {{chatwootAccountName}}</span>
+                    {{/if}}
+                </div>
             </div>
             <div class="channel-actions">
                 {{#if hasConversation}}
@@ -236,7 +251,12 @@
             </div>
             <div class="channel-info">
                 <div class="channel-name">{{inboxName}}</div>
-                <div class="channel-type">{{channelTypeLabel}}</div>
+                <div class="channel-meta">
+                    <span class="channel-type">{{channelTypeLabel}}</span>
+                    {{#if chatwootAccountName}}
+                    <span class="channel-account">• {{chatwootAccountName}}</span>
+                    {{/if}}
+                </div>
             </div>
             {{#if hasPhoneNumber}}
             <div class="channel-actions">

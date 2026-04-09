@@ -1,50 +1,15 @@
 [
-    {
-        "tabLabel": "$Conversation",
-        "name": "chatwootIframeTab",
-        "rows": [
-            [
-                {
-                    "name": "chatwootIframe",
-                    "view": "chatwoot:views/chatwoot-conversation/fields/iframe-conversation",
-                    "noLabel": true,
-                    "span": 4
-                }
-            ]
-        ]
-    },
-    {
-        "tabBreak": true,
+   {
         "tabLabel": "$Overview",
-        "label": "Overview",
+        "name": "identificacaoPanel",
+        "label": "Identificação",
+        "panelIconClass": "fas fa-user-injured",
+        "gridRow": 1,
+        "gridColSpan": 2,
         "rows": [
-            [
-                {
-                    "name": "chatwootConversationId"
-                },
-                {
-                    "name": "status"
-                }
-            ],
-            [
-                {
-                    "name": "inbox"
-                },
-                {
-                    "name": "chatwootInboxId"
-                }
-            ],
             [
                 {
                     "name": "contact"
-                },
-                {
-                    "name": "chatwootContact"
-                }
-            ],
-            [
-                {
-                    "name": "contactInbox"
                 },
                 {
                     "name": "chatwootAccount"
@@ -52,46 +17,20 @@
             ]
         ]
     },
-    {
-        "label": "Activity",
-        "rows": [
-            [
-                {
-                    "name": "assigneeName"
-                },
-                {
-                    "name": "assigneeId"
-                }
-            ],
-            [
-                {
-                    "name": "messagesCount"
-                },
-                {
-                    "name": "lastActivityAt"
-                }
-            ],
-            [
-                {
-                    "name": "chatwootCreatedAt"
-                },
-                {
-                    "name": "lastSyncedAt"
-                }
-            ]
-        ]
-    },
-    {
-        "tabBreak": true,
-        "tabLabel": "$Opportunities",
-        "name": "opportunitiesTab",
+   {
+        "tabLabel": "$Overview",
+        "name": "identificacaoPanel2",
+        "label": "Identificação",
+        "panelIconClass": "fas fa-user-injured",
+        "gridRow": 1,
+        "gridColSpan": 2,
         "rows": [
             [
                 {
                     "name": "opportunitiesList",
                     "view": "global:views/fields/relationship-list",
                     "noLabel": true,
-                    "span": 4,
+                    "span": 2,
                     "options": {
                         "link": "opportunities",
                         "layout": "listSmall",

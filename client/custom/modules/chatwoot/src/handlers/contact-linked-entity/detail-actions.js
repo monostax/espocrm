@@ -43,6 +43,7 @@ define('chatwoot:handlers/contact-linked-entity/detail-actions', [], function ()
          */
         async sendMessage(data, event) {
             const chatwootAccountEntityId = this.view.getHelper().getAppParam('chatwootAccountEntityId');
+            const chatwootAccountName = this.view.getHelper().getAppParam('chatwootAccountName');
             const contactId = this.view.model.get('contactId');
             const contactName = this.view.model.get('contactName');
 
@@ -74,6 +75,7 @@ define('chatwoot:handlers/contact-linked-entity/detail-actions', [], function ()
                     contactId: contactId,
                     contactName: contactName,
                     chatwootAccountEntityId: chatwootAccountEntityId,
+                    chatwootAccountName: chatwootAccountName,
                     contactPhoneNumber: contactPhoneNumber,
                 },
                 (view) => {

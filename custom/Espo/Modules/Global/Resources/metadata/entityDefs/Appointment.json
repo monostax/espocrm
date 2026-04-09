@@ -77,6 +77,11 @@
         "modifiedBy": {
             "type": "link",
             "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "required": true,
+            "view": "views/fields/teams"
         }
     },
     "links": {
@@ -111,6 +116,12 @@
         "modifiedBy": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     },
     "collection": {

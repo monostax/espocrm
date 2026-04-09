@@ -211,7 +211,6 @@
         },
         "closeDate": {
             "type": "date",
-            "required": true,
             "audited": true
         },
         "description": {

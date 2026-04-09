@@ -35,6 +35,9 @@
         "detail": {
             "module": "Global"
         },
+        "detailSmall": {
+            "module": "Global"
+        },
         "filters": {
             "module": "Global"
         },

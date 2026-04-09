@@ -17,6 +17,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Modules\Crm\Controllers\Opportunity as CrmOpportunity;
 use Espo\Modules\Crm\Entities\Opportunity as OpportunityEntity;
+use Espo\ORM\Query\Part\Condition as Cond;
 use stdClass;
 
 /**
@@ -163,6 +164,61 @@ class Opportunity extends CrmOpportunity
             $dateTo,
             $useLastStage
         );
+    }
+
+    /**
+     * GET Opportunity/action/reportByOpportunityStage
+     *
+     * Returns open opportunities grouped by OpportunityStage.
+     * Supports optional funnel filtering.
+     *
+     * @throws BadRequest
+     * @throws Forbidden
+     */
+    public function getActionReportByOpportunityStage(Request $request): stdClass
+    {
+        if (!$this->acl->checkScope(OpportunityEntity::ENTITY_TYPE)) {
+            throw new Forbidden();
+        }
+
+        $dateFrom = $request->getQueryParam('dateFrom');
+        $dateTo = $request->getQueryParam('dateTo');
+        $dateFilter = $request->getQueryParam('dateFilter');
+        $funnelId = $request->getQueryParam('funnelId');
+
+        if (!$dateFilter) {
+            throw new BadRequest("No `dateFilter` parameter.");
+        }
+
+        return $this->buildOpportunityStageAmountReport($dateFilter, $dateFrom, $dateTo, $funnelId);
+    }
+
+    /**
+     * GET Opportunity/action/reportSalesPipelineByOpportunityStage
+     *
+     * Returns pipeline data grouped by OpportunityStage.
+     * Supports optional funnel and team filtering.
+     *
+     * @throws BadRequest
+     * @throws Forbidden
+     */
+    public function getActionReportSalesPipelineByOpportunityStage(Request $request): stdClass
+    {
+        if (!$this->acl->checkScope(OpportunityEntity::ENTITY_TYPE)) {
+            throw new Forbidden();
+        }
+
+        $dateFrom = $request->getQueryParam('dateFrom');
+        $dateTo = $request->getQueryParam('dateTo');
+        $dateFilter = $request->getQueryParam('dateFilter');
+        $funnelId = $request->getQueryParam('funnelId');
+        $teamId = $request->getQueryParam('teamId');
+
+        if (!$dateFilter) {
+            throw new BadRequest("No `dateFilter` parameter.");
+        }
+
+        return $this->buildOpportunityStagePipelineReport($dateFilter, $dateFrom, $dateTo, $funnelId, $teamId);
     }
 
     /**
@@ -371,7 +427,7 @@ class Opportunity extends CrmOpportunity
 
         $where = [
             'funnelId' => $funnelId,
-            'stage' => 'Closed Won',
+            'status' => 'Won',
         ];
         $this->applyDateFilter($where, $dateFilter, $dateFrom, $dateTo);
 
@@ -431,8 +487,8 @@ class Opportunity extends CrmOpportunity
         $where = ['funnelId' => $funnelId];
         $this->applyDateFilter($where, $dateFilter, $dateFrom, $dateTo);
 
-        // Exclude lost opportunities from pipeline
-        $where['stage!='] = 'Closed Lost';
+        // Exclude lost opportunities from pipeline (exclude probability = 0)
+        $where['status!='] = 'Lost';
 
         $queryBuilder = $this->entityManager
             ->getQueryBuilder()
@@ -470,6 +526,279 @@ class Opportunity extends CrmOpportunity
             'funnelId' => $funnelId,
             'useLastStage' => $useLastStage,
         ];
+    }
+
+    /**
+     * Build amount report grouped by OpportunityStage.
+     * Mirrors core "Opportunities by Stage" semantics by showing only open stages.
+     *
+     * @throws BadRequest
+     */
+    private function buildOpportunityStageAmountReport(
+        string $dateFilter,
+        ?string $dateFrom,
+        ?string $dateTo,
+        ?string $funnelId
+    ): stdClass {
+        $selectBuilderFactory = $this->injectableFactory->create(SelectBuilderFactory::class);
+        $baseQuery = $selectBuilderFactory
+            ->create()
+            ->from('Opportunity')
+            ->withStrictAccessControl()
+            ->build();
+
+        $conditionList = [
+            Cond::equal(Cond::column('status'), 'Open'),
+        ];
+
+        if ($funnelId) {
+            $conditionList[] = Cond::equal(Cond::column('funnelId'), $funnelId);
+        }
+
+        $conditionList[] = Cond::or(
+            $this->buildCloseDateFilterCondition($dateFilter, $dateFrom, $dateTo),
+            Cond::equal(Cond::column('closeDate'), null)
+        );
+
+        $queryBuilder = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->clone($baseQuery)
+            ->select([
+                'opportunityStageId',
+                'opportunityStageName',
+                ['SUM:(amountConverted)', 'amountSum'],
+                ['COUNT:(id)', 'count'],
+            ])
+            ->where(Cond::and(...$conditionList))
+            ->group('opportunityStageId');
+
+        $sth = $this->entityManager
+            ->getQueryExecutor()
+            ->execute($queryBuilder->build());
+
+        $rows = $sth->fetchAll(\PDO::FETCH_ASSOC);
+
+        $dataMap = [];
+
+        foreach ($rows as $row) {
+            $stageId = $row['opportunityStageId'] ?? null;
+
+            if (!$stageId) {
+                continue;
+            }
+
+            $dataMap[$stageId] = [
+                'stageId' => $stageId,
+                'stageName' => $row['opportunityStageName'] ?? null,
+                'value' => (float) ($row['amountSum'] ?? 0),
+                'count' => (int) ($row['count'] ?? 0),
+            ];
+        }
+
+        $stageList = $this->getOpportunityStageList($funnelId, array_keys($dataMap));
+        $dataList = [];
+
+        foreach ($stageList as $stage) {
+            if ($stage['probability'] <= 0 || $stage['probability'] >= 100) {
+                continue;
+            }
+
+            $row = $dataMap[$stage['id']] ?? null;
+
+            if (!$row && !$funnelId) {
+                continue;
+            }
+
+            $dataList[] = (object) [
+                'stageId' => $stage['id'],
+                'stageName' => $stage['name'],
+                'style' => $stage['style'],
+                'probability' => $stage['probability'],
+                'value' => $row['value'] ?? 0.0,
+                'count' => $row['count'] ?? 0,
+            ];
+        }
+
+        return (object) [
+            'dataList' => $dataList,
+            'funnelId' => $funnelId,
+        ];
+    }
+
+    /**
+     * Build sales pipeline report grouped by OpportunityStage.
+     * Mirrors core pipeline semantics by excluding lost stages only.
+     *
+     * @throws BadRequest
+     */
+    private function buildOpportunityStagePipelineReport(
+        string $dateFilter,
+        ?string $dateFrom,
+        ?string $dateTo,
+        ?string $funnelId,
+        ?string $teamId
+    ): stdClass {
+        $selectBuilderFactory = $this->injectableFactory->create(SelectBuilderFactory::class);
+        $baseQuery = $selectBuilderFactory
+            ->create()
+            ->from('Opportunity')
+            ->withStrictAccessControl()
+            ->build();
+
+        $conditionList = [
+            Cond::notEqual(Cond::column('status'), 'Lost'),
+        ];
+
+        if ($funnelId) {
+            $conditionList[] = Cond::equal(Cond::column('funnelId'), $funnelId);
+        }
+
+        if ($teamId) {
+            $conditionList[] = Cond::equal(Cond::column('teamsFilter.id'), $teamId);
+        }
+
+        $conditionList[] = Cond::or(
+            $this->buildCloseDateFilterCondition($dateFilter, $dateFrom, $dateTo),
+            Cond::and(
+                Cond::equal(Cond::column('status'), 'Open'),
+                Cond::equal(Cond::column('closeDate'), null)
+            )
+        );
+
+        $queryBuilder = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->clone($baseQuery)
+            ->select([
+                'opportunityStageId',
+                'opportunityStageName',
+                ['SUM:(amountConverted)', 'amountSum'],
+                ['SUM:(amountWeightedConverted)', 'amountWeightedSum'],
+                ['COUNT:(id)', 'count'],
+            ])
+            ->group('opportunityStageId');
+
+        if ($teamId) {
+            $queryBuilder->join('teams', 'teamsFilter');
+        }
+
+        $queryBuilder->where(Cond::and(...$conditionList));
+
+        $sth = $this->entityManager
+            ->getQueryExecutor()
+            ->execute($queryBuilder->build());
+
+        $rows = $sth->fetchAll(\PDO::FETCH_ASSOC);
+
+        $dataMap = [];
+
+        foreach ($rows as $row) {
+            $stageId = $row['opportunityStageId'] ?? null;
+
+            if (!$stageId) {
+                continue;
+            }
+
+            $dataMap[$stageId] = [
+                'stageId' => $stageId,
+                'stageName' => $row['opportunityStageName'] ?? null,
+                'value' => (float) ($row['amountSum'] ?? 0),
+                'valueWeighted' => (float) ($row['amountWeightedSum'] ?? 0),
+                'count' => (int) ($row['count'] ?? 0),
+            ];
+        }
+
+        $stageList = $this->getOpportunityStageList($funnelId, array_keys($dataMap));
+        $dataList = [];
+
+        foreach ($stageList as $stage) {
+            if ($stage['probability'] === 0) {
+                continue;
+            }
+
+            $row = $dataMap[$stage['id']] ?? null;
+
+            if (!$row && !$funnelId) {
+                continue;
+            }
+
+            $dataList[] = (object) [
+                'stageId' => $stage['id'],
+                'stageName' => $stage['name'],
+                'style' => $stage['style'],
+                'probability' => $stage['probability'],
+                'value' => $row['value'] ?? 0.0,
+                'valueWeighted' => $row['valueWeighted'] ?? 0.0,
+                'count' => $row['count'] ?? 0,
+            ];
+        }
+
+        return (object) [
+            'dataList' => $dataList,
+            'funnelId' => $funnelId,
+        ];
+    }
+
+    /**
+     * Get accessible OpportunityStage rows ordered for reporting.
+     * When a funnel is provided, returns all active stages in funnel order.
+     * Otherwise, returns only the provided stage IDs in name order.
+     *
+     * @return array<int, array{id: string, name: string, style: string, probability: int}>
+     */
+    private function getOpportunityStageList(?string $funnelId, array $stageIdList): array
+    {
+        $selectBuilderFactory = $this->injectableFactory->create(SelectBuilderFactory::class);
+        $baseQuery = $selectBuilderFactory
+            ->create()
+            ->from('OpportunityStage')
+            ->withStrictAccessControl()
+            ->build();
+
+        $where = [
+            'isActive' => true,
+        ];
+
+        if ($funnelId) {
+            $where['funnelId'] = $funnelId;
+        } elseif (!$stageIdList) {
+            return [];
+        } else {
+            $where['id'] = $stageIdList;
+        }
+
+        $queryBuilder = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->clone($baseQuery)
+            ->where($where);
+
+        if ($funnelId) {
+            $queryBuilder
+                ->order('order', 'ASC')
+                ->order('name', 'ASC');
+        } else {
+            $queryBuilder->order('name', 'ASC');
+        }
+
+        $stages = $this->entityManager
+            ->getRDBRepository('OpportunityStage')
+            ->clone($queryBuilder->build())
+            ->find();
+
+        $list = [];
+
+        foreach ($stages as $stage) {
+            $list[] = [
+                'id' => $stage->getId(),
+                'name' => $stage->get('name'),
+                'style' => $stage->get('style') ?: 'default',
+                'probability' => (int) $stage->get('probability'),
+            ];
+        }
+
+        return $list;
     }
 
     /**
@@ -517,6 +846,70 @@ class Opportunity extends CrmOpportunity
                     $where[$dateField . '<='] = $dateTo;
                 }
                 break;
+
+            default:
+                throw new BadRequest("Invalid dateFilter: $dateFilter");
+        }
+    }
+
+    private function buildCloseDateFilterCondition(
+        string $dateFilter,
+        ?string $dateFrom,
+        ?string $dateTo
+    ) {
+        $dateField = Cond::column('closeDate');
+
+        switch ($dateFilter) {
+            case 'currentYear':
+                return Cond::and(
+                    Cond::greaterOrEqual($dateField, date('Y') . '-01-01'),
+                    Cond::lessOrEqual($dateField, date('Y') . '-12-31')
+                );
+
+            case 'currentQuarter':
+            case 'currentFiscalQuarter':
+                $quarter = (int) ceil((int) date('n') / 3);
+                $year = date('Y');
+                $startMonth = ($quarter - 1) * 3 + 1;
+                $endMonth = $quarter * 3;
+
+                return Cond::and(
+                    Cond::greaterOrEqual($dateField, sprintf('%d-%02d-01', $year, $startMonth)),
+                    Cond::lessOrEqual($dateField, date('Y-m-t', strtotime("$year-$endMonth-01")))
+                );
+
+            case 'currentMonth':
+                return Cond::and(
+                    Cond::greaterOrEqual($dateField, date('Y-m-01')),
+                    Cond::lessOrEqual($dateField, date('Y-m-t'))
+                );
+
+            case 'currentFiscalYear':
+                return Cond::greaterOrEqual($dateField, date('Y') . '-01-01');
+
+            case 'between':
+                $conditionList = [];
+
+                if ($dateFrom) {
+                    $conditionList[] = Cond::greaterOrEqual($dateField, $dateFrom);
+                }
+
+                if ($dateTo) {
+                    $conditionList[] = Cond::lessOrEqual($dateField, $dateTo);
+                }
+
+                if (!$conditionList) {
+                    throw new BadRequest("No `dateFrom` or `dateTo` parameter.");
+                }
+
+                if (count($conditionList) === 1) {
+                    return $conditionList[0];
+                }
+
+                return Cond::and(...$conditionList);
+
+            case 'ever':
+                return Cond::notEqual($dateField, null);
 
             default:
                 throw new BadRequest("Invalid dateFilter: $dateFilter");

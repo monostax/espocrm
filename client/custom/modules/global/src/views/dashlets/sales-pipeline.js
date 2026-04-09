@@ -1,0 +1,105 @@
+/************************************************************************
+ * This file is part of Monostax.
+ *
+ * Monostax – Custom EspoCRM extensions.
+ * Copyright (C) 2025 Antonio Moura. All rights reserved.
+ * Website: https://www.monostax.ai
+ *
+ * PROPRIETARY AND CONFIDENTIAL
+ ************************************************************************/
+
+define('global:views/dashlets/sales-pipeline', ['crm:views/dashlets/sales-pipeline'], function (Dep) {
+
+    return Dep.extend({
+
+        url: function () {
+            let url = 'Opportunity/action/reportSalesPipelineByOpportunityStage?dateFilter=' + this.getDateFilter();
+
+            if (this.getDateFilter() === 'between') {
+                url += '&dateFrom=' + this.getOption('dateFrom') + '&dateTo=' + this.getOption('dateTo');
+            }
+
+            if (this.getOption('teamId')) {
+                url += '&teamId=' + this.getOption('teamId');
+            }
+
+            if (this.getOption('funnelId')) {
+                url += '&funnelId=' + this.getOption('funnelId');
+            }
+
+            return url;
+        },
+
+        prepareData: function (response) {
+            let list = [];
+
+            this.isEmpty = true;
+
+            (response.dataList || []).forEach(item => {
+                if (item.value) {
+                    this.isEmpty = false;
+                }
+
+                list.push({
+                    stageId: item.stageId,
+                    stage: item.stageName,
+                    stageTranslated: item.stageName,
+                    style: item.style || 'default',
+                    probability: item.probability,
+                    value: item.value,
+                    valueWeighted: item.valueWeighted,
+                    count: item.count,
+                });
+            });
+
+            return list;
+        },
+
+        draw: function () {
+            let colors = Espo.Utils.clone(this.colorList);
+
+            this.chartData.forEach((item, i) => {
+                if (i + 1 > colors.length) {
+                    colors.push('#164');
+                }
+
+                if (item.style === 'success' || item.probability === 100) {
+                    colors[i] = this.successColor;
+                }
+
+                this.chartData[i].color = colors[i];
+            });
+
+            this.$container.empty();
+
+            let tooltipStyleString =
+                'opacity:0.7;background-color:#000;color:#fff;position:absolute;' +
+                'padding:2px 8px;-moz-border-radius:4px;border-radius:4px;white-space:nowrap;';
+
+            new EspoFunnel.Funnel(
+                this.$container.get(0),
+                {
+                    colors: colors,
+                    outlineColor: this.hoverColor,
+                    callbacks: {
+                        tooltipHtml: i => {
+                            let value = this.chartData[i].value;
+
+                            return this.chartData[i].stageTranslated +
+                                '<br>' + this.currencySymbol +
+                                '<span class="numeric-text">' +
+                                this.formatNumber(value, true) +
+                                '</span>';
+                        },
+                    },
+                    tooltipClassName: 'flotr-mouse-value',
+                    tooltipStyleString: tooltipStyleString,
+                },
+                this.chartData
+            );
+
+            this.drawLegend();
+            this.adjustLegend();
+        },
+    });
+});

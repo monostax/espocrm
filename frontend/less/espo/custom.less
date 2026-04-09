@@ -4647,17 +4647,31 @@ html[data-embedded="true"] {
 // Remove navbar padding when embedded
 html.is-embedded,
 html.is-iframe {
-    // Hide header when embedded
-    #header,
-    body > header {
-        display: none !important;
-    }
 
     // Remove padding from content container
     // #content.container.content,
     // .content.container {
     //     padding: 0 !important;
     // }
+
+    // Remove Chat Icon
+    #navbar > div > div.navbar-collapse.navbar-body > div.navbar-right-container > ul > li.chat-icon-container {
+        display: none !important;
+    }
+
+    // Hide navbar logo container
+    #navbar > div > div.navbar-header {
+        display: none !important;
+    }
+}
+
+// Chatwoot Conversation embed specific styles
+html.is-chatwoot-conversation {
+    // Hide header when embedded
+    #header,
+    body > header {
+        display: none !important;
+    }
 
     // Remove top padding from main element
     #main {

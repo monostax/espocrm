@@ -299,8 +299,9 @@ define("global:views/opportunity/record/kanban", [
             );
 
             const formattedNumber = parts.join(decimalMark);
+            const currencySymbol = this.getMetadata().get(['app', 'currency', 'symbolMap', currency]) || currency;
 
-            return currency + " " + formattedNumber;
+            return currencySymbol + " " + formattedNumber;
         },
 
         afterRender: function () {

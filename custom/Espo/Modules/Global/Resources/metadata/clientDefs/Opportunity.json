@@ -1,19 +1,30 @@
 {
     "kanbanStatusField": "opportunityStageId",
     "kanbanViewMode": true,
+    "filterList": [
+        {
+            "name": "open"
+        },
+        {
+            "name": "won",
+            "style": "success"
+        },
+        {
+            "name": "lost",
+            "style": "danger"
+        }
+    ],
+    "boolFilterList": ["onlyMy"],
     "recordViews": {
+        "detail": "global:views/opportunity/record/detail",
+        "detailSmall": "global:views/opportunity/record/detail",
+        "list": "global:views/opportunity/record/list",
+        "listRelated": "global:views/opportunity/record/list",
         "kanban": "global:views/opportunity/record/kanban"
     },
-    "sidePanels": {
-        "detail": [
-            {
-                "name": "opportunityStage",
-                "label": "Stage Details",
-                "view": "views/record/panels/relationship",
-                "hidden": false,
-                "order": 5
-            }
-        ]
+    "viewMap": {
+        "crm:views/dashlets/sales-pipeline": "global:views/dashlets/sales-pipeline",
+        "crm:views/dashlets/opportunities-by-stage": "global:views/dashlets/opportunities-by-stage"
     }
 }
 

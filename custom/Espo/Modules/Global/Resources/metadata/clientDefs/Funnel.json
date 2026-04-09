@@ -15,7 +15,11 @@
             "orderDirection": "asc",
             "createDisabled": false,
             "selectDisabled": true,
-            "unlinkDisabled": true
+            "unlinkDisabled": true,
+            "createAttributeMap": {
+                "funnelId": "id",
+                "funnelName": "name"
+            }
         },
         "opportunities": {
             "label": "Opportunities",

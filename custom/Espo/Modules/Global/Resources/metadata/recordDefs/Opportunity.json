@@ -1,5 +1,6 @@
 {
-    "kanbanClassName": "Espo\\Modules\\Global\\Tools\\Kanban\\OpportunityKanban"
+    "kanbanClassName": "Espo\\Modules\\Global\\Tools\\Kanban\\OpportunityKanban",
+    "mandatoryAttributeList": ["opportunityStageName", "opportunityStageStyle"]
 }
 
 

@@ -78,5 +78,9 @@
     },
     "actions": {
         "create": "Cadastrar"
+    },
+    "dashlets": {
+        "SalesPipelineByStage": "Funil de Vendas (por Estágio)",
+        "OpportunitiesByStageName": "Oportunidades por Estágio"
     }
 }

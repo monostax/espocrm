@@ -92,5 +92,9 @@
         "customConfig": "Custom",
         "noConfigs": "No configurations available",
         "selectConfig": "Select Configuration"
+    },
+    "dashlets": {
+        "SalesPipelineByStage": "Sales Pipeline (by Stage)",
+        "OpportunitiesByStageName": "Opportunities by Stage"
     }
 }

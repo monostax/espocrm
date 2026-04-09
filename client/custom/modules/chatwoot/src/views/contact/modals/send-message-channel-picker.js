@@ -55,6 +55,7 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 hasAvailableInboxes: this.availableInboxes.length > 0,
                 availableInboxes: this.availableInboxes,
                 contactPhoneNumber: this.contactPhoneNumber,
+                chatwootAccountName: this.chatwootAccountName,
             };
         },
 
@@ -71,6 +72,7 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
             this.contactId = this.options.contactId;
             this.contactName = this.options.contactName;
             this.chatwootAccountEntityId = this.options.chatwootAccountEntityId;
+            this.chatwootAccountName = this.options.chatwootAccountName || null;
             this.chatwootAccountId = this.getHelper().getAppParam("chatwootAccountId");
             this.contactPhoneNumber = this.options.contactPhoneNumber || null;
 
@@ -217,6 +219,7 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                         conversationEntityId: conversation
                             ? conversation.id
                             : null,
+                        chatwootAccountName: this.chatwootAccountName,
                     };
                 }.bind(this)
             );
@@ -261,6 +264,7 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                             svgIconUrl: iconInfo.svgIconUrl,
                             iconClass: iconInfo.iconClass,
                             hasPhoneNumber: !!this.contactPhoneNumber,
+                            chatwootAccountName: this.chatwootAccountName,
                         };
                     }.bind(this)
                 );

@@ -33,6 +33,7 @@
         },
         "teams": {
             "type": "linkMultiple",
+            "required": true,
             "view": "views/fields/teams"
         },
         "metadata": {

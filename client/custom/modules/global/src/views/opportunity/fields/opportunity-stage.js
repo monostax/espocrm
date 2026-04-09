@@ -17,6 +17,27 @@ define("global:views/opportunity/fields/opportunity-stage", [
     return Dep.extend({
         selectPrimaryFilterName: "active",
 
+        detailTemplate: "global:opportunity/fields/opportunity-stage/detail",
+        listTemplate: "global:opportunity/fields/opportunity-stage/list",
+        listLinkTemplate: "global:opportunity/fields/opportunity-stage/list-link",
+
+        mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle"],
+
+        getAttributeList: function () {
+            const list = Dep.prototype.getAttributeList.call(this);
+
+            return [...new Set(list.concat([
+                "opportunityStageStyle",
+            ]))];
+        },
+
+        data: function () {
+            let data = Dep.prototype.data.call(this);
+            data.styleValue = this.model.get("opportunityStageStyle") || "default";
+            data.displayAsLabel = true;
+            return data;
+        },
+
         setup: function () {
             Dep.prototype.setup.call(this);
 
@@ -31,16 +52,25 @@ define("global:views/opportunity/fields/opportunity-stage", [
          */
         handleFunnelChange: function () {
             const funnelId = this.model.get("funnelId");
+            const previousFunnelId = this.model.previous("funnelId");
 
-            // Clear the stage when funnel changes (stage might not belong to new funnel)
-            if (this.model.hasChanged("funnelId")) {
+            // Only clear the stage in edit mode after the user actually switched funnels.
+            // During initial detailSmall loading, funnelId changes from empty to fetched value,
+            // and clearing here would wipe an otherwise valid opportunityStage selection.
+            if (
+                this.isEditMode() &&
+                previousFunnelId &&
+                previousFunnelId !== funnelId
+            ) {
                 this.model.set({
                     opportunityStageId: null,
                     opportunityStageName: null,
+                    opportunityStageStyle: null,
+                    stageProbability: null,
                 });
             }
 
-            // Re-render to update the autocomplete filter
+            // Re-render to update the displayed value and autocomplete filter.
             if (this.isRendered()) {
                 this.reRender();
             }

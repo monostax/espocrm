@@ -349,6 +349,9 @@
     user-select: all;
   }
 }
+.collapse {
+  visibility: visible;
+}
 @layer components;
 @layer utilities;
 @property --tw-rotate-x {

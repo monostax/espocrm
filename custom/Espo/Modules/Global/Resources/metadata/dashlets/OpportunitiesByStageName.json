@@ -1,0 +1,60 @@
+{
+    "view": "global:views/dashlets/opportunities-by-stage",
+    "aclScope": "Opportunity",
+    "label": "Opportunities by Stage (OpportunityStage)",
+    "options": {
+        "view": "crm:views/dashlets/options/chart",
+        "fields": {
+            "title": {
+                "type": "varchar",
+                "required": true
+            },
+            "funnel": {
+                "type": "link",
+                "entity": "Funnel",
+                "view": "views/fields/link"
+            },
+            "dateFrom": {
+                "type": "date",
+                "required": true
+            },
+            "dateTo": {
+                "type": "date",
+                "required": true
+            },
+            "dateFilter": {
+                "type": "enum",
+                "options": ["currentYear", "currentQuarter", "currentMonth", "currentFiscalYear", "currentFiscalQuarter", "ever", "between"],
+                "default": "currentYear",
+                "translation": "Global.options.dateSearchRanges"
+            }
+        },
+        "layout": [
+            {
+                "rows": [
+                    [
+                        {"name": "title"},
+                        false
+                    ],
+                    [
+                        {"name": "dateFilter"},
+                        false
+                    ],
+                    [
+                        {"name": "funnel"},
+                        false
+                    ],
+                    [
+                        {"name": "dateFrom"},
+                        {"name": "dateTo"}
+                    ]
+                ]
+            }
+        ],
+        "defaults": {
+            "dateFilter": "currentYear",
+            "funnelId": null,
+            "funnelName": null
+        }
+    }
+}

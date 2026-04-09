@@ -5,6 +5,19 @@
         },
         "modifiedBy": {
             "view": "views/fields/user-with-avatar"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "required": true,
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
         }
     }
 }
