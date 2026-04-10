@@ -32,8 +32,9 @@ use Espo\Core\Utils\Log;
 /**
  * AppParam that provides the Chatwoot SSO login URL for the current user.
  *
- * Resolution path (Phase 5):
- *   EspoCRM User → ChatwootUser (via assignedUserId) → ChatwootPlatform → SSO URL
+ * Resolution path:
+ *   EspoCRM User → ChatwootUser (via assignedUserId) → ChatwootAccountUserMembership
+ *   → ChatwootAccount → ChatwootPlatform → SSO URL
  *
  * This is returned as part of the /api/v1/App/user response.
  */
@@ -79,10 +80,36 @@ class ChatwootSsoUrl implements AppParam
                 return null;
             }
 
-            // Get platform directly from ChatwootUser (it has a direct link to platform)
-            $platformId = $chatwootUser->get('platformId');
+            // Step 2: Find membership for this ChatwootUser (consistent with other AppParams)
+            // Deterministic ordering (oldest first) for multi-account stability
+            $membership = $this->entityManager
+                ->getRDBRepository('ChatwootAccountUserMembership')
+                ->where(['chatwootUserId' => $chatwootUser->getId()])
+                ->order('createdAt', 'ASC')
+                ->findOne();
+
+            if (!$membership) {
+                $this->log->debug("ChatwootSsoUrl: No membership found for ChatwootUser " . $chatwootUser->getId());
+                return null;
+            }
+
+            // Step 3: Get the account from membership
+            $accountEntityId = $membership->get('chatwootAccountId');
+            if (!$accountEntityId) {
+                $this->log->debug("ChatwootSsoUrl: Membership has no chatwootAccountId");
+                return null;
+            }
+
+            $account = $this->entityManager->getEntityById('ChatwootAccount', $accountEntityId);
+            if (!$account) {
+                $this->log->debug("ChatwootSsoUrl: ChatwootAccount not found: {$accountEntityId}");
+                return null;
+            }
+
+            // Step 4: Get platform from account (consistent resolution path)
+            $platformId = $account->get('platformId');
             if (!$platformId) {
-                $this->log->debug("ChatwootSsoUrl: ChatwootUser has no platformId");
+                $this->log->debug("ChatwootSsoUrl: ChatwootAccount has no platformId");
                 return null;
             }
 
