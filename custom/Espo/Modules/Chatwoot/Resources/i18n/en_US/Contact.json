@@ -12,6 +12,9 @@
         "New Conversation": "New Conversation",
         "Initiating conversation...": "Initiating conversation...",
         "Failed to initiate conversation": "Failed to initiate conversation",
-        "Contact has no phone number": "Contact has no phone number for this channel"
+        "Contact has no phone number": "Contact has no phone number for this channel",
+        "Contact has no Instagram identifier": "Contact has no Instagram identifier",
+        "Contact has no Telegram identifier": "Contact has no Telegram identifier",
+        "Channel not supported for new conversations": "Channel not supported for new conversations"
     }
 }

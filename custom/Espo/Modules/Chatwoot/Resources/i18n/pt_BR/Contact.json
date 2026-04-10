@@ -12,6 +12,9 @@
         "New Conversation": "Nova Conversa",
         "Initiating conversation...": "Iniciando conversa...",
         "Failed to initiate conversation": "Falha ao iniciar conversa",
-        "Contact has no phone number": "Contato não possui número de telefone para este canal"
+        "Contact has no phone number": "Contato não possui número de telefone para este canal",
+        "Contact has no Instagram identifier": "Contato não possui identificador do Instagram",
+        "Contact has no Telegram identifier": "Contato não possui identificador do Telegram",
+        "Channel not supported for new conversations": "Canal não suportado para novas conversas"
     }
 }

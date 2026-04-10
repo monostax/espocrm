@@ -37,22 +37,15 @@ define('chatwoot:handlers/contact-linked-entity/detail-actions', [], function ()
 
         /**
          * Opens the channel picker modal for the linked Contact.
+         * Shows inboxes from all ChatwootAccounts the user has access to
+         * (ACL/teams handle visibility).
          *
          * @param {Object} data - data-* attributes from the DOM element
          * @param {Event} event - the DOM click event
          */
         async sendMessage(data, event) {
-            const chatwootAccountEntityId = this.view.getHelper().getAppParam('chatwootAccountEntityId');
-            const chatwootAccountName = this.view.getHelper().getAppParam('chatwootAccountName');
             const contactId = this.view.model.get('contactId');
             const contactName = this.view.model.get('contactName');
-
-            if (!chatwootAccountEntityId) {
-                Espo.Ui.error(
-                    this.view.translate('No channels available', 'labels', 'Contact')
-                );
-                return;
-            }
 
             if (!contactId) {
                 return;
@@ -74,8 +67,6 @@ define('chatwoot:handlers/contact-linked-entity/detail-actions', [], function ()
                 {
                     contactId: contactId,
                     contactName: contactName,
-                    chatwootAccountEntityId: chatwootAccountEntityId,
-                    chatwootAccountName: chatwootAccountName,
                     contactPhoneNumber: contactPhoneNumber,
                 },
                 (view) => {

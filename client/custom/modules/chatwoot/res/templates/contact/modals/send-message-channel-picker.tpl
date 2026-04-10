@@ -241,7 +241,7 @@
     </div>
     <ul class="channel-list">
         {{#each availableInboxes}}
-        <li class="channel-item{{#unless hasPhoneNumber}} is-disabled{{/unless}}" data-inbox-index="{{@index}}">
+        <li class="channel-item{{#unless hasRequiredIdentifier}} is-disabled{{/unless}}" data-inbox-index="{{@index}}">
             <div class="channel-icon">
                 {{#if svgIconUrl}}
                 <img src="{{svgIconUrl}}" alt="" width="18" height="18">
@@ -258,7 +258,7 @@
                     {{/if}}
                 </div>
             </div>
-            {{#if hasPhoneNumber}}
+            {{#if hasRequiredIdentifier}}
             <div class="channel-actions">
                 <button class="btn btn-default btn-sm action" data-action="openTabNewInbox" data-inbox-index="{{@index}}" title="{{translate 'Start in New Tab' category='labels' scope='Contact'}}">
                     <i class="fas fa-external-link-alt"></i> {{translate 'Start in New Tab' category='labels' scope='Contact'}}
@@ -268,7 +268,7 @@
                 </button>
             </div>
             {{else}}
-            <span class="no-phone-hint">{{translate 'Contact has no phone number' category='labels' scope='Contact'}}</span>
+            <span class="no-phone-hint">{{missingIdentifierHint}}</span>
             {{/if}}
             <div class="channel-item-loading">
                 <span class="fas fa-spinner fa-spin"></span>

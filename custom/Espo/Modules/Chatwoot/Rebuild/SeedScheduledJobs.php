@@ -32,10 +32,22 @@ use Espo\ORM\EntityManager;
 /**
  * Rebuild action to seed Chatwoot scheduled jobs.
  * Creates the scheduled jobs if they don't exist.
+ * Also disables deprecated/removed jobs to prevent class-not-found crashes.
  * Runs automatically during system rebuild.
  */
 class SeedScheduledJobs implements RebuildAction
 {
+    /**
+     * Deprecated job names that should be disabled on rebuild.
+     *
+     * When jobs are consolidated or removed, add their `job` value here
+     * so the scheduler doesn't keep trying to instantiate deleted classes.
+     */
+    private const DEPRECATED_JOBS = [
+        'SyncAgentsFromChatwoot',           // Replaced by SyncAccountUserMembershipsFromChatwoot (Apr 2026)
+        'SyncAccountMembersFromChatwoot',   // Replaced by SyncAccountUserMembershipsFromChatwoot (Apr 2026)
+    ];
+
     private const JOBS = [
         [
             'name' => 'Sync Inboxes from Chatwoot',
@@ -58,8 +70,8 @@ class SeedScheduledJobs implements RebuildAction
             'scheduling' => '* * * * *',
         ],
         [
-            'name' => 'Sync Agents from Chatwoot',
-            'job' => 'SyncAgentsFromChatwoot',
+            'name' => 'Sync Account User Memberships from Chatwoot',
+            'job' => 'SyncAccountUserMembershipsFromChatwoot',
             'scheduling' => '* * * * *',
         ],
         [
@@ -72,11 +84,6 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'RepairAccountUserMembershipInvariants',
             'scheduling' => '*/30 * * * *',
         ],
-        [
-            'name' => 'Sync Account Members from Chatwoot',
-            'job' => 'SyncAccountMembersFromChatwoot',
-            'scheduling' => '*/5 * * * *',
-        ],
     ];
 
     public function __construct(
@@ -86,8 +93,40 @@ class SeedScheduledJobs implements RebuildAction
 
     public function process(): void
     {
+        $this->disableDeprecatedJobs();
+
         foreach (self::JOBS as $jobData) {
             $this->upsertJob($jobData);
+        }
+    }
+
+    /**
+     * Disable (and log) any scheduled jobs that have been removed from the codebase.
+     *
+     * This prevents the EspoCRM scheduler from repeatedly failing with
+     * "Class does not exist" errors after a deployment removes a job class.
+     */
+    private function disableDeprecatedJobs(): void
+    {
+        foreach (self::DEPRECATED_JOBS as $jobName) {
+            $existing = $this->entityManager
+                ->getRDBRepository(ScheduledJob::ENTITY_TYPE)
+                ->where(['job' => $jobName])
+                ->findOne();
+
+            if (!$existing) {
+                continue;
+            }
+
+            if ($existing->get('status') === ScheduledJob::STATUS_ACTIVE) {
+                $existing->set('status', 'Inactive');
+                $this->entityManager->saveEntity($existing, [SaveOption::SKIP_ALL => true]);
+
+                $this->log->warning(
+                    "SeedScheduledJobs: Disabled deprecated scheduled job '{$jobName}' " .
+                    "(class removed from codebase)"
+                );
+            }
         }
     }
 

@@ -57,7 +57,7 @@ class LinkToAgents
     public function afterSave(Entity $entity, array $options): void
     {
         // No-op after Phase 9: ChatwootAgent entity is eliminated.
-        // Memberships are created by SyncAgentsFromChatwoot and SyncAccountMembersFromChatwoot.
+        // Memberships are created by SyncAccountUserMembershipsFromChatwoot.
         // The upsertMembership() call below is a safety net for edge cases.
 
         $email = $entity->get('email');

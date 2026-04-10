@@ -17,11 +17,11 @@
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncConversationsFromChatwoot"
     },
-    "SyncAgentsFromChatwoot": {
-        "name": "Sync Agents from Chatwoot",
+    "SyncAccountUserMembershipsFromChatwoot": {
+        "name": "Sync Account User Memberships from Chatwoot",
         "isSystem": false,
         "scheduling": "* * * * *",
-        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAgentsFromChatwoot"
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAccountUserMembershipsFromChatwoot"
     },
     "SyncTeamsFromChatwoot": {
         "name": "Sync Teams from Chatwoot",
@@ -46,12 +46,6 @@
         "isSystem": false,
         "scheduling": "*/30 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\RepairAccountUserMembershipInvariants"
-    },
-    "SyncAccountMembersFromChatwoot": {
-        "name": "Sync Account Members from Chatwoot",
-        "isSystem": false,
-        "scheduling": "*/5 * * * *",
-        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAccountMembersFromChatwoot"
     },
     "RemoveOrphanedInboxIntegrations": {
         "name": "Remove Orphaned Inbox Integrations",

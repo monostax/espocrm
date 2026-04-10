@@ -32,29 +32,19 @@ define('chatwoot:handlers/contact/detail-actions', [], function () {
 
         /**
          * Opens the channel picker modal for sending messages.
+         * Shows inboxes from all ChatwootAccounts the user has access to
+         * (ACL/teams handle visibility).
          *
          * @param {Object} data - data-* attributes from the DOM element
          * @param {Event} event - the DOM click event
          */
         sendMessage(data, event) {
-            const chatwootAccountEntityId = this.view.getHelper().getAppParam('chatwootAccountEntityId');
-            const chatwootAccountName = this.view.getHelper().getAppParam('chatwootAccountName');
-
-            if (!chatwootAccountEntityId) {
-                Espo.Ui.error(
-                    this.view.translate('No channels available', 'labels', 'Contact')
-                );
-                return;
-            }
-
             this.view.createView(
                 'sendMessageChannelPicker',
                 'chatwoot:views/contact/modals/send-message-channel-picker',
                 {
                     contactId: this.view.model.id,
                     contactName: this.view.model.get('name'),
-                    chatwootAccountEntityId: chatwootAccountEntityId,
-                    chatwootAccountName: chatwootAccountName,
                     contactPhoneNumber: this.view.model.get('phoneNumber'),
                 },
                 (view) => {
