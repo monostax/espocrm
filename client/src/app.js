@@ -129,15 +129,12 @@ class App {
 
         this.appTimestamp = options.appTimestamp;
 
-        // DISABLED: Auth redirect logic
-        // Store 'from' redirect parameter early so it survives OAuth redirects
-        // const urlParams = new URLSearchParams(window.location.search);
-        // const fromParam = urlParams.get('from');
-        //
-        // if (fromParam) {
-        //     localStorage.setItem('espo_redirect_from', fromParam);
-        //     console.log('[Monostax] Stored redirect URL:', fromParam);
-        // }
+        const urlParams = new URLSearchParams(window.location.search);
+        const chatRedirect = urlParams.get('chat_redirect');
+
+        if (chatRedirect) {
+            localStorage.setItem('chat_redirect', chatRedirect);
+        }
 
         this.initCache(options).then(async () => {
             await this.init(options);
@@ -478,6 +475,19 @@ class App {
      */
     start() {
         this.initAuth();
+
+        const chatRedirect = localStorage.getItem('chat_redirect');
+
+        if (chatRedirect && this.auth) {
+            localStorage.removeItem('chat_redirect');
+
+            this.redirectToChatwoot(chatRedirect, () => {
+                this.started = true;
+                this.initUserData(null, () => this.onAuth());
+            });
+
+            return;
+        }
 
         this.started = true;
 
@@ -978,20 +988,17 @@ class App {
 
                 this.setCookieAuth(userName, token);
 
-                // DISABLED: Auth redirect logic
-                // Check for redirect URL in 'from' query parameter (or stored from earlier)
-                // const urlParams = new URLSearchParams(window.location.search);
-                // let redirectUrl = urlParams.get('from') || localStorage.getItem('espo_redirect_from');
-                //
-                // // Clear stored redirect
-                // localStorage.removeItem('espo_redirect_from');
-                //
-                // if (redirectUrl) {
-                //     console.log('[Monostax] Redirecting after login to:', redirectUrl);
-                //     window.location.href = redirectUrl;
-                //
-                //     return;
-                // }
+                const chatRedirect = localStorage.getItem('chat_redirect');
+
+                if (chatRedirect) {
+                    localStorage.removeItem('chat_redirect');
+
+                    this.redirectToChatwoot(chatRedirect, () => {
+                        this.initUserData(data, () => this.onAuth(true));
+                    });
+
+                    return;
+                }
 
                 this.initUserData(data, () => this.onAuth(true));
             }
@@ -1152,6 +1159,30 @@ class App {
         }
 
         document.cookie = `auth-token=${token}; SameSite=Lax; expires=${date.toUTCString()}; path=/${domainParam}`;
+    }
+
+    /**
+     * @private
+     * @param {string} chatRedirect
+     * @param {function} fallback
+     */
+    redirectToChatwoot(chatRedirect, fallback) {
+        Ajax.getRequest('ChatwootSso/freshUrl')
+            .then(response => {
+                const ssoUrl = response?.ssoUrl;
+
+                if (ssoUrl) {
+                    const url = new URL(ssoUrl);
+
+                    url.searchParams.set('redirect_to', chatRedirect);
+                    window.location.href = url.toString();
+
+                    return;
+                }
+
+                fallback();
+            })
+            .catch(() => fallback());
     }
 
     /**

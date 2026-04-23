@@ -59,7 +59,10 @@ class ModifyConfig implements RebuildAction
         // Filter out null values and re-index
         $newTabList = array_values(array_filter($newTabList, fn($item) => $item !== null));
 
-        if ($newTabList !== $tabList) {
+        // NOTE: strict array compare would always differ because this function
+        // rebuilds stdClass items from scratch (new instances). Compare by value
+        // via json_encode to detect real structural changes only.
+        if (json_encode($newTabList) !== json_encode($tabList)) {
             $this->configWriter->set('tabList', $newTabList);
             $this->configWriter->save();
         }

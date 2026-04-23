@@ -22,8 +22,9 @@ use Espo\ORM\EntityManager;
  * 1. WhatsApp Delivery Status — subscribed to `message_updated` and `message_created`,
  *    points to the CRM's DeliveryWebhook controller for campaign tracking.
  *
- * 2. Hatchet AI Agent — subscribed to `message_created`, points to the Hatchet
- *    webhook ingest endpoint so incoming messages trigger the AI agent workflow.
+ * 2. Hatchet AI Agent — subscribed to `message_created` and `conversation_updated`,
+ *    points to the Hatchet webhook ingest endpoint so incoming messages and
+ *    conversation status changes trigger the AI agent workflow.
  *
  * Each creates a ChatwootAccountWebhook entity which triggers the SyncWithChatwoot
  * hook to register it on the Chatwoot side.
@@ -109,8 +110,8 @@ class RegisterDeliveryWebhook
     /**
      * Register Hatchet AI Agent webhook.
      *
-     * Sends `message_created` events to the Hatchet webhook ingest endpoint,
-     * which triggers the chatwoot-agent workflow for AI-powered responses.
+     * Sends `message_created` and `conversation_updated` events to the Hatchet
+     * webhook ingest endpoint, which triggers the AI agent workflows.
      * The URL is provided by the HATCHET_WEBHOOK_URL environment variable
      * (internal k8s service URL).
      */
@@ -134,7 +135,7 @@ class RegisterDeliveryWebhook
                 'name' => 'Hatchet AI Agent',
                 'accountId' => $entity->getId(),
                 'url' => $hatchetWebhookUrl,
-                'subscriptions' => ['message_created'],
+                'subscriptions' => ['message_created', 'conversation_updated'],
             ]);
 
             $this->log->info(

@@ -24,9 +24,12 @@ class SetDefaultSidePanelView implements RebuildAction
         private Metadata $metadata
     ) {}
 
+    private const TARGET_VIEW = 'global:views/record/panels/default-side';
+
     public function process(): void
     {
         $scopes = $this->metadata->get(['scopes']) ?? [];
+        $changed = false;
 
         foreach ($scopes as $entityType => $scopeDefs) {
             // Only process entity scopes (not disabled, has entity = true)
@@ -39,13 +42,23 @@ class SetDefaultSidePanelView implements RebuildAction
                 continue;
             }
 
-            // Set our custom default side panel view
+            // Skip if already set — avoids rewriting clientDefs JSON on every
+            // rebuild, which otherwise creates a self-triggering loop with the
+            // dev file watcher (see container/localhost.entrypoint.sh).
+            $current = $this->metadata->get(['clientDefs', $entityType, 'defaultSidePanelView']);
+            if ($current === self::TARGET_VIEW) {
+                continue;
+            }
+
             $this->metadata->set('clientDefs', $entityType, [
-                'defaultSidePanelView' => 'global:views/record/panels/default-side',
+                'defaultSidePanelView' => self::TARGET_VIEW,
             ]);
+            $changed = true;
         }
 
-        $this->metadata->save();
+        if ($changed) {
+            $this->metadata->save();
+        }
     }
 }
 

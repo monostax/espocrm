@@ -6,7 +6,7 @@
  * Copyright (C) 2025 Antonio Moura. All rights reserved.
  * Website: https://www.monostax.ai
  *
- * PROPRIETARY AND CONFIDENTIAL
+ * PROPRIETARY AND CONFIDENTIAL 
  ************************************************************************/
 
 namespace Espo\Modules\Chatwoot\Classes\Acl\ChatwootContact;
