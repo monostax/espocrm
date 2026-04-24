@@ -1,0 +1,7 @@
+{
+    "order": 25,
+    "version": "1.0.0",
+    "name": "FeatureMetaInstagram",
+    "description": "Meta Instagram integration with Virtual Entity for Instagram Business Accounts",
+    "jsTranspiled": true
+}

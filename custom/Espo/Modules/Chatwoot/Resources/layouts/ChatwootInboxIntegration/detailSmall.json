@@ -29,6 +29,11 @@
             ],
             [
                 {
+                    "name": "instagramBusinessAccountId"
+                }
+            ],
+            [
+                {
                     "name": "phoneNumber"
                 }
             ],

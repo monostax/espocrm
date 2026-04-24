@@ -2,6 +2,7 @@ import EnumFieldView from 'views/fields/enum';
 
 const SVG_ICON_FILE_MAP = {
     whatsapp: 'whatsapp.svg',
+    instagram: 'instagram.svg',
 };
 
 class SvgIconEnumFieldView extends EnumFieldView {

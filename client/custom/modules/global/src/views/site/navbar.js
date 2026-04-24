@@ -240,6 +240,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
         this.injectMobileDrawerStyles();
         this.injectNavbarConfigSelectorStyles();
         this.injectVirtualFolderStyles();
+        this.injectSideNavbarPillStyles();
         this.injectChatIconStyles();
         this.setupMobileHeaderIcons();
         this.setupNavbarConfigSelector();
@@ -828,6 +829,23 @@ class CustomNavbarSiteView extends NavbarSiteView {
         link.id = "virtual-folder-styles";
         link.rel = "stylesheet";
         link.href = "client/custom/modules/global/css/virtual-folder.css";
+
+        document.head.appendChild(link);
+    }
+
+    /**
+     * Load side-navbar pill CSS stylesheet (idempotent).
+     * @private
+     */
+    injectSideNavbarPillStyles() {
+        if (document.getElementById("side-navbar-pill-styles")) {
+            return;
+        }
+
+        const link = document.createElement("link");
+        link.id = "side-navbar-pill-styles";
+        link.rel = "stylesheet";
+        link.href = "client/custom/modules/global/css/side-navbar-pill.css";
 
         document.head.appendChild(link);
     }

@@ -29,6 +29,12 @@
                     "name": "phoneNumber",
                     "span": 4
                 }
+            ],
+            [
+                {
+                    "name": "instagramBusinessAccountId",
+                    "span": 4
+                }
             ]
         ]
     },
@@ -198,6 +204,51 @@
                 },
                 {
                     "name": "phoneNumberId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootInboxId"
+                },
+                {
+                    "name": "chatwootInboxIdentifier"
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "Instagram Metadata",
+        "label": "Instagram Metadata",
+        "name": "instagramMetadata",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isNotEmpty",
+                    "attribute": "id"
+                },
+                {
+                    "type": "equals",
+                    "attribute": "channelType",
+                    "value": "instagram"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "instagramUsername"
+                },
+                {
+                    "name": "instagramId"
+                }
+            ],
+            [
+                {
+                    "name": "connectedAt"
+                },
+                {
+                    "name": "tokenExpiresAt"
                 }
             ],
             [

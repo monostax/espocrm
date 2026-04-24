@@ -14,6 +14,10 @@
         "chatwootInbox": "Chat / Conta / Caixa de Entrada",
         "whatsappId": "ID WhatsApp",
         "whatsappName": "Nome WhatsApp",
+        "instagramId": "ID Instagram",
+        "instagramUsername": "Usuário Instagram",
+        "tokenExpiresAt": "Token Expira Em",
+        "instagramBusinessAccountId": "Conta Instagram",
         "errorMessage": "Mensagem de Erro",
         "connectedAt": "Conectado Em",
         "lastActivityAt": "Última Atividade",
@@ -39,6 +43,10 @@
     "labels": {
         "Create ChatwootInboxIntegration": "Cadastrar Caixa de Entrada (Conexão)",
         "WhatsApp Connection": "Conexão WhatsApp",
+        "Instagram Connection": "Conexão Instagram",
+        "Instagram Metadata": "Metadados Instagram",
+        "Cloud API Metadata": "Metadados Cloud API",
+        "WhatsApp Metadata": "Metadados WhatsApp",
         "Connection Details": "Detalhes da Conexão",
         "Error": "Erro",
         "Activate": "Ativar",
@@ -67,12 +75,16 @@
         },
         "channelType": {
             "whatsappQrcode": "WhatsApp Lite (QR Code)",
-            "whatsappCloudApi": "WhatsApp Business (Cloud API)"
+            "whatsappCloudApi": "WhatsApp Business (Cloud API)",
+            "instagram": "Instagram"
         }
     },
     "tooltips": {
         "phoneNumber": "O número de telefone associado a esta conexão WhatsApp",
         "whatsappId": "O ID da conta WhatsApp (formato: 5511999999999@c.us)",
+        "instagramId": "O ID do Instagram (user_id) usado para webhooks e mensagens.",
+        "instagramUsername": "O nome de usuário Instagram da Conta Business autenticada.",
+        "instagramBusinessAccountId": "A Conta Business do Instagram descoberta a partir da Conta OAuth Meta.",
         "wahaSessionName": "O nome da sessão no WAHA",
         "chatwootInboxIdentifier": "O identificador do canal usado para webhooks",
         "oAuthAccount": "A Conta OAuth Meta usada para autenticação com WhatsApp Cloud API",
@@ -92,6 +104,7 @@
         "channelFailed": "Falha na configuração do canal.",
         "confirmDisconnect": "Tem certeza que deseja desconectar este canal? A sessão WhatsApp será parada.",
         "confirmActivate": "Isso criará uma sessão WAHA e um canal de Chat. Continuar?",
+        "confirmActivateInstagram": "Isso conectará a Conta Business do Instagram ao Chatwoot e criará um canal de Chat. Continuar?",
         "noWahaPlatform": "Por favor, selecione uma Plataforma WAHA.",
         "noChatwootAccount": "Por favor, selecione uma Conta de Chat."
     }

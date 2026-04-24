@@ -211,7 +211,7 @@ class WhatsAppBusinessAccount
     public function getActionOAuthAccounts(Request $request, Response $response): stdClass
     {
         $oAuthHelper = $this->injectableFactory->create(WhatsAppOAuthHelper::class);
-        $oAuthAccounts = $oAuthHelper->getAccessibleOAuthAccounts();
+        $oAuthAccounts = $oAuthHelper->getAccessibleOAuthAccounts('meta-whatsapp');
 
         $list = [];
 

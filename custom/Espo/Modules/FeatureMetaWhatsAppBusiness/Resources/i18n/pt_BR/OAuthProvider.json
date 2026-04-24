@@ -1,0 +1,12 @@
+{
+    "labels": {
+        "configureMetaWhatsAppWebhook": "Configurar App Secret do WhatsApp",
+        "Configuring WhatsApp webhook...": "Configurando webhook do WhatsApp..."
+    },
+    "messages": {
+        "confirmConfigureMetaWhatsAppWebhook": "Isto irá enviar o clientSecret deste App Meta para todas as ChatwootPlatforms, permitindo ao Chatwoot validar assinaturas HMAC em eventos de webhook do WhatsApp. Continuar?",
+        "whatsappWebhookConfigured": "App secret do WhatsApp sincronizado com o Chatwoot. Eventos de webhook deste App Meta agora serão verificados por assinatura.",
+        "whatsappWebhookConfiguredChatwootFailed": "Algumas ChatwootPlatforms falharam ao aceitar o app secret:",
+        "whatsappWebhookConfigFailed": "Falha na configuração do webhook do WhatsApp."
+    }
+}

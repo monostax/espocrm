@@ -19,6 +19,10 @@
         "chatwootInbox": "Chat / Account / Channel",
         "whatsappId": "WhatsApp ID",
         "whatsappName": "WhatsApp Name",
+        "instagramId": "Instagram ID",
+        "instagramUsername": "Instagram Username",
+        "tokenExpiresAt": "Token Expires At",
+        "instagramBusinessAccountId": "Instagram Account",
         "errorMessage": "Error Message",
         "connectedAt": "Connected At",
         "lastActivityAt": "Last Activity",
@@ -39,6 +43,10 @@
     "labels": {
         "Create ChatwootInboxIntegration": "Create Chat / Connection",
         "WhatsApp Connection": "WhatsApp Connection",
+        "Instagram Connection": "Instagram Connection",
+        "Instagram Metadata": "Instagram Metadata",
+        "Cloud API Metadata": "Cloud API Metadata",
+        "WhatsApp Metadata": "WhatsApp Metadata",
         "Connection Details": "Connection Details",
         "Error": "Error",
         "Activate": "Activate",
@@ -67,7 +75,8 @@
         },
         "channelType": {
             "whatsappQrcode": "WhatsApp Lite (QR Code)",
-            "whatsappCloudApi": "WhatsApp Business (Cloud API)"
+            "whatsappCloudApi": "WhatsApp Business (Cloud API)",
+            "instagram": "Instagram"
         }
     },
     "tooltips": {
@@ -77,6 +86,9 @@
         "phoneNumberId": "The Meta Phone Number ID for WhatsApp Cloud API",
         "credential": "Legacy credential link (replaced by Meta Account + Business Account selection)",
         "whatsappId": "The WhatsApp account ID (format: 5511999999999@c.us)",
+        "instagramId": "The Instagram-scoped account ID (user_id) used by Instagram webhooks and messaging.",
+        "instagramUsername": "The Instagram username of the authenticated Business Account.",
+        "instagramBusinessAccountId": "The Instagram Business Account discovered from the Meta OAuth Account.",
         "wahaSessionName": "The session name in WAHA",
         "chatwootInboxIdentifier": "The inbox identifier used for webhooks",
         "wahaIgnoreStatus": "Ignore Status updates (stories). No webhooks or stored messages for status@broadcast.",
@@ -92,6 +104,7 @@
         "channelFailed": "Channel setup failed.",
         "confirmDisconnect": "Are you sure you want to disconnect this channel? The WhatsApp session will be stopped.",
         "confirmActivate": "This will create a WAHA session and Chat / Inbox. Continue?",
+        "confirmActivateInstagram": "This will connect the Instagram Business Account to Chatwoot and create a Chat / Inbox. Continue?",
         "noWahaPlatform": "Please select a WAHA Platform.",
         "noChatwootAccount": "Please select a Chat / Account."
     }

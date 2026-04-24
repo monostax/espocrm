@@ -1,0 +1,28 @@
+{
+    "detailActionList": [
+        {
+            "name": "configureMetaInstagramWebhook",
+            "label": "Configure Meta Webhook",
+            "labelTranslation": "OAuthProvider.labels.configureMetaInstagramWebhook",
+            "handler": "feature-meta-instagram:handlers/o-auth-provider/detail-actions",
+            "actionFunction": "configureMetaInstagramWebhook",
+            "checkVisibilityFunction": "isConfigureMetaInstagramWebhookAvailable",
+            "groupIndex": 1
+        }
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "webhookVerifyToken": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "provider",
+                            "value": "meta-instagram"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "name": "Nome",
+        "instagramId": "ID Instagram",
+        "username": "Nome de Usuário",
+        "accountType": "Tipo de Conta",
+        "profilePictureUrl": "Foto de Perfil",
+        "oAuthAccount": "Conta OAuth"
+    },
+    "links": {
+        "oAuthAccount": "Conta OAuth"
+    },
+    "labels": {
+        "Create InstagramBusinessAccount": "Ver Contas Business do Instagram"
+    },
+    "tooltips": {
+        "instagramId": "O ID Instagram-escopado usado para webhooks e mensagens.",
+        "oAuthAccount": "A Conta OAuth Meta usada para autenticar com o Instagram."
+    }
+}

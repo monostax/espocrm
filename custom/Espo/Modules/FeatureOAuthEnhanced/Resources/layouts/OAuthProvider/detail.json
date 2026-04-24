@@ -27,5 +27,21 @@
     },
     {
         "rows": [[{ "name": "description" }]]
+    },
+    {
+        "label": "Instagram Webhook",
+        "name": "metaInstagramWebhook",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "equals",
+                    "attribute": "provider",
+                    "value": "meta-instagram"
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "webhookVerifyToken" }, false]
+        ]
     }
 ]

@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "instagramId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "username": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "accountType": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "profilePictureUrl": {
+            "type": "url",
+            "readOnly": true
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount"
+        }
+    }
+}

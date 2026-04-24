@@ -1,0 +1,10 @@
+[
+    {
+        "route": "/MetaInstagramWebhook/configure",
+        "method": "post",
+        "params": {
+            "controller": "MetaInstagramWebhook",
+            "action": "configure"
+        }
+    }
+]

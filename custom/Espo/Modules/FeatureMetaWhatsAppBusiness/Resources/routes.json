@@ -1,0 +1,10 @@
+[
+    {
+        "route": "/MetaWhatsAppWebhook/configure",
+        "method": "post",
+        "params": {
+            "controller": "MetaWhatsAppWebhook",
+            "action": "configure"
+        }
+    }
+]

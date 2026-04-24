@@ -70,9 +70,80 @@ body[data-navbar="side"] {
                         padding-left: var(--navbar-tab-right-padding);
                     }
 
-                    li.tab > a {
-                        padding-right: var(--navbar-tab-left-padding);
-                        padding-left: var(--navbar-tab-right-padding);
+                    li.tab,
+                    li.tab-group,
+                    li.more {
+                        margin-left: var(--8px);
+                        margin-right: var(--8px);
+
+                        > a {
+                            padding-right: var(--navbar-tab-left-padding);
+                            padding-left: var(--navbar-tab-right-padding);
+                            border-radius: var(--border-radius);
+                        }
+                    }
+                }
+            }
+        }
+
+        &:not(.minimized) {
+            #navbar {
+                ul.tabs.navbar-nav {
+                    display: flex;
+                    flex-direction: column;
+                    gap: var(--4px);
+
+                    > li {
+                        float: none;
+                        margin-left: var(--8px);
+                        margin-right: var(--8px);
+
+                        > a {
+                            height: var(--32px);
+                            padding-top: var(--4px);
+                            padding-bottom: var(--4px);
+                            padding-right: var(--6px);
+                            padding-left: var(--6px);
+                            border-radius: var(--border-radius);
+                            display: flex;
+                            align-items: center;
+                            gap: var(--8px);
+                            position: relative;
+
+                            > span.full-label {
+                                padding-right: 0;
+                                position: static;
+                                flex: 1;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                            }
+
+                            > span.short-label {
+                                position: relative;
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                width: var(--16px);
+                                height: var(--16px);
+                                right: auto;
+                                top: auto;
+                                margin-left: 0;
+
+                                > .short-label-text {
+                                    display: none;
+                                }
+                            }
+                        }
+                    }
+
+                    > li.tab-divider {
+                        > div {
+                            padding-top: var(--8px);
+                            padding-bottom: var(--4px);
+                            padding-right: var(--6px);
+                            padding-left: var(--6px);
+                        }
                     }
                 }
             }

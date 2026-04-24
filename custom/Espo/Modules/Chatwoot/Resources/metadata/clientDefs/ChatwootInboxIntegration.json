@@ -60,18 +60,38 @@
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "channelType",
-                            "value": "whatsappCloudApi"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCloudApi"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "instagram"
+                                }
+                            ]
                         }
                     ]
                 },
                 "required": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "channelType",
-                            "value": "whatsappCloudApi"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCloudApi"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "instagram"
+                                }
+                            ]
                         }
                     ]
                 }
@@ -190,6 +210,75 @@
                             "type": "equals",
                             "attribute": "channelType",
                             "value": "whatsappQrcode"
+                        }
+                    ]
+                }
+            },
+            "instagramBusinessAccountId": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "instagram"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "oAuthAccountId"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "instagram"
+                        }
+                    ]
+                }
+            },
+            "instagramId": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "instagram"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "instagramUsername": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "instagram"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
+                        }
+                    ]
+                }
+            },
+            "tokenExpiresAt": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "instagram"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "id"
                         }
                     ]
                 }

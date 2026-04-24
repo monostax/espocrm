@@ -1,0 +1,14 @@
+{
+    "detailActionList": [
+        "__APPEND__",
+        {
+            "name": "configureMetaWhatsAppWebhook",
+            "label": "Configure WhatsApp App Secret",
+            "labelTranslation": "OAuthProvider.labels.configureMetaWhatsAppWebhook",
+            "handler": "feature-meta-whatsapp-business:handlers/o-auth-provider/detail-actions",
+            "actionFunction": "configureMetaWhatsAppWebhook",
+            "checkVisibilityFunction": "isConfigureMetaWhatsAppWebhookAvailable",
+            "groupIndex": 1
+        }
+    ]
+}

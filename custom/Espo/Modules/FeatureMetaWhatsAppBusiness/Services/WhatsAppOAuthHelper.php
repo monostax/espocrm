@@ -77,9 +77,11 @@ class WhatsAppOAuthHelper
     /**
      * Get all active OAuthAccounts accessible to the current user.
      *
+     * @param string|null $provider Optional provider type filter (e.g. "meta-whatsapp", "meta-instagram").
+     *                              When provided, only accounts whose OAuthProvider.provider matches are returned.
      * @return Entity[]
      */
-    public function getAccessibleOAuthAccounts(): array
+    public function getAccessibleOAuthAccounts(?string $provider = null): array
     {
         $oAuthAccounts = $this->entityManager
             ->getRDBRepository('OAuthAccount')
@@ -104,9 +106,13 @@ class WhatsAppOAuthHelper
                 continue;
             }
 
-            $provider = $this->entityManager->getEntityById('OAuthProvider', $providerId);
+            $providerEntity = $this->entityManager->getEntityById('OAuthProvider', $providerId);
 
-            if (!$provider || !$provider->get('isActive')) {
+            if (!$providerEntity || !$providerEntity->get('isActive')) {
+                continue;
+            }
+
+            if ($provider !== null && $providerEntity->get('provider') !== $provider) {
                 continue;
             }
 

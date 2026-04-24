@@ -43,12 +43,13 @@
         },
         "channelType": {
             "type": "enum",
-            "options": ["whatsappQrcode", "whatsappCloudApi"],
+            "options": ["whatsappQrcode", "whatsappCloudApi", "instagram"],
             "default": "whatsappQrcode",
             "view": "global:views/fields/svg-icon-enum",
             "svgIconByValue": {
                 "whatsappQrcode": "whatsapp",
-                "whatsappCloudApi": "whatsapp"
+                "whatsappCloudApi": "whatsapp",
+                "instagram": "instagram"
             },
             "readOnlyAfterCreate": true
         },
@@ -144,6 +145,29 @@
             "type": "varchar",
             "maxLength": 255,
             "readOnly": true
+        },
+        "instagramId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "instagramUsername": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "tokenExpiresAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "instagramBusinessAccountId": {
+            "type": "varchar",
+            "notStorable": true,
+            "utility": true,
+            "layoutListDisabled": true,
+            "maxLength": 64,
+            "view": "chatwoot:views/chatwoot-inbox-integration/fields/instagram-business-account"
         },
         "errorMessage": {
             "type": "text",

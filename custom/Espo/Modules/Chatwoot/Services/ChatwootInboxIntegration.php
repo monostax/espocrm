@@ -19,10 +19,12 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Crypt;
 use Espo\Core\Acl;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
+use Espo\Modules\FeatureMetaInstagram\Services\InstagramGraphApiClient;
 use Espo\Tools\OAuth\TokensProvider;
 use stdClass;
 
@@ -40,6 +42,8 @@ class ChatwootInboxIntegration
         private ChatwootApiClient $chatwootApiClient,
         private CredentialResolver $credentialResolver,
         private TokensProvider $tokensProvider,
+        private InstagramGraphApiClient $instagramApiClient,
+        private Crypt $crypt,
         private Log $log,
         private Acl $acl,
         private Config $config
@@ -81,6 +85,10 @@ class ChatwootInboxIntegration
 
         if ($channelType === 'whatsappCloudApi') {
             return $this->activateWhatsappCloudApi($channel);
+        }
+
+        if ($channelType === 'instagram') {
+            return $this->activateInstagram($channel);
         }
 
         return $this->activateWhatsappQrcode($channel);
@@ -544,6 +552,9 @@ class ChatwootInboxIntegration
 
         // For Cloud API channels, disconnecting simply marks the status.
         // The Chatwoot inbox remains intact and can be reconnected.
+        //
+        // Instagram: status-only disconnect, Chatwoot inbox is preserved.
+        // We do NOT delete the inbox or unsubscribe webhooks; reconnect re-activates idempotently.
 
         $channel->set('status', 'DISCONNECTED');
         $this->entityManager->saveEntity($channel);
@@ -576,6 +587,10 @@ class ChatwootInboxIntegration
 
         if ($channelType === 'whatsappCloudApi') {
             return $this->reconnectWhatsappCloudApi($channel);
+        }
+
+        if ($channelType === 'instagram') {
+            return $this->reconnectInstagram($channel);
         }
 
         return $this->reconnectWhatsappQrcode($channel);
@@ -892,6 +907,10 @@ class ChatwootInboxIntegration
 
         if ($channelType === 'whatsappCloudApi') {
             return $this->checkStatusWhatsappCloudApi($channel);
+        }
+
+        if ($channelType === 'instagram') {
+            return $this->checkStatusInstagram($channel);
         }
 
         return $this->checkStatusWhatsappQrcode($channel);
@@ -1223,5 +1242,425 @@ class ChatwootInboxIntegration
         $this->log->info("ChatwootInboxIntegration: Created Chatwoot WhatsApp Cloud inbox '{$inboxName}' for account {$accountId}");
 
         return json_decode($result, true);
+    }
+
+    /**
+     * Activate an Instagram channel.
+     *
+     * Orchestrates:
+     *   1. Resolve short-lived access token from OAuthAccount via TokensProvider.
+     *   2. Exchange short-lived → long-lived token via Instagram Graph API.
+     *   3. Resolve Instagram Business Account via /me (or use pre-selected instagramBusinessAccountId).
+     *   4. Create the Chatwoot Instagram inbox (flat channel attributes).
+     *   5. Persist instagramId/instagramUsername/tokenExpiresAt on the integration.
+     *   6. Upsert the local ChatwootInbox mirror (inbox_identifier may be null).
+     *
+     * @param Entity $channel
+     * @return Entity
+     * @throws Error
+     */
+    private function activateInstagram(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
+
+        try {
+            $chatwootAccount = $channel->get('chatwootAccount');
+
+            if (!$chatwootAccount) {
+                throw new Error("Chatwoot Account not set.");
+            }
+
+            $oAuthAccountId = $channel->get('oAuthAccountId');
+
+            if (!$oAuthAccountId) {
+                throw new Error("Meta Account (OAuth) not set. Please select an Instagram Meta Account.");
+            }
+
+            $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
+
+            if (!$oAuthAccount) {
+                throw new Error("OAuthAccount not found.");
+            }
+
+            // Step 1: Resolve current access token.
+            $tokens = $this->tokensProvider->get($oAuthAccountId);
+            $currentAccessToken = $tokens->getAccessToken();
+
+            if (!$currentAccessToken) {
+                throw new Error("Unable to obtain access token from the Meta (Instagram) OAuth Account.");
+            }
+
+            // Step 2: Exchange short-lived → long-lived token if not already exchanged.
+            // Instagram uses a non-standard grant type at a different domain, so we
+            // cannot rely on EspoCRM's generic OAuth refresh_token flow.
+            // The exchange is REQUIRED: Chatwoot's Channel::Instagram#access_token getter
+            // returns nil when expires_at is blank (via Instagram::RefreshOauthTokenService),
+            // which makes `validates :access_token, presence: true` fail.
+            $longLivedToken = $currentAccessToken;
+            $expiresAt = $oAuthAccount->get('expiresAt');
+            $alreadyExchanged = (bool) $oAuthAccount->get('metaIgLongLivedExchangedAt');
+
+            if (!$alreadyExchanged) {
+                $providerId = $oAuthAccount->get('providerId');
+                $provider = $providerId
+                    ? $this->entityManager->getEntityById('OAuthProvider', $providerId)
+                    : null;
+
+                $encryptedSecret = $provider ? ($provider->get('clientSecret') ?? '') : '';
+
+                if (!$encryptedSecret) {
+                    throw new Error("Meta (Instagram) OAuth Provider is missing a client secret.");
+                }
+
+                // OAuthProvider.clientSecret is stored encrypted (password field); decrypt it.
+                $clientSecret = $this->crypt->decrypt($encryptedSecret);
+
+                $exchange = $this->instagramApiClient->exchangeForLongLivedToken(
+                    $currentAccessToken,
+                    $clientSecret
+                );
+                $longLivedToken = $exchange['access_token'] ?? null;
+                $expiresIn = (int) ($exchange['expires_in'] ?? 0);
+
+                if (!$longLivedToken) {
+                    throw new Error("Instagram long-lived token exchange did not return an access_token.");
+                }
+
+                $newExpiresAt = $expiresIn > 0
+                    ? gmdate('Y-m-d H:i:s', time() + $expiresIn)
+                    : gmdate('Y-m-d H:i:s', time() + 60 * 24 * 60 * 60); // fallback: 60 days
+
+                // OAuthAccount.accessToken is a `password`-type field. It is NOT
+                // auto-encrypted by the ORM on save (the standard EspoCRM flow in
+                // Tools\OAuth\TokenSetter explicitly encrypts before setting);
+                // TokensProvider assumes the stored value is ciphertext and runs
+                // $crypt->decrypt() on it. Writing plaintext here would corrupt
+                // the token pipeline with "OpenSSL decrypt failure" on every
+                // subsequent read. Mirror TokenSetter::set() and encrypt here.
+                $oAuthAccount->set('accessToken', $this->crypt->encrypt($longLivedToken));
+                $oAuthAccount->set('expiresAt', $newExpiresAt);
+                $oAuthAccount->set('metaIgLongLivedExchangedAt', gmdate('Y-m-d H:i:s'));
+                $this->entityManager->saveEntity($oAuthAccount);
+
+                $expiresAt = $newExpiresAt;
+            }
+
+            // Safety net: Chatwoot REQUIRES a non-null expires_at (the Instagram channel's
+            // access_token getter returns nil when expires_at is blank).
+            if (!$expiresAt) {
+                $expiresAt = gmdate('Y-m-d H:i:s', time() + 60 * 24 * 60 * 60);
+            }
+
+            // Step 3: Resolve Instagram Business Account via /me.
+            $me = $this->instagramApiClient->getMe($longLivedToken);
+            $instagramId = (string) ($me['user_id'] ?? '');
+            $instagramUsername = $me['username'] ?? null;
+
+            if (!$instagramId) {
+                throw new Error("Unable to resolve Instagram account (user_id) from the OAuth token.");
+            }
+
+            // Step 3.5: Explicitly subscribe the Meta App to this IG account's webhook
+            // events BEFORE creating the Chatwoot inbox. Chatwoot's
+            // `Channel::Instagram#subscribe` (fired by `after_create_commit`) makes the
+            // same call but silently `rescue StandardError` — so if Meta rejects
+            // (missing `instagram_business_manage_messages` scope, account not
+            // messaging-enabled, revoked token, etc.), the Chatwoot inbox would be
+            // created in a broken state and the user would never receive messages.
+            //
+            // Doing this first means:
+            //   - We surface Meta's real error message to the user.
+            //   - We fail fast, before any Chatwoot-side resource is created.
+            //   - The call is idempotent, so Chatwoot's redundant retry is safe.
+            try {
+                $this->instagramApiClient->subscribeApp($longLivedToken, $instagramId);
+                $this->log->info(
+                    "ChatwootInboxIntegration: Instagram webhook subscription confirmed for {$instagramId}."
+                );
+            } catch (\Exception $e) {
+                throw new Error(
+                    'Failed to subscribe this Instagram account to webhook events at Meta. ' .
+                    'Make sure the Meta App webhook is configured (Configure Meta Webhook action on the ' .
+                    "meta-instagram OAuthProvider) and the token has the required scopes. Original error: " .
+                    $e->getMessage()
+                );
+            }
+
+            // Get Chatwoot connection details.
+            $chatwootPlatform = $chatwootAccount->get('platform');
+
+            if (!$chatwootPlatform) {
+                throw new Error("Chatwoot Platform not found for account.");
+            }
+
+            $chatwootUrl = $chatwootPlatform->get('backendUrl');
+            $chatwootAccountId = $chatwootAccount->get('chatwootAccountId');
+            $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
+
+            if (!$chatwootAccountApiKey) {
+                throw new Error("ChatwootAccount is missing API key. Please generate a User Access Token in Chatwoot (Settings > Account Settings > API Access Tokens) and add it to the ChatwootAccount.");
+            }
+
+            // Step 4: Create the Chatwoot Instagram inbox.
+            $inboxName = 'Instagram - ' . $channel->get('name');
+
+            // Normalise expiresAt to ISO-8601 if present.
+            $expiresAtIso = $this->normaliseExpiresAt($expiresAt);
+
+            $inboxResult = $this->createChatwootInstagramInbox(
+                $chatwootUrl,
+                $chatwootAccountApiKey,
+                (int) $chatwootAccountId,
+                $inboxName,
+                $longLivedToken,
+                $instagramId,
+                $expiresAtIso
+            );
+
+            // Step 5: Persist Instagram metadata on the integration entity.
+            $channel->set('instagramId', $instagramId);
+            $channel->set('instagramUsername', $instagramUsername);
+            $channel->set('tokenExpiresAt', $expiresAt ?: null);
+
+            // Step 6: Mirror into local ChatwootInbox (inbox_identifier tolerated as null).
+            $channel->set('chatwootInboxId', $inboxResult['id']);
+            $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
+            $channel->set('chatwootInboxRecordId', $this->upsertLocalChatwootInbox($channel, $inboxResult));
+
+            $channel->set('status', 'ACTIVE');
+            $channel->set('connectedAt', date('Y-m-d H:i:s'));
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+
+            $this->log->info("ChatwootInboxIntegration: Instagram channel {$channelId} activated successfully.");
+
+            return $channel;
+
+        } catch (\Exception $e) {
+            $this->log->error("ChatwootInboxIntegration activation failed (Instagram): " . $e->getMessage());
+            $channel->set('status', 'FAILED');
+            $channel->set('errorMessage', $e->getMessage());
+            $this->entityManager->saveEntity($channel);
+            throw new Error("Activation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reconnect an Instagram channel.
+     * If the Chatwoot inbox still exists, marks the channel ACTIVE.
+     * Otherwise re-runs activation.
+     *
+     * Note: Instagram does NOT support standard OAuth2 refresh_token grant.
+     * If the stored token has expired, the user must re-authorize in the CRM.
+     *
+     * @param Entity $channel
+     * @return Entity
+     * @throws Error
+     */
+    private function reconnectInstagram(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
+        $chatwootInboxId = $channel->get('chatwootInboxId');
+
+        if (!$chatwootInboxId) {
+            return $this->activate($channelId);
+        }
+
+        try {
+            $tokenExpiresAt = $channel->get('tokenExpiresAt');
+
+            if ($tokenExpiresAt && strtotime($tokenExpiresAt) < time()) {
+                throw new Error(
+                    "Instagram long-lived token has expired. Please re-authorize the Meta (Instagram) OAuth Account."
+                );
+            }
+
+            $chatwootAccount = $channel->get('chatwootAccount');
+
+            if (!$chatwootAccount) {
+                throw new Error("Chatwoot Account not set.");
+            }
+
+            $chatwootPlatform = $chatwootAccount->get('platform');
+
+            if (!$chatwootPlatform) {
+                throw new Error("Chatwoot Platform not found for account.");
+            }
+
+            $chatwootUrl = $chatwootPlatform->get('backendUrl');
+            $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
+            $chatwootAccountId = $chatwootAccount->get('chatwootAccountId');
+
+            if ($chatwootAccountApiKey && $chatwootAccountId) {
+                $inboxes = $this->chatwootApiClient->listInboxes(
+                    $chatwootUrl,
+                    $chatwootAccountApiKey,
+                    (int) $chatwootAccountId
+                );
+
+                $inboxExists = false;
+                $inboxList = $inboxes['payload'] ?? $inboxes;
+                foreach ($inboxList as $inbox) {
+                    if (($inbox['id'] ?? null) == $chatwootInboxId) {
+                        $inboxExists = true;
+                        break;
+                    }
+                }
+
+                if (!$inboxExists) {
+                    $this->log->info("ChatwootInboxIntegration: Chatwoot inbox {$chatwootInboxId} no longer exists, re-activating Instagram channel.");
+                    $channel->set('chatwootInboxId', null);
+                    $channel->set('chatwootInboxIdentifier', null);
+                    $this->entityManager->saveEntity($channel);
+                    return $this->activate($channelId);
+                }
+            }
+
+            $channel->set('status', 'ACTIVE');
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+
+            $this->log->info("ChatwootInboxIntegration: Instagram channel {$channelId} reconnected successfully.");
+
+            return $channel;
+
+        } catch (\Exception $e) {
+            $this->log->error("Reconnect failed (Instagram): " . $e->getMessage());
+            $channel->set('status', 'FAILED');
+            $channel->set('errorMessage', $e->getMessage());
+            $this->entityManager->saveEntity($channel);
+            throw new Error("Reconnect failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Health-check an Instagram channel against graph.instagram.com.
+     * HTTP 200 ⇒ ACTIVE. Any other code ⇒ DISCONNECTED with errorMessage.
+     */
+    private function checkStatusInstagram(Entity $channel): Entity
+    {
+        $instagramId = $channel->get('instagramId');
+        $oAuthAccountId = $channel->get('oAuthAccountId');
+
+        if (!$instagramId || !$oAuthAccountId) {
+            return $channel;
+        }
+
+        try {
+            $tokens = $this->tokensProvider->get($oAuthAccountId);
+            $accessToken = $tokens->getAccessToken();
+
+            if (!$accessToken) {
+                if ($channel->get('status') === 'ACTIVE') {
+                    $channel->set('status', 'DISCONNECTED');
+                    $channel->set('errorMessage', 'Unable to obtain access token from Meta (Instagram) OAuth Account.');
+                    $this->entityManager->saveEntity($channel);
+                }
+                return $channel;
+            }
+
+            $httpCode = $this->instagramApiClient->healthCheck($accessToken, $instagramId);
+            $currentStatus = $channel->get('status');
+
+            if ($httpCode === 200) {
+                if ($currentStatus !== 'ACTIVE') {
+                    $channel->set('status', 'ACTIVE');
+                    $channel->set('errorMessage', null);
+                    $this->entityManager->saveEntity($channel);
+                }
+            } else {
+                if ($currentStatus === 'ACTIVE') {
+                    $channel->set('status', 'DISCONNECTED');
+                    $channel->set('errorMessage', "Instagram Graph API returned HTTP {$httpCode}.");
+                    $this->entityManager->saveEntity($channel);
+                }
+            }
+
+        } catch (\Exception $e) {
+            $this->log->warning("Failed to check channel status (Instagram): " . $e->getMessage());
+        }
+
+        return $channel;
+    }
+
+    /**
+     * Create a native Chatwoot Instagram inbox.
+     *
+     * Uses flat channel attributes (NOT provider_config) since Channel::Instagram
+     * has flat columns (access_token, instagram_id, expires_at) and no JSONB
+     * provider_config hash.
+     *
+     * Note: the Chatwoot `_inbox.json.jbuilder` partial does NOT emit
+     * `inbox_identifier` for Instagram (Channel::Instagram has no `identifier`
+     * column). Callers must tolerate it being absent via the `?? null` pattern.
+     *
+     * @throws Error
+     */
+    private function createChatwootInstagramInbox(
+        string $chatwootUrl,
+        string $apiKey,
+        int $accountId,
+        string $inboxName,
+        string $accessToken,
+        string $instagramId,
+        ?string $expiresAtIso
+    ): array {
+        $url = rtrim($chatwootUrl, '/') . "/api/v1/accounts/{$accountId}/inboxes";
+
+        $channelPayload = [
+            'type' => 'instagram',
+            'instagram_id' => $instagramId,
+            'access_token' => $accessToken,
+        ];
+
+        if ($expiresAtIso) {
+            $channelPayload['expires_at'] = $expiresAtIso;
+        }
+
+        $payload = json_encode([
+            'name' => $inboxName,
+            'channel' => $channelPayload,
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'api_access_token: ' . $apiKey,
+        ]);
+
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $error = json_decode($result, true);
+            $errorMessage = $error['message'] ?? $error['error'] ?? $result;
+            throw new Error("Failed to create Chatwoot Instagram inbox: " . $errorMessage);
+        }
+
+        $this->log->info("ChatwootInboxIntegration: Created Chatwoot Instagram inbox '{$inboxName}' for account {$accountId}");
+
+        return json_decode($result, true);
+    }
+
+    /**
+     * Normalise a datetime-ish value to ISO-8601 (UTC) for Chatwoot's expires_at.
+     */
+    private function normaliseExpiresAt(mixed $expiresAt): ?string
+    {
+        if (!$expiresAt) {
+            return null;
+        }
+
+        $ts = is_numeric($expiresAt) ? (int) $expiresAt : strtotime((string) $expiresAt);
+
+        if (!$ts) {
+            return null;
+        }
+
+        return gmdate('c', $ts);
     }
 }

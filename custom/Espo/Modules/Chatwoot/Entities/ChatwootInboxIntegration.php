@@ -34,6 +34,7 @@ class ChatwootInboxIntegration extends Entity
     public const CHANNEL_TYPE_WHATSAPP = 'whatsapp';
     public const CHANNEL_TYPE_WHATSAPP_QRCODE = 'whatsappQrcode';
     public const CHANNEL_TYPE_WHATSAPP_CLOUD_API = 'whatsappCloudApi';
+    public const CHANNEL_TYPE_INSTAGRAM = 'instagram';
 
     public function getName(): ?string
     {
@@ -108,5 +109,20 @@ class ChatwootInboxIntegration extends Entity
     public function isWhatsappCloudApi(): bool
     {
         return $this->getChannelType() === self::CHANNEL_TYPE_WHATSAPP_CLOUD_API;
+    }
+
+    public function isInstagram(): bool
+    {
+        return $this->getChannelType() === self::CHANNEL_TYPE_INSTAGRAM;
+    }
+
+    public function getInstagramId(): ?string
+    {
+        return $this->get('instagramId');
+    }
+
+    public function getInstagramUsername(): ?string
+    {
+        return $this->get('instagramUsername');
     }
 }

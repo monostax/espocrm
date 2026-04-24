@@ -1,0 +1,25 @@
+{
+    "fields": {
+        "webhookVerifyToken": "Webhook Verify Token"
+    },
+    "tooltips": {
+        "webhookVerifyToken": "Shared secret used during Meta's `hub.verify_token` webhook verification handshake. Auto-generated on first 'Configure Meta Webhook' run. Must match the Verify Token you paste into the Meta App Dashboard → Products → Instagram → Webhooks. The configure action pushes this value to every ChatwootPlatform."
+    },
+    "labels": {
+        "configureMetaInstagramWebhook": "Configure Meta Webhook",
+        "Configure": "Configure",
+        "Configuring Meta webhook...": "Configuring Meta webhook...",
+        "Instagram Webhook": "Instagram Webhook"
+    },
+    "messages": {
+        "confirmConfigureMetaInstagramWebhook": "This will generate (if needed) a webhook Verify Token, sync it to every ChatwootPlatform, and show you the Callback URL + Verify Token to paste into the Meta App Dashboard → Products → Instagram → Webhooks. Proceed?",
+        "metaWebhookConfigured": "Verify Token is in sync with Chatwoot. Paste the values below into the Meta App Dashboard to finish setup.",
+        "metaWebhookConfiguredWithNewToken": "A new Verify Token was generated and synced to Chatwoot. Paste the values below into the Meta App Dashboard to finish setup.",
+        "metaWebhookConfiguredChatwootFailed": "Verify Token is set locally, but some ChatwootPlatforms failed to accept it. See details below.",
+        "metaWebhookConfigFailed": "Meta webhook configuration failed.",
+        "metaWebhookManualStepsTitle": "Paste these into Meta App Dashboard → Products → Instagram → Webhooks:",
+        "metaWebhookCallbackUrlLabel": "Callback URL",
+        "metaWebhookVerifyTokenLabel": "Verify Token",
+        "metaWebhookChatwootFailedHeader": "ChatwootPlatforms that failed to sync:"
+    }
+}

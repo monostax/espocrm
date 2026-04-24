@@ -21,6 +21,7 @@ class SeedProviderEnum implements RebuildAction
     private const KNOWN_PROVIDER_BY_ID = [
         'msx_gmeet_01' => 'google-meet',
         'msx_google_cal_01' => 'google-calendar',
+        'msx_meta_ig_01' => 'meta-instagram',
     ];
 
     /**
