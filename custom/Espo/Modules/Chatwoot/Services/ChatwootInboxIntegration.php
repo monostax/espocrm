@@ -1298,7 +1298,26 @@ class ChatwootInboxIntegration
             // which makes `validates :access_token, presence: true` fail.
             $longLivedToken = $currentAccessToken;
             $expiresAt = $oAuthAccount->get('expiresAt');
+
+            // "Already exchanged" is true when either:
+            //   (a) the explicit marker is set (post-fix flow), OR
+            //   (b) expiresAt is more than 2 days in the future (fallback for
+            //       OAuthAccounts created before the marker column existed —
+            //       a short-lived IG token is always ~1 hour, so anything
+            //       >2 days ahead MUST be long-lived already).
+            // Re-exchanging a long-lived token hits
+            //   https://graph.instagram.com/access_token?grant_type=ig_exchange_token
+            // with a token that IG expects to be short-lived and fails with
+            // OAuthException code 190, so avoiding that call is important.
             $alreadyExchanged = (bool) $oAuthAccount->get('metaIgLongLivedExchangedAt');
+
+            if (!$alreadyExchanged && $expiresAt) {
+                $expiresTs = strtotime((string) $expiresAt);
+
+                if ($expiresTs !== false && $expiresTs > time() + 2 * 24 * 60 * 60) {
+                    $alreadyExchanged = true;
+                }
+            }
 
             if (!$alreadyExchanged) {
                 $providerId = $oAuthAccount->get('providerId');

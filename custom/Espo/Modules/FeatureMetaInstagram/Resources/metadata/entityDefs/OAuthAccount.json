@@ -1,0 +1,11 @@
+{
+    "fields": {
+        "metaIgLongLivedExchangedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "audited": false,
+            "tooltip": true,
+            "comment": "Set when the short-lived Instagram Login token was exchanged for a long-lived one via graph.instagram.com/access_token. Used by ChatwootInboxIntegration to skip re-exchange on re-activation."
+        }
+    }
+}

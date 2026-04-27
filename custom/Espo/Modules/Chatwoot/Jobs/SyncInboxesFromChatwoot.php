@@ -152,7 +152,13 @@ class SyncInboxesFromChatwoot implements JobDataLess
         }
 
         // Remove orphaned inboxes (exist in EspoCRM but not in Chatwoot)
-        $deleted = $this->removeOrphanedInboxes($espoAccountId, $chatwootInboxIds);
+        $deleted = $this->removeOrphanedInboxes(
+            $espoAccountId,
+            $chatwootInboxIds,
+            $platformUrl,
+            $apiKey,
+            $chatwootAccountId
+        );
         $stats['deleted'] = $deleted;
 
         return $stats;
@@ -161,17 +167,30 @@ class SyncInboxesFromChatwoot implements JobDataLess
     /**
      * Remove ChatwootInbox records that no longer exist in Chatwoot.
      *
-     * SAFETY: If the API returned 0 inboxes but local inboxes exist, this is
-     * almost certainly an API error (auth failure, timeout, etc.), not a
-     * legitimate "all inboxes were deleted" scenario. We bail out to prevent
-     * catastrophic data loss including cascaded ChatwootInboxIntegration deletes.
+     * SAFETY layers (in order):
+     *   1. If the API returned 0 inboxes but local inboxes exist, abort entirely —
+     *      almost certainly a transient API failure, not "all inboxes were deleted".
+     *   2. For each local inbox not in the listInboxes response, perform a
+     *      targeted GET /api/v1/accounts/{id}/inboxes/{inbox_id} and only delete
+     *      on confirmed 404. If the inbox still exists remotely we log a warning
+     *      and skip — this prevents silent data loss when Chatwoot returns a
+     *      partial or stale inbox list.
+     *   3. If the per-inbox confirmation itself errors out, skip that inbox.
      *
      * @param string $espoAccountId
-     * @param array<int> $chatwootInboxIds Valid Chatwoot inbox IDs
+     * @param array<int> $chatwootInboxIds Valid Chatwoot inbox IDs from listInboxes
+     * @param string $platformUrl Chatwoot platform base URL
+     * @param string $apiKey Chatwoot account API key
+     * @param int $chatwootAccountId Chatwoot-side account ID
      * @return int Number of deleted records
      */
-    private function removeOrphanedInboxes(string $espoAccountId, array $chatwootInboxIds): int
-    {
+    private function removeOrphanedInboxes(
+        string $espoAccountId,
+        array $chatwootInboxIds,
+        string $platformUrl,
+        string $apiKey,
+        int $chatwootAccountId
+    ): int {
         $deleted = 0;
 
         // Get all existing inboxes for this account in EspoCRM
@@ -182,7 +201,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
         $existingList = iterator_to_array($existingInboxes);
 
-        // Safety check: refuse to treat an empty API response as "delete all".
+        // Layer 1: refuse to treat an empty API response as "delete all".
         if (empty($chatwootInboxIds) && !empty($existingList)) {
             $this->log->warning(
                 "SyncInboxesFromChatwoot: API returned 0 inboxes but " . count($existingList) .
@@ -194,24 +213,63 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
         foreach ($existingList as $inbox) {
             $inboxChatwootId = $inbox->get('chatwootInboxId');
-            
-            // If this inbox's chatwootInboxId is not in the list from Chatwoot, delete it
-            if (!in_array($inboxChatwootId, $chatwootInboxIds, true)) {
-                $this->log->info(
-                    "SyncInboxesFromChatwoot: Removing orphaned inbox {$inbox->getId()} " .
-                    "(chatwootInboxId: {$inboxChatwootId}) - no longer exists in Chatwoot"
+
+            if (in_array($inboxChatwootId, $chatwootInboxIds, true)) {
+                continue;
+            }
+
+            if (empty($inboxChatwootId)) {
+                // Local inbox without a Chatwoot id — cannot confirm remote state.
+                $this->log->warning(
+                    "SyncInboxesFromChatwoot: Local inbox {$inbox->getId()} has no " .
+                    "chatwootInboxId; skipping orphan cleanup."
                 );
-                
-                try {
-                    // Use cascadeParent to enable local cascade delete while skipping remote API calls
-                    $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
-                    $deleted++;
-                } catch (\Exception $e) {
-                    $this->log->debug(
-                        "SyncInboxesFromChatwoot: Failed to remove orphaned inbox {$inbox->getId()}: " .
-                        $e->getMessage()
-                    );
-                }
+                continue;
+            }
+
+            // Layer 2: confirm the inbox really is missing remotely before deleting.
+            try {
+                $remote = $this->apiClient->getInbox(
+                    $platformUrl,
+                    $apiKey,
+                    $chatwootAccountId,
+                    (int) $inboxChatwootId
+                );
+            } catch (\Throwable $e) {
+                // Layer 3: on API error, do not delete.
+                $this->log->warning(
+                    "SyncInboxesFromChatwoot: Could not confirm remote state of inbox " .
+                    "{$inboxChatwootId} for account {$espoAccountId}: " . $e->getMessage() .
+                    " - skipping deletion."
+                );
+                continue;
+            }
+
+            if ($remote !== null) {
+                // Inbox exists remotely but was missing from the list response.
+                // This is exactly the bug class that previously destroyed data.
+                $this->log->warning(
+                    "SyncInboxesFromChatwoot: Inbox {$inboxChatwootId} was absent from " .
+                    "listInboxes but direct GET returned 200 for account {$espoAccountId}. " .
+                    "Skipping deletion of local inbox {$inbox->getId()}."
+                );
+                continue;
+            }
+
+            // Confirmed 404 — safe to delete.
+            $this->log->info(
+                "SyncInboxesFromChatwoot: Removing orphaned inbox {$inbox->getId()} " .
+                "(chatwootInboxId: {$inboxChatwootId}) - confirmed 404 in Chatwoot"
+            );
+
+            try {
+                $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
+                $deleted++;
+            } catch (\Exception $e) {
+                $this->log->debug(
+                    "SyncInboxesFromChatwoot: Failed to remove orphaned inbox {$inbox->getId()}: " .
+                    $e->getMessage()
+                );
             }
         }
 
@@ -221,13 +279,19 @@ class SyncInboxesFromChatwoot implements JobDataLess
     /**
      * Sync a single inbox from Chatwoot to EspoCRM.
      *
+     * Self-heals soft-deleted local records: if a ChatwootInbox for this
+     * (chatwootInboxId, chatwootAccountId) pair was previously soft-deleted
+     * but Chatwoot still returns the inbox, we restore the local row rather
+     * than create a duplicate. This protects against the data-loss class
+     * where a prior sync run incorrectly marked an existing inbox as orphaned.
+     *
      * @param array<string> $teamsIds Team IDs to assign to synced entities
      */
     private function syncSingleInbox(array $chatwootInbox, string $espoAccountId, array $teamsIds = []): void
     {
         $chatwootInboxId = $chatwootInbox['id'];
 
-        // Check if ChatwootInbox already exists
+        // Check if ChatwootInbox already exists (live rows only).
         $existingInbox = $this->entityManager
             ->getRDBRepository('ChatwootInbox')
             ->where([
@@ -238,9 +302,55 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
         if ($existingInbox) {
             $this->updateExistingInbox($existingInbox, $chatwootInbox, $teamsIds);
-        } else {
-            $this->createNewInbox($chatwootInbox, $espoAccountId, $teamsIds);
+            return;
         }
+
+        // Fall back to soft-deleted lookup and self-heal.
+        $softDeleted = $this->findInboxIncludingDeleted($chatwootInboxId, $espoAccountId);
+
+        if ($softDeleted) {
+            $this->log->warning(
+                "SyncInboxesFromChatwoot: Restoring soft-deleted ChatwootInbox " .
+                "{$softDeleted->getId()} (chatwootInboxId={$chatwootInboxId}) — " .
+                "Chatwoot still returns this inbox."
+            );
+
+            $this->entityManager
+                ->getRDBRepository('ChatwootInbox')
+                ->restoreDeleted($softDeleted->getId());
+
+            $restored = $this->entityManager->getEntityById('ChatwootInbox', $softDeleted->getId());
+
+            if ($restored) {
+                $this->updateExistingInbox($restored, $chatwootInbox, $teamsIds);
+                return;
+            }
+        }
+
+        $this->createNewInbox($chatwootInbox, $espoAccountId, $teamsIds);
+    }
+
+    /**
+     * Find a ChatwootInbox by (chatwootInboxId, chatwootAccountId) including
+     * soft-deleted records. Needed for self-healing restore.
+     */
+    private function findInboxIncludingDeleted(int $chatwootInboxId, string $espoAccountId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('ChatwootInbox')
+            ->where([
+                'chatwootInboxId' => $chatwootInboxId,
+                'chatwootAccountId' => $espoAccountId,
+            ])
+            ->withDeleted()
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->clone($query)
+            ->findOne();
     }
 
     /**

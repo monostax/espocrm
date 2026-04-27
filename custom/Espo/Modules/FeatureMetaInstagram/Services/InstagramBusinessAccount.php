@@ -67,6 +67,14 @@ class InstagramBusinessAccount
         $collection = $this->entityManager->getCollectionFactory()->create(self::ENTITY_TYPE);
         $totalCount = 0;
 
+        // When the caller explicitly asks about ONE OAuthAccount (e.g. the
+        // ChatwootInboxIntegration channel-creation form), per-account failures
+        // are actionable user errors: silencing them hides root causes like
+        // "Instagram account is not Professional". Surface them. When the
+        // caller asks about MANY (bulk listing), we keep the original
+        // best-effort behaviour so one broken account doesn't hide the rest.
+        $singleAccountMode = $oAuthAccountId !== null && !$oAuthAccountIds;
+
         if ($oAuthAccountIds) {
             $oAuthAccounts = [];
             foreach ($oAuthAccountIds as $id) {
@@ -98,9 +106,17 @@ class InstagramBusinessAccount
             try {
                 $tokens = $this->tokensProvider->get($accountId);
             } catch (\Throwable $e) {
+                $msg = "Failed to decrypt the access token for Meta (Instagram) "
+                    . "OAuth Account '{$accountName}'. The record may be corrupted — "
+                    . "delete it and re-authorize. (Original: " . $e->getMessage() . ")";
+
                 $this->log->warning(
                     "InstagramBusinessAccount: Failed to get tokens for OAuthAccount {$accountId}: " . $e->getMessage()
                 );
+
+                if ($singleAccountMode) {
+                    throw new Error($msg);
+                }
 
                 continue;
             }
@@ -108,9 +124,16 @@ class InstagramBusinessAccount
             $accessToken = $tokens->getAccessToken();
 
             if (!$accessToken) {
+                $msg = "The Meta (Instagram) OAuth Account '{$accountName}' has no "
+                    . "access token. Re-authorize it to obtain a fresh token.";
+
                 $this->log->warning(
                     "InstagramBusinessAccount: OAuthAccount {$accountId} has no access token, skipping."
                 );
+
+                if ($singleAccountMode) {
+                    throw new Error($msg);
+                }
 
                 continue;
             }
@@ -127,6 +150,13 @@ class InstagramBusinessAccount
                 $this->log->error(
                     "InstagramBusinessAccount: Failed to discover accounts for OAuthAccount {$accountId}: " . $e->getMessage()
                 );
+
+                // In single-account mode propagate so the channel-creation UI
+                // can render the actionable error (e.g. "IG account is not
+                // Professional" — translated in InstagramGraphApiClient).
+                if ($singleAccountMode) {
+                    throw $e;
+                }
             }
         }
 

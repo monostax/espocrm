@@ -9,7 +9,7 @@ define("feature-oauth-enhanced:views/o-auth-provider/record/detail", ["views/rec
                         [{ name: "name" }, { name: "isActive" }],
                         [{ name: "provider" }, false],
                         [{ name: "clientId" }, { name: "clientSecret" }],
-                        [{ name: "isGloballyShared" }, { name: "authorizationRedirectUri" }],
+                        [{ name: "authorizationRedirectUri" }, false],
                     ],
                 },
                 {
@@ -26,6 +26,15 @@ define("feature-oauth-enhanced:views/o-auth-provider/record/detail", ["views/rec
                 },
                 {
                     rows: [[{ name: "description" }]],
+                },
+                {
+                    tabBreak: true,
+                    tabLabel: "[Admin]",
+                    label: "[Admin]",
+                    name: "admin",
+                    rows: [
+                        [{ name: "isGloballyShared" }, false],
+                    ],
                 },
             ];
 

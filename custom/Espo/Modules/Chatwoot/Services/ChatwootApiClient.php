@@ -1670,6 +1670,55 @@ public function listInboxes(
 }
 
 /**
+ * Get a single inbox from a Chatwoot account.
+ *
+ * Returns null on HTTP 404 (inbox confirmed missing) so callers can
+ * distinguish a confirmed deletion from a transient API failure.
+ * Throws on any other non-2xx response.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @return array<string, mixed>|null Inbox payload, or null if 404
+ * @throws Error
+ */
+public function getInbox(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): ?array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inboxes/' . $inboxId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] === 404) {
+        return null;
+    }
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to get inbox from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (getInbox): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
  * Delete an inbox from a Chatwoot account.
  *
  * @param string $platformUrl The Chatwoot platform URL

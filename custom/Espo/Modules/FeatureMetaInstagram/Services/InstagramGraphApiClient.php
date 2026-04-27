@@ -326,17 +326,47 @@ class InstagramGraphApiClient
         if (is_array($data) && !empty($data['error']['message'])) {
             $apiMessage = $data['error']['message'];
             $apiCode = $data['error']['code'] ?? null;
+            $apiType = $data['error']['type'] ?? null;
+            $lowerMessage = strtolower((string) $apiMessage);
+
+            // Meta returns `IGApiException code=100 "Unsupported request – method type: get"`
+            // for EVERY endpoint on graph.instagram.com (including the token exchange and
+            // refresh endpoints) when the IG account behind the access token is not
+            // eligible for the Instagram Login API — almost always because the account
+            // is still set to Personal rather than Professional (Business/Creator), or
+            // the Meta App is in Development Mode and the IG user has not been added
+            // as a tester. A structurally-valid IGAA… token is still issued by the
+            // OAuth dialog, but no API call against it will ever succeed until the
+            // underlying account config is fixed.
+            if (
+                (int) $apiCode === 100 &&
+                $apiType === 'IGApiException' &&
+                str_contains($lowerMessage, 'unsupported request')
+            ) {
+                return "Instagram rejected this OAuth token (Unsupported request, code 100). "
+                    . "This almost always means the Instagram account is not set to a "
+                    . "Professional account type. In the Instagram mobile app, open "
+                    . "Settings → Account type and tools → Switch to Professional account "
+                    . "(choose Business or Creator), then remove Monostax from "
+                    . "Settings → Apps and Websites → Active and re-authorize. "
+                    . "(If the Meta App is in Development Mode, also add this Instagram "
+                    . "user as a tester in the Meta App dashboard.)";
+            }
 
             $message = match ($apiCode) {
-                190 => "Access token is invalid or expired. {$apiMessage}",
-                200 => "Insufficient permissions. {$apiMessage}",
-                803 => "Resource not found. {$apiMessage}",
+                190 => "Instagram access token is invalid, expired, or was revoked. "
+                    . "Re-authorize the Meta (Instagram) OAuth Account. "
+                    . "(Original: {$apiMessage})",
+                200 => "Insufficient Instagram permissions. Make sure the OAuth scopes "
+                    . "include `instagram_business_basic` and "
+                    . "`instagram_business_manage_messages`. (Original: {$apiMessage})",
+                803 => "Instagram resource not found. (Original: {$apiMessage})",
                 default => "Instagram API: {$apiMessage} (code {$apiCode})",
             };
         }
 
         if ($httpCode === 429) {
-            $message = "Instagram Graph API rate limit exceeded. Please try again later.";
+            $message = "Instagram Graph API rate limit exceeded. Please try again in a few minutes.";
         }
 
         return $message;

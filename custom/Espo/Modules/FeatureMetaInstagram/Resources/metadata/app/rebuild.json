@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\FeatureMetaInstagram\\Rebuild\\SeedOAuthProviderMetaInstagram"
+        "Espo\\Modules\\FeatureMetaInstagram\\Rebuild\\SeedOAuthProviderMetaInstagram",
+        "Espo\\Modules\\FeatureMetaInstagram\\Rebuild\\BackfillMetaIgLongLivedExchangedAt"
     ]
 }
