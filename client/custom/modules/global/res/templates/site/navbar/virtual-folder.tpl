@@ -1,6 +1,5 @@
 <div class="virtual-folder-header">
     <a class="virtual-folder-toggle" role="button" data-action="toggleVirtualFolder" data-id="{{id}}">
-        <span class="virtual-folder-icon {{iconClass}}"{{#if color}} style="color: {{color}}"{{/if}}></span>
         <span class="virtual-folder-label">{{label}}</span>
         <span class="virtual-folder-caret fas fa-chevron-down"></span>
     </a>
@@ -28,7 +27,10 @@
     {{else}}
         {{#each recordList}}
             <li class="virtual-folder-item">
-                <a href="{{url}}">{{name}}</a>
+                <a href="{{url}}">
+                    <span class="virtual-folder-item-icon {{iconClass}}"{{#if color}} style="color: {{color}}"{{/if}}></span>
+                    <span class="virtual-folder-item-label">{{name}}</span>
+                </a>
             </li>
         {{/each}}
         {{#unless recordList.length}}

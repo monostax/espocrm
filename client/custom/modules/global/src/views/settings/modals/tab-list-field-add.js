@@ -31,6 +31,7 @@ export default class CustomTabListFieldAddModal extends TabListFieldAddSettingsM
             label: null,
             entityType: null,
             filterName: null,
+            filterData: null,
             maxItems: 5,
             iconClass: null,
             color: null,

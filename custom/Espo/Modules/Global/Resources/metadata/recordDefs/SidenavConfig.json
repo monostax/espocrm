@@ -1,0 +1,15 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\SidenavConfig\\BeforeSave"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\SidenavConfig\\BeforeUpdate",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\SidenavConfig\\BeforeSave"
+    ],
+    "beforeDeleteHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\SidenavConfig\\BeforeDelete"
+    ]
+}

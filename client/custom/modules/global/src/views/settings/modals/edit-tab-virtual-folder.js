@@ -10,12 +10,26 @@
 
 import Modal from 'views/modal';
 import Model from 'model';
+import SearchManager from 'search-manager';
 
 export default class EditTabVirtualFolderModalView extends Modal {
 
     className = 'dialog dialog-record'
 
-    templateContent = `<div class="record no-side-margin">{{{record}}}</div>`
+    templateContent = `
+        <div class="record no-side-margin">{{{record}}}</div>
+        <div class="panel panel-default margin-top">
+            <div class="panel-heading">
+                <span class="panel-title">{{translate 'Filter'}}</span>
+            </div>
+            <div class="panel-body">
+                <div class="text-muted small margin-bottom">
+                    {{translate 'Use the same filters available in list views. Access control is still enforced when the folder loads records.' scope='Global'}}
+                </div>
+                <div class="filter-builder-container"></div>
+            </div>
+        </div>
+    `
 
     setup() {
         super.setup();
@@ -50,11 +64,7 @@ export default class EditTabVirtualFolderModalView extends Modal {
                             labelText: this.translate('entityType', 'fields', 'Global'),
                             view: 'global:views/settings/fields/virtual-folder-entity',
                         },
-                        {
-                            name: 'filterName',
-                            labelText: this.translate('filterName', 'fields', 'Global'),
-                            view: 'global:views/settings/fields/virtual-folder-filter',
-                        },
+                        false,
                     ],
                     [
                         {
@@ -116,6 +126,9 @@ export default class EditTabVirtualFolderModalView extends Modal {
                 filterName: {
                     type: 'enum',
                 },
+                filterData: {
+                    type: 'jsonObject',
+                },
                 maxItems: {
                     type: 'int',
                     default: 5,
@@ -153,11 +166,129 @@ export default class EditTabVirtualFolderModalView extends Modal {
             selector: '.record',
         });
 
+        this.listenTo(model, 'change:entityType', () => {
+            model.set('filterName', null, {silent: true});
+            model.set('filterData', null, {silent: true});
+
+            if (this.isRendered()) {
+                this.createFilterBuilder();
+            }
+        });
+
         this.listenTo(model, 'change:openMode', () => {
             if (model.get('openMode') === 'view') {
                 model.set('relationshipLink', null, {silent: true});
             }
         });
+    }
+
+    afterRender() {
+        super.afterRender();
+
+        this.createFilterBuilder();
+    }
+
+    createFilterBuilder() {
+        const entityType = this.model.get('entityType');
+
+        this.clearView('filterBuilder');
+
+        if (!entityType) {
+            const container = this.element && this.element.querySelector('.filter-builder-container');
+
+            if (container) {
+                container.innerHTML = `<span class="text-muted">${this.translate('Select an entity type first.', 'messages', 'Global')}</span>`;
+            }
+
+            return;
+        }
+
+        this.getCollectionFactory().create(entityType, collection => {
+            const searchManager = new SearchManager(collection, {
+                defaultData: this.getSearchDefaultData(),
+                emptyOnReset: true,
+            });
+
+            searchManager.scope = entityType;
+            collection.where = searchManager.getWhere();
+
+            this.filterSearchManager = searchManager;
+
+            this.createView('filterBuilder', 'views/record/search', {
+                collection: collection,
+                selector: '.filter-builder-container',
+                searchManager: searchManager,
+                disableSavePreset: true,
+                isWide: true,
+            }, view => {
+                view.render();
+            });
+        });
+    }
+
+    getSearchDefaultData() {
+        const filterData = this.model.get('filterData') || {};
+
+        return {
+            textFilter: filterData.textFilter || '',
+            bool: Espo.Utils.cloneDeep(filterData.bool || {}),
+            advanced: this.sanitizeAdvancedFilterData(filterData.advanced || {}),
+            primary: filterData.primary || null,
+            presetName: null,
+        };
+    }
+
+    sanitizeAdvancedFilterData(advanced) {
+        const result = {};
+
+        if (!advanced || typeof advanced !== 'object' || Array.isArray(advanced)) {
+            return result;
+        }
+
+        Object.keys(advanced).forEach(field => {
+            const defs = advanced[field];
+
+            if (!defs || typeof defs !== 'object' || Array.isArray(defs) || defs.where) {
+                return;
+            }
+
+            result[field] = Espo.Utils.cloneDeep(defs);
+        });
+
+        return result;
+    }
+
+    fetchFilterData() {
+        const view = this.getView('filterBuilder');
+
+        if (!view) {
+            return null;
+        }
+
+        view.fetch();
+        view.updateSearch();
+
+        const data = this.filterSearchManager.get();
+
+        return {
+            textFilter: data.textFilter || '',
+            bool: this.getActiveBoolFilterData(data.bool || {}),
+            advanced: this.sanitizeAdvancedFilterData(data.advanced || {}),
+            primary: data.primary || null,
+            presetName: null,
+        };
+    }
+
+    getActiveBoolFilterData(bool) {
+        const result = {};
+
+        Object.keys(bool || {}).forEach(name => {
+            if (bool[name]) {
+                result[name] = true;
+            }
+        });
+
+        return result;
     }
 
     actionApply() {
@@ -180,6 +311,10 @@ export default class EditTabVirtualFolderModalView extends Modal {
         }
 
         const data = recordView.fetch();
+        const filterData = this.fetchFilterData();
+
+        data.filterData = filterData;
+        data.filterName = filterData ? filterData.primary : null;
 
         this.trigger('apply', data);
     }

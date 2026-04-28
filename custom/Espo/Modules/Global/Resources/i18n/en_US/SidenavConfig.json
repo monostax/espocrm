@@ -5,11 +5,15 @@
         "tabList": "Tab List",
         "isDefault": "Default",
         "order": "Order",
-        "isDisabled": "Disabled"
+        "isDisabled": "Disabled",
+        "isGloballyShared": "Globally Shared",
+        "hideOnDropdown": "Hide on Dropdown"
     },
     "tooltips": {
         "isDefault": "If checked, this configuration will be the default for users in these teams who haven't selected a specific config.",
         "order": "Controls the position of this configuration in the selector dropdown. Lower numbers appear first.",
-        "isDisabled": "If checked, this configuration will be hidden from the selector dropdown but the record will be preserved."
+        "isDisabled": "If checked, this configuration will be hidden from the selector dropdown but the record will be preserved.",
+        "isGloballyShared": "If checked, this configuration will be available to all users regardless of team assignment. Only administrators can toggle this option.",
+        "hideOnDropdown": "If checked, this configuration will be active but hidden from the selector dropdown. Users can still be assigned to it via preferences."
     }
 }

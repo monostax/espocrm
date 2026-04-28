@@ -17,11 +17,61 @@ export default class VirtualFolderFilterFieldView extends EnumFieldView {
 
         this.listenTo(this.model, 'change:entityType', () => {
             this.model.set('filterName', null, {silent: true});
+            this.model.set('filterData', null, {silent: true});
             this.setupOptions();
             this.reRender();
         });
 
+        this.listenTo(this.model, 'change:filterName', () => {
+            this.syncFilterData();
+        });
+
         super.setup();
+    }
+
+    syncFilterData() {
+        const entityType = this.model.get('entityType');
+        const filterName = this.model.get('filterName');
+
+        if (!filterName || !entityType) {
+            this.model.set('filterData', null, {silent: true});
+
+            return;
+        }
+
+        const systemFilters = this.getMetadata().get(['clientDefs', entityType, 'filterList']) || [];
+        const isSystem = systemFilters.some(item => {
+            if (typeof item === 'string') {
+                return item === filterName;
+            }
+
+            return item.name === filterName;
+        });
+
+        if (isSystem) {
+            this.model.set('filterData', {primary: filterName}, {silent: true});
+
+            return;
+        }
+
+        const userFilters = (this.getPreferences().get('presetFilters') || {})[entityType] || [];
+        const userFilter = userFilters.find(item => item.name === filterName) || null;
+
+        if (userFilter) {
+            const filterData = {};
+
+            if (userFilter.primary) {
+                filterData.primary = userFilter.primary;
+            }
+
+            if (userFilter.data) {
+                filterData.advanced = Espo.Utils.cloneDeep(userFilter.data);
+            }
+
+            this.model.set('filterData', Object.keys(filterData).length ? filterData : null, {silent: true});
+        } else {
+            this.model.set('filterData', null, {silent: true});
+        }
     }
 
     setupOptions() {

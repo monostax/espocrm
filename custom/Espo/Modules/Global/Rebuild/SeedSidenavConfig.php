@@ -21,7 +21,7 @@
  * For licensing information, please visit: https://www.monostax.ai
  ************************************************************************/
 
-namespace Espo\Modules\FeatureClinicaBase\Rebuild;
+namespace Espo\Modules\Global\Rebuild;
 
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Metadata;
@@ -30,12 +30,9 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Seeds a "Clínica" SidenavConfig record with a clinical-workflow-focused
- * tabList. Upsert: creates if not exists, merges missing seed items into
- * existing records while preserving user customizations across rebuilds.
- *
- * Tenant-admins assign the config to their team(s) via
- * Configurations > Sidenav Configs.
+ * Seeds globally shared SidenavConfig records for common CRM scopes.
+ * Upsert: creates if not exists, merges missing seed items into existing
+ * records while preserving user customizations across rebuilds.
  */
 class SeedSidenavConfig implements RebuildAction
 {
@@ -47,20 +44,44 @@ class SeedSidenavConfig implements RebuildAction
 
     public function process(): void
     {
-        $this->log->info('FeatureClinicaBase: Seeding SidenavConfig...');
+        $this->log->info('Global: Seeding SidenavConfig...');
 
         $toHash = $this->metadata->get(['app', 'recordId', 'type']) === 'uuid4' ||
                   $this->metadata->get(['app', 'recordId', 'dbType']) === 'uuid';
 
-        $configId = $this->prepareId('feature-clinica', $toHash);
+        $configs = [
+            [
+                'id' => 'contact',
+                'name' => 'Pessoas',
+                'order' => 20,
+                'iconClass' => 'fas fa-users',
+                'tabList' => ['Contact'],
+            ],
+            [
+                'id' => 'opportunity',
+                'name' => 'Oportunidades',
+                'order' => 30,
+                'iconClass' => 'fas fa-briefcase',
+                'tabList' => ['Opportunity'],
+            ],
+        ];
 
+        foreach ($configs as $config) {
+            $this->seedConfig($config, $toHash);
+        }
+    }
+
+    private function seedConfig(array $config, bool $toHash): void
+    {
+        $configId = $this->prepareId($config['id'], $toHash);
         $existing = $this->findExistingConfigIncludingDeleted($configId);
 
         $data = [
-            'name' => 'Menu Clínica',
-            'order' => 10,
-            'iconClass' => 'fas fa-heartbeat',
-            'tabList' => $this->getTabList(),
+            'name' => $config['name'],
+            'order' => $config['order'],
+            'iconClass' => $config['iconClass'],
+            'tabList' => $config['tabList'],
+            'isGloballyShared' => true,
         ];
 
         try {
@@ -71,7 +92,7 @@ class SeedSidenavConfig implements RebuildAction
                     'modifiedById' => 'system',
                     'skipWorkflow' => true,
                 ]);
-                $this->log->info("FeatureClinicaBase: Upserted SidenavConfig 'Clínica' (ID: '{$configId}')");
+                $this->log->info("Global: Upserted SidenavConfig '{$config['name']}' (ID: '{$configId}')");
             } else {
                 $data['id'] = $configId;
                 $data['isDefault'] = false;
@@ -80,10 +101,10 @@ class SeedSidenavConfig implements RebuildAction
                     'createdById' => 'system',
                     'skipWorkflow' => true,
                 ]);
-                $this->log->info("FeatureClinicaBase: Created SidenavConfig 'Clínica' (ID: '{$configId}')");
+                $this->log->info("Global: Created SidenavConfig '{$config['name']}' (ID: '{$configId}')");
             }
         } catch (\Throwable $e) {
-            $this->log->error("FeatureClinicaBase: Failed to upsert SidenavConfig: " . $e->getMessage());
+            $this->log->error("Global: Failed to upsert SidenavConfig '{$config['name']}': " . $e->getMessage());
 
             $existing = $this->findExistingConfigIncludingDeleted($configId);
 
@@ -96,11 +117,11 @@ class SeedSidenavConfig implements RebuildAction
                         'skipWorkflow' => true,
                     ]);
                     $this->log->info(
-                        "FeatureClinicaBase: Recovered SidenavConfig upsert after conflict (ID: '{$configId}')"
+                        "Global: Recovered SidenavConfig upsert after conflict (ID: '{$configId}')"
                     );
                 } catch (\Throwable $retryError) {
                     $this->log->error(
-                        "FeatureClinicaBase: Retry upsert failed for SidenavConfig '{$configId}': " .
+                        "Global: Retry upsert failed for SidenavConfig '{$configId}': " .
                         $retryError->getMessage()
                     );
                 }
@@ -115,6 +136,7 @@ class SeedSidenavConfig implements RebuildAction
             'order' => $existing->get('order') ?? $data['order'],
             'iconClass' => $existing->get('iconClass') ?: $data['iconClass'],
             'tabList' => $this->upsertTabList($existing->get('tabList'), $data['tabList']),
+            'isGloballyShared' => $existing->get('isGloballyShared') ?? $data['isGloballyShared'],
         ];
     }
 
@@ -221,89 +243,6 @@ class SeedSidenavConfig implements RebuildAction
         $this->entityManager
             ->getRDBRepository('SidenavConfig')
             ->restoreDeleted($existing->getId());
-    }
-
-    private function getTabList(): array
-    {
-        return [
-            (object) [
-                'type' => 'url',
-                'text' => '$Calendar',
-                'url' => '#Calendar',
-                'iconClass' => 'ti ti-calendar',
-                'color' => null,
-                'aclScope' => null,
-                'onlyAdmin' => false,
-                'id' => 'sidenav-calendar',
-            ],
-
-            (object) [
-                'type' => 'divider',
-                'text' => '$Pacientes',
-            ],
-            'FeatureClinicaBasePaciente',
-            (object) [
-                'type' => 'divider',
-                'text' => '$CRM',
-            ],
-            'Contact',
-            'Opportunity',
-
-            (object) [
-                'type' => 'divider',
-                'text' => '$Conversations',
-                'id' => 'sidenav-conversations',
-            ],
-            (object) [
-                'type' => 'url',
-                'text' => '$OpenConversations',
-                'url' => '#ChatwootConversation/list/primaryFilter=open',
-                'iconClass' => 'ti ti-circle-dashed',
-                'color' => null,
-                'aclScope' => 'ChatwootConversation',
-                'onlyAdmin' => false,
-                'id' => 'sidenav-conversations-open',
-            ],
-            (object) [
-                'type' => 'url',
-                'text' => '$PendingConversations',
-                'url' => '#ChatwootConversation/list/primaryFilter=pending',
-                'iconClass' => 'ti ti-circle-half-2',
-                'color' => null,
-                'aclScope' => 'ChatwootConversation',
-                'onlyAdmin' => false,
-                'id' => 'sidenav-conversations-pending',
-            ],
-            (object) [
-                'type' => 'url',
-                'text' => '$SnoozedConversations',
-                'url' => '#ChatwootConversation/list/primaryFilter=snoozed',
-                'iconClass' => 'ti ti-bell-off',
-                'color' => null,
-                'aclScope' => 'ChatwootConversation',
-                'onlyAdmin' => false,
-                'id' => 'sidenav-conversations-snoozed',
-            ],
-            (object) [
-                'type' => 'url',
-                'text' => '$ResolvedConversations',
-                'url' => '#ChatwootConversation/list/primaryFilter=resolved',
-                'iconClass' => 'ti ti-circle-check-filled',
-                'color' => null,
-                'aclScope' => 'ChatwootConversation',
-                'onlyAdmin' => false,
-                'id' => 'sidenav-conversations-resolved',
-            ],
-
-            (object) [
-                'type' => 'divider',
-                'text' => '$Activities',
-            ],
-            'Task',
-            'Appointment',
-            'Call',
-            'Meeting',
-        ];
     }
 
     private function prepareId(string $id, bool $toHash): string

@@ -5,8 +5,17 @@
             [{"name": "name"}, {"name": "teams"}],
             [{"name": "order"}, {"name": "isDisabled"}],
             [{"name": "iconClass"}, {"name": "color"}],
-            [{"name": "isDefault"}, false],
+            [{"name": "isDefault"}, {"name": "hideOnDropdown"}],
             [{"name": "tabList", "fullWidth": true}]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "[Admin]",
+        "label": "[Admin]",
+        "name": "admin",
+        "rows": [
+            [{"name": "isGloballyShared"}, false]
         ]
     }
 ]

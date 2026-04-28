@@ -1,5 +1,6 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-bars",
-    "createDisabled": false
+    "createDisabled": false,
+    "aclFieldLevel": "yes"
 }

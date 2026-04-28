@@ -1,5 +1,5 @@
 /************************************************************************
- * Hide Metadata Tab for Non-Admin Users
+ * Hide Metadata Tab and [Admin] Tab for Non-Admin Users
  *
  * Applies globally to record detail views.
  ************************************************************************/
@@ -25,6 +25,7 @@
 
                 if (this.getUser && !this.getUser().isAdmin()) {
                     this.hidePanel("metadata", true);
+                    this.hidePanel("admin", true);
                 }
             };
         })

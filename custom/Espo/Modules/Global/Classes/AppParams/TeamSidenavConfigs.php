@@ -46,36 +46,72 @@ class TeamSidenavConfigs implements AppParam
     public function get(): array
     {
         $teamIds = $this->user->getLinkMultipleIdList('teams');
-
-        if (empty($teamIds)) {
-            return [];
-        }
-
-        $configs = $this->entityManager
-            ->getRDBRepository('SidenavConfig')
-            ->distinct()
-            ->join('teams')
-            ->where([
-                'teams.id' => $teamIds,
-                'isDisabled' => false,
-            ])
-            ->order('order')
-            ->order('name')
-            ->find();
-
+        $seenIds = [];
         $result = [];
 
-        foreach ($configs as $config) {
-            $result[] = [
-                'id' => $config->getId(),
-                'name' => $config->get('name'),
-                'iconClass' => $config->get('iconClass'),
-                'color' => $config->get('color'),
-                'tabList' => $config->get('tabList') ?? [],
-                'isDefault' => (bool) $config->get('isDefault'),
-            ];
+        $order = [
+            ['order', 'ASC'],
+            ['name', 'ASC'],
+        ];
+
+        // 1. Team-scoped configs
+        if (!empty($teamIds)) {
+            $teamConfigs = $this->entityManager
+                ->getRDBRepository('SidenavConfig')
+                ->distinct()
+                ->join('teams')
+                ->where([
+                    'teams.id' => $teamIds,
+                    'isDisabled' => false,
+                ])
+                ->order($order)
+                ->find();
+
+            foreach ($teamConfigs as $config) {
+                $id = $config->getId();
+                $seenIds[$id] = true;
+                $result[] = $this->buildItem($config);
+            }
+        }
+
+        // 2. Globally shared configs
+        $globalConfigs = $this->entityManager
+            ->getRDBRepository('SidenavConfig')
+            ->where([
+                'isGloballyShared' => true,
+                'isDisabled' => false,
+            ])
+            ->order($order)
+            ->find();
+
+        foreach ($globalConfigs as $config) {
+            $id = $config->getId();
+
+            if (isset($seenIds[$id])) {
+                continue;
+            }
+
+            $seenIds[$id] = true;
+            $result[] = $this->buildItem($config);
         }
 
         return $result;
+    }
+
+    /**
+     * @param \Espo\ORM\Entity $config
+     * @return array<string, mixed>
+     */
+    private function buildItem($config): array
+    {
+        return [
+            'id' => $config->getId(),
+            'name' => $config->get('name'),
+            'iconClass' => $config->get('iconClass'),
+            'color' => $config->get('color'),
+            'tabList' => $config->get('tabList') ?? [],
+            'isDefault' => (bool) $config->get('isDefault'),
+            'hideOnDropdown' => (bool) $config->get('hideOnDropdown'),
+        ];
     }
 }

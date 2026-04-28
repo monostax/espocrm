@@ -16,17 +16,18 @@ class NavbarConfigSelectorView extends View {
 
     events = {
         'click .navbar-config-option': function (e) {
+            e.preventDefault();
+
             const id = e.currentTarget.dataset.id;
 
-            if (id !== this.activeConfigId) {
-                this.trigger('switch', id);
-            }
+            this.trigger('switch', id);
         },
     }
 
     data() {
-        const configList = this.options.configList || [];
         const activeConfigId = this.activeConfigId;
+        const configList = (this.options.configList || [])
+            .filter(c => !c.hideOnDropdown || c.id === activeConfigId);
 
         const activeConfig = configList.find(c => c.id === activeConfigId)
             || configList.find(c => c.isDefault)

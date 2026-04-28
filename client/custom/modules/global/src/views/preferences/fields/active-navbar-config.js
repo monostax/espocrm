@@ -21,7 +21,8 @@ class ActiveNavbarConfigFieldView extends EnumFieldView {
     }
 
     setupOptions() {
-        const configs = this.getHelper().getAppParam('teamSidenavConfigs') || [];
+        const configs = (this.getHelper().getAppParam('teamSidenavConfigs') || [])
+            .filter(c => !c.hideOnDropdown);
 
         if (this.getConfig().get('navbarConfigShowDefaultTabList')) {
             configs.push({

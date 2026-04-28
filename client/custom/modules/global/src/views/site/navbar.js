@@ -97,11 +97,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 }
 
                 if (activeConfig.tabList) {
-                    let tabList = Espo.Utils.cloneDeep(activeConfig.tabList);
-
-                    if (this.isSide()) {
-                        tabList.unshift("Home");
-                    }
+                    const tabList = Espo.Utils.cloneDeep(activeConfig.tabList);
 
                     return this.filterConversasItems(tabList);
                 }
@@ -156,6 +152,12 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
     /**
      * Get the active navbar config from the resolved list.
+     *
+     * Resolution priority:
+     *   1. URL query parameter `?navbar=<id>` (read-only override)
+     *   2. User preference `activeNavbarConfigId`
+     *   3. Default/first config from the list
+     *
      * @return {Object|null}
      */
     getActiveNavbarConfig() {
@@ -165,6 +167,22 @@ class CustomNavbarSiteView extends NavbarSiteView {
             return null;
         }
 
+        // 1. Check URL query parameter first (highest priority)
+        const urlNavbarId = this.getUrlNavbarOverride();
+
+        if (urlNavbarId !== null) {
+            const found = configList.find((c) => c.id === urlNavbarId);
+
+            if (found) {
+                return found;
+            }
+
+            console.warn(
+                `Navbar config ID "${urlNavbarId}" from URL query param not found, falling back to preference`,
+            );
+        }
+
+        // 2. Fall back to user preference
         const activeId = this.getPreferences().get("activeNavbarConfigId");
 
         if (activeId) {
@@ -193,7 +211,53 @@ class CustomNavbarSiteView extends NavbarSiteView {
             }
         }
 
+        // 3. Default/first config
         return configList.find((c) => c.isDefault) || configList[0];
+    }
+
+    /**
+     * Read the navbar config ID from the URL query parameter `?navbar=<id>`.
+     * Returns the param value if present and non-empty, or null.
+     * @private
+     * @return {string|null}
+     */
+    getUrlNavbarOverride() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const value = params.get("navbar");
+
+            if (value && value.trim() !== "") {
+                return value.trim();
+            }
+        } catch (e) {
+            // URLSearchParams not supported or other error
+        }
+
+        return null;
+    }
+
+    /**
+     * Remove the one-time navbar URL override so preference changes can take over.
+     * @private
+     */
+    stripUrlNavbarOverride() {
+        try {
+            const url = new URL(window.location.href);
+
+            if (!url.searchParams.has("navbar")) {
+                return;
+            }
+
+            url.searchParams.delete("navbar");
+
+            window.history.replaceState(
+                window.history.state,
+                document.title,
+                url.pathname + url.search + url.hash,
+            );
+        } catch (e) {
+            // Ignore URL API/history failures; switching still works without stripping.
+        }
     }
 
     /**
@@ -314,7 +378,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
             return false;
         }
 
-        const configList = this.getNavbarConfigList();
+        const activeConfig = this.getActiveNavbarConfig();
+        const activeConfigId = activeConfig ? activeConfig.id : null;
+        const configList = this.getNavbarConfigList()
+            .filter(c => !c.hideOnDropdown || c.id === activeConfigId);
 
         return configList && configList.length > 1;
     }
@@ -338,6 +405,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
             });
 
             this.getPreferences().set("activeNavbarConfigId", configId);
+            this.stripUrlNavbarOverride();
             this.getPreferences().trigger("update", ["activeNavbarConfigId"]);
 
             this.setupTabDefsList();

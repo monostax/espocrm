@@ -34,6 +34,16 @@
             "default": false,
             "tooltip": true
         },
+        "isGloballyShared": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "hideOnDropdown": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true
@@ -54,7 +64,6 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "required": true,
             "view": "views/fields/teams"
         }
     },

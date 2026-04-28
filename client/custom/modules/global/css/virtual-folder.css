@@ -21,41 +21,29 @@ li.virtual-folder .virtual-folder-toggle {
     flex: 1;
     min-width: 0;
     padding: var(--navbar-tab-vertical-padding, 8px) var(--navbar-tab-right-padding, 14px);
-    padding-top: calc(var(--navbar-tab-vertical-padding, 8px) + 4px);
     padding-left: var(--navbar-tab-left-padding, 14px);
     cursor: pointer;
     user-select: none;
     text-decoration: none;
-    color: inherit;
+    color: var(--navbar-inverse-color, var(--gray-light, inherit));
 }
 
 li.virtual-folder .virtual-folder-toggle:hover,
 li.virtual-folder .virtual-folder-toggle:focus {
     text-decoration: none;
-    color: inherit;
-}
-
-li.virtual-folder > .virtual-folder-header:hover {
-    background-color: var(--navbar-inverse-link-hover-bg, rgba(0, 0, 0, 0.03));
-}
-
-li.virtual-folder .virtual-folder-icon {
-    margin-right: 8px;
-    font-size: 14px;
-    opacity: 0.65;
-    flex-shrink: 0;
+    color: var(--navbar-inverse-color, var(--gray-light, inherit));
 }
 
 li.virtual-folder .virtual-folder-label {
     flex: 1;
-    font-weight: 600;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-weight: inherit;
+    font-size: inherit;
+    text-transform: none;
+    letter-spacing: normal;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    opacity: 0.65;
+    opacity: 1;
 }
 
 li.virtual-folder .virtual-folder-caret {
@@ -80,7 +68,8 @@ li.virtual-folder .virtual-folder-actions {
     flex-shrink: 0;
 }
 
-li.virtual-folder > .virtual-folder-header:hover .virtual-folder-actions {
+li.virtual-folder > .virtual-folder-header:hover .virtual-folder-actions,
+li.virtual-folder > .virtual-folder-header:focus-within .virtual-folder-actions {
     display: flex;
 }
 
@@ -132,6 +121,132 @@ li.virtual-folder .virtual-folder-item > a:hover {
     background-color: var(--navbar-inverse-link-hover-bg, rgba(0, 0, 0, 0.03));
 }
 
+li.virtual-folder .virtual-folder-item-icon {
+    margin-right: 8px;
+    font-size: 14px;
+    opacity: 0.65;
+    flex-shrink: 0;
+}
+
+li.virtual-folder .virtual-folder-item-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media screen and (min-width: 768px) {
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder > .virtual-folder-header {
+        min-height: var(--24px, 24px);
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder > .virtual-folder-header > .virtual-folder-toggle {
+        padding-top: var(--8px);
+        padding-bottom: var(--4px);
+        padding-left: var(--6px);
+        padding-right: var(--6px);
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder > .virtual-folder-header:hover > .virtual-folder-toggle {
+        padding-right: calc(var(--6px) + var(--48px, 48px));
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder > .virtual-folder-header:focus-within > .virtual-folder-toggle {
+        padding-right: calc(var(--6px) + var(--48px, 48px));
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-label {
+        color: var(--navbar-inverse-color, var(--gray-light));
+        padding-left: 0;
+        padding-right: 0;
+        position: static;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-caret {
+        margin-left: var(--4px);
+        opacity: 0.65;
+        color: var(--navbar-inverse-color, var(--gray-light));
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-actions {
+        position: absolute;
+        right: var(--6px);
+        top: 50%;
+        transform: translateY(-50%);
+        padding-right: 0;
+        height: var(--24px, 24px);
+        align-items: center;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-actions > a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--20px, 20px);
+        height: var(--20px, 20px);
+        padding: 0;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder > .virtual-folder-items {
+        display: flex;
+        flex-direction: column;
+        gap: var(--4px);
+        margin-top: var(--4px);
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder > .virtual-folder-items.hidden {
+        display: none;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item > a {
+        height: var(--32px);
+        padding-top: var(--4px);
+        padding-bottom: var(--4px);
+        padding-left: var(--6px);
+        padding-right: var(--6px);
+        border-left-width: 0;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        gap: var(--8px);
+        font-size: inherit;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--16px);
+        height: var(--16px);
+        margin-right: 0;
+        color: var(--navbar-inverse-link-icon-color);
+        opacity: 1;
+        flex-shrink: 0;
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item > a:hover .virtual-folder-item-icon,
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item > a:focus .virtual-folder-item-icon {
+        color: var(--navbar-inverse-link-icon-hover-color);
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item-label {
+        padding-left: 0;
+        padding-right: 0;
+        position: static;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 /* --- State indicators --------------------------------------------- */
 
 li.virtual-folder .virtual-folder-empty {
@@ -173,6 +288,10 @@ li.virtual-folder .virtual-folder-more a {
 }
 
 /* --- Minimized sidebar -------------------------------------------- */
+
+body.minimized li.virtual-folder {
+    display: none;
+}
 
 body.minimized li.virtual-folder .virtual-folder-label,
 body.minimized li.virtual-folder .virtual-folder-caret,

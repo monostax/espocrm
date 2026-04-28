@@ -11,11 +11,15 @@
         "tabList": "Lista de Abas",
         "isDefault": "É Padrão",
         "order": "Ordem",
-        "isDisabled": "Desabilitado"
+        "isDisabled": "Desabilitado",
+        "isGloballyShared": "Compartilhado Globalmente",
+        "hideOnDropdown": "Ocultar no Seletor"
     },
     "tooltips": {
         "isDefault": "Se habilitada, esse menu lateral será utilizado por padrão por usuários que estão nesses times",
         "order": "Controla a posição desse menu na caixa de seleção de menus. Menor o número, maior a prioridade (aparece primeiro).",
-        "isDisabled": "Se habilitada, essa configuração vai esconder o menu na caixa de seleção de menus."
+        "isDisabled": "Se habilitada, essa configuração vai esconder o menu na caixa de seleção de menus.",
+        "isGloballyShared": "Se habilitada, essa configuração ficará disponível para todos os usuários, independente de time. Apenas administradores podem alterar essa opção.",
+        "hideOnDropdown": "Se habilitada, essa configuração ficará ativa mas oculta na caixa de seleção. Usuários ainda podem ser atribuídos via preferências."
     }
 }
