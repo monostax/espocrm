@@ -215,10 +215,48 @@
     /**
      * Navigate to a route
      * @param {string} path - The path to navigate to
+     * @param {string} [navbar] - Optional navbar config ID to set as ?navbar= query param
      */
-    function navigateToPath(path) {
+    function navigateToPath(path, navbar) {
         // Remove leading # if present
         const cleanPath = path.startsWith("#") ? path.substring(1) : path;
+
+        // Update ?navbar= query param and notify CRM
+        if (navbar) {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set("navbar", navbar);
+                window.history.replaceState(
+                    window.history.state,
+                    document.title,
+                    url.pathname + url.search + url.hash,
+                );
+                window.dispatchEvent(
+                    new CustomEvent("monostax:navbar-change", {
+                        detail: { navbar },
+                    }),
+                );
+            } catch (e) {
+                console.error("EspoCRM: Failed to update navbar param:", e);
+            }
+        } else {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("navbar");
+                window.history.replaceState(
+                    window.history.state,
+                    document.title,
+                    url.pathname + url.search + url.hash,
+                );
+                window.dispatchEvent(
+                    new CustomEvent("monostax:navbar-change", {
+                        detail: { navbar: null },
+                    }),
+                );
+            } catch (e) {
+                console.error("EspoCRM: Failed to clear navbar param:", e);
+            }
+        }
 
         // Update hash without triggering hashchange if already there
         if (window.location.hash === "#" + cleanPath) {
@@ -313,7 +351,8 @@
             // Handle parent navigation commands
             if (event.data.type === "PARENT_NAVIGATE") {
                 const path = event.data.path || "";
-                navigateToPath(path);
+                const navbar = event.data.navbar || null;
+                navigateToPath(path, navbar);
             }
 
             // Handle theme change from parent

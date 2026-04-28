@@ -278,20 +278,21 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
         super.setup();
 
-        this.listenTo(
-            this.getHelper().preferences,
-            "update",
-            (attributeList) => {
-                if (!attributeList) {
-                    return;
-                }
+        this.listenTo(this.getHelper().preferences, "update", (attributeList) => {
+            if (!attributeList) {
+                return;
+            }
 
-                if (attributeList.includes("activeNavbarConfigId")) {
-                    this.setupTabDefsList();
-                    this.reRender();
-                }
-            },
-        );
+            if (attributeList.includes("activeNavbarConfigId")) {
+                this.setupTabDefsList();
+                this.reRender();
+            }
+        });
+
+        window.addEventListener("monostax:navbar-change", () => {
+            this.setupTabDefsList();
+            this.reRender();
+        });
     }
 
     /**
@@ -367,6 +368,34 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 });
             },
         );
+    }
+
+    selectTab(name) {
+        super.selectTab(name);
+        this.updateVirtualFolderActiveItems();
+    }
+
+    updateVirtualFolderActiveItems() {
+        if (!this.element) {
+            return;
+        }
+
+        const currentUrl = this.normalizeNavUrl(this.getRouter().getCurrentUrl());
+
+        this.element.querySelectorAll('li.virtual-folder .virtual-folder-item').forEach(item => {
+            const link = item.querySelector('a[href]');
+            const href = link ? link.getAttribute('href') : null;
+
+            item.classList.toggle('active', !!href && currentUrl === this.normalizeNavUrl(href));
+        });
+    }
+
+    normalizeNavUrl(url) {
+        if (!url || typeof url !== "string") {
+            return "";
+        }
+
+        return url.replace(/^#/, "").replace(/^\//, "");
     }
 
     /**
@@ -959,8 +988,30 @@ class CustomNavbarSiteView extends NavbarSiteView {
         a.title =
             this.getLanguage().translate("Chat", "labels", "Global") || "Chat";
 
-        const icon = document.createElement("span");
-        icon.className = "fas fa-comments icon";
+        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        icon.setAttribute("class", "icon");
+        icon.setAttribute("width", "15");
+        icon.setAttribute("height", "15");
+        icon.setAttribute("viewBox", "3 3 18 18");
+        icon.setAttribute("fill", "currentColor");
+        icon.style.setProperty("width", "15px", "important");
+        icon.style.setProperty("height", "15px", "important");
+        icon.style.setProperty("min-width", "15px", "important");
+        icon.style.setProperty("min-height", "15px", "important");
+
+        const backgroundPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        backgroundPath.setAttribute("d", "M0 0h24v24H0z");
+        backgroundPath.setAttribute("fill", "none");
+
+        const topMessagePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        topMessagePath.setAttribute("d", "M20.901 14.995l-.044 -.006a.4 .4 0 0 1 -.102 -.02l-.045 -.012l-.048 -.017l-.045 -.016l-.043 -.02l-.045 -.022l-.04 -.024l-.044 -.026l-.043 -.032l-.036 -.027a1 1 0 0 1 -.073 -.066l-2.707 -2.707h-6.586a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h9a2 2 0 0 1 2 2v10a1 1 0 0 1 -.076 .383l-.02 .043l-.022 .045l-.024 .04l-.026 .044l-.032 .043l-.027 .036a1 1 0 0 1 -.578 .347l-.052 .008l-.044 .006a1 1 0 0 1 -.198 0");
+
+        const bottomMessagePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        bottomMessagePath.setAttribute("d", "M7 8.999v1.001a4 4 0 0 0 4 4h4v3a2 2 0 0 1 -2 2h-6.586l-2.707 2.707c-.63 .63 -1.707 .184 -1.707 -.707v-10a2 2 0 0 1 2 -2z");
+
+        icon.appendChild(backgroundPath);
+        icon.appendChild(topMessagePath);
+        icon.appendChild(bottomMessagePath);
 
         a.appendChild(icon);
         li.appendChild(a);
@@ -994,7 +1045,9 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 justify-content: center;
             }
             .chat-icon-container .chat-icon-link .icon {
-                font-size: 14px;
+                width: 15px;
+                height: 15px;
+                display: block;
             }
             .chat-icon-container .chat-icon-link:hover {
                 opacity: 0.8;

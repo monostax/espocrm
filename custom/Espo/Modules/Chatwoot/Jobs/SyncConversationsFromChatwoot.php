@@ -653,22 +653,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $newAssigneeId = $assignee['id'] ?? null;
         $assigneeChanged = $oldAssigneeId !== $newAssigneeId;
 
-        // Generate display name with date
+        // Generate display name
         $contactName = $sender['name'] ?? $cwtContact->get('name') ?? '';
-        $createdAt = $chatwootConversation['created_at'] ?? null;
-        $dateStr = $createdAt ? date('Y-m-d', $createdAt) : '';
-        
-        $nameParts = [];
-        if ($dateStr) {
-            $nameParts[] = $dateStr;
-        }
-        if ($contactName) {
-            $nameParts[] = $contactName;
-        }
-        $name = implode(' - ', $nameParts);
-        if (!$name) {
-            $name = 'Conversation #' . $chatwootConversation['id'];
-        }
+        $name = $contactName ?: 'Conversation #' . $chatwootConversation['id'];
 
         $conversation->set('name', $name);
         $conversation->set('status', $chatwootConversation['status'] ?? 'open');
@@ -746,22 +733,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $sender = $chatwootConversation['meta']['sender'] ?? null;
         $channel = $chatwootConversation['meta']['channel'] ?? null;
 
-        // Generate display name with date
+        // Generate display name
         $contactName = $sender['name'] ?? $cwtContact->get('name') ?? '';
-        $createdAt = $chatwootConversation['created_at'] ?? null;
-        $dateStr = $createdAt ? date('Y-m-d', $createdAt) : '';
-        
-        $nameParts = [];
-        if ($dateStr) {
-            $nameParts[] = $dateStr;
-        }
-        if ($contactName) {
-            $nameParts[] = $contactName;
-        }
-        $name = implode(' - ', $nameParts);
-        if (!$name) {
-            $name = 'Conversation #' . $chatwootConversation['id'];
-        }
+        $name = $contactName ?: 'Conversation #' . $chatwootConversation['id'];
 
         // Get last message content and type from messages array
         $messages = $chatwootConversation['messages'] ?? [];

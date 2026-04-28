@@ -4592,6 +4592,21 @@ span:has(.avatar) .scope-icon {
     display: none;
 }
 
+// Horizontally align scope icon with adjacent text/link in field containers
+.field:has(> span > .scope-icon),
+.cell:has(> span > .scope-icon) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+// Ensure the whitespace separator between icon and link doesn't collapse
+.field > span:has(> .scope-icon) + span,
+.cell > span:has(> .scope-icon) + span {
+    display: inline-flex;
+    align-items: center;
+}
+
 /* ===================================================================
  * Iframe Embedding Styles
  * These styles are applied when the application is embedded in an iframe

@@ -701,6 +701,23 @@ class CustomDetailRecordView extends DetailRecordView {
                 flex: 1;
             }
 
+            .record .panels-grid-row .panels-grid-col > .panel > .panel-body,
+            .record .panels-grid-row .panels-grid-col > .panel > .panel-body > .row,
+            .record .panels-grid-row .panels-grid-col > .panel > .panel-body > .row > .cell,
+            .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field,
+            .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field > .panel {
+                height: 100%;
+            }
+
+            .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field > .panel {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field > .panel > .panel-body {
+                flex: 1;
+            }
+
             .record .panels-grid-row .panels-grid-col > .panel.is-collapsed {
                 flex: none;
             }
@@ -824,10 +841,11 @@ class CustomDetailRecordView extends DetailRecordView {
             if ($panels.length <= 1) {
                 // Single panel = full width, just apply card styling.
                 if ($panels.length === 1) {
-                    $panels[0].css({
+                    const $panel = $panels[0];
+
+                    $panel.css({
                         'border-radius': 'var(--panel-border-radius)',
-                        'overflow': 'hidden',
-                        'margin-bottom': '10px',
+                        'margin-bottom': $panel.hasClass('headered') ? '10px' : '',
                     }).attr('data-grid-styled', '1');
                 }
                 return;
@@ -860,7 +878,6 @@ class CustomDetailRecordView extends DetailRecordView {
                 // Card-like styling.
                 $panel.css({
                     'border-radius': 'var(--panel-border-radius)',
-                    'overflow': 'hidden',
                 });
 
                 $col.append($panel);

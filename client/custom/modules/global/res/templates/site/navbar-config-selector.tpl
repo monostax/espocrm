@@ -2,7 +2,7 @@
 <div class="navbar-config-selector">
     <div class="dropdown">
         <a
-            class="navbar-config-selector-toggle dropdown-toggle"
+            class="navbar-config-selector-toggle dropdown-toggle{{#if activeConfig}} active{{/if}}"
             data-toggle="dropdown"
             role="button"
             tabindex="0"

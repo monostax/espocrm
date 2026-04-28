@@ -121,6 +121,14 @@ li.virtual-folder .virtual-folder-item > a:hover {
     background-color: var(--navbar-inverse-link-hover-bg, rgba(0, 0, 0, 0.03));
 }
 
+li.virtual-folder .virtual-folder-item.active > a,
+li.virtual-folder .virtual-folder-item.active > a:hover,
+li.virtual-folder .virtual-folder-item.active > a:focus {
+    color: var(--navbar-inverse-link-active-color, inherit);
+    background-color: var(--navbar-inverse-link-active-bg);
+    text-decoration: none;
+}
+
 li.virtual-folder .virtual-folder-item-icon {
     margin-right: 8px;
     font-size: 14px;
@@ -233,6 +241,10 @@ li.virtual-folder .virtual-folder-item-label {
 
     body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item > a:hover .virtual-folder-item-icon,
     body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item > a:focus .virtual-folder-item-icon {
+        color: var(--navbar-inverse-link-icon-hover-color);
+    }
+
+    body[data-navbar="side"]:not(.minimized) #navbar ul.tabs.navbar-nav > li.virtual-folder .virtual-folder-item.active > a .virtual-folder-item-icon {
         color: var(--navbar-inverse-link-icon-hover-color);
     }
 

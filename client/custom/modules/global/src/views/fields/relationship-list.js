@@ -501,6 +501,20 @@ class RelationshipListFieldView extends BaseFieldView {
 
         const attributes = {};
 
+        const panelDefs =
+            this.getMetadata().get([
+                "clientDefs",
+                this.model.entityType,
+                "relationshipPanels",
+                link,
+            ]) || {};
+
+        const attributeMap = panelDefs.createAttributeMap || {};
+
+        Object.keys(attributeMap).forEach(attr => {
+            attributes[attributeMap[attr]] = this.model.get(attr);
+        });
+
         if (foreignLink && this.model.defs.links[link].type === "hasMany") {
             if (
                 this.getMetadata().get([

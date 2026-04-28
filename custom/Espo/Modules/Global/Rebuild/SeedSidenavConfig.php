@@ -64,6 +64,34 @@ class SeedSidenavConfig implements RebuildAction
                 'iconClass' => 'fas fa-briefcase',
                 'tabList' => ['Opportunity'],
             ],
+            [
+                'id' => 'activities',
+                'name' => 'Atividades',
+                'order' => 40,
+                'iconClass' => 'fas fa-tasks',
+                'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Activities',
+                        'url' => '?navbar=activities#Activities',
+                        'iconClass' => 'ti ti-activity',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'agenda',
+                'name' => 'Agenda',
+                'order' => 50,
+                'iconClass' => 'fas fa-calendar',
+                'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Calendar',
+                        'url' => '?navbar=calendar#Calendar',
+                        'iconClass' => 'ti ti-calendar',
+                    ],
+                ],
+            ],
         ];
 
         foreach ($configs as $config) {

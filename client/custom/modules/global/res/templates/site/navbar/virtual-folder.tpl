@@ -26,7 +26,7 @@
         </li>
     {{else}}
         {{#each recordList}}
-            <li class="virtual-folder-item">
+            <li class="virtual-folder-item{{#if isActive}} active{{/if}}">
                 <a href="{{url}}">
                     <span class="virtual-folder-item-icon {{iconClass}}"{{#if color}} style="color: {{color}}"{{/if}}></span>
                     <span class="virtual-folder-item-label">{{name}}</span>

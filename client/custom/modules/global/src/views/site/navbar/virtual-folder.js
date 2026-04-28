@@ -55,6 +55,7 @@ export default class VirtualFolderView extends View {
                 url: this.getRecordUrl(record.id),
                 iconClass: iconClass,
                 color: this.color,
+                isActive: this.isRecordActive(record.id),
             })),
             totalCount: this.totalCount,
             hasMore: this.hasMore,
@@ -95,6 +96,10 @@ export default class VirtualFolderView extends View {
         this.addActionHandler('viewAll', () => {
             this.actionViewAll();
         });
+
+        this.listenTo(this.getRouter(), 'routed', () => {
+            this.updateActiveState();
+        });
     }
 
     afterRender() {
@@ -103,6 +108,23 @@ export default class VirtualFolderView extends View {
             this.element.classList.remove('tab');
             this.element.classList.toggle('collapsed', this.isCollapsed);
         }
+
+        this.updateActiveState();
+    }
+
+    updateActiveState() {
+        if (!this.element) {
+            return;
+        }
+
+        const currentUrl = this.normalizeUrl(this.getRouter().getCurrentUrl());
+
+        this.element.querySelectorAll('.virtual-folder-item').forEach(item => {
+            const link = item.querySelector('a[href]');
+            const href = link ? link.getAttribute('href') : null;
+
+            item.classList.toggle('active', !!href && currentUrl === this.normalizeUrl(href));
+        });
     }
 
     isSystemFilter(filterName) {
@@ -482,5 +504,18 @@ export default class VirtualFolderView extends View {
         }
 
         return `#${this.entityType}/view/${recordId}`;
+    }
+
+    isRecordActive(recordId) {
+        return this.normalizeUrl(this.getRecordUrl(recordId)) ===
+            this.normalizeUrl(this.getRouter().getCurrentUrl());
+    }
+
+    normalizeUrl(url) {
+        if (!url || typeof url !== 'string') {
+            return '';
+        }
+
+        return url.replace(/^#/, '').replace(/^\//, '');
     }
 }

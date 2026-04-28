@@ -28,7 +28,7 @@
         "detail": "views/modals/detail"
     },
     "recordViews": {
-        "list": "views/record/list",
+        "list": "chatwoot:views/chatwoot-conversation/record/list",
         "detail": "global:views/record/detail"
     },
     "bottomPanels": {
@@ -39,7 +39,21 @@
         "opportunities": {
             "create": true,
             "select": true,
-            "view": "views/record/panels/relationship"
+            "view": "views/record/panels/relationship",
+            "createAttributeMap": {
+                "name": "name",
+                "teamsIds": "teamsIds",
+                "teamsNames": "teamsNames"
+            }
+        },
+        "documents": {
+            "create": true,
+            "select": true,
+            "view": "views/record/panels/relationship",
+            "createAttributeMap": {
+                "teamsIds": "teamsIds",
+                "teamsNames": "teamsNames"
+            }
         }
     }
 }

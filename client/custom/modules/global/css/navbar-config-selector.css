@@ -26,6 +26,14 @@
     text-decoration: none;
 }
 
+.navbar-config-selector-toggle.active,
+.navbar-config-selector-toggle.active:hover,
+.navbar-config-selector-toggle.active:focus {
+    background-color: var(--navbar-inverse-link-active-bg);
+    color: var(--navbar-inverse-link-active-color, inherit);
+    text-decoration: none;
+}
+
 .navbar-config-name {
     flex: 1;
     overflow: hidden;
@@ -54,6 +62,14 @@
 
 .navbar-config-dropdown li.active > a {
     font-weight: 600;
+}
+
+.navbar-config-dropdown li.active > a,
+.navbar-config-dropdown li.active > a:hover,
+.navbar-config-dropdown li.active > a:focus {
+    background-color: var(--dropdown-link-hover-bg);
+    color: var(--dropdown-link-hover-color);
+    text-decoration: none;
 }
 
 .navbar-config-dropdown li > a {

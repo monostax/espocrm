@@ -10,7 +10,8 @@
         "name": {
             "type": "varchar",
             "maxLength": 255,
-            "readOnly": true
+            "readOnly": true,
+            "view": "chatwoot:views/chatwoot-conversation/fields/name-with-drawer"
         },
         "chatwootConversationId": { "type": "int", "required": true },
         "chatwootAccountIdExternal": {
@@ -115,6 +116,7 @@
                 "dateStart": "dateStart"
             }
         },
+        "documents": { "type": "linkMultiple" },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
@@ -160,6 +162,12 @@
             "entity": "Appointment",
             "foreign": "chatwootConversations",
             "relationName": "chatwootConversationAppointment"
+        },
+        "documents": {
+            "type": "hasMany",
+            "entity": "Document",
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationDocument"
         },
         "tasks": {
             "type": "hasChildren",
@@ -227,6 +235,10 @@
             },
             {
                 "table": "ChatwootConversationAppointment",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationDocument",
                 "column": "chatwootConversationId"
             }
         ]
