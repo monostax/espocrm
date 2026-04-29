@@ -36,7 +36,7 @@ use Espo\ORM\EntityManager;
  * Rebuild action to seed the default ChatwootAccount.
  * Creates a "Default" ChatwootAccount linked to the default ChatwootPlatform.
  * If the account doesn't exist in Chatwoot, it creates it via the Platform API.
- * Also creates an automation user for the account and links it via the automationUser relationship.
+ * Also creates a concierge user for the account and links it via the conciergeUser relationship.
  * Runs automatically during system rebuild (after SeedChatwootPlatform).
  */
 class SeedChatwootAccount implements RebuildAction
@@ -94,33 +94,33 @@ class SeedChatwootAccount implements RebuildAction
             // Update to ensure linked to default platform
             $existing->set('platformId', $platform->getId());
             
-            // If apiKey/automation linkage is missing or broken, bootstrap automation user.
-            if ($this->needsAutomationBootstrap($existing) && $existing->get('chatwootAccountId')) {
-                $automationUserData = $this->createAutomationUser(
+            // If apiKey/concierge linkage is missing or broken, bootstrap concierge user.
+            if ($this->needsConciergeBootstrap($existing) && $existing->get('chatwootAccountId')) {
+                $conciergeUserData = $this->createConciergeUser(
                     $backendUrl,
                     $accessToken,
                     (int) $existing->get('chatwootAccountId'),
                     self::DEFAULT_NAME
                 );
                 
-                if ($automationUserData) {
-                    if (isset($automationUserData['access_token'])) {
-                        $existing->set('apiKey', $automationUserData['access_token']);
+                if ($conciergeUserData) {
+                    if (isset($conciergeUserData['access_token'])) {
+                        $existing->set('apiKey', $conciergeUserData['access_token']);
                     }
                     
                     // Create ChatwootUser entity and link it
                     $chatwootUser = $this->createChatwootUserEntity(
                         $existing,
                         $platform,
-                        $automationUserData
+                        $conciergeUserData
                     );
                     
                     if ($chatwootUser) {
-                        $existing->set('automationUserId', $chatwootUser->getId());
-                        $this->ensureAutomationMembership($existing, $chatwootUser, $automationUserData);
+                        $existing->set('conciergeUserId', $chatwootUser->getId());
+                        $this->ensureConciergeMembership($existing, $chatwootUser, $conciergeUserData);
                     }
                     
-                    $this->log->info('SeedChatwootAccount: Added automation user to existing account');
+                    $this->log->info('SeedChatwootAccount: Added concierge user to existing account');
                 }
             }
             
@@ -148,8 +148,8 @@ class SeedChatwootAccount implements RebuildAction
 
             $chatwootAccountId = (int) $response['id'];
 
-            // Create automation user
-            $automationUserData = $this->createAutomationUser(
+            // Create concierge user
+            $conciergeUserData = $this->createConciergeUser(
                 $backendUrl,
                 $accessToken,
                 $chatwootAccountId,
@@ -161,22 +161,22 @@ class SeedChatwootAccount implements RebuildAction
                 'name' => self::DEFAULT_NAME,
                 'platformId' => $platform->getId(),
                 'chatwootAccountId' => $chatwootAccountId,
-                'apiKey' => $automationUserData['access_token'] ?? null,
+                'apiKey' => $conciergeUserData['access_token'] ?? null,
                 'locale' => 'pt_BR',
                 'status' => 'active',
             ], [SaveOption::SKIP_ALL => true]);
 
             // Create ChatwootUser entity and link it to the account
-            if ($automationUserData) {
+            if ($conciergeUserData) {
                 $chatwootUser = $this->createChatwootUserEntity(
                     $account,
                     $platform,
-                    $automationUserData
+                    $conciergeUserData
                 );
                 
                 if ($chatwootUser) {
-                    $account->set('automationUserId', $chatwootUser->getId());
-                    $this->ensureAutomationMembership($account, $chatwootUser, $automationUserData);
+                    $account->set('conciergeUserId', $chatwootUser->getId());
+                    $this->ensureConciergeMembership($account, $chatwootUser, $conciergeUserData);
                     $this->entityManager->saveEntity($account, [SaveOption::SKIP_ALL => true]);
                 }
             }
@@ -293,7 +293,7 @@ class SeedChatwootAccount implements RebuildAction
     }
 
     /**
-     * Create an automation user for the account.
+     * Create a concierge user for the account.
      * Uses the same naming convention as the SyncWithChatwoot hook.
      *
      * @param string $backendUrl
@@ -302,15 +302,15 @@ class SeedChatwootAccount implements RebuildAction
      * @param string $accountName
      * @return array<string, mixed>|null User data including access_token, or null on failure
      */
-    private function createAutomationUser(
+    private function createConciergeUser(
         string $backendUrl,
         string $platformAccessToken,
         int $chatwootAccountId,
         string $accountName
     ): ?array {
         // Use the same naming convention as SyncWithChatwoot hook
-        $email = 'automation.' . $chatwootAccountId . '@chatwoot.local';
-        $name = 'Automation User - ' . $accountName;
+        $email = 'concierge.' . $chatwootAccountId . '@monostax-ext.com';
+        $name = '✦ Concierge (Monostax)';
         $password = $this->generateSecurePassword();
 
         try {
@@ -320,7 +320,7 @@ class SeedChatwootAccount implements RebuildAction
                 'email' => $email,
                 'password' => $password,
                 'custom_attributes' => [
-                    'type' => 'automation',
+                    'type' => 'concierge',
                     'created_by' => 'espocrm',
                     'account_id' => $chatwootAccountId
                 ],
@@ -329,7 +329,7 @@ class SeedChatwootAccount implements RebuildAction
             $chatwootUserId = $userResponse['id'] ?? null;
 
             if (!$chatwootUserId) {
-                $this->log->error('SeedChatwootAccount: Failed to create automation user - no ID returned');
+                $this->log->error('SeedChatwootAccount: Failed to create concierge user - no ID returned');
                 return null;
             }
 
@@ -342,7 +342,7 @@ class SeedChatwootAccount implements RebuildAction
                 'administrator'
             );
 
-            $this->log->info("SeedChatwootAccount: Created automation user (ID: {$chatwootUserId}) for account {$chatwootAccountId}");
+            $this->log->info("SeedChatwootAccount: Created concierge user (ID: {$chatwootUserId}) for account {$chatwootAccountId}");
 
             return [
                 'user_id' => $chatwootUserId,
@@ -355,23 +355,23 @@ class SeedChatwootAccount implements RebuildAction
         } catch (\Exception $e) {
             // User might already exist
             if (str_contains($e->getMessage(), 'already been taken') || str_contains($e->getMessage(), 'already exists')) {
-                $this->log->info('SeedChatwootAccount: Automation user already exists, skipping creation');
+                $this->log->info('SeedChatwootAccount: Concierge user already exists, skipping creation');
                 return null;
             }
-            $this->log->error('SeedChatwootAccount: Failed to create automation user - ' . $e->getMessage());
+            $this->log->error('SeedChatwootAccount: Failed to create concierge user - ' . $e->getMessage());
             return null;
         }
     }
 
     /**
-     * Create ChatwootUser entity in EspoCRM for the automation user.
+     * Create ChatwootUser entity in EspoCRM for the concierge user.
      *
      * @param \Espo\ORM\Entity $account
      * @param \Espo\ORM\Entity $platform
-     * @param array<string, mixed> $automationUserData
+     * @param array<string, mixed> $conciergeUserData
      * @return \Espo\ORM\Entity|null
      */
-    private function createChatwootUserEntity($account, $platform, array $automationUserData): ?\Espo\ORM\Entity
+    private function createChatwootUserEntity($account, $platform, array $conciergeUserData): ?\Espo\ORM\Entity
     {
         try {
             // Get Teams from the ChatwootAccount for tenant isolation
@@ -379,12 +379,12 @@ class SeedChatwootAccount implements RebuildAction
 
             // Create the ChatwootUser entity
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
-                'name' => $automationUserData['name'],
-                'email' => $automationUserData['email'],
-                'password' => $automationUserData['password'],
-                'displayName' => $automationUserData['name'],
+                'name' => $conciergeUserData['name'],
+                'email' => $conciergeUserData['email'],
+                'password' => $conciergeUserData['password'],
+                'displayName' => $conciergeUserData['name'],
                 'platformId' => $platform->getId(),
-                'chatwootUserId' => $automationUserData['user_id'],
+                'chatwootUserId' => $conciergeUserData['user_id'],
                 'teamsIds' => $teamsIds
             ], [
                 'skipHooks' => true,
@@ -392,7 +392,7 @@ class SeedChatwootAccount implements RebuildAction
             ]);
 
             $this->log->info(
-                'SeedChatwootAccount: Created ChatwootUser entity for automation user: ' .
+                'SeedChatwootAccount: Created ChatwootUser entity for concierge user: ' .
                 $chatwootUser->getId()
             );
 
@@ -405,43 +405,44 @@ class SeedChatwootAccount implements RebuildAction
     }
 
     /**
-     * Ensure automation user has a membership so it is not treated as orphan.
+     * Ensure concierge user has a membership so it is not treated as orphan.
      *
-     * @param array<string, mixed> $automationUserData
+     * @param array<string, mixed> $conciergeUserData
      */
-    private function ensureAutomationMembership(Entity $account, Entity $chatwootUser, array $automationUserData): void
+    private function ensureConciergeMembership(Entity $account, Entity $chatwootUser, array $conciergeUserData): void
     {
         try {
-            $accountUserId = isset($automationUserData['account_user_id'])
-                ? (int) $automationUserData['account_user_id']
+            $accountUserId = isset($conciergeUserData['account_user_id'])
+                ? (int) $conciergeUserData['account_user_id']
                 : null;
 
             $this->membershipService->upsertMembership(
                 $account->getId(),
                 $chatwootUser->getId(),
                 'administrator',
-                $accountUserId
+                $accountUserId,
+                true // isAI — concierge memberships are AI-enabled by default
             );
         } catch (\Throwable $e) {
             $this->log->warning(
-                'SeedChatwootAccount: Failed to ensure automation membership: ' . $e->getMessage()
+                'SeedChatwootAccount: Failed to ensure concierge membership: ' . $e->getMessage()
             );
         }
     }
 
-    private function needsAutomationBootstrap(Entity $account): bool
+    private function needsConciergeBootstrap(Entity $account): bool
     {
         if (!$account->get('apiKey')) {
             return true;
         }
 
-        $automationUserId = $account->get('automationUserId');
-        if (!$automationUserId) {
+        $conciergeUserId = $account->get('conciergeUserId');
+        if (!$conciergeUserId) {
             return true;
         }
 
-        $automationUser = $this->entityManager->getEntityById('ChatwootUser', $automationUserId);
-        if (!$automationUser) {
+        $conciergeUser = $this->entityManager->getEntityById('ChatwootUser', $conciergeUserId);
+        if (!$conciergeUser) {
             return true;
         }
 
@@ -449,7 +450,7 @@ class SeedChatwootAccount implements RebuildAction
             ->getRDBRepository('ChatwootAccountUserMembership')
             ->where([
                 'chatwootAccountId' => $account->getId(),
-                'chatwootUserId' => $automationUserId,
+                'chatwootUserId' => $conciergeUserId,
             ])
             ->findOne();
 

@@ -44,7 +44,7 @@
         "rows": [
             [
                 {
-                    "name": "automationUser"
+                    "name": "conciergeUser"
                 },
                 {
                     "name": "apiKey"

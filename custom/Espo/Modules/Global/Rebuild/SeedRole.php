@@ -224,6 +224,20 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'Document' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                    'stream' => 'team',
+                ],
+                'DocumentFolder' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                    'stream' => 'team',
+                ],
                 'KnowledgeBaseCategory' => [
                     'create' => 'yes',
                     'read' => 'team',

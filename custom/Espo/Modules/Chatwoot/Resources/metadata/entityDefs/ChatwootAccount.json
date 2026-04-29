@@ -19,7 +19,7 @@
             "tooltip": true,
             "required": false
         },
-        "automationUser": {
+        "conciergeUser": {
             "type": "link",
             "readOnly": true
         },
@@ -100,10 +100,10 @@
             "entity": "ChatwootPlatform",
             "foreign": "accounts"
         },
-        "automationUser": {
+        "conciergeUser": {
             "type": "belongsTo",
             "entity": "ChatwootUser",
-            "foreign": "automationForAccount"
+            "foreign": "conciergeForAccount"
         },
         "chatwootTeams": {
             "type": "hasMany",

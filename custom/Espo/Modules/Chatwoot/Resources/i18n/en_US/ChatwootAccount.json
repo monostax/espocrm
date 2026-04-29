@@ -1,12 +1,12 @@
 {
     "fields": {
         "apiKey": "API Key",
-        "automationUser": "Chat / User (Automation)",
+        "conciergeUser": "Chat / User (Concierge)",
         "autoPendingEnabled": "Auto-Pending Enabled",
         "teams": "Chat / Account / Teams"
     },
     "links": {
-        "automationUser": "Chat / User (Automation)",
+        "conciergeUser": "Chat / User (Concierge)",
         "teams": "Chat / Account / Teams",
         "accountUserMemberships": "Chat / Account / Users",
         "webhooks": "Chat / Account / Webhooks"
@@ -22,8 +22,8 @@
         "tabWebhooks": "Webhooks"
     },
     "tooltips": {
-        "apiKey": "Account-level API token from Chat. Automatically populated when an automation user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",
-        "automationUser": "The chat user entity representing the automation user for this account. Used for API operations.",
+        "apiKey": "Account-level API token from Chat. Automatically populated when a concierge user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",
+        "conciergeUser": "The chat user entity representing the concierge user for this account. Used for API operations.",
         "autoPendingEnabled": "When enabled, conversations will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
     },
     "messages": {

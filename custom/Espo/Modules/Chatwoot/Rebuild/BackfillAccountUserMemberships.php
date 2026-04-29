@@ -336,7 +336,7 @@ class BackfillAccountUserMemberships implements RebuildAction
 
         if ($orphanCount > 0) {
             $this->log->info(
-                "BackfillAccountUserMemberships: Pass 2 — {$orphanCount} orphan agent(s) without chatwootUserId skipped (these are typically Automation Users)"
+                "BackfillAccountUserMemberships: Pass 2 — {$orphanCount} orphan agent(s) without chatwootUserId skipped (these are typically Concierge Users)"
             );
         }
 

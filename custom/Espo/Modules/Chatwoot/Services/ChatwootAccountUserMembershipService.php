@@ -55,13 +55,18 @@ class ChatwootAccountUserMembershipService
      * @param string $userId    EspoCRM ChatwootUser entity ID
      * @param string $role      'agent' or 'administrator'
      * @param int|null $chatwootAccountUserId Chatwoot account_user ID (optional)
+     * @param bool|null $isAI   When non-null, sets the membership's `isAI` flag. Pass `null`
+     *                          (default) to leave it at the entity default (false) on create
+     *                          and untouched on update. Pass `true` for concierge/AI-agent
+     *                          memberships.
      * @return Entity The upserted ChatwootAccountUserMembership entity
      */
     public function upsertMembership(
         string $accountId,
         string $userId,
         string $role,
-        ?int $chatwootAccountUserId = null
+        ?int $chatwootAccountUserId = null,
+        ?bool $isAI = null
     ): Entity {
         $existing = $this->entityManager
             ->getRDBRepository('ChatwootAccountUserMembership')
@@ -72,10 +77,10 @@ class ChatwootAccountUserMembershipService
             ->findOne();
 
         if (!$existing) {
-            return $this->createMembership($accountId, $userId, $role, $chatwootAccountUserId);
+            return $this->createMembership($accountId, $userId, $role, $chatwootAccountUserId, $isAI);
         }
 
-        return $this->updateMembership($existing, $role, $chatwootAccountUserId);
+        return $this->updateMembership($existing, $role, $chatwootAccountUserId, $isAI);
     }
 
     /**
@@ -521,7 +526,8 @@ class ChatwootAccountUserMembershipService
         string $accountId,
         string $userId,
         string $role,
-        ?int $chatwootAccountUserId = null
+        ?int $chatwootAccountUserId = null,
+        ?bool $isAI = null
     ): Entity {
         // Load the ChatwootAccount to get teamsIds
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
@@ -544,6 +550,10 @@ class ChatwootAccountUserMembershipService
             $data['chatwootAccountUserId'] = $chatwootAccountUserId;
         }
 
+        if ($isAI !== null) {
+            $data['isAI'] = $isAI;
+        }
+
         $membership = $this->entityManager->createEntity(
             'ChatwootAccountUserMembership',
             $data,
@@ -563,7 +573,8 @@ class ChatwootAccountUserMembershipService
     private function updateMembership(
         Entity $membership,
         string $role,
-        ?int $chatwootAccountUserId = null
+        ?int $chatwootAccountUserId = null,
+        ?bool $isAI = null
     ): Entity {
         $dirty = false;
 
@@ -574,6 +585,11 @@ class ChatwootAccountUserMembershipService
 
         if ($chatwootAccountUserId !== null && $membership->get('chatwootAccountUserId') !== $chatwootAccountUserId) {
             $membership->set('chatwootAccountUserId', $chatwootAccountUserId);
+            $dirty = true;
+        }
+
+        if ($isAI !== null && (bool) $membership->get('isAI') !== $isAI) {
+            $membership->set('isAI', $isAI);
             $dirty = true;
         }
 

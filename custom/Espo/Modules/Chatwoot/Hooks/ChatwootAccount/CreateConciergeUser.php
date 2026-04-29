@@ -34,7 +34,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
  * The actual Chatwoot user was already created in the beforeSave phase.
  * This hook creates the corresponding EspoCRM entity and links it to the ChatwootAccount.
  */
-class CreateAutomationUser
+class CreateConciergeUser
 {
     public static int $order = 20; // Run after database insert
 
@@ -46,7 +46,7 @@ class CreateAutomationUser
 
     /**
      * Create ChatwootUser entity in EspoCRM after the ChatwootAccount is saved.
-     * Links the ChatwootUser to the ChatwootAccount via the automationUser relationship.
+     * Links the ChatwootUser to the ChatwootAccount via the conciergeUser relationship.
      * Only runs on entity creation.
      * 
      * @param Entity $entity
@@ -54,17 +54,17 @@ class CreateAutomationUser
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        // Check if we have automation user data from the beforeSave hook (via static cache)
+        // Check if we have concierge user data from the beforeSave hook (via static cache)
         // Using static cache because entity transient data may be lost when EspoCRM
         // refreshes the entity from database after insert
         $entityId = $entity->getId();
-        $automationUserData = SyncWithChatwoot::$automationUserDataCache[$entityId] ?? null;
+        $conciergeUserData = SyncWithChatwoot::$conciergeUserDataCache[$entityId] ?? null;
         
         // Clean up the cache entry regardless of outcome
-        unset(SyncWithChatwoot::$automationUserDataCache[$entityId]);
+        unset(SyncWithChatwoot::$conciergeUserDataCache[$entityId]);
         
-        if (!$automationUserData) {
-            // No data means this is an update or the automation user wasn't created
+        if (!$conciergeUserData) {
+            // No data means this is an update or the concierge user wasn't created
             return;
         }
 
@@ -73,45 +73,46 @@ class CreateAutomationUser
             // Using cached teamsIds and platformId since entity may have been refreshed
             $chatwootUser = $this->createChatwootUserEntity(
                 $entity,
-                $automationUserData['user_id'],
-                $automationUserData['name'],
-                $automationUserData['email'],
-                $automationUserData['password'],
-                $automationUserData['_teamsIds'] ?? [],
-                $automationUserData['_platformId'] ?? null
+                $conciergeUserData['user_id'],
+                $conciergeUserData['name'],
+                $conciergeUserData['email'],
+                $conciergeUserData['password'],
+                $conciergeUserData['_teamsIds'] ?? [],
+                $conciergeUserData['_platformId'] ?? null
             );
 
             if ($chatwootUser) {
                 // Link the ChatwootUser to the ChatwootAccount
-                $entity->set('automationUserId', $chatwootUser->getId());
+                $entity->set('conciergeUserId', $chatwootUser->getId());
                 $this->entityManager->saveEntity($entity, ['silent' => true, 'skipHooks' => true]);
 
-                $accountUserId = isset($automationUserData['account_user_id'])
-                    ? (int) $automationUserData['account_user_id']
+                $accountUserId = isset($conciergeUserData['account_user_id'])
+                    ? (int) $conciergeUserData['account_user_id']
                     : null;
 
                 $this->membershipService->upsertMembership(
                     $entity->getId(),
                     $chatwootUser->getId(),
                     'administrator',
-                    $accountUserId
+                    $accountUserId,
+                    true // isAI — concierge memberships are AI-enabled by default
                 );
                 
                 $this->log->info(
-                    'Created and linked ChatwootUser entity for automation user: ' . 
+                    'Created and linked ChatwootUser entity for concierge user: ' . 
                     $chatwootUser->getId()
                 );
             }
 
         } catch (\Exception $e) {
             // Don't fail the entire process if ChatwootUser entity creation fails
-            // The automation user exists in Chatwoot, so this is just a record-keeping issue
+            // The concierge user exists in Chatwoot, so this is just a record-keeping issue
             $this->log->error('Failed to create ChatwootUser entity: ' . $e->getMessage());
         }
     }
 
     /**
-     * Create ChatwootUser entity in EspoCRM for the automation user.
+     * Create ChatwootUser entity in EspoCRM for the concierge user.
      * This ensures the user inherits the proper Team and Platform for tenant isolation.
      *
      * @param Entity $chatwootAccount
@@ -137,8 +138,8 @@ class CreateAutomationUser
             // because after entity refresh, the in-memory data may be lost
 
             // Create the ChatwootUser entity
-            // Note: assignedUser is NOT set for automation users to avoid unique constraint violation
-            // Automation users are system users, not tied to a specific EspoCRM user
+            // Note: assignedUser is NOT set for concierge users to avoid unique constraint violation
+            // Concierge users are system users, not tied to a specific EspoCRM user
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
                 'name' => $name,
                 'email' => $email,
@@ -153,7 +154,7 @@ class CreateAutomationUser
             ]);
 
             $this->log->info(
-                'Created ChatwootUser entity for automation user: ' . 
+                'Created ChatwootUser entity for concierge user: ' . 
                 $chatwootUser->getId() . 
                 ' with Team: ' . ($teamId ?? 'none')
             );

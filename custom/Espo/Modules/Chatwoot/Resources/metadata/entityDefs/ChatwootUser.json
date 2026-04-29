@@ -64,10 +64,10 @@
             "entity": "ChatwootPlatform",
             "foreign": "users"
         },
-        "automationForAccount": {
+        "conciergeForAccount": {
             "type": "hasOne",
             "entity": "ChatwootAccount",
-            "foreign": "automationUser"
+            "foreign": "conciergeUser"
         },
 
         "accountUserMemberships": {

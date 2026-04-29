@@ -31,7 +31,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 
 /**
  * Hook to synchronize ChatwootAccount with Chatwoot Platform API.
- * Creates BOTH account AND automation user on Chatwoot BEFORE saving to database.
+ * Creates BOTH account AND concierge user on Chatwoot BEFORE saving to database.
  * This ensures the database only contains accounts that fully exist in Chatwoot.
  */
 class SyncWithChatwoot
@@ -39,13 +39,13 @@ class SyncWithChatwoot
     public static int $order = 10; // Run after ValidateBeforeSync
 
     /**
-     * Static cache to pass automation user data between beforeSave and afterSave hooks.
+     * Static cache to pass concierge user data between beforeSave and afterSave hooks.
      * Using static cache because entity transient data may be lost when EspoCRM
      * refreshes the entity from database after insert.
      * 
      * @var array<string, array<string, mixed>>
      */
-    public static array $automationUserDataCache = [];
+    public static array $conciergeUserDataCache = [];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -54,7 +54,7 @@ class SyncWithChatwoot
     ) {}
 
     /**
-     * Create account AND automation user on Chatwoot BEFORE entity is saved to database.
+     * Create account AND concierge user on Chatwoot BEFORE entity is saved to database.
      * The entity will be populated with all Chatwoot data before the INSERT.
      * If either operation fails, an exception is thrown and nothing is saved.
      * Only runs on entity creation.
@@ -121,32 +121,32 @@ class SyncWithChatwoot
             
             $this->log->info('Chatwoot account created successfully with ID: ' . $chatwootAccountId);
 
-            // STEP 2: Create automation user for this account
-            $this->log->info('Creating automation user for account: ' . $chatwootAccountId);
+            // STEP 2: Create concierge user for this account
+            $this->log->info('Creating concierge user for account: ' . $chatwootAccountId);
             
-            $automationUser = $this->createAutomationUser(
+            $conciergeUser = $this->createConciergeUser(
                 $platformUrl,
                 $accessToken,
                 $chatwootAccountId,
                 $entity->get('name')
             );
 
-            if (!$automationUser) {
-                throw new Error('Failed to create automation user for account.');
+            if (!$conciergeUser) {
+                throw new Error('Failed to create concierge user for account.');
             }
 
-            $createdUserId = $automationUser['user_id'];
+            $createdUserId = $conciergeUser['user_id'];
 
             // STEP 3: Set all data on entity BEFORE database insert
             $entity->set('chatwootAccountId', $chatwootAccountId);
             
-            if (isset($automationUser['access_token'])) {
-                $entity->set('apiKey', $automationUser['access_token']);
-                $this->log->info('Automation user created with access token for account: ' . $chatwootAccountId);
+            if (isset($conciergeUser['access_token'])) {
+                $entity->set('apiKey', $conciergeUser['access_token']);
+                $this->log->info('Concierge user created with access token for account: ' . $chatwootAccountId);
             } else {
                 $this->log->warning(
-                    'Automation user created but no access token received. ' .
-                    'Manual API Key configuration needed. Login email: ' . $automationUser['email']
+                    'Concierge user created but no access token received. ' .
+                    'Manual API Key configuration needed. Login email: ' . $conciergeUser['email']
                 );
             }
 
@@ -154,14 +154,14 @@ class SyncWithChatwoot
             // Using static cache because entity transient data may be lost when EspoCRM
             // refreshes the entity from database after insert
             // Include teamsIds and platformId since they may not be available after refresh
-            $automationUser['_teamsIds'] = $entity->getLinkMultipleIdList('teams');
-            $automationUser['_platformId'] = $entity->get('platformId');
-            self::$automationUserDataCache[$entity->getId()] = $automationUser;
+            $conciergeUser['_teamsIds'] = $entity->getLinkMultipleIdList('teams');
+            $conciergeUser['_platformId'] = $entity->get('platformId');
+            self::$conciergeUserDataCache[$entity->getId()] = $conciergeUser;
 
             $this->log->info('Successfully prepared Chatwoot account and user for database insert');
             
             // FINAL SAFEGUARD: Ensure the entity has the required Chatwoot data
-            if (!$entity->get('chatwootAccountId') || !$automationUser['user_id']) {
+            if (!$entity->get('chatwootAccountId') || !$conciergeUser['user_id']) {
                 throw new Error(
                     'Critical error: Chatwoot account created but entity data not set properly. ' .
                     'Preventing database save to maintain data integrity.'
@@ -225,7 +225,7 @@ class SyncWithChatwoot
     }
 
     /**
-     * Create an automation user for the account.
+     * Create a concierge user for the account.
      *
      * @param string $platformUrl
      * @param string $accessToken
@@ -234,15 +234,15 @@ class SyncWithChatwoot
      * @return array<string, mixed>|null
      * @throws Error
      */
-    private function createAutomationUser(
+    private function createConciergeUser(
         string $platformUrl,
         string $accessToken,
         int $chatwootAccountId,
         string $accountName
     ): ?array {
-        // Generate automation user credentials
-        $email = 'automation.' . $chatwootAccountId . '@chatwoot.local';
-        $name = 'Automation User - ' . $accountName;
+        // Generate concierge user credentials
+        $email = 'concierge.' . $chatwootAccountId . '@monostax-ext.com';
+        $name = '✦ Concierge (Monostax)';
         
         // Generate password meeting Chatwoot requirements
         $password = $this->generateSecurePassword();
@@ -253,7 +253,7 @@ class SyncWithChatwoot
             'email' => $email,
             'password' => $password,
             'custom_attributes' => [
-                'type' => 'automation',
+                'type' => 'concierge',
                 'created_by' => 'espocrm',
                 'account_id' => $chatwootAccountId
             ]
@@ -262,7 +262,7 @@ class SyncWithChatwoot
         $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, $userData);
 
         if (!isset($userResponse['id'])) {
-            throw new Error('Failed to create automation user: missing user ID in response');
+            throw new Error('Failed to create concierge user: missing user ID in response');
         }
 
         $chatwootUserId = $userResponse['id'];
@@ -276,7 +276,7 @@ class SyncWithChatwoot
             'administrator'
         );
 
-        $this->log->info("Created automation user (ID: $chatwootUserId) for account $chatwootAccountId");
+        $this->log->info("Created concierge user (ID: $chatwootUserId) for account $chatwootAccountId");
 
         // Return user info including password for ChatwootUser entity creation
         return [
