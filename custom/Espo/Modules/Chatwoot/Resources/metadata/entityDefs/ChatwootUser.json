@@ -34,6 +34,43 @@
             "readOnly": true,
             "tooltip": true
         },
+        "userAccessToken": {
+            "type": "password",
+            "dbType": "text",
+            "readOnly": true,
+            "tooltip": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "textFilterDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
+        "crmAvatarSyncHash": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "textFilterDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
+        "chatwootAvatarSyncHash": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "textFilterDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

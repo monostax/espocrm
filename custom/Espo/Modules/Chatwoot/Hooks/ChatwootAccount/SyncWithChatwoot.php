@@ -28,6 +28,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 
 /**
  * Hook to synchronize ChatwootAccount with Chatwoot Platform API.
@@ -50,7 +51,8 @@ class SyncWithChatwoot
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
-        private Log $log
+        private Log $log,
+        private ConciergeAvatarService $conciergeAvatarService
     ) {}
 
     /**
@@ -278,14 +280,28 @@ class SyncWithChatwoot
 
         $this->log->info("Created concierge user (ID: $chatwootUserId) for account $chatwootAccountId");
 
+        $accessToken = $userResponse['access_token'] ?? null;
+
+        // Best-effort: brand the concierge with the Monostax favicon. Failures
+        // here never abort concierge creation — avatar is cosmetic.
+        $avatarUrl = null;
+        if ($accessToken) {
+            $avatarUrl = $this->conciergeAvatarService->uploadForConcierge(
+                $platformUrl,
+                $accessToken,
+                (int) $chatwootUserId
+            );
+        }
+
         // Return user info including password for ChatwootUser entity creation
         return [
             'user_id' => $chatwootUserId,
             'email' => $email,
             'password' => $password,
             'name' => $name,
-            'access_token' => $userResponse['access_token'] ?? null,
+            'access_token' => $accessToken,
             'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
+            'avatar_url' => $avatarUrl,
         ];
     }
 

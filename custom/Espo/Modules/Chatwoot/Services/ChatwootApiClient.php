@@ -2778,4 +2778,286 @@ public function deleteConversation(
             $this->log->info("Chatwoot: Label {$labelId} not found in account {$accountId} (already deleted)");
         }
     }
+
+    /* -------------------------------------------------------------------------- */
+    /*                      Profile API (User-level, authenticated)               */
+    /* -------------------------------------------------------------------------- */
+
+    /**
+     * Upload an avatar image for the authenticated Chatwoot user.
+     *
+     * Uses `PUT /api/v1/profile` with a multipart body. Authentication is the
+     * *user's own* `api_access_token` (the one returned by Platform API
+     * `POST /platform/api/v1/users` in the `access_token` field) — NOT the
+     * platform access token. This is the only endpoint Chatwoot exposes that
+     * lets you set a user's avatar by file upload.
+     *
+     * Chatwoot's ProfilesController permits `profile[avatar]` (multipart
+     * attachment) and `profile[avatar_url]` (remote URL the server then
+     * downloads). We go multipart-first because it works regardless of
+     * whether the CRM host is reachable from the Chatwoot host.
+     *
+     * @param string $platformUrl       Base URL of the Chatwoot platform
+     * @param string $userAccessToken   The *user's* api_access_token (returned by createUser)
+     * @param string $avatarFilePath    Absolute path to the image file on disk
+     * @return array<string, mixed>     Decoded profile response body (expected to include `avatar_url`)
+     * @throws Error
+     */
+    public function updateUserAvatar(
+        string $platformUrl,
+        string $userAccessToken,
+        string $avatarFilePath
+    ): array {
+        if (!is_file($avatarFilePath) || !is_readable($avatarFilePath)) {
+            throw new Error("Avatar file not found or unreadable: {$avatarFilePath}");
+        }
+
+        $url = rtrim($platformUrl, '/') . '/api/v1/profile';
+
+        $mimeType = @mime_content_type($avatarFilePath) ?: 'image/png';
+        $cfile = new \CURLFile($avatarFilePath, $mimeType, basename($avatarFilePath));
+
+        // Multipart form fields. Chatwoot wraps user attributes in `profile[...]`.
+        $postFields = [
+            'profile[avatar]' => $cfile,
+        ];
+
+        $ch = curl_init($url);
+
+        if ($ch === false) {
+            throw new Error("Could not initialize cURL for URL: {$url}");
+        }
+
+        $timeout = $this->config->get('chatwootApiTimeout', self::DEFAULT_TIMEOUT);
+        $connectTimeout = $this->config->get('chatwootApiConnectTimeout', self::CONNECT_TIMEOUT);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS | CURLPROTO_HTTP);
+        // Intentionally omit Content-Type header — cURL sets it with the
+        // correct multipart boundary when POSTFIELDS is an array with a CURLFile.
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'api_access_token: ' . $userAccessToken,
+            'Accept: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+
+        curl_close($ch);
+
+        if ($result === false) {
+            throw new Error("cURL Error (updateUserAvatar): {$curlError}");
+        }
+
+        $body = json_decode((string) $result, true);
+        if (!is_array($body)) {
+            $body = [];
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $errorMsg = 'Chatwoot API error (updateUserAvatar): HTTP ' . $httpCode;
+
+            if (isset($body['message'])) {
+                $errorMsg .= ' - ' . $body['message'];
+            } elseif (isset($body['error'])) {
+                $errorMsg .= ' - ' . $body['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (updateUserAvatar): ' . (string) $result);
+            throw new Error($errorMsg);
+        }
+
+        return $body;
+    }
+
+    /**
+     * Upload an avatar for the authenticated Chatwoot user from raw bytes.
+     *
+     * Convenience wrapper around {@see updateUserAvatar()} that writes the bytes
+     * to a short-lived temp file before POSTing it as multipart — the same
+     * transport path Chatwoot expects (the ProfilesController only reads
+     * `profile[avatar]` as an UploadedFile, not as inline raw data).
+     *
+     * The temp file is unlinked even if the upload throws, so callers never
+     * need to clean up on their own.
+     *
+     * @param string $platformUrl      Base URL of the Chatwoot platform
+     * @param string $userAccessToken  The user's own api_access_token
+     * @param string $bytes            Raw image bytes
+     * @param string $mimeType         e.g. "image/png"
+     * @param string $filename         File name hint for Chatwoot (used only for display)
+     * @return array<string, mixed>    Decoded profile response
+     * @throws Error
+     */
+    public function updateUserAvatarFromBytes(
+        string $platformUrl,
+        string $userAccessToken,
+        string $bytes,
+        string $mimeType,
+        string $filename
+    ): array {
+        $tempPath = tempnam(sys_get_temp_dir(), 'cw-avatar-');
+
+        if ($tempPath === false) {
+            throw new Error('Could not create temp file for avatar upload.');
+        }
+
+        // Preserve extension when known so MIME sniffing on Chatwoot's side
+        // lines up with what we advertise.
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+        if ($extension !== '') {
+            $newPath = $tempPath . '.' . $extension;
+            if (@rename($tempPath, $newPath)) {
+                $tempPath = $newPath;
+            }
+        }
+
+        try {
+            if (file_put_contents($tempPath, $bytes) === false) {
+                throw new Error('Could not write avatar bytes to temp file.');
+            }
+
+            return $this->updateUserAvatar($platformUrl, $userAccessToken, $tempPath);
+        } finally {
+            if (is_file($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+    }
+
+    /**
+     * Delete the avatar of the authenticated Chatwoot user.
+     *
+     * Maps to `DELETE /api/v1/profile/avatar` — the ProfilesController
+     * destroy_avatar action. Authenticated with the *user's* access token.
+     *
+     * 404 is treated as success (avatar already absent), matching the
+     * idempotent semantics we apply to other delete endpoints in this client.
+     *
+     * @throws Error
+     */
+    public function deleteUserAvatar(string $platformUrl, string $userAccessToken): void
+    {
+        $url = rtrim($platformUrl, '/') . '/api/v1/profile/avatar';
+
+        $headers = [
+            'api_access_token: ' . $userAccessToken,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ];
+
+        $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+        if ($response['code'] !== 200 && $response['code'] !== 204 && $response['code'] !== 404) {
+            $errorMsg = 'Failed to delete user avatar on Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (deleteUserAvatar): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+    }
+
+    /**
+     * Download binary content from an arbitrary URL.
+     *
+     * Used to pull the hosted avatar blob back from Chatwoot so we can mirror
+     * it onto the CRM User's `avatarId` attachment. Kept unauthenticated on
+     * purpose — Chatwoot's `rails/active_storage/blobs/*` URLs are publicly
+     * readable tokens and do not accept `api_access_token` headers.
+     *
+     * Returns raw bytes on success. Throws {@see Error} on network failure
+     * or non-2xx response so callers can cleanly decide to give up.
+     *
+     * @param string $url Absolute URL of the binary to download
+     * @return string Raw bytes
+     * @throws Error
+     */
+    public function downloadBinary(string $url): string
+    {
+        $ch = curl_init($url);
+
+        if ($ch === false) {
+            throw new Error("Could not initialize cURL for URL: {$url}");
+        }
+
+        $timeout = $this->config->get('chatwootApiTimeout', self::DEFAULT_TIMEOUT);
+        $connectTimeout = $this->config->get('chatwootApiConnectTimeout', self::CONNECT_TIMEOUT);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS | CURLPROTO_HTTP);
+
+        $result = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+
+        curl_close($ch);
+
+        if ($result === false) {
+            throw new Error("cURL Error (downloadBinary): {$curlError}");
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            throw new Error("Failed to download binary: HTTP {$httpCode} from {$url}");
+        }
+
+        return (string) $result;
+    }
+
+    /**
+     * Fetch a Chatwoot user's personal `access_token` via the Platform API.
+     *
+     * The `access_token` is only returned verbatim by `POST /platform/api/v1/users`
+     * at creation time. For pre-existing users (seeded before we stored the
+     * token, or concierge users whose token was never persisted) we need to
+     * re-fetch it using the platform-level access token.
+     *
+     * Returns null if the endpoint doesn't surface a token on the target
+     * Chatwoot version, so callers can log and fall back to skipping the
+     * avatar upload rather than throwing.
+     */
+    public function fetchUserAccessToken(
+        string $platformUrl,
+        string $platformAccessToken,
+        int $chatwootUserId
+    ): ?string {
+        try {
+            $user = $this->getUser($platformUrl, $platformAccessToken, $chatwootUserId);
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                'Chatwoot API (fetchUserAccessToken): Failed to fetch user ' .
+                $chatwootUserId . ' — ' . $e->getMessage()
+            );
+            return null;
+        }
+
+        $candidates = [
+            $user['access_token'] ?? null,
+            $user['api_access_token'] ?? null,
+            isset($user['access_token']['token']) ? $user['access_token']['token'] : null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
 }

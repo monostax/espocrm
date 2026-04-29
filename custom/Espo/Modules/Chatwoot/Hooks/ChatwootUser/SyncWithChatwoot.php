@@ -107,6 +107,17 @@ class SyncWithChatwoot implements CreateHook
             // Set chatwootUserId on entity BEFORE database insert
             $entity->set('chatwootUserId', $chatwootUserId);
 
+            // Persist the per-user `access_token` Chatwoot returned at creation
+            // time. It's the *only* credential that can hit the user-scoped
+            // `/api/v1/profile` endpoints we need for bi-directional avatar
+            // sync (see AgentAvatarSyncService). If the upstream response
+            // omits it, AgentAvatarSyncService will lazy-fetch via the
+            // Platform API — this just spares that extra round-trip.
+            $userAccessToken = $userResponse['access_token'] ?? null;
+            if (is_string($userAccessToken) && $userAccessToken !== '') {
+                $entity->set('userAccessToken', $userAccessToken);
+            }
+
             $this->log->info(
                 'Successfully prepared Chatwoot user ' . $chatwootUserId . ' for database insert'
             );

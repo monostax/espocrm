@@ -28,6 +28,8 @@ use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ChatwootWahaAppTokenSync;
+use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -82,6 +84,8 @@ class RotateAutomationToConcierge implements RebuildAction
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private ChatwootAccountUserMembershipService $membershipService,
+        private ConciergeAvatarService $conciergeAvatarService,
+        private ChatwootWahaAppTokenSync $wahaAppTokenSync,
         private Log $log,
     ) {}
 
@@ -268,6 +272,25 @@ class RotateAutomationToConcierge implements RebuildAction
                 true // isAI — concierge memberships are AI-enabled by default
             );
 
+            // Proactively stamp the avatar URL we just uploaded to Chatwoot
+            // onto the membership row. Looked up fresh to keep the write
+            // inside the same transaction as the rotation.
+            $avatarUrl = $conciergeData['avatar_url'] ?? null;
+            if ($avatarUrl) {
+                $membership = $this->entityManager
+                    ->getRDBRepository('ChatwootAccountUserMembership')
+                    ->where([
+                        'chatwootAccountId' => $account->getId(),
+                        'chatwootUserId' => $newChatwootUser->getId(),
+                    ])
+                    ->findOne();
+
+                if ($membership && !$membership->get('avatarUrl')) {
+                    $membership->set('avatarUrl', $avatarUrl);
+                    $this->entityManager->saveEntity($membership, [SaveOption::SKIP_ALL => true]);
+                }
+            }
+
             $pdo->commit();
         } catch (\Throwable $e) {
             $pdo->rollBack();
@@ -276,6 +299,31 @@ class RotateAutomationToConcierge implements RebuildAction
                 $e->getMessage()
             );
             return 'skipped';
+        }
+
+        // Propagate the freshly-minted concierge access token to every WAHA
+        // Chatwoot app bound to this account. Without this step, existing
+        // WAHA sessions keep the deleted automation user's token cached in
+        // `config.accountToken` and every outbound bot reply / status
+        // command hits Chatwoot with 401 "Invalid Access Token" — webhooks
+        // from Chatwoot to WAHA still work (they use the inbox identifier),
+        // which makes the breakage silent from the Chatwoot UI side.
+        //
+        // Done outside the DB transaction on purpose: a WAHA hiccup must
+        // not roll back the already-committed rotation; the service logs
+        // per-app failures and the next rebuild will retry.
+        //
+        // The normal `Hooks\ChatwootAccount\PropagateApiKeyToWaha` afterSave
+        // hook cannot cover this path because the rotation uses
+        // `SaveOption::SKIP_ALL` above to avoid recursing into Chatwoot
+        // sync hooks while we're still inside the rebuild.
+        try {
+            $this->wahaAppTokenSync->syncForAccount($account);
+        } catch (\Throwable $e) {
+            $this->log->error(
+                "RotateAutomationToConcierge: WAHA app token propagation failed for account $accountId — " .
+                $e->getMessage()
+            );
         }
 
         // 7. Best-effort cleanup of the legacy user (outside the transaction — if this
@@ -361,13 +409,26 @@ class RotateAutomationToConcierge implements RebuildAction
                 'administrator'
             );
 
+            $userAccessToken = $userResponse['access_token'] ?? null;
+
+            // Best-effort avatar branding. See ConciergeAvatarService docs.
+            $avatarUrl = null;
+            if ($userAccessToken) {
+                $avatarUrl = $this->conciergeAvatarService->uploadForConcierge(
+                    $backendUrl,
+                    $userAccessToken,
+                    (int) $chatwootUserId
+                );
+            }
+
             return [
                 'user_id' => $chatwootUserId,
                 'email' => $email,
                 'password' => $password,
                 'name' => $name,
-                'access_token' => $userResponse['access_token'] ?? null,
+                'access_token' => $userAccessToken,
                 'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
+                'avatar_url' => $avatarUrl,
             ];
         } catch (\Exception $e) {
             // If the new-domain email collides (unlikely but possible on re-runs),
@@ -398,7 +459,7 @@ class RotateAutomationToConcierge implements RebuildAction
         try {
             $teamsIds = $account->getLinkMultipleIdList('teams');
 
-            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
+            $attributes = [
                 'name' => $conciergeUserData['name'],
                 'email' => $conciergeUserData['email'],
                 'password' => $conciergeUserData['password'],
@@ -406,7 +467,18 @@ class RotateAutomationToConcierge implements RebuildAction
                 'platformId' => $platform->getId(),
                 'chatwootUserId' => $conciergeUserData['user_id'],
                 'teamsIds' => $teamsIds,
-            ], [
+            ];
+
+            // Persist the user's personal access_token so the bi-directional
+            // avatar sync (AgentAvatarSyncService) can hit /api/v1/profile
+            // without re-fetching via the Platform API. Optional — the sync
+            // lazily refetches when missing.
+            $userAccessToken = $conciergeUserData['access_token'] ?? null;
+            if (is_string($userAccessToken) && $userAccessToken !== '') {
+                $attributes['userAccessToken'] = $userAccessToken;
+            }
+
+            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', $attributes, [
                 'skipHooks' => true,
                 'silent' => true,
             ]);

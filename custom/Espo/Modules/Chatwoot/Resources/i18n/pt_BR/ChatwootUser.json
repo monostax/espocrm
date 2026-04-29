@@ -8,6 +8,9 @@
         "assignedUser": "Usuário Atribuído",
         "role": "Função",
         "chatwootUserId": "Chat / Usuário (ID)",
+        "userAccessToken": "Chat / Token de Acesso do Usuário",
+        "crmAvatarSyncHash": "Hash de Sincronização do Avatar (CRM)",
+        "chatwootAvatarSyncHash": "Hash de Sincronização do Avatar (Chat)",
         "teams": "Permissão / Times"
     },
     "links": {
@@ -31,6 +34,7 @@
     "tooltips": {
         "assignedUser": "Usuário do CRM que será vinculado a este usuário de Chat. Cada usuário CRM pode ter apenas um usuário de Chat.",
         "chatwootUserId": "ID do usuário criado no Chat. Este campo é preenchido automaticamente após a criação.",
-        "password": "Senha do usuário para acesso ao Chat. Mínimo 6 caracteres."
+        "password": "Senha do usuário para acesso ao Chat. Mínimo 6 caracteres.",
+        "userAccessToken": "Token de acesso pessoal deste usuário de Chat, usado para sincronização bidirecional do avatar com o Chat."
     }
 }

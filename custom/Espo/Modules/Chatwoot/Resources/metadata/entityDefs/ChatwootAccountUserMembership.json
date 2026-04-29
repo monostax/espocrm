@@ -53,7 +53,7 @@
             "readOnly": true
         },
         "avatarUrl": {
-            "type": "url",
+            "type": "text",
             "readOnly": true
         },
         "customRoleId": {

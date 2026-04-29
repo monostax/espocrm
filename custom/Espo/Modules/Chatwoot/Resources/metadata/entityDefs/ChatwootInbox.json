@@ -57,7 +57,7 @@
             "type": "text"
         },
         "avatarUrl": {
-            "type": "url"
+            "type": "text"
         },
         "inboxIdentifier": {
             "type": "varchar",

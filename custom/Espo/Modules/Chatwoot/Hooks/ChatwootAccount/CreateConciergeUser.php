@@ -78,7 +78,8 @@ class CreateConciergeUser
                 $conciergeUserData['email'],
                 $conciergeUserData['password'],
                 $conciergeUserData['_teamsIds'] ?? [],
-                $conciergeUserData['_platformId'] ?? null
+                $conciergeUserData['_platformId'] ?? null,
+                $conciergeUserData['access_token'] ?? null
             );
 
             if ($chatwootUser) {
@@ -90,13 +91,22 @@ class CreateConciergeUser
                     ? (int) $conciergeUserData['account_user_id']
                     : null;
 
-                $this->membershipService->upsertMembership(
+                $membership = $this->membershipService->upsertMembership(
                     $entity->getId(),
                     $chatwootUser->getId(),
                     'administrator',
                     $accountUserId,
                     true // isAI — concierge memberships are AI-enabled by default
                 );
+
+                // Proactively stamp the avatar we just uploaded to Chatwoot onto
+                // the membership so the CRM conversation view shows branding
+                // immediately, without waiting for the next agent sync pass.
+                $avatarUrl = $conciergeUserData['avatar_url'] ?? null;
+                if ($avatarUrl && $membership && !$membership->get('avatarUrl')) {
+                    $membership->set('avatarUrl', $avatarUrl);
+                    $this->entityManager->saveEntity($membership, ['silent' => true]);
+                }
                 
                 $this->log->info(
                     'Created and linked ChatwootUser entity for concierge user: ' . 
@@ -122,6 +132,9 @@ class CreateConciergeUser
      * @param string $password
      * @param array<string> $teamsIds
      * @param string|null $platformId
+     * @param string|null $userAccessToken The concierge user's personal api_access_token
+     *                                      (returned by Platform API at user creation). Optional:
+     *                                      persisted for bi-directional avatar sync but never fatal.
      * @return Entity|null
      */
     private function createChatwootUserEntity(
@@ -131,7 +144,8 @@ class CreateConciergeUser
         string $email,
         string $password,
         array $teamsIds,
-        ?string $platformId
+        ?string $platformId,
+        ?string $userAccessToken = null
     ): ?Entity {
         try {
             // teamsIds and platformId are passed from cached data captured in beforeSave
@@ -140,7 +154,7 @@ class CreateConciergeUser
             // Create the ChatwootUser entity
             // Note: assignedUser is NOT set for concierge users to avoid unique constraint violation
             // Concierge users are system users, not tied to a specific EspoCRM user
-            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
+            $attributes = [
                 'name' => $name,
                 'email' => $email,
                 'password' => $password,
@@ -148,7 +162,13 @@ class CreateConciergeUser
                 'platformId' => $platformId,
                 'chatwootUserId' => $chatwootUserId,
                 'teamsIds' => $teamsIds // Inherit Teams from ChatwootAccount
-            ], [
+            ];
+
+            if (is_string($userAccessToken) && $userAccessToken !== '') {
+                $attributes['userAccessToken'] = $userAccessToken;
+            }
+
+            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', $attributes, [
                 'skipHooks' => true, // Skip hooks to avoid recursive creation
                 'silent' => true
             ]);

@@ -29,6 +29,8 @@ use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ChatwootWahaAppTokenSync;
+use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -48,6 +50,8 @@ class SeedChatwootAccount implements RebuildAction
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private ChatwootAccountUserMembershipService $membershipService,
+        private ConciergeAvatarService $conciergeAvatarService,
+        private ChatwootWahaAppTokenSync $wahaAppTokenSync,
         private Config $config,
         private Log $log
     ) {}
@@ -129,6 +133,14 @@ class SeedChatwootAccount implements RebuildAction
             // Ensure webhooks exist (SKIP_ALL bypasses RegisterDeliveryWebhook hook)
             $this->ensureWebhooks($existing);
 
+            // If we just rotated apiKey on the existing account (concierge
+            // rebootstrap branch above), push the fresh token out to every
+            // WAHA Chatwoot app bound to this account. SKIP_ALL bypassed
+            // the PropagateApiKeyToWaha hook, so the seed must do it.
+            // No-op when no rotation happened — syncForAccount short-circuits
+            // for integrations whose accountToken already matches.
+            $this->safeSyncWaha($existing);
+
             $this->log->info('SeedChatwootAccount: Updated default ChatwootAccount');
             return;
         }
@@ -184,9 +196,37 @@ class SeedChatwootAccount implements RebuildAction
             // Register webhooks (SKIP_ALL bypasses RegisterDeliveryWebhook hook)
             $this->ensureWebhooks($account);
 
+            // Fresh account + fresh concierge token. No WAHA apps exist yet
+            // for a brand-new account, but run the sync anyway so that if
+            // a pre-existing orphan integration happens to point at this
+            // account (data migration edge case), it gets rewired.
+            $this->safeSyncWaha($account);
+
             $this->log->info('SeedChatwootAccount: Created default ChatwootAccount with Chatwoot ID: ' . $chatwootAccountId);
         } catch (\Exception $e) {
             $this->log->error('SeedChatwootAccount: Failed to create account - ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Propagate the account's current apiKey to every WAHA Chatwoot app
+     * that belongs to this account. Wrapped so a WAHA hiccup cannot abort
+     * the surrounding rebuild step.
+     *
+     * See `ChatwootWahaAppTokenSync` for rationale. The normal afterSave
+     * hook `Hooks\ChatwootAccount\PropagateApiKeyToWaha` is bypassed by
+     * the SKIP_ALL saves this class uses, so propagation is done here
+     * explicitly. No-op when tokens already match.
+     */
+    private function safeSyncWaha(Entity $account): void
+    {
+        try {
+            $this->wahaAppTokenSync->syncForAccount($account);
+        } catch (\Throwable $e) {
+            $this->log->error(
+                'SeedChatwootAccount: WAHA app token propagation failed for account ' .
+                $account->getId() . ' — ' . $e->getMessage()
+            );
         }
     }
 
@@ -344,13 +384,26 @@ class SeedChatwootAccount implements RebuildAction
 
             $this->log->info("SeedChatwootAccount: Created concierge user (ID: {$chatwootUserId}) for account {$chatwootAccountId}");
 
+            $userAccessToken = $userResponse['access_token'] ?? null;
+
+            // Best-effort avatar branding. See ConciergeAvatarService docs.
+            $avatarUrl = null;
+            if ($userAccessToken) {
+                $avatarUrl = $this->conciergeAvatarService->uploadForConcierge(
+                    $backendUrl,
+                    $userAccessToken,
+                    (int) $chatwootUserId
+                );
+            }
+
             return [
                 'user_id' => $chatwootUserId,
                 'email' => $email,
                 'password' => $password,
                 'name' => $name,
-                'access_token' => $userResponse['access_token'] ?? null,
+                'access_token' => $userAccessToken,
                 'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
+                'avatar_url' => $avatarUrl,
             ];
         } catch (\Exception $e) {
             // User might already exist
@@ -378,7 +431,7 @@ class SeedChatwootAccount implements RebuildAction
             $teamsIds = $account->getLinkMultipleIdList('teams');
 
             // Create the ChatwootUser entity
-            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
+            $attributes = [
                 'name' => $conciergeUserData['name'],
                 'email' => $conciergeUserData['email'],
                 'password' => $conciergeUserData['password'],
@@ -386,7 +439,18 @@ class SeedChatwootAccount implements RebuildAction
                 'platformId' => $platform->getId(),
                 'chatwootUserId' => $conciergeUserData['user_id'],
                 'teamsIds' => $teamsIds
-            ], [
+            ];
+
+            // Persist the user's personal access_token so the bi-directional
+            // avatar sync (AgentAvatarSyncService) can hit /api/v1/profile
+            // without re-fetching via the Platform API. Optional — the sync
+            // lazily refetches when missing.
+            $userAccessToken = $conciergeUserData['access_token'] ?? null;
+            if (is_string($userAccessToken) && $userAccessToken !== '') {
+                $attributes['userAccessToken'] = $userAccessToken;
+            }
+
+            $chatwootUser = $this->entityManager->createEntity('ChatwootUser', $attributes, [
                 'skipHooks' => true,
                 'silent' => true
             ]);
@@ -416,13 +480,21 @@ class SeedChatwootAccount implements RebuildAction
                 ? (int) $conciergeUserData['account_user_id']
                 : null;
 
-            $this->membershipService->upsertMembership(
+            $membership = $this->membershipService->upsertMembership(
                 $account->getId(),
                 $chatwootUser->getId(),
                 'administrator',
                 $accountUserId,
                 true // isAI — concierge memberships are AI-enabled by default
             );
+
+            // Proactively stamp the avatar URL we just uploaded to Chatwoot.
+            // See ConciergeAvatarService docs for why this matters.
+            $avatarUrl = $conciergeUserData['avatar_url'] ?? null;
+            if ($avatarUrl && $membership && !$membership->get('avatarUrl')) {
+                $membership->set('avatarUrl', $avatarUrl);
+                $this->entityManager->saveEntity($membership, ['silent' => true]);
+            }
         } catch (\Throwable $e) {
             $this->log->warning(
                 'SeedChatwootAccount: Failed to ensure concierge membership: ' . $e->getMessage()
