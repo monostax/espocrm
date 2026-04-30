@@ -293,6 +293,7 @@ class ChatwootInboxIntegration
             // Create WAHA Chatwoot App
             $appConfig = [
                 'linkPreview' => 'OFF',
+                'editMessage' => 'ON',
                 'locale' => str_replace('_', '-', $chatwootAccount->get('locale') ?? 'en-US'),
                 'url' => rtrim($chatwootUrl, '/'),
                 'accountId' => (int) $chatwootAccountId,

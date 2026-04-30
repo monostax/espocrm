@@ -193,13 +193,17 @@ class ChatwootWahaAppTokenSync
         }
 
         $currentToken = $config['accountToken'] ?? null;
+        $hasEditMessage = array_key_exists('editMessage', $config);
 
-        if ($currentToken === $apiKey) {
+        if ($currentToken === $apiKey && $hasEditMessage) {
             // Already in sync — no PUT needed.
             return 'skipped';
         }
 
         $config['accountToken'] = $apiKey;
+        if (!$hasEditMessage) {
+            $config['editMessage'] = 'ON';
+        }
 
         // WAHA's PUT /api/apps/:id validator requires the full descriptor
         // (id, session, app) alongside the mutable fields. Missing any of

@@ -368,6 +368,7 @@ class WahaSessionApp
     {
         $config = [
             'linkPreview' => 'OFF',
+            'editMessage' => 'ON',
             'locale' => 'en-US',
             'url' => '',
             'accountId' => 0,
