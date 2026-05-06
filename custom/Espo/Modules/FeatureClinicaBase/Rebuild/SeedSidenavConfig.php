@@ -297,6 +297,21 @@ class SeedSidenavConfig implements RebuildAction
 
             (object) [
                 'type' => 'divider',
+                'text' => '$Clínica Nas Nuvens',
+            ],
+            'FeatureIntegrationClinicaNasNuvensPaciente',
+            'FeatureIntegrationClinicaNasNuvensAgendamento',
+            'FeatureIntegrationClinicaNasNuvensFaturamento',
+            'FeatureIntegrationClinicaNasNuvensProfissional',
+            (object) [
+                'text' => '$Outros',
+                'itemList' => [
+                    'FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento',
+                ],
+            ],
+
+            (object) [
+                'type' => 'divider',
                 'text' => '$Activities',
             ],
             'Task',

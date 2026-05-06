@@ -542,14 +542,22 @@ CREATE OR REPLACE TABLE out_paciente AS
     LEFT JOIN src_uf uf ON CAST(ci.codEstado AS VARCHAR) = CAST(uf.codigo AS VARCHAR)
     LEFT JOIN paciente_convenio_ranked pcr ON CAST(pac.codpessoa AS VARCHAR) = CAST(pcr.codpaciente AS VARCHAR) AND pcr.rn = 1;
 
--- Phone + email data for post-import ORM pass.
--- EspoCRM stores phone/email-type fields in relational tables (phone_number,
--- entity_phone_number, email_address, entity_email_address). With standard
--- field names (phoneNumber, emailAddress) the ORM hooks handle persistence.
--- Outputs: paciente_id, phoneNumber, emailAddress
+-- Phone + email data for post-import bulk linking pass.
+-- EspoCRM stores phone/email-type fields in relational tables
+-- (phone_number, entity_phone_number, email_address, entity_email_address).
+--
+-- Output column `contact_id` is the Espo Contact id derived with the SAME
+-- formula used by the PHP Phase 1 contact upsert
+-- (substr(md5('contact::' || credential_id || '::' || paciente_espo_id), 1, 17))
+-- so the bulk INSERTs in `bulkCreateContactsAndLink` always link to the
+-- contact actually created in Phase 1. (Previously this CSV emitted the
+-- CNN codpessoa here and the PHP re-hashed it with a different seed,
+-- producing a ghost contact id and orphaned entity_phone_number rows.)
+--
+-- Outputs: contact_id, phoneNumber, emailAddress
 CREATE OR REPLACE TABLE out_paciente_contact AS
     SELECT
-        op.paciente_id,
+        espo_id('contact::' || getvariable('credentialId') || '::' || op.id) AS contact_id,
         CAST(COALESCE(
             NULLIF(ct.telefoneCelular, ''),
             NULLIF(ct.telefoneComercial, ''),

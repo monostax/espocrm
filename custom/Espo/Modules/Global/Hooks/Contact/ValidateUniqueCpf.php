@@ -45,11 +45,29 @@ class ValidateUniqueCpf
             return;
         }
 
-        if (!$entity->isNew() && !$entity->isAttributeChanged('cpf')) {
+        $tenantId = $entity->get('tenantId');
+
+        // Tenant is required; if absent, SyncTenantFromTeam (order 5) runs
+        // before this hook (order 9) and fills it in. Bail out defensively.
+        if (!$tenantId) {
             return;
         }
 
-        $where = ['cpf' => $cpf];
+        if (
+            !$entity->isNew()
+            && !$entity->isAttributeChanged('cpf')
+            && !$entity->isAttributeChanged('tenantId')
+        ) {
+            return;
+        }
+
+        // Uniqueness is scoped to (cpf, tenantId). The same CPF MAY exist
+        // in another tenant; cross-tenant lookups are forbidden here so we
+        // cannot leak another tenant's Contact.
+        $where = [
+            'cpf' => $cpf,
+            'tenantId' => $tenantId,
+        ];
 
         if (!$entity->isNew()) {
             $where['id!='] = $entity->getId();
@@ -61,7 +79,7 @@ class ValidateUniqueCpf
             ->findOne();
 
         if ($existing) {
-            throw new Conflict('CPF já cadastrado para outro contato.');
+            throw new Conflict('CPF já cadastrado para outro contato neste tenant.');
         }
     }
 }

@@ -19,6 +19,11 @@
         "modifiedBy": {
             "view": "views/fields/user-with-avatar"
         },
+        "tenant": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/link"
+        },
         "teams": {
             "type": "linkMultiple",
             "required": true,
@@ -26,6 +31,11 @@
         }
     },
     "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "contacts"
+        },
         "teams": {
             "type": "hasMany",
             "entity": "Team",
@@ -36,8 +46,10 @@
     "indexes": {
         "cpf": {
             "unique": true,
-            "columns": ["cpf", "deleted"]
+            "columns": ["cpf", "tenantId", "deleted"]
+        },
+        "tenantId": {
+            "columns": ["tenantId"]
         }
     }
 }
-

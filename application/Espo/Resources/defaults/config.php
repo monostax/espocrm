@@ -230,7 +230,7 @@ return [
     'busyRangesEntityList' => ['Meeting', 'Call'],
     'emailAutoReplySuppressPeriod' => '2 hours',
     'emailAutoReplyLimit' => 5,
-    'cleanupJobPeriod' => '1 month',
+    'cleanupJobPeriod' => '1 day',
     'cleanupActionHistoryPeriod' => '15 days',
     'cleanupAuthTokenPeriod' => '1 month',
     'cleanupSubscribers' => true,

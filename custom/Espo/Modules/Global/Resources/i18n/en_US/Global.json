@@ -84,7 +84,8 @@
         "SidenavConfig": "Custom Sidenav"
     },
     "navbarTabs": {
-        "Lists": "Lists"
+        "Lists": "Lists",
+        "Outros": "Other"
     },
     "navbarConfig": {
         "switchView": "Switch View",

@@ -132,6 +132,9 @@
         },
         "statusScheduledJobId": {
             "columns": ["status", "scheduledJobId"]
+        },
+        "group": {
+            "columns": ["group", "createdAt"]
         }
     },
     "hooksDisabled": true

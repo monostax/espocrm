@@ -1,0 +1,51 @@
+{
+    "FeatureIntegrationClinicaNasNuvensPaciente": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensPaciente",
+            "action": "list"
+        },
+        "order": 50
+    },
+    "FeatureIntegrationClinicaNasNuvensAgendamento": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensAgendamento",
+            "action": "list"
+        },
+        "order": 52
+    },
+    "FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento",
+            "action": "list"
+        },
+        "order": 54
+    },
+    "FeatureIntegrationClinicaNasNuvensFaturamento": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensFaturamento",
+            "action": "list"
+        },
+        "order": 56
+    },
+    "FeatureIntegrationClinicaNasNuvensProfissional": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensProfissional",
+            "action": "list"
+        },
+        "order": 58
+    },
+    "FeatureIntegrationClinicaNasNuvensSettings/list": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensSettings",
+            "action": "list"
+        },
+        "order": 49
+    },
+    "FeatureIntegrationClinicaNasNuvensSettings/:id": {
+        "params": {
+            "controller": "FeatureIntegrationClinicaNasNuvensSettings",
+            "action": "view"
+        },
+        "order": 50
+    }
+}

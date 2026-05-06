@@ -2,6 +2,7 @@
     "actionClassNameList": [
         "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\SeedCredentialTypeClinicaNasNuvens",
         "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\SeedScheduledJobs",
-        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\BackfillClinicaNasNuvensProfiles"
+        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\BackfillClinicaNasNuvensProfiles",
+        "Espo\\Modules\\FeatureIntegrationClinicaNasNuvens\\Rebuild\\EnsureJobGroupIndex"
     ]
 }

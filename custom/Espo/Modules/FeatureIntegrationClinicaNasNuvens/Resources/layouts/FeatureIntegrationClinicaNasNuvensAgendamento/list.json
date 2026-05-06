@@ -1,14 +1,14 @@
 [
-    {"name": "name", "link": true, "width": 18},
-    {"name": "agendamentoId", "width": 12},
-    {"name": "paciente", "width": 14},
-    {"name": "consultaTipoAnchor", "width": 14},
-    {"name": "valorFinanceiro", "width": 10},
-    {"name": "status", "width": 10},
-    {"name": "statusFaturamento", "width": 10},
-    {"name": "syncStatus", "width": 10},
-    {"name": "data", "width": 10},
-    {"name": "horaInicio", "width": 8},
-    {"name": "horaFim", "width": 8},
-    {"name": "modifiedAt", "width": 10}
+    {"name": "name", "link": true, "width": 14},
+    {"name": "agendamentoId", "width": 9},
+    {"name": "paciente", "width": 10},
+    {"name": "consultaTipoAnchor", "width": 10},
+    {"name": "valorFinanceiro", "width": 7},
+    {"name": "status", "width": 7},
+    {"name": "statusFaturamento", "width": 7},
+    {"name": "syncStatus", "width": 7},
+    {"name": "data", "width": 7},
+    {"name": "horaInicio", "width": 6},
+    {"name": "horaFim", "width": 6},
+    {"name": "modifiedAt", "width": 7}
 ]

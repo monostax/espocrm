@@ -138,35 +138,37 @@ class ImportCsvData implements Job
     /**
      * Columns to update on duplicate key.
      * Includes 'id' so deterministic IDs replace time-based IDs on re-import.
-     * Also includes FK columns so child references stay consistent.
+     * Also includes FK columns so child references stay consistent, and
+     * 'deleted' so a record that was soft-deleted in the CRM is resurrected
+     * on the next import (the CSV always emits deleted=0 for live rows).
      *
      * @var array<string, string[]>
      */
     private const UPDATE_COLUMNS = [
         'consulta_tipo' => [
-            'id', 'name', 'sync_status', 'ativo', 'reconsulta', 'modified_at', 'settings_id',
+            'id', 'name', 'sync_status', 'ativo', 'reconsulta', 'modified_at', 'settings_id', 'deleted',
         ],
         'convenio_tipo' => [
-            'id', 'name', 'sync_status', 'ativo', 'beneficio', 'particular', 'modified_at', 'settings_id',
+            'id', 'name', 'sync_status', 'ativo', 'beneficio', 'particular', 'modified_at', 'settings_id', 'deleted',
         ],
         'procedimento_tipo' => [
-            'id', 'name', 'sync_status', 'ativo', 'especialidades', 'modified_at', 'settings_id',
+            'id', 'name', 'sync_status', 'ativo', 'especialidades', 'modified_at', 'settings_id', 'deleted',
         ],
         'procedimento_convenio' => [
             'id', 'name', 'is_active', 'convenio_name', 'preco_paciente', 'preco_convenio',
             'modified_at', 'preco_paciente_currency', 'preco_convenio_currency',
-            'procedimento_tipo_id', 'convenio_tipo_id',
+            'procedimento_tipo_id', 'convenio_tipo_id', 'deleted',
         ],
         'profissional' => [
             'id', 'name', 'id_pessoa', 'sync_status', 'ativo', 'tipo_executor', 'cpfcnpj',
             'profissional', 'profissional_codigo', 'cbo', 'registro_profissional',
-            'especialidades', 'especialidades_texto', 'clinicas', 'modified_at', 'settings_id',
+            'especialidades', 'especialidades_texto', 'clinicas', 'modified_at', 'settings_id', 'deleted',
         ],
         'paciente' => [
             'id', 'name', 'sync_status', 'ativo', 'cpfcnpj', 'data_nascimento',
             'sexo', 'estado_civil', 'profissao', 'endereco', 'numero',
             'complemento', 'bairro', 'cidade', 'estado', 'cep', 'convenio',
-            'numero_convenio', 'validade_convenio', 'modified_at', 'settings_id',
+            'numero_convenio', 'validade_convenio', 'modified_at', 'settings_id', 'deleted',
         ],
         'agendamento' => [
             'id', 'name', 'sync_status', 'id_paciente', 'id_profissional', 'id_convenio',
@@ -177,17 +179,17 @@ class ImportCsvData implements Job
             'consulta_tipo_anchor_id', 'modified_at', 'settings_id',
             'valor_procedimentos', 'valor_procedimentos_currency',
             'valor_faturamentos', 'valor_faturamentos_currency',
-            'valor_financeiro', 'valor_financeiro_currency',
+            'valor_financeiro', 'valor_financeiro_currency', 'deleted',
         ],
         'agendamento_procedimento' => [
             'id', 'name', 'quantidade', 'procedimento_nome', 'preco_paciente', 'preco_convenio',
             'valor_total', 'modified_at', 'preco_paciente_currency', 'preco_convenio_currency',
-            'valor_total_currency', 'agendamento_id', 'procedimento_tipo_id',
+            'valor_total_currency', 'agendamento_id', 'procedimento_tipo_id', 'deleted',
         ],
         'faturamento' => [
             'id', 'name', 'sync_status', 'documento', 'data_faturamento', 'profissional_nome',
             'valor', 'parcela', 'data_vencimento', 'description', 'valor_currency',
-            'agendamento_id', 'paciente_id', 'profissional_anchor_id', 'modified_at', 'settings_id',
+            'agendamento_id', 'paciente_id', 'profissional_anchor_id', 'modified_at', 'settings_id', 'deleted',
         ],
     ];
 
@@ -290,20 +292,21 @@ class ImportCsvData implements Job
                 $totalRows += $teamRows;
             }
 
-            // ORM pass for phone/email relational fields.
-            // EspoCRM stores phoneNumber/emailAddress fields in separate
-            // relational tables. With the standard field names, the ORM
-            // afterSave hooks (PhoneNumber\Saver, EmailAddress\Saver)
-            // handle persistence automatically.
+            // Repair any contacts with broken tenant_id from prior emergency fixes.
+            $this->repairBrokenTenantContacts($pdo, $resolved['apiCredentialId'], $resolved['teamId'], $resolved['tenantId']);
+
+            // Bulk create Contact entities and link phone/email via direct SQL.
+            // Replaces the slow ORM-based one-by-one approach that triggered
+            // PhoneNumber\Saver / EmailAddress\Saver hooks per entity.
             $contactCsv = $csvOutputPath . '/paciente_contact.csv';
 
-            if (file_exists($contactCsv)) {
-                $contactUpdated = $this->importPacienteContactViaOrm(
-                    $contactCsv,
-                    $resolved['apiCredentialId'],
-                );
-                $this->log->info("ImportCsvData: Updated contact fields on {$contactUpdated} pacientes via ORM.");
-            }
+            $this->bulkCreateContactsAndLink(
+                $pdo,
+                $contactCsv,
+                $resolved['apiCredentialId'],
+                $resolved['teamId'],
+                $resolved['tenantId'],
+            );
 
             // Cleanup output directory.
             $this->cleanupOutputDir($csvOutputPath);
@@ -343,7 +346,7 @@ class ImportCsvData implements Job
     }
 
     /**
-     * @return array{apiCredentialId: string, webCredentialId: string, settingsId: string, teamId: string}
+     * @return array{apiCredentialId: string, webCredentialId: string, settingsId: string, teamId: string, tenantId: string}
      */
     private function resolveProfile(string $profileId): array
     {
@@ -361,6 +364,12 @@ class ImportCsvData implements Job
 
         if (!$apiCredentialId || !$webCredentialId) {
             throw new \RuntimeException("Profile '{$profileId}' is missing API or Web credential.");
+        }
+
+        $tenantId = $this->normalizeNullableString($profile->get('tenantId'));
+
+        if (!$tenantId) {
+            throw new \RuntimeException("Profile '{$profileId}' has no tenant assigned.");
         }
 
         // Get team ID from the profile's teams link.
@@ -394,6 +403,7 @@ class ImportCsvData implements Job
             'webCredentialId' => $webCredentialId,
             'settingsId' => $profileId,
             'teamId' => $teamId,
+            'tenantId' => $tenantId,
         ];
     }
 
@@ -568,45 +578,392 @@ class ImportCsvData implements Job
     }
 
     /**
-     * Re-save all imported entities through EspoCRM's ORM to fire hooks
-     * (CurrencyConverted, CurrencyDefault, ForeignFields, SyncContactPacienteId, etc.).
-     * Direct SQL import bypasses these, so computed/derived fields are missing.
+     * Repair contacts that were created with a broken tenant_id (e.g. '{}') by an
+     * earlier emergency SQL fix. This method:
+     *  1. NULLs CPFs on broken-tenant contacts that conflict with correct-tenant contacts
+     *  2. Updates tenant_id to the correct value
+     *  3. Inserts missing entity_team rows
+     *
+     * Safe to run on every import — no-ops if nothing is broken.
      */
-    private function fireHooksOnImportedEntities(string $profileId): void
+    private function repairBrokenTenantContacts(
+        PDO $pdo,
+        string $credentialId,
+        string $teamId,
+        string $tenantId,
+    ): void {
+        // Find contacts linked to this credential's pacientes that have wrong tenant_id.
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM contact c
+            JOIN `feature_integration_clinica_nas_nuvens_paciente` p ON p.contact_id = c.id
+            WHERE p.credential_id = ?
+              AND c.tenant_id != ?
+              AND c.deleted = 0
+        ");
+        $stmt->execute([$credentialId, $tenantId]);
+        $brokenCount = (int) $stmt->fetchColumn();
+
+        if ($brokenCount === 0) {
+            return;
+        }
+
+        $this->log->info("ImportCsvData: Repairing {$brokenCount} contacts with wrong tenant_id.");
+
+        // Phase 1: NULL out CPFs that would conflict with the UNIQUE index (cpf, tenant_id, deleted).
+        $pdo->exec("
+            UPDATE `contact` c1
+            SET c1.`cpf` = NULL
+            WHERE c1.`tenant_id` != '{$this->escapeSqlString($tenantId)}'
+              AND c1.`deleted` = 0
+              AND c1.`cpf` IS NOT NULL
+              AND c1.`cpf` != ''
+              AND c1.`id` IN (
+                  SELECT p.`contact_id` FROM `feature_integration_clinica_nas_nuvens_paciente` p
+                  WHERE p.`credential_id` = '{$this->escapeSqlString($credentialId)}'
+                    AND p.`contact_id` IS NOT NULL
+              )
+              AND EXISTS (
+                  SELECT 1 FROM `contact` c2
+                  WHERE c2.`cpf` = c1.`cpf`
+                    AND c2.`tenant_id` = '{$this->escapeSqlString($tenantId)}'
+                    AND c2.`deleted` = 0
+                    AND c2.`id` != c1.`id`
+              )
+        ");
+
+        // Phase 2: Fix tenant_id.
+        $stmt = $pdo->prepare("
+            UPDATE `contact` c
+            JOIN `feature_integration_clinica_nas_nuvens_paciente` p ON p.contact_id = c.id
+            SET c.`tenant_id` = ?
+            WHERE p.`credential_id` = ?
+              AND c.`tenant_id` != ?
+              AND c.`deleted` = 0
+        ");
+        $stmt->execute([$tenantId, $credentialId, $tenantId]);
+        $fixed = $stmt->rowCount();
+
+        // Phase 3: Insert missing entity_team rows.
+        $pdo->exec("
+            INSERT IGNORE INTO `entity_team` (`entity_id`, `team_id`, `entity_type`, `deleted`)
+            SELECT c.`id`, '{$this->escapeSqlString($teamId)}', 'Contact', 0
+            FROM `contact` c
+            JOIN `feature_integration_clinica_nas_nuvens_paciente` p ON p.`contact_id` = c.`id`
+            LEFT JOIN `entity_team` et ON et.`entity_id` = c.`id` AND et.`entity_type` = 'Contact'
+            WHERE p.`credential_id` = '{$this->escapeSqlString($credentialId)}'
+              AND c.`tenant_id` = '{$this->escapeSqlString($tenantId)}'
+              AND et.`entity_id` IS NULL
+        ");
+
+        $this->log->info("ImportCsvData: Repaired {$fixed} contacts — tenant_id fixed and entity_team rows added.");
+    }
+
+    /**
+     * Delete orphan entity_phone_number / entity_email_address rows that point
+     * at the *ghost* contact id produced by the previous (buggy) hash formula
+     * for this credential's pacientes.
+     *
+     * Old (buggy) formula: substr(md5('contact::{credentialId}::{paciente.paciente_id}'), 1, 17)
+     *                      where paciente_id is the CNN codpessoa.
+     * New (correct)      : substr(md5('contact::{credentialId}::{paciente.id}'), 1, 17)
+     *                      where id is the deterministic Espo id.
+     *
+     * Anything matching the old formula is, by construction, an orphan because
+     * no contact row was ever inserted with that id. Replaying the formula on
+     * paciente rows for this credential lets us delete only the bad rows we
+     * created — never anyone else's data.
+     */
+    private function cleanupGhostContactLinks(PDO $pdo, string $credentialId): void
     {
-        // Entity types in dependency order (anchors first, then dependents).
-        $entityTypes = [
-            'FeatureIntegrationClinicaNasNuvensConsultaTipo',
-            'FeatureIntegrationClinicaNasNuvensConvenioTipo',
-            'FeatureIntegrationClinicaNasNuvensProcedimentoTipo',
-            'FeatureIntegrationClinicaNasNuvensProfissional',
-            'FeatureIntegrationClinicaNasNuvensPaciente',
-            'FeatureIntegrationClinicaNasNuvensAgendamento',
-            'FeatureIntegrationClinicaNasNuvensFaturamento',
-        ];
+        $stmt = $pdo->prepare("
+            DELETE epn FROM `entity_phone_number` epn
+            JOIN `feature_integration_clinica_nas_nuvens_paciente` p
+              ON epn.`entity_id` = SUBSTR(MD5(CONCAT('contact::', p.`credential_id`, '::', p.`paciente_id`)), 1, 17)
+            WHERE p.`credential_id` = ?
+              AND epn.`entity_type` = 'Contact'
+        ");
+        $stmt->execute([$credentialId]);
+        $phoneOrphans = $stmt->rowCount();
 
-        $saveOptions = [
-            SaveOption::SILENT => true,
-            SaveOption::SKIP_MODIFIED_BY => true,
-            SaveOption::IMPORT => true,
-        ];
+        $stmt = $pdo->prepare("
+            DELETE eea FROM `entity_email_address` eea
+            JOIN `feature_integration_clinica_nas_nuvens_paciente` p
+              ON eea.`entity_id` = SUBSTR(MD5(CONCAT('contact::', p.`credential_id`, '::', p.`paciente_id`)), 1, 17)
+            WHERE p.`credential_id` = ?
+              AND eea.`entity_type` = 'Contact'
+        ");
+        $stmt->execute([$credentialId]);
+        $emailOrphans = $stmt->rowCount();
 
-        foreach ($entityTypes as $entityType) {
-            $collection = $this->entityManager
-                ->getRDBRepository($entityType)
-                ->where(['settingsId' => $profileId])
-                ->find();
+        if ($phoneOrphans > 0 || $emailOrphans > 0) {
+            $this->log->info(
+                "ImportCsvData: Phase 0 — Removed {$phoneOrphans} ghost phone links " .
+                "and {$emailOrphans} ghost email links left by previous import."
+            );
+        }
+    }
 
-            $count = 0;
+    /**
+     * Bulk create Contact entities and link phone/email via direct SQL.
+     *
+     * Replaces the ORM-based one-by-one approach (importPacienteContactViaOrm +
+     * createContactsForUnlinkedPacientes) that triggered PhoneNumber\Saver /
+     * EmailAddress\Saver hooks per entity save — taking 25+ minutes for 45K rows.
+     *
+     * This method runs 4 SQL-only phases in seconds:
+     *  1. UPSERT contacts for all pacientes (deterministic IDs, updates name on re-import)
+     *  2. UPDATE paciente.contact_id to link the new contacts
+     *  3. INSERT phone_number + entity_phone_number from paciente_contact.csv
+     *  4. INSERT email_address + entity_email_address from paciente_contact.csv
+     */
+    private function bulkCreateContactsAndLink(
+        PDO $pdo,
+        string $contactCsvPath,
+        string $credentialId,
+        string $teamId,
+        string $tenantId,
+    ): void {
+        $now = date('Y-m-d H:i:s');
 
-            foreach ($collection as $entity) {
-                $this->entityManager->saveEntity($entity, $saveOptions);
-                $count++;
+        // ── Phase 0: Clean up orphan entity_phone_number / entity_email_address rows ──
+        // Older builds of this job hashed the CNN remote codpessoa (the value in
+        // paciente.paciente_id) instead of the Espo paciente id when computing the
+        // contact_id for phone/email links — producing rows pointing at a
+        // contact that never existed. The cleanup is scoped to this credential's
+        // pacientes by replaying the exact ghost-id formula, so it cannot
+        // touch unrelated entity_phone_number / entity_email_address rows.
+        $this->cleanupGhostContactLinks($pdo, $credentialId);
+
+        // ── Phase 1: Bulk UPSERT contacts for all pacientes ──
+        // Deterministic ID: substr(md5('contact::' || credentialId || '::' || pacienteId), 1, 17)
+        // Matches the formula used by DuckDB ETL for paciente IDs (same seed).
+        // ON DUPLICATE KEY UPDATE refreshes first_name/last_name on re-import.
+        $this->log->info("ImportCsvData: Phase 1 — Bulk upserting contacts.");
+
+        $stmt1 = $pdo->prepare("
+            INSERT INTO `contact`
+                (`id`, `first_name`, `last_name`, `cpf`, `tenant_id`, `created_at`, `modified_at`, `deleted`)
+            SELECT
+                SUBSTR(MD5(CONCAT('contact::', p.`credential_id`, '::', p.`id`)), 1, 17),
+                SUBSTRING_INDEX(p.`name`, ' ', 1),
+                CASE
+                    WHEN LOCATE(' ', p.`name`) > 0
+                    THEN TRIM(SUBSTRING(p.`name`, LOCATE(' ', p.`name`)))
+                    ELSE ''
+                END,
+                NULLIF(TRIM(p.`cpfcnpj`), ''),
+                ?,
+                ?,
+                ?,
+                0
+            FROM `feature_integration_clinica_nas_nuvens_paciente` p
+            WHERE p.`credential_id` = ?
+              AND p.`name` IS NOT NULL
+              AND p.`name` != ''
+            ON DUPLICATE KEY UPDATE
+                `first_name`  = VALUES(`first_name`),
+                `last_name`   = VALUES(`last_name`),
+                `modified_at` = VALUES(`modified_at`),
+                `deleted`     = VALUES(`deleted`)
+        ");
+        $stmt1->execute([$tenantId, $now, $now, $credentialId]);
+        $contactsAffected = $stmt1->rowCount();
+        $this->log->info("ImportCsvData: Phase 1 — Upserted {$contactsAffected} contacts.");
+
+        // ── Phase 2: Bulk UPDATE paciente.contact_id ──
+        $this->log->info("ImportCsvData: Phase 2 — Linking contact_id on pacientes.");
+
+        $stmt2 = $pdo->prepare("
+            UPDATE `feature_integration_clinica_nas_nuvens_paciente` p
+            SET p.`contact_id` = SUBSTR(MD5(CONCAT('contact::', p.`credential_id`, '::', p.`id`)), 1, 17)
+            WHERE p.`contact_id` IS NULL
+              AND p.`credential_id` = ?
+        ");
+        $stmt2->execute([$credentialId]);
+        $linked = $stmt2->rowCount();
+
+        $this->log->info("ImportCsvData: Phase 2 — Linked {$linked} pacientes.");
+
+        // ── Phase 3 & 4: Bulk insert phone/email from paciente_contact.csv ──
+        if (!file_exists($contactCsvPath)) {
+            $this->log->info("ImportCsvData: No paciente_contact.csv found — skipping phone/email.");
+
+            return;
+        }
+
+        $handle = fopen($contactCsvPath, 'r');
+
+        if (!$handle) {
+            $this->log->warning("ImportCsvData: Cannot open paciente_contact.csv: {$contactCsvPath}");
+
+            return;
+        }
+
+        // Read header: contact_id, phoneNumber, emailAddress
+        $header = fgetcsv($handle);
+
+        if (!$header) {
+            fclose($handle);
+
+            return;
+        }
+
+        $phoneBatch = [];
+        $emailBatch = [];
+        $phonesInserted = 0;
+        $emailsInserted = 0;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            if (count($row) !== 3) {
+                continue;
             }
 
-            $short = str_replace('FeatureIntegrationClinicaNasNuvens', '', $entityType);
-            $this->log->info("ImportCsvData: Fired hooks on {$count} {$short} entities.");
+            // Column 0 is the deterministic Espo Contact id, computed in
+            // the DuckDB ETL with the SAME formula used by the Phase 1
+            // contact upsert. We trust the CSV value directly so phone /
+            // email links never drift away from the actual contact row.
+            $contactId = trim((string) ($row[0] ?? ''));
+            $rawPhone = $this->normalizePhoneNumber($row[1] ?? '');
+            $rawEmail = trim((string) ($row[2] ?? ''));
+
+            if ($contactId === '') {
+                continue;
+            }
+
+            if ($rawPhone !== null && $rawPhone !== '') {
+                // Deterministic phone_number ID from normalized number.
+                $phoneId = substr(md5('pn::' . $rawPhone), 0, 17);
+                $numeric = preg_replace('/\D+/', '', $rawPhone);
+
+                $phoneBatch[] = [$phoneId, $rawPhone, $numeric, $contactId];
+            }
+
+            if ($rawEmail !== '' && $rawEmail !== 'NULL') {
+                $emailId = substr(md5('ea::' . strtolower($rawEmail)), 0, 17);
+
+                $emailBatch[] = [$emailId, $rawEmail, strtolower($rawEmail), $contactId];
+            }
+
+            // Flush batches.
+            if (count($phoneBatch) >= self::BATCH_SIZE) {
+                $phonesInserted += $this->executeBatchPhoneInsert($pdo, $phoneBatch);
+                $phoneBatch = [];
+            }
+
+            if (count($emailBatch) >= self::BATCH_SIZE) {
+                $emailsInserted += $this->executeBatchEmailInsert($pdo, $emailBatch);
+                $emailBatch = [];
+            }
         }
+
+        fclose($handle);
+
+        // Flush remaining.
+        if ($phoneBatch !== []) {
+            $phonesInserted += $this->executeBatchPhoneInsert($pdo, $phoneBatch);
+        }
+
+        if ($emailBatch !== []) {
+            $emailsInserted += $this->executeBatchEmailInsert($pdo, $emailBatch);
+        }
+
+        $this->log->info(
+            "ImportCsvData: Phase 3 — Inserted {$phonesInserted} phone numbers."
+        );
+        $this->log->info(
+            "ImportCsvData: Phase 4 — Inserted {$emailsInserted} email addresses."
+        );
+    }
+
+    /**
+     * Batch INSERT phone_number + entity_phone_number rows.
+     *
+     * @param array<int, array{0: string, 1: string, 2: string, 3: string}> $batch
+     *                 [phoneId, name, numeric, contactId]
+     */
+    private function executeBatchPhoneInsert(PDO $pdo, array $batch): int
+    {
+        if ($batch === []) {
+            return 0;
+        }
+
+        // INSERT IGNORE into phone_number (may already exist from previous import).
+        $placeholders = implode(', ', array_fill(0, count($batch), '(?, ?, 0, ?, ?, 0, 0)'));
+        $sql = "INSERT IGNORE INTO `phone_number` (`id`, `name`, `deleted`, `type`, `numeric`, `invalid`, `opt_out`) VALUES {$placeholders}";
+
+        $stmt = $pdo->prepare($sql);
+        $i = 1;
+
+        foreach ($batch as [$phoneId, $name, $numeric]) {
+            $stmt->bindValue($i++, $phoneId);
+            $stmt->bindValue($i++, $name);
+            $stmt->bindValue($i++, 'Mobile');
+            $stmt->bindValue($i++, $numeric);
+        }
+
+        $stmt->execute();
+
+        // INSERT IGNORE into entity_phone_number (link contact → phone_number).
+        $sql2 = "INSERT IGNORE INTO `entity_phone_number`
+            (`entity_id`, `phone_number_id`, `entity_type`, `primary`, `deleted`)
+            VALUES " . implode(', ', array_fill(0, count($batch), '(?, ?, ?, 1, 0)'));
+
+        $stmt2 = $pdo->prepare($sql2);
+        $i = 1;
+
+        foreach ($batch as [$phoneId, , , $contactId]) {
+            $stmt2->bindValue($i++, $contactId);
+            $stmt2->bindValue($i++, $phoneId);
+            $stmt2->bindValue($i++, 'Contact');
+        }
+
+        $stmt2->execute();
+
+        return count($batch);
+    }
+
+    /**
+     * Batch INSERT email_address + entity_email_address rows.
+     *
+     * @param array<int, array{0: string, 1: string, 2: string, 3: string}> $batch
+     *                 [emailId, name, lower, contactId]
+     */
+    private function executeBatchEmailInsert(PDO $pdo, array $batch): int
+    {
+        if ($batch === []) {
+            return 0;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($batch), '(?, ?, 0, ?, 0, 0)'));
+        $sql = "INSERT IGNORE INTO `email_address` (`id`, `name`, `deleted`, `lower`, `invalid`, `opt_out`) VALUES {$placeholders}";
+
+        $stmt = $pdo->prepare($sql);
+        $i = 1;
+
+        foreach ($batch as [$emailId, $name, $lower]) {
+            $stmt->bindValue($i++, $emailId);
+            $stmt->bindValue($i++, $name);
+            $stmt->bindValue($i++, $lower);
+        }
+
+        $stmt->execute();
+
+        $sql2 = "INSERT IGNORE INTO `entity_email_address`
+            (`entity_id`, `email_address_id`, `entity_type`, `primary`, `deleted`)
+            VALUES " . implode(', ', array_fill(0, count($batch), '(?, ?, ?, 1, 0)'));
+
+        $stmt2 = $pdo->prepare($sql2);
+        $i = 1;
+
+        foreach ($batch as [$emailId, , , $contactId]) {
+            $stmt2->bindValue($i++, $contactId);
+            $stmt2->bindValue($i++, $emailId);
+            $stmt2->bindValue($i++, 'Contact');
+        }
+
+        $stmt2->execute();
+
+        return count($batch);
     }
 
     /**
@@ -802,109 +1159,6 @@ class ImportCsvData implements Job
         $stmt->execute();
 
         return count($batch);
-    }
-
-    /**
-     * Read paciente_contact.csv, compute deterministic paciente DB IDs,
-     * and set phoneNumber/emailAddress fields via EspoCRM ORM.
-     *
-     * EspoCRM's PhoneNumber\Saver and EmailAddress\Saver process fields
-     * named "phoneNumber" and "emailAddress" respectively via afterSave hooks.
-     * The entity uses these standard names, so the ORM handles persistence
-     * to phone_number/entity_phone_number and email_address/entity_email_address
-     * relational tables automatically.
-     *
-     * Uses the same deterministic ID formula as the DuckDB ETL:
-     *   id = substr(md5('pa::' . credentialId . '::' . remoteId), 0, 17)
-     */
-    private function importPacienteContactViaOrm(
-        string $csvPath,
-        string $credentialId,
-    ): int {
-        $handle = fopen($csvPath, 'r');
-
-        if (!$handle) {
-            $this->log->warning("ImportCsvData: Cannot open paciente_contact CSV: {$csvPath}");
-
-            return 0;
-        }
-
-        // Read header: paciente_id, phoneNumber, emailAddress
-        $header = fgetcsv($handle);
-
-        if (!$header) {
-            fclose($handle);
-
-            return 0;
-        }
-
-        $updated = 0;
-
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) !== 3) {
-                continue;
-            }
-
-            $remotePacienteId = $row[0] ?? '';
-            $phoneNumber = $this->normalizePhoneNumber($row[1] ?? '');
-            $emailAddress = trim((string) ($row[2] ?? ''));
-
-            if ($emailAddress === '') {
-                $emailAddress = null;
-            }
-
-            if (!$phoneNumber && !$emailAddress) {
-                continue;
-            }
-
-            if ($remotePacienteId === '') {
-                continue;
-            }
-
-            // Compute the deterministic EspoCRM ID — same formula as DuckDB ETL.
-            $entityId = substr(md5('pa::' . $credentialId . '::' . $remotePacienteId), 0, 17);
-
-            $entity = $this->entityManager->getEntityById(
-                'FeatureIntegrationClinicaNasNuvensPaciente',
-                $entityId,
-            );
-
-            if (!$entity) {
-                continue;
-            }
-
-            $changed = false;
-
-            if ($phoneNumber && $entity->get('phoneNumber') !== $phoneNumber) {
-                $entity->set('phoneNumber', $phoneNumber);
-                $changed = true;
-            }
-
-            if ($emailAddress && $entity->get('emailAddress') !== $emailAddress) {
-                $entity->set('emailAddress', $emailAddress);
-                $changed = true;
-            }
-
-            if (!$changed) {
-                continue;
-            }
-
-            try {
-                $this->entityManager->saveEntity($entity, [
-                    SaveOption::SILENT => true,
-                    SaveOption::SKIP_MODIFIED_BY => true,
-                ]);
-                $updated++;
-            } catch (Throwable $e) {
-                $this->log->warning(
-                    "ImportCsvData: Failed to save contact for paciente '{$entityId}': " . $e->getMessage()
-                );
-            }
-        }
-
-        fclose($handle);
-
-        return $updated;
     }
 
     /**

@@ -701,14 +701,6 @@ class CustomDetailRecordView extends DetailRecordView {
                 flex: 1;
             }
 
-            .record .panels-grid-row .panels-grid-col > .panel > .panel-body,
-            .record .panels-grid-row .panels-grid-col > .panel > .panel-body > .row,
-            .record .panels-grid-row .panels-grid-col > .panel > .panel-body > .row > .cell,
-            .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field,
-            .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field > .panel {
-                height: 100%;
-            }
-
             .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field > .panel {
                 display: flex;
                 flex-direction: column;

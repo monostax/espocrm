@@ -74,7 +74,8 @@
         "Records": "Cadastros",
         "Calendar": "Agenda",
         "Activities": "Atividades",
-        "Users": "Usuários"
+        "Users": "Usuários",
+        "Outros": "Outros"
     },
     "actions": {
         "create": "Cadastrar"

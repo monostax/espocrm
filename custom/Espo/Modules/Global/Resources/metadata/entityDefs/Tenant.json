@@ -77,6 +77,11 @@
             "relationName": "tenantUser",
             "layoutRelationshipsDisabled": true
         },
+        "contacts": {
+            "type": "hasMany",
+            "entity": "Contact",
+            "foreign": "tenant"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
