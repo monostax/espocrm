@@ -55,9 +55,7 @@
                 {
                     "name": "contactSyncEnabled"
                 },
-                {
-                    "name": "autoPendingEnabled"
-                }
+                false
             ],
             [
                 {

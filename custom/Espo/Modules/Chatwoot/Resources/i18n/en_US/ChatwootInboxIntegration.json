@@ -31,6 +31,7 @@
         "wahaIgnoreGroups": "Ignore Groups",
         "wahaIgnoreChannels": "Ignore Channels",
         "wahaIgnoreBroadcast": "Ignore Broadcast",
+        "autoPendingEnabled": "Auto-Pending Enabled",
         "team": "Team"
     },
     "links": {
@@ -94,7 +95,8 @@
         "wahaIgnoreStatus": "Ignore Status updates (stories). No webhooks or stored messages for status@broadcast.",
         "wahaIgnoreGroups": "Ignore Group chats. No webhooks or stored messages for group conversations.",
         "wahaIgnoreChannels": "Ignore Channel messages. No webhooks or stored messages for channels.",
-        "wahaIgnoreBroadcast": "Ignore Broadcast lists (*@broadcast), excluding status@broadcast. Use 'Ignore Status' for Status."
+        "wahaIgnoreBroadcast": "Ignore Broadcast lists (*@broadcast), excluding status@broadcast. Use 'Ignore Status' for Status.",
+        "autoPendingEnabled": "When enabled, conversations in this inbox will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
     },
     "messages": {
         "channelCreated": "Channel created. Click Activate to start the connection.",

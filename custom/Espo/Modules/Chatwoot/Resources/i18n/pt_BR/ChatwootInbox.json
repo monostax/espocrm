@@ -3,7 +3,8 @@
         "accountUserMemberships": "Chat / Conta / Caixa de Entrada / Agentes",
         "chatwootInboxIntegration": "Caixa de Entrada (Conexão)",
         "status": "Status",
-        "channelType": "Tipo de Canal"
+        "channelType": "Tipo de Canal",
+        "autoPendingEnabled": "Auto-Pendente Habilitado"
     },
     "links": {
         "accountUserMemberships": "Chat / Conta / Caixa de Entrada / Agentes",

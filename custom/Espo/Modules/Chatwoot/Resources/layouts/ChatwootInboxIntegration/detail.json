@@ -95,6 +95,12 @@
                 {
                     "name": "wahaIgnoreBroadcast"
                 }
+            ],
+            [
+                {
+                    "name": "autoPendingEnabled"
+                },
+                false
             ]
         ]
     },

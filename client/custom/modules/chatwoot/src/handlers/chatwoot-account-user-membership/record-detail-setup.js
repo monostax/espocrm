@@ -48,7 +48,7 @@ define('chatwoot:handlers/chatwoot-account-user-membership/record-detail-setup',
             if (isAI === true) {
                 this.view.showPanel('aiConfiguration');
             } else {
-                this.view.hidePanel('aiConfiguration', true);
+                this.view.hidePanel('aiConfiguration');
             }
         }
     };

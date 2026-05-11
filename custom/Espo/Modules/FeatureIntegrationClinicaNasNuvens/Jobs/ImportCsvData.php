@@ -799,7 +799,7 @@ class ImportCsvData implements Job
             return;
         }
 
-        // Read header: contact_id, phoneNumber, emailAddress
+        // Read header: paciente_id, contact_id, phoneNumber, emailAddress
         $header = fgetcsv($handle);
 
         if (!$header) {
@@ -814,19 +814,22 @@ class ImportCsvData implements Job
         $emailsInserted = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) !== 3) {
+            if (count($row) !== 4) {
                 continue;
             }
 
-            // Column 0 is the deterministic Espo Contact id, computed in
-            // the DuckDB ETL with the SAME formula used by the Phase 1
-            // contact upsert. We trust the CSV value directly so phone /
-            // email links never drift away from the actual contact row.
-            $contactId = trim((string) ($row[0] ?? ''));
-            $rawPhone = $this->normalizePhoneNumber($row[1] ?? '');
-            $rawEmail = trim((string) ($row[2] ?? ''));
+            // Columns 0 and 1 are the deterministic Espo ids of the Paciente
+            // and its Contact, computed in DuckDB with the SAME formulas
+            // used by the Phase 1 contact upsert. We write link rows for
+            // both entity types so the Paciente view (phoneNumber/emailAddress
+            // fields on the entity itself) and the Contact view both show
+            // the same value.
+            $pacienteId = trim((string) ($row[0] ?? ''));
+            $contactId  = trim((string) ($row[1] ?? ''));
+            $rawPhone   = $this->normalizePhoneNumber($row[2] ?? '');
+            $rawEmail   = trim((string) ($row[3] ?? ''));
 
-            if ($contactId === '') {
+            if ($pacienteId === '' || $contactId === '') {
                 continue;
             }
 
@@ -835,13 +838,13 @@ class ImportCsvData implements Job
                 $phoneId = substr(md5('pn::' . $rawPhone), 0, 17);
                 $numeric = preg_replace('/\D+/', '', $rawPhone);
 
-                $phoneBatch[] = [$phoneId, $rawPhone, $numeric, $contactId];
+                $phoneBatch[] = [$phoneId, $rawPhone, $numeric, $contactId, $pacienteId];
             }
 
             if ($rawEmail !== '' && $rawEmail !== 'NULL') {
                 $emailId = substr(md5('ea::' . strtolower($rawEmail)), 0, 17);
 
-                $emailBatch[] = [$emailId, $rawEmail, strtolower($rawEmail), $contactId];
+                $emailBatch[] = [$emailId, $rawEmail, strtolower($rawEmail), $contactId, $pacienteId];
             }
 
             // Flush batches.
@@ -878,8 +881,13 @@ class ImportCsvData implements Job
     /**
      * Batch INSERT phone_number + entity_phone_number rows.
      *
-     * @param array<int, array{0: string, 1: string, 2: string, 3: string}> $batch
-     *                 [phoneId, name, numeric, contactId]
+     * Each batch entry yields TWO entity_phone_number rows for the same
+     * phone_number_id — one scoped to Contact, one scoped to
+     * FeatureIntegrationClinicaNasNuvensPaciente — so both entity views
+     * display the phone.
+     *
+     * @param array<int, array{0: string, 1: string, 2: string, 3: string, 4: string}> $batch
+     *                 [phoneId, name, numeric, contactId, pacienteId]
      */
     private function executeBatchPhoneInsert(PDO $pdo, array $batch): int
     {
@@ -903,18 +911,24 @@ class ImportCsvData implements Job
 
         $stmt->execute();
 
-        // INSERT IGNORE into entity_phone_number (link contact → phone_number).
+        // Two link rows per batch entry (Contact + Paciente).
         $sql2 = "INSERT IGNORE INTO `entity_phone_number`
             (`entity_id`, `phone_number_id`, `entity_type`, `primary`, `deleted`)
-            VALUES " . implode(', ', array_fill(0, count($batch), '(?, ?, ?, 1, 0)'));
+            VALUES " . implode(', ', array_fill(0, count($batch) * 2, '(?, ?, ?, 1, 0)'));
 
         $stmt2 = $pdo->prepare($sql2);
         $i = 1;
 
-        foreach ($batch as [$phoneId, , , $contactId]) {
+        foreach ($batch as [$phoneId, , , $contactId, $pacienteId]) {
+            // Contact scope.
             $stmt2->bindValue($i++, $contactId);
             $stmt2->bindValue($i++, $phoneId);
             $stmt2->bindValue($i++, 'Contact');
+
+            // Paciente scope.
+            $stmt2->bindValue($i++, $pacienteId);
+            $stmt2->bindValue($i++, $phoneId);
+            $stmt2->bindValue($i++, 'FeatureIntegrationClinicaNasNuvensPaciente');
         }
 
         $stmt2->execute();
@@ -925,8 +939,13 @@ class ImportCsvData implements Job
     /**
      * Batch INSERT email_address + entity_email_address rows.
      *
-     * @param array<int, array{0: string, 1: string, 2: string, 3: string}> $batch
-     *                 [emailId, name, lower, contactId]
+     * Each batch entry yields TWO entity_email_address rows for the same
+     * email_address_id — one scoped to Contact, one scoped to
+     * FeatureIntegrationClinicaNasNuvensPaciente — so both entity views
+     * display the email.
+     *
+     * @param array<int, array{0: string, 1: string, 2: string, 3: string, 4: string}> $batch
+     *                 [emailId, name, lower, contactId, pacienteId]
      */
     private function executeBatchEmailInsert(PDO $pdo, array $batch): int
     {
@@ -950,15 +969,21 @@ class ImportCsvData implements Job
 
         $sql2 = "INSERT IGNORE INTO `entity_email_address`
             (`entity_id`, `email_address_id`, `entity_type`, `primary`, `deleted`)
-            VALUES " . implode(', ', array_fill(0, count($batch), '(?, ?, ?, 1, 0)'));
+            VALUES " . implode(', ', array_fill(0, count($batch) * 2, '(?, ?, ?, 1, 0)'));
 
         $stmt2 = $pdo->prepare($sql2);
         $i = 1;
 
-        foreach ($batch as [$emailId, , , $contactId]) {
+        foreach ($batch as [$emailId, , , $contactId, $pacienteId]) {
+            // Contact scope.
             $stmt2->bindValue($i++, $contactId);
             $stmt2->bindValue($i++, $emailId);
             $stmt2->bindValue($i++, 'Contact');
+
+            // Paciente scope.
+            $stmt2->bindValue($i++, $pacienteId);
+            $stmt2->bindValue($i++, $emailId);
+            $stmt2->bindValue($i++, 'FeatureIntegrationClinicaNasNuvensPaciente');
         }
 
         $stmt2->execute();

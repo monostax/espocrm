@@ -45,11 +45,6 @@
             "default": true,
             "tooltip": true
         },
-        "autoPendingEnabled": {
-            "type": "bool",
-            "default": true,
-            "tooltip": true
-        },
         "lastContactSyncAt": {
             "type": "datetime",
             "readOnly": true,

@@ -346,6 +346,9 @@
         "agendamentoIdCredential": {
             "unique": true,
             "columns": ["agendamentoId", "credentialId", "deleted"]
+        },
+        "deletedModifiedAt": {
+            "columns": ["deleted", "modifiedAt"]
         }
     }
 }

@@ -84,21 +84,23 @@ class DownloadCnnExport implements Job
                 return;
             }
 
-            // Staleness check: compare most recent dataHoraCriacao against lastRequestedAt in manifest.
+            // Staleness check: compare most recent dataHoraCriacao against lastDownloadedAt in manifest.
+            // Uses lastDownloadedAt (not lastRequestedAt) to avoid a loop where requesting a new
+            // export updates lastRequestedAt, making the current files appear stale on the next run.
             $manifestPath = "data/cnn-exports/{$profileId}/manifest.json";
             $manifest = $this->readManifest($manifestPath);
 
-            if ($manifest !== null && isset($manifest['lastRequestedAt'])) {
+            if ($manifest !== null && isset($manifest['lastDownloadedAt'])) {
                 $mostRecentDataHora = $this->getMostRecentDataHoraCriacao($fileList);
 
-                if ($mostRecentDataHora !== null && $manifest['lastRequestedAt'] !== null) {
+                if ($mostRecentDataHora !== null && $manifest['lastDownloadedAt'] !== null) {
                     $fileTimestamp = strtotime($mostRecentDataHora);
-                    $requestedTimestamp = strtotime($manifest['lastRequestedAt']);
+                    $downloadedTimestamp = strtotime($manifest['lastDownloadedAt']);
 
-                    if ($fileTimestamp !== false && $requestedTimestamp !== false && $fileTimestamp < $requestedTimestamp) {
+                    if ($fileTimestamp !== false && $downloadedTimestamp !== false && $fileTimestamp < $downloadedTimestamp) {
                         $this->log->info(
                             "DownloadCnnExport: Export files are stale for profile '{$profileId}' " .
-                            "(file: {$mostRecentDataHora}, requested: {$manifest['lastRequestedAt']}). " .
+                            "(file: {$mostRecentDataHora}, lastDownloaded: {$manifest['lastDownloadedAt']}). " .
                             "Triggering new export request and rescheduling."
                         );
 

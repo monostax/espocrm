@@ -115,6 +115,9 @@
         "consultaTipoIdCredential": {
             "unique": true,
             "columns": ["consultaTipoId", "credentialId", "deleted"]
+        },
+        "name": {
+            "columns": ["name"]
         }
     }
 }

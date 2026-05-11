@@ -30,7 +30,8 @@
             "view": "global:views/fields/svg-icon-enum",
             "svgIconByValue": {
                 "whatsappQrcode": "whatsapp",
-                "whatsappCloudApi": "whatsapp"
+                "whatsappCloudApi": "whatsapp",
+                "instagram": "instagram"
             },
             "readOnly": true
         },
@@ -84,6 +85,12 @@
         },
         "chatwootInboxIntegration": {
             "type": "link"
+        },
+        "autoPendingEnabled": {
+            "type": "foreign",
+            "link": "chatwootInboxIntegration",
+            "field": "autoPendingEnabled",
+            "readOnly": true
         },
         "status": {
             "type": "foreign",

@@ -966,7 +966,28 @@ class SyncConversationsFromChatwoot implements JobDataLess
             return;
         }
         
-        $autoPendingEnabled = $account->get('autoPendingEnabled') ?? true;
+        // Check autoPendingEnabled at inbox integration level
+        $inboxId = $conversation->get('inboxId');
+        if (!$inboxId) {
+            return;
+        }
+        
+        $inbox = $this->entityManager->getEntityById('ChatwootInbox', $inboxId);
+        if (!$inbox) {
+            return;
+        }
+        
+        $inboxIntegrationId = $inbox->get('chatwootInboxIntegrationId');
+        if (!$inboxIntegrationId) {
+            return;
+        }
+        
+        $inboxIntegration = $this->entityManager->getEntityById('ChatwootInboxIntegration', $inboxIntegrationId);
+        if (!$inboxIntegration) {
+            return;
+        }
+        
+        $autoPendingEnabled = $inboxIntegration->get('autoPendingEnabled') ?? false;
         if (!$autoPendingEnabled) {
             return;
         }

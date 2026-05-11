@@ -544,19 +544,24 @@ CREATE OR REPLACE TABLE out_paciente AS
 
 -- Phone + email data for post-import bulk linking pass.
 -- EspoCRM stores phone/email-type fields in relational tables
--- (phone_number, entity_phone_number, email_address, entity_email_address).
+-- (phone_number, entity_phone_number, email_address, entity_email_address),
+-- keyed by (entity_id, phone_number_id, entity_type).
 --
--- Output column `contact_id` is the Espo Contact id derived with the SAME
--- formula used by the PHP Phase 1 contact upsert
--- (substr(md5('contact::' || credential_id || '::' || paciente_espo_id), 1, 17))
--- so the bulk INSERTs in `bulkCreateContactsAndLink` always link to the
--- contact actually created in Phase 1. (Previously this CSV emitted the
--- CNN codpessoa here and the PHP re-hashed it with a different seed,
--- producing a ghost contact id and orphaned entity_phone_number rows.)
+-- We emit BOTH the Paciente id and the Contact id because:
+--   * FeatureIntegrationClinicaNasNuvensPaciente has its own phoneNumber /
+--     emailAddress fields (type: "phone" / "email" in entityDefs), so the
+--     Paciente detail view only shows values when rows exist with
+--     entity_type='FeatureIntegrationClinicaNasNuvensPaciente'.
+--   * Contact also exposes the same phone/email to CRM users via the linked
+--     Contact view, so we mirror the link there as well.
 --
--- Outputs: contact_id, phoneNumber, emailAddress
+-- Both ids are deterministic (same MD5 seed formula used by PHP Phase 1),
+-- eliminating any hash drift between ETL and the bulk INSERTs.
+--
+-- Outputs: paciente_id, contact_id, phoneNumber, emailAddress
 CREATE OR REPLACE TABLE out_paciente_contact AS
     SELECT
+        op.id AS paciente_id,
         espo_id('contact::' || getvariable('credentialId') || '::' || op.id) AS contact_id,
         CAST(COALESCE(
             NULLIF(ct.telefoneCelular, ''),

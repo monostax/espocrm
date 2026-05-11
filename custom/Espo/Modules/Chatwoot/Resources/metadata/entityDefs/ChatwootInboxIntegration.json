@@ -210,6 +210,11 @@
             "default": true,
             "tooltip": true
         },
+        "autoPendingEnabled": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

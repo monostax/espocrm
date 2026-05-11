@@ -11,7 +11,6 @@
         "contactSyncEnabled": "Sync de Contatos Habilitado",
         "lastContactSyncAt": "Último Sync de Contatos",
         "lastConversationSyncAt": "Último Sync de Conversas",
-        "autoPendingEnabled": "Auto-Pendente Habilitado",
         "conciergeUser": "Usuário (Concierge)",
         "apiKey": "Chave API da Conta"
     },
@@ -72,7 +71,6 @@
     },
     "tooltips": {
         "chatwootAccountId": "ID da conta criada no Chat. Este campo é preenchido automaticamente após a criação.",
-        "autoPendingEnabled": "Quando habilitado, as conversas serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente.",
         "conciergeUser": "O usuário da plataforma de chat que representa o usuário concierge para esta conta. Usado para operações de API.",
         "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário concierge é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso."
     },

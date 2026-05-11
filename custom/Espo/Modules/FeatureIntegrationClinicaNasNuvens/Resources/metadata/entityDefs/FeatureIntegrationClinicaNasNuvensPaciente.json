@@ -249,6 +249,9 @@
         "pacienteIdCredential": {
             "unique": true,
             "columns": ["pacienteId", "credentialId", "deleted"]
+        },
+        "name": {
+            "columns": ["name"]
         }
     }
 }

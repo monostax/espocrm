@@ -26,6 +26,7 @@
         "wahaIgnoreGroups": "Ignorar Grupos",
         "wahaIgnoreChannels": "Ignorar Canais",
         "wahaIgnoreBroadcast": "Ignorar Broadcast",
+        "autoPendingEnabled": "Auto-Pendente Habilitado",
         "team": "Equipe",
         "phoneNumberId": "ID do Número de Telefone",
         "oAuthAccount": "Conta Meta",
@@ -94,7 +95,8 @@
         "wahaIgnoreStatus": "Ignorar atualizações de Status (stories). Sem webhooks ou mensagens armazenadas para status@broadcast.",
         "wahaIgnoreGroups": "Ignorar conversas em Grupo. Sem webhooks ou mensagens armazenadas para grupos.",
         "wahaIgnoreChannels": "Ignorar mensagens de Canais. Sem webhooks ou mensagens armazenadas para canais.",
-        "wahaIgnoreBroadcast": "Ignorar listas de Broadcast (*@broadcast), exceto status@broadcast. Use 'Ignorar Status' para Status."
+        "wahaIgnoreBroadcast": "Ignorar listas de Broadcast (*@broadcast), exceto status@broadcast. Use 'Ignorar Status' para Status.",
+        "autoPendingEnabled": "Quando habilitado, as conversas nesta caixa de entrada serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente."
     },
     "messages": {
         "channelCreated": "Canal criado. Clique em Ativar para iniciar a conexão.",

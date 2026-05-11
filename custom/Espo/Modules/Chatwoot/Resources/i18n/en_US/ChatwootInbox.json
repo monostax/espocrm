@@ -3,7 +3,8 @@
         "accountUserMemberships": "Chat / Inbox / Agents",
         "chatwootInboxIntegration": "Channel Connection",
         "status": "Status",
-        "channelType": "Channel Type"
+        "channelType": "Channel Type",
+        "autoPendingEnabled": "Auto-Pending Enabled"
     },
     "links": {
         "accountUserMemberships": "Chat / Inbox / Agents",

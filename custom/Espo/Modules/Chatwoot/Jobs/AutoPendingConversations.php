@@ -156,11 +156,43 @@ class AutoPendingConversations implements JobDataLess
             return false;
         }
 
-        // Check if auto-pending is enabled for this account (default: true)
-        $autoPendingEnabled = $account->get('autoPendingEnabled') ?? true;
+        // Check if auto-pending is enabled at inbox integration level
+        $inboxId = $conversation->get('inboxId');
+        if (!$inboxId) {
+            $this->log->debug(
+                "AutoPendingConversations: Conversation {$conversationId} has no inboxId"
+            );
+            return false;
+        }
+
+        $inbox = $this->entityManager->getEntityById('ChatwootInbox', $inboxId);
+        if (!$inbox) {
+            $this->log->debug(
+                "AutoPendingConversations: ChatwootInbox {$inboxId} not found"
+            );
+            return false;
+        }
+
+        $inboxIntegrationId = $inbox->get('chatwootInboxIntegrationId');
+        if (!$inboxIntegrationId) {
+            $this->log->debug(
+                "AutoPendingConversations: ChatwootInbox {$inboxId} has no inboxIntegrationId"
+            );
+            return false;
+        }
+
+        $inboxIntegration = $this->entityManager->getEntityById('ChatwootInboxIntegration', $inboxIntegrationId);
+        if (!$inboxIntegration) {
+            $this->log->debug(
+                "AutoPendingConversations: ChatwootInboxIntegration {$inboxIntegrationId} not found"
+            );
+            return false;
+        }
+
+        $autoPendingEnabled = $inboxIntegration->get('autoPendingEnabled') ?? false;
         if (!$autoPendingEnabled) {
             $this->log->debug(
-                "AutoPendingConversations: Auto-pending disabled for account {$accountId}"
+                "AutoPendingConversations: Auto-pending disabled for inbox integration {$inboxIntegrationId}"
             );
             return false;
         }
