@@ -82,6 +82,11 @@
             "entity": "Contact",
             "foreign": "tenant"
         },
+        "accounts": {
+            "type": "hasMany",
+            "entity": "Account",
+            "foreign": "tenant"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

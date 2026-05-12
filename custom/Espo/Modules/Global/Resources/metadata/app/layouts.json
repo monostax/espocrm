@@ -18,6 +18,12 @@
         },
         "sidePanelsDetail": {
             "module": "Global"
+        },
+        "defaultSidePanel": {
+            "module": "Global"
+        },
+        "list": {
+            "module": "Global"
         }
     },
     "Contact": {
@@ -28,6 +34,12 @@
             "module": "Global"
         },
         "sidePanelsDetail": {
+            "module": "Global"
+        },
+        "defaultSidePanel": {
+            "module": "Global"
+        },
+        "list": {
             "module": "Global"
         }
     },

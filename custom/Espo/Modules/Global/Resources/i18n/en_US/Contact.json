@@ -2,7 +2,11 @@
     "fields": {
         "cpf": "CPF",
         "dataNascimento": "Date of Birth",
-        "sexo": "Sex"
+        "sexo": "Sex",
+        "tenant": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
     },
     "options": {
         "sexo": {

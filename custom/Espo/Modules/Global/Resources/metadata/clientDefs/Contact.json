@@ -5,6 +5,7 @@
     "views": {
         "list": "global:views/list"
     },
+    "modelDefaultsPreparator": "global:handlers/tenant/defaults-preparator",
     "sidePanels": {
         "detail": [
             {

@@ -1,4 +1,10 @@
 {
+    "fields": {
+        "tenant": "Ambiente"
+    },
+    "links": {
+        "tenant": "Ambiente"
+    },
     "tabs": {
         "Contacts": "Contatos",
         "Opportunities": "Oportunidades",

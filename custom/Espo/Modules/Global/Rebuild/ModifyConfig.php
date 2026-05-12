@@ -77,8 +77,13 @@ class ModifyConfig implements RebuildAction
     }
 
     /**
-     * Configure activitiesEntityList and historyEntityList.
+     * Configure activitiesEntityList, historyEntityList, calendarEntityList
+     * and busyRangesEntityList.
      * - Add Task to activities
+     * - Add Appointment to activities, history, calendar (agenda) and busy/free
+     *   ranges so the scheduler and the chatwoot calendar tool see Appointment
+     *   slots when checking availability (otherwise overlapping Appointments
+     *   are reported as free time).
      * - Remove invalid/non-existent entities
      */
     private function configureActivitiesEntityList(): void
@@ -86,6 +91,12 @@ class ModifyConfig implements RebuildAction
         // Valid entity types for activities/history panels
         $validActivityEntities = ['Meeting', 'Call', 'Email', 'Task', 'Appointment'];
         $validHistoryEntities = ['Meeting', 'Call', 'Email', 'Appointment'];
+        // Valid entity types for the calendar (agenda) view and busy/free ranges.
+        // These mirror the entities Espo natively renders on the scheduler:
+        // calendar accepts Task as well; busy ranges only consider scheduled
+        // entities (no Task) — Email is not time-bounded so it is excluded.
+        $validCalendarEntities = ['Meeting', 'Call', 'Task', 'Appointment'];
+        $validBusyRangesEntities = ['Meeting', 'Call', 'Appointment'];
 
         $modified = false;
 
@@ -145,6 +156,64 @@ class ModifyConfig implements RebuildAction
 
         if ($newHistoryEntityList !== $historyEntityList) {
             $this->configWriter->set('historyEntityList', $newHistoryEntityList);
+            $modified = true;
+        }
+
+        // Configure calendarEntityList (Agenda entity list).
+        // Default in Espo is ['Meeting', 'Call', 'Task'] — Appointment is missing,
+        // so Appointment records never show on the calendar/scheduler view.
+        $calendarEntityList = $this->config->get('calendarEntityList') ?? [];
+
+        if (!is_array($calendarEntityList)) {
+            $calendarEntityList = [];
+        }
+
+        $newCalendarEntityList = array_values(array_intersect($calendarEntityList, $validCalendarEntities));
+
+        // Ensure core entities are included
+        foreach (['Meeting', 'Call', 'Task'] as $entity) {
+            if (!in_array($entity, $newCalendarEntityList)) {
+                $newCalendarEntityList[] = $entity;
+            }
+        }
+
+        // Ensure Appointment is included
+        if (!in_array('Appointment', $newCalendarEntityList)) {
+            $newCalendarEntityList[] = 'Appointment';
+        }
+
+        if ($newCalendarEntityList !== $calendarEntityList) {
+            $this->configWriter->set('calendarEntityList', $newCalendarEntityList);
+            $modified = true;
+        }
+
+        // Configure busyRangesEntityList (Free/Busy entity list).
+        // Default in Espo is ['Meeting', 'Call'] — Appointment is missing, so
+        // Timeline/busyRanges returns empty for slots that already have an
+        // Appointment, causing the chatwoot calendar tool to schedule
+        // overlapping appointments on the same calendar.
+        $busyRangesEntityList = $this->config->get('busyRangesEntityList') ?? [];
+
+        if (!is_array($busyRangesEntityList)) {
+            $busyRangesEntityList = [];
+        }
+
+        $newBusyRangesEntityList = array_values(array_intersect($busyRangesEntityList, $validBusyRangesEntities));
+
+        // Ensure core entities are included
+        foreach (['Meeting', 'Call'] as $entity) {
+            if (!in_array($entity, $newBusyRangesEntityList)) {
+                $newBusyRangesEntityList[] = $entity;
+            }
+        }
+
+        // Ensure Appointment is included
+        if (!in_array('Appointment', $newBusyRangesEntityList)) {
+            $newBusyRangesEntityList[] = 'Appointment';
+        }
+
+        if ($newBusyRangesEntityList !== $busyRangesEntityList) {
+            $this->configWriter->set('busyRangesEntityList', $newBusyRangesEntityList);
             $modified = true;
         }
 

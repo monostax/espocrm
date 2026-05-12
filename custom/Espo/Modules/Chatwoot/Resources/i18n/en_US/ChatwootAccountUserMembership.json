@@ -46,7 +46,10 @@
         "Enable AI Profile": "Enable AI Profile",
         "Disable AI Profile": "Disable AI Profile",
         "Account Users": "Account Users",
-        "AI Configuration": "AI Configuration"
+        "AI Configuration": "AI Configuration",
+        "Edit Internal Notes": "Edit Internal Notes",
+        "Save": "Save",
+        "Cancel": "Cancel"
     },
     "messages": {
         "confirmEnableAiProfile": "This will enable AI capabilities for this account member. Continue?",

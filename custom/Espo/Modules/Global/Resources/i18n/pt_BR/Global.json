@@ -33,7 +33,7 @@
         "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Agendamento",
         "FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento": "Clínica Nas Nuvens / Procedimento de Agendamento",
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamento",
-        "Funnel": "Funil de Venda",
+        "Funnel": "Funil de Oportunidade",
         "Tenant": "Ambiente",
         "OpportunityStage": "Estágio da Oportunidade",
         "Appointment": "Agendamento",
@@ -48,7 +48,7 @@
         "FeatureIntegrationClinicaNasNuvensAgendamento": "Clínica Nas Nuvens / Agendamentos",
         "FeatureIntegrationClinicaNasNuvensAgendamentoProcedimento": "Clínica Nas Nuvens / Procedimentos de Agendamento",
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Faturamentos",
-        "Funnel": "Funil de Venda",
+        "Funnel": "Funil de Oportunidade",
         "Tenant": "Ambientes",
         "Appointment": "Agendamentos",
         "OpportunityStage": "Etapas do Funil",
@@ -68,7 +68,7 @@
         "Mentions": "Mencionadas",
         "Configurations": "Configurações",
         "Configuration": "Configuração",
-        "Funnels": "Funis de Vendas",
+        "Funnels": "Funis de Oportunidade",
         "Import": "Importação",
         "Lists": "Listas",
         "Records": "Cadastros",
@@ -81,7 +81,7 @@
         "create": "Cadastrar"
     },
     "dashlets": {
-        "SalesPipelineByStage": "Funil de Vendas (por Estágio)",
+        "SalesPipelineByStage": "Funil de Oportunidades (por Estágio)",
         "OpportunitiesByStageName": "Oportunidades por Estágio"
     }
 }

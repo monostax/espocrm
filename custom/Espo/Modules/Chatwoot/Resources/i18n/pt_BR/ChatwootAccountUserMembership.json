@@ -48,7 +48,10 @@
         "Disable AI Profile": "Desativar Perfil IA",
         "Chat / Account / Inboxes": "Chat / Conta / Caixas de Entrada",
         "Account Users": "Chat / Conta / Agentes",
-        "AI Configuration": "Configuração IA"
+        "AI Configuration": "Configuração IA",
+        "Edit Internal Notes": "Editar Instruções",
+        "Save": "Salvar",
+        "Cancel": "Cancelar"
     },
     "messages": {
         "confirmEnableAiProfile": "Isto habilitará as capacidades de IA para este membro da conta. Continuar?",

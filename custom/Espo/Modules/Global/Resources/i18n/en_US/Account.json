@@ -1,4 +1,10 @@
 {
+    "fields": {
+        "tenant": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
+    },
     "tabs": {
         "Contacts": "Contacts",
         "Opportunities": "Opportunities",

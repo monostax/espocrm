@@ -1,4 +1,14 @@
 {
+    "fields": {
+        "calendarDescription": {
+            "type": "wysiwyg",
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "utility": true,
+            "fieldManagerParamList": []
+        }
+    },
     "links": {
         "appointmentsLocation": {
             "type": "hasMany",

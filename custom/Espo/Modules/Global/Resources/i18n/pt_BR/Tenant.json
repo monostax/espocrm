@@ -12,7 +12,9 @@
         "baseUserTeam": "Time Base de Usuários",
         "otherUserTeams": "Outros Times de Usuários",
         "clinicaNasNuvensSettings": "Perfis Clínica Nas Nuvens",
-        "users": "Usuários"
+        "users": "Usuários",
+        "contacts": "Contatos",
+        "accounts": "Contas"
     },
     "fields": {
         "name": "Nome",
