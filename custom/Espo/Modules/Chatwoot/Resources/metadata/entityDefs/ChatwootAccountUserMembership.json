@@ -93,7 +93,19 @@
         },
         "calendarsToManage": {
             "type": "linkMultiple",
-            "tooltip": true
+            "tooltip": true,
+            "view": "chatwoot:views/account-user-membership/fields/calendars-to-manage",
+            "columns": {
+                "description": "calendarDescription"
+            },
+            "additionalAttributeList": ["columns"]
+        },
+        "calendarDescription": {
+            "type": "varchar",
+            "maxLength": 4000,
+            "notStorable": true,
+            "utility": true,
+            "disabled": true
         },
         "chatwootTeams": {
             "type": "linkMultiple"
@@ -170,7 +182,16 @@
             "type": "hasMany",
             "entity": "User",
             "relationName": "chatwootAccountUserMembershipCalendarUser",
-            "foreign": "accountUserMembershipsWithCalendarAccess"
+            "foreign": "accountUserMembershipsWithCalendarAccess",
+            "additionalColumns": {
+                "description": {
+                    "type": "varchar",
+                    "len": 4000
+                }
+            },
+            "columnAttributeMap": {
+                "description": "description"
+            }
         },
         "wahaSessionLabels": {
             "type": "hasMany",

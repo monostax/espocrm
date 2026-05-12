@@ -19,6 +19,7 @@
         "transferScenarios": "Transfer Scenarios",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
+        "calendarDescription": "Internal Notes",
         "chatwootTeams": "Chat Teams",
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
@@ -76,6 +77,7 @@
         "isAI": "Enable to configure this member as an AI-powered agent.",
         "aiPrompt": "The system prompt that defines the AI agent's behavior and capabilities.",
         "knowledgeBaseCategories": "Select knowledge base categories. Articles in these categories (and their sub-categories) will be available for AI-powered responses.",
-        "calendarsToManage": "Select users whose calendars this AI agent can manage. The agent can check availability, create, update, and delete appointments for these calendars."
+        "calendarsToManage": "Select users whose calendars this AI agent can manage. The agent can check availability, create, update, and delete appointments for these calendars. Use the \"Internal Notes\" column next to each calendar to record per-professional guidance (internal use — never quoted verbatim to the customer).",
+        "calendarDescription": "Internal text (up to ~4000 chars) describing per-professional/location guidance — e.g. service types, age restrictions, prep instructions. Injected into the AI agent's system prompt but NEVER quoted verbatim to the customer."
     }
 }
