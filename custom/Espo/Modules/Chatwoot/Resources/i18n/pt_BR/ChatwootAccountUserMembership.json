@@ -20,6 +20,9 @@
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
         "calendarDescription": "Instruções Internas",
+        "funnelsToManage": "Funis Gerenciados",
+        "description": "Instruções Internas",
+        "calendarEventType": "Tipo de Evento",
         "chatwootTeams": "Chat / Times",
         "syncStatus": "Status de Sincronização",
         "lastSyncedAt": "Última Sincronização",
@@ -33,6 +36,7 @@
         "chatwootUser": "Chat / Usuário",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
+        "funnelsToManage": "Funis Gerenciados",
         "chatwootTeams": "Chat / Times",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
@@ -74,6 +78,11 @@
             "available": "Disponível",
             "busy": "Ocupado",
             "offline": "Offline"
+        },
+        "calendarEventType": {
+            "Appointment": "Agendamento",
+            "Meeting": "Reunião",
+            "Call": "Chamada"
         }
     },
     "tooltips": {
@@ -83,6 +92,9 @@
         "aiPrompt": "O prompt do sistema que define o comportamento e as capacidades do agente IA.",
         "knowledgeBaseCategories": "Selecione categorias da base de conhecimento. Artigos nessas categorias (e suas subcategorias) estarão disponíveis para respostas com IA.",
         "calendarsToManage": "Selecione os calendários que este agente IA pode gerenciar. O agente pode verificar disponibilidade, criar, atualizar e excluir agendamentos para esses calendários. Use o campo \"Instruções Internas\" ao lado de cada calendário para registrar orientações específicas do profissional (uso interno — nunca citado literalmente ao cliente).",
-        "calendarDescription": "Texto interno (até ~4000 caracteres) com orientações específicas do profissional/local — ex.: tipos de atendimento, restrições de idade, instruções de preparo. Será injetado no prompt do sistema do agente IA, mas NUNCA citado literalmente ao cliente."
+        "calendarDescription": "Texto interno (até ~4000 caracteres) com orientações específicas do profissional/local — ex.: tipos de atendimento, restrições de idade, instruções de preparo. Será injetado no prompt do sistema do agente IA, mas NUNCA citado literalmente ao cliente.",
+        "calendarEventType": "Tipo de entidade CRM que o agente IA deve criar ao agendar para este calendário. Appointment é o padrão; Meeting e Call também são suportados.",
+        "funnelsToManage": "Selecione os funis de oportunidade que este agente IA pode gerenciar. O agente pode criar, atualizar e excluir oportunidades nesses funis. Cada funil pode ter instruções personalizadas para a IA. Use o campo \"Instruções Internas\" ao lado de cada funil para registrar orientações específicas (uso interno — nunca citado literalmente ao cliente).",
+        "description": "Texto interno (até ~4000 caracteres) com orientações específicas do funil — ex.: restrições de valor, público-alvo, critérios de qualificação. Será injetado no prompt do sistema do agente IA, mas NUNCA citado literalmente ao cliente."
     }
 }

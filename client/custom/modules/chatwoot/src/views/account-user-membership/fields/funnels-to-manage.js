@@ -9,29 +9,26 @@
  ************************************************************************/
 
 /**
- * Custom field view for `calendarsToManage` on ChatwootAccountUserMembership.
+ * Custom field view for `funnelsToManage` on ChatwootAccountUserMembership.
  *
  * Extends the stock `link-multiple-with-columns` view to expose:
- * - A per-row `eventType` additionalColumn rendered as an enum select
- *   (Appointment, Meeting, Call) — handled natively by the stock parent
- *   since the column resolves to an `enum` field type.
  * - A per-row `description` additionalColumn rendered as a wysiwyg-edited
  *   HTML blob.
  *
  * The stock parent only natively supports varchar/enum/bool column types
  * (link-multiple-with-columns.js:99-101, 183, 420-440). For wysiwyg we
- * inject our own UI: a stripped-text preview + an "Editar instruções"
+ * inject our own UI: a stripped-text preview + an "Edit Internal Notes"
  * button that opens a modal containing `views/fields/wysiwyg`.
  *
- * Storage: link table columns are `text` (description) and `varchar`
- * (eventType) declared via `additionalColumns` in entityDefs.
+ * Storage: link table column is `text` (description) declared via
+ * `additionalColumns` in entityDefs.
  *
- * Read path: `getAgentCalendarsToManage` in drizzle.crm.app/helpers.ts strips
+ * Read path: `getAgentFunnelsToManage` in drizzle.crm.app/helpers.ts strips
  * the HTML to plain text before the value reaches the AI agent — the LLM
  * never sees tags, mirroring the existing `aiPrompt` cleanup in
- * workflows/$chatwootAgent.ts:1329-1340.
+ * workflows/$chatwootAgent.ts.
  */
-define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
+define('chatwoot:views/account-user-membership/fields/funnels-to-manage', [
     'views/fields/link-multiple-with-columns',
 ], function (Dep) {
 
@@ -63,16 +60,8 @@ define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
 
     return Dep.extend({
 
-        /**
-         * Stock parent uses metadata at
-         * `entityDefs.{entity}.fields.{name}.columns` to populate its
-         * `columnsDefs`; for wysiwyg the type-resolver finds
-         * `User.calendarDescription` (type=wysiwyg) and the parent's
-         * row renderer ignores it (line 183 / 420-440 only handles
-         * varchar/enum/bool). We render the column ourselves below.
-         */
         events: Object.assign({}, Dep.prototype.events || {}, {
-            'click [data-action="editCalendarDescription"]': function (e) {
+            'click [data-action="editFunnelDescription"]': function (e) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -101,38 +90,23 @@ define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
         getDetailLinkHtml: function (id, name) {
             const html = Dep.prototype.getDetailLinkHtml.call(this, id, name);
 
-            const eventType = this.getColumnValue(id, 'eventType');
             const description = this.getColumnValue(id, 'description');
             const preview = stripHtmlPreview(description);
 
-            const hasEventType = eventType && eventType !== 'Appointment';
-            const hasPreview = !!preview;
-
-            if (!hasEventType && !hasPreview) {
+            if (!preview) {
                 return html;
             }
 
             const $wrapper = $('<div>').html(html);
 
-            if (hasEventType) {
-                $wrapper.append(
-                    $('<span>').text(' '),
-                    $('<span>')
-                        .addClass('label label-default')
-                        .text(eventType)
-                );
-            }
-
-            if (hasPreview) {
-                $wrapper.append(
-                    $('<span>').text(' '),
-                    $('<span>').addClass('text-muted middle-dot'),
-                    $('<span>').text(' '),
-                    $('<span>')
-                        .addClass('text-muted small')
-                        .text(preview)
-                );
-            }
+            $wrapper.append(
+                $('<span>').text(' '),
+                $('<span>').addClass('text-muted middle-dot'),
+                $('<span>').text(' '),
+                $('<span>')
+                    .addClass('text-muted small')
+                    .text(preview)
+            );
 
             return $wrapper.get(0).innerHTML;
         },
@@ -142,23 +116,23 @@ define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
          * rendered link row.
          *
          * @param {JQuery} $el The row element returned by the parent.
-         * @param {string} id  The calendar (User) id for this row.
+         * @param {string} id  The funnel id for this row.
          */
         appendDescriptionUi: function ($el, id) {
             const value = this.getColumnValue(id, 'description');
             const preview = stripHtmlPreview(value);
 
             const $preview = $('<span>')
-                .addClass('text-muted small calendar-description-preview')
+                .addClass('text-muted small funnel-description-preview')
                 .attr('data-id', id)
                 .text(preview);
 
             const $button = $('<a>')
                 .attr('role', 'button')
                 .attr('tabindex', '0')
-                .attr('data-action', 'editCalendarDescription')
+                .attr('data-action', 'editFunnelDescription')
                 .attr('data-id', id)
-                .addClass('calendar-description-edit-btn')
+                .addClass('funnel-description-edit-btn')
                 .css('margin-left', '6px')
                 .text(this.translate('Edit Internal Notes', 'labels', 'ChatwootAccountUserMembership'));
 
@@ -166,7 +140,7 @@ define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
 
             if ($name.length) {
                 $name.append(
-                    $('<span>').addClass('calendar-description-meta')
+                    $('<span>').addClass('funnel-description-meta')
                         .css('margin-left', '8px')
                         .append($preview)
                         .append($button)
@@ -182,19 +156,19 @@ define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
          * Open the wysiwyg modal for a row and persist the result back
          * into the host model's `<name>Columns` attribute.
          *
-         * @param {string} id The calendar (User) id for the row being edited.
+         * @param {string} id The funnel id for the row being edited.
          */
         openDescriptionEditor: function (id) {
             const currentValue = this.getColumnValue(id, 'description') || '';
-            const calendarName = this.nameHash[id] || '';
+            const funnelName = this.nameHash[id] || '';
 
-            this.createView('editDescriptionModal', 'chatwoot:views/account-user-membership/modals/edit-calendar-description', {
-                calendarId: id,
-                calendarName: calendarName,
+            this.createView('editDescriptionModal', 'chatwoot:views/account-user-membership/modals/edit-funnel-description', {
+                funnelId: id,
+                funnelName: funnelName,
                 value: currentValue,
             }, (view) => {
                 this.listenToOnce(view, 'save', (data) => {
-                    if (!data || data.calendarId !== id) {
+                    if (!data || data.funnelId !== id) {
                         return;
                     }
 
@@ -220,18 +194,12 @@ define('chatwoot:views/account-user-membership/fields/calendars-to-manage', [
                 return;
             }
 
-            $row.find('.calendar-description-meta').remove();
+            $row.find('.funnel-description-meta').remove();
             this.appendDescriptionUi($row, id);
         },
 
         /** @inheritDoc */
         fetch: function () {
-            // Stock parent's fetch() reads varchar/enum inputs from the DOM
-            // back into `this.columns`. Our description value is updated via
-            // the modal's save callback (openDescriptionEditor) and never
-            // lives in a DOM input, so it is already on `this.columns`
-            // before fetch is called. The parent then clones `this.columns`
-            // into the model attribute — descriptions ride along correctly.
             return Dep.prototype.fetch.call(this);
         },
     });

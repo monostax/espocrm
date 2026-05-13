@@ -23,11 +23,15 @@ use Espo\ORM\EntityManager;
  *    points to the CRM's DeliveryWebhook controller for campaign tracking.
  *
  * 2. Hatchet AI Agent — subscribed to `message_created` and `conversation_updated`,
- *    points to the Hatchet webhook ingest endpoint so incoming messages and
- *    conversation status changes trigger the AI agent workflow.
+ *    points to the backend proxy (not Hatchet directly) so the proxy can pre-filter
+ *    noise (AI self-loops, echoes, reactions) before forwarding to Hatchet.
  *
  * Each creates a ChatwootAccountWebhook entity which triggers the SyncWithChatwoot
  * hook to register it on the Chatwoot side.
+ *
+ * Migration: on every ChatwootAccount save, existing Hatchet webhooks that still
+ * point directly to Hatchet (legacy URL without '/hatchet/proxy/') are
+ * automatically updated to the proxy URL from HATCHET_CHATWOOT_WEBHOOK_URL.
  */
 class RegisterDeliveryWebhook
 {
@@ -110,23 +114,53 @@ class RegisterDeliveryWebhook
     /**
      * Register Hatchet AI Agent webhook.
      *
-     * Sends `message_created` and `conversation_updated` events to the Hatchet
-     * webhook ingest endpoint, which triggers the AI agent workflows.
-     * The URL is provided by the HATCHET_WEBHOOK_URL environment variable
-     * (internal k8s service URL).
+     * Sends `message_created` and `conversation_updated` events to the backend
+     * proxy endpoint, which pre-filters noise (AI self-loops, echoes, reactions,
+     * etc.) before forwarding to Hatchet. This reduces unnecessary workflow runs.
+     *
+     * HATCHET_CHATWOOT_WEBHOOK_URL must point to the backend proxy, NOT directly
+     * to the Hatchet service. Expected format:
+     *
+     *   http://backend-service.{namespace}.svc.cluster.local:8181/hatchet/proxy/{tenantId}/webhooks/{webhookName}
+     *
+     * The proxy forwards to Hatchet via its own HATCHET_PROXY_BASE_URL env var.
+     *
+     * On every save, this method also checks if the existing webhook URL points
+     * directly to Hatchet (legacy) and migrates it to the proxy URL.
      */
     private function registerHatchetWebhook(Entity $entity, int $chatwootAccountId): void
     {
-        if ($this->webhookExists($entity, 'Hatchet AI Agent')) {
-            return;
-        }
-
         $hatchetWebhookUrl = getenv('HATCHET_CHATWOOT_WEBHOOK_URL');
 
         if (!$hatchetWebhookUrl) {
             $this->log->debug(
                 "RegisterDeliveryWebhook: HATCHET_CHATWOOT_WEBHOOK_URL not set, skipping Hatchet webhook for account {$entity->getId()}"
             );
+            return;
+        }
+
+        // Migrate existing webhooks that point directly to Hatchet (legacy URL).
+        // The proxy URL contains '/hatchet/proxy/' — if the stored URL doesn't,
+        // it's a direct Hatchet URL that needs updating.
+        $existing = $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $entity->getId(),
+                'name' => 'Hatchet AI Agent',
+            ])
+            ->findOne();
+
+        if ($existing) {
+            $currentUrl = $existing->get('url');
+            if ($currentUrl && strpos($currentUrl, '/hatchet/proxy/') === false) {
+                $existing->set('url', $hatchetWebhookUrl);
+                $this->entityManager->saveEntity($existing);
+                $this->log->info(
+                    "RegisterDeliveryWebhook: Migrated Hatchet webhook URL for account " .
+                    "{$entity->getId()} (Chatwoot #{$chatwootAccountId}) " .
+                    "from {$currentUrl} to {$hatchetWebhookUrl}"
+                );
+            }
             return;
         }
 

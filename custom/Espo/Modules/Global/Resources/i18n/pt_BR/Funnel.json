@@ -7,7 +7,8 @@
         "Opportunity Stages": "Estágios da Oportunidade"
     },
     "links": {
-        "opportunityStages": "Estágios da Oportunidade"
+        "opportunityStages": "Estágios da Oportunidade",
+        "accountUserMembershipsWithFunnelAccess": "Agente de IA com Acesso"
     },
     "fields": {
         "name": "Nome",

@@ -136,10 +136,48 @@ class SyncWithChatwoot
                 $chatwootWebhookId = $entity->get('chatwootWebhookId');
                 
                 if (!$chatwootWebhookId) {
-                    throw new Error(
-                        'Cannot update webhook: chatwootWebhookId is missing. ' .
-                        'This webhook may not have been properly synchronized.'
+                    // Recovery: entity exists in CRM but was never synced to Chatwoot
+                    // (legacy entity created before SyncWithChatwoot hook, or previous
+                    // sync failure). Create the webhook on Chatwoot now.
+                    $this->log->warning(
+                        'ChatwootAccountWebhook ' . $entity->getId() . ' missing chatwootWebhookId. ' .
+                        'Attempting recovery: creating webhook on Chatwoot.'
                     );
+
+                    $webhookData = $this->prepareWebhookData($entity);
+                    $webhookResponse = $this->apiClient->createWebhook(
+                        $platformUrl,
+                        $apiKey,
+                        $chatwootAccountId,
+                        $webhookData
+                    );
+
+                    $newWebhookId = $webhookResponse['id']
+                        ?? $webhookResponse['payload']['webhook']['id']
+                        ?? null;
+
+                    if ($newWebhookId) {
+                        $entity->set('chatwootWebhookId', $newWebhookId);
+
+                        $secret = $webhookResponse['secret']
+                            ?? $webhookResponse['payload']['webhook']['secret']
+                            ?? null;
+                        if ($secret) {
+                            $entity->set('webhookSecret', $secret);
+                        }
+
+                        $this->log->info(
+                            'Recovery successful: created Chatwoot webhook ' . $newWebhookId .
+                            ' for entity ' . $entity->getId()
+                        );
+                    } else {
+                        $this->log->error(
+                            'Recovery failed: Chatwoot createWebhook response missing ID. ' .
+                            'Response: ' . json_encode($webhookResponse)
+                        );
+                    }
+
+                    return;
                 }
 
                 // Only update if relevant fields changed

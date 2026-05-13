@@ -77,6 +77,11 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "accountUserMembershipsWithFunnelAccess": {
+            "type": "hasMany",
+            "entity": "ChatwootAccountUserMembership",
+            "foreign": "funnelsToManage"
         }
     },
     "collection": {

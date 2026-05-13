@@ -285,6 +285,16 @@ class SeedChatwootAccount implements RebuildAction
             ->findOne();
 
         if ($existing) {
+            // Migrate URL if it changed (e.g., switching from direct Hatchet to proxy)
+            $currentUrl = $existing->get('url');
+            if ($currentUrl && $url && $currentUrl !== $url) {
+                $existing->set('url', $url);
+                $this->entityManager->saveEntity($existing);
+                $this->log->info(
+                    "SeedChatwootAccount: Migrated webhook '{$name}' URL for account " .
+                    "{$account->getId()} from {$currentUrl} to {$url}"
+                );
+            }
             return;
         }
 

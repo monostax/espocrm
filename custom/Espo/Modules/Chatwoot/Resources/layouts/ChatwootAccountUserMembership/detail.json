@@ -132,6 +132,12 @@
             ],
             [
                 {
+                    "name": "funnelsToManage",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
                     "name": "aiPrompt",
                     "fullWidth": true
                 }

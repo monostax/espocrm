@@ -20,6 +20,9 @@
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
         "calendarDescription": "Internal Notes",
+        "funnelsToManage": "Managed Funnels",
+        "description": "Internal Notes",
+        "calendarEventType": "Event Type",
         "chatwootTeams": "Chat Teams",
         "syncStatus": "Sync Status",
         "lastSyncedAt": "Last Synced At",
@@ -33,6 +36,7 @@
         "chatwootUser": "Chat / User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
+        "funnelsToManage": "Managed Funnels",
         "chatwootTeams": "Chat / Teams",
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
@@ -72,6 +76,11 @@
             "available": "Available",
             "busy": "Busy",
             "offline": "Offline"
+        },
+        "calendarEventType": {
+            "Appointment": "Appointment",
+            "Meeting": "Meeting",
+            "Call": "Call"
         }
     },
     "tooltips": {
@@ -81,6 +90,9 @@
         "aiPrompt": "The system prompt that defines the AI agent's behavior and capabilities.",
         "knowledgeBaseCategories": "Select knowledge base categories. Articles in these categories (and their sub-categories) will be available for AI-powered responses.",
         "calendarsToManage": "Select users whose calendars this AI agent can manage. The agent can check availability, create, update, and delete appointments for these calendars. Use the \"Internal Notes\" column next to each calendar to record per-professional guidance (internal use — never quoted verbatim to the customer).",
-        "calendarDescription": "Internal text (up to ~4000 chars) describing per-professional/location guidance — e.g. service types, age restrictions, prep instructions. Injected into the AI agent's system prompt but NEVER quoted verbatim to the customer."
+        "calendarDescription": "Internal text (up to ~4000 chars) describing per-professional/location guidance — e.g. service types, age restrictions, prep instructions. Injected into the AI agent's system prompt but NEVER quoted verbatim to the customer.",
+        "calendarEventType": "Which CRM entity type the AI agent should create when booking for this calendar. Appointment is the default; Meeting and Call are also supported.",
+        "funnelsToManage": "Select the opportunity funnels this AI agent can manage. The agent can create, update, and delete opportunities in these funnels. Use the \"Internal Notes\" column next to each funnel to record per-funnel guidance (internal use — never quoted verbatim to the customer).",
+        "description": "Internal text (up to ~4000 chars) describing per-funnel guidance — e.g. value restrictions, target audience, qualification criteria. Injected into the AI agent's system prompt but NEVER quoted verbatim to the customer."
     }
 }

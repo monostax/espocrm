@@ -96,7 +96,17 @@
             "tooltip": true,
             "view": "chatwoot:views/account-user-membership/fields/calendars-to-manage",
             "columns": {
-                "description": "calendarDescription"
+                "description": "calendarDescription",
+                "eventType": "calendarEventType"
+            },
+            "additionalAttributeList": ["columns"]
+        },
+        "funnelsToManage": {
+            "type": "linkMultiple",
+            "view": "chatwoot:views/account-user-membership/fields/funnels-to-manage",
+            "tooltip": "Funnels that this AI agent can create/manage opportunities in. Each funnel can have custom instructions for the AI.",
+            "columns": {
+                "description": "description"
             },
             "additionalAttributeList": ["columns"]
         },
@@ -146,6 +156,13 @@
         },
         "chatwootInboxes": {
             "type": "linkMultiple"
+        },
+        "calendarEventType": {
+            "type": "enum",
+            "options": ["Appointment", "Meeting", "Call"],
+            "default": "Appointment",
+            "readOnly": true,
+            "tooltip": true
         }
     },
     "links": {
@@ -176,6 +193,26 @@
             "entity": "User",
             "relationName": "chatwootAccountUserMembershipCalendarUser",
             "foreign": "accountUserMembershipsWithCalendarAccess",
+            "additionalColumns": {
+                "description": {
+                    "type": "text"
+                },
+                "eventType": {
+                    "type": "varchar",
+                    "len": 36,
+                    "default": "Appointment"
+                }
+            },
+            "columnAttributeMap": {
+                "description": "description",
+                "eventType": "eventType"
+            }
+        },
+        "funnelsToManage": {
+            "type": "hasMany",
+            "entity": "Funnel",
+            "relationName": "chatwootAccountUserMembershipFunnel",
+            "foreign": "accountUserMembershipsWithFunnelAccess",
             "additionalColumns": {
                 "description": {
                     "type": "text"
@@ -239,7 +276,8 @@
             {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootAccountUserMembershipId"},
             {"table": "ChatwootAccountUserMembershipChatwootTeam", "column": "chatwootAccountUserMembershipId"},
             {"table": "ChatwootAccountUserMembershipKnowledgeBaseCategory", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipCalendarUser", "column": "chatwootAccountUserMembershipId"}
+            {"table": "ChatwootAccountUserMembershipCalendarUser", "column": "chatwootAccountUserMembershipId"},
+            {"table": "ChatwootAccountUserMembershipFunnel", "column": "chatwootAccountUserMembershipId"}
         ]
     }
 }

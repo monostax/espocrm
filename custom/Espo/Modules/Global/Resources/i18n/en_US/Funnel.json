@@ -16,6 +16,7 @@
         "team": "Team",
         "opportunityStages": "Opportunity Stages",
         "opportunities": "Opportunities",
+        "accountUserMembershipsWithFunnelAccess": "AI Agent with Access",
         "createdBy": "Created By",
         "modifiedBy": "Modified By"
     },
