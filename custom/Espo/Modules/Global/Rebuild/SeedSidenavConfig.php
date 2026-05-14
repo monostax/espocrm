@@ -247,32 +247,45 @@ class SeedSidenavConfig implements RebuildAction
 
     private function upsertTabList($existingTabList, array $seedTabList): array
     {
-        $result = is_array($existingTabList) ? array_values($existingTabList) : [];
-        $indexMap = [];
+        $existing = is_array($existingTabList) ? array_values($existingTabList) : [];
 
-        foreach ($result as $index => $item) {
+        $existingIndexMap = [];
+
+        foreach ($existing as $index => $item) {
             $key = $this->getTabItemKey($item);
 
-            if ($key !== null) {
-                $indexMap[$key] = $index;
+            if ($key !== null && !array_key_exists($key, $existingIndexMap)) {
+                $existingIndexMap[$key] = $index;
             }
         }
 
+        $result = [];
+        $consumedExistingIndexes = [];
+
+        // 1. Emit items in seed order. Seed defines the canonical layout;
+        //    merge any matching existing item's user-overridable fields on top.
         foreach ($seedTabList as $seedItem) {
             $key = $this->getTabItemKey($seedItem);
 
-            if ($key !== null && array_key_exists($key, $indexMap)) {
-                $index = $indexMap[$key];
-                $result[$index] = $this->mergeTabItem($result[$index], $seedItem);
+            if ($key !== null && array_key_exists($key, $existingIndexMap)) {
+                $existingIndex = $existingIndexMap[$key];
+                $result[] = $this->mergeTabItem($existing[$existingIndex], $seedItem);
+                $consumedExistingIndexes[$existingIndex] = true;
 
                 continue;
             }
 
             $result[] = $seedItem;
+        }
 
-            if ($key !== null) {
-                $indexMap[$key] = count($result) - 1;
+        // 2. Append remaining existing items (user customizations not in seed)
+        //    in their original relative order.
+        foreach ($existing as $index => $item) {
+            if (isset($consumedExistingIndexes[$index])) {
+                continue;
             }
+
+            $result[] = $item;
         }
 
         return array_values($result);

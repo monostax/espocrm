@@ -3,8 +3,16 @@
     border-bottom: 1px solid var(--navbar-inverse-border, rgba(255, 255, 255, 0.1));
 }
 
-.navbar-config-selector > .dropdown {
-    position: unset;
+/*
+ * Keep .navbar-header (and the .navbar-brand logo link) painted above any
+ * positioned descendants of .navbar-body. Without this, .dropdown's default
+ * `position: relative` lifts the (full-width, transparent) dropdown box into
+ * the positioned paint phase and it ends up covering the logo, eating its
+ * clicks even when the menu is closed.
+ */
+.navbar > .navbar-header {
+    position: relative;
+    z-index: 2;
 }
 
 .navbar-config-selector-toggle {

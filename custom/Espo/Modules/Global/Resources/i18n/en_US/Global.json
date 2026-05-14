@@ -107,7 +107,9 @@
         "Lost": "Lost",
         "By Funnel": "By Funnel",
         "By Status": "By Status",
-        "Dashboard": "Dashboard"
+        "Dashboard": "Dashboard",
+        "Opportunity": "Opportunities",
+        "Contact": "Contacts"
     },
     "navbarConfig": {
         "switchView": "Switch View",

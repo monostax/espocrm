@@ -105,7 +105,9 @@
         "Lost": "Perdidas",
         "By Funnel": "Por Funil",
         "By Status": "Por Status",
-        "Dashboard": "Dashboard"
+        "Dashboard": "Dashboard",
+        "Opportunity": "Oportunidades",
+        "Contact": "Contatos"
     },
     "actions": {
         "create": "Cadastrar"
