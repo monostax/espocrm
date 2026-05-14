@@ -39,6 +39,65 @@ class Helper
         'duration',
     ];
 
+    /**
+     * Functions that aggregate values across rows. Top-level usage of these
+     * makes a column a "summary" column.
+     * @var string[]
+     */
+    private array $aggregateFunctionList = [
+        'COUNT',
+        'SUM',
+        'AVG',
+        'MIN',
+        'MAX',
+    ];
+
+    /**
+     * Functions that operate on a single value and preserve aggregate semantics
+     * when wrapping an aggregate expression (e.g. CONCAT('R$ ', SUM(...))).
+     * If the outer function is one of these AND an aggregate is nested within,
+     * the column is treated as a summary column.
+     * @var string[]
+     */
+    private array $aggregateWrapperFunctionList = [
+        'CONCAT',
+        'IFNULL',
+        'COALESCE',
+        'NULLIF',
+        'IF',
+        'SWITCH',
+        'MAP',
+        'ROUND',
+        'FLOOR',
+        'CEIL',
+        'ADD',
+        'SUB',
+        'MUL',
+        'DIV',
+        'MOD',
+        'GREATEST',
+        'LEAST',
+        'LEFT',
+        'LOWER',
+        'UPPER',
+        'TRIM',
+        'REPLACE',
+    ];
+
+    /**
+     * Wrappers that produce a string output (regardless of inner type).
+     * Used to determine that a wrapped aggregate is not numeric for display.
+     * @var string[]
+     */
+    private array $stringProducingWrapperList = [
+        'CONCAT',
+        'LEFT',
+        'LOWER',
+        'UPPER',
+        'TRIM',
+        'REPLACE',
+    ];
+
     public function __construct(
         private Metadata $metadata,
         private AclManager $aclManager,
@@ -107,6 +166,24 @@ class Helper
             }
         }
 
+        $outerFunction = $this->getOuterFunction($item);
+
+        // String-producing wrappers (e.g. CONCAT) yield a non-numeric column,
+        // even if they wrap an aggregate. Sorting/totals/charts won't treat
+        // it as a number.
+        if ($outerFunction !== null && in_array($outerFunction, $this->stringProducingWrapperList)) {
+            return false;
+        }
+
+        // Numeric-preserving wrapper around an aggregate is still numeric.
+        if (
+            $outerFunction !== null &&
+            in_array($outerFunction, $this->aggregateWrapperFunctionList) &&
+            $this->containsAggregateFunction($item)
+        ) {
+            return true;
+        }
+
         $columnData = $this->getDataFromColumnName($data->getEntityType(), $item);
 
         if (in_array($columnData->function, ['COUNT', 'SUM', 'AVG'])) {
@@ -149,14 +226,66 @@ class Helper
             return $type === Data::COLUMN_TYPE_SUMMARY;
         }
 
-        $function = null;
+        $function = $this->getOuterFunction($item);
 
-        if (strpos($item, ':') > 0) {
-            [$function] = explode(':', $item);
+        if ($function === null) {
+            return false;
         }
 
-        if (in_array($function, ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'])) {
+        if (in_array($function, $this->aggregateFunctionList)) {
             return true;
+        }
+
+        // Accept wrappers like CONCAT, IFNULL, ROUND, etc. when they contain
+        // an aggregate function inside. This allows formatting expressions
+        // such as CONCAT:('R$ ', SUM:(amountConverted)).
+        if (
+            in_array($function, $this->aggregateWrapperFunctionList) &&
+            $this->containsAggregateFunction($item)
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract the outermost function name from a complex expression.
+     * E.g. "CONCAT:('R$ ', SUM:(x))" -> "CONCAT".
+     * Returns null if no function token is present.
+     */
+    private function getOuterFunction(string $item): ?string
+    {
+        $colonPos = strpos($item, ':');
+
+        if ($colonPos === false || $colonPos === 0) {
+            return null;
+        }
+
+        $function = substr($item, 0, $colonPos);
+
+        // Function tokens are uppercase letters/digits/underscores only.
+        if (!preg_match('/^[A-Z][A-Z0-9_]*$/', $function)) {
+            return null;
+        }
+
+        return $function;
+    }
+
+    /**
+     * Whether the given complex expression contains an aggregate function
+     * token (SUM:, COUNT:, AVG:, MIN:, MAX:) anywhere within it.
+     */
+    public function containsAggregateFunction(string $item): bool
+    {
+        foreach ($this->aggregateFunctionList as $fn) {
+            // Match the token at start or after a non-identifier character,
+            // followed by a colon. Avoids false matches inside string literals
+            // that happen to contain the substring (e.g. 'SUMMARY:'), since
+            // the token must be uppercase and followed by ':'.
+            if (preg_match('/(?:^|[^A-Z0-9_])' . $fn . ':/', $item)) {
+                return true;
+            }
         }
 
         return false;

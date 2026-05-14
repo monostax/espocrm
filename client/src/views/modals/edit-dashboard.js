@@ -82,15 +82,34 @@ class EditDashboardModalView extends ModalView {
 
         const dashboardTabList = [];
 
+        // Per-tab metadata maps consumed by `views/preferences/fields/dashboard-tab-list`.
+        // Keys are the tab names (which are the stable identifiers used by the
+        // dashboard view to look up the matching layout entry).
+        const tabTitles = {};
+        const tabDescriptions = {};
+        const tabShowDateRange = {};
+
         dashboardLayout.forEach(item => {
-            if (item.name) {
-                dashboardTabList.push(item.name);
+            if (!item.name) {
+                return;
             }
+
+            dashboardTabList.push(item.name);
+
+            tabTitles[item.name] = item.title || '';
+            tabDescriptions[item.name] = item.description || '';
+
+            // Default to "shown" so existing dashboards keep the picker
+            // visible after the upgrade. An explicit `false` opts a tab out.
+            tabShowDateRange[item.name] = item.showDateRange !== false;
         });
 
         const model = this.model = new Model({}, {entityType: 'Preferences'});
 
         model.set('dashboardTabList', dashboardTabList);
+        model.set('tabTitles', tabTitles);
+        model.set('tabDescriptions', tabDescriptions);
+        model.set('tabShowDateRange', tabShowDateRange);
 
         this.hasLocked = 'dashboardLocked' in this.options;
 
@@ -169,6 +188,13 @@ class EditDashboardModalView extends ModalView {
         }
 
         attributes.renameMap = renameMap;
+
+        // Per-tab metadata edited inside the tab list field. The dashboard
+        // view applies these to the matching layout entries (after rename
+        // mapping is resolved).
+        attributes.tabTitles = this.model.get('tabTitles') || {};
+        attributes.tabDescriptions = this.model.get('tabDescriptions') || {};
+        attributes.tabShowDateRange = this.model.get('tabShowDateRange') || {};
 
         this.trigger('after:save', attributes);
 

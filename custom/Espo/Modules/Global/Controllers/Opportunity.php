@@ -51,11 +51,7 @@ class Opportunity extends CrmOpportunity
 
         $dateFrom = $request->getQueryParam('dateFrom');
         $dateTo = $request->getQueryParam('dateTo');
-        $dateFilter = $request->getQueryParam('dateFilter');
-
-        if (!$dateFilter) {
-            throw new BadRequest("No `dateFilter` parameter.");
-        }
+        $dateFilter = $request->getQueryParam('dateFilter') ?: null;
 
         return $this->buildFunnelStageReport($funnelId, $dateFilter, $dateFrom, $dateTo);
     }
@@ -84,11 +80,7 @@ class Opportunity extends CrmOpportunity
 
         $dateFrom = $request->getQueryParam('dateFrom');
         $dateTo = $request->getQueryParam('dateTo');
-        $dateFilter = $request->getQueryParam('dateFilter');
-
-        if (!$dateFilter) {
-            throw new BadRequest("No `dateFilter` parameter.");
-        }
+        $dateFilter = $request->getQueryParam('dateFilter') ?: null;
 
         return $this->buildFunnelLeadSourceReport($funnelId, $dateFilter, $dateFrom, $dateTo);
     }
@@ -117,11 +109,7 @@ class Opportunity extends CrmOpportunity
 
         $dateFrom = $request->getQueryParam('dateFrom');
         $dateTo = $request->getQueryParam('dateTo');
-        $dateFilter = $request->getQueryParam('dateFilter');
-
-        if (!$dateFilter) {
-            throw new BadRequest("No `dateFilter` parameter.");
-        }
+        $dateFilter = $request->getQueryParam('dateFilter') ?: null;
 
         return $this->buildFunnelSalesByMonthReport($funnelId, $dateFilter, $dateFrom, $dateTo);
     }
@@ -150,12 +138,8 @@ class Opportunity extends CrmOpportunity
 
         $dateFrom = $request->getQueryParam('dateFrom');
         $dateTo = $request->getQueryParam('dateTo');
-        $dateFilter = $request->getQueryParam('dateFilter');
+        $dateFilter = $request->getQueryParam('dateFilter') ?: null;
         $useLastStage = $request->getQueryParam('useLastStage') === 'true';
-
-        if (!$dateFilter) {
-            throw new BadRequest("No `dateFilter` parameter.");
-        }
 
         return $this->buildFunnelSalesPipelineReport(
             $funnelId,
@@ -183,12 +167,8 @@ class Opportunity extends CrmOpportunity
 
         $dateFrom = $request->getQueryParam('dateFrom');
         $dateTo = $request->getQueryParam('dateTo');
-        $dateFilter = $request->getQueryParam('dateFilter');
+        $dateFilter = $request->getQueryParam('dateFilter') ?: null;
         $funnelId = $request->getQueryParam('funnelId');
-
-        if (!$dateFilter) {
-            throw new BadRequest("No `dateFilter` parameter.");
-        }
 
         return $this->buildOpportunityStageAmountReport($dateFilter, $dateFrom, $dateTo, $funnelId);
     }
@@ -210,13 +190,9 @@ class Opportunity extends CrmOpportunity
 
         $dateFrom = $request->getQueryParam('dateFrom');
         $dateTo = $request->getQueryParam('dateTo');
-        $dateFilter = $request->getQueryParam('dateFilter');
+        $dateFilter = $request->getQueryParam('dateFilter') ?: null;
         $funnelId = $request->getQueryParam('funnelId');
         $teamId = $request->getQueryParam('teamId');
-
-        if (!$dateFilter) {
-            throw new BadRequest("No `dateFilter` parameter.");
-        }
 
         return $this->buildOpportunityStagePipelineReport($dateFilter, $dateFrom, $dateTo, $funnelId, $teamId);
     }
@@ -302,7 +278,7 @@ class Opportunity extends CrmOpportunity
      */
     private function buildFunnelStageReport(
         string $funnelId,
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo
     ): stdClass {
@@ -358,7 +334,7 @@ class Opportunity extends CrmOpportunity
      */
     private function buildFunnelLeadSourceReport(
         string $funnelId,
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo
     ): stdClass {
@@ -414,7 +390,7 @@ class Opportunity extends CrmOpportunity
      */
     private function buildFunnelSalesByMonthReport(
         string $funnelId,
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo
     ): stdClass {
@@ -472,7 +448,7 @@ class Opportunity extends CrmOpportunity
      */
     private function buildFunnelSalesPipelineReport(
         string $funnelId,
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo,
         bool $useLastStage = false
@@ -535,7 +511,7 @@ class Opportunity extends CrmOpportunity
      * @throws BadRequest
      */
     private function buildOpportunityStageAmountReport(
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo,
         ?string $funnelId
@@ -555,10 +531,12 @@ class Opportunity extends CrmOpportunity
             $conditionList[] = Cond::equal(Cond::column('funnelId'), $funnelId);
         }
 
-        $conditionList[] = Cond::or(
-            $this->buildCloseDateFilterCondition($dateFilter, $dateFrom, $dateTo),
-            Cond::equal(Cond::column('closeDate'), null)
-        );
+        if ($dateFilter) {
+            $conditionList[] = Cond::or(
+                $this->buildCloseDateFilterCondition($dateFilter, $dateFrom, $dateTo),
+                Cond::equal(Cond::column('closeDate'), null)
+            );
+        }
 
         $queryBuilder = $this->entityManager
             ->getQueryBuilder()
@@ -633,7 +611,7 @@ class Opportunity extends CrmOpportunity
      * @throws BadRequest
      */
     private function buildOpportunityStagePipelineReport(
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo,
         ?string $funnelId,
@@ -658,13 +636,15 @@ class Opportunity extends CrmOpportunity
             $conditionList[] = Cond::equal(Cond::column('teamsFilter.id'), $teamId);
         }
 
-        $conditionList[] = Cond::or(
-            $this->buildCloseDateFilterCondition($dateFilter, $dateFrom, $dateTo),
-            Cond::and(
-                Cond::equal(Cond::column('status'), 'Open'),
-                Cond::equal(Cond::column('closeDate'), null)
-            )
-        );
+        if ($dateFilter) {
+            $conditionList[] = Cond::or(
+                $this->buildCloseDateFilterCondition($dateFilter, $dateFrom, $dateTo),
+                Cond::and(
+                    Cond::equal(Cond::column('status'), 'Open'),
+                    Cond::equal(Cond::column('closeDate'), null)
+                )
+            );
+        }
 
         $queryBuilder = $this->entityManager
             ->getQueryBuilder()
@@ -806,10 +786,14 @@ class Opportunity extends CrmOpportunity
      */
     private function applyDateFilter(
         array &$where,
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo
     ): void {
+        if (!$dateFilter) {
+            return;
+        }
+
         $dateField = 'closeDate';
 
         switch ($dateFilter) {
@@ -853,10 +837,14 @@ class Opportunity extends CrmOpportunity
     }
 
     private function buildCloseDateFilterCondition(
-        string $dateFilter,
+        ?string $dateFilter,
         ?string $dateFrom,
         ?string $dateTo
     ) {
+        if (!$dateFilter) {
+            return null;
+        }
+
         $dateField = Cond::column('closeDate');
 
         switch ($dateFilter) {

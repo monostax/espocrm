@@ -13,14 +13,20 @@ define('global:views/dashlets/opportunities-by-stage', ['crm:views/dashlets/oppo
     return Dep.extend({
 
         url: function () {
-            let url = 'Opportunity/action/reportByOpportunityStage?dateFilter=' + this.getDateFilter();
+            let url = 'Opportunity/action/reportByOpportunityStage';
+            let dateFilter = this.getDateFilter();
 
-            if (this.getDateFilter() === 'between') {
-                url += '&dateFrom=' + this.getOption('dateFrom') + '&dateTo=' + this.getOption('dateTo');
+            if (dateFilter && dateFilter !== 'none') {
+                url += '?dateFilter=' + dateFilter;
+
+                if (dateFilter === 'between') {
+                    url += '&dateFrom=' + this.getOption('dateFrom') + '&dateTo=' + this.getOption('dateTo');
+                }
             }
 
             if (this.getOption('funnelId')) {
-                url += '&funnelId=' + this.getOption('funnelId');
+                let separator = url.indexOf('?') === -1 ? '?' : '&';
+                url += separator + 'funnelId=' + this.getOption('funnelId');
             }
 
             return url;

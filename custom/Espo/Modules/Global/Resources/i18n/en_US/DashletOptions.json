@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "totalColumn": "Total Column",
+        "countColumn": "Count Column",
+        "percentageColumn": "Percentage Column",
+        "bindDashboardDateRange": "Bind to Dashboard Date Range",
+        "dashboardDateRangeField": "Dashboard Date Range Field",
+        "showFilterInfo": "Show Filter Info on Card"
+    },
+    "tooltips": {
+        "bindDashboardDateRange": "When enabled, the dashlet results are filtered by the date range selected in the dashboard header.",
+        "dashboardDateRangeField": "The date/datetime field used to apply the dashboard date range filter.",
+        "showFilterInfo": "When enabled, shows the currently-applied filter (e.g. date range) next to the count line on the dashlet card."
+    }
+}

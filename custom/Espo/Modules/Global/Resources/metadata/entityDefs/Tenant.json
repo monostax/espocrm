@@ -26,6 +26,26 @@
             "type": "jsonObject",
             "notStorable": true
         },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true,
+            "tooltip": "Mirrors baseUserTeam for ACL team-level access. Auto-synced."
+        },
+        "teamsIds": {
+            "type": "jsonArray",
+            "notStorable": true
+        },
+        "teamsNames": {
+            "type": "jsonObject",
+            "notStorable": true
+        },
         "users": {
             "type": "linkMultiple",
             "view": "views/fields/assigned-users"
@@ -75,6 +95,12 @@
             "entity": "User",
             "foreign": "tenants",
             "relationName": "tenantUser",
+            "layoutRelationshipsDisabled": true
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
         },
         "contacts": {

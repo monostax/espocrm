@@ -13,18 +13,26 @@ define('global:views/dashlets/sales-pipeline', ['crm:views/dashlets/sales-pipeli
     return Dep.extend({
 
         url: function () {
-            let url = 'Opportunity/action/reportSalesPipelineByOpportunityStage?dateFilter=' + this.getDateFilter();
+            let url = 'Opportunity/action/reportSalesPipelineByOpportunityStage';
+            let dateFilter = this.getDateFilter();
 
-            if (this.getDateFilter() === 'between') {
-                url += '&dateFrom=' + this.getOption('dateFrom') + '&dateTo=' + this.getOption('dateTo');
+            if (dateFilter && dateFilter !== 'none') {
+                url += '?dateFilter=' + dateFilter;
+
+                if (dateFilter === 'between') {
+                    url += '&dateFrom=' + this.getOption('dateFrom') + '&dateTo=' + this.getOption('dateTo');
+                }
             }
 
+            let separator = url.indexOf('?') === -1 ? '?' : '&';
+
             if (this.getOption('teamId')) {
-                url += '&teamId=' + this.getOption('teamId');
+                url += separator + 'teamId=' + this.getOption('teamId');
+                separator = '&';
             }
 
             if (this.getOption('funnelId')) {
-                url += '&funnelId=' + this.getOption('funnelId');
+                url += separator + 'funnelId=' + this.getOption('funnelId');
             }
 
             return url;

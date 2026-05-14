@@ -1,0 +1,106 @@
+{
+    "view": "global:views/dashlets/report-total-count",
+    "aclScope": "Report",
+    "options": {
+        "view": "global:views/dashlets/options/report-total-count",
+        "fields": {
+            "title": {
+                "type": "varchar"
+            },
+            "report": {
+                "type": "link",
+                "entity": "Report",
+                "required": true,
+                "view": "advanced:views/report/fields/dashlet-select"
+            },
+            "totalColumn": {
+                "type": "enum",
+                "options": [],
+                "required": true
+            },
+            "totalLabel": {
+                "type": "varchar"
+            },
+            "countColumn": {
+                "type": "enum",
+                "options": [],
+                "required": true
+            },
+            "countLabel": {
+                "type": "varchar"
+            },
+            "percentageColumn": {
+                "type": "enum",
+                "options": []
+            },
+            "percentageLabel": {
+                "type": "varchar"
+            },
+            "useSiMultiplier": {
+                "type": "bool"
+            },
+            "bindDashboardDateRange": {
+                "type": "bool"
+            },
+            "dashboardDateRangeField": {
+                "type": "enum",
+                "options": []
+            },
+            "showFilterInfo": {
+                "type": "bool"
+            },
+            "autorefreshInterval": {
+                "type": "enumFloat",
+                "options": [
+                    0,
+                    0.5,
+                    1,
+                    2,
+                    5,
+                    10
+                ]
+            }
+        },
+        "defaults": {
+            "autorefreshInterval": 0,
+            "useSiMultiplier": true,
+            "bindDashboardDateRange": false,
+            "showFilterInfo": true
+        },
+        "layout": [
+            {
+                "rows": [
+                    [
+                        {"name": "title"}
+                    ],
+                    [
+                        {"name": "report"},
+                        {"name": "autorefreshInterval"}
+                    ],
+                    [
+                        {"name": "totalColumn"},
+                        {"name": "totalLabel"}
+                    ],
+                    [
+                        {"name": "countColumn"},
+                        {"name": "countLabel"}
+                    ],
+                    [
+                        {"name": "percentageColumn"},
+                        {"name": "percentageLabel"}
+                    ],
+                    [
+                        {"name": "useSiMultiplier"}
+                    ],
+                    [
+                        {"name": "bindDashboardDateRange"},
+                        {"name": "dashboardDateRangeField"}
+                    ],
+                    [
+                        {"name": "showFilterInfo"}
+                    ]
+                ]
+            }
+        ]
+    }
+}

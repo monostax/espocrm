@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "isGloballyShared": "Globally Shared"
+    },
+    "labels": {
+        "Field Type": "Field Type"
+    },
+    "options": {
+        "columnFieldType": {
+            "": "Auto",
+            "currencyConverted": "Currency",
+            "int": "Integer",
+            "float": "Float",
+            "duration": "Duration"
+        }
+    },
+    "tooltips": {
+        "isGloballyShared": "If checked, this report will be available to all users regardless of team assignment. Only administrators can toggle this option."
+    }
+}

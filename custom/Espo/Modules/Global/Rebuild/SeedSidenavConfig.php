@@ -54,21 +54,21 @@ class SeedSidenavConfig implements RebuildAction
                 'id' => 'contact',
                 'name' => 'Pessoas',
                 'order' => 20,
-                'iconClass' => 'fas fa-users',
+                'iconClass' => 'ti ti-address-book',
                 'tabList' => ['Contact'],
             ],
             [
                 'id' => 'opportunity',
                 'name' => 'Oportunidades',
                 'order' => 30,
-                'iconClass' => 'fas fa-briefcase',
+                'iconClass' => 'ti ti-coin-filled',
                 'tabList' => ['Opportunity'],
             ],
             [
                 'id' => 'activities',
                 'name' => 'Atividades',
                 'order' => 40,
-                'iconClass' => 'fas fa-tasks',
+                'iconClass' => 'ti ti-checklist',
                 'tabList' => [
                     (object) [
                         'type' => 'url',
@@ -82,7 +82,7 @@ class SeedSidenavConfig implements RebuildAction
                 'id' => 'agenda',
                 'name' => 'Agenda',
                 'order' => 50,
-                'iconClass' => 'fas fa-calendar',
+                'iconClass' => 'ti ti-calendar',
                 'tabList' => [
                     (object) [
                         'type' => 'url',

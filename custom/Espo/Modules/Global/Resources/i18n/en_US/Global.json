@@ -10,7 +10,21 @@
         "View All": "View All",
         "View all": "View all",
         "Select Entity First": "Select Entity First",
-        "No Relationship": "No Relationship"
+        "No Relationship": "No Relationship",
+        "Date Range": "Date Range",
+        "From": "From",
+        "To": "To",
+        "Apply": "Apply",
+        "Last 7 Days": "Last 7 Days",
+        "Last 30 Days": "Last 30 Days",
+        "This Month": "This Month",
+        "Last Month": "Last Month",
+        "This Year": "This Year",
+        "Last 12 Months": "Last 12 Months",
+        "Tab Label": "Tab Label",
+        "Header Title": "Header Title",
+        "Description": "Description",
+        "Show Date Range Picker": "Show Date Range Picker"
     },
     "fields": {
         "weight": "Weight",
@@ -51,7 +65,8 @@
         "validUnit": "Unit must be valid",
         "errorSavingPreference": "Error saving preference.",
         "relationshipLinkRequired": "Relationship is required when Open Mode is Relationship View",
-        "relationshipLinkInvalid": "The configured relationship is no longer available. Opening record view instead."
+        "relationshipLinkInvalid": "The configured relationship is no longer available. Opening record view instead.",
+        "dashboardDescription": "Overview of your performance and activities"
     },
     "boolFilters": {
         "onlyMy": "Participating",
@@ -96,6 +111,7 @@
     },
     "dashlets": {
         "SalesPipelineByStage": "Sales Pipeline (by Stage)",
-        "OpportunitiesByStageName": "Opportunities by Stage"
+        "OpportunitiesByStageName": "Opportunities by Stage",
+        "ReportTotalCount": "Report Total + Count"
     }
 }

@@ -47,6 +47,18 @@
                 }
             ]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "[Admin]",
+        "rows": [
+            [
+                {
+                    "name": "createdByAIAgent"
+                },
+                false
+            ]
+        ]
     }
 ]
 

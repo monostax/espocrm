@@ -1,3 +1,14 @@
 {
-    "iconClass": "ti ti-list"
+    "iconClass": "ti ti-list",
+    "aclFieldLevel": "yes",
+    "defaultSidePanelFieldLists": {
+        "detail": [
+            "__APPEND__",
+            "isGloballyShared"
+        ],
+        "edit": [
+            "__APPEND__",
+            "isGloballyShared"
+        ]
+    }
 }

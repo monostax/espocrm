@@ -256,7 +256,7 @@ class SeedChatwootAccount implements RebuildAction
             $account,
             'Hatchet AI Agent',
             getenv('HATCHET_CHATWOOT_WEBHOOK_URL') ?: null,
-            ['message_created', 'conversation_updated']
+            ['message_created']
         );
     }
 

@@ -6,11 +6,6 @@
                 {
                     "name": "name"
                 }
-            ],
-            [
-                {
-                    "name": "baseUserTeam"
-                }
             ]
         ]
     }

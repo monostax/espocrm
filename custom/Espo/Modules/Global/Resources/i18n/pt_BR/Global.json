@@ -18,7 +18,8 @@
         "weightDecimal": "Armazenamento decimal de peso. Usa o tipo VARCHAR para armazenamento em banco de dados para manter valores precisos."
     },
     "messages": {
-        "validUnit": "A unidade deve ser válida"
+        "validUnit": "A unidade deve ser válida",
+        "dashboardDescription": "Visão geral do seu desempenho e atividades"
     },
     "boolFilters": {
         "onlyMy": "Atribuído a Mim ou Participando",
@@ -26,7 +27,7 @@
     },
     "scopeNames": {
         "Activities": "Atividades",
-        "Contact": "Pessoa",
+        "Contact": "Contato",
         "FeatureClinicaBasePaciente": "Paciente",
         "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica Nas Nuvens / Paciente",
         "FeatureIntegrationClinicaNasNuvensProfissional": "Clínica Nas Nuvens / Profissional",
@@ -41,7 +42,7 @@
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
-        "Contact": "Pessoas",
+        "Contact": "Contatos",
         "FeatureClinicaBasePaciente": "Pacientes",
         "FeatureIntegrationClinicaNasNuvensPaciente": "Clínica Nas Nuvens / Pacientes",
         "FeatureIntegrationClinicaNasNuvensProfissional": "Clínica Nas Nuvens / Profissionais",
@@ -58,7 +59,21 @@
         "Home": "Dashboard",
         "Create {entityType}": "Cadastrar {entityTypeTranslated}",
         "Create": "Cadastrar",
-        "create": "cadastrar"
+        "create": "cadastrar",
+        "Date Range": "Período",
+        "From": "De",
+        "To": "Até",
+        "Apply": "Aplicar",
+        "Last 7 Days": "Últimos 7 Dias",
+        "Last 30 Days": "Últimos 30 Dias",
+        "This Month": "Este Mês",
+        "Last Month": "Mês Passado",
+        "This Year": "Este Ano",
+        "Last 12 Months": "Últimos 12 Meses",
+        "Tab Label": "Nome da Aba",
+        "Header Title": "Título do Cabeçalho",
+        "Description": "Descrição",
+        "Show Date Range Picker": "Exibir Seletor de Período"
     },
     "navbarTabs": {
         "Conversations": "Chat / Conversas",

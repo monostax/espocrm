@@ -38,7 +38,7 @@
     "options": {
         "type": {
             "": "Nenhum",
-            "Person": "Pessoa",
+            "Person": "Contato",
             "CategoryTree": "Árvore de categorias",
             "Event": "Evento",
             "BasePlus": "Base plus",

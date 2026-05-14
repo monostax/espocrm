@@ -204,6 +204,27 @@ class Data
     }
 
     /**
+     * Field type override declared in `columnsData[column].fieldType`.
+     * Lets a report explicitly mark a complex-expression column as e.g.
+     * `currencyConverted`, `float`, `int`, so dashlets and result views
+     * format it correctly instead of treating it as a plain number.
+     */
+    public function getColumnFieldType(string $column): ?string
+    {
+        if (!isset($this->columnsData->$column)) {
+            return null;
+        }
+
+        $item = $this->columnsData->$column;
+
+        if (!is_object($item)) {
+            return null;
+        }
+
+        return $item->fieldType ?? null;
+    }
+
+    /**
      * @param string[] $aggregatedColumns
      */
     public function withAggregatedColumns(array $aggregatedColumns): self

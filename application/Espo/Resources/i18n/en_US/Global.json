@@ -746,6 +746,7 @@
             "zh_TW":"Traditional Chinese (Taiwan)"
         },
         "dateSearchRanges": {
+            "none": "No Date Filter",
             "on": "On",
             "notOn": "Not On",
             "after": "After",

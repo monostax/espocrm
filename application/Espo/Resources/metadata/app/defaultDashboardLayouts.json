@@ -1,7 +1,7 @@
 {
 	"Standard": [
 	    {
-	    	"name": "My Espo",
+	    	"name": "Dashboard",
 		    "layout": [
                 {
                     "id": "default-activities",

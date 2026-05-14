@@ -1,6 +1,7 @@
 {
     "fields": {
-        "chatwootConversations": { "type": "linkMultiple" }
+        "chatwootConversations": { "type": "linkMultiple" },
+        "createdByAIAgent": { "type": "bool", "default": false }
     },
     "links": {
         "chatwootConversations": {

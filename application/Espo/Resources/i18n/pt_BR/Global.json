@@ -195,7 +195,7 @@
         "Dashlet Options": "Opções do Painel",
         "Full Form": "Formulário Completo",
         "Insert": "Inserir",
-        "Person": "Pessoa",
+        "Person": "Contato",
         "First Name": "Nome",
         "Last Name": "Sobrenome",
         "You": "Você",
@@ -507,6 +507,7 @@
             "Ms.": "Srta."
         },
         "dateSearchRanges": {
+            "none": "Sem Filtro de Data",
             "on": "Em",
             "notOn": "Menos em",
             "after": "Posterior",

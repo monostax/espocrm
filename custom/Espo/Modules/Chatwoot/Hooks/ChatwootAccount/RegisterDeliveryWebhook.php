@@ -22,7 +22,7 @@ use Espo\ORM\EntityManager;
  * 1. WhatsApp Delivery Status — subscribed to `message_updated` and `message_created`,
  *    points to the CRM's DeliveryWebhook controller for campaign tracking.
  *
- * 2. Hatchet AI Agent — subscribed to `message_created` and `conversation_updated`,
+ * 2. Hatchet AI Agent — subscribed to `message_created`,
  *    points to the backend proxy (not Hatchet directly) so the proxy can pre-filter
  *    noise (AI self-loops, echoes, reactions) before forwarding to Hatchet.
  *
@@ -114,7 +114,7 @@ class RegisterDeliveryWebhook
     /**
      * Register Hatchet AI Agent webhook.
      *
-     * Sends `message_created` and `conversation_updated` events to the backend
+     * Sends `message_created` events to the backend
      * proxy endpoint, which pre-filters noise (AI self-loops, echoes, reactions,
      * etc.) before forwarding to Hatchet. This reduces unnecessary workflow runs.
      *
@@ -169,7 +169,7 @@ class RegisterDeliveryWebhook
                 'name' => 'Hatchet AI Agent',
                 'accountId' => $entity->getId(),
                 'url' => $hatchetWebhookUrl,
-                'subscriptions' => ['message_created', 'conversation_updated'],
+                'subscriptions' => ['message_created'],
             ]);
 
             $this->log->info(

@@ -1216,6 +1216,16 @@ class ResultHelper
                 $type = 'int';
             }
 
+            // Explicit override from columnsData[column].fieldType wins over
+            // metadata-based auto-detection. Useful for complex expressions
+            // (e.g. SUM:IF:(..., amountConverted, 0)) where the field cannot
+            // be inferred and dashlets need to know it's a currency.
+            $fieldTypeOverride = $data->getColumnFieldType($item);
+
+            if ($fieldTypeOverride !== null) {
+                $type = $fieldTypeOverride;
+            }
+
             /** @var ?int $decimalPlaces */
             $decimalPlaces = $data->getColumnDecimalPlaces($item) ??
                 $this->metadata

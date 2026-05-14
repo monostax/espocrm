@@ -24,8 +24,8 @@
             },
             "dateFilter": {
                 "type": "enum",
-                "options": ["currentYear", "currentQuarter", "currentMonth", "currentFiscalYear", "currentFiscalQuarter", "ever", "between"],
-                "default": "currentYear",
+                "options": ["none", "currentYear", "currentQuarter", "currentMonth", "currentFiscalYear", "currentFiscalQuarter", "ever", "between"],
+                "default": "none",
                 "translation": "Global.options.dateSearchRanges"
             },
             "team": {
@@ -61,7 +61,7 @@
             }
         ],
         "defaults": {
-            "dateFilter": "currentYear",
+            "dateFilter": "none",
             "funnelId": null,
             "funnelName": null,
             "teamId": null,

@@ -1,4 +1,14 @@
 {
+    "fields": {
+        "applyAcl": {
+            "default": true
+        },
+        "isGloballyShared": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        }
+    },
     "complexExpressionFunctionList": [
         "__APPEND__",
         "LEFT",

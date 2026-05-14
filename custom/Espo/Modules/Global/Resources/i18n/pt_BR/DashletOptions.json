@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "totalColumn": "Coluna Total",
+        "countColumn": "Coluna Contagem",
+        "percentageColumn": "Coluna Percentual",
+        "bindDashboardDateRange": "Vincular ao Período do Dashboard",
+        "dashboardDateRangeField": "Campo de Data do Dashboard",
+        "showFilterInfo": "Mostrar Filtros Aplicados no Painel"
+    },
+    "tooltips": {
+        "bindDashboardDateRange": "Quando ativado, os resultados do painel são filtrados pelo período selecionado no cabeçalho do dashboard.",
+        "dashboardDateRangeField": "Campo de data ou data/hora usado para aplicar o filtro de período do dashboard.",
+        "showFilterInfo": "Quando ativado, exibe o filtro aplicado (ex.: período) ao lado da contagem no card do painel."
+    }
+}

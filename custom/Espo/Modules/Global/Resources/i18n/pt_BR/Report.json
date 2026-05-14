@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "isGloballyShared": "Compartilhado Globalmente"
+    },
+    "labels": {
+        "Field Type": "Tipo do Campo"
+    },
+    "options": {
+        "columnFieldType": {
+            "": "Auto",
+            "currencyConverted": "Moeda",
+            "int": "Inteiro",
+            "float": "Decimal",
+            "duration": "Duração"
+        }
+    },
+    "tooltips": {
+        "isGloballyShared": "Se habilitada, esse relatório ficará disponível para todos os usuários, independente de time. Apenas administradores podem alterar essa opção."
+    }
+}

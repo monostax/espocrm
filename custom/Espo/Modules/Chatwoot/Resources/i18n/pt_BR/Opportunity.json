@@ -1,5 +1,8 @@
 {
     "labels": {
         "Send Message": "Enviar Mensagem"
+    },
+    "fields": {
+        "createdByAIAgent": "Criado por Agente de IA"
     }
 }

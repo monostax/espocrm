@@ -31,6 +31,8 @@
 import View from 'view';
 import GridStack from 'gridstack';
 import _ from 'underscore';
+import moment from 'moment';
+import Datepicker from 'ui/datepicker';
 
 class DashboardView extends View {
 
@@ -47,6 +49,30 @@ class DashboardView extends View {
 
     WIDTH_MULTIPLIER = 3
     HEIGHT_MULTIPLIER = 4
+
+    /**
+     * Internal date format used to persist the dashboard date range.
+     * @private
+     */
+    DATE_RANGE_INTERNAL_FORMAT = 'YYYY-MM-DD'
+
+    /**
+     * @private
+     * @type {{start: string, end: string}|null}
+     */
+    dateRange = null
+
+    /**
+     * @private
+     * @type {import('ui/datepicker').default|null}
+     */
+    dateRangeStartDatepicker = null
+
+    /**
+     * @private
+     * @type {import('ui/datepicker').default|null}
+     */
+    dateRangeEndDatepicker = null
 
     /**
      * @private
@@ -79,17 +105,86 @@ class DashboardView extends View {
         'click .dashboard-buttons [data-action="editTabs"]': function () {
             this.editTabs();
         },
+        /** @this DashboardView */
+        'click .dashboard-date-range[data-action="toggleDateRange"]': function (e) {
+            if ($(e.target).closest('.dashboard-date-range-popover').length) {
+                return;
+            }
+
+            this.toggleDateRangePopover();
+        },
+        /** @this DashboardView */
+        'click .dashboard-date-range-popover': function (e) {
+            e.stopPropagation();
+        },
+        /** @this DashboardView */
+        'click [data-action="selectDatePreset"]': function (e) {
+            e.stopPropagation();
+
+            const preset = $(e.currentTarget).data('preset');
+
+            this.applyDatePreset(preset);
+        },
+        /** @this DashboardView */
+        'click [data-action="applyDateRange"]': function (e) {
+            e.stopPropagation();
+
+            this.applyDateRangeFromInputs();
+        },
+        /** @this DashboardView */
+        'click [data-action="cancelDateRange"]': function (e) {
+            e.stopPropagation();
+
+            this.closeDateRangePopover();
+        },
     }
 
     data() {
+        // displayTitle defaults to true: the controller passes it explicitly,
+        // but `views/home` (the root URL entry point) embeds the dashboard
+        // without options, in which case we still want the title/description.
+        const displayTitle = this.options.displayTitle !== false;
+
+        const currentTabData = this.dashboardLayout && this.dashboardLayout[this.currentTab] || {};
+
+        // Per-tab title falls back to the global "Dashboard" translation.
+        const titleText = displayTitle
+            ? (currentTabData.title || this.translate('Dashboard', 'scopeNames'))
+            : null;
+
+        // Per-tab description falls back to the global default translation
+        // (which itself returns `null` if no translation is configured).
+        const descriptionText = displayTitle
+            ? (currentTabData.description || this.getDashboardDescription())
+            : null;
+
+        // The date range picker is shown unless this tab explicitly opts out.
+        const showDateRange = currentTabData.showDateRange !== false;
+
         return {
-            displayTitle: this.options.displayTitle,
+            displayTitle: displayTitle,
+            titleText: titleText,
+            descriptionText: descriptionText,
+            showDateRange: showDateRange,
+            dateRangeLabel: this.formatDateRangeLabel(this.dateRange),
             currentTab: this.currentTab,
             tabCount: this.dashboardLayout.length,
             dashboardLayout: this.dashboardLayout,
             layoutReadOnly: this.layoutReadOnly,
             hasAdd: !this.layoutReadOnly && !this.getPreferences().get('dashboardLocked'),
         };
+    }
+
+    /**
+     * @protected
+     * @return {string|null}
+     */
+    getDashboardDescription() {
+        const language = this.getLanguage();
+
+        const description = language.translate('dashboardDescription', 'messages');
+
+        return description === 'dashboardDescription' ? null : description;
     }
 
     generateId() {
@@ -100,7 +195,7 @@ class DashboardView extends View {
         if (!this.dashboardLayout) {
             const defaultLayout = [
                 {
-                    "name": "My Espo",
+                    "name": "Dashboard",
                     "layout": [],
                 }
             ];
@@ -163,8 +258,12 @@ class DashboardView extends View {
     }
 
     setup() {
+        this.injectDashboardHeaderStyles();
+
         this.currentTab = this.getStorage().get('state', 'dashboardTab') || 0;
         this.setupCurrentTabLayout();
+
+        this.setupDateRange();
 
         this.cellHeight = this.getThemeManager().getParam('dashboardCellHeight');
 
@@ -197,11 +296,113 @@ class DashboardView extends View {
             }
 
             $(window).off('resize.dashboard');
+            $(document).off('mousedown.dashboard-date-range');
         });
+    }
+
+    /**
+     * Inject the custom dashboard header stylesheet (idempotent).
+     *
+     * @private
+     */
+    injectDashboardHeaderStyles() {
+        if (document.getElementById('dashboard-header-styles')) {
+            return;
+        }
+
+        const link = document.createElement('link');
+        link.id = 'dashboard-header-styles';
+        link.rel = 'stylesheet';
+        link.href = 'client/custom/modules/global/css/dashboard-header.css';
+
+        document.head.appendChild(link);
+    }
+
+    /**
+     * @private
+     */
+    setupDateRange() {
+        const stored = this.getStorage().get('state', 'dashboardDateRange');
+
+        let range = null;
+
+        if (stored && typeof stored === 'object' && stored.start && stored.end) {
+            range = {start: stored.start, end: stored.end, preset: stored.preset || null};
+        }
+
+        if (!range) {
+            const end = moment().format(this.DATE_RANGE_INTERNAL_FORMAT);
+            const start = moment().subtract(1, 'year').format(this.DATE_RANGE_INTERNAL_FORMAT);
+
+            range = {start, end, preset: null};
+        }
+
+        this.dateRange = range;
+    }
+
+    /**
+     * Whether the date range picker is exposed for the current tab.
+     *
+     * @return {boolean}
+     */
+    isDateRangeVisibleForCurrentTab() {
+        const tab = this.dashboardLayout && this.dashboardLayout[this.currentTab];
+
+        return !!tab && tab.showDateRange !== false;
+    }
+
+    /**
+     * Get the currently active dashboard date range.
+     *
+     * The picker can be hidden per tab via the Edit Dashboard modal — in that
+     * case we still keep the stored range, but `getDateRange()` returns
+     * `null` so that bound dashlets stop filtering until the user re-enables
+     * the picker for the active tab.
+     *
+     * @return {{start: string, end: string, preset: string|null}|null}
+     */
+    getDateRange() {
+        if (!this.isDateRangeVisibleForCurrentTab()) {
+            return null;
+        }
+
+        return this.dateRange
+            ? {
+                start: this.dateRange.start,
+                end: this.dateRange.end,
+                preset: this.dateRange.preset || null,
+            }
+            : null;
+    }
+
+    /**
+     * @private
+     * @param {{start: string, end: string}|null} range
+     * @return {string}
+     */
+    formatDateRangeLabel(range) {
+        if (!range || !range.start || !range.end) {
+            return this.translate('Date Range', 'labels');
+        }
+
+        const start = moment(range.start, this.DATE_RANGE_INTERNAL_FORMAT);
+        const end = moment(range.end, this.DATE_RANGE_INTERNAL_FORMAT);
+
+        if (!start.isValid() || !end.isValid()) {
+            return this.translate('Date Range', 'labels');
+        }
+
+        // Use moment's default locale — Espo overrides English month/day
+        // names with the user's language translations, so this produces
+        // localized output (e.g. "Abr 10, 2025" in pt_BR) without us having
+        // to ship moment locale files.
+        return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
     }
 
     afterRender() {
         this.$dashboard = this.$el.find('> .dashlets');
+
+        this.initDateRangePicker();
 
         if (window.innerWidth >= this.screenWidthXs) {
             this.initGridstack();
@@ -211,6 +412,206 @@ class DashboardView extends View {
 
         $(window).off('resize.dashboard');
         $(window).on('resize.dashboard', this.onResize.bind(this));
+    }
+
+    /**
+     * @private
+     */
+    initDateRangePicker() {
+        const $popover = this.$el.find('.dashboard-date-range-popover');
+
+        if (!$popover.length) {
+            return;
+        }
+
+        const range = this.dateRange || {};
+        const format = (this.getDateTime().getDateFormat() || 'YYYY-MM-DD');
+        const weekStart = this.getPreferences().get('weekStart') ||
+            this.getConfig().get('weekStart') || 0;
+
+        const $startInput = $popover.find('.dashboard-date-range-start');
+        const $endInput = $popover.find('.dashboard-date-range-end');
+
+        const startDisplay = range.start
+            ? moment(range.start, this.DATE_RANGE_INTERNAL_FORMAT).format(format)
+            : '';
+
+        const endDisplay = range.end
+            ? moment(range.end, this.DATE_RANGE_INTERNAL_FORMAT).format(format)
+            : '';
+
+        $startInput.val(startDisplay);
+        $endInput.val(endDisplay);
+
+        this.dateRangeStartDatepicker = new Datepicker($startInput.get(0), {
+            format: format,
+            weekStart: weekStart,
+            todayButton: true,
+            date: startDisplay,
+        });
+
+        this.dateRangeEndDatepicker = new Datepicker($endInput.get(0), {
+            format: format,
+            weekStart: weekStart,
+            todayButton: true,
+            date: endDisplay,
+        });
+
+        $(document).off('mousedown.dashboard-date-range');
+        $(document).on('mousedown.dashboard-date-range', e => {
+            const $target = $(e.target);
+
+            if (
+                !$target.closest('.dashboard-date-range').length &&
+                !$target.closest('.datepicker').length
+            ) {
+                this.closeDateRangePopover();
+            }
+        });
+    }
+
+    /**
+     * @private
+     */
+    toggleDateRangePopover() {
+        const $popover = this.$el.find('.dashboard-date-range-popover');
+
+        if (!$popover.length) {
+            return;
+        }
+
+        if ($popover.is(':visible')) {
+            this.closeDateRangePopover();
+
+            return;
+        }
+
+        $popover.removeAttr('hidden').show();
+
+        this.$el.find('.dashboard-date-range').addClass('open');
+    }
+
+    /**
+     * @private
+     */
+    closeDateRangePopover() {
+        const $popover = this.$el.find('.dashboard-date-range-popover');
+
+        if (!$popover.length) {
+            return;
+        }
+
+        $popover.hide();
+        this.$el.find('.dashboard-date-range').removeClass('open');
+    }
+
+    /**
+     * @private
+     */
+    applyDateRangeFromInputs() {
+        const format = (this.getDateTime().getDateFormat() || 'YYYY-MM-DD');
+
+        const $startInput = this.$el.find('.dashboard-date-range-start');
+        const $endInput = this.$el.find('.dashboard-date-range-end');
+
+        const startRaw = $startInput.val();
+        const endRaw = $endInput.val();
+
+        const start = startRaw ? moment(startRaw, format) : null;
+        const end = endRaw ? moment(endRaw, format) : null;
+
+        if (!start || !start.isValid() || !end || !end.isValid()) {
+            Espo.Ui.warning(this.translate('Date Range', 'labels'));
+
+            return;
+        }
+
+        if (end.isBefore(start)) {
+            Espo.Ui.warning(this.translate('Date Range', 'labels'));
+
+            return;
+        }
+
+        const range = {
+            start: start.format(this.DATE_RANGE_INTERNAL_FORMAT),
+            end: end.format(this.DATE_RANGE_INTERNAL_FORMAT),
+            preset: null,
+        };
+
+        this.setDateRange(range);
+        this.closeDateRangePopover();
+    }
+
+    /**
+     * @private
+     * @param {string} preset
+     */
+    applyDatePreset(preset) {
+        const today = moment().startOf('day');
+
+        let start = null;
+        let end = today.clone();
+
+        switch (preset) {
+            case 'last7Days':
+                start = today.clone().subtract(6, 'days');
+                break;
+            case 'last30Days':
+                start = today.clone().subtract(29, 'days');
+                break;
+            case 'thisMonth':
+                start = today.clone().startOf('month');
+                end = today.clone().endOf('month');
+                break;
+            case 'lastMonth':
+                start = today.clone().subtract(1, 'month').startOf('month');
+                end = today.clone().subtract(1, 'month').endOf('month');
+                break;
+            case 'thisYear':
+                start = today.clone().startOf('year');
+                end = today.clone().endOf('year');
+                break;
+            case 'last12Months':
+                start = today.clone().subtract(1, 'year');
+                break;
+            default:
+                return;
+        }
+
+        const range = {
+            start: start.format(this.DATE_RANGE_INTERNAL_FORMAT),
+            end: end.format(this.DATE_RANGE_INTERNAL_FORMAT),
+            // Remember which preset was selected so downstream consumers
+            // (e.g. dashlets) can render a friendly localized label like
+            // "Últimos 7 Dias" instead of the raw date range.
+            preset: preset,
+        };
+
+        this.setDateRange(range);
+        this.closeDateRangePopover();
+    }
+
+    /**
+     * @private
+     * @param {{start: string, end: string}} range
+     */
+    setDateRange(range) {
+        this.dateRange = range;
+
+        this.getStorage().set('state', 'dashboardDateRange', range);
+
+        this.$el.find('.dashboard-date-range-label').text(this.formatDateRangeLabel(range));
+
+        const format = (this.getDateTime().getDateFormat() || 'YYYY-MM-DD');
+
+        this.$el.find('.dashboard-date-range-start').val(
+            moment(range.start, this.DATE_RANGE_INTERNAL_FORMAT).format(format)
+        );
+        this.$el.find('.dashboard-date-range-end').val(
+            moment(range.end, this.DATE_RANGE_INTERNAL_FORMAT).format(format)
+        );
+
+        this.trigger('dashboard-date-range-change', range);
     }
 
     onResize() {
@@ -711,9 +1112,18 @@ class DashboardView extends View {
 
                 const dashboardLayout = [];
 
+                const tabTitles = data.tabTitles || {};
+                const tabDescriptions = data.tabDescriptions || {};
+                const tabShowDateRange = data.tabShowDateRange || {};
+
                 data.dashboardTabList.forEach(name => {
                     let layout = [];
                     let id = null;
+                    // Existing per-tab values keyed by the *pre-rename* name
+                    // so we can preserve them across a rename.
+                    let title = tabTitles[name] || '';
+                    let description = tabDescriptions[name] || '';
+                    let showDateRange = tabShowDateRange[name];
 
                     this.dashboardLayout.forEach(d => {
                         if (d.name === name) {
@@ -733,6 +1143,21 @@ class DashboardView extends View {
 
                     if (id) {
                         o.id = id;
+                    }
+
+                    if (title) {
+                        o.title = title;
+                    }
+
+                    if (description) {
+                        o.description = description;
+                    }
+
+                    // Only persist the toggle when it was explicitly set to
+                    // false — omitting it keeps the layout compact and lets
+                    // future versions change the default safely.
+                    if (showDateRange === false) {
+                        o.showDateRange = false;
                     }
 
                     dashboardLayout.push(o);
