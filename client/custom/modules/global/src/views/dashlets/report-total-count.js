@@ -131,6 +131,13 @@ define('global:views/dashlets/report-total-count', [
         /**
          * Append the dashboard date range filter to the existing `where`
          * array when the dashlet is configured to bind to it.
+         *
+         * Sets `dateTime: true` (with timezone) when the target field is a
+         * datetime / datetimeOptional field, and `date: true` when it's a
+         * date field. Without these flags the backend would skip the
+         * `DateTimeItemTransformer` and MySQL would coerce the end-of-range
+         * date (e.g. `'2026-05-14'`) to `'2026-05-14 00:00:00'`, silently
+         * excluding records created later that same day.
          */
         applyDashboardDateRange: function (where) {
             if (!this.getOption('bindDashboardDateRange')) {
@@ -149,13 +156,30 @@ define('global:views/dashlets/report-total-count', [
                 return where;
             }
 
-            where = where || [];
+            const entityType = this.getOption('entityType');
 
-            where.push({
+            const fieldType = entityType
+                ? this.getMetadata().get(['entityDefs', entityType, 'fields', field, 'type'])
+                : null;
+
+            const isDateTime = fieldType === 'datetime' || fieldType === 'datetimeOptional';
+            const isDate = fieldType === 'date';
+
+            const item = {
                 type: 'between',
                 attribute: field,
                 value: [range.start, range.end],
-            });
+            };
+
+            if (isDateTime) {
+                item.dateTime = true;
+                item.timeZone = this.getDateTime().getTimeZone();
+            } else if (isDate) {
+                item.date = true;
+            }
+
+            where = where || [];
+            where.push(item);
 
             return where;
         },
@@ -575,8 +599,10 @@ define('global:views/dashlets/report-total-count', [
                 ? this.translate(field, 'fields', entityType)
                 : field;
 
-            const dateRangeText = dateTime.toDisplayDate(range.start) + ' – ' +
-                dateTime.toDisplayDate(range.end);
+            const dateRangeText = dateTime.toDisplayDate(range.start) === dateTime.toDisplayDate(range.end)
+                ? dateTime.toDisplayDate(range.start)
+                : dateTime.toDisplayDate(range.start) + ' – ' +
+                    dateTime.toDisplayDate(range.end);
 
             // Prefer the friendly preset label ("Últimos 7 Dias", "Este Mês"…)
             // when the user picked a preset. The mapping mirrors the buttons
@@ -603,6 +629,7 @@ define('global:views/dashlets/report-total-count', [
             }
 
             const map = {
+                today: 'Today',
                 last7Days: 'Last 7 Days',
                 last30Days: 'Last 30 Days',
                 thisMonth: 'This Month',

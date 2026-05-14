@@ -21,6 +21,7 @@
                 <span class="dashboard-date-range-label">{{dateRangeLabel}}</span>
                 <div class="dashboard-date-range-popover" hidden>
                     <div class="dashboard-date-range-presets">
+                        <button type="button" class="btn btn-text btn-block" data-action="selectDatePreset" data-preset="today">{{translate 'Today' category='labels' scope='Global'}}</button>
                         <button type="button" class="btn btn-text btn-block" data-action="selectDatePreset" data-preset="last7Days">{{translate 'Last 7 Days' category='labels' scope='Global'}}</button>
                         <button type="button" class="btn btn-text btn-block" data-action="selectDatePreset" data-preset="last30Days">{{translate 'Last 30 Days' category='labels' scope='Global'}}</button>
                         <button type="button" class="btn btn-text btn-block" data-action="selectDatePreset" data-preset="thisMonth">{{translate 'This Month' category='labels' scope='Global'}}</button>

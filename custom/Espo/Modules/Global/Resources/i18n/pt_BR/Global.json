@@ -103,7 +103,9 @@
         "Open": "Abertas",
         "Won": "Ganhas",
         "Lost": "Perdidas",
-        "By Funnel": "Por Funil"
+        "By Funnel": "Por Funil",
+        "By Status": "Por Status",
+        "Dashboard": "Dashboard"
     },
     "actions": {
         "create": "Cadastrar"

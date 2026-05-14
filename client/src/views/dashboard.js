@@ -216,6 +216,8 @@ class DashboardView extends View {
             ) {
                 this.dashboardLayout = defaultLayout;
             }
+
+            this.ensureTabSlugs(this.dashboardLayout);
         }
 
         const dashboardLayout = this.dashboardLayout || [];
@@ -247,6 +249,7 @@ class DashboardView extends View {
 
         this.currentTab = tab;
         this.storeCurrentTab(tab);
+        this.updateUrlForTab(tab);
 
         this.setupCurrentTabLayout();
 
@@ -257,10 +260,151 @@ class DashboardView extends View {
         this.reRender();
     }
 
+    /**
+     * Reflect the active tab in the URL without triggering navigation.
+     * Uses the tab's `slug` so links work across users (a slug derived from
+     * the tab name is stable per template/deployment); falls back to the
+     * numeric index for legacy tabs that have no slug yet.
+     *
+     * @param {number} tab
+     * @private
+     */
+    updateUrlForTab(tab) {
+        const router = this.getRouter();
+
+        if (!router) {
+            return;
+        }
+
+        const entry = (this.dashboardLayout || [])[tab];
+        const key = entry && entry.slug ? entry.slug : String(tab);
+
+        router.navigate(`Dashboard/index/tab=${encodeURIComponent(key)}`, {trigger: false});
+    }
+
+    /**
+     * Resolve a URL `tab` parameter to an index in `this.dashboardLayout`.
+     * Tries, in order: slug match, legacy `id` match, numeric index, and
+     * finally a name-based slug match (so a link generated against one
+     * user's layout still resolves on another user's layout when names line
+     * up). Returns `null` when nothing matches.
+     *
+     * @param {string|number|null|undefined} value
+     * @return {number|null}
+     * @private
+     */
+    resolveTabFromUrl(value) {
+        if (value == null || value === '') {
+            return null;
+        }
+
+        const layout = this.dashboardLayout || [];
+        const key = String(value).toLowerCase();
+
+        const bySlug = layout.findIndex(d => d && d.slug && String(d.slug).toLowerCase() === key);
+
+        if (bySlug !== -1) {
+            return bySlug;
+        }
+
+        const byId = layout.findIndex(d => d && d.id != null && String(d.id) === String(value));
+
+        if (byId !== -1) {
+            return byId;
+        }
+
+        if (/^\d+$/.test(String(value))) {
+            const idx = parseInt(String(value));
+
+            if (idx >= 0 && idx < layout.length) {
+                return idx;
+            }
+        }
+
+        const byDerivedSlug = layout.findIndex(d => d && this.slugifyTabName(d.name) === key);
+
+        if (byDerivedSlug !== -1) {
+            return byDerivedSlug;
+        }
+
+        return null;
+    }
+
+    /**
+     * Derive a URL-safe slug from a tab `name`. Stable, ASCII-only, lowercase.
+     * Used both to assign new tab slugs and to match URL params against tabs
+     * that don't yet have a stored slug.
+     *
+     * @param {string} name
+     * @return {string}
+     * @private
+     */
+    slugifyTabName(name) {
+        return String(name || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 50) || 'tab';
+    }
+
+    /**
+     * Lazily assign a `slug` to any tab missing one, de-duplicating against
+     * existing slugs. The mutation is in-memory; it is persisted on the next
+     * `saveLayout()` call.
+     *
+     * @param {Array<Object>} layout
+     * @private
+     */
+    ensureTabSlugs(layout) {
+        if (!Array.isArray(layout)) {
+            return;
+        }
+
+        const used = new Set(
+            layout
+                .filter(d => d && d.slug)
+                .map(d => String(d.slug).toLowerCase())
+        );
+
+        layout.forEach(entry => {
+            if (!entry || entry.slug) {
+                return;
+            }
+
+            const base = this.slugifyTabName(entry.name);
+            let candidate = base;
+            let n = 2;
+
+            while (used.has(candidate)) {
+                candidate = `${base}-${n++}`;
+            }
+
+            entry.slug = candidate;
+            used.add(candidate);
+        });
+    }
+
     setup() {
         this.injectDashboardHeaderStyles();
 
-        this.currentTab = this.getStorage().get('state', 'dashboardTab') || 0;
+        // We need the layout populated before resolving a URL-supplied tab id
+        // to an index, so build the layout first and then pick currentTab.
+        this.currentTab = 0;
+        this.setupCurrentTabLayout();
+
+        const fromUrl = this.resolveTabFromUrl(this.options.tab);
+
+        if (fromUrl != null) {
+            this.currentTab = fromUrl;
+        } else {
+            const stored = this.getStorage().get('state', 'dashboardTab');
+
+            this.currentTab = Number.isInteger(stored) ? stored : 0;
+        }
+
+        // Re-run with the resolved tab so `layoutData` etc. reflect it.
         this.setupCurrentTabLayout();
 
         this.setupDateRange();
@@ -396,6 +540,13 @@ class DashboardView extends View {
         // names with the user's language translations, so this produces
         // localized output (e.g. "Abr 10, 2025" in pt_BR) without us having
         // to ship moment locale files.
+        // Collapse identical start/end (e.g. the "Today" preset) into a
+        // single date so the header shows "Mai 14, 2026" instead of the
+        // duplicated "Mai 14, 2026 - Mai 14, 2026".
+        if (start.isSame(end, 'day')) {
+            return start.format('MMM D, YYYY');
+        }
+
         return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
     }
 
@@ -426,8 +577,12 @@ class DashboardView extends View {
 
         const range = this.dateRange || {};
         const format = (this.getDateTime().getDateFormat() || 'YYYY-MM-DD');
-        const weekStart = this.getPreferences().get('weekStart') ||
-            this.getConfig().get('weekStart') || 0;
+        // `DateTime.weekStart` already resolves the "use system default"
+        // sentinel (`-1`) from preferences down to the configured fallback.
+        // Reading the raw preference here previously surfaced `-1` to the
+        // datepicker, which then indexed `daysMin[-1 % 7] = undefined` and
+        // rendered a stray `undefined` cell in the weekday header.
+        const weekStart = this.getDateTime().weekStart;
 
         const $startInput = $popover.find('.dashboard-date-range-start');
         const $endInput = $popover.find('.dashboard-date-range-end');
@@ -443,17 +598,20 @@ class DashboardView extends View {
         $startInput.val(startDisplay);
         $endInput.val(endDisplay);
 
+        // `'linked'` makes bootstrap-datepicker actually pick today's date
+        // when the footer "Today" cell is clicked (and close, thanks to
+        // `autoclose: true`). With `true` it only navigates the view.
         this.dateRangeStartDatepicker = new Datepicker($startInput.get(0), {
             format: format,
             weekStart: weekStart,
-            todayButton: true,
+            todayButton: 'linked',
             date: startDisplay,
         });
 
         this.dateRangeEndDatepicker = new Datepicker($endInput.get(0), {
             format: format,
             weekStart: weekStart,
-            todayButton: true,
+            todayButton: 'linked',
             date: endDisplay,
         });
 
@@ -553,6 +711,10 @@ class DashboardView extends View {
         let end = today.clone();
 
         switch (preset) {
+            case 'today':
+                start = today.clone();
+                end = today.clone();
+                break;
             case 'last7Days':
                 start = today.clone().subtract(6, 'days');
                 break;
@@ -1119,6 +1281,7 @@ class DashboardView extends View {
                 data.dashboardTabList.forEach(name => {
                     let layout = [];
                     let id = null;
+                    let slug = null;
                     // Existing per-tab values keyed by the *pre-rename* name
                     // so we can preserve them across a rename.
                     let title = tabTitles[name] || '';
@@ -1129,6 +1292,7 @@ class DashboardView extends View {
                         if (d.name === name) {
                             layout = d.layout;
                             id = d.id;
+                            slug = d.slug;
                         }
                     });
 
@@ -1143,6 +1307,15 @@ class DashboardView extends View {
 
                     if (id) {
                         o.id = id;
+                    }
+
+                    // Preserve a stable slug across renames so previously
+                    // shared URLs keep resolving. Brand-new tabs get a slug
+                    // assigned lazily on the next setupCurrentTabLayout() via
+                    // ensureTabSlugs(); we don't generate here to keep the
+                    // de-duplication in one place.
+                    if (slug) {
+                        o.slug = slug;
                     }
 
                     if (title) {

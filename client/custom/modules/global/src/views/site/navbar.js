@@ -13,6 +13,7 @@ import $ from "jquery";
 import TabsHelper from "global:helpers/site/tabs";
 
 const DEFAULT_TABLIST_ID = "__default_tablist__";
+const HIDDEN_NAVBAR = {id: "__none__", hidden: true};
 
 /**
  * Custom navbar view that:
@@ -88,9 +89,13 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * @return {(Object|string)[]}
      */
     getTabList() {
-        if (this.hasNavbarConfigSystem()) {
-            const activeConfig = this.getActiveNavbarConfig();
+        const activeConfig = this.getActiveNavbarConfig();
 
+        if (activeConfig && activeConfig.hidden) {
+            return [];
+        }
+
+        if (this.hasNavbarConfigSystem()) {
             if (activeConfig) {
                 if (activeConfig.isDefaultTabList) {
                     return this.filterConversasItems(this.getLegacyTabList());
@@ -161,6 +166,13 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * @return {Object|null}
      */
     getActiveNavbarConfig() {
+        // 0. ?navbar=none hides the navbar entirely (works even without configs)
+        const urlNavbarId = this.getUrlNavbarOverride();
+
+        if (urlNavbarId === "none") {
+            return HIDDEN_NAVBAR;
+        }
+
         const configList = this.getNavbarConfigList();
 
         if (!configList || configList.length === 0) {
@@ -168,8 +180,6 @@ class CustomNavbarSiteView extends NavbarSiteView {
         }
 
         // 1. Check URL query parameter first (highest priority)
-        const urlNavbarId = this.getUrlNavbarOverride();
-
         if (urlNavbarId !== null) {
             const found = configList.find((c) => c.id === urlNavbarId);
 
@@ -248,6 +258,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
                 return;
             }
 
+            if (url.searchParams.get("navbar") === "none") {
+                return;
+            }
+
             url.searchParams.delete("navbar");
 
             window.history.replaceState(
@@ -301,6 +315,35 @@ class CustomNavbarSiteView extends NavbarSiteView {
      */
     afterRender() {
         super.afterRender();
+
+        const activeConfig = this.getActiveNavbarConfig();
+
+        const navbarInner = this.element.querySelector(".navbar.navbar-inverse");
+
+        if (activeConfig && activeConfig.hidden) {
+            // Collapse the inner navbar to zero width instead of hiding it,
+            // so the header (logo + toggle) can still be accessed if needed
+            // and layout flow stays intact.
+            if (navbarInner) {
+                navbarInner.style.width = "0";
+                navbarInner.style.overflow = "hidden";
+            }
+
+            // `super.afterRender()` adds `has-navbar` to body, which triggers
+            // `body[data-navbar=side].has-navbar > .content { padding-left: ... }`
+            // and leaves a gap where the hidden navbar used to be. Drop it.
+            document.body.classList.remove("has-navbar");
+
+            return;
+        }
+
+        // Restore the inner navbar in case a previous render collapsed it
+        // (e.g. switching from `?navbar=none` to `?navbar=<id>` via PARENT_NAVIGATE).
+        // `super.afterRender()` already re-adds the `has-navbar` body class.
+        if (navbarInner) {
+            navbarInner.style.width = "";
+            navbarInner.style.overflow = "";
+        }
 
         this.injectMobileDrawerStyles();
         this.injectNavbarConfigSelectorStyles();

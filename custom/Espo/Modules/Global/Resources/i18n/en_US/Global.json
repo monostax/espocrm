@@ -105,7 +105,9 @@
         "Open": "Open",
         "Won": "Won",
         "Lost": "Lost",
-        "By Funnel": "By Funnel"
+        "By Funnel": "By Funnel",
+        "By Status": "By Status",
+        "Dashboard": "Dashboard"
     },
     "navbarConfig": {
         "switchView": "Switch View",

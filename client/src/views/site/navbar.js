@@ -1060,11 +1060,17 @@ class NavbarSiteView extends View {
 
         const url = this.getRouter().getCurrentUrl();
 
-        this.urlList
-            .filter(item => url.startsWith(item.url))
-            .forEach(item => {
-                $tabs.find(`li[data-name="${item.name}"]`).addClass('active');
-            });
+        const best = this.urlList
+            .filter(item => {
+                return url === item.url ||
+                    url.startsWith(item.url + '/') ||
+                    url.startsWith(item.url + '?');
+            })
+            .sort((a, b) => b.url.length - a.url.length)[0];
+
+        if (best) {
+            $tabs.find(`li[data-name="${best.name}"]`).addClass('active');
+        }
     }
 
     /**

@@ -133,7 +133,10 @@ export default class extends ArrayFieldView {
         nameInput.dataset.name = 'translatedValue';
         nameInput.dataset.value = value;
         nameInput.className = 'role form-control input-sm';
-        nameInput.value = translatedValue;
+        // `setAttribute('value', ...)` (not `.value = ...`) is required so the
+        // initial value survives the outerHTML → parse round-trip that
+        // `views/fields/array` performs when inserting the row markup.
+        nameInput.setAttribute('value', translatedValue);
         nameInput.placeholder = this.translate('Tab Label', 'labels', 'Global');
         nameWrap.append(nameInput);
         topRow.append(nameWrap);
@@ -208,7 +211,11 @@ export default class extends ArrayFieldView {
         input.dataset.name = dataName;
         input.dataset.value = value;
         input.placeholder = placeholder || '';
-        input.value = inputValue || '';
+        // Use the attribute (not the IDL `value` property) so the pre-populated
+        // value survives the outerHTML serialization done by the parent array
+        // field. `.value = ...` would update the live element but be lost when
+        // the markup is re-parsed for insertion into the list.
+        input.setAttribute('value', inputValue || '');
         row.append(input);
 
         return row;
@@ -232,7 +239,10 @@ export default class extends ArrayFieldView {
         textarea.dataset.value = value;
         textarea.placeholder = placeholder || '';
         textarea.rows = 2;
-        textarea.value = inputValue || '';
+        // For <textarea> the *content* (text between the tags) is what
+        // serializes through outerHTML — `.value = ...` updates the IDL
+        // property but is dropped on re-parse.
+        textarea.textContent = inputValue || '';
         row.append(textarea);
 
         return row;

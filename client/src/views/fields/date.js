@@ -92,6 +92,7 @@ class DateFieldView extends BaseFieldView {
      * @type {string[]}
      */
     searchTypeList = [
+        'any',
         'lastSevenDays',
         'ever',
         'isEmpty',
@@ -539,6 +540,15 @@ class DateFieldView extends BaseFieldView {
         if (type === 'isEmpty') {
             return {
                 type: 'isNull',
+                data: {
+                    type: type,
+                },
+            };
+        }
+
+        if (type === 'any') {
+            return {
+                type: 'any',
                 data: {
                     type: type,
                 },

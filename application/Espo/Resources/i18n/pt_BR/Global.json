@@ -507,6 +507,7 @@
             "Ms.": "Srta."
         },
         "dateSearchRanges": {
+            "any": "Qualquer",
             "none": "Sem Filtro de Data",
             "on": "Em",
             "notOn": "Menos em",

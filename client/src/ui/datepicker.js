@@ -59,7 +59,7 @@ class Datepicker {
      * @param {{
      *     format: string,
      *     weekStart: number,
-     *     todayButton?: boolean,
+     *     todayButton?: boolean|'linked',
      *     date?: string,
      *     startDate?: string|undefined,
      *     onChange?: function(),

@@ -73,6 +73,18 @@ class SeedSidenavConfig implements RebuildAction
                 'tabList' => [
                     (object) [
                         'type' => 'url',
+                        'text' => '$Dashboard',
+                        'url' => '#Dashboard/index/tab=oportunidades',
+                        'iconClass' => 'ti ti-layout-dashboard',
+                        'id' => 'opportunity-dashboard',
+                    ],
+                    (object) [
+                        'type' => 'divider',
+                        'text' => '$By Status',
+                        'id' => 'opportunity-by-status',
+                    ],
+                    (object) [
+                        'type' => 'url',
                         'text' => '$All',
                         'url' => '#Opportunity/list',
                         'iconClass' => 'ti ti-list',

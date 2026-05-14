@@ -33,9 +33,13 @@ class DashboardController extends Controller {
     defaultAction = 'index'
 
     // noinspection JSUnusedGlobalSymbols
-    actionIndex() {
+    actionIndex(options) {
+        const tabRaw = options && options.tab;
+        const tab = tabRaw != null && tabRaw !== '' ? String(tabRaw) : null;
+
         this.main('views/dashboard', {
             displayTitle: true,
+            tab: tab,
         }, view => {
             view.render();
         });

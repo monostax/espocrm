@@ -256,16 +256,27 @@ export default class SettingsDashboardLayoutFieldView extends BaseFieldView {
             this.listenToOnce(view, 'after:save', data => {
                 view.close();
 
+                const tabTitles = data.tabTitles || {};
+                const tabDescriptions = data.tabDescriptions || {};
+                const tabShowDateRange = data.tabShowDateRange || {};
+
                 const dashboardLayout = [];
 
                 data.dashboardTabList.forEach(name => {
                     let layout = [];
                     let id = this.generateId();
+                    let slug = null;
+                    // Per-tab metadata keyed by the *pre-rename* name so values
+                    // survive a rename.
+                    const title = tabTitles[name] || '';
+                    const description = tabDescriptions[name] || '';
+                    const showDateRange = tabShowDateRange[name];
 
                     this.dashboardLayout.forEach(d => {
                         if (d.name === name) {
                             layout = d.layout;
                             id = d.id;
+                            slug = d.slug;
                         }
                     });
 
@@ -273,11 +284,34 @@ export default class SettingsDashboardLayoutFieldView extends BaseFieldView {
                         name = data.renameMap[name];
                     }
 
-                    dashboardLayout.push({
+                    const o = {
                         name: name,
                         layout: layout,
                         id: id,
-                    });
+                    };
+
+                    // Preserve a stable slug if the tab already had one. New
+                    // tabs get a slug assigned when the dashboard view loads
+                    // the layout (ensureTabSlugs()), or you can pre-seed
+                    // here if you want admin-set slugs to be visible
+                    // immediately in the URL.
+                    if (slug) {
+                        o.slug = slug;
+                    }
+
+                    if (title) {
+                        o.title = title;
+                    }
+
+                    if (description) {
+                        o.description = description;
+                    }
+
+                    if (showDateRange === false) {
+                        o.showDateRange = false;
+                    }
+
+                    dashboardLayout.push(o);
                 });
 
                 this.dashboardLayout = dashboardLayout;

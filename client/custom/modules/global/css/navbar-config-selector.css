@@ -3,6 +3,10 @@
     border-bottom: 1px solid var(--navbar-inverse-border, rgba(255, 255, 255, 0.1));
 }
 
+.navbar-config-selector > .dropdown {
+    position: unset;
+}
+
 .navbar-config-selector-toggle {
     display: flex;
     align-items: center;
