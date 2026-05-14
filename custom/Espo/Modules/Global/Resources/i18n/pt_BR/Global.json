@@ -90,7 +90,11 @@
         "Calendar": "Agenda",
         "Activities": "Atividades",
         "Users": "Usuários",
-        "Outros": "Outros"
+        "Outros": "Outros",
+        "Open": "Abertas",
+        "Won": "Ganhas",
+        "Lost": "Perdidas",
+        "By Funnel": "Por Funil"
     },
     "actions": {
         "create": "Cadastrar"

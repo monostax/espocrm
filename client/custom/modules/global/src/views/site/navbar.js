@@ -316,6 +316,13 @@ class CustomNavbarSiteView extends NavbarSiteView {
             if (this.isMobileDrawerOpen) {
                 this.closeMobileDrawer();
             }
+
+            // Track last visited route per config
+            const activeConfig = this.getActiveNavbarConfig();
+
+            if (activeConfig && !this._switchingConfig) {
+                this._saveConfigRoute(activeConfig.id, this.getRouter().getCurrentUrl());
+            }
         });
     }
 
@@ -417,6 +424,8 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
     /**
      * Switch the active navbar config and persist to preferences.
+     * Saves the current route for the outgoing config and navigates to
+     * the saved route (or first tab item) for the incoming config.
      * @param {string} configId
      */
     async switchNavbarConfig(configId) {
@@ -429,6 +438,14 @@ class CustomNavbarSiteView extends NavbarSiteView {
         Espo.Ui.notify(" ... ");
 
         try {
+            const currentConfig = this.getActiveNavbarConfig();
+            const currentConfigId = currentConfig ? currentConfig.id : null;
+
+            // Save current route for the outgoing config
+            if (currentConfigId) {
+                this._saveConfigRoute(currentConfigId, this.getRouter().getCurrentUrl());
+            }
+
             await Espo.Ajax.putRequest("Preferences/" + this.getUser().id, {
                 activeNavbarConfigId: configId,
             });
@@ -439,6 +456,14 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
             this.setupTabDefsList();
             this.reRender();
+
+            // Navigate to saved route or first tab item for the incoming config
+            const targetUrl = this._getConfigRoute(configId);
+
+            if (targetUrl) {
+                this.getRouter().navigate(targetUrl, {trigger: false});
+                this.getRouter().dispatch();
+            }
 
             Espo.Ui.notify(false);
         } catch (e) {
@@ -453,6 +478,69 @@ class CustomNavbarSiteView extends NavbarSiteView {
         } finally {
             this._switchingConfig = false;
         }
+    }
+
+    /**
+     * Get the saved route for a config, or the first navigable tab item's URL.
+     * @private
+     * @param {string} configId
+     * @return {string|null}
+     */
+    _getConfigRoute(configId) {
+        // 1. Check saved routes in preferences
+        const savedRoutes = this.getPreferences().get("sidenavConfigLastRoutes") || {};
+
+        if (savedRoutes[configId]) {
+            return savedRoutes[configId];
+        }
+
+        // 2. Fall back to first navigable tab item
+        const configList = this.getNavbarConfigList();
+        const config = configList.find((c) => c.id === configId);
+
+        if (!config) {
+            return null;
+        }
+
+        const tabList = config.isDefaultTabList
+            ? this.getLegacyTabList()
+            : (config.tabList || []);
+
+        for (const item of tabList) {
+            if (typeof item === "string") {
+                return "#" + item;
+            }
+
+            if (item && typeof item === "object" && item.type === "url" && item.url) {
+                return item.url;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Save a route for a config to user preferences.
+     * @private
+     * @param {string} configId
+     * @param {string} url
+     */
+    _saveConfigRoute(configId, url) {
+        if (!configId || !url) {
+            return;
+        }
+
+        const savedRoutes = this.getPreferences().get("sidenavConfigLastRoutes") || {};
+
+        savedRoutes[configId] = url;
+
+        this.getPreferences().set("sidenavConfigLastRoutes", savedRoutes);
+
+        Espo.Ajax.putRequest("Preferences/" + this.getUser().id, {
+            sidenavConfigLastRoutes: savedRoutes,
+        }).catch((e) => {
+            console.warn("Failed to save sidenav route preference:", e);
+        });
     }
 
     prepareTabItemDefs(params, tab, i, vars) {

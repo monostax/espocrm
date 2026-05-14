@@ -2,10 +2,10 @@
     <div class="row">
         <div class="col-sm-4 dashboard-header-titles">
             {{#if titleText}}
-            <h3 class="dashboard-title">{{titleText}}</h3>
+            <h3 class="dashboard-title" title="{{titleText}}">{{titleText}}</h3>
             {{/if}}
-            {{#if descriptionText}}
-            <div class="text-muted dashboard-description">{{descriptionText}}</div>
+            {{#if displayTitle}}
+            <div class="text-muted dashboard-description" title="{{descriptionText}}">{{descriptionText}}</div>
             {{/if}}
         </div>
         <div class="col-sm-8 clearfix dashboard-header-controls">

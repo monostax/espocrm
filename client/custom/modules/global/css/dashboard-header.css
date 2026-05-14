@@ -29,11 +29,29 @@
     line-height: 1.2;
     font-size: var(--22px);
     font-weight: 400;
+    /* Keep the title to a single line so the header height stays stable
+     * regardless of label length. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dashboard-header .dashboard-description {
     font-size: 13px;
     line-height: 1.3;
+    /* Reserve a fixed two-line slot so the header height never jumps when
+     * the description is 1, 2 or 3+ lines long. Longer text is clipped
+     * with an ellipsis; the full text is exposed via the `title` attribute
+     * set on the element by the dashboard view. */
+    min-height: calc(13px * 1.3 * 2);
+    max-height: calc(13px * 1.3 * 2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    text-overflow: ellipsis;
+    word-break: break-word;
 }
 
 .dashboard-header .dashboard-header-controls {

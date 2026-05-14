@@ -100,7 +100,12 @@
     },
     "navbarTabs": {
         "Lists": "Lists",
-        "Outros": "Other"
+        "Outros": "Other",
+        "All": "All",
+        "Open": "Open",
+        "Won": "Won",
+        "Lost": "Lost",
+        "By Funnel": "By Funnel"
     },
     "navbarConfig": {
         "switchView": "Switch View",

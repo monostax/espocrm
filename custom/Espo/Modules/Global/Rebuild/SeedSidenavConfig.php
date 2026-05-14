@@ -52,24 +52,89 @@ class SeedSidenavConfig implements RebuildAction
         $configs = [
             [
                 'id' => 'contact',
-                'name' => 'Pessoas',
+                'name' => '$Contact',
                 'order' => 20,
                 'iconClass' => 'ti ti-address-book',
-                'tabList' => ['Contact'],
+                'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$All',
+                        'url' => '#Contact/list',
+                        'iconClass' => 'ti ti-list',
+                        'id' => 'contact-all',
+                    ],
+                ],
             ],
             [
                 'id' => 'opportunity',
-                'name' => 'Oportunidades',
+                'name' => '$Opportunity',
                 'order' => 30,
                 'iconClass' => 'ti ti-coin-filled',
-                'tabList' => ['Opportunity'],
+                'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$All',
+                        'url' => '#Opportunity/list',
+                        'iconClass' => 'ti ti-list',
+                        'id' => 'opportunity-all',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Open',
+                        'url' => '#Opportunity/list/primaryFilter=open',
+                        'iconClass' => 'ti ti-clock',
+                        'id' => 'opportunity-open',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Won',
+                        'url' => '#Opportunity/list/primaryFilter=won',
+                        'iconClass' => 'ti ti-circle-check-filled',
+                        'id' => 'opportunity-won',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Lost',
+                        'url' => '#Opportunity/list/primaryFilter=lost',
+                        'iconClass' => 'ti ti-circle-x-filled',
+                        'id' => 'opportunity-lost',
+                    ],
+                    (object) [
+                        'type' => 'virtualFolder',
+                        'id' => 'vf-opportunity-funnel',
+                        'label' => '$By Funnel',
+                        'entityType' => 'Funnel',
+                        'filterName' => null,
+                        'filterData' => (object) [
+                            'textFilter' => '',
+                            'bool' => (object) [],
+                            'advanced' => (object) [],
+                            'primary' => null,
+                            'presetName' => null,
+                        ],
+                        'maxItems' => 5,
+                        'iconClass' => null,
+                        'color' => null,
+                        'orderBy' => null,
+                        'order' => 'desc',
+                        'openMode' => 'relationship',
+                        'relationshipLink' => 'opportunities',
+                    ],
+                ],
             ],
             [
                 'id' => 'activities',
-                'name' => 'Atividades',
+                'name' => '$Activities',
                 'order' => 40,
                 'iconClass' => 'ti ti-checklist',
                 'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$All',
+                        'url' => '#Activities',
+                        'iconClass' => 'ti ti-list',
+                        'id' => 'activities-all',
+                    ],
                     (object) [
                         'type' => 'url',
                         'text' => '$Activities',
@@ -80,7 +145,7 @@ class SeedSidenavConfig implements RebuildAction
             ],
             [
                 'id' => 'agenda',
-                'name' => 'Agenda',
+                'name' => '$Calendar',
                 'order' => 50,
                 'iconClass' => 'ti ti-calendar',
                 'tabList' => [
@@ -160,9 +225,9 @@ class SeedSidenavConfig implements RebuildAction
     private function prepareExistingData(Entity $existing, array $data): array
     {
         return [
-            'name' => $existing->get('name') ?: $data['name'],
+            'name' => $data['name'],
             'order' => $existing->get('order') ?? $data['order'],
-            'iconClass' => $existing->get('iconClass') ?: $data['iconClass'],
+            'iconClass' => $data['iconClass'],
             'tabList' => $this->upsertTabList($existing->get('tabList'), $data['tabList']),
             'isGloballyShared' => $existing->get('isGloballyShared') ?? $data['isGloballyShared'],
         ];
