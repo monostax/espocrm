@@ -461,8 +461,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
             const targetUrl = this._getConfigRoute(configId);
 
             if (targetUrl) {
-                this.getRouter().navigate(targetUrl, {trigger: false});
-                this.getRouter().dispatch();
+                this.getRouter().navigate(targetUrl, {trigger: true});
             }
 
             Espo.Ui.notify(false);
@@ -482,6 +481,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
 
     /**
      * Get the saved route for a config, or the first navigable tab item's URL.
+     * Strips ?navbar= query params since those are for deep-linking only.
      * @private
      * @param {string} configId
      * @return {string|null}
@@ -491,7 +491,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
         const savedRoutes = this.getPreferences().get("sidenavConfigLastRoutes") || {};
 
         if (savedRoutes[configId]) {
-            return savedRoutes[configId];
+            return this._stripNavbarParam(savedRoutes[configId]);
         }
 
         // 2. Fall back to first navigable tab item
@@ -512,11 +512,44 @@ class CustomNavbarSiteView extends NavbarSiteView {
             }
 
             if (item && typeof item === "object" && item.type === "url" && item.url) {
-                return item.url;
+                return this._stripNavbarParam(item.url);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Strip ?navbar= query parameter from a URL.
+     * @private
+     * @param {string} url
+     * @return {string}
+     */
+    _stripNavbarParam(url) {
+        if (!url || typeof url !== "string") {
+            return url;
+        }
+
+        try {
+            // Handle URLs like ?navbar=activities#Activities
+            if (url.startsWith("?")) {
+                const hashIndex = url.indexOf("#");
+                const hash = hashIndex >= 0 ? url.substring(hashIndex) : "";
+                const query = hashIndex >= 0 ? url.substring(0, hashIndex) : url;
+                const params = new URLSearchParams(query);
+
+                params.delete("navbar");
+
+                const remaining = params.toString();
+
+                return (remaining ? "?" + remaining : "") + hash;
+            }
+
+            return url;
+        } catch (e) {
+            // Fallback: strip ?navbar=...& or ?navbar=...
+            return url.replace(/[?&]navbar=[^&#]*/, "").replace(/^\?$/, "");
+        }
     }
 
     /**
@@ -786,6 +819,15 @@ class CustomNavbarSiteView extends NavbarSiteView {
     }
 
     renderAndInjectVirtualFolderViews() {
+        // Clean up previous virtual folder views
+        if (this.virtualFolderViewKeys && this.virtualFolderViewKeys.length) {
+            for (const key of this.virtualFolderViewKeys) {
+                if (this.hasView(key)) {
+                    this.clearView(key);
+                }
+            }
+        }
+
         if (!this.virtualFolderConfigs || !this.virtualFolderConfigs.length) {
             return;
         }

@@ -73,7 +73,16 @@
         "Tab Label": "Nome da Aba",
         "Header Title": "Título do Cabeçalho",
         "Description": "Descrição",
-        "Show Date Range Picker": "Exibir Seletor de Período"
+        "Show Date Range Picker": "Exibir Seletor de Período",
+        "Virtual Folder": "Pasta Virtual",
+        "Add Virtual Folder": "Adicionar Pasta Virtual",
+        "Edit Virtual Folder": "Editar Pasta Virtual",
+        "No Filter": "Sem Filtro",
+        "No records found": "Nenhum registro encontrado",
+        "Failed to load": "Falha ao carregar",
+        "Retry": "Tentar novamente",
+        "View All": "Ver Tudo",
+        "View all": "Ver tudo"
     },
     "navbarTabs": {
         "Conversations": "Chat / Conversas",

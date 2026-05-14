@@ -98,6 +98,10 @@ export default class VirtualFolderView extends View {
         });
 
         this.listenTo(this.getRouter(), 'routed', () => {
+            if (this.isBeingDisposed || !this.isRendered()) {
+                return;
+            }
+
             this.updateActiveState();
         });
     }
@@ -113,7 +117,7 @@ export default class VirtualFolderView extends View {
     }
 
     updateActiveState() {
-        if (!this.element) {
+        if (!this.element || this.isBeingDisposed) {
             return;
         }
 
@@ -359,6 +363,10 @@ export default class VirtualFolderView extends View {
 
     getLabel() {
         if (this.label) {
+            if (this.label.startsWith('$')) {
+                return this.translate(this.label.substring(1), 'navbarTabs', 'Global');
+            }
+
             return this.label;
         }
 

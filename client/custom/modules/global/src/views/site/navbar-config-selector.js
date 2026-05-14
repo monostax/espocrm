@@ -33,12 +33,24 @@ class NavbarConfigSelectorView extends View {
             || configList.find(c => c.isDefault)
             || configList[0];
 
+        const translateName = (name) => {
+            if (name && name.startsWith('$')) {
+                return this.translate(name.substring(1), 'navbarTabs', 'Global');
+            }
+
+            return name;
+        };
+
         return {
             configList: configList.map(c => ({
                 ...c,
+                name: translateName(c.name),
                 isActive: c.id === (activeConfig ? activeConfig.id : null),
             })),
-            activeConfig: activeConfig || null,
+            activeConfig: activeConfig ? {
+                ...activeConfig,
+                name: translateName(activeConfig.name),
+            } : null,
             hasMultiple: configList.length > 1,
         };
     }
