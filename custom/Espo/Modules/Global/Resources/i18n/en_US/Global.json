@@ -83,7 +83,8 @@
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Billing",
         "Funnel": "Funnel",
         "OpportunityStage": "Opportunity Stage",
-        "SidenavConfig": "Custom Sidenav"
+        "SidenavConfig": "Custom Sidenav",
+        "UserApiKey": "User API Key"
     },
     "scopeNamesPlural": {
         "Activities": "Activities",
@@ -96,7 +97,8 @@
         "FeatureIntegrationClinicaNasNuvensFaturamento": "Clínica Nas Nuvens / Billings",
         "Funnel": "Funnels",
         "OpportunityStage": "Opportunity Stages",
-        "SidenavConfig": "Custom Sidenav"
+        "SidenavConfig": "Custom Sidenav",
+        "UserApiKey": "User API Keys"
     },
     "navbarTabs": {
         "Lists": "Lists",

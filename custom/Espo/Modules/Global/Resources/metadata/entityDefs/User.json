@@ -10,6 +10,11 @@
         }
     },
     "links": {
+        "userApiKeys": {
+            "type": "hasMany",
+            "entity": "UserApiKey",
+            "foreign": "user"
+        },
         "appointmentsLocation": {
             "type": "hasMany",
             "entity": "Appointment",

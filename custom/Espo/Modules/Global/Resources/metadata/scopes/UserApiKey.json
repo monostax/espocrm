@@ -1,0 +1,17 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": false,
+    "acl": "boolean",
+    "aclPortal": false,
+    "aclFieldLevelDisabled": true,
+    "customizable": false,
+    "importable": false,
+    "notifications": false,
+    "stream": false,
+    "disabled": false,
+    "type": "Base",
+    "module": "Global",
+    "object": true,
+    "isCustom": true
+}

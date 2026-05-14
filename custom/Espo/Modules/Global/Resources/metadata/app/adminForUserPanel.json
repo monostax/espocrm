@@ -15,6 +15,13 @@
                 "iconClass": "ti ti-users",
                 "description": "teams",
                 "tabQuickSearch": true
+            },
+            {
+                "url": "#UserApiKey",
+                "label": "User API Keys",
+                "iconClass": "ti ti-key",
+                "description": "userApiKeys",
+                "tabQuickSearch": true
             }
         ],
         "order": 5

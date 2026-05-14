@@ -61,6 +61,8 @@ define('global:views/dashlets/report-total-count', [
                 {type: 'enum', options: []};
             this.optionsFields.showFilterInfo = this.optionsFields.showFilterInfo ||
                 {type: 'bool'};
+            this.optionsFields.countLinkEnabled = this.optionsFields.countLinkEnabled ||
+                {type: 'bool'};
 
             this.reportHelper = new ReportHelper(
                 this.getMetadata(),
@@ -265,6 +267,12 @@ define('global:views/dashlets/report-total-count', [
                 return void this.displayError();
             }
 
+            // Cache the materialized `where` and result so the count link
+            // (see `openRecordsModal`) can request the matching record list
+            // with the very same filters that produced the displayed totals.
+            this.lastWhere = where;
+            this.lastResult = result;
+
             const useSi = this.getOption('useSiMultiplier');
 
             const totalValue = this.sumColumn(totalColumn, result);
@@ -432,14 +440,7 @@ define('global:views/dashlets/report-total-count', [
                 });
 
             $count.append(
-                $('<span>')
-                    .css({
-                        // Count label always wins for space; never truncate
-                        // or wrap. Width is its content.
-                        flex: '0 0 auto',
-                        whiteSpace: 'nowrap',
-                    })
-                    .text(countStr + ' ' + countLabel)
+                this.buildCountTextElement(countStr + ' ' + countLabel)
             );
 
             if (filterVisible) {
@@ -463,6 +464,135 @@ define('global:views/dashlets/report-total-count', [
             $wrap.append($count);
 
             this.$container.append($wrap);
+        },
+
+        /**
+         * Build the count text element. When `countLinkEnabled` is enabled
+         * (default), the count is rendered as a clickable anchor that opens
+         * the records modal with the dashlet's currently-applied filters.
+         *
+         * Falls back to a plain `<span>` when:
+         *   - the user disabled the link via dashlet options;
+         *   - we don't yet have a result cached (defensive: should not happen
+         *     because `displayComposite` runs after `run` succeeds);
+         *   - or the report has no grouping (`depth === 0`). For depth-0
+         *     grid reports the platform's `runList` endpoint cannot reproduce
+         *     the chart's filtering when the report relies on column-level
+         *     conditional aggregates (e.g. `COUNT_IF(stage='Perdido')`):
+         *     `runList` only knows about the report's static filter +
+         *     runtime where, not column expressions. To avoid surfacing a
+         *     record list that contradicts the displayed count we suppress
+         *     the link entirely in that case — the user can still drill in
+         *     via "View Report" in the dashlet menu.
+         */
+        buildCountTextElement: function (text) {
+            const linkEnabled = this.getOption('countLinkEnabled') !== false;
+            const hasResult = !!this.lastResult;
+            const isUngroupedResult = hasResult && this.lastResult.depth === 0;
+
+            const baseCss = {
+                flex: '0 0 auto',
+                whiteSpace: 'nowrap',
+            };
+
+            if (!linkEnabled || !hasResult || isUngroupedResult) {
+                return $('<span>').css(baseCss).text(text);
+            }
+
+            const $a = $('<a>')
+                .attr('role', 'button')
+                .attr('tabindex', '0')
+                .attr('title', this.translate('View Records', 'labels', 'Report'))
+                .css(Object.assign({}, baseCss, {
+                    cursor: 'pointer',
+                    color: 'inherit',
+                    textDecoration: 'none',
+                }))
+                .text(text);
+
+            // Underline on hover/focus — keeps the muted base look clean while
+            // still signalling clickability.
+            $a.on('mouseenter focus', () => $a.css('textDecoration', 'underline'));
+            $a.on('mouseleave blur', () => $a.css('textDecoration', 'none'));
+
+            $a.on('click', e => {
+                e.preventDefault();
+                this.openRecordsModal();
+            });
+
+            $a.on('keydown', e => {
+                // Activate on Enter / Space — standard anchor-as-button keys.
+                if (e.key === 'Enter' || e.key === ' ' || e.which === 13 || e.which === 32) {
+                    e.preventDefault();
+                    this.openRecordsModal();
+                }
+            });
+
+            return $a;
+        },
+
+        /**
+         * Open Advanced's standard "sub-report" modal listing the underlying
+         * records, with the dashlet's currently-applied filters (`filtersData`
+         * + dashboard date range) honored.
+         *
+         * Reuses `advanced:views/report/modals/sub-report` — the same modal
+         * the platform opens when clicking a cell in a Grid report — so the
+         * UX (header, columns, pagination) matches what users already know.
+         *
+         * For Grid reports the underlying entity is the report's primary
+         * entity. For JointGrid reports we resolve the entity/subReportId
+         * from the count column (the cardinal source of "N items"), mirroring
+         * the runtime's behaviour for joint-grid cell clicks.
+         */
+        openRecordsModal: function () {
+            if (!this.lastResult) {
+                return;
+            }
+
+            const baseReportId = this.getOption('reportId');
+            const baseEntityType = this.getOption('entityType');
+            const reportName = this.getOption('title') || '';
+            const countColumn = this.getOption('countColumn');
+
+            let reportId = baseReportId;
+            let entityType = baseEntityType;
+
+            if (this.lastResult.isJoint && countColumn) {
+                reportId = (this.lastResult.columnReportIdMap || {})[countColumn] || reportId;
+                entityType = (this.lastResult.columnEntityTypeMap || {})[countColumn] || entityType;
+            }
+
+            // The depth-0 (total) grouping is internally represented by the
+            // platform as a single `__STUB__` row. Pass it to runList; the
+            // backend treats it as a no-op when no group-by columns exist.
+            const groupValue = '__STUB__';
+
+            Espo.Ui.notify(' ... ');
+
+            this.getCollectionFactory().create(entityType, collection => {
+                collection.url = 'Report/action/runList?id=' + reportId +
+                    '&groupValue=' + encodeURIComponent(groupValue);
+
+                if (this.lastWhere && this.lastWhere.length) {
+                    collection.where = this.lastWhere;
+                }
+
+                collection.maxSize = this.getConfig().get('recordsPerPage') || 20;
+
+                this.createView('subReport', 'advanced:views/report/modals/sub-report', {
+                    reportId: reportId,
+                    reportName: reportName,
+                    result: this.lastResult,
+                    groupValue: groupValue,
+                    groupIndex: 0,
+                    collection: collection,
+                    column: countColumn,
+                }, modalView => {
+                    Espo.Ui.notify(false);
+                    modalView.render();
+                });
+            });
         },
 
         /**

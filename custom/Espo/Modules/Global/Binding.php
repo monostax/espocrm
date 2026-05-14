@@ -15,6 +15,7 @@ use Espo\Core\Binding\Binder;
 use Espo\Core\Binding\BindingProcessor;
 use Espo\Modules\Global\Tools\Kanban\CustomOrderer;
 use Espo\Modules\Global\Tools\Kanban\KanbanService;
+use Espo\Modules\Global\Tools\Report\Service as ReportService;
 
 /**
  * Binding configuration for the Global module.
@@ -36,6 +37,15 @@ class Binding implements BindingProcessor
             \Espo\Tools\Kanban\Orderer::class,
             CustomOrderer::class
         );
+
+        // Override Advanced's Report Service so Grid / JointGrid results are
+        // post-processed by `DateBucketPadder` (fills empty date buckets when
+        // the report has `fillEmptyDateBuckets = true`).
+        $binder->bindImplementation(
+            \Espo\Modules\Advanced\Tools\Report\Service::class,
+            ReportService::class
+        );
     }
 }
+
 

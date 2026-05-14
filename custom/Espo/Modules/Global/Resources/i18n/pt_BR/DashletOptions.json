@@ -5,11 +5,13 @@
         "percentageColumn": "Coluna Percentual",
         "bindDashboardDateRange": "Vincular ao Período do Dashboard",
         "dashboardDateRangeField": "Campo de Data do Dashboard",
-        "showFilterInfo": "Mostrar Filtros Aplicados no Painel"
+        "showFilterInfo": "Mostrar Filtros Aplicados no Painel",
+        "countLinkEnabled": "Contagem é Clicável"
     },
     "tooltips": {
         "bindDashboardDateRange": "Quando ativado, os resultados do painel são filtrados pelo período selecionado no cabeçalho do dashboard.",
         "dashboardDateRangeField": "Campo de data ou data/hora usado para aplicar o filtro de período do dashboard.",
-        "showFilterInfo": "Quando ativado, exibe o filtro aplicado (ex.: período) ao lado da contagem no card do painel."
+        "showFilterInfo": "Quando ativado, exibe o filtro aplicado (ex.: período) ao lado da contagem no card do painel.",
+        "countLinkEnabled": "Quando ativado, clicar na contagem (ex.: \"8 oportunidades\") abre uma janela listando os registros que compõem o total, respeitando os filtros do painel e o período do dashboard."
     }
 }

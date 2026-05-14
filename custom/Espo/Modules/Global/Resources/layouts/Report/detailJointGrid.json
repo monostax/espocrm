@@ -1,0 +1,42 @@
+[
+    {
+        "rows": [
+            [{"name": "name"}, {"name": "type", "readOnly": true}],
+            [{"name": "category"}, false],
+            [{"name": "description"}]
+        ]
+    },
+    {
+        "label": "Parameters",
+        "rows": [
+            [
+                {
+                    "name": "joinedReports",
+                    "fullWidth": true,
+                    "params": {
+                        "required": true
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "rows": [
+            [
+                {"name": "fillEmptyDateBuckets"},
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Chart",
+        "rows": [
+            [
+                {
+                    "name": "chartType"
+                },
+                false
+            ]
+        ]
+    }
+]

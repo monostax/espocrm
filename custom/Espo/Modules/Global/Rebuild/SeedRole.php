@@ -224,6 +224,12 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                // UserApiKey uses `acl: "boolean"` (scope-level yes/no only).
+                // Per-record ownership is enforced by the custom AccessChecker
+                // (`Espo\Modules\Global\Classes\Acl\UserApiKey\AccessChecker`),
+                // so granting `true` here just opens the scope gate; the
+                // checker still limits non-admins to their own keys.
+                'UserApiKey' => true,
                 'Document' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -306,6 +312,19 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                 ],
                 'WhatsAppCampaign' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+
+                // Reports (Advanced module). Full team CRUD at the base level
+                // so tenant users can author, view, and manage their own
+                // reports — and so the `Report` / `ReportTotalCount` dashlets
+                // pass the `acl->tryCheck('Report')` filter in
+                // `Espo\Tools\App\MetadataService::process` and remain
+                // visible in the client metadata payload.
+                'Report' => [
                     'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',
@@ -548,6 +567,10 @@ class SeedRole implements RebuildAction
                     'teams' => (object)['read' => 'yes', 'edit' => 'yes'],
                     'defaultTeam' => (object)['read' => 'yes', 'edit' => 'yes'],
                 ],
+                // Empty fieldData entry — the entity has `aclFieldLevelDisabled: true`
+                // in its scopes config so per-field role overrides are
+                // irrelevant. Listed here for completeness/grep-ability.
+                'UserApiKey' => (object)[],
                 'Account' => (object)[],
                 'Call' => (object)[],
                 'Campaign' => (object)[],
@@ -575,6 +598,11 @@ class SeedRole implements RebuildAction
 
                 'WhatsAppBusinessAccount' => (object)[],
                 'WhatsAppCampaign' => (object)[],
+
+                // Empty entry mirrors the convention used for every other
+                // scope in this map — no per-field overrides; the scope-level
+                // grant in `data.Report` above is what matters.
+                'Report' => (object)[],
 
                 'ChatwootPlatform' => (object)[],
                 'ChatwootTeam' => (object)[],

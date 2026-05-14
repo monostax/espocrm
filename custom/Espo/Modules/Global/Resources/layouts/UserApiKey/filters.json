@@ -1,0 +1,8 @@
+[
+    "name",
+    "user",
+    "isActive",
+    "expiresAt",
+    "lastUsedAt",
+    "createdAt"
+]

@@ -1,0 +1,6 @@
+[
+    {"name": "name", "link": true},
+    {"name": "isActive", "width": 8},
+    {"name": "lastUsedAt"},
+    {"name": "expiresAt"}
+]

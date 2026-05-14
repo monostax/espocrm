@@ -1,0 +1,4 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\UserApiKey\\AccessChecker",
+    "ownershipCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\UserApiKey\\OwnershipChecker"
+}

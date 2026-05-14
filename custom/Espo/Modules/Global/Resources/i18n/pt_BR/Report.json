@@ -1,6 +1,7 @@
 {
     "fields": {
-        "isGloballyShared": "Compartilhado Globalmente"
+        "isGloballyShared": "Compartilhado Globalmente",
+        "fillEmptyDateBuckets": "Preencher Períodos Vazios"
     },
     "labels": {
         "Field Type": "Tipo do Campo"
@@ -15,6 +16,8 @@
         }
     },
     "tooltips": {
-        "isGloballyShared": "Se habilitada, esse relatório ficará disponível para todos os usuários, independente de time. Apenas administradores podem alterar essa opção."
+        "isGloballyShared": "Se habilitada, esse relatório ficará disponível para todos os usuários, independente de time. Apenas administradores podem alterar essa opção.",
+        "fillEmptyDateBuckets": "Quando ativado, e o primeiro agrupamento for por uma função de data (Dia / Mês / Ano / Trimestre / Semana), os períodos sem registros no intervalo filtrado são preenchidos com zero — fazendo com que gráficos e tabelas mostrem a linha do tempo de forma contínua.\n\nO intervalo é extraído do filtro de runtime aplicado sobre o campo agrupado (ou de qualquer filtro de data equivalente em tempo de execução). Se não for possível inferir um intervalo, o relatório é retornado sem alterações."
     }
 }
+

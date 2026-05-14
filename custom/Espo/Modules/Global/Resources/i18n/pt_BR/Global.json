@@ -38,7 +38,8 @@
         "Tenant": "Ambiente",
         "OpportunityStage": "Estágio da Oportunidade",
         "Appointment": "Agendamento",
-        "SidenavConfig": "Menu Lateral"
+        "SidenavConfig": "Menu Lateral",
+        "UserApiKey": "Chave de API (Usuário)"
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
@@ -53,7 +54,8 @@
         "Tenant": "Ambientes",
         "Appointment": "Agendamentos",
         "OpportunityStage": "Etapas do Funil",
-        "SidenavConfig": "Menu Lateral"
+        "SidenavConfig": "Menu Lateral",
+        "UserApiKey": "Chaves de API (Usuário)"
     },
     "labels": {
         "Home": "Dashboard",

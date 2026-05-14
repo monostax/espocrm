@@ -1,69 +1,7 @@
 {
-    "Settings": {
-        "userInterface": {
-            "module": "Global"
-        }
-    },
-    "Preferences": {
-        "detail": {
-            "module": "Global"
-        }
-    },
-    "Account": {
-        "detail": {
-            "module": "Global"
-        },
+    "User": {
         "bottomPanelsDetail": {
-            "module": "Global"
-        },
-        "sidePanelsDetail": {
-            "module": "Global"
-        },
-        "defaultSidePanel": {
-            "module": "Global"
-        },
-        "list": {
-            "module": "Global"
-        }
-    },
-    "Contact": {
-        "detail": {
-            "module": "Global"
-        },
-        "bottomPanelsDetail": {
-            "module": "Global"
-        },
-        "sidePanelsDetail": {
-            "module": "Global"
-        },
-        "defaultSidePanel": {
-            "module": "Global"
-        },
-        "list": {
-            "module": "Global"
-        }
-    },
-    "Opportunity": {
-        "detail": {
-            "module": "Global"
-        },
-        "detailSmall": {
-            "module": "Global"
-        },
-        "filters": {
-            "module": "Global"
-        },
-        "list": {
-            "module": "Global"
-        }
-    },
-    "OAuthProvider": {
-        "detail": {
-            "module": "Global"
-        },
-        "edit": {
             "module": "Global"
         }
     }
 }
-

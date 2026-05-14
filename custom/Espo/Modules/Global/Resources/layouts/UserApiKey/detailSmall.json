@@ -1,0 +1,15 @@
+[
+    {
+        "rows": [
+            [
+                {"name": "name"}, {"name": "isActive"}
+            ],
+            [
+                {"name": "user"}, {"name": "expiresAt"}
+            ],
+            [
+                {"name": "apiKey"}, {"name": "lastUsedAt"}
+            ]
+        ]
+    }
+]

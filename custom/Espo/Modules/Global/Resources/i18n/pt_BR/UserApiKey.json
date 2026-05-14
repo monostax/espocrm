@@ -1,0 +1,40 @@
+{
+    "labels": {
+        "Create UserApiKey": "Criar Chave de API (Usuário)",
+        "UserApiKey": "Chave de API (Usuário)",
+        "API Keys": "Chaves de API (Usuário)",
+        "User API Keys": "Chaves de API (Usuário)"
+    },
+    "fields": {
+        "name": "Nome",
+        "description": "Descrição",
+        "user": "Usuário",
+        "apiKey": "Chave de API",
+        "isActive": "Ativa",
+        "lastUsedAt": "Último Uso Em",
+        "expiresAt": "Expira Em",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "links": {
+        "user": "Usuário",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "tooltips": {
+        "name": "Rótulo legível que identifica o uso desta chave (ex.: \"Agente IA do Chatwoot\", \"Integração Zapier\").",
+        "user": "Usuário do CRM autenticado por esta chave. Usuários não-admin só podem criar chaves para si mesmos.",
+        "apiKey": "Envie no cabeçalho `X-Api-Key` das requisições à API. O valor em texto plano só é visível para o proprietário e para administradores.",
+        "isActive": "Quando desmarcada, a chave deixa de autenticar imediatamente sem precisar ser excluída.",
+        "expiresAt": "Expiração opcional. Se estiver no passado, a chave deixa de autenticar mesmo com `isActive` marcado."
+    },
+    "boolFilters": {
+        "onlyMy": "Minhas Chaves"
+    },
+    "presetFilters": {
+        "active": "Ativas",
+        "expired": "Expiradas"
+    }
+}

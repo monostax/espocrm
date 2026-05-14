@@ -1,0 +1,10 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\UserApiKey\\BeforeCreate"
+    ],
+    "outputFilterClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\Record\\UserApiKey\\OutputFilter"
+    ]
+}

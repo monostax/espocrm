@@ -1,0 +1,40 @@
+{
+    "labels": {
+        "Create UserApiKey": "Create User API Key",
+        "UserApiKey": "User API Key",
+        "API Keys": "User API Keys",
+        "User API Keys": "User API Keys"
+    },
+    "fields": {
+        "name": "Name",
+        "description": "Description",
+        "user": "User",
+        "apiKey": "API Key",
+        "isActive": "Active",
+        "lastUsedAt": "Last Used At",
+        "expiresAt": "Expires At",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "links": {
+        "user": "User",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "tooltips": {
+        "name": "A human-readable label that identifies what this key is used for (e.g. \"Chatwoot AI Agent\", \"Zapier integration\").",
+        "user": "The CRM user this key authenticates as. Non-admins can only create keys for themselves.",
+        "apiKey": "Send as the `X-Api-Key` header on API requests. The plaintext value is only visible to the owner and to admins.",
+        "isActive": "When unchecked, the key stops authenticating immediately without having to be deleted.",
+        "expiresAt": "Optional expiry. If set in the past, the key stops authenticating regardless of `isActive`."
+    },
+    "boolFilters": {
+        "onlyMy": "My Keys"
+    },
+    "presetFilters": {
+        "active": "Active",
+        "expired": "Expired"
+    }
+}

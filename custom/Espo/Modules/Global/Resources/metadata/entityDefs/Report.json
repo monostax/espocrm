@@ -7,6 +7,11 @@
             "type": "bool",
             "default": false,
             "tooltip": true
+        },
+        "fillEmptyDateBuckets": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
         }
     },
     "complexExpressionFunctionList": [

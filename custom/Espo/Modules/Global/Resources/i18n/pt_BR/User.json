@@ -1,5 +1,8 @@
 {
     "fields": {
         "featureVerticals": "Verticais de Feature"
+    },
+    "links": {
+        "userApiKeys": "Chaves de API (Usuário)"
     }
 }

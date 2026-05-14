@@ -1,0 +1,5 @@
+[
+    {"name": "name", "link": true},
+    {"name": "user"},
+    {"name": "isActive", "width": 8}
+]

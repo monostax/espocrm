@@ -1,9 +1,12 @@
 {
     "labels": {
         "Tenant Management": "Gestão de Ambientes",
-        "Tenants": "Ambientes"
+        "Tenants": "Ambientes",
+        "User API Keys": "Chaves de API (Usuário)"
     },
     "descriptions": {
-        "manageTenants": "Gerenciar registros de ambientes, time base e associações"
+        "manageTenants": "Gerenciar registros de ambientes, time base e associações",
+        "userApiKeys": "Gerenciar chaves de API por usuário. Cada usuário pode possuir múltiplas chaves para integrações distintas (ex.: agentes IA do Chat, automações), independentes da chave legada do tipo \"API User\"."
     }
 }
+

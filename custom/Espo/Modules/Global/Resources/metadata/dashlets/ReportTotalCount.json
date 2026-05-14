@@ -49,6 +49,9 @@
             "showFilterInfo": {
                 "type": "bool"
             },
+            "countLinkEnabled": {
+                "type": "bool"
+            },
             "autorefreshInterval": {
                 "type": "enumFloat",
                 "options": [
@@ -65,7 +68,8 @@
             "autorefreshInterval": 0,
             "useSiMultiplier": true,
             "bindDashboardDateRange": false,
-            "showFilterInfo": true
+            "showFilterInfo": true,
+            "countLinkEnabled": true
         },
         "layout": [
             {
@@ -97,7 +101,8 @@
                         {"name": "dashboardDateRangeField"}
                     ],
                     [
-                        {"name": "showFilterInfo"}
+                        {"name": "showFilterInfo"},
+                        {"name": "countLinkEnabled"}
                     ]
                 ]
             }

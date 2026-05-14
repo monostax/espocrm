@@ -1,6 +1,7 @@
 {
     "fields": {
-        "isGloballyShared": "Globally Shared"
+        "isGloballyShared": "Globally Shared",
+        "fillEmptyDateBuckets": "Fill Empty Date Buckets"
     },
     "labels": {
         "Field Type": "Field Type"
@@ -15,6 +16,8 @@
         }
     },
     "tooltips": {
-        "isGloballyShared": "If checked, this report will be available to all users regardless of team assignment. Only administrators can toggle this option."
+        "isGloballyShared": "If checked, this report will be available to all users regardless of team assignment. Only administrators can toggle this option.",
+        "fillEmptyDateBuckets": "When enabled and the report is grouped by a date function (Day / Month / Year / Quarter / Week) as the first grouping, missing date buckets in the result are filled with zero values, so charts and tables show a continuous timeline across the filtered date range.\n\nThe range is taken from the runtime date filter on the grouped field (or any equivalent date filter applied at runtime). If no such range can be inferred, the report is returned unchanged."
     }
 }
+

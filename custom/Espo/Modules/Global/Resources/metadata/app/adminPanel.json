@@ -1,26 +1,13 @@
 {
-    "system": {
+    "users": {
         "itemList": [
-            "__APPEND__",
             {
-                "url": "#Admin/layouts/scope=Activities",
-                "label": "Activities Layout",
-                "description": "Customize Activities list columns and filters",
-                "iconClass": "fas fa-tasks"
+                "url": "#UserApiKey",
+                "label": "User API Keys",
+                "iconClass": "ti ti-key",
+                "description": "userApiKeys",
+                "tabQuickSearch": true
             }
         ]
-    },
-    "tenantManagement": {
-        "label": "Tenant Management",
-        "itemList": [
-            {
-                "url": "#Tenant",
-                "label": "Tenants",
-                "description": "manageTenants",
-                "iconClass": "ti ti-building"
-            }
-        ],
-        "order": 40
     }
 }
-
