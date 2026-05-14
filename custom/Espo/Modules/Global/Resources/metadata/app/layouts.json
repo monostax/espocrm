@@ -3,5 +3,34 @@
         "bottomPanelsDetail": {
             "module": "Global"
         }
+    },
+    "Opportunity": {
+        "detail": {
+            "module": "Global"
+        },
+        "detailSmall": {
+            "module": "Global"
+        },
+        "list": {
+            "module": "Global"
+        },
+        "listSmall": {
+            "module": "Global"
+        },
+        "listForAccount": {
+            "module": "Global"
+        },
+        "listForContact": {
+            "module": "Global"
+        },
+        "kanban": {
+            "module": "Global"
+        },
+        "filters": {
+            "module": "Global"
+        },
+        "massUpdate": {
+            "module": "Global"
+        }
     }
 }

@@ -29,7 +29,7 @@
         "detail": [
             {
                 "name": "chatwootConversations",
-                "label": "Chatwoot Conversations",
+                "label": "Chat Conversations",
                 "view": "views/record/panels/relationship",
                 "select": true,
                 "create": false,
