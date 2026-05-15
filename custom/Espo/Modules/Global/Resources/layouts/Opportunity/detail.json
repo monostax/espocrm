@@ -20,6 +20,22 @@
             ],
             [
                 {
+                    "name": "followupStatus"
+                },
+                {
+                    "name": "followupTimer"
+                }
+            ],
+            [
+                {
+                    "name": "followupCount"
+                },
+                {
+                    "name": "followupBreakoutLimit"
+                }
+            ],
+            [
+                {
                     "name": "amount"
                 },
                 {

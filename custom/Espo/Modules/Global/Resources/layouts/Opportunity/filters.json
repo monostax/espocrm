@@ -2,6 +2,8 @@
     "funnel",
     "assignedUser",
     "teams",
+    "followupStatus",
+    "followupTimer",
     "createdAt",
     "createdBy",
     "modifiedAt",

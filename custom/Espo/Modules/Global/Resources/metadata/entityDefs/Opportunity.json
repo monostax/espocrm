@@ -72,6 +72,44 @@
                 "Lost": "danger"
             }
         },
+        "followupStatus": {
+            "type": "enum",
+            "options": ["ActionNeeded", "WaitingReply", "FollowupScheduled", "Ended"],
+            "default": "ActionNeeded",
+            "required": true,
+            "audited": true,
+            "displayAsLabel": true,
+            "labelType": "state",
+            "tooltip": true,
+            "style": {
+                "ActionNeeded": "warning",
+                "WaitingReply": "primary",
+                "FollowupScheduled": "info",
+                "Ended": "default"
+            }
+        },
+        "followupTimer": {
+            "type": "datetime",
+            "required": false,
+            "default": null,
+            "tooltip": true
+        },
+        "followupCount": {
+            "type": "int",
+            "required": true,
+            "default": 0,
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "followupBreakoutLimit": {
+            "type": "int",
+            "required": true,
+            "default": 4,
+            "min": 1,
+            "audited": true,
+            "tooltip": true
+        },
         "stageProbability": {
             "type": "foreign",
             "link": "opportunityStage",
@@ -115,6 +153,9 @@
     "indexes": {
         "funnelId": {
             "columns": ["funnelId"]
+        },
+        "followupTimer": {
+            "columns": ["followupTimer", "deleted"]
         }
     }
 }

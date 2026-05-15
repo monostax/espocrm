@@ -12,6 +12,9 @@
         "name": "account"
     },
     {
+        "name": "followupStatus"
+    },
+    {
         "name": "closeDate",
         "align": "right",
         "isMuted": true

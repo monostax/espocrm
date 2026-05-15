@@ -2,6 +2,10 @@
     "fields": {
         "stage": "Stage (Deprecated)",
         "status": "Status",
+        "followupStatus": "Follow-up Status",
+        "followupTimer": "Follow-up Timer",
+        "followupCount": "Follow-up Count",
+        "followupBreakoutLimit": "Follow-up Breakout Limit",
         "funnel": "Funnel",
         "opportunityStage": "Stage",
         "stageName": "Stage Name",
@@ -22,11 +26,21 @@
             "Open": "Open",
             "Won": "Won",
             "Lost": "Lost"
+        },
+        "followupStatus": {
+            "ActionNeeded": "Action Needed",
+            "WaitingReply": "Waiting Reply",
+            "FollowupScheduled": "Follow-up Scheduled",
+            "Ended": "Ended"
         }
     },
     "tooltips": {
         "stage": "This field is deprecated. Please use the 'Stage' link field instead, which allows custom stages.",
         "status": "The current status of the opportunity. Automatically set based on the stage's probability (0 = Lost, 100 = Won, other = Open).",
+        "followupStatus": "The current follow-up workflow state. Set by the user and automatically flipped to 'Ended' when the opportunity is Won or Lost.",
+        "followupTimer": "The earliest moment the AI is allowed to send the next follow-up message on this opportunity. Cleared automatically when the follow-up status leaves 'Waiting Reply'.",
+        "followupCount": "Number of consecutive follow-ups sent without receiving a reply. Resets to 0 whenever the follow-up status leaves 'Waiting Reply'.",
+        "followupBreakoutLimit": "Maximum number of consecutive follow-ups the AI may send before it must stop contacting the prospect. Acts as a per-deal safety net; the AI may set its own value but if it doesn't, this default applies.",
         "funnel": "The sales funnel this opportunity belongs to. Stages will be filtered based on the selected funnel.",
         "opportunityStage": "The current stage of this opportunity. Stages are filtered by the selected funnel."
     },

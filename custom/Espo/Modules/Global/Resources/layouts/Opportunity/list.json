@@ -12,6 +12,15 @@
         "width": 15
     },
     {
+        "name": "followupStatus",
+        "width": 12
+    },
+    {
+        "name": "followupTimer",
+        "width": 12,
+        "hidden": true
+    },
+    {
         "name": "createdAt",
         "width": 12
     },

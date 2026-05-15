@@ -3,6 +3,7 @@
         "Espo\\Modules\\Global\\Rebuild\\SeedSidenavConfig",
         "Espo\\Modules\\Global\\Rebuild\\BackfillContactTenant",
         "Espo\\Modules\\Global\\Rebuild\\BackfillTenantAclTeams",
+        "Espo\\Modules\\Global\\Rebuild\\BackfillOpportunityFollowupStatus",
         "Espo\\Modules\\Global\\Rebuild\\SeedRole",
         "Espo\\Modules\\Global\\Rebuild\\EnforceReportApplyAcl"
     ]
