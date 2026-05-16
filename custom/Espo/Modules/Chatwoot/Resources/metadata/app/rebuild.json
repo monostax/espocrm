@@ -5,6 +5,7 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootPlatform",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootAccount",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillAccountUserMemberships",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillOpportunityVersionNumber",
         "Espo\\Modules\\Chatwoot\\Rebuild\\RotateAutomationToConcierge",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedWahaPlatform"
     ]
