@@ -36,6 +36,12 @@
             ],
             [
                 {
+                    "name": "followupAiAgent"
+                },
+                false
+            ],
+            [
+                {
                     "name": "amount"
                 },
                 {

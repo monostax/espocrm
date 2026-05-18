@@ -74,7 +74,7 @@
         },
         "followupStatus": {
             "type": "enum",
-            "options": ["ActionNeeded", "WaitingReply", "FollowupScheduled", "Ended"],
+            "options": ["ActionNeeded", "FollowupActive", "Ended"],
             "default": "ActionNeeded",
             "required": true,
             "audited": true,
@@ -83,8 +83,7 @@
             "tooltip": true,
             "style": {
                 "ActionNeeded": "warning",
-                "WaitingReply": "primary",
-                "FollowupScheduled": "info",
+                "FollowupActive": "primary",
                 "Ended": "default"
             }
         },
@@ -92,6 +91,7 @@
             "type": "datetime",
             "required": false,
             "default": null,
+            "minuteStep": 5,
             "tooltip": true
         },
         "followupCount": {
@@ -109,6 +109,13 @@
             "min": 1,
             "audited": true,
             "tooltip": true
+        },
+        "followupAiAgent": {
+            "type": "link",
+            "readOnly": true,
+            "audited": true,
+            "tooltip": true,
+            "entity": "ChatwootAccountUserMembership"
         },
         "stageProbability": {
             "type": "foreign",
@@ -142,6 +149,10 @@
             "type": "belongsTo",
             "entity": "OpportunityStage",
             "foreign": "opportunities"
+        },
+        "followupAiAgent": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccountUserMembership"
         },
         "teams": {
             "type": "hasMany",

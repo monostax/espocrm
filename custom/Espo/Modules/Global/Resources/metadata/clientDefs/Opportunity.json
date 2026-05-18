@@ -25,6 +25,11 @@
     "viewMap": {
         "crm:views/dashlets/sales-pipeline": "global:views/dashlets/sales-pipeline",
         "crm:views/dashlets/opportunities-by-stage": "global:views/dashlets/opportunities-by-stage"
+    },
+    "relationshipPanels": {
+        "followupAiAgent": {
+            "selectPrimaryFilterName": "aiOnly"
+        }
     }
 }
 

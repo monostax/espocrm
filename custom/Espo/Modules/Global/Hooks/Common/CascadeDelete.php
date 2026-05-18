@@ -281,7 +281,19 @@ class CascadeDelete
     }
 
     /**
-     * Clean up EntityTeam records for the deleted entity.
+     * Soft-delete EntityTeam records for the deleted entity so the team-link
+     * history can be restored later by {@see \Espo\Modules\Global\Classes\Record\Deleted\TeamAwareRestorer}.
+     *
+     * Only currently-live rows are touched — already-soft-deleted rows
+     * (e.g. from earlier manual unrelates) are left untouched so the restorer
+     * does not silently re-attach teams the user had previously detached.
+     *
+     * The rows persist as `deleted=1` for the duration of the parent entity's
+     * soft-delete retention window (config `cleanupDeletedRecordsPeriod`,
+     * default 2 months) and are then hard-purged together with the parent by
+     * {@see \Espo\Classes\Jobs\Cleanup::cleanupDeletedEntity()}, which iterates
+     * the parent's MANY_MANY relations and hard-deletes middle rows regardless
+     * of their `deleted` flag.
      *
      * @param Entity $entity
      */
@@ -291,18 +303,27 @@ class CascadeDelete
         $entityId = $entity->getId();
 
         try {
-            $deleteQuery = $this->entityManager->getQueryBuilder()
-                ->delete()
-                ->from('EntityTeam')
+            $entityTeamRows = $this->entityManager
+                ->getRDBRepository('EntityTeam')
                 ->where([
                     'entityType' => $entityType,
                     'entityId' => $entityId,
+                    'deleted' => false,
                 ])
-                ->build();
+                ->find();
 
-            $this->entityManager->getQueryExecutor()->execute($deleteQuery);
+            $count = 0;
+
+            foreach ($entityTeamRows as $row) {
+                $this->entityManager->removeEntity($row, ['cascadeParent' => true]);
+                $count++;
+            }
+
+            if ($count > 0) {
+                $this->log->debug("CascadeDelete: Soft-deleted {$count} EntityTeam row(s) for {$entityType} {$entityId}");
+            }
         } catch (\Exception $e) {
-            $this->log->debug("CascadeDelete: Could not clean EntityTeam records: " . $e->getMessage());
+            $this->log->debug("CascadeDelete: Could not soft-delete EntityTeam records: " . $e->getMessage());
         }
     }
 }

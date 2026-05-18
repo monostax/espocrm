@@ -1,0 +1,5 @@
+{
+    "primaryFilterClassNameMap": {
+        "aiOnly": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootAccountUserMembership\\PrimaryFilters\\AiOnly"
+    }
+}

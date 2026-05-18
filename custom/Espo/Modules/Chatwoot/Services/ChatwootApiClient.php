@@ -737,6 +737,52 @@ class ChatwootApiClient
     }
 
     /**
+     * Delete a contact on Chatwoot via Account API.
+     *
+     * Idempotent: HTTP 200/204/404 are treated as success.
+     * Mirrors deleteInbox / deleteTeam / deleteLabel conventions.
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $contactId The Chatwoot contact ID
+     * @throws Error
+     */
+    public function deleteContact(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId
+    ): void {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/contacts/' . $contactId;
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+        ];
+
+        $response = $this->executeRequest($url, 'DELETE', null, $headers);
+
+        // 404 = already gone. Idempotent success.
+        if ($response['code'] === 404) {
+            return;
+        }
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (deleteContact): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+    }
+
+    /**
      * Search for contacts on Chatwoot via Account API.
      *
      * @param string $platformUrl The base URL of the Chatwoot platform

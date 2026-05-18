@@ -218,6 +218,12 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                'ChatwootContact' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'User' => [
                     'create' => 'yes',
                     'read' => 'team',

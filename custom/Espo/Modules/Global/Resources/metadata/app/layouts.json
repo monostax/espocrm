@@ -4,6 +4,40 @@
             "module": "Global"
         }
     },
+    "Contact": {
+        "detail": {
+            "module": "Global"
+        },
+        "list": {
+            "module": "Global"
+        },
+        "defaultSidePanel": {
+            "module": "Global"
+        },
+        "sidePanelsDetail": {
+            "module": "Global"
+        },
+        "bottomPanelsDetail": {
+            "module": "Global"
+        }
+    },
+    "Account": {
+        "detail": {
+            "module": "Global"
+        },
+        "list": {
+            "module": "Global"
+        },
+        "defaultSidePanel": {
+            "module": "Global"
+        },
+        "sidePanelsDetail": {
+            "module": "Global"
+        },
+        "bottomPanelsDetail": {
+            "module": "Global"
+        }
+    },
     "Opportunity": {
         "detail": {
             "module": "Global"

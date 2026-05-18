@@ -33,6 +33,14 @@
             "relationName": "whatsAppCampaignManualContact",
             "layoutRelationshipsDisabled": true
         }
+    },
+    "cascadeDelete": {
+        "links": [
+            "chatwootContacts",
+            "chatwootContactInboxes",
+            "chatwootConversations",
+            "chatwootMessages"
+        ]
     }
 }
 

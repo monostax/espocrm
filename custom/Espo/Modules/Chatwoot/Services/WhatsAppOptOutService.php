@@ -71,7 +71,10 @@ class WhatsAppOptOutService
 
             if ($contact && !$contact->get('whatsAppOptedOut')) {
                 $contact->set('whatsAppOptedOut', true);
-                $this->entityManager->saveEntity($contact);
+                // silent=true to avoid triggering Hooks/Contact/SyncToChatwoot
+                // for an internal flag flip; the opt-out has no semantic
+                // counterpart on Chatwoot side, so a push would be wasted.
+                $this->entityManager->saveEntity($contact, ['silent' => true]);
 
                 $this->log->info(
                     "WhatsAppOptOutService: Auto opt-out Contact {$contactId} " .

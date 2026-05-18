@@ -1,5 +1,6 @@
 {
     "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
+    "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer",
     "beforeCreateHookClassNameList": [
         "Espo\\Modules\\Chatwoot\\Hooks\\ChatwootUser\\ValidateBeforeSync",
         "Espo\\Modules\\Chatwoot\\Hooks\\ChatwootUser\\SyncWithChatwoot"

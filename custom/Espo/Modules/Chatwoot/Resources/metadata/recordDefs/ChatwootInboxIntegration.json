@@ -2,5 +2,6 @@
     "readLoaderClassNameList": [],
     "listLoaderClassNameList": [],
     "saverClassNameList": [],
-    "deleteDisabled": true
+    "deleteDisabled": true,
+    "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer"
 }

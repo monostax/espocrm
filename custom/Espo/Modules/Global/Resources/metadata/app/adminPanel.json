@@ -1,6 +1,7 @@
 {
     "users": {
         "itemList": [
+            "__APPEND__",
             {
                 "url": "#UserApiKey",
                 "label": "User API Keys",

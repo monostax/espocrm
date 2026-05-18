@@ -45,6 +45,11 @@
             "default": true,
             "tooltip": true
         },
+        "contactPushEnabled": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
         "lastContactSyncAt": {
             "type": "datetime",
             "readOnly": true,

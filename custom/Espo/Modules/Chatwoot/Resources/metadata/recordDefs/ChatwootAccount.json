@@ -1,4 +1,5 @@
 {
-    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General"
+    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
+    "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer"
 }
 
