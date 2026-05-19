@@ -1,0 +1,59 @@
+{
+    "labels": {
+        "Create ChatwootReportingEvent": "Create Reporting Event",
+        "noTenant": "(No Ambiente)",
+        "restricted": "(Restricted)"
+    },
+    "scopeNames": {
+        "ChatwootReportingEvent": "Reporting Event",
+        "ChatwootReportingEventPlural": "Reporting Events"
+    },
+    "scopeNamesSingular": {
+        "ChatwootReportingEvent": "Reporting Event"
+    },
+    "fields": {
+        "name": "Name",
+        "kind": "Source",
+        "eventName": "Event",
+        "chatwootAccount": "Account",
+        "conversation": "Conversation",
+        "chatwootContact": "Contact",
+        "tenant": "Tenant",
+        "happenedAt": "Happened At",
+        "eventStartTime": "Window Start",
+        "eventEndTime": "Window End",
+        "valueSeconds": "Value (seconds)",
+        "valueInBusinessHoursSeconds": "Value in Business Hours (seconds)",
+        "chatwootInboxId": "Chatwoot Inbox ID",
+        "chatwootUserId": "Chatwoot User ID",
+        "chatwootConversationId": "Chatwoot Conversation Display ID",
+        "chatwootReportingEventId": "Chatwoot Reporting Event ID"
+    },
+    "tooltips": {
+        "kind": "How this row was sourced: 'native' mirrors a row from Chatwoot's `reporting_events` table 1:1; 'synthetic' is generated from `conversations.created_at` (Chatwoot does not emit a real `conversation_created` event — `conversation_opened` only fires on reopens).",
+        "eventName": "Lifecycle event name. `conversation_created` (synthetic) and `conversation_opened` (reopen) are status transitions into the open state; `conversation_resolved` is a transition out. `first_response` is the agent's first reply; `reply_time` is recorded on every agent reply.",
+        "tenant": "Denormalized tenant of the event's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations.",
+        "happenedAt": "Wall-clock time the event occurred (Chatwoot's `reporting_events.created_at`, or `conversations.created_at` for synthetic rows).",
+        "eventStartTime": "Window start time, populated by Chatwoot for `first_response` / `reply_time` events. Null for status transitions.",
+        "eventEndTime": "Window end time, populated by Chatwoot for `first_response` / `reply_time` events. Null for status transitions.",
+        "valueSeconds": "Chatwoot's `value` column in seconds. Meaningful for `first_response` (time-to-first-response) and `reply_time` (per-reply latency). Null for status transitions.",
+        "valueInBusinessHoursSeconds": "Same as `valueSeconds` but only counts business-hour seconds, per the account's business-hours configuration.",
+        "chatwootInboxId": "The originating Chatwoot inbox numeric id.",
+        "chatwootUserId": "The agent user id that triggered the event (Chatwoot internal numeric id; may be null for system events).",
+        "chatwootConversationId": "Chatwoot conversation display_id (per-account human-friendly id). Same id used in conversation URLs.",
+        "chatwootReportingEventId": "Source row id from Chatwoot's `reporting_events` Postgres table. Null for synthetic rows."
+    },
+    "options": {
+        "kind": {
+            "native": "Native",
+            "synthetic": "Synthetic"
+        },
+        "eventName": {
+            "conversation_created": "Conversation Created",
+            "conversation_opened": "Conversation Opened (Reopen)",
+            "conversation_resolved": "Conversation Resolved",
+            "first_response": "First Response",
+            "reply_time": "Reply Time"
+        }
+    }
+}

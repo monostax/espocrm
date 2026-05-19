@@ -194,6 +194,27 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // Read-only telemetry the platform writes. Tenant users
+                // need scope read access so the seeded reports built on
+                // these entities (Chatwoot:ConversationsEngagedByTenantPerDay,
+                // Chatwoot:ConversationsEngagedPerDay, chwRptOpensDay) pass
+                // the Advanced/Report AccessChecker's target-entity gate.
+                // Row-level ACL is `team`, so the per-tenant trimming
+                // inside the report's withStrictAccessControl() still
+                // applies — each user only counts runs/events on their
+                // own teams.
+                'ChatwootAiAgentRun' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'ChatwootReportingEvent' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'WahaSessionLabel' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -621,6 +642,8 @@ class SeedRole implements RebuildAction
                     'channelType' => (object)['read' => 'yes', 'edit' => 'no'],
                 ],
                 'ChatwootMessage' => (object)[],
+                'ChatwootAiAgentRun' => (object)[],
+                'ChatwootReportingEvent' => (object)[],
                 'ChatwootSyncState' => (object)[],
 
                 'Unidade' => (object)[],

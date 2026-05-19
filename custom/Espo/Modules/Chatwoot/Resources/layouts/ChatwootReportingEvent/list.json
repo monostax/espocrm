@@ -1,0 +1,36 @@
+[
+    {
+        "name": "happenedAt",
+        "width": 14
+    },
+    {
+        "name": "eventName",
+        "width": 14
+    },
+    {
+        "name": "kind",
+        "width": 8
+    },
+    {
+        "name": "conversation",
+        "width": 14
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 12
+    },
+    {
+        "name": "tenant",
+        "width": 12
+    },
+    {
+        "name": "valueSeconds",
+        "width": 8,
+        "align": "right"
+    },
+    {
+        "name": "valueInBusinessHoursSeconds",
+        "width": 8,
+        "align": "right"
+    }
+]

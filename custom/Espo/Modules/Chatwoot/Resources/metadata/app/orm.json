@@ -1,0 +1,14 @@
+{
+    "platforms": {
+        "Mysql": {
+            "functionConverterClassNameMap": {
+                "COUNT_DISTINCT": "Espo\\Modules\\Chatwoot\\ORM\\FunctionConverters\\CountDistinct"
+            }
+        },
+        "Postgresql": {
+            "functionConverterClassNameMap": {
+                "COUNT_DISTINCT": "Espo\\Modules\\Chatwoot\\ORM\\FunctionConverters\\CountDistinct"
+            }
+        }
+    }
+}

@@ -3,7 +3,7 @@
         "stage": "Stage (Deprecated)",
         "status": "Status",
         "followupStatus": "Follow-up Status",
-        "followupTimer": "Follow-up Timer",
+        "followupTimer": "Next Follow-up",
         "followupCount": "Follow-up Count",
         "followupBreakoutLimit": "Follow-up Breakout Limit",
         "followupAiAgent": "Follow-up AI Agent",
@@ -53,5 +53,9 @@
         "open": "Open",
         "won": "Won",
         "lost": "Lost"
+    },
+    "boolFilters": {
+        "followupActionNeeded": "Follow-up: Action Needed",
+        "followupActive": "Follow-up: Active"
     }
 }

@@ -1,0 +1,45 @@
+{
+    "labels": {
+        "Create ChatwootReportingEvent": "Criar Evento de Relatório",
+        "noTenant": "(Sem Ambiente)",
+        "restricted": "(Restrito)"
+    },
+    "scopeNames": {
+        "ChatwootReportingEvent": "Evento de Relatório",
+        "ChatwootReportingEventPlural": "Eventos de Relatório"
+    },
+    "scopeNamesSingular": {
+        "ChatwootReportingEvent": "Evento de Relatório"
+    },
+    "fields": {
+        "name": "Nome",
+        "kind": "Origem",
+        "eventName": "Evento",
+        "chatwootAccount": "Conta",
+        "conversation": "Conversa",
+        "chatwootContact": "Contato",
+        "tenant": "Ambiente",
+        "happenedAt": "Aconteceu em",
+        "eventStartTime": "Início da Janela",
+        "eventEndTime": "Fim da Janela",
+        "valueSeconds": "Valor (segundos)",
+        "valueInBusinessHoursSeconds": "Valor em Horário Comercial (segundos)",
+        "chatwootInboxId": "ID da Caixa Chatwoot",
+        "chatwootUserId": "ID do Usuário Chatwoot",
+        "chatwootConversationId": "ID Externo da Conversa",
+        "chatwootReportingEventId": "ID do Evento de Relatório Chatwoot"
+    },
+    "options": {
+        "kind": {
+            "native": "Nativo",
+            "synthetic": "Sintético"
+        },
+        "eventName": {
+            "conversation_created": "Conversa Criada",
+            "conversation_opened": "Conversa Reaberta",
+            "conversation_resolved": "Conversa Resolvida",
+            "first_response": "Primeira Resposta",
+            "reply_time": "Tempo de Resposta"
+        }
+    }
+}

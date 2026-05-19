@@ -2,11 +2,13 @@
     "fields": {
         "apiKey": "API Key",
         "conciergeUser": "Chat / User (Concierge)",
-        "teams": "Chat / Account / Teams"
+        "teams": "Chat / Account / Teams",
+        "tenant": "Tenant"
     },
     "links": {
         "conciergeUser": "Chat / User (Concierge)",
         "teams": "Chat / Account / Teams",
+        "tenant": "Tenant",
         "accountUserMemberships": "Chat / Account / Users",
         "webhooks": "Chat / Account / Webhooks"
     },
@@ -22,7 +24,8 @@
     },
     "tooltips": {
         "apiKey": "Account-level API token from Chat. Automatically populated when a concierge user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",
-        "conciergeUser": "The chat user entity representing the concierge user for this account. Used for API operations."
+        "conciergeUser": "The chat user entity representing the concierge user for this account. Used for API operations.",
+        "tenant": "Tenant that owns this account. Auto-resolved from the account's team when its team is the tenant's base team. Set explicitly to override."
     },
     "messages": {
         "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",

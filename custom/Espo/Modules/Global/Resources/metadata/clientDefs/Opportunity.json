@@ -14,7 +14,7 @@
             "style": "danger"
         }
     ],
-    "boolFilterList": ["onlyMy"],
+    "boolFilterList": ["onlyMy", "followupActionNeeded", "followupActive"],
     "recordViews": {
         "detail": "global:views/opportunity/record/detail",
         "detailSmall": "global:views/opportunity/record/detail",

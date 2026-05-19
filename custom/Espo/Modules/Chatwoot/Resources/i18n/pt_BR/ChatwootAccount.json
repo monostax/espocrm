@@ -12,12 +12,14 @@
         "lastContactSyncAt": "Último Sync de Contatos",
         "lastConversationSyncAt": "Último Sync de Conversas",
         "conciergeUser": "Usuário (Concierge)",
-        "apiKey": "Chave API da Conta"
+        "apiKey": "Chave API da Conta",
+        "tenant": "Ambiente"
     },
     "links": {
         "conciergeUser": "Usuário (Concierge)",
         "platform": "Plataforma",
         "chatwootTeams": "Times",
+        "tenant": "Ambiente",
         "contacts": "Contatos",
         "syncStates": "Estados de Sincronização",
         "inboxes": "Caixas de Entrada",
@@ -72,7 +74,8 @@
     "tooltips": {
         "chatwootAccountId": "ID da conta criada no Chat. Este campo é preenchido automaticamente após a criação.",
         "conciergeUser": "O usuário da plataforma de chat que representa o usuário concierge para esta conta. Usado para operações de API.",
-        "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário concierge é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso."
+        "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário concierge é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso.",
+        "tenant": "Ambiente dono desta conta. Resolvido automaticamente a partir do time da conta quando este é o time base do ambiente. Defina manualmente para sobrescrever."
     },
     "messages": {
         "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",

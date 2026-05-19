@@ -1,0 +1,10 @@
+[
+    "happenedAt",
+    "eventName",
+    "kind",
+    "tenant",
+    "chatwootAccount",
+    "conversation",
+    "chatwootContact",
+    "teams"
+]

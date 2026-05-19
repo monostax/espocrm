@@ -1,0 +1,162 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "kind": {
+            "type": "enum",
+            "options": ["native", "synthetic"],
+            "default": "native",
+            "required": true,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "eventName": {
+            "type": "enum",
+            "options": [
+                "conversation_created",
+                "conversation_opened",
+                "conversation_resolved",
+                "first_response",
+                "reply_time"
+            ],
+            "required": true,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "conversation": {
+            "type": "link"
+        },
+        "chatwootContact": {
+            "type": "link"
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "happenedAt": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "eventStartTime": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "eventEndTime": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "valueSeconds": {
+            "type": "float",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "valueInBusinessHoursSeconds": {
+            "type": "float",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootInboxId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootUserId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootConversationId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "chatwootReportingEventId": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true
+        }
+    },
+    "links": {
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount"
+        },
+        "conversation": {
+            "type": "belongsTo",
+            "entity": "ChatwootConversation"
+        },
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "chatwootReportingEvents"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "indexes": {
+        "eventNameHappenedAt": {
+            "columns": ["eventName", "happenedAt", "deleted"]
+        },
+        "happenedAt": {
+            "columns": ["happenedAt", "deleted"]
+        },
+        "chatwootAccountHappenedAt": {
+            "columns": ["chatwootAccountId", "happenedAt", "deleted"]
+        },
+        "tenantHappenedAt": {
+            "columns": ["tenantId", "happenedAt", "deleted"]
+        },
+        "conversationEventName": {
+            "columns": ["conversationId", "eventName", "deleted"]
+        },
+        "chatwootReportingEventId": {
+            "columns": ["chatwootAccountId", "chatwootReportingEventId"]
+        }
+    },
+    "collection": {
+        "orderBy": "happenedAt",
+        "order": "desc"
+    }
+}

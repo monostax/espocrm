@@ -3,7 +3,7 @@
         "stage": "Estágio (Obsoleto)",
         "status": "Status",
         "followupStatus": "Status de Follow-up",
-        "followupTimer": "Temporizador de Follow-up",
+        "followupTimer": "Próximo Follow-up",
         "followupCount": "Contagem de Follow-up",
         "followupBreakoutLimit": "Limite de Follow-up",
         "followupAiAgent": "Agente de IA do Follow-up",
@@ -53,6 +53,10 @@
         "open": "Abertas",
         "won": "Ganhas",
         "lost": "Perdidas"
+    },
+    "boolFilters": {
+        "followupActionNeeded": "Follow-up: Ação Necessária",
+        "followupActive": "Follow-up: Ativo"
     }
 }
 

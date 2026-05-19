@@ -1,0 +1,17 @@
+[
+    "runAt",
+    "kind",
+    "agent",
+    "model",
+    "tenant",
+    "chatwootAccount",
+    "conversation",
+    "chatwootContact",
+    "wasTransferred",
+    "hadAppointment",
+    "createdOpportunity",
+    "updatedOpportunity",
+    "deletedOpportunity",
+    "sentFollowupMessage",
+    "teams"
+]

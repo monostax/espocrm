@@ -1,0 +1,12 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-chart-line",
+    "color": "#0d6efd",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    }
+}

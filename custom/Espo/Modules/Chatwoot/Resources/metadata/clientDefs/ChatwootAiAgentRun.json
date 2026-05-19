@@ -1,0 +1,12 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-robot",
+    "color": "#6f42c1",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    }
+}

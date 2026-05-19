@@ -24,6 +24,7 @@
 namespace Espo\Modules\Global\Hooks\Contact;
 
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -62,9 +63,11 @@ class SyncTenantFromTeam
             return;
         }
 
-        $teamIds = $entity->get('teamsIds');
+        $teamIds = $entity instanceof CoreEntity
+            ? $entity->getLinkMultipleIdList('teams')
+            : [];
 
-        if (!is_array($teamIds) || $teamIds === []) {
+        if ($teamIds === []) {
             // No team and no tenant — field is required, let the ORM
             // validator raise a normal "required" error.
             return;

@@ -1,0 +1,19 @@
+{
+    "links": {
+        "chatwootAccounts": {
+            "type": "hasMany",
+            "entity": "ChatwootAccount",
+            "foreign": "tenant"
+        },
+        "chatwootAiAgentRuns": {
+            "type": "hasMany",
+            "entity": "ChatwootAiAgentRun",
+            "foreign": "tenant"
+        },
+        "chatwootReportingEvents": {
+            "type": "hasMany",
+            "entity": "ChatwootReportingEvent",
+            "foreign": "tenant"
+        }
+    }
+}

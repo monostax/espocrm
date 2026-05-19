@@ -1,0 +1,45 @@
+[
+    {
+        "name": "runAt",
+        "width": 14
+    },
+    {
+        "name": "kind",
+        "width": 10
+    },
+    {
+        "name": "agent",
+        "width": 16
+    },
+    {
+        "name": "conversation",
+        "width": 16
+    },
+    {
+        "name": "model",
+        "width": 14
+    },
+    {
+        "name": "totalTokens",
+        "width": 8,
+        "align": "right"
+    },
+    {
+        "name": "leadTimeMs",
+        "width": 8,
+        "align": "right"
+    },
+    {
+        "name": "durationMs",
+        "width": 8,
+        "align": "right"
+    },
+    {
+        "name": "chatwootAccount",
+        "width": 14
+    },
+    {
+        "name": "tenant",
+        "width": 14
+    }
+]

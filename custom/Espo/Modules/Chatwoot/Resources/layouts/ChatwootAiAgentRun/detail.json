@@ -1,0 +1,131 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "kind"
+                },
+                {
+                    "name": "agent"
+                }
+            ],
+            [
+                {
+                    "name": "model"
+                },
+                {
+                    "name": "triggerMessageId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "chatwootContact"
+                }
+            ],
+            [
+                {
+                    "name": "conversation"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Execution",
+        "rows": [
+            [
+                {
+                    "name": "triggerMessageAt"
+                },
+                {
+                    "name": "runAt"
+                }
+            ],
+            [
+                {
+                    "name": "leadTimeMs"
+                },
+                {
+                    "name": "durationMs"
+                }
+            ],
+            [
+                {
+                    "name": "stepCount"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "toolsUsed",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Token Usage",
+        "rows": [
+            [
+                {
+                    "name": "totalTokens"
+                },
+                {
+                    "name": "cachedInputTokens"
+                }
+            ],
+            [
+                {
+                    "name": "inputTokens"
+                },
+                {
+                    "name": "outputTokens"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Outcomes",
+        "rows": [
+            [
+                {
+                    "name": "wasTransferred"
+                },
+                {
+                    "name": "hadAppointment"
+                }
+            ],
+            [
+                {
+                    "name": "createdOpportunity"
+                },
+                {
+                    "name": "updatedOpportunity"
+                }
+            ],
+            [
+                {
+                    "name": "deletedOpportunity"
+                },
+                {
+                    "name": "sentFollowupMessage"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Trace",
+        "rows": [
+            [
+                {
+                    "name": "hatchetEventId"
+                },
+                false
+            ]
+        ]
+    }
+]

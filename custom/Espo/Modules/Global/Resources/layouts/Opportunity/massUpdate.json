@@ -1,4 +1,4 @@
-["opportunityStage", "followupStatus", "followupBreakoutLimit", "assignedUser", "teams"]
+["opportunityStage", "followupStatus", "followupTimer", "followupAiAgent", "followupBreakoutLimit", "assignedUser", "teams"]
 
 
 

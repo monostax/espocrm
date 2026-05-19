@@ -112,7 +112,6 @@
         },
         "followupAiAgent": {
             "type": "link",
-            "readOnly": true,
             "audited": true,
             "tooltip": true,
             "entity": "ChatwootAccountUserMembership"
@@ -167,6 +166,30 @@
         },
         "followupTimer": {
             "columns": ["followupTimer", "deleted"]
+        }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "followupTimer": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "followupStatus",
+                            "value": "FollowupActive"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "followupStatus",
+                            "value": "FollowupActive"
+                        }
+                    ]
+                }
+            }
         }
     }
 }

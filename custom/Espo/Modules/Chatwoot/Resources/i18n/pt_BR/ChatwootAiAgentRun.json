@@ -1,0 +1,51 @@
+{
+    "labels": {
+        "Create ChatwootAiAgentRun": "Criar Execução de Agente IA",
+        "noTenant": "(Sem Ambiente)",
+        "restricted": "(Restrito)"
+    },
+    "columnLabels": {
+        "conversationsEngaged": "Conversas Engajadas"
+    },
+    "scopeNames": {
+        "ChatwootAiAgentRun": "Execução de Agente IA",
+        "ChatwootAiAgentRunPlural": "Execuções de Agente IA"
+    },
+    "scopeNamesSingular": {
+        "ChatwootAiAgentRun": "Execução de Agente IA"
+    },
+    "fields": {
+        "name": "Nome",
+        "kind": "Tipo",
+        "agent": "Agente IA",
+        "conversation": "Conversa",
+        "chatwootAccount": "Conta",
+        "chatwootContact": "Contato",
+        "tenant": "Ambiente",
+        "triggerMessageId": "ID da Mensagem Disparadora",
+        "triggerMessageAt": "Mensagem Recebida em",
+        "runAt": "Executado em",
+        "leadTimeMs": "Tempo de Resposta (ms)",
+        "durationMs": "Duração (ms)",
+        "stepCount": "Quantidade de Passos",
+        "toolsUsed": "Ferramentas Usadas",
+        "inputTokens": "Tokens de Entrada",
+        "outputTokens": "Tokens de Saída",
+        "totalTokens": "Total de Tokens",
+        "cachedInputTokens": "Tokens de Entrada em Cache",
+        "model": "Modelo",
+        "wasTransferred": "Houve Transferência",
+        "hadAppointment": "Houve Agendamento",
+        "createdOpportunity": "Oportunidade Criada",
+        "updatedOpportunity": "Oportunidade Atualizada",
+        "deletedOpportunity": "Oportunidade Excluída",
+        "sentFollowupMessage": "Mensagem de Follow-up Enviada",
+        "hatchetEventId": "ID de Evento Hatchet"
+    },
+    "options": {
+        "kind": {
+            "customer-message": "Mensagem do Cliente",
+            "followup-trigger": "Disparador de Follow-up"
+        }
+    }
+}

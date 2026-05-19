@@ -121,6 +121,20 @@ class Service extends ParentService
             idWhereMap: $idWhereMap,
         );
 
+        // Internal-class reports (`isInternal=true`) return the Result
+        // straight from `$impl->run()` without going through
+        // `buildGridResult`, so the chart-rendering metadata stored on the
+        // Report row (`chartType`, `chartColor`, `chartColors`) never
+        // reaches the FE. The chart view picker then falls back to
+        // `"BarHorizontal"` (see `advanced:views/dashlets/report`), which
+        // flips dates onto the Y axis regardless of the seed value.
+        //
+        // Fill the gap here so internal reports honor the Report row's
+        // chart settings — but only when the internal class itself did not
+        // already set them (lets a future internal class pick its own
+        // chart type dynamically if it wants to).
+        $this->applyChartMetadataFromReport($result, $report);
+
         // Padding is purely additive. If it throws (malformed report data,
         // unexpected attribute shape, etc.) the original result is more
         // valuable than a 500 — log and pass through.
@@ -130,6 +144,49 @@ class Service extends ParentService
             // The padder logs its own warnings on expected failure modes;
             // this catches genuinely unexpected exceptions only.
             return $result;
+        }
+    }
+
+    /**
+     * Backfill chart rendering metadata from the Report row onto a
+     * GridResult whenever the producer (typically an internal-class
+     * report's `run()`) left it unset. Standard non-internal reports
+     * already get this via `Service::buildGridResult` and pass through
+     * unchanged here.
+     */
+    private function applyChartMetadataFromReport(GridResult $result, Report $report): void
+    {
+        if ($result->getChartType() === null) {
+            $chartType = $report->get('chartType');
+
+            if (is_string($chartType) && $chartType !== '') {
+                $result->setChartType($chartType);
+            }
+        }
+
+        if ($result->getChartColor() === null) {
+            $chartColor = $report->get('chartColor');
+
+            if (is_string($chartColor) && $chartColor !== '') {
+                $result->setChartColor($chartColor);
+            }
+        }
+
+        // `chartColors` is stored as a per-column JSON object on the
+        // Report row. Espo's Result helper expects a stdClass; the
+        // Report getter returns it as such already, so a non-empty
+        // object is forwarded directly.
+        $existingColors = $result->getChartColors();
+
+        if (
+            $existingColors instanceof \stdClass &&
+            (array) $existingColors === []
+        ) {
+            $chartColors = $report->get('chartColors');
+
+            if ($chartColors instanceof \stdClass && (array) $chartColors !== []) {
+                $result->setChartColors($chartColors);
+            }
         }
     }
 }

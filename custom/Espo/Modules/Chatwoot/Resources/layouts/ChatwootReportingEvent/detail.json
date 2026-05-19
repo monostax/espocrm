@@ -1,0 +1,79 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "eventName"
+                },
+                {
+                    "name": "kind"
+                }
+            ],
+            [
+                {
+                    "name": "happenedAt"
+                },
+                {
+                    "name": "tenant"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "conversation"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootContact"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Lifecycle",
+        "rows": [
+            [
+                {
+                    "name": "eventStartTime"
+                },
+                {
+                    "name": "eventEndTime"
+                }
+            ],
+            [
+                {
+                    "name": "valueSeconds"
+                },
+                {
+                    "name": "valueInBusinessHoursSeconds"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Source",
+        "rows": [
+            [
+                {
+                    "name": "chatwootInboxId"
+                },
+                {
+                    "name": "chatwootUserId"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootConversationId"
+                },
+                {
+                    "name": "chatwootReportingEventId"
+                }
+            ]
+        ]
+    }
+]

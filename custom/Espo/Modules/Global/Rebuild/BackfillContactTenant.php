@@ -23,6 +23,7 @@
 
 namespace Espo\Modules\Global\Rebuild;
 
+use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
@@ -82,9 +83,14 @@ class BackfillContactTenant implements RebuildAction
             ->find();
 
         foreach ($collection as $contact) {
-            $teamIds = $contact->get('teamsIds');
+            // NB: must use getLinkMultipleIdList() — raw ->find() does not
+            // run the LinkMultiple loader pipeline, so $contact->get('teamsIds')
+            // returns null even when entity_team rows exist.
+            $teamIds = $contact instanceof CoreEntity
+                ? $contact->getLinkMultipleIdList('teams')
+                : [];
 
-            if (!is_array($teamIds) || $teamIds === []) {
+            if ($teamIds === []) {
                 $this->log->warning(
                     "Global Module: Contact '{$contact->getId()}' has no teams; cannot derive tenantId."
                 );

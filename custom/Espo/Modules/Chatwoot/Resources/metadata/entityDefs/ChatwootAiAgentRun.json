@@ -1,0 +1,223 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "kind": {
+            "type": "enum",
+            "options": ["customer-message", "followup-trigger"],
+            "default": "customer-message",
+            "required": true,
+            "readOnly": true
+        },
+        "agent": {
+            "type": "link",
+            "required": true
+        },
+        "conversation": {
+            "type": "link"
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootContact": {
+            "type": "link"
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "triggerMessageId": {
+            "type": "int",
+            "readOnly": true
+        },
+        "triggerMessageAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "runAt": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": true
+        },
+        "leadTimeMs": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "durationMs": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "stepCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "toolsUsed": {
+            "type": "array",
+            "readOnly": true
+        },
+        "inputTokens": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "outputTokens": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "totalTokens": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "cachedInputTokens": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "model": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "hatchetEventId": {
+            "type": "varchar",
+            "maxLength": 36,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "wasTransferred": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true
+        },
+        "hadAppointment": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true
+        },
+        "createdOpportunity": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "updatedOpportunity": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "deletedOpportunity": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "sentFollowupMessage": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true
+        }
+    },
+    "links": {
+        "agent": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccountUserMembership"
+        },
+        "conversation": {
+            "type": "belongsTo",
+            "entity": "ChatwootConversation"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount"
+        },
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "chatwootAiAgentRuns"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "indexes": {
+        "runAt": {
+            "columns": ["runAt", "deleted"]
+        },
+        "agentRunAt": {
+            "columns": ["agentId", "runAt", "deleted"]
+        },
+        "conversationRunAt": {
+            "columns": ["conversationId", "runAt", "deleted"]
+        },
+        "chatwootAccountRunAt": {
+            "columns": ["chatwootAccountId", "runAt", "deleted"]
+        },
+        "tenantRunAt": {
+            "columns": ["tenantId", "runAt", "deleted"]
+        },
+        "hatchetEventId": {
+            "columns": ["hatchetEventId"]
+        },
+        "leadTimeMs": {
+            "columns": ["leadTimeMs", "deleted"]
+        },
+        "sentFollowupMessageRunAt": {
+            "columns": ["sentFollowupMessage", "runAt", "deleted"]
+        },
+        "createdOpportunityRunAt": {
+            "columns": ["createdOpportunity", "runAt", "deleted"]
+        },
+        "updatedOpportunityRunAt": {
+            "columns": ["updatedOpportunity", "runAt", "deleted"]
+        },
+        "deletedOpportunityRunAt": {
+            "columns": ["deletedOpportunity", "runAt", "deleted"]
+        }
+    },
+    "collection": {
+        "orderBy": "runAt",
+        "order": "desc"
+    }
+}

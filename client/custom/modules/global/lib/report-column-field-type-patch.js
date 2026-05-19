@@ -292,6 +292,46 @@ require([
     };
 });
 
+// ---------- 3a. Shared duration helper -----------------------------------
+//
+// A duration column stores its value in milliseconds (the entity field is
+// typed `int`, e.g. `ChatwootAiAgentRun.leadTimeMs`). The user marks the
+// column as `fieldType: "duration"` in the column editor and the backend
+// then exports `result.columnTypeMap[col] === "duration"`.
+//
+// We render duration columns by:
+//   1. Dividing the raw ms value by 1000 to get seconds.
+//   2. Formatting via the standard `formatNumber` helper (so the user's
+//      `decimalPlaces` override is honored and thousand separators apply).
+//   3. Appending a " s" unit suffix.
+//
+// We deliberately disable the SI multiplier (k / M) for durations: a value
+// like `3,307,000` ms = `3,307 s` is more readable than `3.3 ks`. Users who
+// want hour/minute breakdowns can still build them via column expressions.
+const __DURATION_DIVISOR_MS_TO_S = 1000;
+
+const __isDurationColumn = (expr, result) => {
+    if (!result || !result.columnTypeMap) {
+        return false;
+    }
+
+    return result.columnTypeMap[expr] === 'duration';
+};
+
+const __formatDurationSeconds = (helper, value, expr, result) => {
+    const numeric = Number(value);
+
+    if (!Number.isFinite(numeric)) {
+        return '';
+    }
+
+    const seconds = numeric / __DURATION_DIVISOR_MS_TO_S;
+    const decimals = ((result || {}).columnDecimalPlacesMap || {})[expr];
+
+    // useSi=false on purpose — see comment above.
+    return helper.formatNumber(seconds, false, false, null, null, decimals) + ' s';
+};
+
 // ---------- 4. Result rendering: honor columnTypeMap currencyConverted ----------
 //
 // The Advanced Pack's `tables/grid2` view (also used by `tables/grid1` via
@@ -306,6 +346,9 @@ require([
 // so that the per-column `fieldType` override (see Data.php::getColumnFieldType
 // and ResultHelper.php::populateColumnInfo) actually produces R$/$/€ output
 // in the table-style Grid result view.
+//
+// Also handles `columnTypeMap[col] === "duration"` (see helper above): the
+// raw ms value is converted to seconds and rendered as e.g. `73.2 s`.
 require(['advanced:views/report/reports/tables/grid2'], (Grid2View) => {
     const originalFormatCellValue = Grid2View.prototype.formatCellValue;
 
@@ -319,6 +362,19 @@ require(['advanced:views/report/reports/tables/grid2'], (Grid2View) => {
         }
 
         value = value || 0;
+
+        // Duration override (`columnTypeMap[col] === "duration"`) wins over
+        // the currency / numeric paths: it has its own unit suffix and
+        // never uses the SI multiplier.
+        if (__isDurationColumn(expr, this.result)) {
+            if (!hasValue && value == 0) {
+                return '<span class="text-muted">' +
+                    __formatDurationSeconds(this.reportHelper, 0, expr, this.result) +
+                    '</span>';
+            }
+
+            return __formatDurationSeconds(this.reportHelper, value, expr, this.result);
+        }
 
         let isCurrency = false;
         let parts = expr.split(':');
@@ -396,6 +452,13 @@ require(['advanced:report-helper'], (ReportHelper) => {
             }
 
             return Array.isArray(value) ? value.join(', ') : value;
+        }
+
+        // Duration columns — convert ms → s and append " s". Bypasses the
+        // currency/SI logic below so a 3,307,000 ms value renders as
+        // "3,307 s" rather than "3.3 ks".
+        if (__isDurationColumn(expr, result)) {
+            return __formatDurationSeconds(this, value, expr, result);
         }
 
         let isCurrency = false;
