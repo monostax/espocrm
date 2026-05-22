@@ -1,0 +1,30 @@
+{
+    "labels": {
+        "Create MetaLeadForm": "Create Meta Lead Ads Form"
+    },
+    "fields": {
+        "name": "Name",
+        "formId": "Form ID (Meta)",
+        "page": "Page",
+        "funnel": "Funnel",
+        "opportunityStage": "Opportunity Stage",
+        "assignedUser": "Assigned User",
+        "isActive": "Active",
+        "createOpportunity": "Create Opportunity",
+        "fieldMapping": "Field Mapping",
+        "description": "Description",
+        "totalLeadsReceived": "Total Leads Received",
+        "lastLeadReceivedAt": "Last Lead Received",
+        "leadgenEvents": "Lead Events"
+    },
+    "tooltips": {
+        "name": "Lead form display name (synced from Meta or admin-edited).",
+        "formId": "Meta numeric leadgen form id. Used to route incoming webhook events to this row.",
+        "funnel": "Funnel where Opportunities will be created for leads from this form. Required when isActive=true; sync may create rows without it set.",
+        "opportunityStage": "OpportunityStage to use for created Opportunities. Empty = first active stage of the funnel.",
+        "assignedUser": "Default assignedUser for created Contacts/Opportunities. Empty = unassigned.",
+        "isActive": "Inactive forms are skipped at ingestion (event marked status=skipped).",
+        "createOpportunity": "When true, each lead creates an Opportunity linked to the Contact in the configured Funnel.",
+        "fieldMapping": "Per-form override map: {metaFieldName: contactAttribute}. Merged on top of built-in defaults (email, full_name, first_name, last_name, phone_number, phone, city, company_name)."
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "MetaLeadAds": "Meta Lead Ads"
+    },
+    "scopeNames": {
+        "MetaFacebookPage": "Página do Facebook",
+        "MetaLeadForm": "Formulário Meta Lead Ads",
+        "MetaLeadgenEvent": "Evento de Lead Meta"
+    },
+    "scopeNamesPlural": {
+        "MetaFacebookPage": "Páginas do Facebook",
+        "MetaLeadForm": "Formulários Meta Lead Ads",
+        "MetaLeadgenEvent": "Eventos de Lead Meta"
+    }
+}

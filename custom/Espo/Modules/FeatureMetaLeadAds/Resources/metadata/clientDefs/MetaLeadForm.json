@@ -1,0 +1,23 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-target-arrow",
+    "boolFilterList": ["onlyMy"],
+    "relationshipPanels": {
+        "leadgenEvents": {
+            "createDisabled": true,
+            "selectDisabled": true,
+            "unlinkDisabled": true
+        }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "opportunityStage": {
+                "visible": {
+                    "conditionGroup": [
+                        { "type": "equals", "attribute": "createOpportunity", "value": true }
+                    ]
+                }
+            }
+        }
+    }
+}

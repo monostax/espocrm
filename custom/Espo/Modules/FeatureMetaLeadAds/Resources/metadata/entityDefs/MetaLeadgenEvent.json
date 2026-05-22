@@ -1,0 +1,133 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true,
+            "comment": "Human label: '{formName} — {leadgenId}'."
+        },
+        "leadgenId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 32,
+            "readOnly": true,
+            "index": true,
+            "comment": "Meta leadgen id (unique). Used for idempotency on retries."
+        },
+        "formId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "pageId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "adId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "metaCreatedTime": {
+            "type": "datetime",
+            "readOnly": true,
+            "comment": "created_time from the webhook payload (when Meta saw the lead)."
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Received", "Processed", "Failed", "Skipped"],
+            "default": "Received",
+            "readOnly": true,
+            "style": {
+                "Received": "default",
+                "Processed": "success",
+                "Failed": "danger",
+                "Skipped": "warning"
+            }
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "rawPayload": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "comment": "Body of GET /{leadgenId} response from Graph API. Contains field_data array."
+        },
+        "processedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "leadForm": {
+            "type": "link",
+            "readOnly": true
+        },
+        "page": {
+            "type": "link",
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "readOnly": true
+        },
+        "opportunity": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "leadForm": {
+            "type": "belongsTo",
+            "entity": "MetaLeadForm",
+            "foreign": "leadgenEvents"
+        },
+        "page": {
+            "type": "belongsTo",
+            "entity": "MetaFacebookPage"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "leadgenId": { "columns": ["leadgenId", "deleted"], "unique": true },
+        "status": { "columns": ["status"] },
+        "formId": { "columns": ["formId"] }
+    }
+}

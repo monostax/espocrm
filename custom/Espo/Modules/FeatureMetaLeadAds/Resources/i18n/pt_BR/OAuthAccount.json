@@ -1,0 +1,21 @@
+{
+    "labels": {
+        "syncMetaLeadAdsPages": "Sincronizar Páginas Meta",
+        "Meta Lead Ads — Sync Pages": "Meta Lead Ads — Sincronizar Páginas",
+        "Sync": "Sincronizar",
+        "Cancel": "Cancelar",
+        "Close": "Fechar",
+        "Discovered": "Descobertas",
+        "Created": "Criadas",
+        "Updated": "Atualizadas",
+        "Subscribed": "Assinadas em leadgen",
+        "Syncing Meta Lead Ads pages...": "Sincronizando páginas Meta Lead Ads..."
+    },
+    "messages": {
+        "confirmSyncMetaLeadAdsPages": "Sincronizar as Páginas do Facebook acessíveis por esta conta OAuth? Tokens serão renovados e cada página será assinada no campo leadgen.",
+        "syncMetaLeadAdsPagesDone": "Sincronização concluída.",
+        "syncMetaLeadAdsPagesPartial": "Sincronização concluída com erros na assinatura de algumas páginas.",
+        "syncMetaLeadAdsPagesFailed": "Falha ao sincronizar páginas Meta Lead Ads.",
+        "syncMetaLeadAdsPagesSubscribeErrors": "Páginas que não puderam ser assinadas no webhook leadgen:"
+    }
+}

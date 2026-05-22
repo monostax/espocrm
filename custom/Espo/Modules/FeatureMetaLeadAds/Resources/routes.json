@@ -1,0 +1,44 @@
+[
+    {
+        "route": "/MetaLeadAds/webhook",
+        "method": "get",
+        "params": {
+            "controller": "MetaLeadAdsWebhook",
+            "action": "webhook"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/MetaLeadAds/webhook",
+        "method": "post",
+        "params": {
+            "controller": "MetaLeadAdsWebhook",
+            "action": "webhook"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/MetaLeadAds/syncPages",
+        "method": "post",
+        "params": {
+            "controller": "MetaLeadAdsAdmin",
+            "action": "syncPages"
+        }
+    },
+    {
+        "route": "/MetaLeadAds/syncForms",
+        "method": "post",
+        "params": {
+            "controller": "MetaLeadAdsAdmin",
+            "action": "syncForms"
+        }
+    },
+    {
+        "route": "/MetaLeadAds/retryIngest",
+        "method": "post",
+        "params": {
+            "controller": "MetaLeadAdsAdmin",
+            "action": "retryIngest"
+        }
+    }
+]

@@ -1,0 +1,42 @@
+{
+    "labels": {
+        "Create MetaFacebookPage": "Create Facebook Page",
+        "Meta Lead Ads": "Meta Lead Ads",
+        "Sync Forms": "Sync Forms",
+        "syncMetaLeadForms": "Sync Forms",
+        "Meta Lead Ads — Sync Forms": "Meta Lead Ads — Sync Forms",
+        "Sync": "Sync",
+        "Cancel": "Cancel",
+        "Close": "Close",
+        "Discovered": "Discovered",
+        "Created": "Created",
+        "Updated": "Updated",
+        "Syncing lead forms...": "Syncing lead forms..."
+    },
+    "messages": {
+        "confirmSyncMetaLeadForms": "Sync all Lead Ads forms on this page? New forms will be created disabled and need a Funnel assignment before accepting leads.",
+        "syncMetaLeadFormsDone": "Form sync completed.",
+        "syncMetaLeadFormsFailed": "Failed to sync lead forms.",
+        "syncMetaLeadFormsNeedConfig": "Note: new forms start disabled — assign a Funnel and enable them before they accept leads."
+    },
+    "fields": {
+        "name": "Name",
+        "pageId": "Page ID (Meta)",
+        "pageAccessToken": "Page Access Token",
+        "isActive": "Active",
+        "subscribedToLeadgen": "Subscribed to leadgen",
+        "oAuthAccount": "OAuth Account",
+        "lastSyncedAt": "Last Synced",
+        "lastSyncError": "Last Sync Error",
+        "description": "Description",
+        "leadForms": "Lead Forms"
+    },
+    "tooltips": {
+        "name": "Facebook Page display name (synced from Meta).",
+        "pageId": "Meta numeric page id. Discriminator for webhook routing.",
+        "pageAccessToken": "Long-lived Page Access Token. Encrypted at rest. Obtained automatically via OAuth user token and synced by 'Sync Pages'.",
+        "isActive": "Inactive pages are ignored by the webhook receiver and excluded from form sync.",
+        "subscribedToLeadgen": "True after Meta App is subscribed to leadgen field on this page (POST /{pageId}/subscribed_apps).",
+        "oAuthAccount": "OAuthAccount used to discover this page. Provider must be 'meta-leadads'."
+    }
+}

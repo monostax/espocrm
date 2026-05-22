@@ -1,0 +1,27 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "datasetId" }, { "name": "apiVersion" }],
+            [{ "name": "accessToken" }, { "name": "isDefault" }],
+            [{ "name": "testEventCode" }, { "name": "leadEventSource" }],
+            [{ "name": "description" }, false]
+        ]
+    },
+    {
+        "label": "Last Event",
+        "rows": [
+            [{ "name": "lastEventStatus" }, { "name": "lastEventSentAt" }],
+            [{ "name": "lastEventError" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

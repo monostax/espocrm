@@ -1,0 +1,9 @@
+[
+    { "name": "createdAt" },
+    { "name": "eventName" },
+    { "name": "status" },
+    { "name": "metaCapiDataset" },
+    { "name": "opportunity" },
+    { "name": "contact" },
+    { "name": "httpStatus" }
+]

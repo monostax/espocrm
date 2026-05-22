@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "metaCapiEnabled": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "metaCapiDataset": {
+            "type": "link",
+            "tooltip": true
+        }
+    },
+    "links": {
+        "metaCapiDataset": {
+            "type": "belongsTo",
+            "entity": "MetaCapiDataset",
+            "foreign": "funnels"
+        }
+    }
+}

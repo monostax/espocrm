@@ -1,0 +1,30 @@
+{
+    "labels": {
+        "Create MetaLeadForm": "Criar Formulário Meta Lead Ads"
+    },
+    "fields": {
+        "name": "Nome",
+        "formId": "ID do Formulário (Meta)",
+        "page": "Página",
+        "funnel": "Funil",
+        "opportunityStage": "Estágio da Oportunidade",
+        "assignedUser": "Usuário Atribuído",
+        "isActive": "Ativo",
+        "createOpportunity": "Criar Oportunidade",
+        "fieldMapping": "Mapeamento de Campos",
+        "description": "Descrição",
+        "totalLeadsReceived": "Total de Leads Recebidos",
+        "lastLeadReceivedAt": "Último Lead Recebido",
+        "leadgenEvents": "Eventos de Lead"
+    },
+    "tooltips": {
+        "name": "Nome de exibição do formulário (sincronizado do Meta ou editado pelo admin).",
+        "formId": "ID numérico do formulário Lead Ads no Meta. Usado para rotear webhooks para esta linha.",
+        "funnel": "Funil onde Oportunidades serão criadas para leads deste formulário. Obrigatório quando isActive=true; sync pode criar linhas sem ele.",
+        "opportunityStage": "Estágio para Oportunidades criadas. Vazio = primeiro estágio ativo do funil.",
+        "assignedUser": "Usuário padrão para Contacts/Oportunidades criados. Vazio = sem atribuição.",
+        "isActive": "Formulários inativos são ignorados na ingestão (evento marcado status=Skipped).",
+        "createOpportunity": "Quando true, cada lead cria uma Oportunidade vinculada ao Contact no Funil configurado.",
+        "fieldMapping": "Mapa de override por formulário: {nomeCampoMeta: atributoContact}. Mesclado por cima dos defaults built-in (email, full_name, first_name, last_name, phone_number, phone, city, company_name)."
+    }
+}

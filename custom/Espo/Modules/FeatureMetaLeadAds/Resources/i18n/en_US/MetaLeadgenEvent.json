@@ -1,0 +1,44 @@
+{
+    "labels": {
+        "Retry Ingestion": "Retry Ingestion",
+        "retryLeadgenIngest": "Retry Ingestion",
+        "Retry": "Retry",
+        "Cancel": "Cancel",
+        "Re-enqueueing ingestion...": "Re-enqueueing ingestion..."
+    },
+    "massActions": {
+        "retryLeadgenIngest": "Retry Ingestion"
+    },
+    "messages": {
+        "confirmRetryLeadgenIngest": "Re-ingest this lead? The status will be reset to 'Received' and the job will be re-queued.",
+        "retryLeadgenIngestQueued": "Job re-queued successfully.",
+        "retryLeadgenIngestFailed": "Failed to re-enqueue ingestion.",
+        "confirmMassRetryLeadgenIngest": "Re-ingest all selected events with status 'Failed'? Events with other statuses will be skipped.",
+        "massRetryDone": "{count} event(s) re-queued successfully.",
+        "massRetryFailed": "Failed to perform bulk retry."
+    },
+    "fields": {
+        "name": "Name",
+        "leadgenId": "Leadgen ID (Meta)",
+        "formId": "Form ID (Meta)",
+        "pageId": "Page ID (Meta)",
+        "adId": "Ad ID (Meta)",
+        "metaCreatedTime": "Created on Meta",
+        "status": "Status",
+        "errorMessage": "Error Message",
+        "rawPayload": "Raw Payload",
+        "processedAt": "Processed At",
+        "leadForm": "Lead Form",
+        "page": "Page",
+        "contact": "Contact",
+        "opportunity": "Opportunity"
+    },
+    "options": {
+        "status": {
+            "Received": "Received",
+            "Processed": "Processed",
+            "Failed": "Failed",
+            "Skipped": "Skipped"
+        }
+    }
+}

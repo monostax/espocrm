@@ -1,0 +1,7 @@
+{
+    "massActions": {
+        "retryLeadgenIngest": {
+            "implementationClassName": "Espo\\Modules\\FeatureMetaLeadAds\\Classes\\MassAction\\MetaLeadgenEvent\\MassRetryIngest"
+        }
+    }
+}

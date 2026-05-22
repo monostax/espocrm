@@ -1,0 +1,44 @@
+{
+    "labels": {
+        "Retry Ingestion": "Reprocessar Ingestão",
+        "retryLeadgenIngest": "Reprocessar Ingestão",
+        "Retry": "Reprocessar",
+        "Cancel": "Cancelar",
+        "Re-enqueueing ingestion...": "Reenfileirando ingestão..."
+    },
+    "massActions": {
+        "retryLeadgenIngest": "Reprocessar Ingestão"
+    },
+    "messages": {
+        "confirmRetryLeadgenIngest": "Reprocessar este lead? O status será resetado para 'Recebido' e o job será reenfileirado.",
+        "retryLeadgenIngestQueued": "Job reenfileirado com sucesso.",
+        "retryLeadgenIngestFailed": "Falha ao reenfileirar a ingestão.",
+        "confirmMassRetryLeadgenIngest": "Reprocessar todos os eventos selecionados com status 'Falhou'? Eventos em outros status serão ignorados.",
+        "massRetryDone": "{count} evento(s) reenfileirado(s) com sucesso.",
+        "massRetryFailed": "Falha ao executar reprocessamento em massa."
+    },
+    "fields": {
+        "name": "Nome",
+        "leadgenId": "ID do Lead (Meta)",
+        "formId": "ID do Formulário (Meta)",
+        "pageId": "ID da Página (Meta)",
+        "adId": "ID do Anúncio (Meta)",
+        "metaCreatedTime": "Criado no Meta em",
+        "status": "Status",
+        "errorMessage": "Mensagem de Erro",
+        "rawPayload": "Payload Bruto",
+        "processedAt": "Processado em",
+        "leadForm": "Formulário de Lead",
+        "page": "Página",
+        "contact": "Contact",
+        "opportunity": "Oportunidade"
+    },
+    "options": {
+        "status": {
+            "Received": "Recebido",
+            "Processed": "Processado",
+            "Failed": "Falhou",
+            "Skipped": "Ignorado"
+        }
+    }
+}

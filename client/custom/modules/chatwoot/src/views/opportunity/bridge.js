@@ -80,6 +80,7 @@ class OpportunityBridgeView extends View {
         }
 
         const conversationId = parsed.data.conversation?.id;
+        const accountId = parsed.data.conversation?.account_id;
 
         if (!conversationId) {
             this.bridgeState = "not-found";
@@ -96,29 +97,40 @@ class OpportunityBridgeView extends View {
         }
 
         this.lastChatwootConversationId = conversationId;
-        this._lookupAndNavigate(conversationId);
+        this._lookupAndNavigate(conversationId, accountId);
     }
 
     /**
      * Look up the ChatwootConversation entity and navigate to its
      * related Opportunity list.
      * @param {number} chatwootConversationId
+     * @param {number|undefined} chatwootAccountId
      */
-    async _lookupAndNavigate(chatwootConversationId) {
+    async _lookupAndNavigate(chatwootConversationId, chatwootAccountId) {
         this.bridgeState = "loading";
         if (this.isRendered()) {
             this.reRender();
         }
 
         try {
+            const where = [
+                {
+                    type: "equals",
+                    attribute: "chatwootConversationId",
+                    value: chatwootConversationId,
+                },
+            ];
+
+            if (chatwootAccountId) {
+                where.push({
+                    type: "equals",
+                    attribute: "chatwootAccountIdExternal",
+                    value: chatwootAccountId,
+                });
+            }
+
             const response = await Espo.Ajax.getRequest("ChatwootConversation", {
-                where: [
-                    {
-                        type: "equals",
-                        attribute: "chatwootConversationId",
-                        value: chatwootConversationId,
-                    },
-                ],
+                where,
                 maxSize: 1,
                 select: "id",
             });

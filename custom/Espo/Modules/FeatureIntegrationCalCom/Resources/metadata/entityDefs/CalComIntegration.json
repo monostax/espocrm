@@ -1,0 +1,124 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true,
+            "pattern": "$noBadCharacters"
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "apiKey": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true,
+            "index": true,
+            "comment": "URL slug used in webhook path: /api/v1/CalCom/receive/{apiKey}. Must be unique."
+        },
+        "signingSecret": {
+            "type": "password",
+            "dbType": "text",
+            "tooltip": true,
+            "audited": false,
+            "comment": "Cal.com webhook signing secret. If set, X-Cal-Signature-256 is required and verified (HMAC-SHA256)."
+        },
+        "createContactIfMissing": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "metaCapiDataset": {
+            "type": "link",
+            "tooltip": true
+        },
+        "metaCapiEventMapping": {
+            "type": "jsonObject",
+            "tooltip": true,
+            "comment": "Map of cal.com triggerEvent -> Meta CAPI event_name. Missing/empty value = skip CAPI for that trigger."
+        },
+        "description": {
+            "type": "text"
+        },
+        "lastWebhookReceivedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastWebhookStatus": {
+            "type": "enum",
+            "options": ["", "Accepted", "Skipped", "BadRequest", "Unauthorized"],
+            "default": "",
+            "readOnly": true,
+            "style": {
+                "Accepted": "success",
+                "Skipped": "warning",
+                "BadRequest": "danger",
+                "Unauthorized": "danger"
+            }
+        },
+        "lastWebhookError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "totalWebhooksReceived": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "metaCapiDataset": {
+            "type": "belongsTo",
+            "entity": "MetaCapiDataset"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": { "columns": ["name", "deleted"] },
+        "isActive": { "columns": ["isActive"] },
+        "apiKey": { "columns": ["apiKey", "deleted"], "unique": true }
+    }
+}

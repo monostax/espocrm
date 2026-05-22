@@ -1,0 +1,21 @@
+{
+    "labels": {
+        "syncMetaLeadAdsPages": "Sync Meta Pages",
+        "Meta Lead Ads — Sync Pages": "Meta Lead Ads — Sync Pages",
+        "Sync": "Sync",
+        "Cancel": "Cancel",
+        "Close": "Close",
+        "Discovered": "Discovered",
+        "Created": "Created",
+        "Updated": "Updated",
+        "Subscribed": "Subscribed to leadgen",
+        "Syncing Meta Lead Ads pages...": "Syncing Meta Lead Ads pages..."
+    },
+    "messages": {
+        "confirmSyncMetaLeadAdsPages": "Sync Facebook Pages accessible via this OAuth account? Tokens will be refreshed and each page will be subscribed to the leadgen field.",
+        "syncMetaLeadAdsPagesDone": "Sync completed.",
+        "syncMetaLeadAdsPagesPartial": "Sync completed with errors subscribing some pages.",
+        "syncMetaLeadAdsPagesFailed": "Failed to sync Meta Lead Ads pages.",
+        "syncMetaLeadAdsPagesSubscribeErrors": "Pages that could not be subscribed to the leadgen webhook:"
+    }
+}

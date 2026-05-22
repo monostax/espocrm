@@ -1,0 +1,33 @@
+[
+    {
+        "label": "Event",
+        "rows": [
+            [{ "name": "eventName" }, { "name": "status" }],
+            [{ "name": "metaCapiDataset" }, { "name": "eventTime" }],
+            [{ "name": "httpStatus" }, { "name": "eventsReceived" }],
+            [{ "name": "fbtraceId" }, false]
+        ]
+    },
+    {
+        "label": "Context",
+        "rows": [
+            [{ "name": "subject" }, false],
+            [{ "name": "opportunity" }, { "name": "contact" }],
+            [{ "name": "opportunityStageFrom" }, { "name": "opportunityStageTo" }]
+        ]
+    },
+    {
+        "label": "Diagnostics",
+        "rows": [
+            [{ "name": "errorMessage" }, false],
+            [{ "name": "requestPayload" }, false],
+            [{ "name": "responsePayload" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }]
+        ]
+    }
+]

@@ -1,0 +1,8 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-calendar-event",
+    "filterList": [
+        { "name": "active", "label": "Active" },
+        { "name": "inactive", "label": "Inactive" }
+    ]
+}

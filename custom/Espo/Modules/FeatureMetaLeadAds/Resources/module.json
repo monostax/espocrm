@@ -1,0 +1,7 @@
+{
+    "order": 26,
+    "version": "1.0.0",
+    "name": "FeatureMetaLeadAds",
+    "description": "Meta Lead Ads ingestion — receives leadgen webhooks, fetches lead data via Graph API, creates Contacts/Opportunities.",
+    "jsTranspiled": true
+}

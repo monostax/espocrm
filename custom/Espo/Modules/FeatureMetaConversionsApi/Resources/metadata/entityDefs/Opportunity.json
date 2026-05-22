@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "metaCapiEventLogs": {
+            "type": "linkMultiple",
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "view": "views/fields/link-multiple"
+        }
+    },
+    "links": {
+        "metaCapiEventLogs": {
+            "type": "hasChildren",
+            "entity": "MetaCapiEventLog",
+            "foreign": "subject"
+        }
+    }
+}

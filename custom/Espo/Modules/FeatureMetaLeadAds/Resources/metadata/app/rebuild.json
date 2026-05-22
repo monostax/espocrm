@@ -1,0 +1,6 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeatureMetaLeadAds\\Rebuild\\SeedOAuthProviderMetaLeadAds",
+        "Espo\\Modules\\FeatureMetaLeadAds\\Rebuild\\ConfigureNavbar"
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "name": "Nome",
+        "datasetId": "ID do Dataset (Pixel)",
+        "accessToken": "Access Token",
+        "apiVersion": "Versão da API",
+        "testEventCode": "Código de Evento de Teste",
+        "leadEventSource": "Lead Event Source",
+        "isActive": "Ativo",
+        "isDefault": "Padrão",
+        "description": "Descrição",
+        "lastEventSentAt": "Último Envio em",
+        "lastEventStatus": "Status do Último Envio",
+        "lastEventError": "Erro do Último Envio",
+        "funnels": "Funis",
+        "eventLogs": "Histórico de Eventos"
+    },
+    "links": {
+        "funnels": "Funis",
+        "eventLogs": "Histórico de Eventos"
+    },
+    "options": {
+        "lastEventStatus": {
+            "": "—",
+            "Success": "Sucesso",
+            "Failed": "Falha"
+        }
+    },
+    "tooltips": {
+        "datasetId": "Identificador numérico de 15 a 17 dígitos do seu dataset/pixel no Gerenciador de Eventos da Meta.",
+        "accessToken": "Token de acesso gerado em Gerenciador de Eventos → Configurações → API de Conversões → Gerar token de acesso.",
+        "apiVersion": "Versão da Graph API. Padrão: v25.0.",
+        "testEventCode": "Se preenchido, todos os eventos serão enviados como teste (aparecem na aba 'Eventos de Teste' do Gerenciador de Eventos).",
+        "leadEventSource": "Enviado como custom_data.lead_event_source. Identifica o CRM nos dashboards da Meta.",
+        "isDefault": "Marque para usar este dataset quando um Funil não tiver um dataset específico configurado."
+    },
+    "presetFilters": {
+        "active": "Ativos",
+        "inactive": "Inativos",
+        "default": "Padrão"
+    }
+}

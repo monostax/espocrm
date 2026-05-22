@@ -1,0 +1,7 @@
+{
+    "order": 27,
+    "version": "1.0.0",
+    "name": "FeatureIntegrationCalCom",
+    "description": "Cal.com integration — receives booking webhooks, matches/creates Contacts, optionally forwards to Meta CAPI.",
+    "jsTranspiled": true
+}

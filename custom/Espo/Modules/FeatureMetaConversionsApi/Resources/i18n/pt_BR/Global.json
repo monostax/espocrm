@@ -1,0 +1,13 @@
+{
+    "scopeNames": {
+        "MetaCapiDataset": "Meta CAPI / Dataset",
+        "MetaCapiEventLog": "Meta CAPI / Histórico de Eventos"
+    },
+    "scopeNamesPlural": {
+        "MetaCapiDataset": "Meta CAPI / Datasets",
+        "MetaCapiEventLog": "Meta CAPI / Histórico de Eventos"
+    },
+    "labels": {
+        "Meta Conversions API": "API de Conversões da Meta"
+    }
+}

@@ -1,0 +1,18 @@
+[
+    {
+        "route": "/MetaCapiTest/sendForOpportunity",
+        "method": "post",
+        "params": {
+            "controller": "MetaCapiTest",
+            "action": "sendForOpportunity"
+        }
+    },
+    {
+        "route": "/MetaCapiTest/sendForContact",
+        "method": "post",
+        "params": {
+            "controller": "MetaCapiTest",
+            "action": "sendForContact"
+        }
+    }
+]

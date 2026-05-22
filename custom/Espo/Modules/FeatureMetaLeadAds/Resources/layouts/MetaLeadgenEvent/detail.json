@@ -1,0 +1,37 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "leadgenId" }, { "name": "status" }],
+            [{ "name": "formId" }, { "name": "pageId" }],
+            [{ "name": "adId" }, { "name": "metaCreatedTime" }],
+            [{ "name": "processedAt" }, false]
+        ]
+    },
+    {
+        "label": "References",
+        "rows": [
+            [{ "name": "leadForm" }, { "name": "page" }],
+            [{ "name": "contact" }, { "name": "opportunity" }]
+        ]
+    },
+    {
+        "label": "Error",
+        "rows": [
+            [{ "name": "errorMessage" }, false]
+        ]
+    },
+    {
+        "label": "Payload",
+        "rows": [
+            [{ "name": "rawPayload" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }]
+        ]
+    }
+]

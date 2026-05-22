@@ -1,0 +1,11 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-radar",
+    "filterList": [
+        "name",
+        { "name": "active", "label": "Active" },
+        { "name": "inactive", "label": "Inactive" },
+        { "name": "default", "label": "Default" }
+    ],
+    "boolFilterList": ["onlyMy"]
+}

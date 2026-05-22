@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "metaCapiEventName": {
+            "type": "varchar",
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true
+        },
+        "metaCapiEventNameOnLeave": {
+            "type": "varchar",
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true
+        }
+    }
+}

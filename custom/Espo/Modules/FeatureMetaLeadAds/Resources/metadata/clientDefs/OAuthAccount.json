@@ -1,0 +1,15 @@
+{
+    "detailActionList": [
+        "__APPEND__",
+        {
+            "name": "syncMetaLeadAdsPages",
+            "label": "Sync Meta Pages",
+            "labelTranslation": "OAuthAccount.labels.syncMetaLeadAdsPages",
+            "handler": "feature-meta-lead-ads:handlers/o-auth-account/detail-actions",
+            "actionFunction": "syncMetaLeadAdsPages",
+            "checkVisibilityFunction": "isSyncMetaLeadAdsPagesAvailable",
+            "groupIndex": 1,
+            "iconClass": "fas fa-sync"
+        }
+    ]
+}

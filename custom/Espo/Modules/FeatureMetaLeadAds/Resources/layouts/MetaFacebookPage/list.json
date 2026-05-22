@@ -1,0 +1,7 @@
+[
+    { "name": "name", "link": true },
+    { "name": "pageId" },
+    { "name": "isActive" },
+    { "name": "subscribedToLeadgen" },
+    { "name": "lastSyncedAt" }
+]

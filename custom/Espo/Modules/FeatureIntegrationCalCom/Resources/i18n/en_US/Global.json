@@ -1,0 +1,11 @@
+{
+    "scopeNames": {
+        "CalComIntegration": "Cal.com / Integration"
+    },
+    "scopeNamesPlural": {
+        "CalComIntegration": "Cal.com / Integrations"
+    },
+    "labels": {
+        "Cal.com Integration": "Cal.com Integration"
+    }
+}

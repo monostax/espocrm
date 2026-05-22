@@ -1,0 +1,134 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true,
+            "pattern": "$noBadCharacters"
+        },
+        "datasetId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 32,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Numeric Meta dataset/pixel ID (15-17 digits)."
+        },
+        "accessToken": {
+            "type": "password",
+            "dbType": "text",
+            "tooltip": true,
+            "audited": false,
+            "required": true,
+            "comment": "Encrypted at rest via Crypt::encrypt. Generated in Events Manager → Settings → Conversions API → Generate access token."
+        },
+        "apiVersion": {
+            "type": "varchar",
+            "maxLength": 8,
+            "default": "v25.0",
+            "tooltip": true
+        },
+        "testEventCode": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true,
+            "comment": "If set, every event is sent as a test event (visible in Events Manager → Test Events tab)."
+        },
+        "leadEventSource": {
+            "type": "varchar",
+            "maxLength": 64,
+            "default": "EspoCRM",
+            "tooltip": true,
+            "comment": "Sent as custom_data.lead_event_source. Identifies the CRM in Meta dashboards."
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "isDefault": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true,
+            "comment": "Used as fallback when a Funnel has no explicit metaCapiDataset link."
+        },
+        "description": {
+            "type": "text"
+        },
+        "lastEventSentAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastEventStatus": {
+            "type": "enum",
+            "options": ["", "Success", "Failed"],
+            "default": "",
+            "readOnly": true,
+            "style": {
+                "Success": "success",
+                "Failed": "danger"
+            }
+        },
+        "lastEventError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "funnels": {
+            "type": "hasMany",
+            "entity": "Funnel",
+            "foreign": "metaCapiDataset"
+        },
+        "eventLogs": {
+            "type": "hasMany",
+            "entity": "MetaCapiEventLog",
+            "foreign": "metaCapiDataset"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": { "columns": ["name", "deleted"] },
+        "isActive": { "columns": ["isActive"] },
+        "isDefault": { "columns": ["isDefault"] }
+    }
+}

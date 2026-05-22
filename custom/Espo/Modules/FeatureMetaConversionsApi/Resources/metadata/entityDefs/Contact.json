@@ -1,0 +1,48 @@
+{
+    "fields": {
+        "metaLeadId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "trim": true,
+            "tooltip": true,
+            "index": true,
+            "audited": true
+        },
+        "metaAdId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "trim": true,
+            "audited": true
+        },
+        "metaCampaignId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "trim": true,
+            "audited": true
+        },
+        "metaFormId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "trim": true,
+            "audited": true
+        },
+        "metaFbc": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Meta click identifier. Format: fb.1.{timestamp}.{fbclid}. From _fbc cookie or built from fbclid URL param."
+        },
+        "metaFbp": {
+            "type": "varchar",
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Meta browser identifier. From _fbp cookie."
+        },
+        "metaCapturedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "metaLeadId": "Meta Lead ID",
+        "metaAdId": "Meta Ad ID",
+        "metaCampaignId": "Meta Campaign ID",
+        "metaFormId": "Meta Form ID",
+        "metaFbc": "Meta Click ID (fbc)",
+        "metaFbp": "Meta Browser ID (fbp)",
+        "metaCapturedAt": "Capturado em"
+    },
+    "tooltips": {
+        "metaLeadId": "ID numérico (15-17 dígitos) gerado pela Meta para este lead. Permite matching exato no servidor.",
+        "metaFbc": "Identificador de clique. Formato: fb.1.{timestamp}.{fbclid}. Vem do cookie _fbc ou construído a partir do parâmetro fbclid da URL.",
+        "metaFbp": "Identificador de navegador. Vem do cookie _fbp."
+    }
+}

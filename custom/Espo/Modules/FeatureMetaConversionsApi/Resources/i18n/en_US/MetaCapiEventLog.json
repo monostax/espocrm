@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "name": "Summary",
+        "eventName": "Event",
+        "status": "Status",
+        "metaCapiDataset": "Dataset",
+        "subject": "Source",
+        "contact": "Contact",
+        "opportunity": "Opportunity",
+        "opportunityStageFrom": "Previous Stage",
+        "opportunityStageTo": "New Stage",
+        "eventTime": "Event Time",
+        "requestPayload": "Request Payload",
+        "responsePayload": "Meta Response",
+        "httpStatus": "HTTP Status",
+        "errorMessage": "Error Message",
+        "fbtraceId": "fbtrace_id",
+        "eventsReceived": "Events Received"
+    },
+    "links": {
+        "metaCapiDataset": "Dataset",
+        "subject": "Source",
+        "contact": "Contact",
+        "opportunity": "Opportunity",
+        "opportunityStageFrom": "Previous Stage",
+        "opportunityStageTo": "New Stage"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Sent": "Sent",
+            "Failed": "Failed",
+            "Skipped": "Skipped"
+        }
+    },
+    "presetFilters": {
+        "sent": "Sent",
+        "failed": "Failed",
+        "pending": "Pending",
+        "skipped": "Skipped"
+    }
+}

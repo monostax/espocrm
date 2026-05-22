@@ -1,0 +1,9 @@
+{
+    "links": {
+        "metaLeadForms": {
+            "type": "hasMany",
+            "entity": "MetaLeadForm",
+            "foreign": "funnel"
+        }
+    }
+}

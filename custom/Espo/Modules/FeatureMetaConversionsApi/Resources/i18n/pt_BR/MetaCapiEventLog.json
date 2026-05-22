@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "name": "Resumo",
+        "eventName": "Evento",
+        "status": "Status",
+        "metaCapiDataset": "Dataset",
+        "subject": "Origem",
+        "contact": "Contato",
+        "opportunity": "Oportunidade",
+        "opportunityStageFrom": "Stage Anterior",
+        "opportunityStageTo": "Nova Stage",
+        "eventTime": "Hora do Evento",
+        "requestPayload": "Payload Enviado",
+        "responsePayload": "Resposta da Meta",
+        "httpStatus": "HTTP Status",
+        "errorMessage": "Mensagem de Erro",
+        "fbtraceId": "fbtrace_id",
+        "eventsReceived": "Eventos Recebidos"
+    },
+    "links": {
+        "metaCapiDataset": "Dataset",
+        "subject": "Origem",
+        "contact": "Contato",
+        "opportunity": "Oportunidade",
+        "opportunityStageFrom": "Stage Anterior",
+        "opportunityStageTo": "Nova Stage"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pendente",
+            "Sent": "Enviado",
+            "Failed": "Falhou",
+            "Skipped": "Ignorado"
+        }
+    },
+    "presetFilters": {
+        "sent": "Enviados",
+        "failed": "Falhas",
+        "pending": "Pendentes",
+        "skipped": "Ignorados"
+    }
+}

@@ -1,0 +1,8 @@
+[
+    [{ "name": "name" }, { "name": "isActive" }],
+    [{ "name": "datasetId" }, { "name": "apiVersion" }],
+    [{ "name": "accessToken" }, { "name": "isDefault" }],
+    [{ "name": "testEventCode" }, { "name": "leadEventSource" }],
+    [{ "name": "description" }, false],
+    [{ "name": "teams" }, false]
+]

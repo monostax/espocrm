@@ -1,0 +1,113 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 200,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Facebook Page display name (synced from Meta)."
+        },
+        "pageId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 32,
+            "trim": true,
+            "tooltip": true,
+            "index": true,
+            "comment": "Meta numeric page id. Discriminator for webhook routing."
+        },
+        "pageAccessToken": {
+            "type": "password",
+            "dbType": "text",
+            "tooltip": true,
+            "audited": false,
+            "comment": "Long-lived Page Access Token. Encrypted at rest via Crypt::encrypt."
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true,
+            "comment": "Inactive pages are ignored by the webhook receiver and excluded from form sync."
+        },
+        "subscribedToLeadgen": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "True after Meta App is subscribed to leadgen field on this page (POST /{pageId}/subscribed_apps)."
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "OAuthAccount used to discover and refresh this page's data. The OAuthProvider must be `meta-leadads`."
+        },
+        "lastSyncedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastSyncError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount"
+        },
+        "leadForms": {
+            "type": "hasMany",
+            "entity": "MetaLeadForm",
+            "foreign": "page"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": { "columns": ["name", "deleted"] },
+        "isActive": { "columns": ["isActive"] },
+        "pageId": { "columns": ["pageId", "deleted"], "unique": true }
+    }
+}

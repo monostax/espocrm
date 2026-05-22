@@ -1,0 +1,38 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-brand-facebook",
+    "boolFilterList": ["onlyMy"],
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "label": "Sync Forms",
+                    "name": "syncMetaLeadForms",
+                    "style": "default",
+                    "acl": "edit",
+                    "handler": "feature-meta-lead-ads:handlers/meta-facebook-page/detail-actions",
+                    "actionFunction": "syncMetaLeadForms",
+                    "checkVisibilityFunction": "isSyncMetaLeadFormsAvailable",
+                    "iconClass": "fas fa-sync"
+                }
+            ]
+        }
+    },
+    "detailActionList": [
+        {
+            "name": "syncMetaLeadForms",
+            "label": "Sync Forms",
+            "handler": "feature-meta-lead-ads:handlers/meta-facebook-page/detail-actions",
+            "actionFunction": "syncMetaLeadForms",
+            "checkVisibilityFunction": "isSyncMetaLeadFormsAvailable",
+            "groupIndex": 1,
+            "iconClass": "fas fa-sync"
+        }
+    ],
+    "relationshipPanels": {
+        "leadForms": {
+            "unlinkDisabled": true
+        }
+    }
+}

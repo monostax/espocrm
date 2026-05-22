@@ -1,0 +1,9 @@
+{
+    "links": {
+        "metaFacebookPages": {
+            "type": "hasMany",
+            "entity": "MetaFacebookPage",
+            "foreign": "oAuthAccount"
+        }
+    }
+}

@@ -1,0 +1,139 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 200,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Lead form display name (synced from Meta or admin-edited)."
+        },
+        "formId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 32,
+            "trim": true,
+            "tooltip": true,
+            "index": true,
+            "comment": "Meta numeric leadgen form id. Used to route incoming webhook events to this row."
+        },
+        "page": {
+            "type": "link",
+            "required": true,
+            "tooltip": true
+        },
+        "funnel": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "Funnel where Opportunities will be created for leads from this form. Required when isActive=true; sync may create rows without it set."
+        },
+        "opportunityStage": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "OpportunityStage to use for created Opportunities. Empty = first active stage of the funnel."
+        },
+        "assignedUser": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "Default assignedUser for created Contacts/Opportunities. Empty = unassigned."
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true,
+            "comment": "Inactive forms are skipped at ingestion (event marked status=skipped)."
+        },
+        "createOpportunity": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true,
+            "comment": "When true, each lead creates an Opportunity linked to the Contact in the configured Funnel."
+        },
+        "fieldMapping": {
+            "type": "jsonObject",
+            "tooltip": true,
+            "comment": "Per-form override map: {metaFieldName: contactAttribute}. Merged on top of built-in defaults (email, full_name, first_name, last_name, phone_number, phone, city, company_name)."
+        },
+        "description": {
+            "type": "text"
+        },
+        "totalLeadsReceived": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "lastLeadReceivedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "page": {
+            "type": "belongsTo",
+            "entity": "MetaFacebookPage",
+            "foreign": "leadForms"
+        },
+        "funnel": {
+            "type": "belongsTo",
+            "entity": "Funnel"
+        },
+        "opportunityStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "leadgenEvents": {
+            "type": "hasMany",
+            "entity": "MetaLeadgenEvent",
+            "foreign": "leadForm"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": { "columns": ["name", "deleted"] },
+        "isActive": { "columns": ["isActive"] },
+        "formId": { "columns": ["formId", "deleted"], "unique": true }
+    }
+}

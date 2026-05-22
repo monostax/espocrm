@@ -1,0 +1,7 @@
+{
+    "create": "no",
+    "read": "team",
+    "edit": "no",
+    "delete": "admin",
+    "stream": false
+}

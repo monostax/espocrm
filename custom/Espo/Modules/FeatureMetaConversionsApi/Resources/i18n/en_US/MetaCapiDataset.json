@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "name": "Name",
+        "datasetId": "Dataset (Pixel) ID",
+        "accessToken": "Access Token",
+        "apiVersion": "API Version",
+        "testEventCode": "Test Event Code",
+        "leadEventSource": "Lead Event Source",
+        "isActive": "Active",
+        "isDefault": "Default",
+        "description": "Description",
+        "lastEventSentAt": "Last Sent At",
+        "lastEventStatus": "Last Event Status",
+        "lastEventError": "Last Event Error",
+        "funnels": "Funnels",
+        "eventLogs": "Event Logs"
+    },
+    "links": {
+        "funnels": "Funnels",
+        "eventLogs": "Event Logs"
+    },
+    "options": {
+        "lastEventStatus": {
+            "": "—",
+            "Success": "Success",
+            "Failed": "Failed"
+        }
+    },
+    "tooltips": {
+        "datasetId": "Numeric 15-17 digit dataset/pixel ID from Meta Events Manager.",
+        "accessToken": "Token generated at Events Manager → Settings → Conversions API → Generate access token.",
+        "apiVersion": "Graph API version. Default: v25.0.",
+        "testEventCode": "If set, all events are sent as test events (visible in Events Manager → Test Events tab).",
+        "leadEventSource": "Sent as custom_data.lead_event_source. Identifies the CRM in Meta dashboards.",
+        "isDefault": "Use this dataset as fallback when a Funnel has no explicit dataset configured."
+    },
+    "presetFilters": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "default": "Default"
+    }
+}

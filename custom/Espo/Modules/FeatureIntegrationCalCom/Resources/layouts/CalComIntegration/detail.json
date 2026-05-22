@@ -1,0 +1,34 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "apiKey" }, { "name": "signingSecret" }],
+            [{ "name": "createContactIfMissing" }, false],
+            [{ "name": "description" }, false]
+        ]
+    },
+    {
+        "label": "Meta CAPI Forwarding",
+        "rows": [
+            [{ "name": "metaCapiDataset" }, false],
+            [{ "name": "metaCapiEventMapping" }, false]
+        ]
+    },
+    {
+        "label": "Last Webhook",
+        "rows": [
+            [{ "name": "lastWebhookStatus" }, { "name": "lastWebhookReceivedAt" }],
+            [{ "name": "totalWebhooksReceived" }, false],
+            [{ "name": "lastWebhookError" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

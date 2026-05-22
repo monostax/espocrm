@@ -1,0 +1,131 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true
+        },
+        "eventName": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "index": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pending", "Sent", "Failed", "Skipped"],
+            "default": "Pending",
+            "readOnly": true,
+            "style": {
+                "Sent": "success",
+                "Failed": "danger",
+                "Skipped": "warning"
+            },
+            "index": true
+        },
+        "metaCapiDataset": {
+            "type": "link"
+        },
+        "subject": {
+            "type": "linkParent",
+            "entityList": ["Opportunity", "Contact", "IncomingWebhook"]
+        },
+        "contact": {
+            "type": "link"
+        },
+        "opportunity": {
+            "type": "link"
+        },
+        "opportunityStageFrom": {
+            "type": "link"
+        },
+        "opportunityStageTo": {
+            "type": "link"
+        },
+        "eventTime": {
+            "type": "datetime",
+            "readOnly": true,
+            "index": true
+        },
+        "requestPayload": {
+            "type": "jsonObject",
+            "readOnly": true
+        },
+        "responsePayload": {
+            "type": "jsonObject",
+            "readOnly": true
+        },
+        "httpStatus": {
+            "type": "int",
+            "readOnly": true
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "fbtraceId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "comment": "Meta's trace ID (fbtrace_id) for support requests."
+        },
+        "eventsReceived": {
+            "type": "int",
+            "readOnly": true,
+            "comment": "Number of events Meta acknowledged."
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "metaCapiDataset": {
+            "type": "belongsTo",
+            "entity": "MetaCapiDataset",
+            "foreign": "eventLogs"
+        },
+        "subject": {
+            "type": "belongsToParent",
+            "foreign": "metaCapiEventLogs"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity"
+        },
+        "opportunityStageFrom": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "opportunityStageTo": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "createdAt": { "columns": ["createdAt"] },
+        "statusEventTime": { "columns": ["status", "eventTime"] },
+        "datasetEventTime": { "columns": ["metaCapiDatasetId", "eventTime"] }
+    }
+}

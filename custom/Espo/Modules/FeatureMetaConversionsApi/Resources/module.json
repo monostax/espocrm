@@ -1,0 +1,7 @@
+{
+    "order": 25,
+    "version": "1.0.0",
+    "name": "FeatureMetaConversionsApi",
+    "description": "Meta Conversions API integration — forwards CRM stage changes to Meta as server-side events.",
+    "jsTranspiled": true
+}

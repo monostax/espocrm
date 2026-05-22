@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-list-details",
+    "filterList": [
+        { "name": "sent", "label": "Sent" },
+        { "name": "failed", "label": "Failed" },
+        { "name": "pending", "label": "Pending" },
+        { "name": "skipped", "label": "Skipped" }
+    ]
+}

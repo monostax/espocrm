@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "metaCapiEventName": "Meta CAPI Event Name (entrada)",
+        "metaCapiEventNameOnLeave": "Meta CAPI Event Name (saída)"
+    },
+    "tooltips": {
+        "metaCapiEventName": "Nome do evento enviado para a Meta quando uma Oportunidade ENTRA nesta stage. Ex: Lead, MQL, SQL, Purchase. Deixe vazio para não disparar.",
+        "metaCapiEventNameOnLeave": "Opcional: evento disparado quando a Oportunidade SAI desta stage. Útil para marcar conclusão de etapa ou Closed Lost."
+    }
+}

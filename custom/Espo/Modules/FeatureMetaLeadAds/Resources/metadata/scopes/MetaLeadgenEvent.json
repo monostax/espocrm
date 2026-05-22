@@ -1,0 +1,11 @@
+{
+    "entity": "MetaLeadgenEvent",
+    "isCustom": false,
+    "module": "FeatureMetaLeadAds",
+    "tab": true,
+    "object": true,
+    "acl": "team",
+    "aclLevel": "team",
+    "stream": false,
+    "languageCategory": "Meta Lead Ads"
+}

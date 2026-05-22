@@ -1,0 +1,37 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "formId" }, { "name": "page" }]
+        ]
+    },
+    {
+        "label": "Routing",
+        "rows": [
+            [{ "name": "funnel" }, { "name": "opportunityStage" }],
+            [{ "name": "createOpportunity" }, { "name": "assignedUser" }]
+        ]
+    },
+    {
+        "label": "Field Mapping",
+        "rows": [
+            [{ "name": "fieldMapping" }, false]
+        ]
+    },
+    {
+        "label": "Stats",
+        "rows": [
+            [{ "name": "totalLeadsReceived" }, { "name": "lastLeadReceivedAt" }]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "description" }, false],
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

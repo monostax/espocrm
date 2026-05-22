@@ -1,0 +1,13 @@
+{
+    "fields": {
+        "metaCapiEnabled": "Meta CAPI Enabled",
+        "metaCapiDataset": "Meta CAPI Dataset"
+    },
+    "links": {
+        "metaCapiDataset": "Meta CAPI Dataset"
+    },
+    "tooltips": {
+        "metaCapiEnabled": "When enabled, stage changes on Opportunities in this funnel send events to Meta Conversions API.",
+        "metaCapiDataset": "Which Dataset (Pixel) receives events from this funnel. If empty, the Default dataset is used."
+    }
+}
