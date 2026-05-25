@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "webhookVerifyToken": {
+            "type": "password",
+            "dbType": "text",
+            "tooltip": true,
+            "audited": false
+        }
+    }
+}

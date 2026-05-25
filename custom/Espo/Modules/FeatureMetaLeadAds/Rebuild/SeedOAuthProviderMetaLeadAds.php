@@ -26,6 +26,7 @@ use stdClass;
  *   - leads_retrieval        — read lead data (REQUIRES app review for prod)
  *   - pages_show_list        — list pages user manages
  *   - pages_manage_metadata  — subscribe app to leadgen field
+ *   - pages_manage_ads       — subscribe app to leadgen webhook on page
  *   - pages_read_engagement  — read page metadata
  */
 class SeedOAuthProviderMetaLeadAds implements RebuildAction
@@ -97,6 +98,7 @@ class SeedOAuthProviderMetaLeadAds implements RebuildAction
             'leads_retrieval',
             'pages_show_list',
             'pages_manage_metadata',
+            'pages_manage_ads',
             'pages_read_engagement',
         ];
     }

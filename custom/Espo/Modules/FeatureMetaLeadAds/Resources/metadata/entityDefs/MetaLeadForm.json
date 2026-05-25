@@ -86,7 +86,16 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "view": "views/fields/teams"
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaFacebookPage (auto-set by CascadeTeamsFromPage hook)."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaFacebookPage (auto-set by CascadeTenantFromPage hook)."
         }
     },
     "links": {
@@ -103,6 +112,11 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaLeadForms"
         },
         "page": {
             "type": "belongsTo",
@@ -134,6 +148,7 @@
     "indexes": {
         "name": { "columns": ["name", "deleted"] },
         "isActive": { "columns": ["isActive"] },
-        "formId": { "columns": ["formId", "deleted"], "unique": true }
+        "formId": { "columns": ["formId", "deleted"], "unique": true },
+        "tenantId": { "columns": ["tenantId", "deleted"] }
     }
 }

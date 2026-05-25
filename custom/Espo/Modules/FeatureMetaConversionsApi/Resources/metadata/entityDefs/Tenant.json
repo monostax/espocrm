@@ -1,0 +1,14 @@
+{
+    "links": {
+        "metaCapiDatasets": {
+            "type": "hasMany",
+            "entity": "MetaCapiDataset",
+            "foreign": "tenant"
+        },
+        "metaCapiEventLogs": {
+            "type": "hasMany",
+            "entity": "MetaCapiEventLog",
+            "foreign": "tenant"
+        }
+    }
+}

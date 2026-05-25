@@ -42,6 +42,38 @@
         ]
     },
     {
+        "label": "Lead Ads Webhook",
+        "name": "metaLeadAdsWebhook",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "equals",
+                    "attribute": "provider",
+                    "value": "meta-leadads"
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "webhookVerifyToken" }, false]
+        ]
+    },
+    {
+        "label": "Lead Ads Webhook",
+        "name": "metaLeadAdsWebhook",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "equals",
+                    "attribute": "provider",
+                    "value": "meta-leadads"
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "webhookVerifyToken" }, false]
+        ]
+    },
+    {
         "tabBreak": true,
         "tabLabel": "[Admin]",
         "label": "[Admin]",

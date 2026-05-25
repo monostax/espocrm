@@ -38,7 +38,7 @@
         "leadEventSource": {
             "type": "varchar",
             "maxLength": 64,
-            "default": "EspoCRM",
+            "default": "Monostax",
             "tooltip": true,
             "comment": "Sent as custom_data.lead_event_source. Identifies the CRM in Meta dashboards."
         },
@@ -93,7 +93,14 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "view": "views/fields/teams"
+            "view": "views/fields/teams",
+            "required": true
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "tooltip": true,
+            "comment": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by AssignTenantFromTeam hook."
         }
     },
     "links": {
@@ -110,6 +117,11 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaCapiDatasets"
         },
         "funnels": {
             "type": "hasMany",
@@ -129,6 +141,7 @@
     "indexes": {
         "name": { "columns": ["name", "deleted"] },
         "isActive": { "columns": ["isActive"] },
-        "isDefault": { "columns": ["isDefault"] }
+        "isDefault": { "columns": ["isDefault"] },
+        "tenantId": { "columns": ["tenantId", "deleted"] }
     }
 }

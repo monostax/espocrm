@@ -3,9 +3,35 @@
     "iconClass": "ti ti-brand-facebook",
     "boolFilterList": ["onlyMy"],
     "menu": {
+        "list": {
+            "buttons": [
+                {
+                    "name": "syncMetaPages",
+                    "label": "Sync Pages",
+                    "labelTranslation": "MetaFacebookPage.labels.syncMetaPages",
+                    "style": "default",
+                    "acl": "create",
+                    "aclScope": "MetaFacebookPage",
+                    "handler": "feature-meta-lead-ads:handlers/meta-facebook-page/list-actions",
+                    "actionFunction": "syncMetaPages",
+                    "iconClass": "fas fa-sync"
+                }
+            ]
+        },
         "detail": {
             "buttons": [
                 "__APPEND__",
+                {
+                    "label": "Sync Pages",
+                    "labelTranslation": "MetaFacebookPage.labels.syncMetaPagesFromAccount",
+                    "name": "syncMetaPagesFromAccount",
+                    "style": "default",
+                    "acl": "edit",
+                    "handler": "feature-meta-lead-ads:handlers/meta-facebook-page/detail-actions",
+                    "actionFunction": "syncMetaPagesFromAccount",
+                    "checkVisibilityFunction": "isSyncMetaPagesFromAccountAvailable",
+                    "iconClass": "fas fa-sync"
+                },
                 {
                     "label": "Sync Forms",
                     "name": "syncMetaLeadForms",
@@ -21,6 +47,16 @@
     },
     "detailActionList": [
         {
+            "name": "syncMetaPagesFromAccount",
+            "label": "Sync Pages",
+            "labelTranslation": "MetaFacebookPage.labels.syncMetaPagesFromAccount",
+            "handler": "feature-meta-lead-ads:handlers/meta-facebook-page/detail-actions",
+            "actionFunction": "syncMetaPagesFromAccount",
+            "checkVisibilityFunction": "isSyncMetaPagesFromAccountAvailable",
+            "groupIndex": 1,
+            "iconClass": "fas fa-sync"
+        },
+        {
             "name": "syncMetaLeadForms",
             "label": "Sync Forms",
             "handler": "feature-meta-lead-ads:handlers/meta-facebook-page/detail-actions",
@@ -33,6 +69,9 @@
     "relationshipPanels": {
         "leadForms": {
             "unlinkDisabled": true
+        },
+        "oAuthAccount": {
+            "selectPrimaryFilterName": "metaLeadAds"
         }
     }
 }

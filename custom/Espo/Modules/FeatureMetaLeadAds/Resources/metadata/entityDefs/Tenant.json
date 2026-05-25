@@ -1,0 +1,19 @@
+{
+    "links": {
+        "metaFacebookPages": {
+            "type": "hasMany",
+            "entity": "MetaFacebookPage",
+            "foreign": "tenant"
+        },
+        "metaLeadForms": {
+            "type": "hasMany",
+            "entity": "MetaLeadForm",
+            "foreign": "tenant"
+        },
+        "metaLeadgenEvents": {
+            "type": "hasMany",
+            "entity": "MetaLeadgenEvent",
+            "foreign": "tenant"
+        }
+    }
+}

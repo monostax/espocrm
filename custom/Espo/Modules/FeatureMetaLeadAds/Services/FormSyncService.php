@@ -68,7 +68,15 @@ class FormSyncService
 
         $encrypted = (string) ($page->get('pageAccessToken') ?? '');
         if ($encrypted === '') {
-            $result['error'] = 'Page has no access token configured. Run Sync Pages first.';
+            // Pages get their pageAccessToken populated by PageSyncService::syncForOAuthAccount,
+            // which is reachable from two places in the UI:
+            //   1. OAuthAccount detail   → button "Sync Meta Pages"
+            //   2. MetaFacebookPage list → button "Sync Pages" (top of the list view)
+            //   3. MetaFacebookPage detail → button "Sync Pages" (when oAuthAccount is linked)
+            // Tell the user that explicitly so they don't go hunting.
+            $result['error'] = 'Page has no access token yet. '
+                . 'Click "Sync Pages" at the top of the Facebook Pages list (or on the linked OAuth Account) '
+                . 'to pull pages and per-page tokens from Meta first.';
 
             return $result;
         }

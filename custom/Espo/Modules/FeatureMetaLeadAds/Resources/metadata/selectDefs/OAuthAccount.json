@@ -1,0 +1,5 @@
+{
+    "primaryFilterClassNameMap": {
+        "metaLeadAds": "Espo\\Modules\\FeatureMetaLeadAds\\Classes\\Select\\OAuthAccount\\PrimaryFilters\\MetaLeadAds"
+    }
+}

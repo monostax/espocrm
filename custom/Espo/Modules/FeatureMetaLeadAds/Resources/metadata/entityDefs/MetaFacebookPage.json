@@ -73,7 +73,14 @@
         },
         "teams": {
             "type": "linkMultiple",
-            "view": "views/fields/teams"
+            "view": "views/fields/teams",
+            "required": true
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "tooltip": true,
+            "comment": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by AssignTenantFromTeam hook."
         }
     },
     "links": {
@@ -90,6 +97,11 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaFacebookPages"
         },
         "oAuthAccount": {
             "type": "belongsTo",
@@ -108,6 +120,7 @@
     "indexes": {
         "name": { "columns": ["name", "deleted"] },
         "isActive": { "columns": ["isActive"] },
-        "pageId": { "columns": ["pageId", "deleted"], "unique": true }
+        "pageId": { "columns": ["pageId", "deleted"], "unique": true },
+        "tenantId": { "columns": ["tenantId", "deleted"] }
     }
 }

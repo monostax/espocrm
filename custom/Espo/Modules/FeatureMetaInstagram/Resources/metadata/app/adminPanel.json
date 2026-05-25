@@ -1,0 +1,15 @@
+{
+    "meta": {
+        "label": "Meta",
+        "order": 25,
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#InstagramBusinessAccount",
+                "label": "Instagram Accounts",
+                "iconClass": "ti ti-brand-instagram",
+                "description": "instagramBusinessAccounts"
+            }
+        ]
+    }
+}

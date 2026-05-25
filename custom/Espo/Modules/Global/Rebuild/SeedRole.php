@@ -332,7 +332,28 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                // Meta / WhatsApp Business — virtual entities (Graph API proxies).
+                // RecordDefs mark these readOnly/createDisabled, so granting only
+                // read at the role level keeps the UI consistent with the backend.
                 'WhatsAppBusinessAccount' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'WhatsAppBusinessAccountMessageTemplate' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'WhatsAppBusinessAccountPhoneNumber' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'WhatsAppBusinessAccountWebhook' => [
                     'create' => 'no',
                     'read' => 'team',
                     'edit' => 'no',
@@ -343,6 +364,54 @@ class SeedRole implements RebuildAction
                     'read' => 'team',
                     'edit' => 'team',
                     'delete' => 'team',
+                ],
+
+                // Meta / Instagram — virtual entity backed by Graph API.
+                'InstagramBusinessAccount' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+
+                // Meta / Conversions API. Datasets are admin-managed (tenant-admin
+                // role gets CRUD via override below); event log is read-only for
+                // every tenant role.
+                'MetaCapiDataset' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'MetaCapiEventLog' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+
+                // Meta / Lead Ads. Pages and lead forms are configuration entities
+                // managed by tenant-admin (overrides below). Leadgen events are
+                // a webhook-driven log; tenant-admin can edit to use the
+                // `retryLeadgenIngest` mass action (declared with acl=edit in
+                // FeatureMetaLeadAds/Resources/metadata/recordDefs/MetaLeadgenEvent.json).
+                'MetaFacebookPage' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'MetaLeadForm' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'MetaLeadgenEvent' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
                 ],
 
                 // Reports (Advanced module). Full team CRUD at the base level
@@ -624,7 +693,23 @@ class SeedRole implements RebuildAction
                 'OpportunityStage' => (object)[],
 
                 'WhatsAppBusinessAccount' => (object)[],
+                'WhatsAppBusinessAccountMessageTemplate' => (object)[],
+                'WhatsAppBusinessAccountPhoneNumber' => (object)[],
+                'WhatsAppBusinessAccountWebhook' => (object)[],
                 'WhatsAppCampaign' => (object)[],
+
+                // Meta / Conversions API + Lead Ads + Instagram.
+                // Empty fieldData entries mirror the convention used for every
+                // other scope in this map — scope-level grants in `data` above
+                // are what matters; sensitive fields like accessToken /
+                // pageAccessToken are typed `password` and aren't returned by
+                // the API regardless of role.
+                'InstagramBusinessAccount' => (object)[],
+                'MetaCapiDataset' => (object)[],
+                'MetaCapiEventLog' => (object)[],
+                'MetaFacebookPage' => (object)[],
+                'MetaLeadForm' => (object)[],
+                'MetaLeadgenEvent' => (object)[],
 
                 // Empty entry mirrors the convention used for every other
                 // scope in this map — no per-field overrides; the scope-level
@@ -990,6 +1075,39 @@ class SeedRole implements RebuildAction
                         'edit' => 'team',
                         'delete' => 'team',
                         'stream' => 'team',
+                    ],
+
+                    // Meta / Conversions API — tenant-admin manages datasets
+                    // (creates, edits credentials, etc.). Event log stays
+                    // read-only since it's an audit trail.
+                    'MetaCapiDataset' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+
+                    // Meta / Lead Ads — tenant-admin syncs Facebook Pages,
+                    // configures lead forms (funnel/stage/fieldMapping), and
+                    // can retry failed leadgen ingestions via the mass action
+                    // (which requires edit permission on MetaLeadgenEvent).
+                    'MetaFacebookPage' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'MetaLeadForm' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'MetaLeadgenEvent' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'no',
                     ],
                 ],
                 'fieldData' => [

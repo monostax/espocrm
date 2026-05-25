@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Meta": "Meta",
+        "CAPI Datasets": "CAPI Datasets",
+        "CAPI Event Log": "CAPI Event Log"
+    },
+    "descriptions": {
+        "metaCapiDatasets": "Manage Meta Conversions API datasets, pixels and access tokens.",
+        "metaCapiEventLog": "Inspect events sent to the Meta Conversions API and their delivery status."
+    },
+    "keywords": {
+        "metaCapiDatasets": "meta,facebook,capi,conversions,api,dataset,pixel,token",
+        "metaCapiEventLog": "meta,facebook,capi,conversions,api,event,log,delivery"
+    }
+}

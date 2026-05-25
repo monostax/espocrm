@@ -4,6 +4,7 @@
             "type": "enum",
             "options": [
                 "meta-whatsapp",
+                "meta-leadads",
                 "google-calendar",
                 "google-meet",
                 "meta-instagram",

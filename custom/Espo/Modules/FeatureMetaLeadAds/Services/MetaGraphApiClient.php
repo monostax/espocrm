@@ -133,6 +133,66 @@ class MetaGraphApiClient
     }
 
     /**
+     * Register (or update) the app-level webhook subscription.
+     *
+     * Endpoint: POST /{appId}/subscriptions
+     *
+     * This tells Meta where to deliver webhook events for the app.
+     * Uses App Access Token ({appId}|{appSecret}).
+     *
+     * @param string $appId Meta App ID (same as clientId).
+     * @param string $appSecret Meta App Secret (plaintext, already decrypted).
+     * @param string $callbackUrl Full URL Meta will POST events to.
+     * @param string $verifyToken Shared secret for hub.verify_token handshake.
+     * @param string[] $fields Webhook fields to subscribe (e.g. ['leadgen']).
+     * @return array{success: bool}
+     * @throws Error
+     */
+    public function registerAppWebhook(
+        string $appId,
+        string $appSecret,
+        string $callbackUrl,
+        string $verifyToken,
+        array $fields = ['leadgen'],
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): array {
+        $appAccessToken = $appId . '|' . $appSecret;
+
+        $url = self::GRAPH_API_BASE . "/{$apiVersion}/{$appId}/subscriptions";
+
+        $postFields = http_build_query([
+            'callback_url' => $callbackUrl,
+            'verify_token' => $verifyToken,
+            'object'       => 'page',
+            'fields'       => implode(',', $fields),
+        ]);
+
+        return $this->formPostRequest($url, $appAccessToken, $postFields);
+    }
+
+    /**
+     * List current app-level webhook subscriptions.
+     *
+     * Endpoint: GET /{appId}/subscriptions
+     *
+     * @return array<int, array{object: string, callback_url: string, fields: array, active: bool}>
+     * @throws Error
+     */
+    public function getAppWebhookSubscriptions(
+        string $appId,
+        string $appSecret,
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): array {
+        $appAccessToken = $appId . '|' . $appSecret;
+
+        $url = self::GRAPH_API_BASE . "/{$apiVersion}/{$appId}/subscriptions";
+
+        $response = $this->request($url, $appAccessToken);
+
+        return $response['data'] ?? [];
+    }
+
+    /**
      * Subscribe our Meta App to webhook events on a Page.
      *
      * Endpoint: POST /{pageId}/subscribed_apps?subscribed_fields=leadgen
@@ -269,7 +329,7 @@ class MetaGraphApiClient
                     . "Re-authorize the Meta (Lead Ads) OAuth Account. (Original: {$apiMessage})",
                 200 => "Insufficient Meta permissions. Make sure the OAuth scopes include "
                     . "`leads_retrieval`, `pages_show_list`, `pages_manage_metadata`, "
-                    . "and `pages_read_engagement`. (Original: {$apiMessage})",
+                    . "`pages_manage_ads`, and `pages_read_engagement`. (Original: {$apiMessage})",
                 368 => "Meta has temporarily blocked actions on this Page. (Original: {$apiMessage})",
                 default => "Meta API: {$apiMessage} (code {$apiCode})",
             };

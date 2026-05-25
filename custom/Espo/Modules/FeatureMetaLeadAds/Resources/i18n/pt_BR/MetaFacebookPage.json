@@ -4,6 +4,9 @@
         "Meta Lead Ads": "Meta Lead Ads",
         "Sync Forms": "Sincronizar Formulários",
         "syncMetaLeadForms": "Sincronizar Formulários",
+        "Sync Pages": "Sincronizar Páginas",
+        "syncMetaPages": "Sincronizar Páginas",
+        "syncMetaPagesFromAccount": "Sincronizar Páginas",
         "Meta Lead Ads — Sync Forms": "Meta Lead Ads — Sincronizar Formulários",
         "Sync": "Sincronizar",
         "Cancel": "Cancelar",
@@ -17,7 +20,9 @@
         "confirmSyncMetaLeadForms": "Sincronizar todos os formulários Lead Ads desta página? Novos formulários serão criados desativados e exigirão atribuição de Funil antes de aceitar leads.",
         "syncMetaLeadFormsDone": "Sincronização de formulários concluída.",
         "syncMetaLeadFormsFailed": "Falha ao sincronizar formulários.",
-        "syncMetaLeadFormsNeedConfig": "Atenção: novos formulários começam desativados — configure um Funil e ative-os."
+        "syncMetaLeadFormsNeedConfig": "Atenção: novos formulários começam desativados — configure um Funil e ative-os.",
+        "syncMetaPagesNoAccount": "Esta página não está vinculada a uma conta OAuth. Use o botão \"Sincronizar Páginas\" no topo da lista — ele permite escolher a conta OAuth para sincronizar.",
+        "syncMetaLeadFormsNoToken": "Esta página ainda não tem token de acesso. Clique em \"Sincronizar Páginas\" (no topo da lista) para puxar as páginas e tokens da sua conta Meta OAuth primeiro."
     },
     "fields": {
         "name": "Nome",

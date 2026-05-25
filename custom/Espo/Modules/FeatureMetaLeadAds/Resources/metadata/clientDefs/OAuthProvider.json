@@ -1,0 +1,28 @@
+{
+    "detailActionList": [
+        {
+            "name": "configureMetaLeadAdsWebhook",
+            "label": "Configure Lead Ads Webhook",
+            "labelTranslation": "OAuthProvider.labels.configureMetaLeadAdsWebhook",
+            "handler": "feature-meta-lead-ads:handlers/o-auth-provider/detail-actions",
+            "actionFunction": "configureMetaLeadAdsWebhook",
+            "checkVisibilityFunction": "isConfigureMetaLeadAdsWebhookAvailable",
+            "groupIndex": 1
+        }
+    ],
+    "dynamicLogic": {
+        "fields": {
+            "webhookVerifyToken": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "provider",
+                            "value": "meta-leadads"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -3,12 +3,12 @@
         "label": "Meta",
         "order": 25,
         "itemList": [
+            "__APPEND__",
             {
-                "url": "#Configurations/WhatsAppBusinessAccount",
+                "url": "#WhatsAppBusinessAccount",
                 "label": "WhatsApp Accounts",
                 "iconClass": "ti ti-brand-whatsapp",
-                "description": "whatsAppBusinessAccounts",
-                "roles": ["tenant", "tenant-admin"]
+                "description": "whatsAppBusinessAccounts"
             }
         ]
     }

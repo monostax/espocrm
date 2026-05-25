@@ -4,6 +4,9 @@
         "Meta Lead Ads": "Meta Lead Ads",
         "Sync Forms": "Sync Forms",
         "syncMetaLeadForms": "Sync Forms",
+        "Sync Pages": "Sync Pages",
+        "syncMetaPages": "Sync Pages",
+        "syncMetaPagesFromAccount": "Sync Pages",
         "Meta Lead Ads — Sync Forms": "Meta Lead Ads — Sync Forms",
         "Sync": "Sync",
         "Cancel": "Cancel",
@@ -17,7 +20,9 @@
         "confirmSyncMetaLeadForms": "Sync all Lead Ads forms on this page? New forms will be created disabled and need a Funnel assignment before accepting leads.",
         "syncMetaLeadFormsDone": "Form sync completed.",
         "syncMetaLeadFormsFailed": "Failed to sync lead forms.",
-        "syncMetaLeadFormsNeedConfig": "Note: new forms start disabled — assign a Funnel and enable them before they accept leads."
+        "syncMetaLeadFormsNeedConfig": "Note: new forms start disabled — assign a Funnel and enable them before they accept leads.",
+        "syncMetaPagesNoAccount": "This page is not linked to an OAuth account. Use the list-level \"Sync Pages\" button instead — it lets you pick the OAuth account to sync from.",
+        "syncMetaLeadFormsNoToken": "This page has no access token yet. Click \"Sync Pages\" (top of the list) to pull pages and tokens from your Meta OAuth account first."
     },
     "fields": {
         "name": "Name",

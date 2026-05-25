@@ -86,6 +86,19 @@
             "type": "link",
             "readOnly": true,
             "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaCapiDataset (auto-set by CascadeTeamsFromMetaCapiDataset hook)."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaCapiDataset (auto-set by CascadeTenantFromMetaCapiDataset hook)."
         }
     },
     "links": {
@@ -117,6 +130,17 @@
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaCapiEventLogs"
         }
     },
     "collection": {
@@ -126,6 +150,7 @@
     "indexes": {
         "createdAt": { "columns": ["createdAt"] },
         "statusEventTime": { "columns": ["status", "eventTime"] },
-        "datasetEventTime": { "columns": ["metaCapiDatasetId", "eventTime"] }
+        "datasetEventTime": { "columns": ["metaCapiDatasetId", "eventTime"] },
+        "tenantId": { "columns": ["tenantId", "deleted"] }
     }
 }

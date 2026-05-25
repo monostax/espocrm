@@ -1,0 +1,18 @@
+{
+    "labels": {
+        "Meta": "Meta",
+        "Facebook Pages": "Páginas do Facebook",
+        "Lead Forms": "Formulários de Lead",
+        "Leadgen Events": "Eventos de Leadgen"
+    },
+    "descriptions": {
+        "metaFacebookPages": "Gerenciar Páginas do Facebook conectadas para Meta Lead Ads.",
+        "metaLeadForms": "Configurar como os formulários de Meta Lead Ads são mapeados para funis, estágios de oportunidade e contatos.",
+        "metaLeadgenEvents": "Auditar eventos de webhook de leadgen recebidos da Meta e reprocessar ingestões com falha."
+    },
+    "keywords": {
+        "metaFacebookPages": "meta,facebook,pagina,leadads,leadgen",
+        "metaLeadForms": "meta,facebook,leadads,formulario,leadgen,funil,mapeamento",
+        "metaLeadgenEvents": "meta,facebook,leadads,leadgen,evento,webhook,reprocessar"
+    }
+}

@@ -11,6 +11,9 @@
         "Subscribed": "Subscribed to leadgen",
         "Syncing Meta Lead Ads pages...": "Syncing Meta Lead Ads pages..."
     },
+    "presetFilters": {
+        "metaLeadAds": "Meta Lead Ads"
+    },
     "messages": {
         "confirmSyncMetaLeadAdsPages": "Sync Facebook Pages accessible via this OAuth account? Tokens will be refreshed and each page will be subscribed to the leadgen field.",
         "syncMetaLeadAdsPagesDone": "Sync completed.",

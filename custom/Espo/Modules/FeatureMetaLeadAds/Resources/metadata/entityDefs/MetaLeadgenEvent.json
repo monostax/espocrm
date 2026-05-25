@@ -9,7 +9,7 @@
         "leadgenId": {
             "type": "varchar",
             "required": true,
-            "maxLength": 32,
+            "maxLength": 64,
             "readOnly": true,
             "index": true,
             "comment": "Meta leadgen id (unique). Used for idempotency on retries."
@@ -92,6 +92,19 @@
             "type": "link",
             "readOnly": true,
             "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaLeadForm (auto-set by CascadeTeamsFromLeadForm hook)."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaLeadForm (auto-set by CascadeTenantFromLeadForm hook)."
         }
     },
     "links": {
@@ -102,6 +115,17 @@
         "modifiedBy": {
             "type": "belongsTo",
             "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaLeadgenEvents"
         },
         "leadForm": {
             "type": "belongsTo",
@@ -128,6 +152,7 @@
     "indexes": {
         "leadgenId": { "columns": ["leadgenId", "deleted"], "unique": true },
         "status": { "columns": ["status"] },
-        "formId": { "columns": ["formId"] }
+        "formId": { "columns": ["formId"] },
+        "tenantId": { "columns": ["tenantId", "deleted"] }
     }
 }

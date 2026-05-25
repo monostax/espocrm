@@ -1,0 +1,18 @@
+{
+    "labels": {
+        "Meta": "Meta",
+        "Facebook Pages": "Facebook Pages",
+        "Lead Forms": "Lead Forms",
+        "Leadgen Events": "Leadgen Events"
+    },
+    "descriptions": {
+        "metaFacebookPages": "Manage Facebook Pages connected for Meta Lead Ads.",
+        "metaLeadForms": "Configure how Meta Lead Ads forms map to funnels, opportunity stages and contacts.",
+        "metaLeadgenEvents": "Audit incoming Meta leadgen webhook events and retry failed ingestions."
+    },
+    "keywords": {
+        "metaFacebookPages": "meta,facebook,page,leadads,leadgen",
+        "metaLeadForms": "meta,facebook,leadads,form,leadgen,funnel,mapping",
+        "metaLeadgenEvents": "meta,facebook,leadads,leadgen,event,webhook,retry"
+    }
+}

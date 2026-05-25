@@ -1,0 +1,22 @@
+{
+    "meta": {
+        "label": "Meta",
+        "order": 25,
+        "itemList": [
+            {
+                "url": "#Configurations/MetaCapiDataset",
+                "label": "CAPI Datasets",
+                "iconClass": "ti ti-radar",
+                "description": "metaCapiDatasets",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#Configurations/MetaCapiEventLog",
+                "label": "CAPI Event Log",
+                "iconClass": "ti ti-list-details",
+                "description": "metaCapiEventLog",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ]
+    }
+}

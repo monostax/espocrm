@@ -1,0 +1,27 @@
+{
+    "meta": {
+        "label": "Meta",
+        "order": 25,
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#MetaFacebookPage",
+                "label": "Facebook Pages",
+                "iconClass": "ti ti-brand-facebook",
+                "description": "metaFacebookPages"
+            },
+            {
+                "url": "#MetaLeadForm",
+                "label": "Lead Forms",
+                "iconClass": "ti ti-target-arrow",
+                "description": "metaLeadForms"
+            },
+            {
+                "url": "#MetaLeadgenEvent",
+                "label": "Leadgen Events",
+                "iconClass": "ti ti-radar",
+                "description": "metaLeadgenEvents"
+            }
+        ]
+    }
+}

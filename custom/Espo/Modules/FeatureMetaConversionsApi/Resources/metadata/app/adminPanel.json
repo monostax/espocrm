@@ -1,0 +1,21 @@
+{
+    "meta": {
+        "label": "Meta",
+        "order": 25,
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#MetaCapiDataset",
+                "label": "CAPI Datasets",
+                "iconClass": "ti ti-radar",
+                "description": "metaCapiDatasets"
+            },
+            {
+                "url": "#MetaCapiEventLog",
+                "label": "CAPI Event Log",
+                "iconClass": "ti ti-list-details",
+                "description": "metaCapiEventLog"
+            }
+        ]
+    }
+}
