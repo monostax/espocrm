@@ -15,7 +15,8 @@
         "description": "Description",
         "totalLeadsReceived": "Total Leads Received",
         "lastLeadReceivedAt": "Last Lead Received",
-        "leadgenEvents": "Lead Events"
+        "leadgenEvents": "Lead Events",
+        "tenant": "Tenant"
     },
     "tooltips": {
         "name": "Lead form display name (synced from Meta or admin-edited).",
@@ -25,6 +26,7 @@
         "assignedUser": "Default assignedUser for created Contacts/Opportunities. Empty = unassigned.",
         "isActive": "Inactive forms are skipped at ingestion (event marked status=skipped).",
         "createOpportunity": "When true, each lead creates an Opportunity linked to the Contact in the configured Funnel.",
-        "fieldMapping": "Per-form override map: {metaFieldName: contactAttribute}. Merged on top of built-in defaults (email, full_name, first_name, last_name, phone_number, phone, city, company_name)."
+        "fieldMapping": "Per-form override map: {metaFieldName: contactAttribute}. Merged on top of built-in defaults (email, full_name, first_name, last_name, phone_number, phone, city, company_name).",
+        "tenant": "Inherited from the parent MetaFacebookPage (auto-set by CascadeTenantFromPage hook). Assign teams on the parent Page to populate."
     }
 }

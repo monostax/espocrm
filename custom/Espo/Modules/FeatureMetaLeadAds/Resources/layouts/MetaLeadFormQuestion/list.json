@@ -1,0 +1,9 @@
+[
+    { "name": "name", "link": true },
+    { "name": "key" },
+    { "name": "type" },
+    { "name": "form" },
+    { "name": "contactAttribute" },
+    { "name": "isActive" },
+    { "name": "order" }
+]

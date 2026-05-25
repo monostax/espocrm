@@ -1,0 +1,11 @@
+{
+    "entity": "MetaLeadFormQuestion",
+    "isCustom": false,
+    "module": "FeatureMetaLeadAds",
+    "tab": false,
+    "object": true,
+    "acl": "team",
+    "aclLevel": "team",
+    "stream": false,
+    "languageCategory": "Meta Lead Ads"
+}

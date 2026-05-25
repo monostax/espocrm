@@ -1,0 +1,9 @@
+{
+    "links": {
+        "calComIntegrations": {
+            "type": "hasMany",
+            "entity": "CalComIntegration",
+            "foreign": "tenant"
+        }
+    }
+}

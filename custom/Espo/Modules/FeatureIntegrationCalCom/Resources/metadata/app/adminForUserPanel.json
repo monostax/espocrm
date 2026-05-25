@@ -1,0 +1,15 @@
+{
+    "calCom": {
+        "label": "Cal.com",
+        "order": 26,
+        "itemList": [
+            {
+                "url": "#Configurations/CalComIntegration",
+                "label": "Cal.com Integrations",
+                "iconClass": "ti ti-calendar-event",
+                "description": "calComIntegrations",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ]
+    }
+}

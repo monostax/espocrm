@@ -11,6 +11,14 @@
             "maxLength": 64,
             "trim": true,
             "tooltip": true
+        },
+        "metaCapiActive": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "audited": false,
+            "tooltip": true,
+            "comment": "Denormalised: true iff this stage's parent Funnel has metaCapiEnabled=true AND a linked active MetaCapiDataset. Maintained by Funnel/AfterSave/SyncStageCapiActive and MetaCapiDataset/AfterSave/SyncStagesOnIsActiveChange. Drives UI visibility of the Meta Conversions API section on the stage detail layout."
         }
     }
 }

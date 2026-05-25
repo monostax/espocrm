@@ -1,0 +1,12 @@
+{
+    "labels": {
+        "Cal.com": "Cal.com",
+        "Cal.com Integrations": "Integrações Cal.com"
+    },
+    "descriptions": {
+        "calComIntegrations": "Configurar integrações via webhook do Cal.com. Recebe eventos de agendamento e opcionalmente encaminha para a Meta Conversions API."
+    },
+    "keywords": {
+        "calComIntegrations": "calcom,cal.com,webhook,agendamento,booking,integracao,capi"
+    }
+}

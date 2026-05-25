@@ -1,0 +1,149 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 250,
+            "readOnly": true,
+            "comment": "Display label: '{label} → {value}' (truncated)."
+        },
+        "fieldKey": {
+            "type": "varchar",
+            "maxLength": 200,
+            "required": true,
+            "readOnly": true,
+            "index": true,
+            "comment": "Meta field_data[].name. Kept denormalised so display works even if the question link is later broken."
+        },
+        "label": {
+            "type": "varchar",
+            "maxLength": 500,
+            "readOnly": true,
+            "comment": "Denormalised question.label at the time of ingest. Survives soft-deletion of the question."
+        },
+        "value": {
+            "type": "text",
+            "readOnly": true,
+            "comment": "Display-ready value. For choice questions, the option's human label resolved via question.options."
+        },
+        "valueRaw": {
+            "type": "jsonArray",
+            "readOnly": true,
+            "comment": "Raw array<string> as Meta returned it, preserving multi-select fidelity and original option keys."
+        },
+        "wasMapped": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "comment": "True if LeadFieldMapper consumed this field into a Contact attribute. False = qualification-only answer."
+        },
+        "event": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "question": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": "Nullable — the question may have been deleted from the Meta form since this lead came in."
+        },
+        "form": {
+            "type": "link",
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "readOnly": true
+        },
+        "opportunity": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaLeadgenEvent (auto-set by CascadeTeamsFromEvent hook)."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaLeadgenEvent (auto-set by CascadeTenantFromEvent hook)."
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaLeadgenAnswers"
+        },
+        "event": {
+            "type": "belongsTo",
+            "entity": "MetaLeadgenEvent",
+            "foreign": "answers"
+        },
+        "question": {
+            "type": "belongsTo",
+            "entity": "MetaLeadFormQuestion",
+            "foreign": "answers"
+        },
+        "form": {
+            "type": "belongsTo",
+            "entity": "MetaLeadForm"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "metaLeadgenAnswers"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity",
+            "foreign": "metaLeadgenAnswers"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "eventId":       { "columns": ["eventId", "deleted"] },
+        "contactId":     { "columns": ["contactId", "deleted"] },
+        "opportunityId": { "columns": ["opportunityId", "deleted"] },
+        "questionId":    { "columns": ["questionId", "deleted"] },
+        "tenantId":      { "columns": ["tenantId", "deleted"] }
+    }
+}

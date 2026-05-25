@@ -1,0 +1,7 @@
+{
+    "meta-capi:rebuild-stage-active": {
+        "className": "Espo\\Modules\\FeatureMetaConversionsApi\\Classes\\ConsoleCommands\\MetaCapiRebuildStageActive",
+        "listed": true,
+        "noSystemUser": true
+    }
+}

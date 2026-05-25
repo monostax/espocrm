@@ -1,45 +1,21 @@
 {
-    "controller": "controllers/record",
-    "iconClass": "ti ti-radar",
-    "createDisabled": true,
-    "boolFilterList": ["onlyMy"],
-    "menu": {
-        "detail": {
-            "buttons": [
-                "__APPEND__",
-                {
-                    "label": "Retry Ingestion",
-                    "name": "retryLeadgenIngest",
-                    "style": "default",
-                    "acl": "edit",
-                    "handler": "feature-meta-lead-ads:handlers/meta-leadgen-event/detail-actions",
-                    "actionFunction": "retryLeadgenIngest",
-                    "checkVisibilityFunction": "isRetryLeadgenIngestAvailable",
-                    "iconClass": "fas fa-redo"
-                }
-            ]
-        }
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "answers",
+                "label": "Lead Answers",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+            }
+        ]
     },
-    "detailActionList": [
-        {
-            "name": "retryLeadgenIngest",
-            "label": "Retry Ingestion",
-            "handler": "feature-meta-lead-ads:handlers/meta-leadgen-event/detail-actions",
-            "actionFunction": "retryLeadgenIngest",
-            "checkVisibilityFunction": "isRetryLeadgenIngestAvailable",
-            "groupIndex": 1,
-            "iconClass": "fas fa-redo"
-        }
-    ],
-    "massActionList": ["__APPEND__", "retryLeadgenIngest"],
-    "checkAllResultMassActionList": ["__APPEND__", "retryLeadgenIngest"],
-    "massActionDefs": {
-        "retryLeadgenIngest": {
-            "handler": "feature-meta-lead-ads:handlers/meta-leadgen-event/mass-retry",
-            "actionFunction": "actionMassRetry",
-            "acl": "edit",
-            "confirmationMessage": "confirmMassRetryLeadgenIngest",
-            "groupIndex": 5
+    "relationshipPanels": {
+        "answers": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
         }
     }
 }

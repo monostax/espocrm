@@ -15,8 +15,17 @@ use Espo\ORM\EntityManager;
  *
  * Resolution order:
  *   1. Opportunity.funnel.metaCapiDataset (if funnel.metaCapiEnabled=true)
- *   2. Any MetaCapiDataset with isDefault=true AND isActive=true
- *   3. null  (caller must skip)
+ *      — with a defense-in-depth assertion that the resolved dataset's
+ *        tenantId matches the Opportunity's tenantId.
+ *   2. Tenant-scoped default: MetaCapiDataset where
+ *      `tenantId={subject.tenantId} AND isDefault=true AND isActive=true`.
+ *   3. null (caller must skip).
+ *
+ * The legacy global `getDefault()` (no tenant filter) is intentionally removed.
+ * Returning a "global default" in a shared-database multi-tenant CRM means
+ * Tenant B's stage change could fire a CAPI event under Tenant A's Pixel
+ * using Tenant A's access token — silently mis-attributing ad spend and
+ * leaking PII (hashed email/phone) across tenants.
  */
 class DatasetResolver
 {
@@ -35,7 +44,20 @@ class DatasetResolver
             }
         }
 
-        return $this->getDefault();
+        // Tenant-scoped default fallback. Refuse to lookup globally.
+        $tenantId = $this->extractTenantId($entity);
+
+        if (!$tenantId) {
+            $this->log->info(sprintf(
+                'MetaCapi DatasetResolver: %s %s has no tenantId; refusing global-default lookup.',
+                $entity->getEntityType(),
+                (string) $entity->getId(),
+            ));
+
+            return null;
+        }
+
+        return $this->getDefaultForTenant($tenantId);
     }
 
     public function resolveFromOpportunity(Opportunity $opportunity): ?MetaCapiDataset
@@ -72,14 +94,37 @@ class DatasetResolver
             return null;
         }
 
+        // Defense in depth — guard against funnel→dataset wiring that crosses
+        // tenant boundaries (admin misconfiguration, data migration error,
+        // ACL bypass). Without this check, a misconfigured funnel would
+        // silently route Tenant A's events to Tenant B's Pixel.
+        $oppTenantId = (string) ($opportunity->get('tenantId') ?? '');
+        $dsTenantId  = (string) ($dataset->get('tenantId') ?? '');
+
+        if ($oppTenantId !== '' && $dsTenantId !== '' && $oppTenantId !== $dsTenantId) {
+            $this->log->error(sprintf(
+                'MetaCapi: cross-tenant dataset resolution refused — Opportunity %s tenant=%s vs Funnel.metaCapiDataset %s tenant=%s.',
+                (string) $opportunity->getId(),
+                $oppTenantId,
+                (string) $dataset->getId(),
+                $dsTenantId,
+            ));
+
+            return null;
+        }
+
         return $dataset;
     }
 
-    public function getDefault(): ?MetaCapiDataset
+    /**
+     * Find the active default dataset for a specific tenant.
+     */
+    public function getDefaultForTenant(string $tenantId): ?MetaCapiDataset
     {
         $dataset = $this->entityManager
             ->getRDBRepository('MetaCapiDataset')
             ->where([
+                'tenantId'  => $tenantId,
                 'isDefault' => true,
                 'isActive'  => true,
                 'deleted'   => false,
@@ -87,5 +132,33 @@ class DatasetResolver
             ->findOne();
 
         return $dataset instanceof MetaCapiDataset ? $dataset : null;
+    }
+
+    /**
+     * Tenant-blind global default lookup.
+     *
+     * Kept for backwards compatibility with any external code, but
+     * intentionally returns null with a warning. All callers should pass
+     * tenant context via `resolveForEntity` or `getDefaultForTenant`.
+     *
+     * @deprecated Tenant-blind default lookups are unsafe in shared-DB
+     *             multi-tenant deployments. Use `getDefaultForTenant` or
+     *             `resolveForEntity` instead.
+     */
+    public function getDefault(): ?MetaCapiDataset
+    {
+        $this->log->warning(
+            'MetaCapi DatasetResolver::getDefault() called without tenant context — refused. ' .
+            'Use getDefaultForTenant() or resolveForEntity() instead.'
+        );
+
+        return null;
+    }
+
+    private function extractTenantId(Entity $entity): ?string
+    {
+        $tid = $entity->get('tenantId');
+
+        return is_string($tid) && $tid !== '' ? $tid : null;
     }
 }

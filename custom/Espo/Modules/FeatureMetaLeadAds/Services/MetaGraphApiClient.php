@@ -133,6 +133,52 @@ class MetaGraphApiClient
     }
 
     /**
+     * Fetch the schema of a single lead form.
+     *
+     * Endpoint: GET /{formId}?fields=id,name,locale,questions{key,label,type,input,options}
+     *
+     * Each question entry from Meta looks like:
+     *   {
+     *     "key": "company_name",
+     *     "label": "Company name",
+     *     "type": "STANDARD",        // STANDARD | CUSTOM | MULTIPLE_CHOICE | CONDITIONAL | …
+     *     "input_type": "FREE_TEXT", // or EMAIL, PHONE, MULTIPLE_CHOICE, …
+     *     "options": [               // present only for choice questions
+     *       {"key": "opt_1", "value": "Option label as shown"}
+     *     ]
+     *   }
+     *
+     * Used by FormSyncService to materialise MetaLeadFormQuestion rows that
+     * back the structured Answers table at lead-ingest time.
+     *
+     * @return array{
+     *   id: string,
+     *   name?: string,
+     *   locale?: string,
+     *   questions: array<int, array<string, mixed>>
+     * }
+     * @throws Error
+     */
+    public function fetchFormQuestions(
+        string $formId,
+        string $pageAccessToken,
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): array {
+        $url = self::GRAPH_API_BASE . "/{$apiVersion}/{$formId}"
+            . '?fields=' . urlencode('id,name,locale,questions{key,label,type,input_type,options}');
+
+        $response = $this->request($url, $pageAccessToken);
+
+        if (!isset($response['questions']) || !is_array($response['questions'])) {
+            $response['questions'] = [];
+        }
+
+        /** @var array{id: string, name?: string, locale?: string, questions: array<int, array<string, mixed>>} $response */
+        return $response;
+    }
+
+
+    /**
      * Register (or update) the app-level webhook subscription.
      *
      * Endpoint: POST /{appId}/subscriptions
@@ -258,6 +304,38 @@ class MetaGraphApiClient
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::TIMEOUT_SECONDS);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Authorization: Bearer ' . $accessToken,
+            'Accept: application/json',
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        return $this->handleResponse($response, $httpCode, $curlError);
+    }
+
+    /**
+     * Authenticated POST with form-urlencoded body via Authorization header.
+     *
+     * Used for endpoints like /{appId}/subscriptions where parameters are
+     * passed as form fields, not as querystring or JSON.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    private function formPostRequest(string $url, string $accessToken, string $postFields): array
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT_SECONDS);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::TIMEOUT_SECONDS);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/x-www-form-urlencoded',
             'Accept: application/json',
         ]);
 

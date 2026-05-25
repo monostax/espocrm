@@ -1,0 +1,144 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 250,
+            "readOnly": true,
+            "comment": "Display label = question.label (synced from Meta)."
+        },
+        "key": {
+            "type": "varchar",
+            "maxLength": 200,
+            "required": true,
+            "readOnly": true,
+            "index": true,
+            "comment": "Meta question key/slug. Matches field_data[].name on incoming leads."
+        },
+        "label": {
+            "type": "varchar",
+            "maxLength": 500,
+            "readOnly": true,
+            "comment": "Human-readable question text. Localised by Meta to the form's locale."
+        },
+        "type": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "comment": "Meta question type: STANDARD, CUSTOM, MULTIPLE_CHOICE, SINGLE_CHOICE, CONDITIONAL, …"
+        },
+        "inputType": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "comment": "Meta input subtype where applicable (EMAIL, PHONE, FREE_TEXT, …)."
+        },
+        "options": {
+            "type": "jsonArray",
+            "readOnly": true,
+            "comment": "For choice questions: [{key, value}, …]. Used to render slugged option keys as human labels on Answers."
+        },
+        "order": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "isStandard": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "comment": "True for Meta's standard fields (email, phone_number, full_name, …)."
+        },
+        "contactAttribute": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "comment": "Contact attribute this question maps to via LeadFieldMapper (only set when the key is in the effective mapping). Null = answer is structured/qualification only."
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true,
+            "tooltip": "False when this question has been removed from the Meta form. Soft-deleted on sync; kept for historical Answers to retain their label/options reference."
+        },
+        "lastSeenAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "comment": "Last sync at which Meta still reported this question."
+        },
+        "form": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaLeadForm (auto-set by CascadeTeamsFromForm hook)."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaLeadForm (auto-set by CascadeTenantFromForm hook)."
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaLeadFormQuestions"
+        },
+        "form": {
+            "type": "belongsTo",
+            "entity": "MetaLeadForm",
+            "foreign": "questions"
+        },
+        "answers": {
+            "type": "hasMany",
+            "entity": "MetaLeadgenAnswer",
+            "foreign": "question"
+        }
+    },
+    "collection": {
+        "orderBy": "order",
+        "order": "asc"
+    },
+    "indexes": {
+        "formKey": { "columns": ["formId", "key", "deleted"], "unique": true },
+        "tenantId": { "columns": ["tenantId", "deleted"] },
+        "isActive": { "columns": ["isActive"] }
+    }
+}

@@ -1,0 +1,10 @@
+[
+    { "name": "label", "link": true },
+    { "name": "value" },
+    { "name": "fieldKey" },
+    { "name": "form" },
+    { "name": "contact" },
+    { "name": "opportunity" },
+    { "name": "wasMapped" },
+    { "name": "createdAt" }
+]

@@ -1,0 +1,32 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "key" }],
+            [{ "name": "label" }, { "name": "isActive" }],
+            [{ "name": "type" }, { "name": "inputType" }],
+            [{ "name": "form" }, { "name": "order" }]
+        ]
+    },
+    {
+        "label": "Mapping",
+        "rows": [
+            [{ "name": "isStandard" }, { "name": "contactAttribute" }]
+        ]
+    },
+    {
+        "label": "Options",
+        "rows": [
+            [{ "name": "options" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "lastSeenAt" }, false],
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

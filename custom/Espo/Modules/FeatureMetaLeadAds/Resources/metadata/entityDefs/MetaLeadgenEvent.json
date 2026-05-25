@@ -143,6 +143,11 @@
         "opportunity": {
             "type": "belongsTo",
             "entity": "Opportunity"
+        },
+        "answers": {
+            "type": "hasMany",
+            "entity": "MetaLeadgenAnswer",
+            "foreign": "event"
         }
     },
     "collection": {

@@ -1,0 +1,31 @@
+{
+    "labels": {
+        "Create MetaLeadFormQuestion": "Create Lead Form Question",
+        "MetaLeadFormQuestion": "Lead Form Question",
+        "Questions": "Questions"
+    },
+    "fields": {
+        "name": "Question",
+        "key": "Field Key",
+        "label": "Label",
+        "type": "Type",
+        "inputType": "Input Type",
+        "options": "Options",
+        "order": "Order",
+        "isStandard": "Standard",
+        "contactAttribute": "Contact Attribute",
+        "isActive": "Active",
+        "lastSeenAt": "Last Seen",
+        "form": "Form",
+        "tenant": "Tenant",
+        "answers": "Answers"
+    },
+    "tooltips": {
+        "key": "The slug Meta uses in field_data[].name. Used to match incoming leads to this question row.",
+        "label": "Human label shown in the Lead Ads form. Synced from Meta in the form's locale.",
+        "type": "Meta question type (STANDARD, CUSTOM, MULTIPLE_CHOICE, SINGLE_CHOICE, CONDITIONAL).",
+        "options": "For choice questions, the list of {key, value} options as defined in Meta. Used to resolve slugged answer values to human labels.",
+        "contactAttribute": "When set, incoming answers for this key are mapped into this Contact attribute via LeadFieldMapper. Otherwise the answer is stored only as a structured MetaLeadgenAnswer.",
+        "isActive": "Set to false automatically when the question disappears from the Meta form schema. Past Answer rows keep their reference so labels/options still render."
+    }
+}

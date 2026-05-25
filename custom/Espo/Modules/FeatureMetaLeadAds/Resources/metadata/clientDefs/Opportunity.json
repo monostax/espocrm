@@ -1,0 +1,22 @@
+{
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "metaLeadgenAnswers",
+                "label": "Meta Lead Answers",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove",
+                "order": 50
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "metaLeadgenAnswers": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+        }
+    }
+}

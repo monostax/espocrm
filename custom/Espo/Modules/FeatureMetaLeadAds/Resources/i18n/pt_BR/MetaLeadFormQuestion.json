@@ -1,0 +1,31 @@
+{
+    "labels": {
+        "Create MetaLeadFormQuestion": "Criar Pergunta do Formulário",
+        "MetaLeadFormQuestion": "Pergunta do Formulário",
+        "Questions": "Perguntas"
+    },
+    "fields": {
+        "name": "Pergunta",
+        "key": "Chave do Campo",
+        "label": "Rótulo",
+        "type": "Tipo",
+        "inputType": "Tipo de Entrada",
+        "options": "Opções",
+        "order": "Ordem",
+        "isStandard": "Padrão",
+        "contactAttribute": "Atributo do Contact",
+        "isActive": "Ativo",
+        "lastSeenAt": "Última Aparição",
+        "form": "Formulário",
+        "tenant": "Ambiente",
+        "answers": "Respostas"
+    },
+    "tooltips": {
+        "key": "O slug que o Meta usa em field_data[].name. Usado para casar leads recebidos com esta pergunta.",
+        "label": "Rótulo humano mostrado no formulário Lead Ads. Sincronizado do Meta no idioma do formulário.",
+        "type": "Tipo da pergunta no Meta (STANDARD, CUSTOM, MULTIPLE_CHOICE, SINGLE_CHOICE, CONDITIONAL).",
+        "options": "Para perguntas de escolha, lista de {key, value} conforme definidas no Meta. Usado para traduzir valores em slug para rótulos humanos.",
+        "contactAttribute": "Quando definido, respostas para esta chave são mapeadas para este atributo do Contact via LeadFieldMapper. Caso contrário, a resposta fica apenas como MetaLeadgenAnswer estruturada.",
+        "isActive": "Marcado como false automaticamente quando a pergunta deixa de aparecer no schema do formulário do Meta. Respostas históricas mantêm a referência para rótulos/opções continuarem renderizando."
+    }
+}

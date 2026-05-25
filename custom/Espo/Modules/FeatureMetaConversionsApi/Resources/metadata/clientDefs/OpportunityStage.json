@@ -1,0 +1,19 @@
+{
+    "recordViews": {
+        "detail": "feature-meta-conversions-api:views/opportunity-stage/record/detail"
+    },
+    "dynamicLogic": {
+        "panels": {
+            "metaConversionsApi": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "metaCapiActive"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

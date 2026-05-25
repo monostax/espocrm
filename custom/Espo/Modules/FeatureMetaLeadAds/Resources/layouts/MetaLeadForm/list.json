@@ -2,6 +2,7 @@
     { "name": "name", "link": true },
     { "name": "formId" },
     { "name": "page" },
+    { "name": "tenant" },
     { "name": "funnel" },
     { "name": "isActive" },
     { "name": "totalLeadsReceived" },

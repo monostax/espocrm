@@ -1,0 +1,12 @@
+{
+    "Funnel": {
+        "detail": {
+            "module": "FeatureMetaConversionsApi"
+        }
+    },
+    "OpportunityStage": {
+        "detail": {
+            "module": "FeatureMetaConversionsApi"
+        }
+    }
+}

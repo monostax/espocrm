@@ -20,20 +20,32 @@ use Throwable;
  * Public webhook endpoint for Meta Lead Ads.
  *
  * Routes (both noAuth, defined in Resources/routes.json):
- *   GET  /MetaLeadAds/webhook   — Meta's subscription verification handshake.
- *   POST /MetaLeadAds/webhook   — Live leadgen delivery.
+ *   GET  /MetaLeadAds/webhook/:providerId   — verify handshake (preferred, BYOA).
+ *   POST /MetaLeadAds/webhook/:providerId   — leadgen delivery (preferred, BYOA).
+ *   GET  /MetaLeadAds/webhook               — legacy global handshake.
+ *   POST /MetaLeadAds/webhook               — legacy global delivery (try-all-secrets).
  *
- * URL registered in the Meta App dashboard (per tenant):
- *   https://{tenant}.{host}/api/v1/MetaLeadAds/webhook
+ * URL registered in the Meta App dashboard:
+ *   - Per-provider BYOA: https://{host}/api/v1/MetaLeadAds/webhook/{oauthProviderId}
+ *   - Legacy global:     https://{host}/api/v1/MetaLeadAds/webhook
+ *
+ * Provider resolution:
+ *   1. If `:providerId` is in the path, resolve that exact OAuthProvider row.
+ *      This is the BYOA path — each tenant's Meta App points at its own URL,
+ *      and each App's HMAC secret is verified against THAT provider's
+ *      clientSecret. No ambiguity, no cross-tenant signature confusion.
+ *   2. If `:providerId` is absent (legacy), iterate every active meta-leadads
+ *      provider and accept the first whose secret validates the signature.
+ *      This is the "try-all-secrets" pattern used by the WhatsApp/Instagram
+ *      modules. It allows multiple Meta Apps to share one legacy URL during
+ *      a transition window — but admins should migrate to BYOA URLs ASAP.
  *
  * SECURITY — POST verification:
  *   X-Hub-Signature-256 = "sha256=" + hex(HMAC-SHA256(rawBody, appSecret))
- *   appSecret = OAuthProvider("meta-leadads").clientSecret  (decrypted)
  *
  * SECURITY — GET handshake:
  *   ?hub.mode=subscribe&hub.verify_token={token}&hub.challenge=...
- *   Must echo back the challenge AS PLAIN TEXT if token matches
- *   OAuthProvider("meta-leadads").webhookVerifyToken (decrypted).
+ *   Token must match the resolved provider's webhookVerifyToken (decrypted).
  *
  * Response strategy (POST):
  *   Always 200 on auth/parsing success — Meta retries aggressively on 5xx
@@ -44,7 +56,8 @@ use Throwable;
  * Returns:
  *   400 — malformed body
  *   401 — bad/missing X-Hub-Signature-256
- *   200 — accepted (with summary)
+ *   403 — bad verify_token (GET handshake)
+ *   200 — accepted
  */
 class MetaLeadAdsWebhook
 {
@@ -74,33 +87,45 @@ class MetaLeadAdsWebhook
             return;
         }
 
-        $provider = $this->resolveProvider();
-        if (!$provider) {
-            $this->log->error('MetaLeadAds: webhook verify failed — no active provider found.');
+        $providerId = $this->extractProviderId($request);
+
+        // For the GET handshake we need ONE provider to compare verify_token
+        // against. With the BYOA path that's unambiguous. For the legacy bare
+        // path we iterate all active providers and accept any matching token.
+        $providers = $providerId !== null
+            ? array_filter([$this->resolveProviderById($providerId)])
+            : $this->resolveAllActiveProviders();
+
+        if (empty($providers)) {
+            $this->log->error('MetaLeadAds: webhook verify failed — no active provider found.', [
+                'providerId' => $providerId,
+            ]);
             $response->setStatus(403);
 
             return;
         }
 
-        $expectedToken = $this->decryptVerifyToken($provider);
+        foreach ($providers as $provider) {
+            $expectedToken = $this->decryptVerifyToken($provider);
 
-        if ($expectedToken === null) {
-            $this->log->error('MetaLeadAds: webhook verify failed — no webhookVerifyToken set on provider.');
-            $response->setStatus(403);
+            if ($expectedToken === null || $expectedToken === '') {
+                continue;
+            }
 
-            return;
+            if (hash_equals($expectedToken, $token)) {
+                $response->setStatus(200);
+                $response->setHeader('Content-Type', 'text/plain');
+                $response->writeBody($challenge);
+
+                return;
+            }
         }
 
-        if (!hash_equals($expectedToken, $token)) {
-            $this->log->warning('MetaLeadAds: webhook verify failed — token mismatch.');
-            $response->setStatus(403);
-
-            return;
-        }
-
-        $response->setStatus(200);
-        $response->setHeader('Content-Type', 'text/plain');
-        $response->writeBody($challenge);
+        $this->log->warning('MetaLeadAds: webhook verify failed — token mismatch.', [
+            'providerId' => $providerId,
+            'providersTried' => count($providers),
+        ]);
+        $response->setStatus(403);
     }
 
     /**
@@ -119,20 +144,16 @@ class MetaLeadAdsWebhook
                 return (object) ['ok' => false, 'message' => 'Empty body.'];
             }
 
-            $provider = $this->resolveProvider();
+            $providerId = $this->extractProviderId($request);
 
-            if (!$provider) {
+            $provider = $providerId !== null
+                ? $this->verifySignatureForProvider($providerId, $rawBody, $request)
+                : $this->verifySignatureTryAll($rawBody, $request);
+
+            if ($provider === null) {
                 $response->setStatus(401);
 
-                return (object) ['ok' => false, 'message' => 'No active meta-leadads provider configured.'];
-            }
-
-            $sigError = $this->verifySignature($provider, $rawBody, $request);
-            if ($sigError !== null) {
-                $this->log->warning('MetaLeadAds: signature verification failed: ' . $sigError);
-                $response->setStatus(401);
-
-                return (object) ['ok' => false, 'message' => $sigError];
+                return (object) ['ok' => false, 'message' => 'Signature verification failed.'];
             }
 
             $payload = json_decode($rawBody);
@@ -163,6 +184,21 @@ class MetaLeadAdsWebhook
 
             return (object) ['ok' => false, 'message' => 'Internal error (logged).'];
         }
+    }
+
+    /**
+     * Extract :providerId from route params. Returns null when the legacy
+     * bare path was used.
+     */
+    private function extractProviderId(Request $request): ?string
+    {
+        $value = $request->getRouteParam('providerId');
+
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
+
+        return $value;
     }
 
     /**
@@ -261,6 +297,18 @@ class MetaLeadAdsWebhook
     /**
      * Upsert MetaLeadgenEvent — idempotent on leadgenId.
      *
+     * Tenancy: looks up MetaLeadForm by formId (string) and propagates
+     * leadFormId (link), teamsIds, and tenantId onto the event before save.
+     * The CascadeTeamsFromLeadForm / CascadeTenantFromLeadForm hooks
+     * (order=1) would normally do this — but they early-return on `silent`,
+     * and we save with `silent => true` to suppress Stream notifications
+     * for system-internal webhook rows. So we do the work here.
+     *
+     * If the form is not yet known (admin hasn't synced it), the event is
+     * still persisted as an "orphan" without teams/tenant. The IngestLeadgen
+     * job will pick it up, fail to resolve the form, and mark it as Skipped
+     * — surfaced in the CRM UI for the admin to investigate.
+     *
      * @param array<string, mixed> $rawValue
      */
     private function upsertEvent(
@@ -294,6 +342,12 @@ class MetaLeadAdsWebhook
             $event->set('status',    MetaLeadgenEvent::STATUS_RECEIVED);
             $event->set('rawPayload', $rawValue);
 
+            // Tenant propagation: lookup the form to derive leadFormId +
+            // teamsIds + tenantId. Without this the event is created
+            // orphaned and effectively visible to all users via team ACL
+            // (a real PII leak in shared-DB multi-tenant deployments).
+            $this->propagateTenancyFromForm($event, $formId);
+
             $this->entityManager->saveEntity($event, ['skipHooks' => true, 'silent' => true]);
 
             return $event;
@@ -304,11 +358,70 @@ class MetaLeadAdsWebhook
         }
     }
 
-    private function resolveProvider(): ?OAuthProvider
+    /**
+     * Set leadFormId + teamsIds + tenantId on the event from the matching
+     * MetaLeadForm row (looked up by string formId).
+     *
+     * If no form is known yet, the event is left without teams/tenant —
+     * a tenant-isolation breach risk. We log a warning so the orphan is
+     * surfaced in operator monitoring.
+     */
+    private function propagateTenancyFromForm(MetaLeadgenEvent $event, string $formId): void
+    {
+        $form = $this->entityManager
+            ->getRDBRepository('MetaLeadForm')
+            ->where(['formId' => $formId, 'deleted' => false])
+            ->findOne();
+
+        if (!$form) {
+            $this->log->warning(
+                "MetaLeadAds: leadgen webhook for unknown formId={$formId}; " .
+                "event will be created without teams/tenant. " .
+                "Run Sync Forms on the parent MetaFacebookPage to enable proper tenancy."
+            );
+
+            return;
+        }
+
+        $event->set('leadFormId', $form->getId());
+
+        $teamIds = [];
+
+        try {
+            $teamIds = $form->getLinkMultipleIdList('teams') ?: [];
+        } catch (Throwable) {
+            $teamIds = [];
+        }
+
+        if (!empty($teamIds)) {
+            $event->set('teamsIds', array_values(array_unique($teamIds)));
+        }
+
+        $tenantId = $form->get('tenantId');
+
+        if ($tenantId) {
+            $event->set('tenantId', $tenantId);
+        }
+
+        if (empty($teamIds)) {
+            $this->log->warning(
+                "MetaLeadAds: MetaLeadForm {$form->getId()} has no teams; " .
+                "leadgen event will inherit the missing-teams state. " .
+                "Assign teams on the parent MetaFacebookPage."
+            );
+        }
+    }
+
+    /**
+     * Resolve a specific meta-leadads OAuthProvider by id.
+     * Returns null if not found, inactive, deleted, or not meta-leadads.
+     */
+    private function resolveProviderById(string $providerId): ?OAuthProvider
     {
         $provider = $this->entityManager
             ->getRDBRepository(OAuthProvider::ENTITY_TYPE)
             ->where([
+                'id'       => $providerId,
                 'provider' => self::PROVIDER_DISCRIMINATOR,
                 'isActive' => true,
                 'deleted'  => false,
@@ -316,6 +429,86 @@ class MetaLeadAdsWebhook
             ->findOne();
 
         return $provider instanceof OAuthProvider ? $provider : null;
+    }
+
+    /**
+     * Resolve every active meta-leadads provider in the DB (legacy bare-path
+     * fallback only — try-all-secrets pattern).
+     *
+     * @return OAuthProvider[]
+     */
+    private function resolveAllActiveProviders(): array
+    {
+        /** @var OAuthProvider[] $providers */
+        $providers = $this->entityManager
+            ->getRDBRepository(OAuthProvider::ENTITY_TYPE)
+            ->where([
+                'provider' => self::PROVIDER_DISCRIMINATOR,
+                'isActive' => true,
+                'deleted'  => false,
+            ])
+            ->find();
+
+        return is_array($providers) ? $providers : iterator_to_array($providers);
+    }
+
+    /**
+     * BYOA signature check — exactly one provider candidate.
+     */
+    private function verifySignatureForProvider(
+        string $providerId,
+        string $rawBody,
+        Request $request,
+    ): ?OAuthProvider {
+        $provider = $this->resolveProviderById($providerId);
+
+        if (!$provider) {
+            $this->log->warning('MetaLeadAds: webhook delivery for unknown providerId.', [
+                'providerId' => $providerId,
+            ]);
+
+            return null;
+        }
+
+        $error = $this->verifySignature($provider, $rawBody, $request);
+
+        if ($error !== null) {
+            $this->log->warning("MetaLeadAds: signature verification failed: {$error}", [
+                'providerId' => $providerId,
+            ]);
+
+            return null;
+        }
+
+        return $provider;
+    }
+
+    /**
+     * Legacy bare-path signature check — iterate every active provider and
+     * accept the first whose clientSecret validates the HMAC. This is the
+     * try-all-secrets pattern used by the WhatsApp/Instagram modules.
+     */
+    private function verifySignatureTryAll(string $rawBody, Request $request): ?OAuthProvider
+    {
+        $providers = $this->resolveAllActiveProviders();
+
+        if (empty($providers)) {
+            $this->log->warning('MetaLeadAds: no active meta-leadads provider configured.');
+
+            return null;
+        }
+
+        foreach ($providers as $provider) {
+            if ($this->verifySignature($provider, $rawBody, $request) === null) {
+                return $provider;
+            }
+        }
+
+        $this->log->warning('MetaLeadAds: no provider secret matched X-Hub-Signature-256.', [
+            'providersTried' => count($providers),
+        ]);
+
+        return null;
     }
 
     private function verifySignature(OAuthProvider $provider, string $rawBody, Request $request): ?string

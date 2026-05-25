@@ -184,12 +184,19 @@ class EventBuilder
         }
 
         // NOT hashed: lead_id, fbc, fbp, external_id (per Meta spec).
+        //
+        // lead_id MUST be a JSON string. Meta's CRM-Leads validators reject
+        // the value when emitted as a JSON number, because:
+        //   - it's a 64-bit numeric id that loses precision in JS clients,
+        //   - Meta's Conversion-Leads docs explicitly require a string.
+        //
+        // We only set lead_id when the Contact actually has a Meta leadgen id
+        // (populated by FeatureMetaLeadAds\Services\LeadgenIngester at lead
+        // capture time). For non-Meta-ad-originated leads, callers should
+        // populate Contact.metaFbc with the click id instead.
         $leadId = $contact->get('metaLeadId');
         if ($leadId) {
-            // Meta accepts lead_id as int. Cast safely.
-            $data->lead_id = ctype_digit((string) $leadId)
-                ? (int) $leadId
-                : (string) $leadId;
+            $data->lead_id = (string) $leadId;
         }
 
         $fbc = $contact->get('metaFbc');

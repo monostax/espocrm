@@ -31,7 +31,8 @@
         "leadForm": "Formulário de Lead",
         "page": "Página",
         "contact": "Contact",
-        "opportunity": "Oportunidade"
+        "opportunity": "Oportunidade",
+        "tenant": "Ambiente"
     },
     "options": {
         "status": {

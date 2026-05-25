@@ -1,0 +1,7 @@
+{
+    "OAuthProvider": {
+        "detail": {
+            "module": "FeatureOAuthEnhanced"
+        }
+    }
+}

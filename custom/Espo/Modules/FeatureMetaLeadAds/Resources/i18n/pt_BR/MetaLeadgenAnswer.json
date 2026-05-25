@@ -1,0 +1,28 @@
+{
+    "labels": {
+        "Create MetaLeadgenAnswer": "Criar Resposta de Lead",
+        "MetaLeadgenAnswer": "Resposta de Lead",
+        "Lead Answers": "Respostas do Lead"
+    },
+    "fields": {
+        "name": "Resposta",
+        "fieldKey": "Chave do Campo",
+        "label": "Pergunta",
+        "value": "Valor",
+        "valueRaw": "Valor Bruto",
+        "wasMapped": "Mapeado para Contact",
+        "event": "Evento de Lead",
+        "question": "Pergunta",
+        "form": "Formulário",
+        "contact": "Contact",
+        "opportunity": "Oportunidade",
+        "tenant": "Ambiente"
+    },
+    "tooltips": {
+        "fieldKey": "Slug do campo como veio em field_data[].name. Mantido independentemente do link com a Pergunta para preservar exibição quando a pergunta é removida no Meta.",
+        "label": "Rótulo da pergunta denormalizado no momento da ingestão. Permite a linha continuar exibindo mesmo se a Pergunta pai for marcada inativa.",
+        "value": "Valor pronto para exibição. Para perguntas de escolha, o rótulo humano da opção resolvido via dicionário options da pergunta pai.",
+        "valueRaw": "array<string> original retornado pelo Meta. Preserva chaves de opção e fidelidade multi-select.",
+        "wasMapped": "True quando LeadFieldMapper consumiu este campo para um atributo do Contact (email, phone, name, …). False = apenas qualificação."
+    }
+}

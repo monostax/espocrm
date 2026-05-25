@@ -31,7 +31,8 @@
         "leadForm": "Lead Form",
         "page": "Page",
         "contact": "Contact",
-        "opportunity": "Opportunity"
+        "opportunity": "Opportunity",
+        "tenant": "Tenant"
     },
     "options": {
         "status": {

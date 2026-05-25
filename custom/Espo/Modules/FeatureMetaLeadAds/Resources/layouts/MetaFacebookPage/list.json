@@ -3,5 +3,6 @@
     { "name": "pageId" },
     { "name": "isActive" },
     { "name": "subscribedToLeadgen" },
+    { "name": "tenant" },
     { "name": "lastSyncedAt" }
 ]

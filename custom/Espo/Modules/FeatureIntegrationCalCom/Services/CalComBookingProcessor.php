@@ -76,7 +76,7 @@ class CalComBookingProcessor
         }
 
         $createIfMissing = (bool) ($integration->get('createContactIfMissing') ?? true);
-        $contact = $this->matcher->matchOrCreate($booking, $createIfMissing);
+        $contact = $this->matcher->matchOrCreate($booking, $createIfMissing, $integration);
 
         if (!$contact) {
             return $this->finish(

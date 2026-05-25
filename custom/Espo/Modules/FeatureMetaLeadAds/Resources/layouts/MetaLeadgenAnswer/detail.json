@@ -1,0 +1,30 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "label" }, { "name": "value" }],
+            [{ "name": "fieldKey" }, { "name": "wasMapped" }],
+            [{ "name": "question" }, { "name": "form" }]
+        ]
+    },
+    {
+        "label": "Context",
+        "rows": [
+            [{ "name": "event" }, false],
+            [{ "name": "contact" }, { "name": "opportunity" }]
+        ]
+    },
+    {
+        "label": "Raw",
+        "rows": [
+            [{ "name": "valueRaw" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }]
+        ]
+    }
+]

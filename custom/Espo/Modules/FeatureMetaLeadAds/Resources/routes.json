@@ -1,5 +1,23 @@
 [
     {
+        "route": "/MetaLeadAds/webhook/:providerId",
+        "method": "get",
+        "params": {
+            "controller": "MetaLeadAdsWebhook",
+            "action": "webhook"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/MetaLeadAds/webhook/:providerId",
+        "method": "post",
+        "params": {
+            "controller": "MetaLeadAdsWebhook",
+            "action": "webhook"
+        },
+        "noAuth": true
+    },
+    {
         "route": "/MetaLeadAds/webhook",
         "method": "get",
         "params": {
@@ -39,6 +57,14 @@
         "params": {
             "controller": "MetaLeadAdsAdmin",
             "action": "retryIngest"
+        }
+    },
+    {
+        "route": "/MetaLeadAdsWebhookConfig/configure",
+        "method": "post",
+        "params": {
+            "controller": "MetaLeadAdsWebhookConfig",
+            "action": "configure"
         }
     }
 ]

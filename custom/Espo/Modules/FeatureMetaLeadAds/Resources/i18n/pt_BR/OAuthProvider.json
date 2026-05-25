@@ -1,0 +1,25 @@
+{
+    "fields": {
+        "webhookVerifyToken": "Token de Verificação do Webhook"
+    },
+    "tooltips": {
+        "webhookVerifyToken": "Segredo compartilhado usado no handshake `hub.verify_token` do webhook da Meta. Gerado automaticamente na primeira execução de 'Configurar Webhook Lead Ads' e registrado na Meta. Cada OAuthProvider meta-leadads tem seu próprio token — suporta BYOA (cada tenant traz seu próprio Meta App)."
+    },
+    "labels": {
+        "configureMetaLeadAdsWebhook": "Configurar Webhook Lead Ads",
+        "Configure": "Configurar",
+        "Configuring Meta Lead Ads webhook...": "Configurando webhook Lead Ads da Meta...",
+        "Lead Ads Webhook": "Webhook Lead Ads"
+    },
+    "messages": {
+        "confirmConfigureMetaLeadAdsWebhook": "Isto irá gerar (se necessário) um Token de Verificação e registrar a URL de callback do webhook Lead Ads na Meta para o Meta App deste OAuth Provider. A URL é escopada por id do OAuthProvider para que múltiplos Meta Apps (BYOA) possam coexistir. Continuar?",
+        "metaLeadAdsWebhookRegistered": "Webhook Lead Ads registrado com sucesso na Meta. As inscrições por página serão criadas no próximo sync.",
+        "metaLeadAdsWebhookRegisteredWithNewToken": "Um novo Token de Verificação foi gerado e registrado na Meta. As inscrições por página serão criadas no próximo sync.",
+        "metaLeadAdsWebhookManualFallback": "Não foi possível registrar automaticamente na Meta. Copie os valores abaixo no Meta App Dashboard → Products → Webhooks → Page → leadgen.",
+        "metaLeadAdsWebhookConfigFailed": "Falha ao configurar o webhook Lead Ads.",
+        "metaLeadAdsWebhookCallbackUrlLabel": "URL de Callback",
+        "metaLeadAdsWebhookVerifyTokenLabel": "Token de Verificação",
+        "metaLeadAdsWebhookSubscriptionsHeader": "Inscrições atuais do webhook do Meta App:",
+        "metaLeadAdsWebhookWarningsHeader": "Avisos:"
+    }
+}

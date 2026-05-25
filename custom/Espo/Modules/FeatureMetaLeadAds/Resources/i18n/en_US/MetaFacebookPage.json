@@ -34,7 +34,8 @@
         "lastSyncedAt": "Last Synced",
         "lastSyncError": "Last Sync Error",
         "description": "Description",
-        "leadForms": "Lead Forms"
+        "leadForms": "Lead Forms",
+        "tenant": "Tenant"
     },
     "tooltips": {
         "name": "Facebook Page display name (synced from Meta).",
@@ -42,6 +43,7 @@
         "pageAccessToken": "Long-lived Page Access Token. Encrypted at rest. Obtained automatically via OAuth user token and synced by 'Sync Pages'.",
         "isActive": "Inactive pages are ignored by the webhook receiver and excluded from form sync.",
         "subscribedToLeadgen": "True after Meta App is subscribed to leadgen field on this page (POST /{pageId}/subscribed_apps).",
-        "oAuthAccount": "OAuthAccount used to discover this page. Provider must be 'meta-leadads'."
+        "oAuthAccount": "OAuthAccount used to discover this page. Provider must be 'meta-leadads'.",
+        "tenant": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by the AssignTenantFromTeam hook — assign teams to populate this."
     }
 }

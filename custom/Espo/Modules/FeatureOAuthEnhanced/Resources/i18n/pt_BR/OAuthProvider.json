@@ -8,6 +8,7 @@
     "options": {
         "provider": {
             "meta-whatsapp": "Meta (WhatsApp)",
+            "meta-leadads": "Meta (Lead Ads)",
             "google-calendar": "Google (Calendar)",
             "google-meet": "Google (Meet)",
             "meta-instagram": "Meta (Instagram)",

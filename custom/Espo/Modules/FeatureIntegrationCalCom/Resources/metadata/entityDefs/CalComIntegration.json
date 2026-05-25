@@ -90,6 +90,12 @@
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by AssignTenantFromTeam hook."
         }
     },
     "links": {
@@ -107,6 +113,11 @@
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
         },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "calComIntegrations"
+        },
         "metaCapiDataset": {
             "type": "belongsTo",
             "entity": "MetaCapiDataset"
@@ -119,6 +130,7 @@
     "indexes": {
         "name": { "columns": ["name", "deleted"] },
         "isActive": { "columns": ["isActive"] },
-        "apiKey": { "columns": ["apiKey", "deleted"], "unique": true }
+        "apiKey": { "columns": ["apiKey", "deleted"], "unique": true },
+        "tenantId": { "columns": ["tenantId"] }
     }
 }

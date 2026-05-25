@@ -58,10 +58,11 @@ class SeedOAuthProviderMetaLeadAds implements RebuildAction
 
     private function updateProvider(OAuthProvider $provider): void
     {
-        $provider->set('name',                 self::PROVIDER_NAME);
+        // Refresh endpoints/scopes only — DO NOT touch isGloballyShared, name,
+        // or credentials. The admin may have toggled this row off-global to
+        // make it tenant-specific (BYOA), or renamed it; we must not clobber
+        // those operator decisions on every rebuild.
         $provider->set('provider',             self::PROVIDER_DISCRIMINATOR);
-        $provider->set('isActive',             true);
-        $provider->set('isGloballyShared',     true);
         $provider->set('authorizationEndpoint', 'https://www.facebook.com/v21.0/dialog/oauth');
         $provider->set('tokenEndpoint',        'https://graph.facebook.com/v21.0/oauth/access_token');
         $provider->set('scopes',               $this->getScopes());

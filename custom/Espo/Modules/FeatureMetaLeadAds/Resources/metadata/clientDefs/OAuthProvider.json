@@ -16,9 +16,19 @@
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "provider",
-                            "value": "meta-leadads"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "provider",
+                                    "value": "meta-leadads"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "provider",
+                                    "value": "meta-instagram"
+                                }
+                            ]
                         }
                     ]
                 }

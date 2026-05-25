@@ -1,23 +1,34 @@
 {
-    "controller": "controllers/record",
-    "iconClass": "ti ti-target-arrow",
-    "boolFilterList": ["onlyMy"],
-    "relationshipPanels": {
-        "leadgenEvents": {
-            "createDisabled": true,
-            "selectDisabled": true,
-            "unlinkDisabled": true
-        }
-    },
-    "dynamicLogic": {
-        "fields": {
-            "opportunityStage": {
-                "visible": {
-                    "conditionGroup": [
-                        { "type": "equals", "attribute": "createOpportunity", "value": true }
-                    ]
-                }
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "questions",
+                "label": "Questions",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+            },
+            {
+                "name": "leadgenEvents",
+                "label": "Lead Events",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
             }
+        ]
+    },
+    "relationshipPanels": {
+        "questions": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+        },
+        "leadgenEvents": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
         }
     }
 }

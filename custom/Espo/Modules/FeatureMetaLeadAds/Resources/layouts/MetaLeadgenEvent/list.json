@@ -2,6 +2,7 @@
     { "name": "name", "link": true },
     { "name": "leadgenId" },
     { "name": "status" },
+    { "name": "tenant" },
     { "name": "formId" },
     { "name": "contact" },
     { "name": "opportunity" },

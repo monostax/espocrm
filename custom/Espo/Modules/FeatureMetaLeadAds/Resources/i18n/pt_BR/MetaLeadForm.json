@@ -15,7 +15,8 @@
         "description": "Descrição",
         "totalLeadsReceived": "Total de Leads Recebidos",
         "lastLeadReceivedAt": "Último Lead Recebido",
-        "leadgenEvents": "Eventos de Lead"
+        "leadgenEvents": "Eventos de Lead",
+        "tenant": "Ambiente"
     },
     "tooltips": {
         "name": "Nome de exibição do formulário (sincronizado do Meta ou editado pelo admin).",
@@ -25,6 +26,7 @@
         "assignedUser": "Usuário padrão para Contacts/Oportunidades criados. Vazio = sem atribuição.",
         "isActive": "Formulários inativos são ignorados na ingestão (evento marcado status=Skipped).",
         "createOpportunity": "Quando true, cada lead cria uma Oportunidade vinculada ao Contact no Funil configurado.",
-        "fieldMapping": "Mapa de override por formulário: {nomeCampoMeta: atributoContact}. Mesclado por cima dos defaults built-in (email, full_name, first_name, last_name, phone_number, phone, city, company_name)."
+        "fieldMapping": "Mapa de override por formulário: {nomeCampoMeta: atributoContact}. Mesclado por cima dos defaults built-in (email, full_name, first_name, last_name, phone_number, phone, city, company_name).",
+        "tenant": "Herdado da MetaFacebookPage pai (definido automaticamente pelo hook CascadeTenantFromPage). Atribua times na Página pai para popular este campo."
     }
 }

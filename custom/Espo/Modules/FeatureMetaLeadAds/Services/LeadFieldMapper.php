@@ -78,10 +78,24 @@ class LeadFieldMapper
      */
     public function map(array $fieldData, MetaLeadForm $form): array
     {
+        return $this->mapDetailed($fieldData, $form)['attrs'];
+    }
+
+    /**
+     * Like map() but also returns the set of source Meta keys that produced
+     * a Contact attribute (so callers can stamp e.g. `MetaLeadgenAnswer.wasMapped`).
+     *
+     * @param array<int, array{name: string, values: array<int, string>}> $fieldData
+     * @return array{attrs: array<string, mixed>, mappedKeys: array<string, true>}
+     */
+    public function mapDetailed(array $fieldData, MetaLeadForm $form): array
+    {
         $merged = $this->effectiveMap($form);
 
         $attrs = [];
+        $mappedKeys = [];
         $fullName = null;
+        $fullNameSourceKey = null;
 
         foreach ($fieldData as $field) {
             $metaName = $field['name'] ?? null;
@@ -102,13 +116,16 @@ class LeadFieldMapper
                 continue;
             }
 
-            // Special-case: full_name needs splitting.
+            // Special-case: full_name needs splitting; defer until after the
+            // loop so explicit firstName/lastName take precedence.
             if ($targetAttr === '__fullName__') {
                 $fullName = $value;
+                $fullNameSourceKey = $metaName;
                 continue;
             }
 
             $attrs[$targetAttr] = $this->castValue($targetAttr, $value);
+            $mappedKeys[$metaName] = true;
         }
 
         // Apply full_name fallback only if first/last weren't provided directly.
@@ -121,10 +138,29 @@ class LeadFieldMapper
                 if ($last !== null) {
                     $attrs['lastName'] = $last;
                 }
+                if ($fullNameSourceKey !== null) {
+                    $mappedKeys[$fullNameSourceKey] = true;
+                }
             }
         }
 
-        return $attrs;
+        return ['attrs' => $attrs, 'mappedKeys' => $mappedKeys];
+    }
+
+    /**
+     * Public accessor for the effective Meta-key → Contact-attribute map of
+     * a given form. Used by FormSyncService to stamp
+     * `MetaLeadFormQuestion.contactAttribute` so the UI can show at a glance
+     * which questions feed into the Contact.
+     *
+     * Identical contents to the private effectiveMap() — exposed as a stable
+     * public API so we can refactor the internal helper freely.
+     *
+     * @return array<string, string>
+     */
+    public function getEffectiveMap(MetaLeadForm $form): array
+    {
+        return $this->effectiveMap($form);
     }
 
     /**

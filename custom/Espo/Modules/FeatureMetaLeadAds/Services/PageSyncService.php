@@ -39,6 +39,7 @@ class PageSyncService
         private MetaGraphApiClient $graphApiClient,
         private TokensProvider $tokensProvider,
         private \Espo\Core\Utils\Crypt $crypt,
+        private TenantResolver $tenantResolver,
         private Log $log,
     ) {}
 
@@ -107,6 +108,23 @@ class PageSyncService
 
         $result['pagesDiscovered'] = count($pages);
 
+        // Derive teams/tenant once per sync from the OAuthAccount. Each
+        // OAuthAccount belongs to one or more teams (FeatureOAuthEnhanced
+        // adds this linkMultiple). The Tenant is then derived from those
+        // teams via Tenant.baseUserTeam. Pages inherit both.
+        //
+        // We do this once per sync (not per page) because all pages
+        // discovered through this OAuthAccount share the same owner.
+        $accountTeamIds = $this->resolveAccountTeamIds($account);
+        $accountTenantId = $this->tenantResolver->resolveTenantIdFromTeamIds($accountTeamIds);
+
+        if (empty($accountTeamIds)) {
+            $this->log->warning(
+                "PageSyncService: OAuthAccount {$oAuthAccountId} has no teams; " .
+                "synced pages will not have teams/tenant set and will be invisible to all non-admin users."
+            );
+        }
+
         foreach ($pages as $pageData) {
             $pageId = (string) ($pageData['id'] ?? '');
             $name   = (string) ($pageData['name'] ?? '');
@@ -116,7 +134,14 @@ class PageSyncService
                 continue;
             }
 
-            $created = $this->upsertPage($pageId, $name, $token, $oAuthAccountId);
+            $created = $this->upsertPage(
+                $pageId,
+                $name,
+                $token,
+                $oAuthAccountId,
+                $accountTeamIds,
+                $accountTenantId,
+            );
 
             if ($created) {
                 $result['pagesCreated']++;
@@ -146,6 +171,23 @@ class PageSyncService
     }
 
     /**
+     * Insert/update MetaFacebookPage with explicit team + tenant propagation
+     * from the source OAuthAccount.
+     *
+     * We deliberately keep `skipHooks => true, silent => true` here so that:
+     *   - EncryptPageAccessToken does NOT re-encrypt our already-encrypted
+     *     ciphertext (that hook has no silent guard).
+     *   - AssignTenantFromTeam (silent-guarded) does NOT run, which is fine
+     *     because we resolve tenantId explicitly via TenantResolver above.
+     *   - No Stream notifications fire for system-internal sync rows.
+     *
+     * Update semantics:
+     *   - Existing pages keep their admin-edited teamsIds/tenantId untouched
+     *     UNLESS those are empty (e.g. legacy rows from before this refactor),
+     *     in which case we backfill from the OAuthAccount.
+     *
+     * @param list<string> $accountTeamIds
+     *
      * @return bool True if a new row was created, false if updated.
      */
     private function upsertPage(
@@ -153,6 +195,8 @@ class PageSyncService
         string $name,
         string $token,
         string $oAuthAccountId,
+        array $accountTeamIds,
+        ?string $accountTenantId,
     ): bool {
         $existing = $this->entityManager
             ->getRDBRepository(MetaFacebookPage::ENTITY_TYPE)
@@ -171,6 +215,10 @@ class PageSyncService
             $existing->set('lastSyncedAt', $now);
             $existing->set('lastSyncError', null);
 
+            // Backfill teams/tenant only if missing (don't overwrite admin
+            // choices on existing rows).
+            $this->backfillTeamsAndTenant($existing, $accountTeamIds, $accountTenantId);
+
             $this->entityManager->saveEntity($existing, ['skipHooks' => true, 'silent' => true]);
 
             return false;
@@ -184,9 +232,76 @@ class PageSyncService
         $page->set('isActive', true);
         $page->set('lastSyncedAt', $now);
 
+        if (!empty($accountTeamIds)) {
+            $page->set('teamsIds', $accountTeamIds);
+        }
+
+        if ($accountTenantId !== null) {
+            $page->set('tenantId', $accountTenantId);
+        }
+
         $this->entityManager->saveEntity($page, ['skipHooks' => true, 'silent' => true]);
 
         return true;
+    }
+
+    /**
+     * Read teams from an OAuthAccount.
+     *
+     * OAuthAccount.teams is provided by FeatureOAuthEnhanced. Defensive
+     * against entities loaded without the link multiple list populated.
+     *
+     * @return list<string>
+     */
+    private function resolveAccountTeamIds(OAuthAccount $account): array
+    {
+        try {
+            $ids = $account->getLinkMultipleIdList('teams') ?: [];
+        } catch (Throwable) {
+            $ids = [];
+        }
+
+        if (!empty($ids)) {
+            return array_values(array_unique($ids));
+        }
+
+        $teamsIds = $account->get('teamsIds');
+
+        if (is_array($teamsIds) && !empty($teamsIds)) {
+            return array_values(array_unique($teamsIds));
+        }
+
+        return [];
+    }
+
+    /**
+     * Backfill teams/tenant on an existing entity only when it has none.
+     *
+     * @param list<string> $teamIds
+     */
+    private function backfillTeamsAndTenant(
+        MetaFacebookPage $entity,
+        array $teamIds,
+        ?string $tenantId,
+    ): void {
+        if (empty($teamIds)) {
+            return;
+        }
+
+        $currentTeamIds = [];
+        try {
+            $currentTeamIds = $entity->getLinkMultipleIdList('teams') ?: [];
+        } catch (Throwable) {
+            $currentTeamIds = [];
+        }
+
+        if (empty($currentTeamIds)) {
+            $entity->set('teamsIds', $teamIds);
+        }
+
+        if ($tenantId !== null && !$entity->get('tenantId')) {
+            $entity->set('tenantId', $tenantId);
+        }
     }
 
     private function markSubscribed(string $pageId, bool $value): void

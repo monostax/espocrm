@@ -14,6 +14,16 @@
             "type": "hasMany",
             "entity": "MetaLeadgenEvent",
             "foreign": "tenant"
+        },
+        "metaLeadFormQuestions": {
+            "type": "hasMany",
+            "entity": "MetaLeadFormQuestion",
+            "foreign": "tenant"
+        },
+        "metaLeadgenAnswers": {
+            "type": "hasMany",
+            "entity": "MetaLeadgenAnswer",
+            "foreign": "tenant"
         }
     }
 }

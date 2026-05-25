@@ -1,0 +1,5 @@
+{
+    "metaCapiActive": {
+        "className": "Espo\\Modules\\FeatureMetaConversionsApi\\Classes\\AppParams\\MetaCapiActive"
+    }
+}

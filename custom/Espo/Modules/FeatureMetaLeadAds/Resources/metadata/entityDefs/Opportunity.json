@@ -1,0 +1,10 @@
+{
+    "links": {
+        "metaLeadgenAnswers": {
+            "type": "hasMany",
+            "entity": "MetaLeadgenAnswer",
+            "foreign": "opportunity",
+            "audited": false
+        }
+    }
+}

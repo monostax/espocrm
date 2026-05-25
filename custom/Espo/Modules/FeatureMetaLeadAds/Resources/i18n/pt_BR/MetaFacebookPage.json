@@ -34,7 +34,8 @@
         "lastSyncedAt": "Última Sincronização",
         "lastSyncError": "Último Erro de Sincronização",
         "description": "Descrição",
-        "leadForms": "Formulários de Lead"
+        "leadForms": "Formulários de Lead",
+        "tenant": "Ambiente"
     },
     "tooltips": {
         "name": "Nome de exibição da Página do Facebook (sincronizado do Meta).",
@@ -42,6 +43,7 @@
         "pageAccessToken": "Token de acesso da página, de longa duração. Criptografado em repouso. Obtido automaticamente via OAuth user token e sincronizado por 'Sync Pages'.",
         "isActive": "Páginas inativas são ignoradas pelo webhook receiver e excluídas da sincronização de formulários.",
         "subscribedToLeadgen": "True após o Meta App estar assinado no campo leadgen desta página (POST /{pageId}/subscribed_apps).",
-        "oAuthAccount": "OAuthAccount usada para descobrir esta página. O provider deve ser 'meta-leadads'."
+        "oAuthAccount": "OAuthAccount usada para descobrir esta página. O provider deve ser 'meta-leadads'.",
+        "tenant": "Derivado do primeiro time selecionado via Tenant.baseUserTeam. Definido automaticamente pelo hook AssignTenantFromTeam — atribua times para popular este campo."
     }
 }

@@ -1,0 +1,28 @@
+{
+    "labels": {
+        "Create MetaLeadgenAnswer": "Create Lead Answer",
+        "MetaLeadgenAnswer": "Lead Answer",
+        "Lead Answers": "Lead Answers"
+    },
+    "fields": {
+        "name": "Answer",
+        "fieldKey": "Field Key",
+        "label": "Question",
+        "value": "Value",
+        "valueRaw": "Raw Value",
+        "wasMapped": "Mapped to Contact",
+        "event": "Lead Event",
+        "question": "Question",
+        "form": "Form",
+        "contact": "Contact",
+        "opportunity": "Opportunity",
+        "tenant": "Tenant"
+    },
+    "tooltips": {
+        "fieldKey": "Meta's field slug as it came in on field_data[].name. Kept independently of the Question link so display survives schema deletions in Meta.",
+        "label": "Question label denormalised at ingest time. Lets the row keep rendering even if the parent Question is later soft-deleted.",
+        "value": "Display-ready value. For choice questions, the option's human label resolved via the parent question's options dictionary.",
+        "valueRaw": "Original array<string> Meta returned. Preserves option keys and multi-select fidelity.",
+        "wasMapped": "True when LeadFieldMapper consumed this field into a Contact attribute (email, phone, name, …). False = qualification-only."
+    }
+}
