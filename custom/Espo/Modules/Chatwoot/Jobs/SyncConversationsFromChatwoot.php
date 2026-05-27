@@ -8,6 +8,7 @@ use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
+use Espo\Modules\Chatwoot\Tools\ContactReconciler;
 
 /**
  * Scheduled job to sync conversations from Chatwoot to EspoCRM.
@@ -34,6 +35,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private WahaApiClient $wahaApiClient,
+        private ContactReconciler $reconciler,
         private Log $log
     ) {}
 
@@ -105,6 +107,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Get teams from the ChatwootAccount
             $teamsIds = $this->getAccountTeamsIds($account);
             $teamId = !empty($teamsIds) ? $teamsIds[0] : null;
+            $tenantId = $this->normalizeTenantId($account->get('tenantId'));
 
             // Sync conversations
             $result = $this->syncConversations(
@@ -113,7 +116,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 $chatwootAccountId,
                 $account->getId(),
                 $cursor,
-                $teamId
+                $teamId,
+                $tenantId,
+                $teamsIds
             );
 
             // Update sync timestamps and cursor
@@ -164,7 +169,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
         int $chatwootAccountId,
         string $espoAccountId,
         ?int $cursor = null,
-        ?string $teamId = null
+        ?string $teamId = null,
+        ?string $tenantId = null,
+        array $teamsIds = []
     ): array {
         $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0, 'newCursor' => $cursor, 'hasMore' => false];
         $page = 1;
@@ -214,7 +221,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
             foreach ($conversations as $chatwootConversation) {
                 try {
-                    $result = $this->syncSingleConversation($chatwootConversation, $espoAccountId, $teamId);
+                    $result = $this->syncSingleConversation($chatwootConversation, $espoAccountId, $teamId, $tenantId, $teamsIds);
 
                     if ($result === 'synced') {
                         $stats['synced']++;
@@ -264,7 +271,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
      * @param string|null $teamId Team ID to assign to synced entities
      * @return string 'synced' or 'skipped'
      */
-    private function syncSingleConversation(array $chatwootConversation, string $espoAccountId, ?string $teamId = null): string
+    private function syncSingleConversation(array $chatwootConversation, string $espoAccountId, ?string $teamId = null, ?string $tenantId = null, array $teamsIds = []): string
     {
         $chatwootConversationId = (int) $chatwootConversation['id'];
         $inboxId = isset($chatwootConversation['inbox_id']) ? (int) $chatwootConversation['inbox_id'] : null;
@@ -289,10 +296,21 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 $this->log->debug("SyncConversationsFromChatwoot: Skipping conversation {$chatwootConversationId} - no sender data available");
                 return 'skipped';
             }
-            
+
             $this->log->info("SyncConversationsFromChatwoot: Creating ChatwootContact on-the-fly for contact ID {$contactId} (conversation {$chatwootConversationId})");
-            $cwtContact = $this->createContactFromSenderData($senderData, $espoAccountId, $teamId);
-            
+            // Pass the conversation's inbox id so the reconciler can
+            // attribute the channel identity to the right inbox even
+            // when the sender payload doesn't carry contact_inboxes.
+            $cwtContact = $this->createContactFromSenderData(
+                $senderData,
+                $espoAccountId,
+                $teamId,
+                $tenantId,
+                $teamsIds,
+                $inboxId,
+                $chatwootConversation['meta']['channel'] ?? null
+            );
+
             if (!$cwtContact) {
                 $this->log->error("SyncConversationsFromChatwoot: Failed to create ChatwootContact for contact ID {$contactId}");
                 return 'skipped';
@@ -384,19 +402,45 @@ class SyncConversationsFromChatwoot implements JobDataLess
      * Create a ChatwootContact from conversation sender data.
      * This handles contacts that don't appear in the contacts filter API (e.g., Instagram contacts).
      *
+     * The EspoCRM Contact-side dedup / auto-provision goes through
+     * {@see ContactReconciler}, which:
+     *   - matches by (tenantId, channelType, sourceId) so Instagram /
+     *     Telegram contacts with no phone or email still resolve to an
+     *     existing Contact via their channel identity;
+     *   - auto-creates a phoneless/emailless Contact when nothing
+     *     matches (the previous code skipped this case);
+     *   - materializes ContactChannelIdentity rows so future syncs hit
+     *     the fast path.
+     *
      * @param array $senderData Sender data from conversation meta
      * @param string $espoAccountId EspoCRM ChatwootAccount ID
-     * @param string|null $teamId Team ID to assign
+     * @param string|null $teamId Primary team ID to assign
+     * @param ?string $tenantId Tenant id derived from the ChatwootAccount
+     * @param array<string> $teamsIds All teams from the ChatwootAccount
+     * @param ?int $conversationInboxId Chatwoot inbox id (int) the
+     *   conversation is in, used as the identity's originating inbox
+     *   when the sender payload has no `contact_inboxes`.
+     * @param ?string $conversationChannel Chatwoot meta.channel string
+     *   (e.g. "Channel::Instagram") for the same use.
      * @return Entity|null The created ChatwootContact, or null on failure
      */
-    private function createContactFromSenderData(array $senderData, string $espoAccountId, ?string $teamId = null): ?Entity
-    {
+    private function createContactFromSenderData(
+        array $senderData,
+        string $espoAccountId,
+        ?string $teamId = null,
+        ?string $tenantId = null,
+        array $teamsIds = [],
+        ?int $conversationInboxId = null,
+        ?string $conversationChannel = null
+    ): ?Entity {
         $chatwootContactId = (int) ($senderData['id'] ?? 0);
         if (!$chatwootContactId) {
             return null;
         }
 
-        $teamsIds = $teamId ? [$teamId] : [];
+        if (empty($teamsIds) && $teamId) {
+            $teamsIds = [$teamId];
+        }
 
         // Check again to prevent race conditions
         $existingCwtContact = $this->findEntityIncludingDeleted('ChatwootContact', [
@@ -405,14 +449,12 @@ class SyncConversationsFromChatwoot implements JobDataLess
         ]);
 
         if ($existingCwtContact) {
-            // Restore if soft-deleted
             $this->entityManager
                 ->getRDBRepository('ChatwootContact')
                 ->restoreDeleted($existingCwtContact->getId());
             return $this->entityManager->getEntityById('ChatwootContact', $existingCwtContact->getId());
         }
 
-        // Extract contact data from sender
         $name = $senderData['name'] ?? null;
         $phoneNumber = $senderData['phone_number'] ?? null;
         $email = $senderData['email'] ?? null;
@@ -422,16 +464,35 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $lastActivityAt = $senderData['last_activity_at'] ?? null;
         $createdAt = $senderData['created_at'] ?? null;
 
-        // Try to find existing EspoCRM Contact by phone or email within the same team
-        $espoContact = null;
-        if ($phoneNumber) {
-            $espoContact = $this->findContactByFieldInTeams('phoneNumber', $phoneNumber, $teamsIds);
-        }
-        if (!$espoContact && $email) {
-            $espoContact = $this->findContactByFieldInTeams('emailAddress', $email, $teamsIds);
+        // Build a synthetic contact_inboxes entry from the
+        // conversation so the reconciler can register a channel
+        // identity even when the sender payload omits the linkage.
+        $contactInboxes = $senderData['contact_inboxes'] ?? [];
+        if (!empty($identifier) && $conversationInboxId && $conversationChannel) {
+            $contactInboxes[] = [
+                'source_id' => $identifier,
+                'inbox' => [
+                    'id' => $conversationInboxId,
+                    'channel_type' => $conversationChannel,
+                ],
+            ];
         }
 
-        // Create ChatwootContact bridge record
+        // Reconcile against the CRM Contact side BEFORE creating the
+        // bridge so the bridge row carries the resolved contactId.
+        $reconciled = $this->reconciler->reconcile([
+            'tenantId' => $tenantId,
+            'teamsIds' => $teamsIds,
+            'chatwootAccountId' => $espoAccountId,
+            'name' => $name,
+            'phoneNumber' => $phoneNumber,
+            'email' => $email,
+            'identifier' => $identifier,
+            'contactInboxes' => $contactInboxes,
+            'inboxIdMap' => $this->buildInboxIdMap($contactInboxes, $espoAccountId),
+        ]);
+        $espoContact = $reconciled['contact'];
+
         $data = [
             'chatwootContactId' => $chatwootContactId,
             'chatwootAccountId' => $espoAccountId,
@@ -455,22 +516,17 @@ class SyncConversationsFromChatwoot implements JobDataLess
         try {
             $cwtContact = $this->entityManager->createEntity('ChatwootContact', $data, ['silent' => true]);
 
-            // Explicitly set teams after creation (linkMultiple requires explicit save)
             if (!empty($teamsIds)) {
                 $cwtContact->set('teamsIds', $teamsIds);
                 $this->entityManager->saveEntity($cwtContact, ['silent' => true]);
             }
 
-            // Auto-create EspoCRM Contact if not found and we have enough data
-            if (!$espoContact && $name && ($phoneNumber || $email)) {
-                $espoContact = $this->createEspoContactFromSenderData($senderData, $teamsIds);
-                if ($espoContact) {
-                    $cwtContact->set('contactId', $espoContact->getId());
-                    $this->entityManager->saveEntity($cwtContact, ['silent' => true]);
-                }
-            }
-
-            $this->log->info("SyncConversationsFromChatwoot: Created ChatwootContact {$cwtContact->getId()} for Chatwoot contact {$chatwootContactId} with teams " . json_encode($teamsIds));
+            $this->log->info(
+                "SyncConversationsFromChatwoot: Created ChatwootContact {$cwtContact->getId()} "
+                . "for Chatwoot contact {$chatwootContactId} "
+                . "(reconciler matchedBy={$reconciled['matchedBy']}, "
+                . "espoContactId=" . ($espoContact?->getId() ?? 'null') . ")"
+            );
             return $cwtContact;
 
         } catch (\Exception $e) {
@@ -480,72 +536,56 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
-     * Find an EspoCRM Contact by a field value, scoped to teams.
+     * Build a map of Chatwoot inbox id (int, from the payload) → EspoCRM
+     * ChatwootInbox entity id (varchar 17). Used by the reconciler.
+     *
+     * @param list<array{inbox?: array{id?: ?int}}> $contactInboxes
+     * @return array<int, string>
      */
-    private function findContactByFieldInTeams(string $field, string $value, array $teamsIds): ?Entity
+    private function buildInboxIdMap(array $contactInboxes, string $espoAccountId): array
     {
-        $queryBuilder = $this->entityManager
-            ->getQueryBuilder()
-            ->select()
-            ->from('Contact')
-            ->where([$field => $value])
-            ->withDeleted();
-
-        if (!empty($teamsIds)) {
-            $queryBuilder->join('teams', 'teams');
-            $queryBuilder->where(['teams.id' => $teamsIds]);
+        $rawIds = [];
+        foreach ($contactInboxes as $ci) {
+            $id = $ci['inbox']['id'] ?? null;
+            if (is_int($id) || (is_string($id) && ctype_digit($id))) {
+                $rawIds[] = (int) $id;
+            }
         }
-
-        $query = $queryBuilder->build();
-        $contact = $this->entityManager
-            ->getRDBRepository('Contact')
-            ->clone($query)
-            ->findOne();
-
-        if ($contact) {
-            $this->entityManager
-                ->getRDBRepository('Contact')
-                ->restoreDeleted($contact->getId());
-            return $this->entityManager->getEntityById('Contact', $contact->getId());
+        if ($rawIds === []) {
+            return [];
         }
+        $rawIds = array_values(array_unique($rawIds));
 
-        return null;
+        $rows = $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->select(['id', 'chatwootInboxId'])
+            ->where([
+                'chatwootInboxId' => $rawIds,
+                'chatwootAccountId' => $espoAccountId,
+            ])
+            ->find();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row->get('chatwootInboxId')] = $row->getId();
+        }
+        return $map;
     }
 
     /**
-     * Create an EspoCRM Contact from sender data.
+     * Normalize a ChatwootAccount.tenantId string. Older rows defaulted
+     * to the literal "NULL" via Drizzle; treat those as missing.
      */
-    private function createEspoContactFromSenderData(array $senderData, array $teamsIds): ?Entity
+    private function normalizeTenantId(mixed $value): ?string
     {
-        $name = $senderData['name'] ?? 'Unknown';
-        $nameParts = explode(' ', $name, 2);
-
-        $data = [
-            'firstName' => $nameParts[0] ?? '',
-            'lastName' => $nameParts[1] ?? '',
-            'phoneNumber' => $senderData['phone_number'] ?? null,
-            'emailAddress' => $senderData['email'] ?? null,
-            'description' => 'Imported from Chatwoot conversation',
-        ];
-
-        if (!empty($teamsIds)) {
-            $data['teamsIds'] = $teamsIds;
-        }
-
-        try {
-            $contact = $this->entityManager->createEntity('Contact', $data, ['silent' => true]);
-            
-            // Explicitly set teams after creation (linkMultiple requires explicit save)
-            if (!empty($teamsIds)) {
-                $contact->set('teamsIds', $teamsIds);
-                $this->entityManager->saveEntity($contact, ['silent' => true]);
-            }
-            
-            return $contact;
-        } catch (\Exception $e) {
-            $this->log->debug("SyncConversationsFromChatwoot: Failed to create EspoCRM Contact: " . $e->getMessage());
+        if (!is_string($value)) {
             return null;
         }
+        $trimmed = trim($value);
+        if ($trimmed === '' || $trimmed === 'NULL' || $trimmed === '0') {
+            return null;
+        }
+        return $trimmed;
     }
 
     /**

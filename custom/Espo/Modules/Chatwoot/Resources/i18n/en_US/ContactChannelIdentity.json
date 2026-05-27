@@ -1,0 +1,44 @@
+{
+    "labels": {
+        "ContactChannelIdentity": "Channel Identity",
+        "Create ContactChannelIdentity": "Create Channel Identity"
+    },
+    "fields": {
+        "channelType": "Channel Type",
+        "sourceId": "Source ID",
+        "label": "Label",
+        "isPrimary": "Primary",
+        "contact": "Contact",
+        "tenant": "Tenant",
+        "chatwootAccount": "Chatwoot Account",
+        "chatwootInbox": "Chatwoot Inbox"
+    },
+    "links": {
+        "contact": "Contact",
+        "tenant": "Tenant",
+        "chatwootAccount": "Chatwoot Account",
+        "chatwootInbox": "Chatwoot Inbox"
+    },
+    "options": {
+        "channelType": {
+            "whatsapp": "WhatsApp",
+            "instagram": "Instagram",
+            "telegram": "Telegram",
+            "facebook": "Facebook",
+            "twitter": "Twitter / X",
+            "sms": "SMS",
+            "email": "Email",
+            "web_widget": "Web Widget",
+            "api": "API",
+            "line": "LINE",
+            "viber": "Viber",
+            "other": "Other"
+        }
+    },
+    "tooltips": {
+        "sourceId": "Channel-specific identifier (E.164 phone for WhatsApp/SMS, scoped user id for Instagram/Telegram/Facebook, lowercased email for Email, etc.)",
+        "label": "Optional human-readable label (e.g. Instagram username)",
+        "chatwootAccount": "Originating Chatwoot account where this identity was first observed",
+        "chatwootInbox": "Originating Chatwoot inbox (if applicable)"
+    }
+}

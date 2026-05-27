@@ -19,6 +19,7 @@
  *   - contactId: EspoCRM Contact entity ID
  *   - contactName: Contact display name
  *   - contactPhoneNumber: Contact phone number (optional, for identifier checks)
+ *   - contactEmailAddress: Contact email (optional, for identifier checks)
  */
 define("chatwoot:views/contact/modals/send-message-channel-picker", [
     "views/modal",
@@ -72,6 +73,10 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
             this.contactName = this.options.contactName;
             this.chatwootAccountId = this.getHelper().getAppParam("chatwootAccountId");
             this.contactPhoneNumber = this.options.contactPhoneNumber || null;
+            this.contactEmailAddress = this.options.contactEmailAddress || null;
+
+            // accountId -> Set<channelType> of identities the contact already has
+            this.identitiesByAccount = {};
 
             this.channels = [];
             this.availableInboxes = [];
@@ -83,13 +88,20 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
         },
 
         /**
-         * Fetch ChatwootContactInboxes, ChatwootConversations, and
-         * ChatwootInbox records in parallel, then merge client-side.
+         * Fetch ChatwootContactInboxes, ChatwootConversations,
+         * ChatwootInbox records, and the contact's ContactChannelIdentity
+         * collection in parallel, then merge client-side.
          *
          * No account filter is applied — EspoCRM ACL (teams) ensures
          * the user only sees entities they have access to. This allows
          * users with memberships in multiple ChatwootAccounts to see
          * inboxes from all their accounts.
+         *
+         * ContactChannelIdentity is the source-of-truth for whether the
+         * contact has any non-phone channel identifier (Instagram/Telegram/
+         * Facebook source_id, etc.) the backend can use to initiate a new
+         * conversation. Scoped per ChatwootAccount because source_ids are
+         * page-/account-scoped on Chatwoot's side.
          */
         _loadData: function () {
             var contactInboxPromise = Espo.Ajax.getRequest("ChatwootContactInbox", {
@@ -123,13 +135,32 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 maxSize: 200,
             });
 
-            Promise.all([contactInboxPromise, conversationPromise, chatwootInboxPromise])
+            var identityPromise = Espo.Ajax.getRequest("ContactChannelIdentity", {
+                where: [
+                    {
+                        type: "equals",
+                        attribute: "contactId",
+                        value: this.contactId,
+                    },
+                ],
+                select: "id,channelType,sourceId,chatwootAccountId,chatwootInboxId",
+                maxSize: 200,
+            }).catch(function () {
+                // Best-effort: if ACL forbids reading the entity for this
+                // user we still want the modal to function (phone-only
+                // channels can be initiated regardless of identities).
+                return { list: [] };
+            });
+
+            Promise.all([contactInboxPromise, conversationPromise, chatwootInboxPromise, identityPromise])
                 .then(
                     function (results) {
                         var contactInboxes = (results[0] && results[0].list) || [];
                         var conversations = (results[1] && results[1].list) || [];
                         var chatwootInboxes = (results[2] && results[2].list) || [];
+                        var identities = (results[3] && results[3].list) || [];
 
+                        this._buildIdentityIndex(identities);
                         this._processData(contactInboxes, conversations, chatwootInboxes);
 
                         this.isLoading = false;
@@ -150,6 +181,44 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                         this.reRender();
                     }.bind(this)
                 );
+        },
+
+        /**
+         * Build a map of chatwootAccountId -> Set of channelType strings
+         * (lowercased, mapped enum form) the contact has at least one
+         * identity for. Used by `_checkRequiredIdentifier` to enable a
+         * "Nova Conversa" row only when the backend can plausibly reach
+         * the contact on that channel within the inbox's account.
+         */
+        _buildIdentityIndex: function (identities) {
+            var byAccount = {};
+
+            identities.forEach(function (identity) {
+                var ct = (identity.channelType || "").toLowerCase();
+                var accountId = identity.chatwootAccountId;
+                if (!ct || !accountId) {
+                    return;
+                }
+                if (!byAccount[accountId]) {
+                    byAccount[accountId] = {};
+                }
+                byAccount[accountId][ct] = true;
+            });
+
+            this.identitiesByAccount = byAccount;
+        },
+
+        /**
+         * Returns true when the contact has at least one
+         * ContactChannelIdentity row of `channelType` within
+         * `chatwootAccountId`.
+         */
+        _hasIdentityFor: function (chatwootAccountId, channelType) {
+            if (!chatwootAccountId || !channelType) {
+                return false;
+            }
+            var bucket = this.identitiesByAccount[chatwootAccountId];
+            return !!(bucket && bucket[channelType]);
         },
 
         /**
@@ -220,8 +289,6 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 }
             });
 
-            var contactPhoneNumber = this.contactPhoneNumber;
-
             // Filter inboxes: exclude already-linked ones.
             // All remaining inboxes are shown. Inboxes whose required identifier
             // is missing on the Contact are rendered in a disabled state with a hint.
@@ -243,7 +310,7 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 .map(
                     function (inbox) {
                         var iconInfo = this._getChannelIcon(inbox.channelType);
-                        var identifierCheck = this._checkRequiredIdentifier(inbox.channelType);
+                        var identifierCheck = this._checkRequiredIdentifier(inbox);
 
                         return {
                             isNewInbox: true,
@@ -262,43 +329,70 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
         },
 
         /**
-         * Check whether the current contact has the required identifier for
-         * a given channel type.
+         * Check whether the current contact has the required identifier
+         * to initiate a *new* conversation on `inbox`.
          *
-         * WhatsApp/WAHA channels require a phone number.
-         * Future: Instagram requires an Instagram handle, Telegram requires
-         * a Telegram ID, etc.
+         * The semantics are channel-family-dependent:
          *
-         * @param {string} channelType - ChatwootInboxIntegration.channelType
+         * - whatsapp / waha / sms: requires `Contact.phoneNumber`. The
+         *   backend will normalize it (E.164) and Chatwoot creates the
+         *   contact_inbox row with the phone as source_id.
+         *
+         * - email: requires `Contact.emailAddress`.
+         *
+         * - instagram / telegram / facebook / messenger / line / viber:
+         *   requires a pre-existing `ContactChannelIdentity` of matching
+         *   channelType within the inbox's ChatwootAccount. These channels
+         *   cannot be cold-DMed — the contact must already have a
+         *   source_id we materialized from a prior webhook/sync. The
+         *   backend re-uses that source_id to create the contact_inbox
+         *   on Chatwoot and then opens the conversation.
+         *
+         * - everything else (web_widget, api, twitter, …): unsupported
+         *   for new outbound conversations.
+         *
+         * @param {Object} inbox - a row from `ChatwootInbox` list
          * @returns {{ hasIdentifier: boolean, hint: string|null }}
          */
-        _checkRequiredIdentifier: function (channelType) {
-            var ct = (channelType || "").toLowerCase();
+        _checkRequiredIdentifier: function (inbox) {
+            var ct = (inbox.channelType || "").toLowerCase();
+            var mapped = this._normalizeChannelType(ct);
+            var accountId = inbox.chatwootAccountId || null;
 
-            if (ct.includes("whatsapp") || ct.includes("waha")) {
+            // Phone-based channels
+            if (mapped === "whatsapp" || mapped === "sms" || ct.includes("waha")) {
                 if (this.contactPhoneNumber) {
                     return { hasIdentifier: true, hint: null };
                 }
-
                 return {
                     hasIdentifier: false,
                     hint: this.translate("Contact has no phone number", "labels", "Contact"),
                 };
             }
 
-            // Instagram channels — future placeholder
-            if (ct.includes("instagram")) {
+            // Email channels
+            if (mapped === "email") {
+                if (this.contactEmailAddress) {
+                    return { hasIdentifier: true, hint: null };
+                }
                 return {
                     hasIdentifier: false,
-                    hint: this.translate("Contact has no Instagram identifier", "labels", "Contact"),
+                    hint: this.translate("Contact has no email address", "labels", "Contact"),
                 };
             }
 
-            // Telegram channels — future placeholder
-            if (ct.includes("telegram")) {
+            // Social channels — require a pre-existing identity scoped to the inbox's account.
+            var socialChannels = ["instagram", "telegram", "facebook", "line", "viber"];
+            if (mapped && socialChannels.indexOf(mapped) !== -1) {
+                if (this._hasIdentityFor(accountId, mapped)) {
+                    return { hasIdentifier: true, hint: null };
+                }
+
+                var capitalized = mapped.charAt(0).toUpperCase() + mapped.slice(1);
+                var hintKey = "Contact has no " + capitalized + " identifier";
                 return {
                     hasIdentifier: false,
-                    hint: this.translate("Contact has no Telegram identifier", "labels", "Contact"),
+                    hint: this.translate(hintKey, "labels", "Contact"),
                 };
             }
 
@@ -307,6 +401,54 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 hasIdentifier: false,
                 hint: this.translate("Channel not supported for new conversations", "labels", "Contact"),
             };
+        },
+
+        /**
+         * Normalize a raw `ChatwootInbox.channelType` value (which can be
+         * either a Chatwoot raw form like "Channel::Instagram" or a
+         * vendor-specific tag like "whatsappQrcode") to the enum used by
+         * ContactChannelIdentity.channelType. Mirrors
+         * `ContactReconciler::mapChannelType` on the PHP side.
+         */
+        _normalizeChannelType: function (channelType) {
+            var ct = (channelType || "").toLowerCase();
+            if (!ct) {
+                return null;
+            }
+            if (ct.indexOf("whatsapp") !== -1 || ct.indexOf("waha") !== -1) {
+                return "whatsapp";
+            }
+            if (ct.indexOf("instagram") !== -1) {
+                return "instagram";
+            }
+            if (ct.indexOf("telegram") !== -1) {
+                return "telegram";
+            }
+            if (ct.indexOf("messenger") !== -1 || ct.indexOf("facebook") !== -1) {
+                return "facebook";
+            }
+            if (ct.indexOf("line") !== -1) {
+                return "line";
+            }
+            if (ct.indexOf("viber") !== -1) {
+                return "viber";
+            }
+            if (ct.indexOf("sms") !== -1) {
+                return "sms";
+            }
+            if (ct.indexOf("email") !== -1) {
+                return "email";
+            }
+            if (ct.indexOf("twitter") !== -1) {
+                return "twitter";
+            }
+            if (ct.indexOf("webwidget") !== -1 || ct.indexOf("web_widget") !== -1) {
+                return "web_widget";
+            }
+            if (ct.indexOf("api") !== -1) {
+                return "api";
+            }
+            return null;
         },
 
         /**

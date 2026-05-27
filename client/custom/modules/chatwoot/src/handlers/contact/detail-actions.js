@@ -46,6 +46,7 @@ define('chatwoot:handlers/contact/detail-actions', [], function () {
                     contactId: this.view.model.id,
                     contactName: this.view.model.get('name'),
                     contactPhoneNumber: this.view.model.get('phoneNumber'),
+                    contactEmailAddress: this.view.model.get('emailAddress'),
                 },
                 (view) => {
                     view.render();

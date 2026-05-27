@@ -13,8 +13,12 @@
         "Initiating conversation...": "Iniciando conversa...",
         "Failed to initiate conversation": "Falha ao iniciar conversa",
         "Contact has no phone number": "Contato não possui número de telefone para este canal",
-        "Contact has no Instagram identifier": "Contato não possui identificador do Instagram",
-        "Contact has no Telegram identifier": "Contato não possui identificador do Telegram",
+        "Contact has no email address": "Contato não possui e-mail para este canal",
+        "Contact has no Instagram identifier": "Contato não possui identificador do Instagram — o cliente precisa enviar a primeira mensagem",
+        "Contact has no Telegram identifier": "Contato não possui identificador do Telegram — o cliente precisa enviar a primeira mensagem",
+        "Contact has no Facebook identifier": "Contato não possui identificador do Facebook — o cliente precisa enviar a primeira mensagem",
+        "Contact has no Line identifier": "Contato não possui identificador do Line — o cliente precisa enviar a primeira mensagem",
+        "Contact has no Viber identifier": "Contato não possui identificador do Viber — o cliente precisa enviar a primeira mensagem",
         "Channel not supported for new conversations": "Canal não suportado para novas conversas"
     }
 }

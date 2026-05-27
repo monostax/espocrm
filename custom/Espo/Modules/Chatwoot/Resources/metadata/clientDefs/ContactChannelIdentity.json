@@ -1,0 +1,12 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-id-badge",
+    "color": "#7B68EE",
+    "kanbanViewMode": false,
+    "modalViews": {
+        "detail": "views/modals/detail"
+    },
+    "recordViews": {
+        "list": "views/record/list"
+    }
+}

@@ -13,8 +13,12 @@
         "Initiating conversation...": "Initiating conversation...",
         "Failed to initiate conversation": "Failed to initiate conversation",
         "Contact has no phone number": "Contact has no phone number for this channel",
-        "Contact has no Instagram identifier": "Contact has no Instagram identifier",
-        "Contact has no Telegram identifier": "Contact has no Telegram identifier",
+        "Contact has no email address": "Contact has no email address for this channel",
+        "Contact has no Instagram identifier": "Contact has no Instagram identifier — the customer must message first",
+        "Contact has no Telegram identifier": "Contact has no Telegram identifier — the customer must message first",
+        "Contact has no Facebook identifier": "Contact has no Facebook identifier — the customer must message first",
+        "Contact has no Line identifier": "Contact has no Line identifier — the customer must message first",
+        "Contact has no Viber identifier": "Contact has no Viber identifier — the customer must message first",
         "Channel not supported for new conversations": "Channel not supported for new conversations"
     }
 }

@@ -32,6 +32,11 @@
             "foreign": "manualContacts",
             "relationName": "whatsAppCampaignManualContact",
             "layoutRelationshipsDisabled": true
+        },
+        "channelIdentities": {
+            "type": "hasMany",
+            "entity": "ContactChannelIdentity",
+            "foreign": "contact"
         }
     },
     "cascadeDelete": {
@@ -39,7 +44,8 @@
             "chatwootContacts",
             "chatwootContactInboxes",
             "chatwootConversations",
-            "chatwootMessages"
+            "chatwootMessages",
+            "channelIdentities"
         ]
     }
 }

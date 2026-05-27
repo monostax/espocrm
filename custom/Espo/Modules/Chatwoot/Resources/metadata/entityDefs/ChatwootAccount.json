@@ -186,6 +186,11 @@
             "type": "hasMany",
             "entity": "ChatwootAccountWebhook",
             "foreign": "account"
+        },
+        "contactChannelIdentities": {
+            "type": "hasMany",
+            "entity": "ContactChannelIdentity",
+            "foreign": "chatwootAccount"
         }
     },
     "collection": {

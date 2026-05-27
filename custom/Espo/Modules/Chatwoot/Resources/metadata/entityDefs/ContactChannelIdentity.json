@@ -1,0 +1,133 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "channelType": {
+            "type": "enum",
+            "required": true,
+            "options": [
+                "whatsapp",
+                "instagram",
+                "telegram",
+                "facebook",
+                "twitter",
+                "sms",
+                "email",
+                "web_widget",
+                "api",
+                "line",
+                "viber",
+                "other"
+            ]
+        },
+        "sourceId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "tooltip": "Channel-specific identifier (E.164 phone for whatsapp/sms, scoped user id for instagram/telegram/facebook, lowercased email for email, etc.)"
+        },
+        "label": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": "Optional human-readable label (e.g. Instagram username)"
+        },
+        "isPrimary": {
+            "type": "bool",
+            "default": false
+        },
+        "contact": {
+            "type": "link",
+            "required": true
+        },
+        "tenant": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": "Originating Chatwoot account where this identity was first observed"
+        },
+        "chatwootInbox": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": "Originating Chatwoot inbox (if applicable)"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "channelIdentities"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "contactChannelIdentities"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "contactChannelIdentities"
+        },
+        "chatwootInbox": {
+            "type": "belongsTo",
+            "entity": "ChatwootInbox"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "uniqueTenantChannelSource": {
+            "unique": true,
+            "columns": ["tenantId", "channelType", "sourceId", "deleteId"]
+        },
+        "contactId": {
+            "columns": ["contactId"]
+        },
+        "channelSource": {
+            "columns": ["channelType", "sourceId", "deleteId"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        }
+    }
+}

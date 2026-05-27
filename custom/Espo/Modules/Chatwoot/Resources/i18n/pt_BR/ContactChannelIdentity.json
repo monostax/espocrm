@@ -1,0 +1,44 @@
+{
+    "labels": {
+        "ContactChannelIdentity": "Identidade de Canal",
+        "Create ContactChannelIdentity": "Criar Identidade de Canal"
+    },
+    "fields": {
+        "channelType": "Tipo de Canal",
+        "sourceId": "Identificador",
+        "label": "Rótulo",
+        "isPrimary": "Principal",
+        "contact": "Contato",
+        "tenant": "Inquilino",
+        "chatwootAccount": "Conta do Chatwoot",
+        "chatwootInbox": "Caixa de Entrada do Chatwoot"
+    },
+    "links": {
+        "contact": "Contato",
+        "tenant": "Inquilino",
+        "chatwootAccount": "Conta do Chatwoot",
+        "chatwootInbox": "Caixa de Entrada do Chatwoot"
+    },
+    "options": {
+        "channelType": {
+            "whatsapp": "WhatsApp",
+            "instagram": "Instagram",
+            "telegram": "Telegram",
+            "facebook": "Facebook",
+            "twitter": "Twitter / X",
+            "sms": "SMS",
+            "email": "E-mail",
+            "web_widget": "Widget Web",
+            "api": "API",
+            "line": "LINE",
+            "viber": "Viber",
+            "other": "Outro"
+        }
+    },
+    "tooltips": {
+        "sourceId": "Identificador específico do canal (telefone E.164 para WhatsApp/SMS, id de usuário escopado para Instagram/Telegram/Facebook, e-mail em minúsculas para Email, etc.)",
+        "label": "Rótulo legível opcional (ex.: nome de usuário do Instagram)",
+        "chatwootAccount": "Conta do Chatwoot onde esta identidade foi observada pela primeira vez",
+        "chatwootInbox": "Caixa de entrada do Chatwoot de origem (se aplicável)"
+    }
+}

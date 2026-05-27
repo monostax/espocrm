@@ -646,6 +646,71 @@ class ChatwootApiClient
     }
 
     /**
+     * Create a contact_inbox row on Chatwoot, registering an existing
+     * Chatwoot contact with an inbox via an explicit source_id.
+     *
+     * Used by the channel-picker `initiateConversation` flow for
+     * non-phone channels (Instagram, Telegram, Facebook, …) where the
+     * contact has a known source_id from a previous webhook/sync but no
+     * contact_inbox yet for the target inbox.
+     *
+     * Endpoint:
+     *   POST /api/v1/accounts/:account_id/contacts/:id/contact_inboxes
+     *
+     * @param string $platformUrl
+     * @param string $accountApiKey
+     * @param int $accountId
+     * @param int $contactId Chatwoot contact ID
+     * @param int $inboxId Chatwoot inbox ID
+     * @param string $sourceId Channel-scoped source identifier
+     * @return array<string, mixed> Response body
+     * @throws Error
+     */
+    public function createContactInbox(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId,
+        int $inboxId,
+        string $sourceId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/contacts/' . $contactId . '/contact_inboxes';
+
+        $payload = json_encode([
+            'inbox_id' => $inboxId,
+            'source_id' => $sourceId,
+        ]);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode contact_inbox payload to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload)
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to create contact_inbox in Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (createContactInbox): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
+
+    /**
      * Update a contact on Chatwoot via Account API.
      *
      * @param string $platformUrl The base URL of the Chatwoot platform

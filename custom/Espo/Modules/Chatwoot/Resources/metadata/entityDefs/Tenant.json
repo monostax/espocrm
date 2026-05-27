@@ -14,6 +14,11 @@
             "type": "hasMany",
             "entity": "ChatwootReportingEvent",
             "foreign": "tenant"
+        },
+        "contactChannelIdentities": {
+            "type": "hasMany",
+            "entity": "ContactChannelIdentity",
+            "foreign": "tenant"
         }
     }
 }

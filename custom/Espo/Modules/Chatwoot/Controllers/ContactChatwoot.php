@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Tools\Acl\InboxAccessResolver;
+use Espo\Modules\Chatwoot\Tools\ContactReconciler;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
 use stdClass;
 
@@ -161,13 +162,11 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             throw new BadRequest("ChatwootPlatform has no backendUrl.");
         }
 
-        // === Phone validation (Decision #8, #16) ===
-        $rawPhone = $contact->get('phoneNumber');
-        $normalizedPhone = PhoneNormalizer::normalize($rawPhone);
-
-        if (!$normalizedPhone) {
-            throw new BadRequest("Contact has no valid phone number. A phone number is required for WhatsApp conversations.");
-        }
+        // === Channel-aware contact resolution ===
+        // Map the inbox's raw channel_type to our enum (whatsapp, instagram, …).
+        $reconciler = $this->injectableFactory->create(ContactReconciler::class);
+        $rawChannelType = $chatwootInbox->get('channelType');
+        $mappedChannelType = $reconciler->mapChannelType($rawChannelType);
 
         $contactName = $contact->get('name') ?? '';
 
@@ -178,46 +177,27 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             $teamsIds = $chatwootAccount->getLinkMultipleIdList('teams');
         }
 
-        // === Strict contact matching in Chatwoot (Decision #10) ===
         $apiClient = $this->injectableFactory->create(ChatwootApiClient::class);
 
-        $chatwootContactData = null;
-        $wasCreated = false;
-
-        // Step 1: Search for existing contact by phone
-        $searchResult = $apiClient->searchContactByPhone(
+        $resolution = $this->resolveExternalContactForChannel(
+            $apiClient,
+            $contact,
+            $contactEntityId,
+            $contactName,
+            $mappedChannelType,
+            $chatwootAccount,
+            $inboxAccountId,
+            $chatwootInbox,
+            $externalInboxId,
             $platformUrl,
             $accountApiKey,
-            $externalAccountId,
-            $normalizedPhone
+            $externalAccountId
         );
 
-        // Step 2: Accept ONLY exact phone match (discard unsafe fallback)
-        if ($searchResult && isset($searchResult['phone_number']) && $searchResult['phone_number'] === $normalizedPhone) {
-            $chatwootContactData = $searchResult;
-            $wasCreated = false;
-        } else {
-            // Step 3: No exact match — create new contact in Chatwoot
-            $createResponse = $apiClient->createContact(
-                $platformUrl,
-                $accountApiKey,
-                $externalAccountId,
-                [
-                    'inbox_id' => $externalInboxId,
-                    'phone_number' => $normalizedPhone,
-                    'name' => $contactName,
-                ]
-            );
-
-            // Normalize nested response structure
-            $chatwootContactData = $createResponse['payload']['contact']
-                ?? $createResponse['contact']
-                ?? $createResponse;
-
-            $wasCreated = true;
-        }
-
-        $externalContactId = (int) ($chatwootContactData['id'] ?? 0);
+        $externalContactId = $resolution['externalContactId'];
+        $chatwootContactData = $resolution['chatwootContactData'];
+        $wasCreated = $resolution['wasCreated'];
+        $sourceId = $resolution['sourceId'];
 
         if (!$externalContactId) {
             throw new Error("Failed to resolve Chatwoot contact ID.");
@@ -259,6 +239,13 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             $inboxAccountId
         );
 
+        // Fall back to the mapped channel type we already know when the
+        // Chatwoot response doesn't carry the inbox metadata (e.g.
+        // contact-was-found path).
+        if (!$inboxChannelType && $mappedChannelType) {
+            $inboxChannelType = $mappedChannelType;
+        }
+
         $localContactInbox = $this->findOrCreateLocalContactInbox(
             $localChatwootContact,
             $externalInboxId,
@@ -267,10 +254,31 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             $chatwootInbox,
             $contactEntityId,
             $inboxChannelType,
-            $teamsIds
+            $teamsIds,
+            $sourceId
         );
 
-        // --- 3. ChatwootConversation (Decision #13: set inboxId) ---
+        // --- 3. Materialize ContactChannelIdentity for the source_id
+        //     we used. This keeps the AI agent / send-message reconciler
+        //     in sync without waiting for the next bg sync pass.
+        $tenantId = $this->extractTenantId($chatwootAccount);
+        if ($sourceId && $mappedChannelType && $tenantId) {
+            try {
+                $reconciler->upsertIdentity(
+                    $contactEntityId,
+                    $tenantId,
+                    $mappedChannelType,
+                    $sourceId,
+                    $chatwootInbox->get('name'),
+                    $inboxAccountId,
+                    $inboxEntityId
+                );
+            } catch (\Throwable $e) {
+                // Non-fatal — the next sync will materialize it.
+            }
+        }
+
+        // --- 4. ChatwootConversation (Decision #13: set inboxId) ---
         $conversationName = date('Y-m-d') . ($contactName ? ' - ' . $contactName : '');
 
         $conversationData = [
@@ -394,6 +402,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
      * @param string $contactEntityId EspoCRM Contact entity ID
      * @param string|null $inboxChannelType Mapped channel type
      * @param array<string> $teamsIds Team IDs
+     * @param string|null $sourceId Channel-scoped source identifier (when known)
      * @return \Espo\ORM\Entity
      */
     private function findOrCreateLocalContactInbox(
@@ -404,7 +413,8 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         \Espo\ORM\Entity $chatwootInbox,
         string $contactEntityId,
         ?string $inboxChannelType,
-        array $teamsIds
+        array $teamsIds,
+        ?string $sourceId = null
     ): \Espo\ORM\Entity {
         $entityManager = $this->getEntityManager();
 
@@ -423,6 +433,11 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             $existing->set('contactId', $contactEntityId);
             $existing->set('inboxId', $inboxEntityId);
             $existing->set('lastSyncedAt', date('Y-m-d H:i:s'));
+
+            // Backfill sourceId when previously unknown.
+            if ($sourceId && !$existing->get('sourceId')) {
+                $existing->set('sourceId', $sourceId);
+            }
 
             if (!empty($teamsIds)) {
                 $existing->set('teamsIds', $teamsIds);
@@ -454,7 +469,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             'inboxId' => $inboxEntityId,
             'inboxName' => $inboxName,
             'inboxChannelType' => $inboxChannelType,
-            'sourceId' => null, // Decision #11: sync job backfills
+            'sourceId' => $sourceId,
             'lastSyncedAt' => date('Y-m-d H:i:s'),
         ];
 
@@ -514,6 +529,328 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         }
 
         return null;
+    }
+
+    /**
+     * Resolve the Chatwoot-side contact (and its `source_id` for the
+     * target inbox) for a given EspoCRM Contact + channel.
+     *
+     * Branches by channel category:
+     *
+     *  - whatsapp / sms (phone-based):
+     *      requires `Contact.phoneNumber`. Searches Chatwoot by phone
+     *      and falls back to creating a new contact with the phone as
+     *      source_id.
+     *
+     *  - email:
+     *      requires `Contact.emailAddress`. Creates a new contact with
+     *      the email as source_id (Chatwoot search-by-email is not
+     *      exposed by the API client; we lean on the local bridge first
+     *      and only create on the platform when missing).
+     *
+     *  - instagram / telegram / facebook / line / viber (identity-based):
+     *      requires a pre-existing `ContactChannelIdentity` of the
+     *      target channelType within the inbox's ChatwootAccount. We
+     *      look up an existing local `ChatwootContact` for this
+     *      (Espo contact, account) pair; if absent, we create one in
+     *      Chatwoot using the stored source_id as the inbox identifier.
+     *      Then we ensure a `contact_inbox` exists by calling
+     *      `createContactInbox` with the source_id.
+     *
+     * @return array{
+     *   externalContactId: int,
+     *   chatwootContactData: array<string, mixed>,
+     *   wasCreated: bool,
+     *   sourceId: ?string,
+     * }
+     *
+     * @throws BadRequest|Error|Forbidden|NotFound
+     */
+    private function resolveExternalContactForChannel(
+        ChatwootApiClient $apiClient,
+        \Espo\ORM\Entity $contact,
+        string $contactEntityId,
+        string $contactName,
+        ?string $mappedChannelType,
+        \Espo\ORM\Entity $chatwootAccount,
+        string $inboxAccountId,
+        \Espo\ORM\Entity $chatwootInbox,
+        int $externalInboxId,
+        string $platformUrl,
+        string $accountApiKey,
+        int $externalAccountId
+    ): array {
+        $entityManager = $this->getEntityManager();
+
+        $phoneBased = $mappedChannelType === 'whatsapp' || $mappedChannelType === 'sms';
+        $emailBased = $mappedChannelType === 'email';
+        $identityBased = in_array(
+            $mappedChannelType,
+            ['instagram', 'telegram', 'facebook', 'line', 'viber'],
+            true
+        );
+
+        // --- Phone-based channels (existing flow) ---
+        if ($phoneBased || $mappedChannelType === null) {
+            // null channelType -> assume phone (current legacy behavior for
+            // inboxes without a registered integration).
+            $rawPhone = $contact->get('phoneNumber');
+            $normalizedPhone = PhoneNormalizer::normalize($rawPhone);
+
+            if (!$normalizedPhone) {
+                throw new BadRequest(
+                    "Contact has no valid phone number. A phone number is required "
+                    . "for this channel."
+                );
+            }
+
+            $searchResult = $apiClient->searchContactByPhone(
+                $platformUrl,
+                $accountApiKey,
+                $externalAccountId,
+                $normalizedPhone
+            );
+
+            if ($searchResult
+                && isset($searchResult['phone_number'])
+                && $searchResult['phone_number'] === $normalizedPhone
+            ) {
+                $externalContactId = (int) ($searchResult['id'] ?? 0);
+                return [
+                    'externalContactId' => $externalContactId,
+                    'chatwootContactData' => $searchResult,
+                    'wasCreated' => false,
+                    'sourceId' => $normalizedPhone,
+                ];
+            }
+
+            $createResponse = $apiClient->createContact(
+                $platformUrl,
+                $accountApiKey,
+                $externalAccountId,
+                [
+                    'inbox_id' => $externalInboxId,
+                    'phone_number' => $normalizedPhone,
+                    'name' => $contactName,
+                ]
+            );
+
+            $chatwootContactData = $createResponse['payload']['contact']
+                ?? $createResponse['contact']
+                ?? $createResponse;
+            $externalContactId = (int) ($chatwootContactData['id'] ?? 0);
+
+            return [
+                'externalContactId' => $externalContactId,
+                'chatwootContactData' => $chatwootContactData,
+                'wasCreated' => true,
+                'sourceId' => $normalizedPhone,
+            ];
+        }
+
+        // --- Email channel ---
+        if ($emailBased) {
+            $email = $contact->get('emailAddress');
+            $normalizedEmail = $email ? strtolower(trim((string) $email)) : null;
+
+            if (!$normalizedEmail) {
+                throw new BadRequest(
+                    "Contact has no email address. An email address is required "
+                    . "for email conversations."
+                );
+            }
+
+            // Reuse a local ChatwootContact bridge if available; otherwise
+            // create the Chatwoot contact with email as the identifier.
+            $existingBridge = $entityManager
+                ->getRDBRepository('ChatwootContact')
+                ->where([
+                    'contactId' => $contactEntityId,
+                    'chatwootAccountId' => $inboxAccountId,
+                ])
+                ->findOne();
+
+            if ($existingBridge && $existingBridge->get('chatwootContactId')) {
+                $externalContactId = (int) $existingBridge->get('chatwootContactId');
+
+                // Ensure contact_inbox exists for this inbox with the email
+                // as source_id.
+                $apiClient->createContactInbox(
+                    $platformUrl,
+                    $accountApiKey,
+                    $externalAccountId,
+                    $externalContactId,
+                    $externalInboxId,
+                    $normalizedEmail
+                );
+
+                $contactData = [
+                    'id' => $externalContactId,
+                    'name' => $existingBridge->get('name') ?? $contactName,
+                    'email' => $normalizedEmail,
+                ];
+
+                return [
+                    'externalContactId' => $externalContactId,
+                    'chatwootContactData' => $contactData,
+                    'wasCreated' => false,
+                    'sourceId' => $normalizedEmail,
+                ];
+            }
+
+            $createResponse = $apiClient->createContact(
+                $platformUrl,
+                $accountApiKey,
+                $externalAccountId,
+                [
+                    'inbox_id' => $externalInboxId,
+                    'email' => $normalizedEmail,
+                    'identifier' => $normalizedEmail,
+                    'name' => $contactName,
+                ]
+            );
+
+            $chatwootContactData = $createResponse['payload']['contact']
+                ?? $createResponse['contact']
+                ?? $createResponse;
+            $externalContactId = (int) ($chatwootContactData['id'] ?? 0);
+
+            return [
+                'externalContactId' => $externalContactId,
+                'chatwootContactData' => $chatwootContactData,
+                'wasCreated' => true,
+                'sourceId' => $normalizedEmail,
+            ];
+        }
+
+        // --- Identity-based channels (Instagram / Telegram / Facebook / …) ---
+        if ($identityBased) {
+            $tenantId = $this->extractTenantId($chatwootAccount);
+
+            if (!$tenantId) {
+                throw new BadRequest(
+                    "ChatwootAccount is not linked to a tenant. Cannot initiate "
+                    . "a conversation on this channel."
+                );
+            }
+
+            $identity = $entityManager
+                ->getRDBRepository('ContactChannelIdentity')
+                ->where([
+                    'contactId' => $contactEntityId,
+                    'channelType' => $mappedChannelType,
+                    'chatwootAccountId' => $inboxAccountId,
+                ])
+                ->findOne();
+
+            // Fallback: tenant-scoped lookup (in case the identity was
+            // observed in another account that shares the same tenant).
+            if (!$identity) {
+                $identity = $entityManager
+                    ->getRDBRepository('ContactChannelIdentity')
+                    ->where([
+                        'contactId' => $contactEntityId,
+                        'channelType' => $mappedChannelType,
+                        'tenantId' => $tenantId,
+                    ])
+                    ->findOne();
+            }
+
+            if (!$identity) {
+                $channelLabel = ucfirst($mappedChannelType);
+                throw new BadRequest(
+                    "Contact has no {$channelLabel} identifier. The customer "
+                    . "must send a message first before a new conversation "
+                    . "can be opened on this channel."
+                );
+            }
+
+            $sourceId = (string) $identity->get('sourceId');
+
+            // Reuse existing Chatwoot contact within this account when possible.
+            $existingBridge = $entityManager
+                ->getRDBRepository('ChatwootContact')
+                ->where([
+                    'contactId' => $contactEntityId,
+                    'chatwootAccountId' => $inboxAccountId,
+                ])
+                ->findOne();
+
+            if ($existingBridge && $existingBridge->get('chatwootContactId')) {
+                $externalContactId = (int) $existingBridge->get('chatwootContactId');
+
+                // Ensure contact_inbox exists for the target inbox using the
+                // known source_id (idempotent on Chatwoot's side: duplicate
+                // POSTs return the existing row).
+                $apiClient->createContactInbox(
+                    $platformUrl,
+                    $accountApiKey,
+                    $externalAccountId,
+                    $externalContactId,
+                    $externalInboxId,
+                    $sourceId
+                );
+
+                $contactData = [
+                    'id' => $externalContactId,
+                    'name' => $existingBridge->get('name') ?? $contactName,
+                    'identifier' => $sourceId,
+                ];
+
+                return [
+                    'externalContactId' => $externalContactId,
+                    'chatwootContactData' => $contactData,
+                    'wasCreated' => false,
+                    'sourceId' => $sourceId,
+                ];
+            }
+
+            // No Chatwoot contact yet in this account — create one with
+            // inbox_id+identifier so Chatwoot also creates the contact_inbox
+            // row in a single call.
+            $createResponse = $apiClient->createContact(
+                $platformUrl,
+                $accountApiKey,
+                $externalAccountId,
+                [
+                    'inbox_id' => $externalInboxId,
+                    'identifier' => $sourceId,
+                    'name' => $contactName,
+                ]
+            );
+
+            $chatwootContactData = $createResponse['payload']['contact']
+                ?? $createResponse['contact']
+                ?? $createResponse;
+            $externalContactId = (int) ($chatwootContactData['id'] ?? 0);
+
+            return [
+                'externalContactId' => $externalContactId,
+                'chatwootContactData' => $chatwootContactData,
+                'wasCreated' => true,
+                'sourceId' => $sourceId,
+            ];
+        }
+
+        // --- Unsupported channel ---
+        throw new BadRequest(
+            "Channel '{$mappedChannelType}' is not supported for "
+            . "outbound conversation initiation."
+        );
+    }
+
+    /**
+     * Extract the tenantId from a ChatwootAccount entity (or null when
+     * the account hasn't been backfilled yet).
+     */
+    private function extractTenantId(\Espo\ORM\Entity $chatwootAccount): ?string
+    {
+        $tenantId = $chatwootAccount->get('tenantId');
+        if (!is_string($tenantId)) {
+            return null;
+        }
+        $trimmed = trim($tenantId);
+        return $trimmed !== '' ? $trimmed : null;
     }
 
     /**
