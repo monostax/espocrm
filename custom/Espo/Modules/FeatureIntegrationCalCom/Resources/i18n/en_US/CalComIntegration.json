@@ -2,19 +2,14 @@
     "fields": {
         "name": "Name",
         "isActive": "Active",
-        "apiKey": "API Key",
+        "webhookUrl": "Webhook URL",
         "signingSecret": "Signing Secret",
         "createContactIfMissing": "Create Contact If Missing",
-        "metaCapiDataset": "Meta CAPI Dataset",
-        "metaCapiEventMapping": "Meta CAPI Event Mapping",
         "description": "Description",
         "lastWebhookReceivedAt": "Last Webhook At",
         "lastWebhookStatus": "Last Webhook Status",
         "lastWebhookError": "Last Webhook Error",
         "totalWebhooksReceived": "Total Webhooks Received"
-    },
-    "links": {
-        "metaCapiDataset": "Meta CAPI Dataset"
     },
     "options": {
         "lastWebhookStatus": {
@@ -26,11 +21,12 @@
         }
     },
     "tooltips": {
-        "apiKey": "Slug used in the webhook URL: /api/v1/CalCom/receive/{apiKey}. Register this URL in cal.com → Settings → Webhooks. Must be unique.",
+        "webhookUrl": "Register this URL in cal.com → Settings → Webhooks. Each integration has its own URL — the path segment is this record's id.",
         "signingSecret": "Cal.com webhook secret. If set, the X-Cal-Signature-256 header is required and verified (HMAC-SHA256 of the body). Strongly recommended in production.",
-        "createContactIfMissing": "When enabled, creates a new Contact if the attendee email isn't found. Otherwise the webhook is skipped.",
-        "metaCapiDataset": "Optional. If set, events are forwarded to the Meta Conversions API using this dataset. If empty, the webhook only creates/updates the Contact (useful for CRM hygiene without ad tracking).",
-        "metaCapiEventMapping": "JSON mapping cal.com triggerEvent → Meta event_name. E.g. {\"BOOKING_CREATED\":\"Schedule\",\"BOOKING_CANCELLED\":\"\",\"MEETING_ENDED\":\"Purchase\"}. Empty or missing value = no CAPI forward for that trigger."
+        "createContactIfMissing": "When enabled, creates a new Contact if the attendee email isn't found. Otherwise the webhook is skipped."
+    },
+    "messages": {
+        "webhookUrlPendingSave": "Save the record to generate the webhook URL."
     },
     "presetFilters": {
         "active": "Active",

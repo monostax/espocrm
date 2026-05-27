@@ -151,7 +151,7 @@ class WhatsAppBusinessAccountPhoneNumber
     private function resolveFromCredential(string $credentialId): array
     {
         $resolver = $this->injectableFactory->create(
-            \Espo\Modules\Global\Tools\Credential\CredentialResolver::class
+            \Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver::class
         );
 
         try {

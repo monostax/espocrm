@@ -1,0 +1,10 @@
+[
+    { "name": "name", "link": true },
+    { "name": "code" },
+    { "name": "category" },
+    { "name": "isActive" },
+    { "name": "isHighValue" },
+    { "name": "tenant" },
+    { "name": "totalEventsReceived" },
+    { "name": "lastEventAt" }
+]

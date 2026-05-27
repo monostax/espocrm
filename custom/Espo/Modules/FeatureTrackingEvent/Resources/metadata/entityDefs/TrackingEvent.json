@@ -1,0 +1,207 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true,
+            "comment": "Human label: '{code} @ {occurredAt}'."
+        },
+        "code": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 64,
+            "readOnly": true,
+            "index": true,
+            "comment": "Denormalized from TrackingEventType.code for fast scope-filtered queries."
+        },
+        "occurredAt": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": true,
+            "comment": "When the event happened, as reported by the client."
+        },
+        "receivedAt": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": true,
+            "comment": "When the ingestion endpoint accepted the event (server clock)."
+        },
+        "url": {
+            "type": "varchar",
+            "maxLength": 1024,
+            "readOnly": true
+        },
+        "referrer": {
+            "type": "varchar",
+            "maxLength": 1024,
+            "readOnly": true
+        },
+        "userAgent": {
+            "type": "varchar",
+            "maxLength": 512,
+            "readOnly": true
+        },
+        "ipAddress": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Public client IP captured by the ingestion endpoint. Honors X-Forwarded-For when source is trusted."
+        },
+        "anonymousId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "index": true,
+            "tooltip": true,
+            "comment": "Opaque visitor id for un-identified traffic. Cleared by AnonymousStitcher once the visitor identifies and the row is rewired to contactId."
+        },
+        "payload": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "comment": "Raw event payload as received. Immutable; do not mutate post-ingest."
+        },
+        "attribution": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Resolved attribution snapshot (utm_*, click ids, referrer chain) at ingest time. Cached for downstream CAPI/Google Offline Conversions dispatch."
+        },
+        "value": {
+            "type": "float",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Monetary value of the event (e.g. order total). Optional."
+        },
+        "currency": {
+            "type": "enum",
+            "options": ["", "USD", "EUR", "BRL", "GBP", "MXN", "ARS"],
+            "default": "",
+            "readOnly": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Received", "Stitched", "Processed", "Failed", "Skipped"],
+            "default": "Received",
+            "readOnly": true,
+            "style": {
+                "Received": "default",
+                "Stitched": "info",
+                "Processed": "success",
+                "Failed": "danger",
+                "Skipped": "warning"
+            }
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "trackingSource": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "trackingEventType": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Set when the visitor was already identified, or backfilled by AnonymousStitcher."
+        },
+        "parent": {
+            "type": "linkParent",
+            "entityList": ["Lead", "Opportunity", "Contact", "Account"],
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Polymorphic subject — additional context (e.g. 'Pricing Page View during Opportunity O-123')."
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the parent TrackingEventType (auto-set by CascadeTeamsFromEventType hook)."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent TrackingEventType (auto-set by CascadeTenantFromEventType hook)."
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "trackingEvents"
+        },
+        "trackingSource": {
+            "type": "belongsTo",
+            "entity": "TrackingSource",
+            "foreign": "events"
+        },
+        "trackingEventType": {
+            "type": "belongsTo",
+            "entity": "TrackingEventType",
+            "foreign": "events"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact",
+            "foreign": "trackingEvents"
+        },
+        "parent": {
+            "type": "belongsToParent",
+            "entityList": ["Lead", "Opportunity", "Contact", "Account"]
+        }
+    },
+    "collection": {
+        "orderBy": "occurredAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "code": { "columns": ["code"] },
+        "occurredAt": { "columns": ["occurredAt"] },
+        "anonymousId": { "columns": ["anonymousId", "deleted"] },
+        "contactId": { "columns": ["contactId", "deleted"] },
+        "status": { "columns": ["status"] },
+        "tenantId": { "columns": ["tenantId", "deleted"] },
+        "parent": { "columns": ["parentType", "parentId"] }
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "links": {
+        "trackingSources": {
+            "type": "hasMany",
+            "entity": "TrackingSource",
+            "foreign": "tenant"
+        },
+        "trackingEventTypes": {
+            "type": "hasMany",
+            "entity": "TrackingEventType",
+            "foreign": "tenant"
+        },
+        "trackingEvents": {
+            "type": "hasMany",
+            "entity": "TrackingEvent",
+            "foreign": "tenant"
+        }
+    }
+}

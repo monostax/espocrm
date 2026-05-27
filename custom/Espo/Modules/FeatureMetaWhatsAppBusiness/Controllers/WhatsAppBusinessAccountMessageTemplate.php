@@ -19,7 +19,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
 use Espo\ORM\EntityManager;
-use Espo\Modules\Global\Tools\Credential\CredentialResolver;
+use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppBusinessAccountMessageTemplate as MessageTemplateService;
 use stdClass;
 

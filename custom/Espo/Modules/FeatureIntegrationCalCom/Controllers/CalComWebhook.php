@@ -16,7 +16,10 @@ use Throwable;
 /**
  * Public webhook endpoint for cal.com.
  *
- * Route (noAuth):  POST /CalCom/receive/:apiKey
+ * Route (noAuth):  POST /CalCom/receive/:id
+ *
+ * The `:id` path segment is the CalComIntegration entity id — that's what
+ * users register in cal.com → Settings → Webhooks as the endpoint URL.
  *
  * Headers expected from cal.com:
  *   - Content-Type: application/json
@@ -26,7 +29,7 @@ use Throwable;
  *   200 OK            -> processed or intentionally skipped (cal.com won't retry)
  *   400 Bad Request   -> malformed payload
  *   401 Unauthorized  -> bad/missing signature
- *   404 Not Found     -> unknown apiKey
+ *   404 Not Found     -> unknown integration id
  *   500 Internal      -> unexpected (cal.com WILL retry)
  *
  * We intentionally translate every known failure to a clean 2xx/4xx with a JSON
@@ -43,7 +46,7 @@ class CalComWebhook
     {
         $response->setHeader('Content-Type', 'application/json');
 
-        $apiKey = (string) ($request->getRouteParam('apiKey') ?? '');
+        $integrationId = (string) ($request->getRouteParam('id') ?? '');
 
         try {
             $rawBody = (string) $request->getBodyContents();
@@ -72,7 +75,7 @@ class CalComWebhook
 
             $result = $this->injectableFactory
                 ->create(CalComBookingProcessor::class)
-                ->process($apiKey, $payload, $rawBody, $headers);
+                ->process($integrationId, $payload, $rawBody, $headers);
 
             $response->setStatus($result->httpStatus);
 
@@ -84,8 +87,8 @@ class CalComWebhook
             ];
         } catch (Throwable $e) {
             $this->log->error('CalComWebhook: ' . $e->getMessage(), [
-                'apiKey' => $apiKey,
-                'trace'  => $e->getTraceAsString(),
+                'integrationId' => $integrationId,
+                'trace'         => $e->getTraceAsString(),
             ]);
 
             $response->setStatus(500);

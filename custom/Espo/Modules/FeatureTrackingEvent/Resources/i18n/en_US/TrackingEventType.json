@@ -1,0 +1,32 @@
+{
+    "labels": {
+        "Create TrackingEventType": "Create Event Type"
+    },
+    "fields": {
+        "name": "Name",
+        "code": "Code",
+        "category": "Category",
+        "isActive": "Active",
+        "isHighValue": "High-Value Event",
+        "description": "Description",
+        "totalEventsReceived": "Total Events",
+        "lastEventAt": "Last Event",
+        "tenant": "Tenant",
+        "events": "Events"
+    },
+    "tooltips": {
+        "code": "Stable slug used in API payloads. Unique per tenant. Format: lowercase letters, digits, underscores.",
+        "isHighValue": "Marks the event as a conversion-worthy signal (e.g. eligible for CAPI dispatch). Consumed by downstream modules.",
+        "tenant": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by the AssignTenantFromTeam hook — assign teams to populate this."
+    },
+    "options": {
+        "category": {
+            "WebTraffic": "Web Traffic",
+            "InboundMessage": "Inbound Message",
+            "FormSubmit": "Form Submit",
+            "Conversion": "Conversion",
+            "System": "System",
+            "Custom": "Custom"
+        }
+    }
+}

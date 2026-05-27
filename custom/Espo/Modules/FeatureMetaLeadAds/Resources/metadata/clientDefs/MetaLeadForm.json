@@ -1,4 +1,5 @@
 {
+    "controller": "controllers/record",
     "bottomPanels": {
         "detail": [
             {
@@ -7,7 +8,7 @@
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+                "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
             },
             {
                 "name": "leadgenEvents",
@@ -15,7 +16,7 @@
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+                "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
             }
         ]
     },
@@ -23,12 +24,12 @@
         "questions": {
             "create": false,
             "select": false,
-            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+            "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
         },
         "leadgenEvents": {
             "create": false,
             "select": false,
-            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+            "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
         }
     }
 }

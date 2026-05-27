@@ -26,5 +26,7 @@ final class ParsedCalComBooking
         public readonly ?string $fbc,
         public readonly ?string $fbp,
         public readonly ?string $fbclid,
+        public readonly ?string $gclid,
+        public readonly ?string $gaClientId,
     ) {}
 }

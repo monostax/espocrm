@@ -1,0 +1,32 @@
+{
+    "labels": {
+        "Create TrackingEventType": "Criar Tipo de Evento"
+    },
+    "fields": {
+        "name": "Nome",
+        "code": "Código",
+        "category": "Categoria",
+        "isActive": "Ativo",
+        "isHighValue": "Evento de Alto Valor",
+        "description": "Descrição",
+        "totalEventsReceived": "Total de Eventos",
+        "lastEventAt": "Último Evento",
+        "tenant": "Tenant",
+        "events": "Eventos"
+    },
+    "tooltips": {
+        "code": "Slug estável usado nos payloads da API. Único por tenant. Formato: letras minúsculas, dígitos, underscores.",
+        "isHighValue": "Marca o evento como sinal de conversão (ex: elegível para envio ao CAPI). Consumido por módulos downstream.",
+        "tenant": "Derivado do primeiro team selecionado via Tenant.baseUserTeam. Definido automaticamente pelo hook AssignTenantFromTeam — selecione teams para preencher."
+    },
+    "options": {
+        "category": {
+            "WebTraffic": "Tráfego Web",
+            "InboundMessage": "Mensagem Recebida",
+            "FormSubmit": "Envio de Formulário",
+            "Conversion": "Conversão",
+            "System": "Sistema",
+            "Custom": "Customizado"
+        }
+    }
+}

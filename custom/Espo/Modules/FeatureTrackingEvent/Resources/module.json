@@ -1,0 +1,7 @@
+{
+    "order": 28,
+    "version": "1.0.0",
+    "name": "FeatureTrackingEvent",
+    "description": "Per-tenant marketing/tracking event ledger. Receives HMAC-signed inbound events from websites, chat, and server-side sources; stitches anonymous browsing to identified Contacts; caches multi-touch attribution on Contact for downstream Meta CAPI / Google Offline Conversions dispatch.",
+    "jsTranspiled": true
+}

@@ -1,0 +1,22 @@
+{
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "trackingEvents",
+                "label": "Tracking Events",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "feature-tracking-event:views/record/row-actions/relationship-no-edit-no-remove",
+                "order": 60
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "trackingEvents": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "feature-tracking-event:views/record/row-actions/relationship-no-edit-no-remove"
+        }
+    }
+}

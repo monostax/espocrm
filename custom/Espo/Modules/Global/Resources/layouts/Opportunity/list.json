@@ -21,6 +21,12 @@
         "hidden": true
     },
     {
+        "name": "followupCount",
+        "align": "right",
+        "width": 8,
+        "hidden": true
+    },
+    {
         "name": "createdAt",
         "width": 12
     },

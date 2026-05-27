@@ -263,7 +263,7 @@ class MetaLeadAdsWebhook
                 }
 
                 $leadgenId   = isset($value->leadgen_id)   ? (string) $value->leadgen_id   : '';
-                $pageId      = isset($value->page_id)      ? (string) $value->page_id      : '';
+                $metaPageId  = isset($value->page_id)      ? (string) $value->page_id      : '';
                 $formId      = isset($value->form_id)      ? (string) $value->form_id      : '';
                 $adId        = isset($value->ad_id)        ? (string) $value->ad_id        : null;
                 $createdTime = isset($value->created_time) ? (int)    $value->created_time : null;
@@ -273,7 +273,7 @@ class MetaLeadAdsWebhook
                     continue;
                 }
 
-                $event = $this->upsertEvent($leadgenId, $pageId, $formId, $adId, $createdTime, (array) $value);
+                $event = $this->upsertEvent($leadgenId, $metaPageId, $formId, $adId, $createdTime, (array) $value);
 
                 if (!$event) {
                     $skipped++;
@@ -297,6 +297,15 @@ class MetaLeadAdsWebhook
     /**
      * Upsert MetaLeadgenEvent — idempotent on leadgenId.
      *
+     * Field/link semantics on MetaLeadgenEvent:
+     *   - `formId`      (scalar)  — Meta numeric form id (from webhook).
+     *   - `metaPageId`  (scalar)  — Meta numeric page id (from webhook).
+     *   - `leadFormId`  (foreign) — CRM id of linked MetaLeadForm (resolved
+     *                                from `formId` if the form is known).
+     *   - `pageId`      (foreign) — CRM id of linked MetaFacebookPage
+     *                                (resolved from `metaPageId` if the page
+     *                                is known). NOT the Meta numeric.
+     *
      * Tenancy: looks up MetaLeadForm by formId (string) and propagates
      * leadFormId (link), teamsIds, and tenantId onto the event before save.
      * The CascadeTeamsFromLeadForm / CascadeTenantFromLeadForm hooks
@@ -306,14 +315,15 @@ class MetaLeadAdsWebhook
      *
      * If the form is not yet known (admin hasn't synced it), the event is
      * still persisted as an "orphan" without teams/tenant. The IngestLeadgen
-     * job will pick it up, fail to resolve the form, and mark it as Skipped
-     * — surfaced in the CRM UI for the admin to investigate.
+     * job will pick it up, attempt to sync the form on-demand from the
+     * linked Page, and only mark it Skipped if the form is genuinely
+     * missing from Meta as well.
      *
      * @param array<string, mixed> $rawValue
      */
     private function upsertEvent(
         string $leadgenId,
-        string $pageId,
+        string $metaPageId,
         string $formId,
         ?string $adId,
         ?int $createdTime,
@@ -333,14 +343,19 @@ class MetaLeadAdsWebhook
             /** @var MetaLeadgenEvent $event */
             $event = $this->entityManager->getNewEntity(MetaLeadgenEvent::ENTITY_TYPE);
 
-            $event->set('name',      "Lead {$leadgenId}");
-            $event->set('leadgenId', $leadgenId);
-            $event->set('formId',    $formId);
-            $event->set('pageId',    $pageId);
-            $event->set('adId',      $adId);
+            $event->set('name',       "Lead {$leadgenId}");
+            $event->set('leadgenId',  $leadgenId);
+            $event->set('formId',     $formId);
+            $event->set('metaPageId', $metaPageId);
+            $event->set('adId',       $adId);
             $event->set('metaCreatedTime', $createdTime ? date('Y-m-d H:i:s', $createdTime) : null);
-            $event->set('status',    MetaLeadgenEvent::STATUS_RECEIVED);
+            $event->set('status',     MetaLeadgenEvent::STATUS_RECEIVED);
             $event->set('rawPayload', $rawValue);
+
+            // Resolve `page` link (CRM id) from Meta numeric page id, if the
+            // page is already synced locally. Safe to leave null otherwise —
+            // the ingester will attempt a sync-on-demand before rejecting.
+            $this->resolvePageLink($event, $metaPageId);
 
             // Tenant propagation: lookup the form to derive leadFormId +
             // teamsIds + tenantId. Without this the event is created
@@ -355,6 +370,27 @@ class MetaLeadAdsWebhook
             $this->log->error('MetaLeadAds: failed to persist MetaLeadgenEvent: ' . $e->getMessage());
 
             return null;
+        }
+    }
+
+    /**
+     * Set the `page` link (foreign-id `pageId` = CRM id) from a Meta numeric
+     * page id by looking up MetaFacebookPage. No-op if the page is not yet
+     * synced locally — the ingester will attempt on-demand sync.
+     */
+    private function resolvePageLink(MetaLeadgenEvent $event, string $metaPageId): void
+    {
+        if ($metaPageId === '') {
+            return;
+        }
+
+        $page = $this->entityManager
+            ->getRDBRepository('MetaFacebookPage')
+            ->where(['pageId' => $metaPageId, 'deleted' => false])
+            ->findOne();
+
+        if ($page) {
+            $event->set('pageId', $page->getId());
         }
     }
 

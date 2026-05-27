@@ -1,13 +1,15 @@
 {
     "fields": {
         "metaCapiEnabled": "Meta CAPI Ativo",
-        "metaCapiDataset": "Meta CAPI Dataset"
+        "metaCapiDataset": "Meta CAPI Dataset",
+        "metaCapiReady": "Meta CAPI Pronto"
     },
     "links": {
         "metaCapiDataset": "Meta CAPI Dataset"
     },
     "tooltips": {
         "metaCapiEnabled": "Quando marcado, mudanças de stage nas Oportunidades deste funil enviam eventos para a Meta Conversions API.",
-        "metaCapiDataset": "Para qual Dataset (Pixel) os eventos deste funil serão enviados. Se vazio, usa o Dataset marcado como Padrão."
+        "metaCapiDataset": "Para qual Dataset (Pixel) os eventos deste funil serão enviados. Se vazio, usa o Dataset marcado como Padrão.",
+        "metaCapiReady": "Somente leitura. Verdadeiro quando o funil está totalmente configurado: metaCapiEnabled E um MetaCapiDataset ativo vinculado. Controla a visibilidade do painel Meta Conversions API no layout de detalhe de OpportunityStage."
     }
 }

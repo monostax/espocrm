@@ -9,14 +9,14 @@ use stdClass;
 
 /**
  * @method ?string   getLeadgenId()
- * @method ?string   getFormId()
- * @method ?string   getPageId()
+ * @method ?string   getFormId()        Meta numeric form id (scalar).
+ * @method ?string   getMetaPageId()    Meta numeric page id (scalar).
  * @method ?string   getAdId()
  * @method ?string   getStatus()
  * @method ?string   getErrorMessage()
  * @method ?stdClass getRawPayload()
- * @method ?string   getLeadFormId()
- * @method ?string   getPageInternalId()
+ * @method ?string   getLeadFormId()    CRM id of linked MetaLeadForm (link `leadForm` foreign-id).
+ * @method ?string   getPageId()        CRM id of linked MetaFacebookPage (link `page` foreign-id).
  * @method ?string   getContactId()
  * @method ?string   getOpportunityId()
  */

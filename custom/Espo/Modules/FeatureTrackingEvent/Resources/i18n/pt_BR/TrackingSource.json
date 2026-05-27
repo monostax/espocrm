@@ -1,0 +1,49 @@
+{
+    "labels": {
+        "Create TrackingSource": "Criar Fonte de Rastreamento",
+        "Tracking Events": "Eventos de Rastreamento"
+    },
+    "messages": {
+        "ingestUrlPendingSave": "Salve esta fonte para revelar a URL de ingestão."
+    },
+    "fields": {
+        "name": "Nome",
+        "kind": "Tipo",
+        "isActive": "Ativo",
+        "ingestUrl": "URL de Ingestão",
+        "signingSecret": "Segredo de Assinatura",
+        "allowedOrigins": "Origens Permitidas",
+        "allowUnknownEventCode": "Criar Códigos Desconhecidos",
+        "description": "Descrição",
+        "lastEventReceivedAt": "Último Evento Recebido",
+        "lastEventStatus": "Status do Último Evento",
+        "lastEventError": "Erro do Último Evento",
+        "totalEventsReceived": "Total de Eventos",
+        "tenant": "Tenant",
+        "events": "Eventos"
+    },
+    "tooltips": {
+        "ingestUrl": "URL pública para POST de eventos. O id no caminho é o id do registro — qualquer um com essa URL pode tentar ingestão, então configure sempre um segredo de assinatura em produção.",
+        "signingSecret": "Segredo HMAC-SHA256 usado para validar o cabeçalho X-Tracking-Signature. Fortemente recomendado para toda fonte — sem ele, qualquer um com a URL de ingestão pode publicar eventos.",
+        "allowedOrigins": "Uma origem CORS por linha (ex: https://www.exemplo.com). Considerado apenas quando kind=Website — ingestão via navegador é bloqueada se a origem não casar.",
+        "allowUnknownEventCode": "Se ligado, a ingestão cria automaticamente um TrackingEventType (categoria=Custom) para códigos desconhecidos. Desligue após estabilizar seu dicionário de eventos.",
+        "lastEventError": "Último motivo de status diferente de sucesso. Atualizado em toda tentativa de ingestão, sucesso ou falha.",
+        "tenant": "Derivado do primeiro team selecionado via Tenant.baseUserTeam. Definido automaticamente pelo hook AssignTenantFromTeam — selecione teams para preencher."
+    },
+    "options": {
+        "kind": {
+            "Website": "Site",
+            "Chatwoot": "Chatwoot",
+            "Server": "Servidor",
+            "Mobile": "Mobile",
+            "Other": "Outro"
+        },
+        "lastEventStatus": {
+            "": "—",
+            "Accepted": "Aceito",
+            "Skipped": "Ignorado",
+            "BadRequest": "Requisição Inválida",
+            "Unauthorized": "Não Autorizado"
+        }
+    }
+}

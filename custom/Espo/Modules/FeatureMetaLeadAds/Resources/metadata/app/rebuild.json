@@ -1,6 +1,7 @@
 {
     "actionClassNameList": [
         "Espo\\Modules\\FeatureMetaLeadAds\\Rebuild\\SeedOAuthProviderMetaLeadAds",
-        "Espo\\Modules\\FeatureMetaLeadAds\\Rebuild\\ConfigureNavbar"
+        "Espo\\Modules\\FeatureMetaLeadAds\\Rebuild\\ConfigureNavbar",
+        "Espo\\Modules\\FeatureMetaLeadAds\\Rebuild\\MigrateLeadgenEventPageId"
     ]
 }

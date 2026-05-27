@@ -11,9 +11,10 @@
     },
     "messages": {
         "confirmRetryLeadgenIngest": "Re-ingest this lead? The status will be reset to 'Received' and the job will be re-queued.",
+        "confirmRetryProcessedLeadgenIngest": "This lead is already Processed. Re-ingesting will re-fetch the lead from Meta, augment the existing Contact (never duplicate), reuse the existing Opportunity if any, and REPLACE all Answer rows for this event. Continue?",
         "retryLeadgenIngestQueued": "Job re-queued successfully.",
         "retryLeadgenIngestFailed": "Failed to re-enqueue ingestion.",
-        "confirmMassRetryLeadgenIngest": "Re-ingest all selected events with status 'Failed'? Events with other statuses will be skipped.",
+        "confirmMassRetryLeadgenIngest": "Re-ingest all selected events? Each event will be re-fetched from Meta. Already-Processed events will have their Contact augmented, existing Opportunity reused, and Answer rows replaced. Continue?",
         "massRetryDone": "{count} event(s) re-queued successfully.",
         "massRetryFailed": "Failed to perform bulk retry."
     },
@@ -21,7 +22,7 @@
         "name": "Name",
         "leadgenId": "Leadgen ID (Meta)",
         "formId": "Form ID (Meta)",
-        "pageId": "Page ID (Meta)",
+        "metaPageId": "Page ID (Meta)",
         "adId": "Ad ID (Meta)",
         "metaCreatedTime": "Created on Meta",
         "status": "Status",

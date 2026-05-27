@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "name": "Nome",
+        "code": "Código",
+        "occurredAt": "Ocorrido em",
+        "receivedAt": "Recebido em",
+        "url": "URL",
+        "referrer": "Referenciador",
+        "userAgent": "User Agent",
+        "ipAddress": "Endereço IP",
+        "anonymousId": "ID Anônimo",
+        "payload": "Payload",
+        "attribution": "Atribuição",
+        "value": "Valor",
+        "currency": "Moeda",
+        "status": "Status",
+        "errorMessage": "Erro",
+        "trackingSource": "Fonte",
+        "trackingEventType": "Tipo de Evento",
+        "contact": "Contato",
+        "parent": "Assunto",
+        "tenant": "Tenant"
+    },
+    "tooltips": {
+        "ipAddress": "IP público do cliente capturado pelo endpoint. Considera X-Forwarded-For quando a fonte é confiável.",
+        "anonymousId": "Identificador opaco para visitantes não identificados. Removido quando o visitante se identifica e a linha é religada a um Contato.",
+        "attribution": "Snapshot de atribuição resolvida (utm_*, click ids, cadeia de referrers) no momento do ingest.",
+        "value": "Valor monetário do evento (ex: total do pedido). Opcional.",
+        "contact": "Preenchido quando o visitante já era identificado, ou retroativamente pelo AnonymousStitcher.",
+        "parent": "Assunto polimórfico — contexto adicional (ex: 'Visita à Página de Preços durante Oportunidade O-123').",
+        "tenant": "Herdado do TrackingEventType pai (definido automaticamente pelo hook CascadeTenantFromEventType)."
+    },
+    "options": {
+        "status": {
+            "Received": "Recebido",
+            "Stitched": "Religado",
+            "Processed": "Processado",
+            "Failed": "Falhou",
+            "Skipped": "Ignorado"
+        },
+        "currency": {
+            "": "—",
+            "USD": "USD",
+            "EUR": "EUR",
+            "BRL": "BRL",
+            "GBP": "GBP",
+            "MXN": "MXN",
+            "ARS": "ARS"
+        }
+    }
+}

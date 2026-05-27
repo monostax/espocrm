@@ -15,7 +15,6 @@ use Espo\Modules\FeatureMetaLeadAds\Entities\MetaLeadgenAnswer;
 use Espo\Modules\FeatureMetaLeadAds\Entities\MetaLeadgenEvent;
 use Espo\ORM\EntityManager;
 use Throwable;
-
 /**
  * Ingests a single leadgen submission end-to-end.
  *
@@ -23,7 +22,12 @@ use Throwable;
  *
  *   1. Load the MetaLeadgenEvent (idempotent — already created by webhook controller).
  *   2. Skip-out if event is already Processed (Meta sometimes redelivers).
- *   3. Resolve MetaLeadForm (must be active) + MetaFacebookPage (must be active).
+ *   3. Resolve MetaLeadForm by `formId`. If unknown locally, attempt one
+ *      on-demand FormSyncService::syncForPage call for the parent
+ *      MetaFacebookPage (resolved via `metaPageId`) and retry. Only mark
+ *      Skipped if Meta itself doesn't return the form.
+ *   4. Verify MetaLeadForm is active + has a Funnel; verify MetaFacebookPage
+ *      is active.
  *   4. Decrypt the Page Access Token.
  *   5. GET /{leadgenId} from Meta Graph API.
  *   6. Dedup Contact: metaLeadId → emailAddress → phoneNumber.
@@ -60,6 +64,7 @@ class LeadgenIngester
         private EntityManager $entityManager,
         private MetaGraphApiClient $graphApiClient,
         private LeadFieldMapper $fieldMapper,
+        private FormSyncService $formSyncService,
         private Crypt $crypt,
         private Log $log,
     ) {}
@@ -102,9 +107,21 @@ class LeadgenIngester
     {
         $leadForm = $this->resolveLeadForm($event);
 
+        // On-demand form sync: if the form isn't known locally, the most
+        // common cause is that the admin created the form in Meta after the
+        // last manual "Sync Forms" run. Try to sync forms for the parent
+        // Page once, then re-check. If still missing — genuinely orphaned
+        // (form deleted on Meta, wrong page, etc.) — fall through to the
+        // existing skip path with the original error message.
+        if (!$leadForm) {
+            if ($this->trySyncFormFromPage($event)) {
+                $leadForm = $this->resolveLeadForm($event);
+            }
+        }
+
         if (!$leadForm) {
             $this->markEventSkipped($event, sprintf(
-                'No MetaLeadForm configured for formId=%s.',
+                'No MetaLeadForm configured for formId=%s (page sync did not surface it).',
                 (string) $event->get('formId'),
             ));
 
@@ -196,16 +213,46 @@ class LeadgenIngester
             }
         }
 
-        // 4) Optionally create Opportunity.
+        // Detect whether this is a re-ingest (retry of a previously-Processed
+        // event). When it is, we want re-ingestion to be IDEMPOTENT — never
+        // create duplicate Opportunities and never leave stale Answer rows.
+        // We're already past Contact dedup (which keys on metaLeadId), so the
+        // only side-effects we need to neutralise are answers (always recreated
+        // from rawPayload) and Opportunity (reuse if still extant).
+        $isReingest = $event->get('processedAt') !== null
+            || $event->get('opportunityId') !== null
+            || $this->hasExistingAnswers($event);
+
+        // 4) Optionally create Opportunity (or reuse the existing one on retry).
         $opportunity = null;
 
         if ($leadForm->get('createOpportunity')) {
-            $opportunity = $this->createOpportunity($contact, $leadForm, $leadData);
+            $existingOppId = (string) ($event->get('opportunityId') ?? '');
+
+            if ($existingOppId !== '') {
+                $existingOpp = $this->entityManager->getEntity(Opportunity::ENTITY_TYPE, $existingOppId);
+
+                if ($existingOpp instanceof Opportunity) {
+                    $opportunity = $existingOpp;
+                    $this->log->info(sprintf(
+                        'MetaLeadAds: re-ingest reusing Opportunity %s for event %s.',
+                        $existingOppId,
+                        $event->getId() ?? '(new)',
+                    ));
+                }
+            }
+
+            if (!$opportunity instanceof Opportunity) {
+                $opportunity = $this->createOpportunity($contact, $leadForm, $leadData);
+            }
         }
 
-        // 5) Persist structured answers (one row per field_data entry).
-        //    Done AFTER both Contact and Opportunity exist so the denormalised
-        //    contactId/opportunityId can be set in a single insert pass.
+        // 5) Persist structured answers. `persistAnswers` is inherently
+        //    idempotent: it upserts by (eventId, fieldKey) and soft-deletes
+        //    stale rows whose key vanished from the latest field_data.
+        //    Safe to call repeatedly — answer row ids and createdAt are
+        //    preserved across re-ingests; only the value/label/links
+        //    bump modifiedAt when their content actually drifted.
         $answers = $this->persistAnswers(
             $event,
             $leadForm,
@@ -230,17 +277,21 @@ class LeadgenIngester
 
         $this->entityManager->saveEntity($event, ['skipHooks' => true, 'silent' => true]);
 
-        // 8) Bump form counters.
-        $leadForm->set(
-            'totalLeadsReceived',
-            (int) ($leadForm->get('totalLeadsReceived') ?? 0) + 1,
-        );
-        $leadForm->set('lastLeadReceivedAt', date('Y-m-d H:i:s'));
+        // 8) Bump form counters — first ingest only. Re-ingests must not
+        //    inflate the lead-count metric.
+        if (!$isReingest) {
+            $leadForm->set(
+                'totalLeadsReceived',
+                (int) ($leadForm->get('totalLeadsReceived') ?? 0) + 1,
+            );
+            $leadForm->set('lastLeadReceivedAt', date('Y-m-d H:i:s'));
 
-        $this->entityManager->saveEntity($leadForm, ['skipHooks' => true, 'silent' => true]);
+            $this->entityManager->saveEntity($leadForm, ['skipHooks' => true, 'silent' => true]);
+        }
 
         $this->log->info(sprintf(
-            'MetaLeadAds: processed leadgenId=%s -> Contact %s%s (%d answers).',
+            'MetaLeadAds: %s leadgenId=%s -> Contact %s%s (%d answers).',
+            $isReingest ? 're-processed' : 'processed',
             $event->get('leadgenId'),
             $contact->getId(),
             $opportunity ? ", Opportunity {$opportunity->getId()}" : '',
@@ -248,8 +299,31 @@ class LeadgenIngester
         ));
     }
 
+    private function hasExistingAnswers(MetaLeadgenEvent $event): bool
+    {
+        if (!$event->getId()) {
+            return false;
+        }
+
+        $row = $this->entityManager
+            ->getRDBRepository(MetaLeadgenAnswer::ENTITY_TYPE)
+            ->where(['eventId' => $event->getId(), 'deleted' => false])
+            ->select(['id'])
+            ->findOne();
+
+        return $row !== null;
+    }
+
     /**
      * Materialise structured MetaLeadgenAnswer rows from the raw field_data.
+     *
+     * IDEMPOTENT — safe to call repeatedly for the same event:
+     *  - Upserts each answer keyed on (eventId, fieldKey). Existing rows are
+     *    updated in place (createdAt/id preserved) and only get a modifiedAt
+     *    bump when content actually changed (Espo handles change-detection).
+     *  - Any rows whose `fieldKey` is no longer present in the incoming
+     *    field_data are soft-deleted so the event's answer set always
+     *    mirrors the latest payload.
      *
      * Each row stores:
      *  - the original Meta key (`fieldKey`) and raw values array (`valueRaw`)
@@ -290,14 +364,36 @@ class LeadgenIngester
             }
         }
 
+        // Preload any existing answer rows so we can upsert by fieldKey
+        // instead of accumulating duplicates across re-ingests.
+        /** @var array<string, MetaLeadgenAnswer> $existingByKey */
+        $existingByKey = [];
+
+        if ($event->getId()) {
+            $existingRows = $this->entityManager
+                ->getRDBRepository(MetaLeadgenAnswer::ENTITY_TYPE)
+                ->where(['eventId' => $event->getId(), 'deleted' => false])
+                ->find();
+
+            foreach ($existingRows as $row) {
+                if ($row instanceof MetaLeadgenAnswer) {
+                    $existingByKey[(string) $row->get('fieldKey')] = $row;
+                }
+            }
+        }
+
         $formTeamIds = $this->resolveFormTeamIds($form);
         $tenantId = $form->get('tenantId');
+
+        $seenKeys = [];
 
         foreach ($fieldData as $field) {
             $key = isset($field['name']) ? (string) $field['name'] : '';
             if ($key === '') {
                 continue;
             }
+
+            $seenKeys[$key] = true;
 
             $values = isset($field['values']) && is_array($field['values']) ? $field['values'] : [];
             $stringValues = [];
@@ -312,24 +408,30 @@ class LeadgenIngester
             $displayValue = $this->resolveDisplayValue($stringValues, $question);
 
             try {
-                $answer = $this->entityManager->getNewEntity(MetaLeadgenAnswer::ENTITY_TYPE);
+                $isExisting = isset($existingByKey[$key]);
+                /** @var MetaLeadgenAnswer $answer */
+                $answer = $isExisting
+                    ? $existingByKey[$key]
+                    : $this->entityManager->getNewEntity(MetaLeadgenAnswer::ENTITY_TYPE);
 
-                $answer->set('fieldKey', $key);
-                $answer->set('label', $label);
-                $answer->set('value', $displayValue);
-                $answer->set('valueRaw', $stringValues);
+                $answer->set('fieldKey',  $key);
+                $answer->set('label',     $label);
+                $answer->set('value',     $displayValue);
+                $answer->set('valueRaw',  $stringValues);
                 $answer->set('wasMapped', isset($mappedKeys[$key]));
-                $answer->set('name', $this->buildAnswerName($label, $displayValue));
+                $answer->set('name',      $this->buildAnswerName($label, $displayValue));
 
-                $answer->set('eventId', $event->getId());
+                $answer->set('eventId',   $event->getId());
+                $answer->set('formId',    $form->getId());
+                $answer->set('contactId', $contact->getId());
+
                 if ($question) {
                     $answer->set('questionId', $question->getId());
                 }
-                $answer->set('formId', $form->getId());
-                $answer->set('contactId', $contact->getId());
-                if ($opportunity) {
-                    $answer->set('opportunityId', $opportunity->getId());
-                }
+
+                // When opportunity is null we DO want to clear any previously
+                // linked opportunityId — keeps the link in sync with reality.
+                $answer->set('opportunityId', $opportunity?->getId());
 
                 // Tenancy propagation: hooks early-return on `silent`, so we
                 // set explicitly. Mirrors LeadgenIngester::createNewContact.
@@ -348,6 +450,28 @@ class LeadgenIngester
                 $this->log->warning(sprintf(
                     'MetaLeadAds: failed to persist Answer for key=%s on event %s: %s',
                     $key,
+                    $event->getId() ?? '(new)',
+                    $e->getMessage(),
+                ));
+            }
+        }
+
+        // Soft-delete any prior answers whose key is no longer in the latest
+        // payload. Without this, a Meta form question that was removed (or
+        // a per-form fieldMapping that dropped a key) would leave orphan
+        // rows around forever. Idempotent: subsequent re-ingests find
+        // nothing left to clean.
+        foreach ($existingByKey as $existingKey => $row) {
+            if (isset($seenKeys[$existingKey])) {
+                continue;
+            }
+
+            try {
+                $this->entityManager->removeEntity($row, ['skipHooks' => true, 'silent' => true]);
+            } catch (Throwable $e) {
+                $this->log->warning(sprintf(
+                    'MetaLeadAds: failed to remove stale Answer (key=%s) for event %s: %s',
+                    $existingKey,
                     $event->getId() ?? '(new)',
                     $e->getMessage(),
                 ));
@@ -501,6 +625,92 @@ class LeadgenIngester
         return $form instanceof MetaLeadForm ? $form : null;
     }
 
+    /**
+     * Attempt to sync forms for the event's parent MetaFacebookPage so a
+     * newly-created Meta lead form becomes locally known before we mark
+     * the event Skipped.
+     *
+     * Strategy:
+     *   1. Resolve the MetaFacebookPage by Meta numeric `metaPageId`.
+     *   2. Skip if the page row doesn't exist locally (we can't sync without
+     *      a page row + token) or is inactive.
+     *   3. Otherwise call FormSyncService::syncForPage; if any forms were
+     *      created/updated, return true so the caller retries the lookup.
+     *
+     * Side-effect-only: rate-limited implicitly by the per-leadgen job
+     * group, but if many unknown forms arrive at once the Graph API will
+     * be hit once per Page per event burst. Acceptable for the rarity.
+     */
+    private function trySyncFormFromPage(MetaLeadgenEvent $event): bool
+    {
+        $metaPageId = (string) $event->get('metaPageId');
+
+        if ($metaPageId === '') {
+            return false;
+        }
+
+        $page = $this->entityManager
+            ->getRDBRepository(MetaFacebookPage::ENTITY_TYPE)
+            ->where(['pageId' => $metaPageId, 'deleted' => false])
+            ->findOne();
+
+        if (!$page instanceof MetaFacebookPage) {
+            $this->log->info(sprintf(
+                'MetaLeadAds: cannot auto-sync form — MetaFacebookPage not found locally (metaPageId=%s).',
+                $metaPageId,
+            ));
+
+            return false;
+        }
+
+        if (!$page->get('isActive')) {
+            return false;
+        }
+
+        try {
+            $result = $this->formSyncService->syncForPage((string) $page->getId());
+        } catch (Throwable $e) {
+            $this->log->warning(sprintf(
+                'MetaLeadAds: on-demand form sync failed for page %s: %s',
+                $page->getId() ?? '(new)',
+                $e->getMessage(),
+            ));
+
+            return false;
+        }
+
+        if (!($result['ok'] ?? false)) {
+            $this->log->info(sprintf(
+                'MetaLeadAds: on-demand form sync returned ok=false for page %s: %s',
+                $page->getId() ?? '(new)',
+                (string) ($result['error'] ?? 'unknown error'),
+            ));
+
+            return false;
+        }
+
+        $changed = (int) ($result['formsCreated'] ?? 0) + (int) ($result['formsUpdated'] ?? 0);
+
+        if ($changed > 0) {
+            $this->log->info(sprintf(
+                'MetaLeadAds: on-demand form sync surfaced %d form(s) for page %s; retrying lookup.',
+                $changed,
+                $page->getId() ?? '(new)',
+            ));
+
+            // Also stamp the event's `page` link CRM id while we have it,
+            // in case the original webhook persisted before the page was
+            // synced and the link is still null.
+            if (!$event->get('pageId')) {
+                $event->set('pageId', $page->getId());
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     private function resolvePage(MetaLeadForm $form): ?MetaFacebookPage
     {
         $pageInternalId = $form->get('pageId'); // link id, NOT meta numeric
@@ -623,20 +833,61 @@ class LeadgenIngester
             }
         }
 
-        // Always (re)stamp meta attribution — this is the latest source of truth for it.
-        $contact->set('metaLeadId',     $event->get('leadgenId'));
-        $contact->set('metaAdId',       $event->get('adId') ?: $contact->get('metaAdId'));
-        $contact->set('metaFormId',     $event->get('formId'));
-        $contact->set('metaCapturedAt', $contact->get('metaCapturedAt') ?: date('Y-m-d H:i:s'));
+        // Meta attribution — stamp only when the target field is currently
+        // empty (or differs in the case of metaLeadId, which is the strongest
+        // source of truth). Always re-stamping every re-ingest would bump
+        // modifiedAt on every retry, breaking strict idempotency.
+        $attrUpdates = [
+            'metaLeadId'     => (string) $event->get('leadgenId'),
+            'metaAdId'       => (string) ($event->get('adId') ?? ''),
+            'metaFormId'     => (string) $event->get('formId'),
+            'metaCapturedAt' => date('Y-m-d H:i:s'),
+        ];
+
+        foreach ($attrUpdates as $field => $value) {
+            if ($value === '') {
+                continue;
+            }
+
+            $current = (string) ($contact->get($field) ?? '');
+
+            // metaCapturedAt must NEVER be re-stamped — it's the moment we
+            // first attributed the Contact to a Meta lead. Subsequent
+            // re-ingests preserve the original timestamp.
+            if ($field === 'metaCapturedAt' && $current !== '') {
+                continue;
+            }
+
+            // For other meta-* fields, only write if currently blank OR if
+            // the new value genuinely differs (e.g. attribution drift).
+            if ($current === $value) {
+                continue;
+            }
+
+            if ($field !== 'metaLeadId' && $current !== '') {
+                // Don't overwrite existing non-blank attribution unless
+                // it's the leadgen primary key.
+                continue;
+            }
+
+            $contact->set($field, $value);
+            $changed = true;
+        }
 
         if ($leadForm->get('assignedUserId') && !$contact->get('assignedUserId')) {
             $contact->set('assignedUserId', $leadForm->get('assignedUserId'));
             $changed = true;
         }
 
+        // Idempotency guard: skip save entirely when no field would change.
+        // Avoids spurious modifiedAt bumps and downstream hook side-effects
+        // on every retry of an already-Processed event.
+        if (!$changed) {
+            return;
+        }
+
         try {
             $this->entityManager->saveEntity($contact, ['skipHooks' => true, 'silent' => true]);
-            unset($changed); // suppress unused
         } catch (Throwable $e) {
             $this->log->warning('MetaLeadAds: failed to augment Contact: ' . $e->getMessage());
         }
@@ -730,7 +981,17 @@ class LeadgenIngester
             $opp->set('accountId', $contact->get('accountId'));
             $opp->set('funnelId',  $leadForm->get('funnelId'));
 
-            $stageId = $leadForm->get('opportunityStageId') ?: $this->firstStageId($leadForm->get('funnelId'));
+            // Pick a stage that ACTUALLY belongs to the configured funnel.
+            // The form's `opportunityStageId` may be stale (a stage that
+            // belonged to a now-deleted funnel, or a leftover from when the
+            // funnel link was changed). Validating here prevents the
+            // Opportunity save from throwing "stage does not belong to the
+            // selected funnel" and silently dropping the lead's Opportunity.
+            $stageId = $this->resolveValidStageId(
+                (string) ($leadForm->get('funnelId') ?? ''),
+                (string) ($leadForm->get('opportunityStageId') ?? ''),
+                $leadForm->getId() ?? '(new)',
+            );
 
             if ($stageId) {
                 $opp->set('opportunityStageId', $stageId);
@@ -808,6 +1069,48 @@ class LeadgenIngester
             ->findOne();
 
         return $stage ? $stage->getId() : null;
+    }
+
+    /**
+     * Pick the OpportunityStage that the Opportunity will use.
+     *
+     *  - If the form's configured stage belongs to the form's funnel, use it.
+     *  - Otherwise log a warning and fall back to the first active stage of
+     *    the funnel (preserves ingestion when the admin configured a stage
+     *    that drifted away from the funnel — which the Opportunity save
+     *    would otherwise reject with "stage does not belong to the selected
+     *    funnel", killing the Opportunity creation entirely).
+     *
+     * Returns null only when the funnel itself has no active stages.
+     */
+    private function resolveValidStageId(string $funnelId, string $configuredStageId, string $formIdForLog): ?string
+    {
+        if ($funnelId === '') {
+            return null;
+        }
+
+        if ($configuredStageId !== '') {
+            $stage = $this->entityManager->getEntity('OpportunityStage', $configuredStageId);
+
+            if (
+                $stage
+                && (string) ($stage->get('funnelId') ?? '') === $funnelId
+                && !$stage->get('deleted')
+            ) {
+                return $configuredStageId;
+            }
+
+            // Stage is configured but doesn't belong to the funnel (or no
+            // longer exists). Don't fail — fall back below.
+            $this->log->warning(sprintf(
+                'MetaLeadAds: form %s has opportunityStageId=%s which does not belong to funnelId=%s; falling back to first active stage of the funnel.',
+                $formIdForLog,
+                $configuredStageId,
+                $funnelId,
+            ));
+        }
+
+        return $this->firstStageId($funnelId);
     }
 
     private function markEventSkipped(MetaLeadgenEvent $event, string $reason): void

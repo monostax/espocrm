@@ -1,0 +1,10 @@
+[
+    { "name": "name", "link": true },
+    { "name": "code" },
+    { "name": "occurredAt" },
+    { "name": "trackingSource" },
+    { "name": "trackingEventType" },
+    { "name": "contact" },
+    { "name": "status" },
+    { "name": "value" }
+]

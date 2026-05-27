@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "name": "Name",
+        "code": "Code",
+        "occurredAt": "Occurred At",
+        "receivedAt": "Received At",
+        "url": "URL",
+        "referrer": "Referrer",
+        "userAgent": "User Agent",
+        "ipAddress": "IP Address",
+        "anonymousId": "Anonymous ID",
+        "payload": "Payload",
+        "attribution": "Attribution",
+        "value": "Value",
+        "currency": "Currency",
+        "status": "Status",
+        "errorMessage": "Error",
+        "trackingSource": "Source",
+        "trackingEventType": "Event Type",
+        "contact": "Contact",
+        "parent": "Subject",
+        "tenant": "Tenant"
+    },
+    "tooltips": {
+        "ipAddress": "Public client IP captured by the ingestion endpoint. Honors X-Forwarded-For when source is trusted.",
+        "anonymousId": "Opaque visitor id for un-identified traffic. Cleared once the visitor identifies and the row is rewired to a Contact.",
+        "attribution": "Resolved attribution snapshot (utm_*, click ids, referrer chain) at ingest time.",
+        "value": "Monetary value of the event (e.g. order total). Optional.",
+        "contact": "Set when the visitor was already identified, or backfilled by AnonymousStitcher.",
+        "parent": "Polymorphic subject — additional context (e.g. 'Pricing Page View during Opportunity O-123').",
+        "tenant": "Inherited from the parent TrackingEventType (auto-set by CascadeTenantFromEventType hook)."
+    },
+    "options": {
+        "status": {
+            "Received": "Received",
+            "Stitched": "Stitched",
+            "Processed": "Processed",
+            "Failed": "Failed",
+            "Skipped": "Skipped"
+        },
+        "currency": {
+            "": "—",
+            "USD": "USD",
+            "EUR": "EUR",
+            "BRL": "BRL",
+            "GBP": "GBP",
+            "MXN": "MXN",
+            "ARS": "ARS"
+        }
+    }
+}

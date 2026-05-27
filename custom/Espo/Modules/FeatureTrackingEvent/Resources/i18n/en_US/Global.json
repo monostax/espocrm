@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "TrackingEvents": "Tracking Events"
+    },
+    "scopeNames": {
+        "TrackingSource": "Tracking Source",
+        "TrackingEventType": "Tracking Event Type",
+        "TrackingEvent": "Tracking Event"
+    },
+    "scopeNamesPlural": {
+        "TrackingSource": "Tracking Sources",
+        "TrackingEventType": "Tracking Event Types",
+        "TrackingEvent": "Tracking Events"
+    }
+}

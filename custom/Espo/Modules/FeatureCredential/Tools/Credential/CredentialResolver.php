@@ -4,6 +4,7 @@ namespace Espo\Modules\FeatureCredential\Tools\Credential;
 
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\NotFound;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Tools\OAuth\TokensProvider;
 use Espo\Tools\OAuth\Exceptions\AccountNotFound;
@@ -13,23 +14,29 @@ use Espo\Tools\OAuth\Exceptions\TokenObtainingFailure;
 use stdClass;
 
 /**
- * Resolves a Credential into its complete configuration by merging
- * static config values with live OAuth tokens (when applicable).
+ * Resolves a Credential into its complete configuration by:
+ *
+ *   1. Loading the row + parsing `config` JSON.
+ *   2. Transparently decrypting any field listed in `CredentialType.encryptionFields`
+ *      that carries the `enc:v1:` marker. Legacy plaintext rows pass through unchanged.
+ *   3. Merging static config values with live OAuth tokens (when the
+ *      Credential is OAuth-backed).
+ *
+ * Used by every server-side consumer that needs to *actually authenticate*
+ * with a third-party service (Medx, WhatsApp, Chatwoot, ClinicaNasNuvens,
+ * SimplesAgenda, etc). Equivalent at-read-time to the `ConfigLoader`
+ * field processor used during API serialization.
  */
 class CredentialResolver
 {
     public function __construct(
         private EntityManager $entityManager,
         private TokensProvider $tokensProvider,
+        private CredentialConfigCipher $cipher,
     ) {}
 
     /**
      * Resolve a credential by ID, returning the full merged configuration.
-     *
-     * For non-OAuth credentials, returns the parsed config JSON as-is.
-     * For OAuth-backed credentials, merges the static config with fresh
-     * (auto-refreshed) tokens from the linked OAuthAccount, using the
-     * tokenFieldMapping defined on the CredentialType.
      *
      * @throws NotFound
      * @throws Error
@@ -53,24 +60,47 @@ class CredentialResolver
             $config = new stdClass();
         }
 
-        $oAuthAccountId = $credential->get('oAuthAccountId');
-
-        if (!$oAuthAccountId) {
-            return $config;
-        }
-
         $credentialTypeId = $credential->get('credentialTypeId');
 
-        if (!$credentialTypeId) {
+        $credentialType = $credentialTypeId
+            ? $this->entityManager->getEntityById('CredentialType', $credentialTypeId)
+            : null;
+
+        // Transparent decrypt of fields listed in encryptionFields.
+        $config = $this->cipher->decryptFields($config, $credentialType);
+
+        $oAuthAccountId = $credential->get('oAuthAccountId');
+
+        if (!$oAuthAccountId || !$credentialType) {
             return $config;
         }
 
-        $credentialType = $this->entityManager->getEntityById('CredentialType', $credentialTypeId);
+        return $this->mergeOAuthTokens($config, $credentialType, $credentialId, (string) $oAuthAccountId);
+    }
 
-        if (!$credentialType) {
-            return $config;
+    /**
+     * Check whether a credential is OAuth-backed.
+     */
+    public function isOAuthBacked(string $credentialId): bool
+    {
+        $credential = $this->entityManager->getEntityById('Credential', $credentialId);
+
+        if (!$credential) {
+            return false;
         }
 
+        return !empty($credential->get('oAuthAccountId'));
+    }
+
+    /**
+     * @throws Error
+     */
+    private function mergeOAuthTokens(
+        stdClass $config,
+        Entity $credentialType,
+        string $credentialId,
+        string $oAuthAccountId,
+    ): stdClass {
         $mappingRaw = $credentialType->get('tokenFieldMapping');
 
         if (!$mappingRaw) {
@@ -107,19 +137,5 @@ class CredentialResolver
         }
 
         return $config;
-    }
-
-    /**
-     * Check whether a credential is OAuth-backed.
-     */
-    public function isOAuthBacked(string $credentialId): bool
-    {
-        $credential = $this->entityManager->getEntityById('Credential', $credentialId);
-
-        if (!$credential) {
-            return false;
-        }
-
-        return !empty($credential->get('oAuthAccountId'));
     }
 }

@@ -19,10 +19,12 @@
             "maxLength": 32,
             "readOnly": true
         },
-        "pageId": {
+        "metaPageId": {
             "type": "varchar",
             "maxLength": 32,
-            "readOnly": true
+            "readOnly": true,
+            "index": true,
+            "comment": "Meta numeric page id from the webhook payload. The `page` link's foreign-id `pageId` holds the CRM MetaFacebookPage id instead."
         },
         "adId": {
             "type": "varchar",
@@ -158,6 +160,7 @@
         "leadgenId": { "columns": ["leadgenId", "deleted"], "unique": true },
         "status": { "columns": ["status"] },
         "formId": { "columns": ["formId"] },
+        "metaPageId": { "columns": ["metaPageId"] },
         "tenantId": { "columns": ["tenantId", "deleted"] }
     }
 }

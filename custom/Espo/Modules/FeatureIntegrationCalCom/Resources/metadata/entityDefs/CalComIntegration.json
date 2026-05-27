@@ -11,14 +11,19 @@
             "type": "bool",
             "default": true
         },
-        "apiKey": {
+        "webhookUrl": {
             "type": "varchar",
-            "required": true,
-            "maxLength": 64,
-            "trim": true,
+            "notStorable": true,
+            "readOnly": true,
+            "utility": true,
+            "view": "feature-integration-cal-com:views/cal-com-integration/fields/webhook-url",
             "tooltip": true,
-            "index": true,
-            "comment": "URL slug used in webhook path: /api/v1/CalCom/receive/{apiKey}. Must be unique."
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true,
+            "directAccessDisabled": true
         },
         "signingSecret": {
             "type": "password",
@@ -31,15 +36,6 @@
             "type": "bool",
             "default": true,
             "tooltip": true
-        },
-        "metaCapiDataset": {
-            "type": "link",
-            "tooltip": true
-        },
-        "metaCapiEventMapping": {
-            "type": "jsonObject",
-            "tooltip": true,
-            "comment": "Map of cal.com triggerEvent -> Meta CAPI event_name. Missing/empty value = skip CAPI for that trigger."
         },
         "description": {
             "type": "text"
@@ -117,10 +113,6 @@
             "type": "belongsTo",
             "entity": "Tenant",
             "foreign": "calComIntegrations"
-        },
-        "metaCapiDataset": {
-            "type": "belongsTo",
-            "entity": "MetaCapiDataset"
         }
     },
     "collection": {
@@ -130,7 +122,6 @@
     "indexes": {
         "name": { "columns": ["name", "deleted"] },
         "isActive": { "columns": ["isActive"] },
-        "apiKey": { "columns": ["apiKey", "deleted"], "unique": true },
         "tenantId": { "columns": ["tenantId"] }
     }
 }

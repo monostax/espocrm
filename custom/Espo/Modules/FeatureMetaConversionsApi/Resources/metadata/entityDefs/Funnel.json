@@ -8,6 +8,14 @@
         "metaCapiDataset": {
             "type": "link",
             "tooltip": true
+        },
+        "metaCapiReady": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "audited": false,
+            "tooltip": true,
+            "comment": "Single source of truth: true iff metaCapiEnabled=true AND a linked active (non-deleted) MetaCapiDataset exists. Maintained by Funnel/BeforeSave/SyncMetaCapiReady and MetaCapiDataset/AfterSave/SyncReferencingFunnelsReady. Read by OpportunityStage via the foreign field `funnelMetaCapiReady` to drive UI panel visibility — no per-stage duplication."
         }
     },
     "links": {

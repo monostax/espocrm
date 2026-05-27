@@ -1,6 +1,6 @@
 {
-    "meta-capi:rebuild-stage-active": {
-        "className": "Espo\\Modules\\FeatureMetaConversionsApi\\Classes\\ConsoleCommands\\MetaCapiRebuildStageActive",
+    "meta-capi:rebuild-funnel-ready": {
+        "className": "Espo\\Modules\\FeatureMetaConversionsApi\\Classes\\ConsoleCommands\\MetaCapiRebuildFunnelReady",
         "listed": true,
         "noSystemUser": true
     }

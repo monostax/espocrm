@@ -1,0 +1,34 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "kind" }, { "name": "allowUnknownEventCode" }],
+            [{ "name": "ingestUrl" }, false],
+            [{ "name": "description" }, false]
+        ]
+    },
+    {
+        "label": "Security",
+        "rows": [
+            [{ "name": "signingSecret" }, false],
+            [{ "name": "allowedOrigins" }, false]
+        ]
+    },
+    {
+        "label": "Statistics",
+        "rows": [
+            [{ "name": "totalEventsReceived" }, { "name": "lastEventReceivedAt" }],
+            [{ "name": "lastEventStatus" }, false],
+            [{ "name": "lastEventError" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

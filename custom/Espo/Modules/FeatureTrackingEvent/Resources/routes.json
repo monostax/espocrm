@@ -1,0 +1,22 @@
+[
+    {
+        "route": "/TrackingEvent/receive/:sourceId",
+        "method": "post",
+        "params": {
+            "controller": "TrackingEventReceiver",
+            "action": "receive",
+            "sourceId": ":sourceId"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/TrackingEvent/receive/:sourceId",
+        "method": "options",
+        "params": {
+            "controller": "TrackingEventReceiver",
+            "action": "preflight",
+            "sourceId": ":sourceId"
+        },
+        "noAuth": true
+    }
+]

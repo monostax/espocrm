@@ -30,6 +30,7 @@
         "opportunityStage": {
             "type": "link",
             "tooltip": true,
+            "view": "global:views/opportunity/fields/opportunity-stage",
             "comment": "OpportunityStage to use for created Opportunities. Empty = first active stage of the funnel."
         },
         "assignedUser": {

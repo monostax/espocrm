@@ -15,7 +15,7 @@ namespace Espo\Modules\FeatureIntegrationCalCom\Services;
  *                  (avoids cal.com retry loops on configured no-ops).
  *   - BAD_REQUEST: 400 — payload malformed.
  *   - UNAUTHORIZED:401 — signature missing/invalid.
- *   - NOT_FOUND:   404 — apiKey doesn't map to any dataset.
+ *   - NOT_FOUND:   404 — integration id doesn't resolve to any CalComIntegration.
  */
 final class ProcessResult
 {

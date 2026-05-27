@@ -3,16 +3,10 @@
         "label": "Overview",
         "rows": [
             [{ "name": "name" }, { "name": "isActive" }],
-            [{ "name": "apiKey" }, { "name": "signingSecret" }],
+            [{ "name": "webhookUrl", "fullWidth": true }],
+            [{ "name": "signingSecret" }, false],
             [{ "name": "createContactIfMissing" }, false],
             [{ "name": "description" }, false]
-        ]
-    },
-    {
-        "label": "Meta CAPI Forwarding",
-        "rows": [
-            [{ "name": "metaCapiDataset" }, false],
-            [{ "name": "metaCapiEventMapping" }, false]
         ]
     },
     {

@@ -1,4 +1,47 @@
 {
+    "controller": "controllers/record",
+    "menu": {
+        "detail": {
+            "buttons": [
+                "__APPEND__",
+                {
+                    "name": "retryLeadgenIngest",
+                    "label": "Retry Ingestion",
+                    "labelTranslation": "MetaLeadgenEvent.labels.retryLeadgenIngest",
+                    "style": "default",
+                    "acl": "edit",
+                    "aclScope": "MetaLeadgenEvent",
+                    "handler": "feature-meta-lead-ads:handlers/meta-leadgen-event/detail-actions",
+                    "actionFunction": "retryLeadgenIngest",
+                    "checkVisibilityFunction": "isRetryLeadgenIngestAvailable",
+                    "iconClass": "fas fa-redo"
+                }
+            ]
+        }
+    },
+    "detailActionList": [
+        {
+            "name": "retryLeadgenIngest",
+            "label": "Retry Ingestion",
+            "labelTranslation": "MetaLeadgenEvent.labels.retryLeadgenIngest",
+            "handler": "feature-meta-lead-ads:handlers/meta-leadgen-event/detail-actions",
+            "actionFunction": "retryLeadgenIngest",
+            "checkVisibilityFunction": "isRetryLeadgenIngestAvailable",
+            "acl": "edit",
+            "aclScope": "MetaLeadgenEvent",
+            "groupIndex": 1,
+            "iconClass": "fas fa-redo"
+        }
+    ],
+    "massActions": {
+        "retryLeadgenIngest": {
+            "handler": "feature-meta-lead-ads:handlers/meta-leadgen-event/mass-retry",
+            "actionFunction": "actionMassRetry",
+            "acl": "edit",
+            "aclScope": "MetaLeadgenEvent",
+            "confirmationMessage": "MetaLeadgenEvent.messages.confirmMassRetryLeadgenIngest"
+        }
+    },
     "bottomPanels": {
         "detail": [
             {
@@ -7,7 +50,7 @@
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+                "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
             }
         ]
     },
@@ -15,7 +58,7 @@
         "answers": {
             "create": false,
             "select": false,
-            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+            "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
         }
     }
 }

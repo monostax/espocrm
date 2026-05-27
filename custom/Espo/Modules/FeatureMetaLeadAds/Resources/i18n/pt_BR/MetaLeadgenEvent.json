@@ -11,9 +11,10 @@
     },
     "messages": {
         "confirmRetryLeadgenIngest": "Reprocessar este lead? O status será resetado para 'Recebido' e o job será reenfileirado.",
+        "confirmRetryProcessedLeadgenIngest": "Este lead já está Processado. Reprocessar irá buscar o lead novamente no Meta, completar o Contato existente (sem duplicar), reutilizar a Oportunidade existente, e SUBSTITUIR todas as Respostas deste evento. Continuar?",
         "retryLeadgenIngestQueued": "Job reenfileirado com sucesso.",
         "retryLeadgenIngestFailed": "Falha ao reenfileirar a ingestão.",
-        "confirmMassRetryLeadgenIngest": "Reprocessar todos os eventos selecionados com status 'Falhou'? Eventos em outros status serão ignorados.",
+        "confirmMassRetryLeadgenIngest": "Reprocessar todos os eventos selecionados? Cada evento será buscado novamente no Meta. Eventos já Processados terão o Contato completado, a Oportunidade existente reutilizada e as Respostas substituídas. Continuar?",
         "massRetryDone": "{count} evento(s) reenfileirado(s) com sucesso.",
         "massRetryFailed": "Falha ao executar reprocessamento em massa."
     },
@@ -21,7 +22,7 @@
         "name": "Nome",
         "leadgenId": "ID do Lead (Meta)",
         "formId": "ID do Formulário (Meta)",
-        "pageId": "ID da Página (Meta)",
+        "metaPageId": "ID da Página (Meta)",
         "adId": "ID do Anúncio (Meta)",
         "metaCreatedTime": "Criado no Meta em",
         "status": "Status",

@@ -2,19 +2,14 @@
     "fields": {
         "name": "Nome",
         "isActive": "Ativa",
-        "apiKey": "API Key",
+        "webhookUrl": "URL do Webhook",
         "signingSecret": "Signing Secret",
         "createContactIfMissing": "Criar Contato se Não Existir",
-        "metaCapiDataset": "Meta CAPI Dataset",
-        "metaCapiEventMapping": "Mapeamento Meta CAPI",
         "description": "Descrição",
         "lastWebhookReceivedAt": "Último Webhook em",
         "lastWebhookStatus": "Status do Último Webhook",
         "lastWebhookError": "Erro do Último Webhook",
         "totalWebhooksReceived": "Total de Webhooks Recebidos"
-    },
-    "links": {
-        "metaCapiDataset": "Meta CAPI Dataset"
     },
     "options": {
         "lastWebhookStatus": {
@@ -26,11 +21,12 @@
         }
     },
     "tooltips": {
-        "apiKey": "Slug usado na URL do webhook: /api/v1/CalCom/receive/{apiKey}. Cadastre esta URL em cal.com → Settings → Webhooks. Deve ser único.",
+        "webhookUrl": "Cadastre esta URL em cal.com → Settings → Webhooks. Cada integração tem uma URL própria — o segmento final do caminho é o id deste registro.",
         "signingSecret": "Segredo do webhook do cal.com. Se preenchido, o header X-Cal-Signature-256 é obrigatório e validado (HMAC-SHA256 sobre o body). Recomendado fortemente em produção.",
-        "createContactIfMissing": "Quando marcado, cria um Contact novo se o email do attendee não existir na base. Caso contrário, ignora o webhook.",
-        "metaCapiDataset": "Opcional. Se preenchido, eventos são enviados para a Meta Conversions API usando este Dataset. Se vazio, o webhook apenas cria/atualiza o Contact (útil para limpeza de CRM sem rastreamento de anúncios).",
-        "metaCapiEventMapping": "JSON mapeando triggerEvent do cal.com → nome de evento Meta. Ex: {\"BOOKING_CREATED\":\"Schedule\",\"BOOKING_CANCELLED\":\"\",\"MEETING_ENDED\":\"Purchase\"}. Valor vazio ou ausente = não envia CAPI para este evento."
+        "createContactIfMissing": "Quando marcado, cria um Contact novo se o email do attendee não existir na base. Caso contrário, ignora o webhook."
+    },
+    "messages": {
+        "webhookUrlPendingSave": "Salve o registro para gerar a URL do webhook."
     },
     "presetFilters": {
         "active": "Ativas",

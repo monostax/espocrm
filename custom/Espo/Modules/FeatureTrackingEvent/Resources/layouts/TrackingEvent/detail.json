@@ -1,0 +1,41 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "status" }],
+            [{ "name": "code" }, { "name": "occurredAt" }],
+            [{ "name": "trackingSource" }, { "name": "trackingEventType" }],
+            [{ "name": "receivedAt" }, false]
+        ]
+    },
+    {
+        "label": "Identity",
+        "rows": [
+            [{ "name": "contact" }, { "name": "anonymousId" }],
+            [{ "name": "parent" }, false]
+        ]
+    },
+    {
+        "label": "Context",
+        "rows": [
+            [{ "name": "url" }, { "name": "referrer" }],
+            [{ "name": "userAgent" }, { "name": "ipAddress" }],
+            [{ "name": "value" }, { "name": "currency" }]
+        ]
+    },
+    {
+        "label": "Payload",
+        "rows": [
+            [{ "name": "payload" }, false],
+            [{ "name": "attribution" }, false],
+            [{ "name": "errorMessage" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, false],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

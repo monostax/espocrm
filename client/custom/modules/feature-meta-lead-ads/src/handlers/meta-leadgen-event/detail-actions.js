@@ -11,7 +11,14 @@
 /**
  * Detail-view actions for MetaLeadgenEvent.
  *
- * Exposes "Retry Ingestion" — only when status=Failed.
+ * Exposes "Retry Ingestion" for any status (Failed, Skipped, Processed).
+ * - Failed:    recover from errors.
+ * - Skipped:   recover after operator fixed config (funnel, page, form, …).
+ * - Processed: re-fetch from Meta to surface new mappings or to create a
+ *              missing Opportunity (e.g. after a stage/funnel correction).
+ *              Existing Contact is augmented (never duplicated). Existing
+ *              Opportunity is reused. Answer rows are replaced.
+ *
  * Calls POST /api/v1/MetaLeadAds/retryIngest { eventId }, which resets the
  * event to Received and re-enqueues IngestLeadgen.
  */
@@ -29,15 +36,29 @@ define('feature-meta-lead-ads:handlers/meta-leadgen-event/detail-actions', [], f
                 return false;
             }
 
-            return model.get('status') === 'Failed';
+            // Available for any persisted status. Receiving status is not
+            // shown because the job is already queued — admin can wait.
+            const status = model.get('status');
+
+            return status === 'Failed'
+                || status === 'Skipped'
+                || status === 'Processed';
         }
 
         retryLeadgenIngest() {
             const view = this.view;
             const model = view.model;
 
+            // Pick a confirmation message tailored to the current status so
+            // admins re-processing a Processed lead understand the side
+            // effects (Meta API hit, answers replaced, etc).
+            const status = model.get('status');
+            const messageKey = status === 'Processed'
+                ? 'confirmRetryProcessedLeadgenIngest'
+                : 'confirmRetryLeadgenIngest';
+
             Espo.Ui.confirm(
-                view.translate('confirmRetryLeadgenIngest', 'messages', 'MetaLeadgenEvent'),
+                view.translate(messageKey, 'messages', 'MetaLeadgenEvent'),
                 {
                     confirmText: view.translate('Retry', 'labels', 'MetaLeadgenEvent'),
                     cancelText: view.translate('Cancel'),

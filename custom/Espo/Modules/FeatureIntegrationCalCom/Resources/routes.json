@@ -1,11 +1,11 @@
 [
     {
-        "route": "/CalCom/receive/:apiKey",
+        "route": "/CalCom/receive/:id",
         "method": "post",
         "params": {
             "controller": "CalComWebhook",
             "action": "receive",
-            "apiKey": ":apiKey"
+            "id": ":id"
         },
         "noAuth": true
     }

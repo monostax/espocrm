@@ -21,12 +21,18 @@ use Throwable;
  * Bulk re-enqueue IngestLeadgen for selected MetaLeadgenEvent rows.
  *
  * Behavior:
- *  - Only rows with status=Failed are reset and re-queued. Others are
- *    silently skipped (counted into $ids only if actually re-queued).
+ *  - All statuses are eligible — Failed (recover from errors), Skipped
+ *    (recover from operator-corrected configs), and Processed (re-fetch
+ *    the lead from Meta to surface newly-mapped fields or to create a
+ *    missing Opportunity after a stage/funnel fix). Per-row ACL is still
+ *    enforced via `checkEntityEdit` so cross-tenant retries are blocked.
  *  - The per-row reset is identical to the single-record retryIngest action:
  *      status=Received, errorMessage=null, processedAt=null.
+ *      contactId/opportunityId are deliberately preserved so the ingester
+ *      can detect re-ingest and reuse the existing Opportunity instead of
+ *      creating a duplicate.
  *  - Each reset triggers a fresh IngestLeadgen job grouped by leadgenId so
- *    duplicate redeliveries serialize.
+ *    duplicate redeliveries serialise.
  *
  * Acl: caller needs EDIT on MetaLeadgenEvent (gated by `acl: "edit"` on the
  * client-side mass action declaration AND by the per-entity ACL check below).
@@ -65,10 +71,6 @@ class MassRetryIngest implements MassAction
             }
 
             if (!$this->acl->checkEntityEdit($entity)) {
-                continue;
-            }
-
-            if ($entity->get('status') !== MetaLeadgenEvent::STATUS_FAILED) {
                 continue;
             }
 

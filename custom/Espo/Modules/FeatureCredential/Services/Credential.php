@@ -8,6 +8,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\UpdateParams;
 use Espo\Core\Record\DeleteParams;
+use Espo\Modules\FeatureCredential\Tools\Credential\CredentialConfigCipher;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use Espo\ORM\Entity;
 use Espo\Services\Record;
@@ -349,7 +350,13 @@ class Credential extends Record
     }
 
     /**
-     * Log credential history
+     * Log credential history.
+     *
+     * `previousValue` and `newValue` carry the Credential's `config` JSON;
+     * any field listed in `CredentialType.encryptionFields` is REDACTED to
+     * `'***'` before persistence. The history table is for audit of *what
+     * changed* — exact secret values do not belong there, and storing them
+     * would compound the blast radius if a row leaked.
      */
     protected function logHistory(
         Entity $credential,
@@ -358,17 +365,36 @@ class Credential extends Record
         ?string $newValue = null,
         ?string $reason = null
     ): void {
+        $credentialType = $this->resolveCredentialTypeForHistory($credential);
+
+        /** @var CredentialConfigCipher $cipher */
+        $cipher = $this->injectableFactory->create(CredentialConfigCipher::class);
+
+        $sanitizedPrevious = $cipher->redactConfig($previousValue, $credentialType);
+        $sanitizedNew = $cipher->redactConfig($newValue, $credentialType);
+
         $history = $this->entityManager->getEntity('CredentialHistory');
         $history->set([
             'credentialId' => $credential->getId(),
             'action' => $action,
-            'previousValue' => $previousValue,
-            'newValue' => $newValue,
+            'previousValue' => $sanitizedPrevious,
+            'newValue' => $sanitizedNew,
             'reason' => $reason,
             'ipAddress' => $_SERVER['REMOTE_ADDR'] ?? null,
             'createdById' => $this->user->getId(),
             'createdAt' => date('Y-m-d H:i:s')
         ]);
         $this->entityManager->saveEntity($history);
+    }
+
+    private function resolveCredentialTypeForHistory(Entity $credential): ?Entity
+    {
+        $credentialTypeId = $credential->get('credentialTypeId');
+
+        if (!$credentialTypeId) {
+            return null;
+        }
+
+        return $this->entityManager->getEntityById('CredentialType', (string) $credentialTypeId);
     }
 }

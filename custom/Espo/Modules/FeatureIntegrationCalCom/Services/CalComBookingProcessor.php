@@ -4,13 +4,9 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureIntegrationCalCom\Services;
 
-use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Crypt;
 use Espo\Core\Utils\Log;
-use Espo\Modules\Crm\Entities\Contact;
 use Espo\Modules\FeatureIntegrationCalCom\Entities\CalComIntegration;
-use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiDataset;
-use Espo\Modules\FeatureMetaConversionsApi\Jobs\SendCapiEvent;
 use Espo\ORM\EntityManager;
 use stdClass;
 use Throwable;
@@ -19,17 +15,12 @@ use Throwable;
  * Orchestrates a cal.com webhook end-to-end.
  *
  * Steps:
- *   1. Resolve CalComIntegration from apiKey.
+ *   1. Resolve CalComIntegration by its entity id (the `:id` route segment).
  *   2. Validate HMAC signature (if signingSecret is configured).
  *   3. Parse payload via CalComPayloadParser.
- *   4. Match/create Contact via CalComContactMatcher.
- *   5. If integration has metaCapiDataset linked AND metaCapiEventMapping has a value
- *      for the triggerEvent, enqueue Meta CAPI event via SendCapiEvent job.
- *   6. Update integration counters / lastWebhookStatus.
- *
- * If integration has NO metaCapiDataset, the webhook is still ACCEPTED — Contact
- * matching/creation runs. Useful when cal.com is needed for CRM hygiene
- * even without ad attribution.
+ *   4. Match/create Contact via CalComContactMatcher (captures Meta/Google
+ *      tracking identifiers from the booking onto the Contact).
+ *   5. Update integration counters / lastWebhookStatus.
  */
 class CalComBookingProcessor
 {
@@ -37,7 +28,6 @@ class CalComBookingProcessor
         private EntityManager $entityManager,
         private CalComPayloadParser $parser,
         private CalComContactMatcher $matcher,
-        private JobSchedulerFactory $jobSchedulerFactory,
         private Crypt $crypt,
         private Log $log,
     ) {}
@@ -46,15 +36,15 @@ class CalComBookingProcessor
      * @param array<string, string> $headers  Lower-cased header map.
      */
     public function process(
-        string $apiKey,
+        string $integrationId,
         stdClass $rawPayload,
         string $rawBody,
         array $headers,
     ): ProcessResult {
-        $integration = $this->resolveIntegration($apiKey);
+        $integration = $this->resolveIntegration($integrationId);
 
         if (!$integration) {
-            return ProcessResult::notFound('Unknown cal.com apiKey.');
+            return ProcessResult::notFound('Unknown CalComIntegration id.');
         }
 
         if (!$integration->get('isActive')) {
@@ -85,42 +75,23 @@ class CalComBookingProcessor
             );
         }
 
-        // CAPI forwarding is optional. If not configured -> still ACCEPT the webhook.
-        $datasetId = $integration->get('metaCapiDatasetId');
-        $capiEventName = $datasetId
-            ? $this->resolveCapiEventName($integration, $booking->triggerEvent)
-            : null;
-
-        $details = [
+        return $this->finish($integration, ProcessResult::accepted([
             'contactId'    => $contact->getId(),
             'triggerEvent' => $booking->triggerEvent,
             'bookingUid'   => $booking->bookingUid,
-        ];
-
-        if ($datasetId && $capiEventName !== null) {
-            $this->enqueueCapiEvent($datasetId, $contact, $capiEventName, $booking);
-            $details['capiEventName'] = $capiEventName;
-            $details['capiDispatched'] = true;
-        } else {
-            $details['capiDispatched'] = false;
-            $details['capiSkipReason'] = $datasetId
-                ? sprintf('No CAPI mapping for triggerEvent=%s.', $booking->triggerEvent)
-                : 'No metaCapiDataset linked to this integration.';
-        }
-
-        return $this->finish($integration, ProcessResult::accepted($details));
+        ]));
     }
 
-    private function resolveIntegration(string $apiKey): ?CalComIntegration
+    private function resolveIntegration(string $integrationId): ?CalComIntegration
     {
-        if ($apiKey === '') {
+        if ($integrationId === '') {
             return null;
         }
 
         $entity = $this->entityManager
             ->getRDBRepository(CalComIntegration::ENTITY_TYPE)
             ->where([
-                'apiKey'  => $apiKey,
+                'id'      => $integrationId,
                 'deleted' => false,
             ])
             ->findOne();
@@ -161,86 +132,6 @@ class CalComBookingProcessor
         }
 
         return null;
-    }
-
-    private function resolveCapiEventName(CalComIntegration $integration, string $triggerEvent): ?string
-    {
-        $mapping = $integration->get('metaCapiEventMapping');
-
-        if (!is_object($mapping) && !is_array($mapping)) {
-            return null;
-        }
-
-        if (is_object($mapping)) {
-            $mapping = (array) $mapping;
-        }
-
-        $eventName = $mapping[$triggerEvent] ?? null;
-
-        if (!is_string($eventName)) {
-            return null;
-        }
-
-        $eventName = trim($eventName);
-
-        return $eventName === '' ? null : $eventName;
-    }
-
-    private function enqueueCapiEvent(
-        string $datasetId,
-        Contact $contact,
-        string $eventName,
-        ParsedCalComBooking $booking,
-    ): void {
-        $customData = $this->buildCapiCustomData($booking);
-
-        // event_id derived from bookingUid + eventName so we can dedupe with
-        // a browser-side Pixel call on the booking confirmation page.
-        $eventId = $booking->bookingUid
-            ? hash('sha256', sprintf('calcom:%s:%s', $booking->bookingUid, $eventName))
-            : null;
-
-        try {
-            $this->jobSchedulerFactory
-                ->create()
-                ->setClassName(SendCapiEvent::class)
-                ->setData([
-                    'entityType' => Contact::ENTITY_TYPE,
-                    'entityId'   => $contact->getId(),
-                    'eventName'  => $eventName,
-                    'datasetId'  => $datasetId,
-                    'context'    => [
-                        'eventId'    => $eventId,
-                        'customData' => $customData,
-                    ],
-                ])
-                ->setGroup('calcom-' . ($booking->bookingUid ?? $contact->getId()))
-                ->schedule();
-        } catch (Throwable $e) {
-            $this->log->error('CalCom: failed to enqueue SendCapiEvent: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildCapiCustomData(ParsedCalComBooking $booking): array
-    {
-        $data = [
-            'source'        => 'cal.com',
-            'trigger_event' => $booking->triggerEvent,
-        ];
-
-        if ($booking->bookingUid)    { $data['booking_uid']      = $booking->bookingUid; }
-        if ($booking->eventTypeSlug) { $data['content_name']     = $booking->eventTypeSlug; }
-        if ($booking->eventTypeId)   { $data['content_ids']      = [$booking->eventTypeId]; }
-        if ($booking->title)         { $data['content_category'] = $booking->title; }
-        if ($booking->startTime)     {
-            $data['delivery_category'] = 'in_store';
-            $data['scheduled_for']     = $booking->startTime;
-        }
-
-        return $data;
     }
 
     private function finish(CalComIntegration $integration, ProcessResult $result): ProcessResult

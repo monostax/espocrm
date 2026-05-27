@@ -1,0 +1,27 @@
+{
+    "tracking": {
+        "label": "Tracking",
+        "order": 27,
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#TrackingSource",
+                "label": "Sources",
+                "iconClass": "ti ti-broadcast",
+                "description": "trackingSources"
+            },
+            {
+                "url": "#TrackingEventType",
+                "label": "Event Types",
+                "iconClass": "ti ti-list-details",
+                "description": "trackingEventTypes"
+            },
+            {
+                "url": "#TrackingEvent",
+                "label": "Events",
+                "iconClass": "ti ti-activity",
+                "description": "trackingEvents"
+            }
+        ]
+    }
+}

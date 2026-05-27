@@ -1,0 +1,158 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true,
+            "pattern": "$noBadCharacters"
+        },
+        "kind": {
+            "type": "enum",
+            "required": true,
+            "options": ["Website", "Chatwoot", "Server", "Mobile", "Other"],
+            "default": "Website",
+            "style": {
+                "Server": "info"
+            }
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "ingestUrl": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "utility": true,
+            "view": "feature-tracking-event:views/tracking-source/fields/ingest-url",
+            "tooltip": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true,
+            "directAccessDisabled": true
+        },
+        "signingSecret": {
+            "type": "password",
+            "dbType": "text",
+            "tooltip": true,
+            "audited": false,
+            "comment": "HMAC-SHA256 secret. If set, X-Tracking-Signature header is required on every ingest call. Strongly recommended."
+        },
+        "allowedOrigins": {
+            "type": "text",
+            "tooltip": true,
+            "comment": "One CORS origin per line (e.g. https://www.example.com). Only honoured for kind=Website."
+        },
+        "allowUnknownEventCode": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true,
+            "comment": "If true, ingestion auto-creates a TrackingEventType (category=Custom) for unknown codes. Turn off once your event dictionary stabilises."
+        },
+        "description": {
+            "type": "text"
+        },
+        "lastEventReceivedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastEventStatus": {
+            "type": "enum",
+            "options": ["", "Accepted", "Skipped", "BadRequest", "Unauthorized"],
+            "default": "",
+            "readOnly": true,
+            "style": {
+                "Accepted": "success",
+                "Skipped": "warning",
+                "BadRequest": "danger",
+                "Unauthorized": "danger"
+            }
+        },
+        "lastEventError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "totalEventsReceived": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by AssignTenantFromTeam hook."
+        },
+        "events": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "view": "views/fields/link-multiple",
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "trackingSources"
+        },
+        "events": {
+            "type": "hasMany",
+            "entity": "TrackingEvent",
+            "foreign": "trackingSource"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "name": { "columns": ["name", "deleted"] },
+        "isActive": { "columns": ["isActive"] },
+        "kind": { "columns": ["kind"] },
+        "tenantId": { "columns": ["tenantId"] }
+    }
+}

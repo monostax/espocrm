@@ -4,12 +4,10 @@
     },
     "fields": {
         "metaCapiEventName": "Meta CAPI Event Name (on enter)",
-        "metaCapiEventNameOnLeave": "Meta CAPI Event Name (on leave)",
-        "metaCapiActive": "CAPI Active"
+        "metaCapiEventNameOnLeave": "Meta CAPI Event Name (on leave)"
     },
     "tooltips": {
         "metaCapiEventName": "Event name sent to Meta when an Opportunity ENTERS this stage. E.g. Lead, MQL, SQL, Purchase. Leave empty to not fire.",
-        "metaCapiEventNameOnLeave": "Optional: event fired when an Opportunity LEAVES this stage. Useful for marking step completion or Closed Lost.",
-        "metaCapiActive": "Read-only. True when the parent Funnel has metaCapiEnabled=true AND a linked active MetaCapiDataset. Maintained automatically; do not edit. Drives visibility of the Meta Conversions API section."
+        "metaCapiEventNameOnLeave": "Optional: event fired when an Opportunity LEAVES this stage. Useful for marking step completion or Closed Lost."
     }
 }

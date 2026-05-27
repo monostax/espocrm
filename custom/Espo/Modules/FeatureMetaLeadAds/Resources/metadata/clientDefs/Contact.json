@@ -7,7 +7,7 @@
                 "view": "views/record/panels/relationship",
                 "select": false,
                 "create": false,
-                "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove",
+                "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove",
                 "order": 50
             }
         ]
@@ -16,7 +16,7 @@
         "metaLeadgenAnswers": {
             "create": false,
             "select": false,
-            "rowActionsView": "views/record/row-actions/relationship-no-edit-no-remove"
+            "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove"
         }
     }
 }

@@ -1,0 +1,9 @@
+{
+    "links": {
+        "trackingEvents": {
+            "type": "hasMany",
+            "entity": "TrackingEvent",
+            "foreign": "contact"
+        }
+    }
+}

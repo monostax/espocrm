@@ -4,6 +4,7 @@
     "teams",
     "followupStatus",
     "followupTimer",
+    "followupCount",
     "followupAiAgent",
     "createdAt",
     "createdBy",

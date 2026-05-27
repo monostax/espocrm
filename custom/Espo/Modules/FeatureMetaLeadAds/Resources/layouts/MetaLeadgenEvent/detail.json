@@ -3,7 +3,7 @@
         "label": "Overview",
         "rows": [
             [{ "name": "leadgenId" }, { "name": "status" }],
-            [{ "name": "formId" }, { "name": "pageId" }],
+            [{ "name": "formId" }, { "name": "metaPageId" }],
             [{ "name": "adId" }, { "name": "metaCreatedTime" }],
             [{ "name": "processedAt" }, false]
         ]

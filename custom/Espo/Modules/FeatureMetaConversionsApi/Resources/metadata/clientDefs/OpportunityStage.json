@@ -9,7 +9,7 @@
                     "conditionGroup": [
                         {
                             "type": "isTrue",
-                            "attribute": "metaCapiActive"
+                            "attribute": "funnelMetaCapiReady"
                         }
                     ]
                 }

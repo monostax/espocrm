@@ -91,6 +91,17 @@ class CalComPayloadParser
             $fbc = sprintf('fb.1.%d.%s', $startTime ?? time(), $fbclid);
         }
 
+        // Google Ads click identifier (gclid URL param, set by Google Ads auto-tagging).
+        $gclid = $this->extractTrackingId($payload, ['gclid']);
+
+        // GA4 client_id (CID). Accept multiple identifiers — the user's redirect script
+        // forwards `ga_client_id` (last two segments of the _ga cookie), but some setups
+        // pass the full `_ga` cookie value or `gaClientId`. Normalise to CID form.
+        $gaClientId = $this->extractTrackingId($payload, ['ga_client_id', 'gaClientId', '_ga']);
+        if ($gaClientId !== null) {
+            $gaClientId = $this->normaliseGaClientId($gaClientId);
+        }
+
         $title = $this->stringOrNull($payload, 'title');
 
         return new ParsedCalComBooking(
@@ -108,6 +119,8 @@ class CalComPayloadParser
             fbc: $fbc,
             fbp: $fbp,
             fbclid: $fbclid,
+            gclid: $gclid,
+            gaClientId: $gaClientId,
         );
     }
 
@@ -214,6 +227,34 @@ class CalComPayloadParser
         $ts = strtotime($payload->{$field});
 
         return $ts === false ? null : $ts;
+    }
+
+    /**
+     * Normalises a GA4 client_id to CID form (two dot-separated numeric segments).
+     *
+     * Accepts both:
+     *   - Full `_ga` cookie value, e.g. "GA1.1.1234567890.1234567890" -> "1234567890.1234567890"
+     *   - Already-CID form, e.g. "1234567890.1234567890" -> "1234567890.1234567890"
+     *
+     * Returns null if the value can't be normalised (malformed cookie/CID).
+     */
+    private function normaliseGaClientId(string $value): ?string
+    {
+        $parts = explode('.', $value);
+        $count = count($parts);
+
+        // Need at least 2 segments and the last two must be numeric.
+        if ($count < 2) {
+            return null;
+        }
+
+        $cid = $parts[$count - 2] . '.' . $parts[$count - 1];
+
+        if (!preg_match('/^\d+\.\d+$/', $cid)) {
+            return null;
+        }
+
+        return $cid;
     }
 
     private function stringOrNull(stdClass $obj, string $field): ?string

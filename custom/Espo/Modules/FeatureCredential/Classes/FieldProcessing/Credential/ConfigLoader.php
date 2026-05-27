@@ -15,7 +15,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\FieldProcessing\Loader as LoaderInterface;
 use Espo\Core\FieldProcessing\Loader\Params;
-use Espo\Core\Utils\Crypt;
+use Espo\Modules\FeatureCredential\Tools\Credential\CredentialConfigCipher;
 use Espo\Tools\OAuth\TokensProvider;
 use Espo\Tools\OAuth\Exceptions\AccountNotFound;
 use Espo\Tools\OAuth\Exceptions\NoToken;
@@ -25,16 +25,35 @@ use Espo\Core\Utils\Log;
 use stdClass;
 
 /**
- * Merges live OAuth tokens into the Credential's config field on read.
+ * Decrypts secret fields and merges live OAuth tokens into `Credential.config`
+ * at read time.
  *
- * For OAuth-backed credentials (those with an oAuthAccountId), this loader
- * fetches fresh tokens from the linked OAuthAccount via TokensProvider and
- * maps them into the config JSON using the tokenFieldMapping defined on the
- * CredentialType. Non-OAuth credentials are left unchanged.
+ * # Pipeline
  *
- * This ensures that API consumers reading a Credential via standard CRUD
- * endpoints receive the fully resolved config (with accessToken, etc.)
- * while benefiting from EspoCRM's built-in ACL checks.
+ *   1. Parse the raw `config` JSON.
+ *   2. {@see CredentialConfigCipher::decryptFields()} — transparent decrypt
+ *      of any field listed in `CredentialType.encryptionFields` that carries
+ *      the `enc:v1:` marker. Legacy plaintext rows pass through unchanged.
+ *   3. If the Credential is linked to an OAuthAccount AND
+ *      `CredentialType.tokenFieldMapping` is defined: overwrite the mapped
+ *      config fields with live (auto-refreshed) tokens from `TokensProvider`.
+ *      This is the existing behaviour; OAuth tokens always come from the
+ *      live source, never from `config` at rest.
+ *   4. Write the resolved config back onto the entity (in-memory only).
+ *
+ * # Why the write-back is important
+ *
+ * `readLoaderClassNameList` runs during API serialization. By overwriting
+ * `entity.config` here we make standard CRUD GET responses return the fully
+ * resolved (decrypted + OAuth-merged) config without callers needing to know
+ * about encryption or OAuth. ACL is still enforced upstream by the standard
+ * record service.
+ *
+ * # Safety
+ *
+ * Decryption failures and OAuth-token-fetch failures are non-fatal: a warning
+ * is logged and the partially-resolved config is still returned. We don't
+ * want a single broken OAuth account to break list-views of all Credentials.
  *
  * @implements LoaderInterface<Entity>
  */
@@ -44,28 +63,48 @@ class ConfigLoader implements LoaderInterface
         private EntityManager $entityManager,
         private TokensProvider $tokensProvider,
         private Log $log,
+        private CredentialConfigCipher $cipher,
     ) {}
 
     public function process(Entity $entity, Params $params): void
     {
-        $oAuthAccountId = $entity->get('oAuthAccountId');
+        $configRaw = $entity->get('config');
 
-        if (!$oAuthAccountId) {
+        if (!is_string($configRaw) || $configRaw === '') {
             return;
+        }
+
+        $config = json_decode($configRaw);
+
+        if (!$config instanceof stdClass) {
+            $config = new stdClass();
         }
 
         $credentialTypeId = $entity->get('credentialTypeId');
 
-        if (!$credentialTypeId) {
-            return;
+        $credentialType = $credentialTypeId
+            ? $this->entityManager->getEntityById('CredentialType', $credentialTypeId)
+            : null;
+
+        // Step 1: transparent decrypt of secret fields.
+        $config = $this->cipher->decryptFields($config, $credentialType);
+
+        // Step 2: OAuth token merge (only when applicable).
+        $oAuthAccountId = $entity->get('oAuthAccountId');
+
+        if ($oAuthAccountId && $credentialType) {
+            $this->mergeOAuthTokens($entity, $config, $credentialType, (string) $oAuthAccountId);
         }
 
-        $credentialType = $this->entityManager->getEntityById('CredentialType', $credentialTypeId);
+        $entity->set('config', json_encode($config));
+    }
 
-        if (!$credentialType) {
-            return;
-        }
-
+    private function mergeOAuthTokens(
+        Entity $entity,
+        stdClass $config,
+        Entity $credentialType,
+        string $oAuthAccountId,
+    ): void {
         $mappingRaw = $credentialType->get('tokenFieldMapping');
 
         if (!$mappingRaw) {
@@ -78,13 +117,6 @@ class ConfigLoader implements LoaderInterface
 
         if (empty($mapping)) {
             return;
-        }
-
-        $configRaw = $entity->get('config') ?: '{}';
-        $config = json_decode($configRaw);
-
-        if (!$config instanceof stdClass) {
-            $config = new stdClass();
         }
 
         try {
@@ -106,7 +138,5 @@ class ConfigLoader implements LoaderInterface
                 default => null,
             };
         }
-
-        $entity->set('config', json_encode($config));
     }
 }

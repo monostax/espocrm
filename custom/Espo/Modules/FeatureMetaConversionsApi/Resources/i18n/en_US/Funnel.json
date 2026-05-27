@@ -1,13 +1,15 @@
 {
     "fields": {
         "metaCapiEnabled": "Meta CAPI Enabled",
-        "metaCapiDataset": "Meta CAPI Dataset"
+        "metaCapiDataset": "Meta CAPI Dataset",
+        "metaCapiReady": "Meta CAPI Ready"
     },
     "links": {
         "metaCapiDataset": "Meta CAPI Dataset"
     },
     "tooltips": {
         "metaCapiEnabled": "When enabled, stage changes on Opportunities in this funnel send events to Meta Conversions API.",
-        "metaCapiDataset": "Which Dataset (Pixel) receives events from this funnel. If empty, the Default dataset is used."
+        "metaCapiDataset": "Which Dataset (Pixel) receives events from this funnel. If empty, the Default dataset is used.",
+        "metaCapiReady": "Read-only. True iff this funnel is fully wired: metaCapiEnabled AND a linked, active MetaCapiDataset. Drives whether the OpportunityStage detail layout exposes the Meta Conversions API panel."
     }
 }

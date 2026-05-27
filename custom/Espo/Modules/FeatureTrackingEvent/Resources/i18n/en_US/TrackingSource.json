@@ -1,0 +1,49 @@
+{
+    "labels": {
+        "Create TrackingSource": "Create Tracking Source",
+        "Tracking Events": "Tracking Events"
+    },
+    "messages": {
+        "ingestUrlPendingSave": "Save this source to reveal the ingest URL."
+    },
+    "fields": {
+        "name": "Name",
+        "kind": "Kind",
+        "isActive": "Active",
+        "ingestUrl": "Ingest URL",
+        "signingSecret": "Signing Secret",
+        "allowedOrigins": "Allowed Origins",
+        "allowUnknownEventCode": "Auto-create Unknown Codes",
+        "description": "Description",
+        "lastEventReceivedAt": "Last Event Received",
+        "lastEventStatus": "Last Event Status",
+        "lastEventError": "Last Event Error",
+        "totalEventsReceived": "Total Events",
+        "tenant": "Tenant",
+        "events": "Events"
+    },
+    "tooltips": {
+        "ingestUrl": "Public URL to POST events to. The path id is the row id — anyone with this URL can attempt ingestion, so always set a signing secret for production sources.",
+        "signingSecret": "HMAC-SHA256 secret used to verify the X-Tracking-Signature header. Strongly recommended for every source — without it, anyone with the ingest URL can post events.",
+        "allowedOrigins": "One CORS origin per line (e.g. https://www.example.com). Only honoured for kind=Website — browser ingestion is blocked unless the Origin matches.",
+        "allowUnknownEventCode": "If true, ingestion auto-creates a TrackingEventType (category=Custom) for unknown codes. Turn off once your event dictionary stabilises.",
+        "lastEventError": "Last non-success status reason. Updated on every ingest attempt regardless of outcome.",
+        "tenant": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by the AssignTenantFromTeam hook — assign teams to populate this."
+    },
+    "options": {
+        "kind": {
+            "Website": "Website",
+            "Chatwoot": "Chatwoot",
+            "Server": "Server",
+            "Mobile": "Mobile",
+            "Other": "Other"
+        },
+        "lastEventStatus": {
+            "": "—",
+            "Accepted": "Accepted",
+            "Skipped": "Skipped",
+            "BadRequest": "Bad Request",
+            "Unauthorized": "Unauthorized"
+        }
+    }
+}

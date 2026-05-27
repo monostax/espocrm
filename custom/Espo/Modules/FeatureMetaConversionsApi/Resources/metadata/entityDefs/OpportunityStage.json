@@ -12,13 +12,17 @@
             "trim": true,
             "tooltip": true
         },
-        "metaCapiActive": {
-            "type": "bool",
-            "default": false,
+        "funnelMetaCapiReady": {
+            "type": "foreign",
+            "link": "funnel",
+            "field": "metaCapiReady",
             "readOnly": true,
-            "audited": false,
-            "tooltip": true,
-            "comment": "Denormalised: true iff this stage's parent Funnel has metaCapiEnabled=true AND a linked active MetaCapiDataset. Maintained by Funnel/AfterSave/SyncStageCapiActive and MetaCapiDataset/AfterSave/SyncStagesOnIsActiveChange. Drives UI visibility of the Meta Conversions API section on the stage detail layout."
+            "notStorable": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "comment": "Foreign read-through of Funnel.metaCapiReady. NOT stored on this row — resolved via a JOIN at query time. Drives panel visibility on the OpportunityStage detail layout; lives on Funnel as a single source of truth so we don't denormalise the same bool onto every stage."
         }
     }
 }

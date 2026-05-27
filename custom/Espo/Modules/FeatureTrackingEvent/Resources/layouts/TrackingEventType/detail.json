@@ -1,0 +1,25 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "name" }, { "name": "code" }],
+            [{ "name": "category" }, { "name": "isActive" }],
+            [{ "name": "isHighValue" }, false],
+            [{ "name": "description" }, false]
+        ]
+    },
+    {
+        "label": "Statistics",
+        "rows": [
+            [{ "name": "totalEventsReceived" }, { "name": "lastEventAt" }]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "googleGclid": {
+            "type": "varchar",
+            "maxLength": 255,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Google Ads click identifier. Captured from gclid URL param at booking time (e.g. via cal.com hidden Booking Question)."
+        },
+        "googleGaClientId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true,
+            "comment": "Google Analytics 4 client_id (CID). Derived from the _ga cookie (last two dot-separated segments). Used for GA4 Measurement Protocol / Google Ads Enhanced Conversions joins."
+        }
+    }
+}

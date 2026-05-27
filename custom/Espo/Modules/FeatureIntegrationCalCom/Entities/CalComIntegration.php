@@ -9,11 +9,12 @@ use Espo\Core\ORM\Entity;
 /**
  * CalComIntegration entity — one row per cal.com webhook endpoint configured.
  *
+ * The entity id IS the webhook slug: cal.com posts to
+ * /api/v1/CalCom/receive/{id}.
+ *
  * Each row owns:
- *   - a unique apiKey (URL slug for the webhook endpoint)
  *   - an HMAC signing secret (encrypted at rest)
- *   - optional link to a MetaCapiDataset (when set, bookings are forwarded to Meta CAPI)
- *   - a triggerEvent → Meta event_name mapping
+ *   - per-tenant scoping derived from the selected teams
  *
  * One tenant can have N integrations (e.g. one per cal.com workspace / event type).
  */

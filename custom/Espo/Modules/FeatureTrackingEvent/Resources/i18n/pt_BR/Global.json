@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "TrackingEvents": "Eventos de Rastreamento"
+    },
+    "scopeNames": {
+        "TrackingSource": "Fonte de Rastreamento",
+        "TrackingEventType": "Tipo de Evento de Rastreamento",
+        "TrackingEvent": "Evento de Rastreamento"
+    },
+    "scopeNamesPlural": {
+        "TrackingSource": "Fontes de Rastreamento",
+        "TrackingEventType": "Tipos de Evento de Rastreamento",
+        "TrackingEvent": "Eventos de Rastreamento"
+    }
+}

@@ -4,12 +4,10 @@
     },
     "fields": {
         "metaCapiEventName": "Meta CAPI Event Name (entrada)",
-        "metaCapiEventNameOnLeave": "Meta CAPI Event Name (saída)",
-        "metaCapiActive": "CAPI Ativo"
+        "metaCapiEventNameOnLeave": "Meta CAPI Event Name (saída)"
     },
     "tooltips": {
         "metaCapiEventName": "Nome do evento enviado para a Meta quando uma Oportunidade ENTRA nesta stage. Ex: Lead, MQL, SQL, Purchase. Deixe vazio para não disparar.",
-        "metaCapiEventNameOnLeave": "Opcional: evento disparado quando a Oportunidade SAI desta stage. Útil para marcar conclusão de etapa ou Closed Lost.",
-        "metaCapiActive": "Somente leitura. True quando o Funnel pai tem metaCapiEnabled=true E um MetaCapiDataset ativo vinculado. Mantido automaticamente; não editar. Controla a visibilidade da seção Meta Conversions API."
+        "metaCapiEventNameOnLeave": "Opcional: evento disparado quando a Oportunidade SAI desta stage. Útil para marcar conclusão de etapa ou Closed Lost."
     }
 }

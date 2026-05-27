@@ -1,8 +1,6 @@
 [
     { "name": "name", "link": true },
     { "name": "isActive" },
-    { "name": "apiKey" },
-    { "name": "metaCapiDataset" },
     { "name": "lastWebhookStatus" },
     { "name": "lastWebhookReceivedAt" },
     { "name": "totalWebhooksReceived" }

@@ -37,13 +37,14 @@ use Throwable;
  * Newly created Contacts get:
  *   - firstName, lastName, emailAddress, phoneNumber (from booking)
  *   - source = "Cal.com"  (free-text; harmless if the field doesn't exist on the tenant)
- *   - metaFbc, metaFbp (if present in booking)  -> drives match quality
+ *   - metaFbc, metaFbp (if present in booking)  -> drives Meta CAPI match quality
+ *   - googleGclid, googleGaClientId (if present) -> drives Google Ads / GA4 attribution
  *   - metaCapturedAt = now
  *   - teamsIds, tenantId  <- inherited from the CalComIntegration
  *
  * Existing Contacts are augmented (never overwritten) with missing
- * metaFbc/metaFbp/phone — only when the Contact's tenant matches the
- * integration's tenant.
+ * metaFbc/metaFbp/googleGclid/googleGaClientId/phone — only when the
+ * Contact's tenant matches the integration's tenant.
  */
 class CalComContactMatcher
 {
@@ -147,6 +148,16 @@ class CalComContactMatcher
             $changed = true;
         }
 
+        if (!$contact->get('googleGclid') && $booking->gclid) {
+            $contact->set('googleGclid', $booking->gclid);
+            $changed = true;
+        }
+
+        if (!$contact->get('googleGaClientId') && $booking->gaClientId) {
+            $contact->set('googleGaClientId', $booking->gaClientId);
+            $changed = true;
+        }
+
         if ($changed) {
             try {
                 $this->entityManager->saveEntity($contact, ['skipHooks' => true, 'silent' => true]);
@@ -187,6 +198,14 @@ class CalComContactMatcher
 
             if ($booking->fbp) {
                 $contact->set('metaFbp', $booking->fbp);
+            }
+
+            if ($booking->gclid) {
+                $contact->set('googleGclid', $booking->gclid);
+            }
+
+            if ($booking->gaClientId) {
+                $contact->set('googleGaClientId', $booking->gaClientId);
             }
 
             $contact->set('metaCapturedAt', date('Y-m-d H:i:s'));

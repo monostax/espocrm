@@ -1,0 +1,129 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true,
+            "pattern": "$noBadCharacters"
+        },
+        "code": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 64,
+            "trim": true,
+            "pattern": "^[a-z0-9_]+$",
+            "tooltip": true,
+            "comment": "Stable slug used in API payloads. Unique per tenant. Format: lowercase letters, digits, underscores."
+        },
+        "category": {
+            "type": "enum",
+            "required": true,
+            "options": ["WebTraffic", "InboundMessage", "FormSubmit", "Conversion", "System", "Custom"],
+            "default": "Custom",
+            "style": {
+                "Conversion": "success",
+                "System": "info"
+            }
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "isHighValue": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true,
+            "comment": "Marks the event as a conversion-worthy signal (e.g. eligible for CAPI dispatch). Consumed by downstream modules."
+        },
+        "description": {
+            "type": "text"
+        },
+        "totalEventsReceived": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "lastEventAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by AssignTenantFromTeam hook."
+        },
+        "events": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "view": "views/fields/link-multiple",
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true
+        }
+    },
+    "links": {
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "trackingEventTypes"
+        },
+        "events": {
+            "type": "hasMany",
+            "entity": "TrackingEvent",
+            "foreign": "trackingEventType"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "codeTenant": {
+            "columns": ["code", "tenantId", "deleted"],
+            "unique": true
+        },
+        "isActive": { "columns": ["isActive"] },
+        "category": { "columns": ["category"] },
+        "tenantId": { "columns": ["tenantId"] }
+    }
+}

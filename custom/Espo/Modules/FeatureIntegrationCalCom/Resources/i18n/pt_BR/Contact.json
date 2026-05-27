@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "googleGclid": "ID de Clique Google Ads (gclid)",
+        "googleGaClientId": "Client ID GA4"
+    },
+    "tooltips": {
+        "googleGclid": "Identificador de clique do Google Ads. Capturado do parâmetro de URL gclid no momento do booking, via Booking Question oculta do cal.com.",
+        "googleGaClientId": "client_id do GA4 (CID). Derivado do cookie _ga (últimos dois segmentos separados por ponto). Usado para joins via GA4 Measurement Protocol / Google Ads Enhanced Conversions."
+    }
+}
