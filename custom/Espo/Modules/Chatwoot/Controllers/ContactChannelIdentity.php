@@ -1,0 +1,16 @@
+<?php
+/************************************************************************
+ * This file is part of Monostax.
+ *
+ * Monostax – Custom EspoCRM extensions.
+ * Copyright (C) 2025 Antonio Moura. All rights reserved.
+ * Website: https://www.monostax.ai
+ *
+ * PROPRIETARY AND CONFIDENTIAL
+ ************************************************************************/
+
+namespace Espo\Modules\Chatwoot\Controllers;
+
+class ContactChannelIdentity extends \Espo\Core\Templates\Controllers\Base
+{
+}
