@@ -23,6 +23,7 @@
                 "DRAFT",
                 "CREATING",
                 "PENDING_QR",
+                "PENDING_COEXISTENCE_CONFIRMATION",
                 "CONNECTING",
                 "ACTIVE",
                 "DISCONNECTED",
@@ -34,6 +35,7 @@
                 "DRAFT": "default",
                 "CREATING": "info",
                 "PENDING_QR": "warning",
+                "PENDING_COEXISTENCE_CONFIRMATION": "warning",
                 "CONNECTING": "info",
                 "ACTIVE": "success",
                 "DISCONNECTED": "danger",
@@ -43,12 +45,13 @@
         },
         "channelType": {
             "type": "enum",
-            "options": ["whatsappQrcode", "whatsappCloudApi", "instagram"],
+            "options": ["whatsappQrcode", "whatsappCloudApi", "whatsappCoexistence", "instagram"],
             "default": "whatsappQrcode",
             "view": "global:views/fields/svg-icon-enum",
             "svgIconByValue": {
                 "whatsappQrcode": "whatsapp",
                 "whatsappCloudApi": "whatsapp",
+                "whatsappCoexistence": "whatsapp",
                 "instagram": "instagram"
             },
             "readOnlyAfterCreate": true

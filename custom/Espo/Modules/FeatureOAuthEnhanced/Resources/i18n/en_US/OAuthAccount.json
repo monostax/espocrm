@@ -1,7 +1,24 @@
 {
     "fields": {
         "teams": "Teams",
-        "assignedUsers": "Assigned Users"
+        "assignedUsers": "Assigned Users",
+        "whatsappBusinessAccountId": "WABA ID",
+        "whatsappPhoneNumberId": "Phone Number ID",
+        "whatsappOnboardingType": "Onboarding Type",
+        "whatsappCoexistenceSyncedAt": "Coexistence Synced At"
+    },
+    "options": {
+        "whatsappOnboardingType": {
+            "": "—",
+            "cloud_api": "Cloud API",
+            "coexistence": "Coexistence (Cloud API + WhatsApp Business app)"
+        }
+    },
+    "tooltips": {
+        "whatsappBusinessAccountId": "WABA ID captured from the Embedded Signup popup. Read-only.",
+        "whatsappPhoneNumberId": "Phone Number ID captured from the Embedded Signup popup. Read-only.",
+        "whatsappOnboardingType": "Type of WhatsApp onboarding completed in the Embedded Signup popup.",
+        "whatsappCoexistenceSyncedAt": "When the contacts + history sync (POST /smb_app_data) completed. Empty for non-Coexistence accounts. The sync has a 24-hour deadline after onboarding."
     },
     "links": {
         "teams": "Teams",

@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\FeatureMetaWhatsAppBusiness\\Rebuild\\SeedOAuthProviderMetaWhatsApp"
+        "Espo\\Modules\\FeatureMetaWhatsAppBusiness\\Rebuild\\SeedOAuthProviderMetaWhatsApp",
+        "Espo\\Modules\\FeatureMetaWhatsAppBusiness\\Rebuild\\SeedOAuthProviderMetaWhatsAppCoexistence"
     ]
 }

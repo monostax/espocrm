@@ -1,12 +1,23 @@
 {
     "labels": {
         "configureMetaWhatsAppWebhook": "Configure WhatsApp App Secret",
-        "Configuring WhatsApp webhook...": "Configuring WhatsApp webhook..."
+        "Configuring WhatsApp webhook...": "Configuring WhatsApp webhook...",
+        "connectWithEmbeddedSignup": "Connect with Meta (Embedded Signup)",
+        "connectWithEmbeddedSignupCoexistence": "Connect WhatsApp Business app (Coexistence)"
+    },
+    "tooltips": {
+        "configurationId": "Meta Facebook Login for Business Configuration ID (config_id). Create one in Meta Business Suite under Apps → <your app> → Facebook Login for Business → Configurations, then paste the ID here.",
+        "embeddedSignupVersion": "Embedded Signup release version. v4 is required for the Coexistence flow (WhatsApp Business app onboarding). v2 is deprecated 2026-10-15."
     },
     "messages": {
         "confirmConfigureMetaWhatsAppWebhook": "This will push this Meta App's clientSecret to every ChatwootPlatform so Chatwoot can validate HMAC signatures on inbound WhatsApp webhook events. Proceed?",
         "whatsappWebhookConfigured": "WhatsApp app secret synced to Chatwoot. Incoming webhook events from this Meta App will now be signature-verified.",
         "whatsappWebhookConfiguredChatwootFailed": "Some ChatwootPlatforms failed to accept the app secret:",
-        "whatsappWebhookConfigFailed": "WhatsApp webhook configuration failed."
+        "whatsappWebhookConfigFailed": "WhatsApp webhook configuration failed.",
+        "embeddedSignupMissingClientId": "This OAuth Provider has no Client ID set. Open Admin → OAuth Providers, paste your Meta App ID into Client ID, then try again.",
+        "embeddedSignupMissingConfigId": "This OAuth Provider has no Embedded Signup Config ID set. Open Admin → OAuth Providers and paste the Facebook Login for Business configuration ID from Meta Business Suite.",
+        "embeddedSignupNoSessionInfo": "Connected, but Meta didn't return waba_id / phone_number_id. Coexistence/Cloud API sync was skipped — you can re-run the Embedded Signup flow to retry.",
+        "embeddedSignupFinishFailed": "Connected, but the follow-up step that registers the WABA and phone with Monostax failed. A background retry has been queued.",
+        "coexistencePendingInAppStep": "Authentication succeeded, but the customer hasn't finished pasting the verification code inside the WhatsApp Business app yet. Webhooks will start flowing once they do. The sync will retry in the background."
     }
 }

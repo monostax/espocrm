@@ -2,8 +2,8 @@ define('chatwoot:views/chatwoot-inbox-integration/record/edit', ['views/record/e
     return Dep.extend({
         exitAfterCreate: function () {
             const chatwootInboxRecordId = this.model.get('chatwootInboxRecordId');
-            const channelType = (this.model.get('channelType') || '').toLowerCase();
-            const isQrCodeIntegration = channelType.includes('whatsapp') && channelType.includes('qrcode');
+            const channelType = this.model.get('channelType') || '';
+            const isQrCodeIntegration = channelType === 'whatsappQrcode';
 
             if (!chatwootInboxRecordId) {
                 return Dep.prototype.exitAfterCreate.call(this);

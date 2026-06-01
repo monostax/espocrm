@@ -189,9 +189,19 @@
                     "attribute": "id"
                 },
                 {
-                    "type": "equals",
-                    "attribute": "channelType",
-                    "value": "whatsappCloudApi"
+                    "type": "or",
+                    "value": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCloudApi"
+                        },
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappCoexistence"
+                        }
+                    ]
                 }
             ]
         },

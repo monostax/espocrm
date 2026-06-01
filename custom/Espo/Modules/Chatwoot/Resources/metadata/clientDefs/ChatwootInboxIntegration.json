@@ -70,6 +70,11 @@
                                 {
                                     "type": "equals",
                                     "attribute": "channelType",
+                                    "value": "whatsappCoexistence"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
                                     "value": "instagram"
                                 }
                             ]
@@ -89,6 +94,11 @@
                                 {
                                     "type": "equals",
                                     "attribute": "channelType",
+                                    "value": "whatsappCoexistence"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
                                     "value": "instagram"
                                 }
                             ]
@@ -100,9 +110,19 @@
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "channelType",
-                            "value": "whatsappCloudApi"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCloudApi"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCoexistence"
+                                }
+                            ]
                         },
                         {
                             "type": "isNotEmpty",
@@ -124,13 +144,19 @@
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "channelType",
-                            "value": "whatsappCloudApi"
-                        },
-                        {
-                            "type": "isNotEmpty",
-                            "attribute": "businessAccountId"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCloudApi"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCoexistence"
+                                }
+                            ]
                         }
                     ]
                 },
@@ -148,9 +174,19 @@
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "channelType",
-                            "value": "whatsappCloudApi"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCloudApi"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCoexistence"
+                                }
+                            ]
                         },
                         {
                             "type": "isNotEmpty",

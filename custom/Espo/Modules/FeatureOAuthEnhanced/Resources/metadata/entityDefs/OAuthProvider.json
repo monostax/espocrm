@@ -4,6 +4,7 @@
             "type": "enum",
             "options": [
                 "meta-whatsapp",
+                "meta-whatsapp-coexistence",
                 "meta-leadads",
                 "google-calendar",
                 "google-meet",
@@ -11,7 +12,7 @@
                 "other"
             ],
             "default": "other",
-            "maxLength": 20
+            "maxLength": 32
         },
         "teams": {
             "type": "linkMultiple",

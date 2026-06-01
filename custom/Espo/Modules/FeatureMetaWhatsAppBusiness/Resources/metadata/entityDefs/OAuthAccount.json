@@ -1,0 +1,60 @@
+{
+    "fields": {
+        "providerType": {
+            "type": "foreign",
+            "link": "provider",
+            "field": "provider",
+            "readOnly": true,
+            "select": {
+                "select": "provider.provider"
+            }
+        },
+        "embeddedSignupConfigurationId": {
+            "type": "foreign",
+            "link": "provider",
+            "field": "configurationId",
+            "readOnly": true,
+            "select": {
+                "select": "provider.configurationId"
+            }
+        },
+        "whatsappBusinessAccountId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "WABA ID captured from the Embedded Signup session_info payload. Set when the OAuthAccount is created via the WhatsApp Coexistence (or Cloud API) Embedded Signup flow."
+        },
+        "whatsappPhoneNumberId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Phone number ID captured from the Embedded Signup session_info payload."
+        },
+        "whatsappOnboardingType": {
+            "type": "enum",
+            "options": ["", "cloud_api", "coexistence"],
+            "default": "",
+            "readOnly": true,
+            "maxLength": 16,
+            "tooltip": true,
+            "comment": "Type of WhatsApp onboarding completed in the Embedded Signup popup. `coexistence` means the customer also linked the WhatsApp Business app."
+        },
+        "whatsappCoexistenceSyncedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Set when POST /{phone_number_id}/smb_app_data with smb_app_state_sync completed successfully. Used to skip the (one-time, 24h-deadline) sync on re-activation."
+        },
+        "whatsappSessionInfo": {
+            "type": "jsonObject",
+            "notStorable": false,
+            "readOnly": true,
+            "dbType": "text",
+            "directAccessDisabled": true,
+            "audited": false,
+            "comment": "Raw session_info payload (sessionInfoVersion 3) from the WA_EMBEDDED_SIGNUP postMessage event. Kept for diagnostics."
+        }
+    }
+}

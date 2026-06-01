@@ -88,7 +88,7 @@ class WhatsAppBusinessAccount
                 $oAuthAccounts = [];
             }
         } else {
-            $oAuthAccounts = $this->oAuthHelper->getAccessibleOAuthAccounts('meta-whatsapp');
+            $oAuthAccounts = $this->oAuthHelper->getAccessibleOAuthAccounts(['meta-whatsapp', 'meta-whatsapp-coexistence']);
         }
 
         foreach ($oAuthAccounts as $oAuthAccount) {

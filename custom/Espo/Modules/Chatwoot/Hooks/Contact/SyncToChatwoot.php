@@ -308,7 +308,7 @@ class SyncToChatwoot
             ->getRDBRepository('ChatwootInboxIntegration')
             ->where([
                 'chatwootAccountId' => $account->getId(),
-                'channelType' => ['whatsappCloudApi', 'whatsappQrcode'],
+                'channelType' => ['whatsappCloudApi', 'whatsappCoexistence', 'whatsappQrcode'],
             ])
             ->findOne();
 

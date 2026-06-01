@@ -1,0 +1,12 @@
+{
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "connection",
+                "label": "Connection",
+                "view": "feature-meta-whatsapp-business:views/o-auth-account/records/panels/connection",
+                "notRefreshable": true
+            }
+        ]
+    }
+}

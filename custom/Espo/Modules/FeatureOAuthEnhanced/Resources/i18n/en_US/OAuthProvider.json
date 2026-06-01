@@ -3,11 +3,14 @@
         "provider": "Provider",
         "teams": "Teams",
         "assignedUsers": "Assigned Users",
-        "isGloballyShared": "Is Globally Shared"
+        "isGloballyShared": "Is Globally Shared",
+        "configurationId": "Embedded Signup Config ID",
+        "embeddedSignupVersion": "Embedded Signup Version"
     },
     "options": {
         "provider": {
             "meta-whatsapp": "Meta (WhatsApp)",
+            "meta-whatsapp-coexistence": "Meta (WhatsApp Coexistence)",
             "meta-leadads": "Meta (Lead Ads)",
             "google-calendar": "Google (Calendar)",
             "google-meet": "Google (Meet)",

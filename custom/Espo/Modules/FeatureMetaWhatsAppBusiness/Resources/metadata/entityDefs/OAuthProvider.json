@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "configurationId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true,
+            "comment": "Meta Facebook Login for Business Configuration ID (config_id) used by the FB JS SDK to launch Embedded Signup. Required for provider=meta-whatsapp-coexistence."
+        },
+        "embeddedSignupVersion": {
+            "type": "enum",
+            "options": ["", "v3", "v4"],
+            "default": "v4",
+            "maxLength": 4,
+            "tooltip": true,
+            "comment": "Embedded Signup release version. v3 deprecated 2026-08-15; v2 deprecated 2026-10-15."
+        }
+    }
+}

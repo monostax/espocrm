@@ -6,5 +6,13 @@
             "controller": "MetaWhatsAppWebhook",
             "action": "configure"
         }
+    },
+    {
+        "route": "/WhatsAppEmbeddedSignup/finish",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppEmbeddedSignup",
+            "action": "finish"
+        }
     }
 ]

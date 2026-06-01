@@ -69,6 +69,7 @@
             "DRAFT": "Draft",
             "CREATING": "Creating",
             "PENDING_QR": "Waiting for QR",
+            "PENDING_COEXISTENCE_CONFIRMATION": "Waiting for Coexistence Confirmation",
             "CONNECTING": "Connecting",
             "ACTIVE": "Active",
             "DISCONNECTED": "Disconnected",
@@ -77,6 +78,7 @@
         "channelType": {
             "whatsappQrcode": "WhatsApp Lite (QR Code)",
             "whatsappCloudApi": "WhatsApp Business (Cloud API)",
+            "whatsappCoexistence": "WhatsApp Business (Coexistence)",
             "instagram": "Instagram"
         }
     },

@@ -11,9 +11,9 @@
 /**
  * Custom field view for the phoneNumber field on ChatwootInboxIntegration.
  *
- * When channelType is "whatsappCloudApi" and in edit mode, this view renders
- * a <select> dropdown populated with phone numbers fetched from the Meta API
- * via the WhatsAppBusinessAccountPhoneNumber virtual entity.
+ * When channelType is "whatsappCloudApi" or "whatsappCoexistence" and in edit mode,
+ * this view renders a <select> dropdown populated with phone numbers fetched from
+ * the Meta API via the WhatsAppBusinessAccountPhoneNumber virtual entity.
  *
  * The phone numbers are fetched using the oAuthAccountId and businessAccountId
  * from the model (set by the WABA selector field). On selection it sets both
@@ -24,10 +24,12 @@
  */
 define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/fields/varchar'], function (Dep) {
 
+    const META_CHANNEL_TYPES = ['whatsappCloudApi', 'whatsappCoexistence'];
+
     return Dep.extend({
 
         editTemplateContent:
-            '{{#if isCloudApi}}' +
+            '{{#if isMetaWhatsApp}}' +
             '<select class="main-element form-control" data-name="{{name}}">' +
                 '<option value="">{{selectPlaceholder}}</option>' +
                 '{{#each phoneOptions}}' +
@@ -57,9 +59,9 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
 
         data: function () {
             const data = Dep.prototype.data.call(this);
-            const isCloudApi = this.model.get('channelType') === 'whatsappCloudApi';
+            const isMetaWhatsApp = META_CHANNEL_TYPES.indexOf(this.model.get('channelType')) !== -1;
 
-            data.isCloudApi = isCloudApi;
+            data.isMetaWhatsApp = isMetaWhatsApp;
             data.phoneOptions = this.phoneOptions || [];
             data.isLoading = this.isLoading;
             data.loadError = this.loadError;
@@ -79,7 +81,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
 
             // Reload phone numbers when the WABA selection changes.
             this.listenTo(this.model, 'change:businessAccountId', () => {
-                if (this.isEditMode() && this.model.get('channelType') === 'whatsappCloudApi') {
+                if (this.isEditMode() && META_CHANNEL_TYPES.indexOf(this.model.get('channelType')) !== -1) {
                     this.model.set('phoneNumber', null);
                     this.model.set('phoneNumberId', null);
                     this.fetchPhoneNumbers();
@@ -96,7 +98,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
         afterRender: function () {
             Dep.prototype.afterRender.call(this);
 
-            if (this.isEditMode() && this.model.get('channelType') === 'whatsappCloudApi') {
+            if (this.isEditMode() && META_CHANNEL_TYPES.indexOf(this.model.get('channelType')) !== -1) {
                 this.$el.find('select[data-name="' + this.name + '"]').on('change', () => {
                     this.onSelectChange();
                 });
@@ -192,7 +194,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
         },
 
         fetch: function () {
-            if (this.model.get('channelType') === 'whatsappCloudApi') {
+            if (META_CHANNEL_TYPES.indexOf(this.model.get('channelType')) !== -1) {
                 const $select = this.$el.find('select[data-name="' + this.name + '"]');
 
                 if ($select.length) {
