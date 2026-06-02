@@ -2,14 +2,20 @@
     "labels": {
         "Meta": "Meta",
         "CAPI Datasets": "Datasets CAPI",
+        "CAPI Dataset Sources": "Origens do Dataset CAPI",
+        "Conversion Events": "Eventos de Conversão",
         "CAPI Event Log": "Log de Eventos CAPI"
     },
     "descriptions": {
         "metaCapiDatasets": "Gerenciar datasets, pixels e tokens de acesso da Meta Conversions API.",
+        "metaCapiDatasetSources": "Vincular contas business do WhatsApp / Instagram a um dataset e configurar em qual funil e etapa suas conversões criam Oportunidades.",
+        "metaConversionEvents": "Revisar conversões de Click-to-WhatsApp / Instagram capturadas das conversas, sua atribuição e qualquer Oportunidade criada.",
         "metaCapiEventLog": "Inspecionar eventos enviados para a Meta Conversions API e seu status de entrega."
     },
     "keywords": {
         "metaCapiDatasets": "meta,facebook,capi,conversions,api,dataset,pixel,token",
+        "metaCapiDatasetSources": "meta,facebook,instagram,whatsapp,capi,conversions,api,origem,source,waba,funil,etapa,oportunidade",
+        "metaConversionEvents": "meta,facebook,instagram,whatsapp,capi,conversoes,ctwa,click,compra,lead,oportunidade",
         "metaCapiEventLog": "meta,facebook,capi,conversions,api,evento,log,entrega"
     }
 }

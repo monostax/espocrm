@@ -24,6 +24,7 @@
                 "CREATING",
                 "PENDING_QR",
                 "PENDING_COEXISTENCE_CONFIRMATION",
+                "PENDING_WAHA_LINK",
                 "CONNECTING",
                 "ACTIVE",
                 "DISCONNECTED",
@@ -36,6 +37,7 @@
                 "CREATING": "info",
                 "PENDING_QR": "warning",
                 "PENDING_COEXISTENCE_CONFIRMATION": "warning",
+                "PENDING_WAHA_LINK": "warning",
                 "CONNECTING": "info",
                 "ACTIVE": "success",
                 "DISCONNECTED": "danger",
@@ -107,6 +109,13 @@
             "type": "varchar",
             "maxLength": 255,
             "readOnly": true
+        },
+        "wahaChatwootInboxId": {
+            "type": "int",
+            "readOnly": true,
+            "utility": true,
+            "layoutMassUpdateDisabled": true,
+            "tooltip": true
         },
         "wahaWebhookSecret": {
             "type": "varchar",

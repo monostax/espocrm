@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "name": "Name",
+        "eventName": "Event",
+        "channel": "Channel",
+        "ctwaClid": "CTWA Click ID",
+        "igSid": "Instagram Scoped ID",
+        "sourceId": "Source ID",
+        "wamid": "Message ID",
+        "value": "Value",
+        "currency": "Currency",
+        "eventTime": "Event Time",
+        "rawPayload": "Raw Payload",
+        "metaCapiDataset": "Dataset",
+        "contact": "Contact",
+        "opportunity": "Opportunity",
+        "chatwootConversation": "Chatwoot Conversation",
+        "teams": "Teams",
+        "tenant": "Tenant"
+    },
+    "links": {
+        "metaCapiDataset": "Dataset",
+        "contact": "Contact",
+        "opportunity": "Opportunity",
+        "chatwootConversation": "Chatwoot Conversation"
+    },
+    "options": {
+        "eventName": {
+            "Purchase": "Purchase",
+            "LeadSubmitted": "Lead Submitted",
+            "AddToCart": "Add To Cart",
+            "InitiateCheckout": "Initiate Checkout",
+            "ViewContent": "View Content",
+            "Contact": "Contact (Ad Arrival)",
+            "Other": "Other"
+        },
+        "channel": {
+            "whatsapp": "WhatsApp",
+            "instagram": "Instagram"
+        }
+    }
+}

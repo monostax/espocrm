@@ -1830,6 +1830,57 @@ public function getInbox(
 }
 
 /**
+ * Update (PATCH) an inbox in a Chatwoot account.
+ *
+ * Used to patch channel-level settings such as `provider_config` (e.g. to
+ * add `linked_waha` to a WhatsApp Cloud inbox so Chatwoot can route
+ * free-form replies through a WAHA companion outside the 24h window).
+ *
+ * Chatwoot's inbox update endpoint accepts a `channel` object whose keys are
+ * shallow-merged into the channel. `provider_config` itself is replaced
+ * wholesale, so callers must pass the FULL provider_config (merge first).
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @param array<string, mixed> $payload Update payload (e.g. ['channel' => ['provider_config' => [...]]])
+ * @return array<string, mixed> The updated inbox
+ * @throws Error
+ */
+public function updateInbox(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId,
+    array $payload
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inboxes/' . $inboxId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'PATCH', json_encode($payload), $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to update inbox in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (updateInbox): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
  * Delete an inbox from a Chatwoot account.
  *
  * @param string $platformUrl The Chatwoot platform URL

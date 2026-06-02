@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "name": "Nome",
+        "metaCapiDataset": "Dataset",
+        "oAuthAccount": "Conta Meta",
+        "channel": "Canal",
+        "sourceId": "Conta Business",
+        "sourceName": "Nome da Conta Business",
+        "chatwootInboxIntegration": "Caixa de Entrada do Chat",
+        "stageEventActionSource": "Fonte de Ação do Evento de Etapa",
+        "createOpportunity": "Criar Oportunidade",
+        "funnel": "Funil",
+        "opportunityStage": "Etapa",
+        "assignedUser": "Responsável",
+        "teams": "Equipes",
+        "tenant": "Tenant"
+    },
+    "links": {
+        "metaCapiDataset": "Dataset",
+        "oAuthAccount": "Conta Meta",
+        "chatwootInboxIntegration": "Caixa de Entrada do Chat",
+        "funnel": "Funil",
+        "opportunityStage": "Etapa",
+        "assignedUser": "Responsável",
+        "teams": "Equipes",
+        "tenant": "Tenant"
+    },
+    "labels": {
+        "Opportunity Creation": "Criação de Oportunidade"
+    },
+    "options": {
+        "channel": {
+            "whatsapp": "WhatsApp",
+            "instagram": "Instagram"
+        },
+        "stageEventActionSource": {
+            "system_generated": "Gerado pelo Sistema (PII com hash)",
+            "business_messaging": "Mensagens de Negócio (na conversa)"
+        }
+    },
+    "tooltips": {
+        "oAuthAccount": "A conta Meta cujo token autoriza esta origem. Selecione-a primeiro para carregar a lista de contas.",
+        "sourceId": "A Conta do WhatsApp Business ou conta business do Instagram cujas conversões este dataset reporta. Única por canal — uma origem pertence a apenas um dataset.",
+        "chatwootInboxIntegration": "A caixa de entrada do chat à qual esta origem está mapeada. Conversões recebidas são associadas a esta origem pela caixa de entrada da conversa. Uma origem por caixa de entrada.",
+        "stageEventActionSource": "Como os eventos de mudança de etapa da Oportunidade são enviados à Meta. Gerado pelo Sistema (padrão) envia dados de contato com hash para conversões que acontecem fora da conversa (mudanças no funil do CRM) e aceita qualquer nome de evento. Mensagens de Negócio envia eventos na conversa associados pelo ID de clique do anúncio e aceita apenas os nomes de evento padrão da Meta (ex.: Purchase, LeadSubmitted).",
+        "createOpportunity": "Quando ativo, cada conversão ingerida cria uma Oportunidade (vinculada ao Contato reconciliado) no Funil configurado. Independente do envio para a Conversions API da Meta.",
+        "funnel": "Funil onde as Oportunidades são criadas para conversões atribuídas a esta origem. Obrigatório quando Criar Oportunidade está ativo.",
+        "opportunityStage": "Etapa das Oportunidades criadas. Deixe vazio para usar a primeira etapa ativa do funil.",
+        "assignedUser": "Responsável padrão das Oportunidades criadas. Deixe vazio para sem responsável."
+    }
+}

@@ -17,7 +17,8 @@
     },
     "links": {
         "funnels": "Funnels",
-        "eventLogs": "Event Logs"
+        "eventLogs": "Event Logs",
+        "sources": "Messaging Sources"
     },
     "options": {
         "lastEventStatus": {

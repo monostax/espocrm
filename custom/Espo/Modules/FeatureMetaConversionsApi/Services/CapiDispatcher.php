@@ -8,6 +8,7 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Crm\Entities\Opportunity;
 use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiDataset;
 use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiEventLog;
+use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaConversionEvent;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Throwable;
@@ -15,9 +16,17 @@ use Throwable;
 /**
  * Orchestrates: build payload -> POST to Meta -> log result.
  *
- * Called from:
- *   - Jobs\SendCapiEvent (async path)
+ * Sending is funnel-driven: the sole entry point is dispatch(), invoked from
+ *   - Jobs\SendCapiEvent (async path, enqueued by Hooks\Opportunity\SendCapiOnStageChange)
  *   - Controllers\MetaCapiTest (sync test)
+ *
+ * Stage-change attribution: when the Opportunity originated from a
+ * Click-to-WhatsApp / Instagram ad (it has a linked MetaConversionEvent with a
+ * ctwaClid/igSid + sourceId), dispatch() builds a `business_messaging` event
+ * attributed by those join keys instead of the hashed-PII `system_generated`
+ * event. The destination dataset is still the funnel/stage dataset. This is
+ * the ONLY path that emits business_messaging events — MetaConversionEvent rows
+ * are inbound attribution records and are never dispatched directly.
  */
 class CapiDispatcher
 {
@@ -77,14 +86,66 @@ class CapiDispatcher
             ? $context['eventId']
             : null;
 
-        $event = $this->eventBuilder->build(
-            $subject,
-            $eventName,
-            (string) ($dataset->get('leadEventSource') ?: 'EspoCRM'),
-            $eventTime,
-            $extraCustomData,
-            $eventIdOverride,
-        );
+        // Routing for Opportunity stage-change events. Two action sources,
+        // chosen per source via MetaCapiDatasetSource.stageEventActionSource:
+        //
+        //   - system_generated (default): hashed-PII event. Correct for
+        //     conversions that happen OUTSIDE the message thread (CRM funnel
+        //     changes). Meta attributes it to the originating ad click via the
+        //     matched identity. Accepts any event name.
+        //
+        //   - business_messaging: in-thread event keyed by the conversion's
+        //     ctwa_clid/ig_sid + the source's WABA/IG account id. Only valid
+        //     for Meta's restricted event vocabulary (e.g. Purchase,
+        //     LeadSubmitted). Requires a CTWA/IG-originated Opportunity (a
+        //     linked MetaConversionEvent) and a resolvable account id; if
+        //     either is missing we fall back to system_generated.
+        $useBusinessMessaging = false;
+        $ctwaConversion = null;
+        $messagingAccountId = null;
+
+        if ($subject instanceof Opportunity) {
+            $source = $this->resolveStageEventSource($subject);
+            $actionSource = $source
+                ? (string) ($source->get('stageEventActionSource') ?: 'system_generated')
+                : 'system_generated';
+
+            if ($actionSource === 'business_messaging') {
+                $ctwaConversion = $this->findCtwaConversionForOpportunity($subject);
+
+                if ($ctwaConversion) {
+                    $channel = (string) ($ctwaConversion->get('channel') ?: 'whatsapp');
+                    $messagingAccountId = $this->resolveMessagingAccountId($subject, $channel);
+                    $useBusinessMessaging = $messagingAccountId !== null;
+
+                    if (!$useBusinessMessaging) {
+                        $this->log->info(sprintf(
+                            'MetaCapi dispatch: Opportunity %s source opts into business_messaging but no messaging account id is resolvable; falling back to system_generated.',
+                            (string) $subject->getId(),
+                        ));
+                    }
+                }
+            }
+        }
+
+        if ($useBusinessMessaging && $ctwaConversion && $messagingAccountId !== null) {
+            $event = $this->buildBusinessMessagingFromConversion(
+                $ctwaConversion,
+                $messagingAccountId,
+                $eventName,
+                $eventTime,
+                $eventIdOverride,
+            );
+        } else {
+            $event = $this->eventBuilder->build(
+                $subject,
+                $eventName,
+                (string) ($dataset->get('leadEventSource') ?: 'EspoCRM'),
+                $eventTime,
+                $extraCustomData,
+                $eventIdOverride,
+            );
+        }
 
         if (!$event) {
             $logEntity->set('status', MetaCapiEventLog::STATUS_SKIPPED);
@@ -131,6 +192,169 @@ class CapiDispatcher
         );
 
         return $logEntity;
+    }
+
+    /**
+     * Find the most recent MetaConversionEvent linked to this Opportunity that
+     * carries a usable Click-to-WhatsApp / Instagram join key (ctwa_clid /
+     * ig_sid). Returns null when the Opportunity is not CTWA/IG-originated, so
+     * the caller falls back to the PII build path.
+     */
+    private function findCtwaConversionForOpportunity(Opportunity $opportunity): ?MetaConversionEvent
+    {
+        $opportunityId = $opportunity->getId();
+
+        if (!$opportunityId) {
+            return null;
+        }
+
+        $conversions = $this->entityManager
+            ->getRDBRepository(MetaConversionEvent::ENTITY_TYPE)
+            ->where([
+                'opportunityId' => $opportunityId,
+                'deleted'       => false,
+            ])
+            ->order('createdAt', 'DESC')
+            ->find();
+
+        foreach ($conversions as $conversion) {
+            if ($this->conversionAttribution($conversion) !== null) {
+                return $conversion;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve the channel-appropriate attribution key for a conversion:
+     * ig_sid for instagram, ctwa_clid otherwise. Null when missing.
+     *
+     * Note: this validates the join KEY only (ctwa_clid / ig_sid). The
+     * messaging account id (whatsapp_business_account_id / instagram_business_
+     * account_id) is NOT read from the conversion's ad-derived sourceId — it is
+     * resolved authoritatively from the Opportunity's linked
+     * MetaCapiDatasetSource -> ChatwootInboxIntegration in dispatch().
+     */
+    private function conversionAttribution(MetaConversionEvent $conversion): ?string
+    {
+        $channel = (string) ($conversion->get('channel') ?: 'whatsapp');
+        $attribution = $channel === 'instagram'
+            ? trim((string) ($conversion->get('igSid') ?? ''))
+            : trim((string) ($conversion->get('ctwaClid') ?? ''));
+
+        return $attribution !== '' ? $attribution : null;
+    }
+
+    /**
+     * Build a business_messaging event payload for a stage-change event,
+     * attributed via the conversion's CTWA/IG join key + the resolved
+     * messaging account id (WABA id / IG business account id) from the
+     * Opportunity's linked source integration. Uses the stage-derived
+     * $eventName (not the conversion's own eventName) and a stable per-stage
+     * event_id so a benign re-save dedupes.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function buildBusinessMessagingFromConversion(
+        MetaConversionEvent $conversion,
+        string $sourceId,
+        string $eventName,
+        int $eventTime,
+        ?string $eventIdOverride,
+    ): ?array {
+        $channel = (string) ($conversion->get('channel') ?: 'whatsapp');
+        $attribution = (string) $this->conversionAttribution($conversion);
+
+        // Dedupe id: prefer caller override, else derive from the conversion +
+        // stage event name so repeated saves into the same stage collapse.
+        $eventId = $eventIdOverride
+            ?? sprintf('%s:%s', (string) $conversion->getId(), $eventName);
+
+        $value = $conversion->get('value');
+
+        return $this->eventBuilder->buildBusinessMessaging(
+            $channel,
+            $sourceId,
+            $attribution,
+            $eventName,
+            $eventTime,
+            $value !== null ? (float) $value : null,
+            $conversion->get('currency') ? (string) $conversion->get('currency') : null,
+            $eventId,
+        );
+    }
+
+    /**
+     * Resolve the MetaCapiDatasetSource an Opportunity was created from, via
+     * its stamped metaCapiDatasetSource link. Returns null when the Opportunity
+     * was not created from a CTWA/IG source (e.g. a normal lead). Used to read
+     * the per-source stageEventActionSource routing preference.
+     */
+    private function resolveStageEventSource(Opportunity $opportunity): ?Entity
+    {
+        $sourceId = $opportunity->get('metaCapiDatasetSourceId');
+
+        if (!$sourceId) {
+            return null;
+        }
+
+        return $this->entityManager->getEntityById('MetaCapiDatasetSource', (string) $sourceId);
+    }
+
+    /**
+     * Resolve the messaging account id (whatsapp_business_account_id for
+     * whatsapp, instagram_business_account_id for instagram) for an
+     * Opportunity, from its linked MetaCapiDatasetSource.
+     *
+     * The authoritative value is the source's own `sourceId` — the admin
+     * configures the real WABA id / IG business account id there (it is the
+     * value Meta's CAPI expects as user_data.whatsapp_business_account_id /
+     * instagram_business_account_id). This works even for QR-only WAHA inboxes,
+     * because the id lives on the source, not on the inbox integration.
+     *
+     * Falls back to the linked ChatwootInboxIntegration's channel id only when
+     * the source's sourceId is empty. Returns null when neither is available.
+     */
+    private function resolveMessagingAccountId(Opportunity $opportunity, string $channel): ?string
+    {
+        $sourceId = $opportunity->get('metaCapiDatasetSourceId');
+
+        if (!$sourceId) {
+            return null;
+        }
+
+        $source = $this->entityManager->getEntityById('MetaCapiDatasetSource', (string) $sourceId);
+
+        if (!$source) {
+            return null;
+        }
+
+        // Primary: the admin-configured account id on the source itself.
+        $accountId = trim((string) ($source->get('sourceId') ?? ''));
+
+        if ($accountId !== '') {
+            return $accountId;
+        }
+
+        // Fallback: derive from the linked inbox integration's channel id.
+        $integrationId = $source->get('chatwootInboxIntegrationId');
+
+        if (!$integrationId) {
+            return null;
+        }
+
+        $integration = $this->entityManager->getEntityById('ChatwootInboxIntegration', (string) $integrationId);
+
+        if (!$integration) {
+            return null;
+        }
+
+        $accountId = $channel === 'instagram'
+            ? trim((string) ($integration->get('instagramId') ?? ''))
+            : trim((string) ($integration->get('businessAccountId') ?? ''));
+
+        return $accountId !== '' ? $accountId : null;
     }
 
     /**

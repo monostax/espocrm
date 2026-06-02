@@ -559,6 +559,31 @@ class ChatwootInboxIntegration
             }
         }
 
+        // Coexistence: tear down the WAHA send companion (if linked). The Cloud
+        // inbox stays intact (Cloud API inbound/outbound keeps working), but we
+        // stop the companion session and remove `linked_waha` so Chatwoot stops
+        // routing free-form replies through a now-stopped transport.
+        if ($channelType === 'whatsappCoexistence') {
+            $wahaPlatform = $channel->get('wahaPlatform');
+            $sessionName = $channel->get('wahaSessionName');
+
+            if ($wahaPlatform && $sessionName) {
+                try {
+                    $this->syncCoexistenceWahaLink($channel, null);
+                } catch (\Exception $e) {
+                    $this->log->warning("Failed to remove linked_waha during coexistence disconnect: " . $e->getMessage());
+                }
+
+                try {
+                    $wahaUrl = $wahaPlatform->get('backendUrl');
+                    $wahaApiKey = $wahaPlatform->get('apiKey');
+                    $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                } catch (\Exception $e) {
+                    $this->log->warning("Failed to stop WAHA companion session during coexistence disconnect: " . $e->getMessage());
+                }
+            }
+        }
+
         // For Cloud API channels, disconnecting simply marks the status.
         // The Chatwoot inbox remains intact and can be reconnected.
         //
@@ -862,6 +887,259 @@ class ChatwootInboxIntegration
         return $lastSessionInfo;
     }
 
+    // ---------------------------------------------------------------------
+    // WhatsApp Coexistence — WAHA send companion (dual transport)
+    // ---------------------------------------------------------------------
+    //
+    // A coexistence number lives on Meta Cloud API for INBOUND + template/
+    // in-window OUTBOUND. The hard Meta limitation is that it CANNOT send
+    // free-form (non-template) messages once the 24h customer-service window
+    // is closed. To cover that gap we link a WAHA "send-only" session bound to
+    // the SAME WhatsApp number (a linked device, paired via QR).
+    //
+    // Send-only means: we create + start a WAHA session and pair it, but we do
+    // NOT create a WAHA Chatwoot "App". Apps are what forward INBOUND WAHA
+    // events into a Chatwoot inbox; omitting the App keeps inbound flowing
+    // exclusively through Cloud API (single conversation thread) while WAHA is
+    // used purely as an outbound HTTP transport (POST /api/sendText), called
+    // directly by Chatwoot's Messages::WahaSendCoexistenceMessageJob.
+    //
+    // Flow:
+    //   1. linkWahaCompanion(): create/start the send-only session, persist
+    //      wahaSessionName/wahaAppId/wahaWebhookSecret + wahaChatwootInboxId,
+    //      set status=PENDING_WAHA_LINK, surface QR via getQrCode().
+    //   2. Customer scans QR with the same number -> WAHA goes WORKING.
+    //   3. checkStatus() detects WORKING, writes provider_config.linked_waha
+    //      into the Cloud inbox (shape { inbox_id, session, base_url }) so
+    //      Chatwoot's Channel::Whatsapp#waha_outbound_enabled? flips on, then
+    //      returns status to ACTIVE.
+
+    /**
+     * Provision (or re-provision) the WAHA send-only companion for a
+     * coexistence channel and put it into the QR-link state.
+     *
+     * @throws Error
+     */
+    public function linkWahaCompanion(string $channelId): Entity
+    {
+        $channel = $this->entityManager->getEntityById(self::ENTITY_TYPE, $channelId);
+
+        if (!$channel) {
+            throw new NotFound("ChatwootInboxIntegration not found.");
+        }
+
+        if ($channel->get('channelType') !== 'whatsappCoexistence') {
+            throw new Error("WAHA companion can only be linked to a WhatsApp Coexistence channel.");
+        }
+
+        try {
+            $this->provisionWahaSendOnlySession($channel);
+
+            $channel->set('status', 'PENDING_WAHA_LINK');
+            $channel->set('errorMessage', null);
+            $this->entityManager->saveEntity($channel);
+
+            $this->log->info("ChatwootInboxIntegration: WAHA send companion provisioned for coexistence channel {$channelId} (awaiting QR scan).");
+
+            return $channel;
+        } catch (\Exception $e) {
+            $this->log->error("ChatwootInboxIntegration: Failed to link WAHA companion for {$channelId}: " . $e->getMessage());
+            $channel->set('errorMessage', 'Failed to link WhatsApp companion: ' . $e->getMessage());
+            $this->entityManager->saveEntity($channel);
+            throw new Error("Failed to link WhatsApp companion: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Create + start a send-only WAHA session for the coexistence number.
+     *
+     * Reuses the same WAHA session lifecycle as activateWhatsappQrcode but
+     * deliberately does NOT create a Chatwoot "App" (inbound stays on Cloud
+     * API). Persists session identifiers on the channel; does not change
+     * status (caller decides).
+     *
+     * @throws Error
+     */
+    private function provisionWahaSendOnlySession(Entity $channel): void
+    {
+        $channelId = $channel->getId();
+
+        // Auto-select default WahaPlatform if not set (mirrors activateWhatsappQrcode).
+        $wahaPlatform = $channel->get('wahaPlatform');
+        if (!$wahaPlatform) {
+            $wahaPlatform = $this->entityManager
+                ->getRDBRepository('WahaPlatform')
+                ->where(['isDefault' => true])
+                ->findOne();
+
+            if (!$wahaPlatform) {
+                throw new Error("No default WAHA Platform configured. Please contact administrator.");
+            }
+
+            $channel->set('wahaPlatformId', $wahaPlatform->getId());
+        }
+
+        $wahaUrl = $wahaPlatform->get('backendUrl');
+        $wahaApiKey = $wahaPlatform->get('apiKey');
+
+        // Distinct session name so a coexistence companion never collides with
+        // a stand-alone QR channel that happens to share the channel id space.
+        $sessionName = 'coexistence_' . $channelId;
+
+        // Clean slate: delete any pre-existing session for this name.
+        try {
+            $existingSession = null;
+            try {
+                $existingSession = $this->wahaApiClient->getSession($wahaUrl, $wahaApiKey, $sessionName);
+            } catch (\Exception $e) {
+                // Not found — fine.
+            }
+
+            if ($existingSession) {
+                $this->log->info("ChatwootInboxIntegration: Send companion session {$sessionName} exists, recreating for clean link.");
+                try {
+                    $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                    sleep(1);
+                    $this->wahaApiClient->deleteSession($wahaUrl, $wahaApiKey, $sessionName);
+                    sleep(2);
+                } catch (\Exception $e) {
+                    $this->log->warning("ChatwootInboxIntegration: Failed to delete existing companion session {$sessionName}: " . $e->getMessage());
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignore pre-check errors.
+        }
+
+        // Create the session.
+        try {
+            $this->wahaApiClient->createSession($wahaUrl, $wahaApiKey, [
+                'name' => $sessionName,
+            ]);
+        } catch (\Exception $e) {
+            $msg = $e->getMessage();
+            if (strpos($msg, 'already exists') !== false) {
+                $this->log->warning("ChatwootInboxIntegration: Companion session {$sessionName} already exists, attempting to reuse.");
+                try {
+                    $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                    sleep(1);
+                    $this->wahaApiClient->startSession($wahaUrl, $wahaApiKey, $sessionName);
+                } catch (\Exception $ex) {
+                    // Ignore.
+                }
+            } else {
+                throw $e;
+            }
+        }
+
+        $channel->set('wahaSessionName', $sessionName);
+
+        // We don't create a Chatwoot App, but we keep an appId/webhookSecret so
+        // the label webhook (used by both transports' UX) can still be wired and
+        // reconnect/cleanup logic has a stable handle.
+        $appId = $channel->get('wahaAppId') ?: ('app_' . bin2hex(random_bytes(16)));
+        $channel->set('wahaAppId', $appId);
+
+        $webhookSecret = $channel->get('wahaWebhookSecret') ?: bin2hex(random_bytes(32));
+        $channel->set('wahaWebhookSecret', $webhookSecret);
+
+        // Record which Chatwoot inbox this companion sends on (the Cloud inbox).
+        $channel->set('wahaChatwootInboxId', $channel->get('chatwootInboxId'));
+
+        // Configure ignore rules + label webhook (no Chatwoot inbound App).
+        $ignoreConfig = [
+            'status' => (bool) $channel->get('wahaIgnoreStatus'),
+            'groups' => (bool) $channel->get('wahaIgnoreGroups'),
+            'channels' => (bool) $channel->get('wahaIgnoreChannels'),
+            'broadcast' => (bool) $channel->get('wahaIgnoreBroadcast'),
+        ];
+
+        $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
+        if ($crmBackendUrl) {
+            $labelWebhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/WahaLabelWebhook/' . $channelId;
+            $this->wahaApiClient->updateSession($wahaUrl, $wahaApiKey, $sessionName, [
+                'config' => [
+                    'ignore' => $ignoreConfig,
+                    'webhooks' => [[
+                        'url' => $labelWebhookUrl,
+                        'events' => ['label.chat.added', 'label.chat.deleted'],
+                        'hmac' => ['key' => $webhookSecret],
+                    ]],
+                ],
+            ]);
+        } else {
+            $this->wahaApiClient->updateSession($wahaUrl, $wahaApiKey, $sessionName, [
+                'config' => ['ignore' => $ignoreConfig],
+            ]);
+        }
+
+        // Start the session so it advances to SCAN_QR_CODE for the QR step.
+        $this->wahaApiClient->startSession($wahaUrl, $wahaApiKey, $sessionName);
+    }
+
+    /**
+     * Patch the coexistence Cloud inbox's provider_config to add (or remove)
+     * the `linked_waha` block consumed by Chatwoot's
+     * Channel::Whatsapp#waha_outbound_enabled?.
+     *
+     * Chatwoot replaces provider_config wholesale on update, so we GET the
+     * current config first and merge.
+     *
+     * @param array<string, mixed>|null $link The linked_waha block, or null to unlink.
+     * @throws Error
+     */
+    private function syncCoexistenceWahaLink(Entity $channel, ?array $link): void
+    {
+        $chatwootInboxId = $channel->get('chatwootInboxId');
+        if (!$chatwootInboxId) {
+            throw new Error("Cannot sync WAHA link: coexistence channel has no Chatwoot inbox.");
+        }
+
+        $chatwootAccount = $channel->get('chatwootAccount');
+        if (!$chatwootAccount) {
+            throw new Error("Chatwoot Account not set.");
+        }
+
+        $chatwootPlatform = $chatwootAccount->get('platform');
+        if (!$chatwootPlatform) {
+            throw new Error("Chatwoot Platform not found for account.");
+        }
+
+        $chatwootUrl = $chatwootPlatform->get('backendUrl');
+        $chatwootAccountId = (int) $chatwootAccount->get('chatwootAccountId');
+        $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
+
+        // Read current provider_config so we can merge rather than clobber.
+        $inbox = $this->chatwootApiClient->getInbox(
+            $chatwootUrl,
+            $chatwootAccountApiKey,
+            $chatwootAccountId,
+            (int) $chatwootInboxId
+        );
+
+        if ($inbox === null) {
+            throw new Error("Coexistence Chatwoot inbox {$chatwootInboxId} not found.");
+        }
+
+        $providerConfig = $inbox['provider_config'] ?? [];
+        if (!is_array($providerConfig)) {
+            $providerConfig = [];
+        }
+
+        if ($link === null) {
+            unset($providerConfig['linked_waha']);
+        } else {
+            $providerConfig['linked_waha'] = $link;
+        }
+
+        $this->chatwootApiClient->updateInbox(
+            $chatwootUrl,
+            $chatwootAccountApiKey,
+            $chatwootAccountId,
+            (int) $chatwootInboxId,
+            ['channel' => ['provider_config' => $providerConfig]]
+        );
+    }
+
     public function findLinkedChatwootInboxRecordId(string $channelId): ?string
     {
         $inbox = $this->entityManager
@@ -891,6 +1169,23 @@ class ChatwootInboxIntegration
 
         if (!$channel) {
             return;
+        }
+
+        // Coexistence: delete the WAHA send companion session to avoid orphans.
+        if ($channel->get('channelType') === 'whatsappCoexistence') {
+            $wahaPlatform = $channel->get('wahaPlatform');
+            $sessionName = $channel->get('wahaSessionName');
+
+            if ($wahaPlatform && $sessionName) {
+                try {
+                    $wahaUrl = $wahaPlatform->get('backendUrl');
+                    $wahaApiKey = $wahaPlatform->get('apiKey');
+                    $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+                    $this->wahaApiClient->deleteSession($wahaUrl, $wahaApiKey, $sessionName);
+                } catch (\Exception $e) {
+                    $this->log->warning("ChatwootInboxIntegration: Failed to delete WAHA companion session for {$channelId}: " . $e->getMessage());
+                }
+            }
         }
 
         try {
@@ -1730,11 +2025,6 @@ class ChatwootInboxIntegration
     //      Otherwise marks PENDING_COEXISTENCE_CONFIRMATION and leaves the
     //      WhatsAppCoexistenceSyncService job to do the rest async.
 
-    /**
-     * Activate a WhatsApp Coexistence channel.
-     *
-     * @throws Error
-     */
     private function activateWhatsappCoexistence(Entity $channel): Entity
     {
         $channelId = $channel->getId();
@@ -1960,7 +2250,27 @@ class ChatwootInboxIntegration
                 }
             }
 
-            // Re-run the same Meta probe path as checkStatusWhatsappCoexistence.
+            // If a WAHA send companion was previously provisioned, restart it
+            // and re-enter the link flow so free-form routing is restored. The
+            // session may need a fresh QR scan if the link was lost.
+            $wahaPlatform = $channel->get('wahaPlatform');
+            $sessionName = $channel->get('wahaSessionName');
+
+            if ($wahaPlatform && $sessionName) {
+                try {
+                    $wahaUrl = $wahaPlatform->get('backendUrl');
+                    $wahaApiKey = $wahaPlatform->get('apiKey');
+                    $this->wahaApiClient->startSession($wahaUrl, $wahaApiKey, $sessionName);
+                    $channel->set('status', 'PENDING_WAHA_LINK');
+                    $channel->set('errorMessage', null);
+                    $this->entityManager->saveEntity($channel);
+                } catch (\Exception $e) {
+                    $this->log->warning("ChatwootInboxIntegration: Failed to restart WAHA companion during coexistence reconnect: " . $e->getMessage());
+                }
+            }
+
+            // Re-run the same Meta probe path as checkStatusWhatsappCoexistence
+            // (also resolves PENDING_WAHA_LINK if the companion is already WORKING).
             return $this->checkStatusWhatsappCoexistence($channel);
 
         } catch (\Exception $e) {
@@ -1973,6 +2283,56 @@ class ChatwootInboxIntegration
     }
 
     /**
+     * Poll the WAHA send companion session. When it reaches WORKING, persist
+     * the linked_waha block into the Cloud inbox provider_config so Chatwoot
+     * can route free-form replies through it. Returns true once linked.
+     */
+    private function resolveWahaCompanionLink(Entity $channel): bool
+    {
+        $wahaPlatform = $channel->get('wahaPlatform');
+        $sessionName = $channel->get('wahaSessionName');
+
+        if (!$wahaPlatform || !$sessionName) {
+            return false;
+        }
+
+        $wahaUrl = $wahaPlatform->get('backendUrl');
+        $wahaApiKey = $wahaPlatform->get('apiKey');
+
+        try {
+            $sessionInfo = $this->wahaApiClient->getSession($wahaUrl, $wahaApiKey, $sessionName);
+        } catch (\Exception $e) {
+            $this->log->warning("ChatwootInboxIntegration: Failed to poll WAHA companion {$sessionName}: " . $e->getMessage());
+            return false;
+        }
+
+        $wahaStatus = $sessionInfo['status'] ?? 'UNKNOWN';
+
+        if ($wahaStatus !== 'WORKING') {
+            return false;
+        }
+
+        // Capture the paired WhatsApp identity for display/audit.
+        if (isset($sessionInfo['me'])) {
+            $channel->set('whatsappId', $sessionInfo['me']['id'] ?? null);
+            $channel->set('whatsappName', $sessionInfo['me']['pushName'] ?? null);
+        }
+
+        // Write linked_waha into the Cloud inbox provider_config.
+        // Shape consumed by Chatwoot Channel::Whatsapp#coexistence_waha_link:
+        //   { inbox_id, session, base_url }
+        $this->syncCoexistenceWahaLink($channel, [
+            'inbox_id' => (int) $channel->get('chatwootInboxId'),
+            'session' => $sessionName,
+            'base_url' => rtrim($wahaUrl, '/'),
+        ]);
+
+        $this->log->info("ChatwootInboxIntegration: WAHA send companion linked for coexistence channel {$channel->getId()} (session {$sessionName}).");
+
+        return true;
+    }
+
+    /**
      * Status check for WhatsApp Coexistence.
      *
      * Probes /{phone_number_id} and runs the deferred SMB-data sync when
@@ -1980,6 +2340,20 @@ class ChatwootInboxIntegration
      */
     private function checkStatusWhatsappCoexistence(Entity $channel): Entity
     {
+        // If we're waiting on the WAHA send companion QR link, resolve that
+        // first. Once the companion session reaches WORKING we write the
+        // linked_waha block into the Cloud inbox and then fall through to the
+        // normal Meta probe to settle on ACTIVE / PENDING_COEXISTENCE_CONFIRMATION.
+        if ($channel->get('status') === 'PENDING_WAHA_LINK') {
+            $linked = $this->resolveWahaCompanionLink($channel);
+
+            if (!$linked) {
+                // Still not paired (or session unhealthy) — stay in the QR state.
+                return $channel;
+            }
+            // Paired: continue to the Meta probe below to determine final status.
+        }
+
         $phoneNumberId = $channel->get('phoneNumberId');
         $oAuthAccountId = $channel->get('oAuthAccountId');
 

@@ -1,0 +1,176 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "comment": "Derived from sourceName (falls back to sourceId) by the DeriveName hook."
+        },
+        "metaCapiDataset": {
+            "type": "link",
+            "required": true
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "required": true,
+            "tooltip": true,
+            "comment": "Meta OAuthAccount whose token authorizes this source. Selecting it scopes the source picker."
+        },
+        "channel": {
+            "type": "enum",
+            "options": ["whatsapp", "instagram"],
+            "default": "whatsapp",
+            "required": true,
+            "style": {
+                "whatsapp": "success"
+            }
+        },
+        "sourceId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true,
+            "view": "feature-meta-conversions-api:views/meta-capi-dataset-source/fields/source-id",
+            "comment": "WhatsApp Business Account ID (whatsapp) or Instagram business account ID (instagram). Sent as user_data.whatsapp_business_account_id / instagram_business_account_id. Unique per channel."
+        },
+        "sourceName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "chatwootInboxIntegration": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "Chatwoot inbox this source maps to. Inbound conversions are matched to this source by walking the conversation's inbox -> ChatwootInboxIntegration. Unique: one source per inbox integration."
+        },
+        "stageEventActionSource": {
+            "type": "enum",
+            "options": ["system_generated", "business_messaging"],
+            "default": "system_generated",
+            "tooltip": true,
+            "comment": "Action source for Opportunity stage-change events sent to Meta. 'system_generated' (default) sends hashed-PII events attributed by Meta via the click id — correct for conversions that happen OUTSIDE the message thread (CRM funnel changes), and accepts any event name. 'business_messaging' sends in-thread events keyed by ctwa_clid/ig_sid + the WABA/IG account id, and only accepts Meta's restricted event vocabulary (e.g. Purchase, LeadSubmitted)."
+        },
+        "createOpportunity": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true,
+            "comment": "When true, each ingested conversion creates an Opportunity (linked to the reconciled Contact) in the configured Funnel/Stage. Independent of the CAPI send."
+        },
+        "funnel": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "Funnel where Opportunities will be created for conversions attributed to this source. Required (in UI) only when createOpportunity=true."
+        },
+        "opportunityStage": {
+            "type": "link",
+            "tooltip": true,
+            "view": "global:views/opportunity/fields/opportunity-stage",
+            "comment": "OpportunityStage to use for created Opportunities. Empty = first active stage of the funnel."
+        },
+        "assignedUser": {
+            "type": "link",
+            "tooltip": true,
+            "comment": "Default assignedUser for created Opportunities. Empty = unassigned."
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaCapiDataset (auto-set by CascadeTeamsFromMetaCapiDataset hook). Not user-editable — assign teams on the parent dataset."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": "Inherited from the parent MetaCapiDataset (auto-set by CascadeTenantFromMetaCapiDataset hook)."
+        }
+    },
+    "links": {
+        "metaCapiDataset": {
+            "type": "belongsTo",
+            "entity": "MetaCapiDataset",
+            "foreign": "sources"
+        },
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount"
+        },
+        "chatwootInboxIntegration": {
+            "type": "belongsTo",
+            "entity": "ChatwootInboxIntegration"
+        },
+        "funnel": {
+            "type": "belongsTo",
+            "entity": "Funnel"
+        },
+        "opportunityStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaCapiDatasetSources"
+        }
+    },
+    "collection": {
+        "orderBy": "sourceName",
+        "order": "asc"
+    },
+    "indexes": {
+        "channelSourceIdUnique": {
+            "type": "unique",
+            "columns": ["channel", "sourceId", "deleted"]
+        },
+        "inboxIntegrationUnique": {
+            "type": "unique",
+            "columns": ["chatwootInboxIntegrationId", "deleted"]
+        },
+        "sourceIdLookup": {
+            "columns": ["sourceId", "deleted"]
+        },
+        "datasetId": {
+            "columns": ["metaCapiDatasetId", "deleted"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        }
+    }
+}

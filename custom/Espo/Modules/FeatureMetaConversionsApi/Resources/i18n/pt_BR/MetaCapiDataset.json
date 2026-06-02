@@ -17,7 +17,8 @@
     },
     "links": {
         "funnels": "Funis",
-        "eventLogs": "Histórico de Eventos"
+        "eventLogs": "Histórico de Eventos",
+        "sources": "Origens de Mensagens"
     },
     "options": {
         "lastEventStatus": {

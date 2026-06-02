@@ -5,6 +5,12 @@
             "layoutDetailDisabled": true,
             "layoutListDisabled": true,
             "view": "views/fields/link-multiple"
+        },
+        "metaCapiDatasetSource": {
+            "type": "link",
+            "readOnly": true,
+            "layoutListDisabled": true,
+            "tooltip": "The MetaCapiDatasetSource this Opportunity was created from (CTWA/IG conversion). Stamped at creation by OpportunityFactory; lets the dispatcher resolve the dataset/channel directly on stage change."
         }
     },
     "links": {
@@ -12,6 +18,10 @@
             "type": "hasChildren",
             "entity": "MetaCapiEventLog",
             "foreign": "subject"
+        },
+        "metaCapiDatasetSource": {
+            "type": "belongsTo",
+            "entity": "MetaCapiDatasetSource"
         }
     }
 }

@@ -9,6 +9,7 @@
         "wahaSessionName": "Sessão WAHA",
         "wahaSessionId": "ID da Sessão WAHA",
         "wahaAppId": "ID do App WAHA",
+        "wahaChatwootInboxId": "ID do Canal de Envio WAHA",
         "chatwootInboxId": "ID do Canal de Chat",
         "chatwootInboxIdentifier": "Identificador do Canal de Chat",
         "chatwootInbox": "Chat / Conta / Caixa de Entrada",
@@ -62,13 +63,17 @@
         "Connecting": "Conectando ao WhatsApp...",
         "Loading QR Code": "Carregando QR Code...",
         "Scan QR Code with WhatsApp": "Escaneie o QR Code com o WhatsApp",
-        "Ignore Rules": "Regras de Ignorar"
+        "Ignore Rules": "Regras de Ignorar",
+        "Link WhatsApp Companion": "Vincular Companheiro WhatsApp",
+        "Waiting for WAHA link": "Escaneie o QR Code com o mesmo número de WhatsApp para vincular o companheiro de envio. Isso habilita respostas livres fora da janela de 24h."
     },
     "options": {
         "status": {
             "DRAFT": "Rascunho",
             "CREATING": "Criando",
             "PENDING_QR": "Aguardando QR",
+            "PENDING_COEXISTENCE_CONFIRMATION": "Aguardando Confirmação de Coexistência",
+            "PENDING_WAHA_LINK": "Aguardando Vínculo WAHA",
             "CONNECTING": "Conectando",
             "ACTIVE": "Ativo",
             "DISCONNECTED": "Desconectado",
@@ -77,6 +82,7 @@
         "channelType": {
             "whatsappQrcode": "WhatsApp Lite (QR Code)",
             "whatsappCloudApi": "WhatsApp Business (Cloud API)",
+            "whatsappCoexistence": "WhatsApp Business (Coexistência)",
             "instagram": "Instagram"
         }
     },
@@ -87,6 +93,7 @@
         "instagramUsername": "O nome de usuário Instagram da Conta Business autenticada.",
         "instagramBusinessAccountId": "A Conta Business do Instagram descoberta a partir da Conta OAuth Meta.",
         "wahaSessionName": "O nome da sessão no WAHA",
+        "wahaChatwootInboxId": "O ID do Canal de Chat do companheiro WAHA somente-envio vinculado a este número de coexistência. Respostas livres fora da janela de 24h são roteadas por ele.",
         "chatwootInboxIdentifier": "O identificador do canal usado para webhooks",
         "oAuthAccount": "A Conta OAuth Meta usada para autenticação com WhatsApp Cloud API",
         "businessAccountId": "A Conta Business do WhatsApp descoberta a partir da Conta OAuth Meta",

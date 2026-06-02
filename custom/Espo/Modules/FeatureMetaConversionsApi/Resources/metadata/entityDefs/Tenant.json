@@ -9,6 +9,16 @@
             "type": "hasMany",
             "entity": "MetaCapiEventLog",
             "foreign": "tenant"
+        },
+        "metaCapiDatasetSources": {
+            "type": "hasMany",
+            "entity": "MetaCapiDatasetSource",
+            "foreign": "tenant"
+        },
+        "metaConversionEvents": {
+            "type": "hasMany",
+            "entity": "MetaConversionEvent",
+            "foreign": "tenant"
         }
     }
 }

@@ -102,6 +102,101 @@ class EventBuilder
         ];
     }
 
+    /**
+     * Build a Click-to-WhatsApp / Instagram "business messaging" conversion
+     * event for the Conversions API.
+     *
+     * Unlike build(), attribution here is NOT via hashed PII. Per Meta's
+     * Conversions API for Business Messaging spec, the join keys are:
+     *   - whatsapp:  user_data.whatsapp_business_account_id + user_data.ctwa_clid
+     *   - instagram: user_data.instagram_business_account_id + user_data.ig_sid
+     *
+     * Reference example:
+     *   {
+     *     "event_name": "Purchase",
+     *     "event_time": 1675999999,
+     *     "action_source": "business_messaging",
+     *     "messaging_channel": "whatsapp",
+     *     "user_data": { "whatsapp_business_account_id": "...", "ctwa_clid": "..." },
+     *     "custom_data": { "currency": "USD", "value": 123 }
+     *   }
+     *
+     * @param string      $channel      'whatsapp' | 'instagram'
+     * @param string      $sourceId     WABA id (whatsapp) or IG business account id (instagram)
+     * @param string      $attribution  ctwa_clid (whatsapp) or ig_sid (instagram)
+     * @param float|null  $value        Optional conversion value
+     * @param string|null $currency     Optional ISO currency code (required by Meta if value set)
+     * @param string|null $eventId      Optional dedupe id (we pass the conversion wamid)
+     *
+     * @return array<string, mixed>|null Null if the required keys are missing.
+     */
+    public function buildBusinessMessaging(
+        string $channel,
+        string $sourceId,
+        string $attribution,
+        string $eventName,
+        ?int $eventTime = null,
+        ?float $value = null,
+        ?string $currency = null,
+        ?string $eventId = null,
+    ): ?array {
+        $channel = trim($channel);
+        $sourceId = trim($sourceId);
+        $attribution = trim($attribution);
+
+        if ($sourceId === '' || $attribution === '') {
+            $this->log->info(sprintf(
+                'MetaCapi EventBuilder: business_messaging %s event missing sourceId/attribution (channel=%s); skipping.',
+                $eventName,
+                $channel,
+            ));
+
+            return null;
+        }
+
+        $eventTime = $eventTime ?? time();
+
+        $userData = [];
+
+        if ($channel === 'instagram') {
+            $userData['instagram_business_account_id'] = $sourceId;
+            $userData['ig_sid'] = $attribution;
+        } else {
+            // Default to WhatsApp.
+            $channel = 'whatsapp';
+            $userData['whatsapp_business_account_id'] = $sourceId;
+            $userData['ctwa_clid'] = $attribution;
+        }
+
+        $customData = [];
+
+        if ($value !== null) {
+            $customData['value'] = $value;
+        }
+
+        if ($currency !== null && $currency !== '') {
+            $customData['currency'] = $currency;
+        }
+
+        $event = [
+            'event_name'        => $eventName,
+            'event_time'        => $eventTime,
+            'action_source'     => 'business_messaging',
+            'messaging_channel' => $channel,
+            'user_data'         => (object) $userData,
+        ];
+
+        if ($eventId !== null && $eventId !== '') {
+            $event['event_id'] = $eventId;
+        }
+
+        if ($customData !== []) {
+            $event['custom_data'] = (object) $customData;
+        }
+
+        return $event;
+    }
+
     private function resolveContact(Entity $subject): ?Contact
     {
         if ($subject instanceof Contact) {

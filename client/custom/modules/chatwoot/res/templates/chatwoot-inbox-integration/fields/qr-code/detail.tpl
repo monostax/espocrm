@@ -23,6 +23,21 @@
 </div>
 {{/if}}
 
+{{#if isPendingWahaLink}}
+<div class="alert alert-warning">
+    <span class="fas fa-link"></span>
+    {{translate 'Waiting for WAHA link' category='labels' scope='ChatwootInboxIntegration'}}
+</div>
+<div class="qr-code-wrapper text-center">
+    <div class="qr-code-container">
+        <div class="loading">
+            <span class="fas fa-spinner fa-spin"></span>
+            {{translate 'Loading QR Code' category='labels' scope='ChatwootInboxIntegration'}}
+        </div>
+    </div>
+</div>
+{{/if}}
+
 {{#if isConnecting}}
 <div class="alert alert-info">
     <span class="fas fa-spinner fa-spin"></span>

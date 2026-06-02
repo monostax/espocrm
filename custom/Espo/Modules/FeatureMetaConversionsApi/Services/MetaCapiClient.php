@@ -27,6 +27,12 @@ class MetaCapiClient
     private const TIMEOUT_SECONDS = 15;
     private const CONNECT_TIMEOUT_SECONDS = 5;
 
+    /**
+     * Sent as the top-level `partner_agent` body field. Identifies this
+     * integration to Meta (recommended for business_messaging events).
+     */
+    private const PARTNER_AGENT = 'monostax';
+
     public function __construct(
         private Crypt $crypt,
         private Log $log,
@@ -66,6 +72,7 @@ class MetaCapiClient
 
         $body = [
             'data' => array_values($events),
+            'partner_agent' => self::PARTNER_AGENT,
         ];
 
         if ($testEventCode !== '') {

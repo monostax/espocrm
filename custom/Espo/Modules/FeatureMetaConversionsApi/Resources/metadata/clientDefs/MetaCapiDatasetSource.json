@@ -1,0 +1,46 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-plug-connected",
+    "dynamicLogic": {
+        "fields": {
+            "funnel": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            },
+            "opportunityStage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            },
+            "assignedUser": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

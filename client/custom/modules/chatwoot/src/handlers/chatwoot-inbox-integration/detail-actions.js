@@ -30,6 +30,40 @@ define('chatwoot:handlers/chatwoot-inbox-integration/detail-actions', [], functi
             return status === 'DISCONNECTED';
         }
 
+        // The WAHA send companion can be (re-)linked for a coexistence channel
+        // once its Cloud inbox exists. We expose it whenever the channel is in a
+        // settled coexistence state (ACTIVE / pending Meta handshake) or already
+        // mid-link (PENDING_WAHA_LINK, to allow re-issuing the QR).
+        isLinkWahaCompanionAvailable() {
+            const model = this.view.model;
+            if (model.get('channelType') !== 'whatsappCoexistence') {
+                return false;
+            }
+            const status = model.get('status');
+            return ['ACTIVE', 'PENDING_COEXISTENCE_CONFIRMATION', 'PENDING_WAHA_LINK'].includes(status)
+                && !!model.get('chatwootInboxId');
+        }
+
+        linkWahaCompanion() {
+            const model = this.view.model;
+
+            Espo.Ui.notify(this.view.translate('Loading QR Code', 'labels', 'ChatwootInboxIntegration'));
+
+            Espo.Ajax.postRequest(`ChatwootInboxIntegration/${model.id}/linkWahaCompanion`)
+                .then(response => {
+                    Espo.Ui.notify(false);
+                    model.set(response);
+                    this.view.reRender();
+                })
+                .catch(xhr => {
+                    let errorMsg = 'Failed to link WhatsApp companion';
+                    if (xhr?.responseJSON?.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    Espo.Ui.error(errorMsg);
+                });
+        }
+
         activate() {
             const model = this.view.model;
 

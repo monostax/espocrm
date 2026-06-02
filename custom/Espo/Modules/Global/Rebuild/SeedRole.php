@@ -383,7 +383,25 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // Dataset↔source bindings (WABA / IG account → dataset, plus the
+                // per-source Opportunity-creation config) are admin-managed too;
+                // tenant-admin gets CRUD via the override below.
+                'MetaCapiDatasetSource' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'MetaCapiEventLog' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                // Click-to-WhatsApp / Instagram conversion events: a webhook-driven
+                // audit/send log (scopes mark it create:no / edit:no). Read-only
+                // for every tenant role; row-level ACL stays `team`.
+                'MetaConversionEvent' => [
                     'create' => 'no',
                     'read' => 'team',
                     'edit' => 'no',
@@ -706,7 +724,9 @@ class SeedRole implements RebuildAction
                 // the API regardless of role.
                 'InstagramBusinessAccount' => (object)[],
                 'MetaCapiDataset' => (object)[],
+                'MetaCapiDatasetSource' => (object)[],
                 'MetaCapiEventLog' => (object)[],
+                'MetaConversionEvent' => (object)[],
                 'MetaFacebookPage' => (object)[],
                 'MetaLeadForm' => (object)[],
                 'MetaLeadgenEvent' => (object)[],
@@ -1081,6 +1101,16 @@ class SeedRole implements RebuildAction
                     // (creates, edits credentials, etc.). Event log stays
                     // read-only since it's an audit trail.
                     'MetaCapiDataset' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    // tenant-admin binds WABA / IG business accounts to a dataset
+                    // and configures the per-source Opportunity creation
+                    // (funnel / stage / assignedUser). MetaConversionEvent stays
+                    // read-only (audit/send log) for tenant-admin too.
+                    'MetaCapiDatasetSource' => [
                         'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',

@@ -132,6 +132,11 @@
             "type": "hasMany",
             "entity": "MetaCapiEventLog",
             "foreign": "metaCapiDataset"
+        },
+        "sources": {
+            "type": "hasMany",
+            "entity": "MetaCapiDatasetSource",
+            "foreign": "metaCapiDataset"
         }
     },
     "collection": {

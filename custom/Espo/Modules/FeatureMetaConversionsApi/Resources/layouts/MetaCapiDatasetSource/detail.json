@@ -1,0 +1,19 @@
+[
+    {
+        "rows": [
+            [{ "name": "oAuthAccount" }, { "name": "channel" }],
+            [{ "name": "sourceId" }, false],
+            [{ "name": "chatwootInboxIntegration" }, false],
+            [{ "name": "stageEventActionSource" }, false],
+            [{ "name": "metaCapiDataset" }, false]
+        ]
+    },
+    {
+        "label": "Opportunity Creation",
+        "rows": [
+            [{ "name": "createOpportunity" }, false],
+            [{ "name": "funnel" }, { "name": "opportunityStage" }],
+            [{ "name": "assignedUser" }, false]
+        ]
+    }
+]

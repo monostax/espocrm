@@ -1,0 +1,154 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true,
+            "comment": "Derived: '<eventName> · <sourceId>'."
+        },
+        "eventName": {
+            "type": "enum",
+            "options": ["Purchase", "LeadSubmitted", "AddToCart", "InitiateCheckout", "ViewContent", "Contact", "Other"],
+            "default": "Purchase",
+            "readOnly": true,
+            "index": true
+        },
+        "channel": {
+            "type": "enum",
+            "options": ["whatsapp", "instagram"],
+            "default": "whatsapp",
+            "readOnly": true,
+            "style": {
+                "whatsapp": "success"
+            }
+        },
+        "ctwaClid": {
+            "type": "varchar",
+            "maxLength": 512,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Click-to-WhatsApp click id. The attribution key for whatsapp channel."
+        },
+        "igSid": {
+            "type": "varchar",
+            "maxLength": 256,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Instagram-scoped sender id (IGSID). The attribution key for instagram channel."
+        },
+        "sourceId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "index": true,
+            "comment": "WABA id (whatsapp) or Instagram business account id (instagram). Joins to MetaCapiDatasetSource.sourceId."
+        },
+        "wamid": {
+            "type": "varchar",
+            "maxLength": 256,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Provider message id of the conversion event. Idempotency key — unique per row."
+        },
+        "value": {
+            "type": "float",
+            "readOnly": true
+        },
+        "currency": {
+            "type": "varchar",
+            "maxLength": 8,
+            "readOnly": true
+        },
+        "eventTime": {
+            "type": "datetime",
+            "readOnly": true,
+            "index": true
+        },
+        "rawPayload": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "comment": "The raw conversion entry as received from Chatwoot additional_attributes.ctwa.conversions[]."
+        },
+        "metaCapiDataset": {
+            "type": "link",
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "readOnly": true
+        },
+        "opportunity": {
+            "type": "link",
+            "readOnly": true
+        },
+        "chatwootConversation": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true,
+            "readOnly": true,
+            "tooltip": "Inherited from the resolved tenant/source."
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "metaCapiDataset": {
+            "type": "belongsTo",
+            "entity": "MetaCapiDataset"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity"
+        },
+        "chatwootConversation": {
+            "type": "belongsTo",
+            "entity": "ChatwootConversation"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "metaConversionEvents"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "wamidUnique": {
+            "type": "unique",
+            "columns": ["wamid", "deleted"]
+        },
+        "eventTime": {
+            "columns": ["eventTime"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        }
+    }
+}

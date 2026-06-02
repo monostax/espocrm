@@ -11,6 +11,20 @@
                 "roles": ["tenant", "tenant-admin"]
             },
             {
+                "url": "#Configurations/MetaCapiDatasetSource",
+                "label": "CAPI Dataset Sources",
+                "iconClass": "ti ti-plug-connected",
+                "description": "metaCapiDatasetSources",
+                "roles": ["tenant-admin"]
+            },
+            {
+                "url": "#Configurations/MetaConversionEvent",
+                "label": "Conversion Events",
+                "iconClass": "ti ti-target-arrow",
+                "description": "metaConversionEvents",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
                 "url": "#Configurations/MetaCapiEventLog",
                 "label": "CAPI Event Log",
                 "iconClass": "ti ti-list-details",

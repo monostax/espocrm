@@ -297,7 +297,6 @@ define(
                             setup: {},
                             featureType: isCoexistence ? 'whatsapp_business_app_onboarding' : '',
                             sessionInfoVersion: '3',
-                            version: 'v3',
                         },
                     });
                 });

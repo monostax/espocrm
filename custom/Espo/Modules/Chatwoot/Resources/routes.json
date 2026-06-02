@@ -44,6 +44,15 @@
         }
     },
     {
+        "route": "/ChatwootInboxIntegration/:id/linkWahaCompanion",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootInboxIntegration",
+            "action": "linkWahaCompanion",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/WahaLabelWebhook/:channelId",
         "method": "post",
         "params": {

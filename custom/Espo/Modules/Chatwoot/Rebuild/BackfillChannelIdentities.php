@@ -49,6 +49,28 @@ class BackfillChannelIdentities implements RebuildAction
     /** Max chatwoot_contact rows to process per pass per rebuild. */
     private const PASS_LIMIT = 10000;
 
+    /**
+     * `chatwoot_contact.email` is an Espo `email`-type field, so it is
+     * NOT a column on the table — the value lives in the EmailAddress
+     * relation (`entity_email_address` -> `email_address`). Selecting
+     * `cc.email` directly throws SQLSTATE[42S22] and aborts the whole
+     * rebuild. This correlated subquery resolves the primary email
+     * address and aliases it as `email` so downstream code that reads
+     * `$row['email']` is unchanged. `primary` is a reserved word and
+     * must stay backticked.
+     */
+    private const EMAIL_SUBQUERY = "(
+                SELECT ea.name
+                FROM entity_email_address eea
+                INNER JOIN email_address ea
+                    ON ea.id = eea.email_address_id AND ea.deleted = 0
+                WHERE eea.entity_id = cc.id
+                  AND eea.entity_type = 'ChatwootContact'
+                  AND eea.deleted = 0
+                ORDER BY eea.`primary` DESC, ea.id ASC
+                LIMIT 1
+            ) AS email";
+
     public function __construct(
         private EntityManager $entityManager,
         private ContactReconciler $reconciler,
@@ -233,7 +255,7 @@ class BackfillChannelIdentities implements RebuildAction
                 cc.contact_id,
                 cc.chatwoot_account_id,
                 cc.phone_number,
-                cc.email,
+                " . self::EMAIL_SUBQUERY . ",
                 cc.identifier,
                 cc.name,
                 a.tenant_id
@@ -258,7 +280,7 @@ class BackfillChannelIdentities implements RebuildAction
                 cc.id,
                 cc.chatwoot_account_id,
                 cc.phone_number,
-                cc.email,
+                " . self::EMAIL_SUBQUERY . ",
                 cc.identifier,
                 cc.name,
                 a.tenant_id

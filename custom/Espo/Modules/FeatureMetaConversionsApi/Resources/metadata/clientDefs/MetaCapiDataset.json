@@ -7,5 +7,14 @@
         { "name": "inactive", "label": "Inactive" },
         { "name": "default", "label": "Default" }
     ],
-    "boolFilterList": ["onlyMy"]
+    "boolFilterList": ["onlyMy"],
+    "relationshipPanels": {
+        "sources": {
+            "layout": "listSmall",
+            "create": true,
+            "selectDisabled": true,
+            "orderBy": "sourceName",
+            "order": "asc"
+        }
+    }
 }

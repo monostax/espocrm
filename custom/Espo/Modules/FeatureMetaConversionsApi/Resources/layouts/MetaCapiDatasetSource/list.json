@@ -1,0 +1,6 @@
+[
+    { "name": "sourceName", "width": 30, "link": true },
+    { "name": "channel", "width": 15 },
+    { "name": "sourceId", "width": 30 },
+    { "name": "oAuthAccount", "width": 25 }
+]

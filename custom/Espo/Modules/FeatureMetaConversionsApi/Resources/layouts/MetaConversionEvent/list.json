@@ -1,0 +1,8 @@
+[
+    { "name": "eventName", "width": 15 },
+    { "name": "channel", "width": 12 },
+    { "name": "sourceId", "width": 18 },
+    { "name": "contact", "width": 18 },
+    { "name": "opportunity", "width": 15 },
+    { "name": "eventTime", "width": 15 }
+]

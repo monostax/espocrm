@@ -14,6 +14,7 @@
         "wahaSessionName": "WAHA Session",
         "wahaSessionId": "WAHA Session ID",
         "wahaAppId": "WAHA App ID",
+        "wahaChatwootInboxId": "WAHA Send Inbox ID",
         "chatwootInboxId": "Chat / Inbox ID",
         "chatwootInboxIdentifier": "Chat / Inbox Identifier",
         "chatwootInbox": "Chat / Account / Channel",
@@ -62,7 +63,9 @@
         "Connecting": "Connecting to WhatsApp...",
         "Loading QR Code": "Loading QR Code...",
         "Scan QR Code with WhatsApp": "Scan QR Code with WhatsApp",
-        "Ignore Rules": "Ignore Rules"
+        "Ignore Rules": "Ignore Rules",
+        "Link WhatsApp Companion": "Link WhatsApp Companion",
+        "Waiting for WAHA link": "Scan the QR Code with the same WhatsApp number to link the send companion. This enables free-form replies outside the 24h window."
     },
     "options": {
         "status": {
@@ -70,6 +73,7 @@
             "CREATING": "Creating",
             "PENDING_QR": "Waiting for QR",
             "PENDING_COEXISTENCE_CONFIRMATION": "Waiting for Coexistence Confirmation",
+            "PENDING_WAHA_LINK": "Waiting for WAHA Link",
             "CONNECTING": "Connecting",
             "ACTIVE": "Active",
             "DISCONNECTED": "Disconnected",
@@ -93,6 +97,7 @@
         "instagramUsername": "The Instagram username of the authenticated Business Account.",
         "instagramBusinessAccountId": "The Instagram Business Account discovered from the Meta OAuth Account.",
         "wahaSessionName": "The session name in WAHA",
+        "wahaChatwootInboxId": "The Chat / Inbox ID of the send-only WAHA companion linked to this coexistence number. Free-form replies outside the 24h window are routed through it.",
         "chatwootInboxIdentifier": "The inbox identifier used for webhooks",
         "wahaIgnoreStatus": "Ignore Status updates (stories). No webhooks or stored messages for status@broadcast.",
         "wahaIgnoreGroups": "Ignore Group chats. No webhooks or stored messages for group conversations.",

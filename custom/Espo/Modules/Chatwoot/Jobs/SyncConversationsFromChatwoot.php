@@ -3,6 +3,7 @@
 namespace Espo\Modules\Chatwoot\Jobs;
 
 use Espo\Core\Job\JobDataLess;
+use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
@@ -36,6 +37,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         private ChatwootApiClient $apiClient,
         private WahaApiClient $wahaApiClient,
         private ContactReconciler $reconciler,
+        private InjectableFactory $injectableFactory,
         private Log $log
     ) {}
 
@@ -395,7 +397,76 @@ class SyncConversationsFromChatwoot implements JobDataLess
             }
         }
 
+        // Ingest any Click-to-WhatsApp / Instagram conversion events carried
+        // in the conversation's additional_attributes.ctwa (captured by the
+        // Chatwoot-side ctwa patches). Idempotent on wamid; safe no-op when
+        // absent or when the FeatureMetaConversionsApi module is not present.
+        if ($conversation) {
+            $this->ingestConversionEvents(
+                $chatwootConversation,
+                $conversation,
+                $cwtContact,
+                $tenantId,
+                $teamsIds,
+            );
+        }
+
         return $result;
+    }
+
+    /**
+     * Hand the conversation's additional_attributes.ctwa to the
+     * FeatureMetaConversionsApi ingester, if that module is installed.
+     *
+     * Resolved lazily by FQCN so the Chatwoot module carries no hard
+     * dependency on the CAPI module.
+     *
+     * @param array<string, mixed> $chatwootConversation Raw Chatwoot payload.
+     * @param array<string> $teamsIds
+     */
+    private function ingestConversionEvents(
+        array $chatwootConversation,
+        Entity $conversation,
+        ?Entity $cwtContact,
+        ?string $tenantId,
+        array $teamsIds
+    ): void {
+        $additionalAttributes = $chatwootConversation['additional_attributes'] ?? null;
+
+        if (!is_array($additionalAttributes) || empty($additionalAttributes['ctwa'])) {
+            return;
+        }
+
+        $ingesterClass = 'Espo\\Modules\\FeatureMetaConversionsApi\\Services\\ConversionEventIngester';
+
+        if (!class_exists($ingesterClass)) {
+            return;
+        }
+
+        try {
+            $ingester = $this->injectableFactory->create($ingesterClass);
+
+            $created = $ingester->ingest(
+                $additionalAttributes,
+                $conversation,
+                $cwtContact,
+                $tenantId,
+                $teamsIds,
+            );
+
+            if ($created > 0) {
+                $this->log->info(sprintf(
+                    'SyncConversationsFromChatwoot: ingested %d Meta conversion event(s) for conversation %s.',
+                    $created,
+                    (string) $conversation->getId(),
+                ));
+            }
+        } catch (\Throwable $e) {
+            $this->log->error(
+                'SyncConversationsFromChatwoot: conversion-event ingest failed for conversation '
+                . (string) $conversation->getId() . ': ' . $e->getMessage()
+            );
+        }
     }
 
     /**

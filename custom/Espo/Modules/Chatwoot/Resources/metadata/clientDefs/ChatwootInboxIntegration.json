@@ -199,9 +199,29 @@
                 "visible": {
                     "conditionGroup": [
                         {
-                            "type": "equals",
-                            "attribute": "channelType",
-                            "value": "whatsappQrcode"
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappQrcode"
+                                },
+                                {
+                                    "type": "and",
+                                    "value": [
+                                        {
+                                            "type": "equals",
+                                            "attribute": "channelType",
+                                            "value": "whatsappCoexistence"
+                                        },
+                                        {
+                                            "type": "equals",
+                                            "attribute": "status",
+                                            "value": "PENDING_WAHA_LINK"
+                                        }
+                                    ]
+                                }
+                            ]
                         }
                     ]
                 }
@@ -352,6 +372,14 @@
             "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
             "actionFunction": "reconnect",
             "checkVisibilityFunction": "isReconnectAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "linkWahaCompanion",
+            "label": "Link WhatsApp Companion",
+            "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
+            "actionFunction": "linkWahaCompanion",
+            "checkVisibilityFunction": "isLinkWahaCompanionAvailable",
             "groupIndex": 1
         }
     ],

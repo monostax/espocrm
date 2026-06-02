@@ -24,6 +24,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/qr-code', ['views/field
                 ...Dep.prototype.data.call(this),
                 status: status,
                 isPendingQr: status === 'PENDING_QR',
+                isPendingWahaLink: status === 'PENDING_WAHA_LINK',
                 isActive: status === 'ACTIVE',
                 isDisconnected: status === 'DISCONNECTED',
                 isFailed: status === 'FAILED',
@@ -34,6 +35,13 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/qr-code', ['views/field
                 whatsappName: this.model.get('whatsappName'),
                 whatsappId: this.model.get('whatsappId'),
             };
+        },
+
+        // Statuses that should display + poll a WAHA QR code. PENDING_QR is the
+        // stand-alone QR channel; PENDING_WAHA_LINK is the coexistence send
+        // companion awaiting its linked-device scan.
+        needsQr: function () {
+            return ['PENDING_QR', 'PENDING_WAHA_LINK'].includes(this.model.get('status'));
         },
 
         setup: function () {
@@ -47,9 +55,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/qr-code', ['views/field
         afterRender: function () {
             Dep.prototype.afterRender.call(this);
 
-            const status = this.model.get('status');
-
-            if (status === 'PENDING_QR') {
+            if (this.needsQr()) {
                 this.loadQrCode();
                 this.startAutoRefresh();
             } else {
@@ -99,7 +105,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/qr-code', ['views/field
             this.stopAutoRefresh();
 
             this.refreshInterval = setInterval(() => {
-                if (this.model.get('status') === 'PENDING_QR') {
+                if (this.needsQr()) {
                     this.checkStatusAndRefresh();
                 } else {
                     this.stopAutoRefresh();
@@ -124,7 +130,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/qr-code', ['views/field
                         if (response.status === 'ACTIVE') {
                             Espo.Ui.success(this.translate('channelConnected', 'messages', 'ChatwootInboxIntegration'));
                         }
-                    } else if (response.status === 'PENDING_QR') {
+                    } else if (['PENDING_QR', 'PENDING_WAHA_LINK'].includes(response.status)) {
                         this.loadQrCode();
                     }
                 })

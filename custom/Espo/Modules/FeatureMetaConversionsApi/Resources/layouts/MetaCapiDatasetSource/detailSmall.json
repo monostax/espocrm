@@ -1,0 +1,16 @@
+[
+    {
+        "rows": [
+            [{ "name": "channel" }, { "name": "sourceId" }],
+            [{ "name": "oAuthAccount" }, false]
+        ]
+    },
+    {
+        "label": "Opportunity Creation",
+        "rows": [
+            [{ "name": "createOpportunity" }, false],
+            [{ "name": "funnel" }, { "name": "opportunityStage" }],
+            [{ "name": "assignedUser" }, false]
+        ]
+    }
+]

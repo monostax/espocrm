@@ -1,0 +1,35 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{ "name": "eventName" }, { "name": "channel" }],
+            [{ "name": "eventTime" }, false],
+            [{ "name": "value" }, { "name": "currency" }],
+            [{ "name": "sourceId" }, false],
+            [{ "name": "ctwaClid" }, false],
+            [{ "name": "igSid" }, false],
+            [{ "name": "wamid" }, false]
+        ]
+    },
+    {
+        "label": "Attribution",
+        "rows": [
+            [{ "name": "contact" }, { "name": "opportunity" }],
+            [{ "name": "metaCapiDataset" }, false],
+            [{ "name": "chatwootConversation" }, false]
+        ]
+    },
+    {
+        "label": "Payload",
+        "rows": [
+            [{ "name": "rawPayload" }, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "modifiedAt" }],
+            [{ "name": "teams" }, false]
+        ]
+    }
+]

@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "name": "Name",
+        "metaCapiDataset": "Dataset",
+        "oAuthAccount": "Meta Account",
+        "channel": "Channel",
+        "sourceId": "Business Account",
+        "sourceName": "Business Account Name",
+        "chatwootInboxIntegration": "Chat Inbox",
+        "stageEventActionSource": "Stage Event Action Source",
+        "createOpportunity": "Create Opportunity",
+        "funnel": "Funnel",
+        "opportunityStage": "Stage",
+        "assignedUser": "Assigned User",
+        "teams": "Teams",
+        "tenant": "Tenant"
+    },
+    "links": {
+        "metaCapiDataset": "Dataset",
+        "oAuthAccount": "Meta Account",
+        "chatwootInboxIntegration": "Chat Inbox",
+        "funnel": "Funnel",
+        "opportunityStage": "Stage",
+        "assignedUser": "Assigned User",
+        "teams": "Teams",
+        "tenant": "Tenant"
+    },
+    "labels": {
+        "Opportunity Creation": "Opportunity Creation"
+    },
+    "options": {
+        "channel": {
+            "whatsapp": "WhatsApp",
+            "instagram": "Instagram"
+        },
+        "stageEventActionSource": {
+            "system_generated": "System Generated (hashed PII)",
+            "business_messaging": "Business Messaging (in-thread)"
+        }
+    },
+    "tooltips": {
+        "oAuthAccount": "The Meta account whose token authorizes this source. Pick it first to load the account list.",
+        "sourceId": "The WhatsApp Business Account or Instagram business account this dataset reports conversions for. Unique per channel — a source belongs to only one dataset.",
+        "chatwootInboxIntegration": "The chat inbox this source maps to. Inbound conversions are matched to this source by their conversation's inbox. One source per inbox.",
+        "stageEventActionSource": "How Opportunity stage-change events are sent to Meta. System Generated (default) sends hashed contact data for conversions that happen outside the message thread (CRM funnel changes) and accepts any event name. Business Messaging sends in-thread events keyed by the ad click id and only accepts Meta's standard event names (e.g. Purchase, Lead Submitted).",
+        "createOpportunity": "When on, each ingested conversion creates an Opportunity (linked to the reconciled Contact) in the configured Funnel. This is independent of the Conversions API send to Meta.",
+        "funnel": "Funnel where Opportunities are created for conversions attributed to this source. Required when Create Opportunity is on.",
+        "opportunityStage": "Stage for created Opportunities. Leave empty to use the funnel's first active stage.",
+        "assignedUser": "Default owner for created Opportunities. Leave empty for unassigned."
+    }
+}

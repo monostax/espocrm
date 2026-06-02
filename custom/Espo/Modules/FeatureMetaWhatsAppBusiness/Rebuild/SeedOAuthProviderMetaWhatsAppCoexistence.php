@@ -43,7 +43,7 @@ use stdClass;
  */
 class SeedOAuthProviderMetaWhatsAppCoexistence implements RebuildAction
 {
-    private const PROVIDER_ID = 'msx_meta_wa_coex_01';
+    private const PROVIDER_ID = 'msx_wa_coex_01';
     private const PROVIDER_NAME = 'Meta (WhatsApp Coexistence)';
 
     /**

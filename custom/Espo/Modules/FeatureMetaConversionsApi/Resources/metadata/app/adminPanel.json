@@ -11,6 +11,18 @@
                 "description": "metaCapiDatasets"
             },
             {
+                "url": "#MetaCapiDatasetSource",
+                "label": "CAPI Dataset Sources",
+                "iconClass": "ti ti-plug-connected",
+                "description": "metaCapiDatasetSources"
+            },
+            {
+                "url": "#MetaConversionEvent",
+                "label": "Conversion Events",
+                "iconClass": "ti ti-target-arrow",
+                "description": "metaConversionEvents"
+            },
+            {
                 "url": "#MetaCapiEventLog",
                 "label": "CAPI Event Log",
                 "iconClass": "ti ti-list-details",

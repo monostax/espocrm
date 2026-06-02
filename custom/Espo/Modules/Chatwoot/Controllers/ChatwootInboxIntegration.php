@@ -176,6 +176,30 @@ class ChatwootInboxIntegration extends Record
         return $entity->getValueMap();
     }
 
+    /**
+     * POST ChatwootInboxIntegration/:id/linkWahaCompanion - Provision the
+     * WAHA send-only companion for a coexistence channel and enter the
+     * QR-link state (status PENDING_WAHA_LINK). Surface the QR via getQrCode.
+     *
+     * @throws BadRequest
+     * @throws Error
+     * @throws Forbidden
+     * @throws NotFound
+     */
+    public function postActionLinkWahaCompanion(Request $request, Response $response): stdClass
+    {
+        $id = $request->getRouteParam('id');
+
+        if (!$id) {
+            throw new BadRequest("ID is required.");
+        }
+
+        $service = $this->getChatwootInboxIntegrationService();
+        $entity = $service->linkWahaCompanion($id);
+
+        return $entity->getValueMap();
+    }
+
     private function getChatwootInboxIntegrationService(): ChatwootInboxIntegrationService
     {
         return $this->injectableFactory->create(ChatwootInboxIntegrationService::class);

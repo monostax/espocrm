@@ -135,6 +135,64 @@ class DatasetResolver
     }
 
     /**
+     * Fetch the MetaCapiDatasetSource junction row for a given messaging
+     * source. Returns the source row itself — needed by callers that read its
+     * per-source Opportunity-creation config (funnel / opportunityStage /
+     * assignedUser). Each (channel, sourceId) is unique, so this is an
+     * unambiguous lookup.
+     *
+     * @param string $channel  'whatsapp' | 'instagram'
+     * @param string $sourceId WABA id or Instagram business account id
+     */
+    public function resolveSourceRow(string $channel, string $sourceId): ?Entity
+    {
+        $channel = trim($channel);
+        $sourceId = trim($sourceId);
+
+        if ($channel === '' || $sourceId === '') {
+            return null;
+        }
+
+        $source = $this->entityManager
+            ->getRDBRepository('MetaCapiDatasetSource')
+            ->where([
+                'channel'  => $channel,
+                'sourceId' => $sourceId,
+                'deleted'  => false,
+            ])
+            ->findOne();
+
+        return $source ?: null;
+    }
+
+    /**
+     * Fetch the MetaCapiDatasetSource mapped to a given Chatwoot inbox
+     * integration. This is the authoritative inbound resolution: a conversion
+     * is matched to its source by walking conversation -> inbox ->
+     * chatwootInboxIntegration, NOT by the ad-derived sourceId string (which is
+     * unavailable/unstable for WAHA inboxes). The link is unique, so this is an
+     * unambiguous lookup.
+     */
+    public function resolveSourceByInboxIntegration(string $inboxIntegrationId): ?Entity
+    {
+        $inboxIntegrationId = trim($inboxIntegrationId);
+
+        if ($inboxIntegrationId === '') {
+            return null;
+        }
+
+        $source = $this->entityManager
+            ->getRDBRepository('MetaCapiDatasetSource')
+            ->where([
+                'chatwootInboxIntegrationId' => $inboxIntegrationId,
+                'deleted'                    => false,
+            ])
+            ->findOne();
+
+        return $source ?: null;
+    }
+
+    /**
      * Tenant-blind global default lookup.
      *
      * Kept for backwards compatibility with any external code, but

@@ -48,9 +48,29 @@
                     "attribute": "id"
                 },
                 {
-                    "type": "equals",
-                    "attribute": "channelType",
-                    "value": "whatsappQrcode"
+                    "type": "or",
+                    "value": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "whatsappQrcode"
+                        },
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "channelType",
+                                    "value": "whatsappCoexistence"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "status",
+                                    "value": "PENDING_WAHA_LINK"
+                                }
+                            ]
+                        }
+                    ]
                 }
             ]
         },
@@ -228,6 +248,14 @@
                 },
                 {
                     "name": "chatwootInboxIdentifier"
+                }
+            ],
+            [
+                {
+                    "name": "wahaSessionName"
+                },
+                {
+                    "name": "wahaChatwootInboxId"
                 }
             ]
         ]
