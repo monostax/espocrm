@@ -1,4 +1,5 @@
 [
+    { "name": "conversationName", "width": 18, "link": true },
     { "name": "eventName", "width": 15 },
     { "name": "channel", "width": 12 },
     { "name": "sourceId", "width": 18 },

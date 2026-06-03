@@ -109,6 +109,7 @@ class ConversionEventIngester
                 $sourceId,
                 $ctwaClid,
                 $igSid,
+                $ctwa,
                 $chatwootConversation,
                 $contactId,
                 $tenantId,
@@ -227,6 +228,10 @@ class ConversionEventIngester
      * derived from the attribution key. Creates an Opportunity like the
      * conversion path, but never dispatches to the Conversions API.
      *
+     * @param array<string, mixed> $ctwa The conversation's captured `ctwa`
+     *        attribution block (Meta-origin referral context, as stored by the
+     *        Chatwoot side). Persisted into rawPayload so the ad headline /
+     *        source url / ad id captured at arrival are not lost.
      * @param array<string> $teamsIds
      *
      * @return int 1 if a new arrival row was created, 0 otherwise.
@@ -236,6 +241,7 @@ class ConversionEventIngester
         string $sourceId,
         ?string $ctwaClid,
         ?string $igSid,
+        array $ctwa,
         Entity $chatwootConversation,
         ?string $contactId,
         ?string $tenantId,
@@ -266,7 +272,7 @@ class ConversionEventIngester
         $conversion->set('igSid', $igSid);
         $conversion->set('wamid', $wamid);
         $conversion->set('eventTime', date('Y-m-d H:i:s'));
-        $conversion->set('rawPayload', ['source' => 'ctwa_arrival', 'attribution' => $attribution]);
+        $conversion->set('rawPayload', $this->buildArrivalPayload($channel, $attribution, $ctwa));
         $conversion->set('chatwootConversationId', $chatwootConversation->getId());
         $conversion->set('name', sprintf('%s · %s', MetaConversionEvent::EVENT_CONTACT, $sourceId));
 
@@ -367,6 +373,56 @@ class ConversionEventIngester
         }
 
         return $conversion;
+    }
+
+    /**
+     * Build the rawPayload stored on an arrival row. Arrival rows are created
+     * the moment an ad-originated conversation appears — Meta has not fired any
+     * conversion (Purchase/LeadSubmitted) yet, so there is no Meta conversion
+     * payload to store. Instead we persist the Meta-origin referral context the
+     * Chatwoot side already captured onto `additional_attributes.ctwa` (ad id,
+     * source url, headline, etc.) so it is not lost. `source` is a
+     * channel-neutral marker — this is NOT a Click-to-WhatsApp-only concept;
+     * Instagram ad arrivals reuse the same `ctwa` block.
+     *
+     * @param array<string, mixed> $ctwa
+     *
+     * @return array<string, mixed>
+     */
+    private function buildArrivalPayload(string $channel, ?string $attribution, array $ctwa): array
+    {
+        // Whitelist the Meta-origin referral fields the Chatwoot side captures
+        // (WhatsApp: incoming_message_service_helpers; Instagram: instagram
+        // base_message_builder). Keep only what is present.
+        $referralKeys = [
+            'source_id',
+            'source_type',
+            'source_url',
+            'headline',
+            'body',
+            'ad_id',
+            'ad_title',
+            'ref',
+            'referral_source',
+            'captured_at',
+        ];
+
+        $referral = [];
+
+        foreach ($referralKeys as $key) {
+            $value = $this->str($ctwa[$key] ?? null);
+
+            if ($value !== null) {
+                $referral[$key] = $value;
+            }
+        }
+
+        return array_filter([
+            'source' => 'meta_ad_arrival',
+            'channel' => $channel,
+            'attribution' => $attribution,
+            'referral' => $referral === [] ? null : $referral,
+        ], static fn ($v) => $v !== null);
     }
 
     private function resolveChannel(array $ctwa): string

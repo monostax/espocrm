@@ -239,6 +239,13 @@ class OpportunityFactory
             // event. This is the ONLY path that reports the conversion to Meta.
             $this->entityManager->saveEntity($opp);
 
+            // Link the originating ChatwootConversation onto the Opportunity
+            // (many-to-many `chatwootConversations`). This is what surfaces the
+            // conversation thread on the Opportunity and back-links the
+            // Opportunity from the conversation, regardless of whether a Contact
+            // was reconciled yet. Best-effort: never fail the creation over it.
+            $this->linkChatwootConversation($opp, $conversion);
+
             return $opp;
         } catch (Throwable $e) {
             $this->log->error(
@@ -247,6 +254,35 @@ class OpportunityFactory
             );
 
             return null;
+        }
+    }
+
+    /**
+     * Relate the originating ChatwootConversation to the Opportunity over the
+     * many-to-many `chatwootConversations` link. Best-effort: a failure here
+     * must not undo a successfully created Opportunity, so it is logged and
+     * swallowed.
+     */
+    private function linkChatwootConversation(Opportunity $opp, MetaConversionEvent $conversion): void
+    {
+        $conversationId = $this->str($conversion->get('chatwootConversationId'));
+
+        if ($conversationId === null) {
+            return;
+        }
+
+        try {
+            $this->entityManager
+                ->getRDBRepository(Opportunity::ENTITY_TYPE)
+                ->getRelation($opp, 'chatwootConversations')
+                ->relateById($conversationId);
+        } catch (Throwable $e) {
+            $this->log->warning(sprintf(
+                'MetaCapi OpportunityFactory: failed to link ChatwootConversation %s onto Opportunity %s: %s',
+                $conversationId,
+                (string) $opp->getId(),
+                $e->getMessage(),
+            ));
         }
     }
 

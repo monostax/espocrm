@@ -14,9 +14,9 @@
     {
         "label": "Attribution",
         "rows": [
+            [{ "name": "conversationName" }, { "name": "chatwootConversation" }],
             [{ "name": "contact" }, { "name": "opportunity" }],
-            [{ "name": "metaCapiDataset" }, false],
-            [{ "name": "chatwootConversation" }, false]
+            [{ "name": "metaCapiDataset" }, false]
         ]
     },
     {

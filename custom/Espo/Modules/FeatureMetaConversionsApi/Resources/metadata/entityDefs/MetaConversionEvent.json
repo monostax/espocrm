@@ -19,7 +19,8 @@
             "default": "whatsapp",
             "readOnly": true,
             "style": {
-                "whatsapp": "success"
+                "whatsapp": "success",
+                "instagram": "info"
             }
         },
         "ctwaClid": {
@@ -27,28 +28,28 @@
             "maxLength": 512,
             "readOnly": true,
             "tooltip": true,
-            "comment": "Click-to-WhatsApp click id. The attribution key for whatsapp channel."
+            "comment": "WhatsApp-only attribution key: the Click-to-WhatsApp click id (ctwa_clid). Empty for Instagram rows."
         },
         "igSid": {
             "type": "varchar",
             "maxLength": 256,
             "readOnly": true,
             "tooltip": true,
-            "comment": "Instagram-scoped sender id (IGSID). The attribution key for instagram channel."
+            "comment": "Instagram-only attribution key: the Instagram-scoped sender id (IGSID). Empty for WhatsApp rows."
         },
         "sourceId": {
             "type": "varchar",
             "maxLength": 64,
             "readOnly": true,
             "index": true,
-            "comment": "WABA id (whatsapp) or Instagram business account id (instagram). Joins to MetaCapiDatasetSource.sourceId."
+            "comment": "Messaging account id: WABA id (WhatsApp) or Instagram business account id (Instagram). Joins to MetaCapiDatasetSource.sourceId."
         },
         "wamid": {
             "type": "varchar",
             "maxLength": 256,
             "readOnly": true,
             "tooltip": true,
-            "comment": "Provider message id of the conversion event. Idempotency key — unique per row."
+            "comment": "Idempotency / dedup key (one row per key). For real conversions it is the provider message id (WhatsApp wamid / Instagram message id). For ad-arrival rows it is a synthetic key derived from the attribution: 'ctwa:<clid>' (WhatsApp) or 'igsid:<sid>' (Instagram). NEVER sent to Meta."
         },
         "value": {
             "type": "float",
@@ -84,6 +85,14 @@
         "chatwootConversation": {
             "type": "link",
             "readOnly": true
+        },
+        "conversationName": {
+            "type": "foreign",
+            "link": "chatwootConversation",
+            "field": "name",
+            "readOnly": true,
+            "notStorable": true,
+            "comment": "Foreign read-through of ChatwootConversation.name (e.g. the contact/person name). NOT stored on this row — resolved via a JOIN at query time. Gives a stable, always-current human label for the event without denormalising or back-filling the (often late-reconciled) Contact."
         },
         "createdAt": {
             "type": "datetime",

@@ -3,10 +3,10 @@
         "name": "Name",
         "eventName": "Event",
         "channel": "Channel",
-        "ctwaClid": "CTWA Click ID",
-        "igSid": "Instagram Scoped ID",
-        "sourceId": "Source ID",
-        "wamid": "Message ID",
+        "ctwaClid": "CTWA Click ID (WhatsApp)",
+        "igSid": "Instagram Scoped ID (IGSID)",
+        "sourceId": "Messaging Account ID",
+        "wamid": "Event Key",
         "value": "Value",
         "currency": "Currency",
         "eventTime": "Event Time",
@@ -15,6 +15,7 @@
         "contact": "Contact",
         "opportunity": "Opportunity",
         "chatwootConversation": "Chatwoot Conversation",
+        "conversationName": "Conversation",
         "teams": "Teams",
         "tenant": "Tenant"
     },
@@ -23,6 +24,12 @@
         "contact": "Contact",
         "opportunity": "Opportunity",
         "chatwootConversation": "Chatwoot Conversation"
+    },
+    "tooltips": {
+        "ctwaClid": "WhatsApp-only attribution key: the Click-to-WhatsApp click id (ctwa_clid). Empty for Instagram.",
+        "igSid": "Instagram-only attribution key: the Instagram-scoped sender id (IGSID). Empty for WhatsApp.",
+        "sourceId": "The messaging account id — WABA id for WhatsApp, Instagram business account id for Instagram.",
+        "wamid": "Idempotency / dedup key (one row per key). For real conversions it is the provider message id (WhatsApp wamid / Instagram message id). For ad-arrival rows it is a synthetic key derived from the attribution. Never sent to Meta."
     },
     "options": {
         "eventName": {

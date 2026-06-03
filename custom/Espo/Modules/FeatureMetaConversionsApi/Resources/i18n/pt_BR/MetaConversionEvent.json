@@ -3,10 +3,10 @@
         "name": "Nome",
         "eventName": "Evento",
         "channel": "Canal",
-        "ctwaClid": "ID de Clique CTWA",
-        "igSid": "ID com Escopo do Instagram",
-        "sourceId": "ID da Origem",
-        "wamid": "ID da Mensagem",
+        "ctwaClid": "ID de Clique CTWA (WhatsApp)",
+        "igSid": "ID com Escopo do Instagram (IGSID)",
+        "sourceId": "ID da Conta de Mensagens",
+        "wamid": "Chave do Evento",
         "value": "Valor",
         "currency": "Moeda",
         "eventTime": "Horário do Evento",
@@ -15,6 +15,7 @@
         "contact": "Contato",
         "opportunity": "Oportunidade",
         "chatwootConversation": "Conversa do Chatwoot",
+        "conversationName": "Conversa",
         "teams": "Equipes",
         "tenant": "Tenant"
     },
@@ -23,6 +24,12 @@
         "contact": "Contato",
         "opportunity": "Oportunidade",
         "chatwootConversation": "Conversa do Chatwoot"
+    },
+    "tooltips": {
+        "ctwaClid": "Chave de atribuição exclusiva do WhatsApp: o id de clique do Click-to-WhatsApp (ctwa_clid). Vazio para Instagram.",
+        "igSid": "Chave de atribuição exclusiva do Instagram: o id com escopo do remetente (IGSID). Vazio para WhatsApp.",
+        "sourceId": "O id da conta de mensagens — id da WABA no WhatsApp, id da conta comercial do Instagram no Instagram.",
+        "wamid": "Chave de idempotência / deduplicação (uma linha por chave). Em conversões reais é o id da mensagem do provedor (wamid do WhatsApp / id da mensagem do Instagram). Em linhas de chegada de anúncio é uma chave sintética derivada da atribuição. Nunca é enviada à Meta."
     },
     "options": {
         "eventName": {
