@@ -1,5 +1,18 @@
 {
     "aclFieldLevel": "yes",
-    "mandatoryFields": ["teams", "assignedUsers"]
+    "mandatoryFields": ["teams", "assignedUsers"],
+    "detailActionList": [
+        "__APPEND__",
+        {
+            "name": "setSystemUserToken",
+            "label": "Set System User Token",
+            "labelTranslation": "OAuthAccount.labels.Set System User Token",
+            "handler": "feature-oauth-enhanced:handlers/o-auth-account/detail-actions",
+            "actionFunction": "setSystemUserToken",
+            "checkVisibilityFunction": "isSetSystemUserTokenAvailable",
+            "groupIndex": 1,
+            "iconClass": "fas fa-key"
+        }
+    ]
 }
 

@@ -36,13 +36,15 @@ use Espo\Core\MassAction\Data;
 use Espo\Core\MassAction\MassAction;
 use Espo\Tools\MassUpdate\Data as MassUpdateData;
 use Espo\Core\Utils\Metadata;
+use Espo\ORM\EntityManager;
 
 class MassUpdate implements MassAction
 {
 
     public function __construct(
         private MassUpdateOriginal $massUpdateOriginal,
-        private Metadata $metadata
+        private Metadata $metadata,
+        private EntityManager $entityManager
     ) {}
 
     public function process(Params $params, Data $data): Result
@@ -59,6 +61,28 @@ class MassUpdate implements MassAction
 
         if ($probability !== null) {
             $massUpdateData = $massUpdateData->with('probability', $probability);
+        }
+
+        // When mass-updating the OpportunityStage, move each record to the
+        // stage's owning funnel as well. An OpportunityStage belongs to exactly
+        // one Funnel, so deriving the funnel from the chosen stage lets every
+        // selected Opportunity be moved (rather than skipped by the
+        // ValidateStageFunnel guard when their current funnel differs).
+        // Only do this when the caller didn't explicitly set a funnel itself.
+        $opportunityStageId = $massUpdateData->getValue('opportunityStageId');
+
+        if ($opportunityStageId && !$massUpdateData->has('funnelId')) {
+            $opportunityStage = $this->entityManager
+                ->getEntityById('OpportunityStage', $opportunityStageId);
+
+            $funnelId = $opportunityStage?->get('funnelId');
+
+            if ($funnelId) {
+                $funnel = $this->entityManager->getEntityById('Funnel', $funnelId);
+
+                $massUpdateData = $massUpdateData->with('funnelId', $funnelId);
+                $massUpdateData = $massUpdateData->with('funnelName', $funnel?->get('name'));
+            }
         }
 
         return $this->massUpdateOriginal->process($params, $massUpdateData->toMassActionData());

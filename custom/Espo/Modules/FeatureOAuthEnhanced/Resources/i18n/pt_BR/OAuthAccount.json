@@ -1,7 +1,24 @@
 {
     "fields": {
         "teams": "Times",
-        "assignedUsers": "Usuários Responsáveis"
+        "assignedUsers": "Usuários Responsáveis",
+        "metaSystemUserId": "ID do Usuário do Sistema Meta",
+        "metaBusinessId": "ID do Business Meta",
+        "metaTokenInfo": "Informações do Token Meta"
+    },
+    "labels": {
+        "Set System User Token": "Definir Token de Usuário do Sistema",
+        "Meta — System User Token": "Meta — Token de Usuário do Sistema",
+        "Save Token": "Salvar Token"
+    },
+    "messages": {
+        "confirmSetSystemUserToken": "Cole o token de acesso do Usuário do Sistema Meta. Ele será validado na Graph API e armazenado criptografado.",
+        "systemUserTokenPrompt": "Token de acesso do Usuário do Sistema Meta",
+        "systemUserTokenSet": "Token de Usuário do Sistema validado e armazenado.",
+        "systemUserTokenFailed": "Não foi possível validar ou armazenar o token do Usuário do Sistema.",
+        "systemUserTokenEmpty": "Por favor, cole um token.",
+        "systemUserMissingClientId": "Defina o Client ID (App ID) e o Client Secret no provedor Meta (Usuário do Sistema) antes de definir um token.",
+        "systemUserTokenMissingScopes": "Token salvo, mas está faltando escopos: {scopes}. Recursos do WhatsApp/Business podem não funcionar até você gerar o token novamente com esses escopos."
     },
     "links": {
         "teams": "Times",

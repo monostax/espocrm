@@ -9,6 +9,7 @@
         "provider": {
             "meta-whatsapp": "Meta (WhatsApp)",
             "meta-leadads": "Meta (Lead Ads)",
+            "meta-system-user": "Meta (Usuário do Sistema)",
             "google-calendar": "Google (Calendar)",
             "google-meet": "Google (Meet)",
             "meta-instagram": "Meta (Instagram)",

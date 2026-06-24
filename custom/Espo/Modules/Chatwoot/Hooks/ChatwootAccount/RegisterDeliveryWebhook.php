@@ -55,6 +55,7 @@ class RegisterDeliveryWebhook
         // This allows safe execution on every save and self-heals missing webhooks.
         $this->registerDeliveryWebhook($entity, $chatwootAccountId);
         $this->registerHatchetWebhook($entity, $chatwootAccountId);
+        $this->registerVoipWebhook($entity, $chatwootAccountId);
     }
 
     private function webhookExists(Entity $entity, string $name): bool
@@ -64,6 +65,19 @@ class RegisterDeliveryWebhook
             ->where([
                 'accountId' => $entity->getId(),
                 'name' => $name,
+            ])
+            ->findOne();
+
+        return (bool) $existing;
+    }
+
+    private function webhookExistsByUrl(Entity $entity, string $url): bool
+    {
+        $existing = $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $entity->getId(),
+                'url' => $url,
             ])
             ->findOne();
 
@@ -106,6 +120,56 @@ class RegisterDeliveryWebhook
         } catch (\Exception $e) {
             $this->log->error(
                 "RegisterDeliveryWebhook: Failed to register delivery webhook for account " .
+                "{$entity->getId()}: {$e->getMessage()}"
+            );
+        }
+    }
+
+    /**
+     * Register VoIP call-mirroring webhook.
+     *
+     * Sends `message_created` and `message_updated` events to the CRM's
+     * VoipWebhook controller. The FeatureVoip module filters for
+     * voice_call messages and upserts a CRM Call record. Shares the same
+     * CRM_BACKEND_URL base as the delivery webhook.
+     */
+    private function registerVoipWebhook(Entity $entity, int $chatwootAccountId): void
+    {
+        $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
+
+        if (!$crmBackendUrl) {
+            $this->log->warning(
+                "RegisterDeliveryWebhook: Cannot register VoIP webhook for account {$entity->getId()} — " .
+                "neither CRM_BACKEND_URL env nor siteUrl config is set."
+            );
+            return;
+        }
+
+        $webhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/VoipWebhook/' . $chatwootAccountId;
+
+        // Idempotent on BOTH name and URL: a webhook with this URL may already
+        // exist on Chatwoot (e.g. created manually or under a different name).
+        // Matching on URL avoids the "422 Url has already been taken" loop.
+        if ($this->webhookExists($entity, 'VoIP Call Mirror') ||
+            $this->webhookExistsByUrl($entity, $webhookUrl)) {
+            return;
+        }
+
+        try {
+            $this->entityManager->createEntity('ChatwootAccountWebhook', [
+                'name' => 'VoIP Call Mirror',
+                'accountId' => $entity->getId(),
+                'url' => $webhookUrl,
+                'subscriptions' => ['message_created', 'message_updated'],
+            ]);
+
+            $this->log->info(
+                "RegisterDeliveryWebhook: Registered VoIP webhook for account " .
+                "{$entity->getId()} (Chatwoot #{$chatwootAccountId}) at {$webhookUrl}"
+            );
+        } catch (\Exception $e) {
+            $this->log->error(
+                "RegisterDeliveryWebhook: Failed to register VoIP webhook for account " .
                 "{$entity->getId()}: {$e->getMessage()}"
             );
         }

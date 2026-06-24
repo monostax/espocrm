@@ -21,7 +21,7 @@ define("global:views/opportunity/fields/opportunity-stage", [
         listTemplate: "global:opportunity/fields/opportunity-stage/list",
         listLinkTemplate: "global:opportunity/fields/opportunity-stage/list-link",
 
-        mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle"],
+        mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle", "funnelName"],
 
         getAttributeList: function () {
             const list = Dep.prototype.getAttributeList.call(this);
@@ -129,9 +129,27 @@ define("global:views/opportunity/fields/opportunity-stage", [
         },
 
         /**
+         * Whether this field is being rendered inside the Opportunity mass-update
+         * modal. In that context there is no single funnel to scope stages to, so
+         * the funnel-first guard is relaxed and every active stage is selectable.
+         * On apply, each record is moved to the chosen stage's owning funnel
+         * (see MassAction\Opportunity\MassUpdate), so no records are skipped.
+         */
+        isMassUpdateContext: function () {
+            const parentView = this.getParentView();
+
+            return !!(parentView && parentView.isMassUpdate === true);
+        },
+
+        /**
          * Override to check if funnel is selected before allowing stage selection.
          */
         actionSelect: function () {
+            if (this.isMassUpdateContext()) {
+                Dep.prototype.actionSelect.call(this);
+                return;
+            }
+
             const funnelId = this.model.get("funnelId");
 
             if (!funnelId) {
@@ -142,6 +160,30 @@ define("global:views/opportunity/fields/opportunity-stage", [
             }
 
             Dep.prototype.actionSelect.call(this);
+        },
+
+        /**
+         * Append the parent Funnel name to each autocomplete suggestion when
+         * stages are offered across funnels (mass-update). Without the funnel
+         * the bare stage name is ambiguous since the same stage name can exist
+         * in multiple funnels.
+         */
+        _transformAutocompleteResult: function (response) {
+            const list = Dep.prototype._transformAutocompleteResult.call(this, response);
+
+            if (!this.isMassUpdateContext()) {
+                return list;
+            }
+
+            list.forEach(item => {
+                const funnelName = item.attributes && item.attributes.funnelName;
+
+                if (funnelName) {
+                    item.value = item.value + " – " + funnelName;
+                }
+            });
+
+            return list;
         },
     });
 });

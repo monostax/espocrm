@@ -13,6 +13,10 @@
         "width": 15
     },
     {
+        "name": "igUserId",
+        "width": 15
+    },
+    {
         "name": "assigneeName",
         "width": 15
     },

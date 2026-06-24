@@ -1,0 +1,14 @@
+{
+    "fields": {
+        "twilioCallSid": "Twilio Call SID",
+        "recordingUrl": "Recording URL",
+        "chatwootConversationId": "Chatwoot Conversation ID",
+        "chatwootAccountId": "Chatwoot Account ID",
+        "voipProvider": "VoIP Provider"
+    },
+    "options": {
+        "voipProvider": {
+            "voip_twilio": "Twilio (VoIP)"
+        }
+    }
+}

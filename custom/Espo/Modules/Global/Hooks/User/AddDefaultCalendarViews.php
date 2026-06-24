@@ -47,11 +47,7 @@ class AddDefaultCalendarViews implements AfterSave
     public function afterSave(Entity $entity, SaveOptions $options): void
     {
         /** @var User $entity */
-        
-        // TEST: Log that this hook is triggered
-        file_put_contents('/tmp/user-hook-test.log', date('Y-m-d H:i:s') . " - User hook triggered for ID: " . $entity->getId() . "\n", FILE_APPEND);
-        error_log("USER HOOK TRIGGERED: " . $entity->getId());
-        
+
         // Only run for new users (not updates)
         if (!$entity->isNew()) {
             return;

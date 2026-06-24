@@ -13,11 +13,13 @@
         "chatwootContact": "Chat / Contact",
         "contact": "Contact",
         "chatwootAccount": "Chat / Account",
+        "channelIdentity": "Channel Identity",
         "lastSyncedAt": "Last Synced At",
         "lastMessageContent": "Last Message",
         "contactAvatarUrl": "Contact Avatar",
         "contactDisplayName": "Contact Name",
         "inboxChannelType": "Channel Type",
+        "igUserId": "Instagram User ID",
         "lastMessageSentAt": "Last Sent",
         "lastMessageReceivedAt": "Last Received",
         "lastMessageType": "Last Message Type"
@@ -55,5 +57,8 @@
     },
     "boolFilters": {
         "assignedToMe": "Assigned (to me)"
+    },
+    "presetFilters": {
+        "instagram": "Instagram"
     }
 }

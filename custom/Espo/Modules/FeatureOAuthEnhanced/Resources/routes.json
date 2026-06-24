@@ -1,0 +1,18 @@
+[
+    {
+        "route": "/MetaSystemUserToken/set",
+        "method": "post",
+        "params": {
+            "controller": "MetaSystemUserToken",
+            "action": "set"
+        }
+    },
+    {
+        "route": "/MetaSystemUserToken/generate",
+        "method": "post",
+        "params": {
+            "controller": "MetaSystemUserToken",
+            "action": "generate"
+        }
+    }
+]

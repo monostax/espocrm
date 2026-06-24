@@ -75,9 +75,19 @@ class ChatwootInboxIntegration
             throw new NotFound("ChatwootInboxIntegration with ID '{$channelId}' not found.");
         }
 
+        // DRAFT/FAILED is first-time activation (or retry). CONNECTING and
+        // PENDING_QR are the "Repair" path: an operator self-repairs a channel
+        // whose WAHA session/app got into a broken/stuck state (e.g. the session
+        // logged out or the Chatwoot app was deleted) without delete + recreate.
+        // Re-activation is idempotent w.r.t. the Chatwoot inbox (see
+        // resolveChatwootInboxForQr), so existing conversations are preserved.
+        // DISCONNECTED is intentionally excluded here: it is handled by reconnect()
+        // (a lighter session restart that falls back to activate() if no session).
         $status = $channel->get('status');
-        if (!in_array($status, ['DRAFT', 'FAILED', 'DISCONNECTED'])) {
-            throw new BadRequest("Channel can only be activated from DRAFT, FAILED, or DISCONNECTED status.");
+        if (!in_array($status, ['DRAFT', 'FAILED', 'CONNECTING', 'PENDING_QR'])) {
+            throw new BadRequest(
+                "Channel can only be activated from DRAFT, FAILED, CONNECTING, or PENDING_QR status."
+            );
         }
 
         // Update status to CREATING
@@ -180,11 +190,16 @@ class ChatwootInboxIntegration
                 throw new Error("ChatwootAccount is missing API key. Please generate a User Access Token in Chatwoot (Settings > Account Settings > API Access Tokens) and add it to the ChatwootAccount.");
             }
             
+            // Idempotent: reuse the channel's existing Chatwoot inbox when it still
+            // exists (only update its webhook_url to the regenerated WAHA app URL).
+            // Re-activation (DRAFT|FAILED|DISCONNECTED -> activate) must NOT create a
+            // duplicate inbox and orphan the historical conversations.
             $inboxName = 'WhatsApp - ' . $channel->get('name');
-            $inboxResult = $this->createChatwootInbox(
+            $inboxResult = $this->resolveChatwootInboxForQr(
+                $channel,
                 $chatwootUrl,
                 $chatwootAccountApiKey,
-                $chatwootAccountId,
+                (int) $chatwootAccountId,
                 $inboxName,
                 $wahaWebhookUrl
             );
@@ -1140,6 +1155,159 @@ class ChatwootInboxIntegration
         );
     }
 
+    /**
+     * Re-sync the current Meta access token from the channel's OAuthAccount into
+     * the native Chatwoot WhatsApp Cloud inbox's `provider_config.api_key`.
+     *
+     * Why this exists
+     * ---------------
+     * At onboarding the integration copies a *snapshot* of the OAuthAccount
+     * (system-user) token into Chatwoot's `provider_config.api_key`
+     * (see createChatwootWhatsappCloudInbox). After that, nothing re-pushes the
+     * token. When the system-user token is rotated/regenerated in Meta — or was
+     * only transiently invalid at onboarding — the OAuthAccount keeps the fresh
+     * token (so CRM health/delivery stays green) while Chatwoot keeps the stale
+     * snapshot. Chatwoot's media download then 401s; after two failures
+     * Channel::Whatsapp#authorization_error! trips the sticky
+     * `reauthorization_required` flag (red badge, inbound media degraded) and it
+     * never recovers on its own.
+     *
+     * This makes the integration the single source of truth for the token:
+     * it patches the live OAuthAccount token into provider_config.api_key. The
+     * Chatwoot inbox PATCH endpoint (InboxesController#reauthorize_and_update_channel)
+     * calls `channel.reauthorized!` *before* applying the update, which clears
+     * both the Redis authorization-error counter and the reauthorization flag —
+     * so a single PATCH both refreshes the token and clears the stuck red badge.
+     *
+     * Mirrors syncCoexistenceWahaLink: Chatwoot replaces provider_config
+     * wholesale on update, so we GET the current config first and merge.
+     *
+     * No-ops quietly (returns false) when prerequisites are missing or the token
+     * is already in sync; throws only on hard API failures.
+     *
+     * @return bool True if a PATCH was issued (token re-synced), false otherwise.
+     */
+    private function patchInboxAccessToken(Entity $channel): bool
+    {
+        // The NUMERIC Chatwoot inbox id (what the Chatwoot REST API expects)
+        // lives on the linked ChatwootInbox entity, NOT on this integration:
+        // the integration's own `chatwootInboxId` attribute has no backing
+        // column and resolves to the link's entity-id string. Resolve the real
+        // numeric id via the link (same pattern as reconnectInstagram).
+        $chatwootInbox = $channel->get('chatwootInbox');
+        $chatwootInboxId = $chatwootInbox ? $chatwootInbox->get('chatwootInboxId') : null;
+        if (!$chatwootInboxId) {
+            return false;
+        }
+
+        $oAuthAccountId = $channel->get('oAuthAccountId');
+        if (!$oAuthAccountId) {
+            // Legacy credential-based channels manage their own token; nothing to sync.
+            return false;
+        }
+
+        $chatwootAccount = $channel->get('chatwootAccount');
+        if (!$chatwootAccount) {
+            return false;
+        }
+
+        $chatwootPlatform = $chatwootAccount->get('platform');
+        if (!$chatwootPlatform) {
+            return false;
+        }
+
+        $chatwootUrl = $chatwootPlatform->get('backendUrl');
+        $chatwootAccountId = (int) $chatwootAccount->get('chatwootAccountId');
+        $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
+
+        if (!$chatwootUrl || !$chatwootAccountId || !$chatwootAccountApiKey) {
+            return false;
+        }
+
+        try {
+            $tokens = $this->tokensProvider->get($oAuthAccountId);
+            $accessToken = $tokens->getAccessToken();
+        } catch (\Exception $e) {
+            $this->log->warning(
+                "ChatwootInboxIntegration: patchInboxAccessToken could not resolve token for OAuthAccount " .
+                "{$oAuthAccountId} (channel {$channel->getId()}): " . $e->getMessage()
+            );
+            return false;
+        }
+
+        if (!$accessToken) {
+            return false;
+        }
+
+        // Read current provider_config so we can merge rather than clobber
+        // (e.g. preserve linked_waha, voice config, phone_number_id, etc.).
+        $inbox = $this->chatwootApiClient->getInbox(
+            $chatwootUrl,
+            $chatwootAccountApiKey,
+            $chatwootAccountId,
+            (int) $chatwootInboxId
+        );
+
+        if ($inbox === null) {
+            $this->log->warning(
+                "ChatwootInboxIntegration: patchInboxAccessToken — Chatwoot inbox {$chatwootInboxId} not found " .
+                "for channel {$channel->getId()}."
+            );
+            return false;
+        }
+
+        $providerConfig = $inbox['provider_config'] ?? [];
+        if (!is_array($providerConfig)) {
+            $providerConfig = [];
+        }
+
+        // Guard against clobbering. Chatwoot only serializes provider_config for
+        // administrator API users; if it came back without the WhatsApp Cloud
+        // identifiers, the account API key is non-admin (or the inbox isn't a
+        // cloud inbox) and PATCHing would wipe phone_number_id/business_account_id.
+        // Bail rather than corrupt the inbox.
+        if (empty($providerConfig['phone_number_id'])) {
+            $this->log->warning(
+                "ChatwootInboxIntegration: patchInboxAccessToken — inbox {$chatwootInboxId} returned no " .
+                "phone_number_id in provider_config (non-admin API key or non-cloud inbox); skipping token re-sync " .
+                "for channel {$channel->getId()}."
+            );
+            return false;
+        }
+
+        $currentApiKey = $providerConfig['api_key'] ?? null;
+
+        // Token already current AND no sticky reauthorization to clear → skip the
+        // PATCH. Chatwoot redacts some secrets in responses but api_key is
+        // returned for whatsapp_cloud, so this comparison is reliable; if the
+        // inbox is flagged we still patch to force reauthorized!.
+        $reauthRequired = (bool) ($inbox['reauthorization_required'] ?? false);
+
+        if ($currentApiKey === $accessToken && !$reauthRequired) {
+            return false;
+        }
+
+        $providerConfig['api_key'] = $accessToken;
+
+        // The PATCH endpoint calls channel.reauthorized! before update!, so this
+        // single call both refreshes the token and clears the stuck reauth flag.
+        $this->chatwootApiClient->updateInbox(
+            $chatwootUrl,
+            $chatwootAccountApiKey,
+            $chatwootAccountId,
+            (int) $chatwootInboxId,
+            ['channel' => ['provider_config' => $providerConfig]]
+        );
+
+        $this->log->info(
+            "ChatwootInboxIntegration: re-synced provider_config.api_key into Chatwoot inbox " .
+            "{$chatwootInboxId} from OAuthAccount {$oAuthAccountId} (channel {$channel->getId()})" .
+            ($reauthRequired ? ' and cleared reauthorization_required.' : '.')
+        );
+
+        return true;
+    }
+
     public function findLinkedChatwootInboxRecordId(string $channelId): ?string
     {
         $inbox = $this->entityManager
@@ -1370,6 +1538,20 @@ class ChatwootInboxIntegration
                     $channel->set('errorMessage', null);
                     $this->entityManager->saveEntity($channel);
                 }
+
+                // The OAuthAccount token just proved valid against Meta. Push it
+                // into Chatwoot's provider_config.api_key so Chatwoot's own media
+                // download uses the live token instead of the onboarding snapshot.
+                // This also clears any sticky reauthorization_required flag tripped
+                // by a previously rotated/stale token. No-ops when already in sync.
+                try {
+                    $this->patchInboxAccessToken($channel);
+                } catch (\Exception $e) {
+                    $this->log->warning(
+                        "ChatwootInboxIntegration: failed to re-sync Chatwoot token for channel " .
+                        "{$channel->getId()} (Cloud API): " . $e->getMessage()
+                    );
+                }
             } else {
                 if ($currentStatus === 'ACTIVE') {
                     $errorData = json_decode($result, true);
@@ -1385,6 +1567,102 @@ class ChatwootInboxIntegration
         }
 
         return $channel;
+    }
+
+    /**
+     * Resolve the Chatwoot inbox for a QR channel idempotently.
+     *
+     * Re-activation (activate() is reachable from DRAFT|FAILED|DISCONNECTED, and is
+     * also used to repair a broken WAHA session/app) must NOT spawn a duplicate
+     * Chatwoot inbox and orphan the historical conversations. When the channel
+     * already references an inbox that still exists in Chatwoot, we REUSE it and
+     * only repoint its webhook_url at the (re)generated WAHA app URL. We create a
+     * new inbox only when none is referenced, or the referenced one is gone.
+     *
+     * The returned array is the raw Chatwoot inbox payload (so upsertLocalChatwootInbox
+     * can keep populating its columns).
+     *
+     * @param Entity $channel
+     * @param string $chatwootUrl
+     * @param string $chatwootAccountApiKey
+     * @param int $chatwootAccountId
+     * @param string $inboxName
+     * @param string $wahaWebhookUrl
+     * @return array<string, mixed> Chatwoot inbox payload (includes at least 'id', 'inbox_identifier')
+     * @throws Error
+     */
+    private function resolveChatwootInboxForQr(
+        Entity $channel,
+        string $chatwootUrl,
+        string $chatwootAccountApiKey,
+        int $chatwootAccountId,
+        string $inboxName,
+        string $wahaWebhookUrl
+    ): array {
+        // The integration's `chatwootInboxId` attribute resolves to the LOCAL
+        // ChatwootInbox entity id (a string hash), NOT the numeric Chatwoot inbox
+        // id the REST API expects. Resolve the numeric id via the link entity —
+        // same pattern documented in patchInboxAccessToken().
+        $localInboxId = $channel->get('chatwootInboxId');
+        $numericInboxId = null;
+
+        if ($localInboxId) {
+            $localInbox = $this->entityManager->getEntityById('ChatwootInbox', $localInboxId);
+            if ($localInbox) {
+                $numericInboxId = (int) $localInbox->get('chatwootInboxId');
+            }
+        }
+
+        if ($numericInboxId) {
+            $existingInbox = null;
+            try {
+                $existingInbox = $this->chatwootApiClient->getInbox(
+                    $chatwootUrl,
+                    $chatwootAccountApiKey,
+                    $chatwootAccountId,
+                    $numericInboxId
+                );
+            } catch (\Exception $e) {
+                $existingInbox = null;
+            }
+
+            if ($existingInbox !== null && (($existingInbox['id'] ?? null) == $numericInboxId)) {
+                // Reuse: repoint the existing inbox's webhook at the new WAHA app URL.
+                $this->chatwootApiClient->updateInbox(
+                    $chatwootUrl,
+                    $chatwootAccountApiKey,
+                    $chatwootAccountId,
+                    $numericInboxId,
+                    ['channel' => ['webhook_url' => $wahaWebhookUrl]]
+                );
+
+                $this->log->info(
+                    "ChatwootInboxIntegration: Reusing existing Chatwoot inbox {$numericInboxId} " .
+                    "for channel {$channel->getId()} (webhook_url repointed to new WAHA app)."
+                );
+
+                // Ensure the consumer always has these keys (getInbox may omit identifier).
+                $existingInbox['id'] = $numericInboxId;
+                if (empty($existingInbox['inbox_identifier'])) {
+                    $existingInbox['inbox_identifier'] = $channel->get('chatwootInboxIdentifier');
+                }
+
+                return $existingInbox;
+            }
+
+            $this->log->warning(
+                "ChatwootInboxIntegration: Channel {$channel->getId()} references Chatwoot inbox " .
+                "{$numericInboxId} which no longer exists; creating a new inbox."
+            );
+        }
+
+        return $this->createChatwootInbox(
+            $chatwootUrl,
+            $chatwootAccountApiKey,
+            $chatwootAccountId,
+            $inboxName,
+            $wahaWebhookUrl
+        );
     }
 
     /**
@@ -1611,25 +1889,23 @@ class ChatwootInboxIntegration
             $longLivedToken = $currentAccessToken;
             $expiresAt = $oAuthAccount->get('expiresAt');
 
-            // "Already exchanged" is true when either:
-            //   (a) the explicit marker is set (post-fix flow), OR
-            //   (b) expiresAt is more than 2 days in the future (fallback for
-            //       OAuthAccounts created before the marker column existed —
-            //       a short-lived IG token is always ~1 hour, so anything
-            //       >2 days ahead MUST be long-lived already).
-            // Re-exchanging a long-lived token hits
-            //   https://graph.instagram.com/access_token?grant_type=ig_exchange_token
-            // with a token that IG expects to be short-lived and fails with
-            // OAuthException code 190, so avoiding that call is important.
-            $alreadyExchanged = (bool) $oAuthAccount->get('metaIgLongLivedExchangedAt');
-
-            if (!$alreadyExchanged && $expiresAt) {
-                $expiresTs = strtotime((string) $expiresAt);
-
-                if ($expiresTs !== false && $expiresTs > time() + 2 * 24 * 60 * 60) {
-                    $alreadyExchanged = true;
-                }
-            }
+            // "Already exchanged" must reflect the CURRENT stored token, not a
+            // stale marker. The bug it fixes: after a fresh re-authorization the
+            // OAuthAccount holds a NEW short-lived token, but a leftover
+            // `metaIgLongLivedExchangedAt` from a previous session made the old
+            // logic believe the token was already long-lived — so it SKIPPED the
+            // ig_exchange_token step and pushed an un-exchanged (short-lived /
+            // non-refreshable) token to Chatwoot. That token then returns
+            // OAuthException code 452 on ig_refresh_token and dies early.
+            //
+            // A token is only genuinely long-lived if its expiry is far in the
+            // future (a short-lived IG token lasts ~1h). We therefore require a
+            // present `expiresAt` that is > 2 days out. The exchange marker alone
+            // is NOT sufficient. This makes a re-auth always re-exchange unless
+            // the stored token is provably already long-lived.
+            $expiresTs = $expiresAt ? strtotime((string) $expiresAt) : false;
+            $alreadyExchanged = $expiresTs !== false
+                && $expiresTs > time() + 2 * 24 * 60 * 60;
 
             if (!$alreadyExchanged) {
                 $providerId = $oAuthAccount->get('providerId');
@@ -1791,9 +2067,17 @@ class ChatwootInboxIntegration
     private function reconnectInstagram(Entity $channel): Entity
     {
         $channelId = $channel->getId();
-        $chatwootInboxId = $channel->get('chatwootInboxId');
 
-        if (!$chatwootInboxId) {
+        // The NUMERIC Chatwoot inbox id (what the Chatwoot REST API expects)
+        // lives on the linked ChatwootInbox entity, NOT on this integration:
+        // the integration's own `chatwootInboxId` attribute has no backing
+        // column and resolves to the link's entity-id string. Resolve the real
+        // numeric id via the link.
+        $chatwootInbox = $channel->get('chatwootInbox');
+        $numericInboxId = $chatwootInbox ? $chatwootInbox->get('chatwootInboxId') : null;
+
+        if (!$numericInboxId) {
+            // Never provisioned (or inbox link missing) → full activation.
             return $this->activate($channelId);
         }
 
@@ -1822,31 +2106,78 @@ class ChatwootInboxIntegration
             $chatwootAccountApiKey = $chatwootAccount->get('apiKey');
             $chatwootAccountId = $chatwootAccount->get('chatwootAccountId');
 
-            if ($chatwootAccountApiKey && $chatwootAccountId) {
-                $inboxes = $this->chatwootApiClient->listInboxes(
-                    $chatwootUrl,
-                    $chatwootAccountApiKey,
-                    (int) $chatwootAccountId
-                );
+            if (!$chatwootAccountApiKey || !$chatwootAccountId) {
+                throw new Error("ChatwootAccount is missing API key or account id.");
+            }
 
-                $inboxExists = false;
-                $inboxList = $inboxes['payload'] ?? $inboxes;
-                foreach ($inboxList as $inbox) {
-                    if (($inbox['id'] ?? null) == $chatwootInboxId) {
-                        $inboxExists = true;
-                        break;
-                    }
-                }
+            // Confirm the Chatwoot inbox still exists; if it was deleted there,
+            // re-activate from scratch.
+            $inboxes = $this->chatwootApiClient->listInboxes(
+                $chatwootUrl,
+                $chatwootAccountApiKey,
+                (int) $chatwootAccountId
+            );
 
-                if (!$inboxExists) {
-                    $this->log->info("ChatwootInboxIntegration: Chatwoot inbox {$chatwootInboxId} no longer exists, re-activating Instagram channel.");
-                    $channel->set('chatwootInboxId', null);
-                    $channel->set('chatwootInboxIdentifier', null);
-                    $this->entityManager->saveEntity($channel);
-                    return $this->activate($channelId);
+            $inboxExists = false;
+            $inboxList = $inboxes['payload'] ?? $inboxes;
+            foreach ($inboxList as $inbox) {
+                if ((int) ($inbox['id'] ?? 0) === (int) $numericInboxId) {
+                    $inboxExists = true;
+                    break;
                 }
             }
 
+            if (!$inboxExists) {
+                $this->log->info("ChatwootInboxIntegration: Chatwoot inbox {$numericInboxId} no longer exists, re-activating Instagram channel.");
+                $channel->set('chatwootInboxId', null);
+                $channel->set('chatwootInboxIdentifier', null);
+                $this->entityManager->saveEntity($channel);
+                return $this->activate($channelId);
+            }
+
+            // PUSH the current CRM token to Chatwoot so the two systems do not
+            // drift. Reconnect previously only re-validated and flipped status
+            // to ACTIVE, leaving Chatwoot holding a stale (often dead) token —
+            // which silently broke inbound DMs after every CRM-side token
+            // update. Now we PATCH access_token + expires_at onto the inbox.
+            $oAuthAccountId = $channel->get('oAuthAccountId');
+
+            if (!$oAuthAccountId) {
+                throw new Error("Meta Account (OAuth) not set on this integration.");
+            }
+
+            $tokens = $this->tokensProvider->get($oAuthAccountId);
+            $accessToken = $tokens->getAccessToken();
+
+            if (!$accessToken) {
+                throw new Error("Unable to obtain access token from the Meta (Instagram) OAuth Account.");
+            }
+
+            // Chatwoot's Channel::Instagram REQUIRES a non-null expires_at (its
+            // access_token getter returns nil when blank). Prefer the OAuthAccount
+            // expiry, fall back to the integration mirror, then a ~60-day default.
+            $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
+            $expiresAtRaw = ($oAuthAccount ? $oAuthAccount->get('expiresAt') : null)
+                ?: $tokenExpiresAt
+                ?: gmdate('Y-m-d H:i:s', time() + 60 * 24 * 60 * 60);
+            $expiresAtIso = $this->normaliseExpiresAt($expiresAtRaw);
+
+            $channelPayload = ['access_token' => $accessToken];
+            if ($expiresAtIso) {
+                $channelPayload['expires_at'] = $expiresAtIso;
+            }
+
+            $this->chatwootApiClient->updateInbox(
+                $chatwootUrl,
+                $chatwootAccountApiKey,
+                (int) $chatwootAccountId,
+                (int) $numericInboxId,
+                ['channel' => $channelPayload]
+            );
+
+            $this->log->info("ChatwootInboxIntegration: pushed refreshed token to Chatwoot inbox {$numericInboxId} during reconnect.");
+
+            $channel->set('tokenExpiresAt', $expiresAtRaw ?: null);
             $channel->set('status', 'ACTIVE');
             $channel->set('errorMessage', null);
             $this->entityManager->saveEntity($channel);
@@ -2406,6 +2737,21 @@ class ChatwootInboxIntegration
                     $channel->set('connectedAt', $channel->get('connectedAt') ?: date('Y-m-d H:i:s'));
                     $channel->set('errorMessage', null);
                     $this->entityManager->saveEntity($channel);
+                }
+
+                // Coexistence inboxes are native whatsapp_cloud Chatwoot inboxes
+                // carrying the same snapshotted provider_config.api_key, so they
+                // share the stale-token failure mode. The token just proved valid
+                // against Meta (getPhoneNumber above), so re-sync it into Chatwoot
+                // and clear any sticky reauthorization_required. No-ops when
+                // already in sync.
+                try {
+                    $this->patchInboxAccessToken($channel);
+                } catch (\Exception $e) {
+                    $this->log->warning(
+                        "ChatwootInboxIntegration: failed to re-sync Chatwoot token for channel " .
+                        "{$channel->getId()} (Coexistence): " . $e->getMessage()
+                    );
                 }
             } else {
                 // Not yet Coexistence-ready.

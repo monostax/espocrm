@@ -51,6 +51,35 @@ class SeedSidenavConfig implements RebuildAction
 
         $configs = [
             [
+                'id' => 'main',
+                'name' => '$Main',
+                'order' => 10,
+                'iconClass' => 'ti ti-layout-grid',
+                'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Contact',
+                        'url' => '#Contact/list',
+                        'iconClass' => 'ti ti-address-book',
+                        'id' => 'main-contacts',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Opportunity',
+                        'url' => '#Opportunity/list',
+                        'iconClass' => 'ti ti-coin-filled',
+                        'id' => 'main-opportunities',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Account',
+                        'url' => '#Account/list',
+                        'iconClass' => 'ti ti-building',
+                        'id' => 'main-accounts',
+                    ],
+                ],
+            ],
+            [
                 'id' => 'contact',
                 'name' => '$Contact',
                 'order' => 20,
@@ -131,6 +160,54 @@ class SeedSidenavConfig implements RebuildAction
                         'order' => 'desc',
                         'openMode' => 'relationship',
                         'relationshipLink' => 'opportunities',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'account',
+                'name' => '$Account',
+                'order' => 35,
+                'iconClass' => 'ti ti-building',
+                'tabList' => [
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$All',
+                        'url' => '#Account/list',
+                        'iconClass' => 'ti ti-list',
+                        'id' => 'account-all',
+                    ],
+                    (object) [
+                        'type' => 'divider',
+                        'text' => '$By Type',
+                        'id' => 'account-by-type',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Customers',
+                        'url' => '#Account/list/primaryFilter=customers',
+                        'iconClass' => 'ti ti-building-cog',
+                        'id' => 'account-customers',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Resellers',
+                        'url' => '#Account/list/primaryFilter=resellers',
+                        'iconClass' => 'ti ti-building-bridge',
+                        'id' => 'account-resellers',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Partners',
+                        'url' => '#Account/list/primaryFilter=partners',
+                        'iconClass' => 'ti ti-building-bridge-2',
+                        'id' => 'account-partners',
+                    ],
+                    (object) [
+                        'type' => 'url',
+                        'text' => '$Recently Created',
+                        'url' => '#Account/list/primaryFilter=recentlyCreated',
+                        'iconClass' => 'ti ti-clock',
+                        'id' => 'account-recently-created',
                     ],
                 ],
             ],

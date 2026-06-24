@@ -15,6 +15,16 @@ define('chatwoot:handlers/chatwoot-inbox-integration/detail-actions', [], functi
             this.view = view;
         }
 
+        // Three mutually-exclusive lifecycle actions. For any given status at most
+        // one is visible, so operators are never shown two overlapping "make it
+        // work" buttons (the old Activate + Reconnect confusion):
+        //
+        //   DRAFT, FAILED          -> Activate  (first-time provisioning / retry)
+        //   DISCONNECTED           -> Reconnect (light: restart the WAHA session)
+        //   CONNECTING, PENDING_QR -> Repair    (heavy: idempotently recreate the
+        //                                         WAHA session + app; inbox and
+        //                                         conversations are preserved, but
+        //                                         a new QR scan may be required)
         isActivateAvailable() {
             const status = this.view.model.get('status');
             return ['DRAFT', 'FAILED'].includes(status);
@@ -28,6 +38,11 @@ define('chatwoot:handlers/chatwoot-inbox-integration/detail-actions', [], functi
         isReconnectAvailable() {
             const status = this.view.model.get('status');
             return status === 'DISCONNECTED';
+        }
+
+        isRepairAvailable() {
+            const status = this.view.model.get('status');
+            return ['CONNECTING', 'PENDING_QR'].includes(status);
         }
 
         // The WAHA send companion can be (re-)linked for a coexistence channel
@@ -84,6 +99,39 @@ define('chatwoot:handlers/chatwoot-inbox-integration/detail-actions', [], functi
                         })
                         .catch(xhr => {
                             let errorMsg = 'Activation failed';
+                            if (xhr?.responseJSON?.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            Espo.Ui.error(errorMsg);
+                        });
+                }
+            );
+        }
+
+        // Repair a stuck QR channel (CONNECTING / PENDING_QR). Routes to the same
+        // /activate endpoint, which idempotently recreates the WAHA session + app
+        // and reuses the existing Chatwoot inbox (conversations preserved). The
+        // confirmation warns that a fresh QR scan may be required.
+        repair() {
+            const model = this.view.model;
+
+            Espo.Ui.confirm(
+                this.view.translate('confirmReactivate', 'messages', 'ChatwootInboxIntegration'),
+                {
+                    confirmText: this.view.translate('Repair', 'labels', 'ChatwootInboxIntegration'),
+                    cancelText: this.view.translate('Cancel'),
+                },
+                () => {
+                    Espo.Ui.notify(this.view.translate('Creating resources', 'labels', 'ChatwootInboxIntegration'));
+
+                    Espo.Ajax.postRequest(`ChatwootInboxIntegration/${model.id}/activate`)
+                        .then(response => {
+                            Espo.Ui.success(this.view.translate('channelActivated', 'messages', 'ChatwootInboxIntegration'));
+                            model.set(response);
+                            this.view.reRender();
+                        })
+                        .catch(xhr => {
+                            let errorMsg = 'Repair failed';
                             if (xhr?.responseJSON?.message) {
                                 errorMsg = xhr.responseJSON.message;
                             }

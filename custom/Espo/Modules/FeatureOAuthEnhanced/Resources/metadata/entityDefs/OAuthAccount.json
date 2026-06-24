@@ -1,5 +1,23 @@
 {
     "fields": {
+        "metaSystemUserId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "trim": true,
+            "tooltip": true
+        },
+        "metaBusinessId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "trim": true,
+            "tooltip": true
+        },
+        "metaTokenInfo": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "tooltip": true
+        },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",

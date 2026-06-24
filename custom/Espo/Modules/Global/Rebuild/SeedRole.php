@@ -108,11 +108,15 @@ class SeedRole implements RebuildAction
                     'edit' => 'own',
                     'delete' => 'own',
                 ],
+                // VoIP calls are mirrored from Chatwoot by the system user and
+                // carry the tenant's team but no assignedUser, so an `own`-level
+                // read would hide every mirrored Call. Use `team` so tenant
+                // users see the calls shared with their team.
                 'Call' => [
                     'create' => 'yes',
-                    'read' => 'own',
-                    'edit' => 'own',
-                    'delete' => 'own',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
                 ],
                 'CredentialHistory' => [
                     'create' => 'no',
@@ -216,6 +220,31 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                 ],
                 'WahaSessionLabel' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                // FeatureTrackingEvent — platform-written telemetry. The
+                // Contact detail view has a read-only `trackingEvents`
+                // bottom panel; without scope read access the metadata
+                // filter strips the link and the panel view throws
+                // "Link 'trackingEvents' is not defined in model 'Contact'".
+                // Row-level ACL stays `team`, so per-tenant trimming still
+                // applies.
+                'TrackingEvent' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'TrackingEventType' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'TrackingSource' => [
                     'create' => 'no',
                     'read' => 'team',
                     'edit' => 'no',
@@ -750,6 +779,10 @@ class SeedRole implements RebuildAction
                 'ChatwootAiAgentRun' => (object)[],
                 'ChatwootReportingEvent' => (object)[],
                 'ChatwootSyncState' => (object)[],
+
+                'TrackingEvent' => (object)[],
+                'TrackingEventType' => (object)[],
+                'TrackingSource' => (object)[],
 
                 'Unidade' => (object)[],
                 'Profissional' => (object)[],

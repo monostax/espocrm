@@ -70,6 +70,41 @@ class InstagramGraphApiClient
     }
 
     /**
+     * Refresh an UNEXPIRED long-lived Instagram access token, extending it for
+     * another ~60 days.
+     *
+     * Endpoint: GET https://graph.instagram.com/refresh_access_token
+     *   ?grant_type=ig_refresh_token&access_token={long_lived}
+     *
+     * Constraints imposed by Meta (important for the scheduled refresh job):
+     *   - The token MUST still be valid (not expired) — a 190'd/expired token
+     *     cannot be refreshed and returns OAuthException code 190.
+     *   - The token must be at least 24 hours old.
+     *   - Meta recommends refreshing within the 24h–60d window; refreshing a
+     *     token that is days from expiry is the intended use.
+     *
+     * Unlike the exchange flow, refresh does NOT require the client_secret.
+     *
+     * @param string $longLivedToken A currently-valid long-lived access token.
+     * @return array{access_token: string, token_type: string, expires_in: int}
+     * @throws Error if Meta rejects the refresh (e.g. token expired/revoked).
+     */
+    public function refreshLongLivedToken(string $longLivedToken): array
+    {
+        $url = self::GRAPH_API_BASE . '/refresh_access_token'
+            . '?grant_type=ig_refresh_token'
+            . '&access_token=' . urlencode($longLivedToken);
+
+        $response = $this->rawRequest($url);
+
+        if (empty($response['access_token'])) {
+            throw new Error('Instagram long-lived token refresh did not return an access_token.');
+        }
+
+        return $response;
+    }
+
+    /**
      * Fetch the authenticated user's Instagram Business Account via /me.
      *
      * Endpoint: GET https://graph.instagram.com/v22.0/me

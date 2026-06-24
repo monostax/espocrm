@@ -22,6 +22,9 @@
         "listRelated": "global:views/opportunity/record/list",
         "kanban": "global:views/opportunity/record/kanban"
     },
+    "modalViews": {
+        "massUpdate": "global:views/opportunity/modals/mass-update"
+    },
     "viewMap": {
         "crm:views/dashlets/sales-pipeline": "global:views/dashlets/sales-pipeline",
         "crm:views/dashlets/opportunities-by-stage": "global:views/dashlets/opportunities-by-stage"

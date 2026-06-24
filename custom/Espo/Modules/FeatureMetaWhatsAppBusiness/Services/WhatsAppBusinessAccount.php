@@ -88,7 +88,7 @@ class WhatsAppBusinessAccount
                 $oAuthAccounts = [];
             }
         } else {
-            $oAuthAccounts = $this->oAuthHelper->getAccessibleOAuthAccounts(['meta-whatsapp', 'meta-whatsapp-coexistence']);
+            $oAuthAccounts = $this->oAuthHelper->getAccessibleOAuthAccounts(['meta-whatsapp', 'meta-whatsapp-coexistence', 'meta-system-user']);
         }
 
         foreach ($oAuthAccounts as $oAuthAccount) {
@@ -116,8 +116,19 @@ class WhatsAppBusinessAccount
             }
 
             try {
-                // Discover businesses accessible to the token.
-                $businesses = $this->apiClient->discoverBusinesses($accessToken, self::DEFAULT_API_VERSION);
+                // System User tokens belong to exactly one Business and do not
+                // resolve via GET /me/businesses (that endpoint is for human
+                // users' business memberships). For these we use the Business
+                // ID captured when the token was set and query its owned WABAs
+                // directly — this also avoids an extra Graph call.
+                $systemUserBusinessId = $this->getSystemUserBusinessId($oAuthAccount);
+
+                if ($systemUserBusinessId !== null) {
+                    $businesses = [['id' => $systemUserBusinessId]];
+                } else {
+                    // Discover businesses accessible to the token.
+                    $businesses = $this->apiClient->discoverBusinesses($accessToken, self::DEFAULT_API_VERSION);
+                }
 
                 foreach ($businesses as $business) {
                     $businessId = $business['id'] ?? null;
@@ -149,6 +160,34 @@ class WhatsAppBusinessAccount
         }
 
         return RecordCollection::create($collection, $totalCount);
+    }
+
+    /**
+     * Return the Business Manager ID for a System User-backed OAuthAccount,
+     * or null when the account is not a System User account (so the caller
+     * falls back to GET /me/businesses).
+     *
+     * Reads the `providerType` discriminator and the `metaBusinessId` stored
+     * when the System User token was set.
+     */
+    private function getSystemUserBusinessId(Entity $oAuthAccount): ?string
+    {
+        if ($oAuthAccount->get('providerType') !== 'meta-system-user') {
+            return null;
+        }
+
+        $businessId = $oAuthAccount->get('metaBusinessId');
+
+        if (!is_string($businessId) || trim($businessId) === '') {
+            $this->log->warning(
+                "WhatsAppBusinessAccount: OAuthAccount {$oAuthAccount->getId()} is a System User " .
+                "account but has no metaBusinessId set; cannot discover WABAs."
+            );
+
+            return null;
+        }
+
+        return trim($businessId);
     }
 
     /**

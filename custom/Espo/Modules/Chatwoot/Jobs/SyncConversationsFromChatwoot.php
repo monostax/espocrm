@@ -719,6 +719,43 @@ class SyncConversationsFromChatwoot implements JobDataLess
     }
 
     /**
+     * Resolve the Instagram-scoped user id (IGSID) for a conversation.
+     *
+     * Only returned for Instagram conversations. The durable source is the
+     * ChatwootContactInbox.sourceId (always populated by the inbox sync);
+     * we fall back to the raw payload's sender.identifier when the bridge
+     * row isn't available yet.
+     *
+     * @param array<string, mixed> $chatwootConversation Raw Chatwoot payload.
+     */
+    private function resolveIgUserId(
+        array $chatwootConversation,
+        ?Entity $contactInbox,
+        ?Entity $chatwootInbox
+    ): ?string {
+        // Determine channel from the inbox entity first, then the payload.
+        $channelType = $chatwootInbox?->get('channelType')
+            ?? ($chatwootConversation['meta']['channel'] ?? null);
+        $mapped = $this->mapChannelType($channelType);
+
+        if ($mapped !== 'instagram') {
+            return null;
+        }
+
+        $sourceId = $contactInbox?->get('sourceId');
+        if (is_string($sourceId) && $sourceId !== '') {
+            return $sourceId;
+        }
+
+        $identifier = $chatwootConversation['meta']['sender']['identifier'] ?? null;
+        if (is_string($identifier) && $identifier !== '') {
+            return $identifier;
+        }
+
+        return null;
+    }
+
+    /**
      * Map Chatwoot channel_type to our enum values.
      */
     private function mapChannelType(?string $channelType): ?string
@@ -798,6 +835,14 @@ class SyncConversationsFromChatwoot implements JobDataLess
         if ($chatwootInbox) {
             $conversation->set('inboxChannelType', $chatwootInbox->get('channelType'));
         }
+
+        // Persist the Instagram-scoped user id (IGSID) so it is filterable,
+        // sortable and exportable via Reports. Only meaningful for Instagram
+        // conversations; left null otherwise.
+        $conversation->set(
+            'igUserId',
+            $this->resolveIgUserId($chatwootConversation, $contactInbox, $chatwootInbox)
+        );
 
         // Update denormalized links
         $conversation->set('chatwootContactId', $cwtContact->getId());
@@ -883,6 +928,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'lastMessageContent' => $lastMessageContent,
             'lastMessageType' => $lastMessageType,
             'inboxChannelType' => $chatwootInbox?->get('channelType'),
+            'igUserId' => $this->resolveIgUserId($chatwootConversation, $contactInbox, $chatwootInbox),
         ];
 
         // Assign teams from ChatwootAccount

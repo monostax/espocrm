@@ -11,13 +11,15 @@
         "contact": "Contact",
         "tenant": "Tenant",
         "chatwootAccount": "Chatwoot Account",
-        "chatwootInbox": "Chatwoot Inbox"
+        "chatwootInbox": "Chatwoot Inbox",
+        "chatwootConversations": "Conversations"
     },
     "links": {
         "contact": "Contact",
         "tenant": "Tenant",
         "chatwootAccount": "Chatwoot Account",
-        "chatwootInbox": "Chatwoot Inbox"
+        "chatwootInbox": "Chatwoot Inbox",
+        "chatwootConversations": "Conversations"
     },
     "options": {
         "channelType": {

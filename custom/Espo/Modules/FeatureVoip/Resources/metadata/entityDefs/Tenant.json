@@ -1,0 +1,9 @@
+{
+    "links": {
+        "voipCalls": {
+            "type": "hasMany",
+            "entity": "Call",
+            "foreign": "tenant"
+        }
+    }
+}

@@ -18,6 +18,7 @@
         "contactAvatarUrl": "Avatar do Contato",
         "contactDisplayName": "Nome do Contato",
         "inboxChannelType": "Tipo de Canal",
+        "igUserId": "ID Usuário Instagram",
         "lastMessageSentAt": "Enviado em",
         "lastMessageReceivedAt": "Recebido em",
         "lastMessageType": "Tipo Última Msg"
@@ -69,7 +70,8 @@
         "open": "Abertas",
         "pending": "Pendentes",
         "resolved": "Resolvidas",
-        "snoozed": "Adiadas"
+        "snoozed": "Adiadas",
+        "instagram": "Instagram"
     },
     "boolFilters": {
         "assignedToMe": "Atribuídas (a mim)"

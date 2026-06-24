@@ -1,0 +1,7 @@
+{
+    "order": 28,
+    "version": "1.0.0",
+    "name": "FeatureVoip",
+    "description": "VoIP call mirroring — receives Chatwoot voice_call events and creates/updates CRM Call records linked to Contacts/Leads.",
+    "jsTranspiled": true
+}

@@ -1,0 +1,8 @@
+{
+    "RefreshInstagramTokens": {
+        "name": "Refresh Instagram Tokens",
+        "isSystem": false,
+        "scheduling": "17 * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureMetaInstagram\\Jobs\\RefreshInstagramTokens"
+    }
+}

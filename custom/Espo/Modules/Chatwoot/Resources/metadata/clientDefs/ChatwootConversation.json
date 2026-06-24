@@ -21,7 +21,11 @@
             "name": "resolved",
             "style": "success"
         },
-        "snoozed"
+        "snoozed",
+        {
+            "name": "instagram",
+            "style": "info"
+        }
     ],
     "boolFilterList": ["assignedToMe"],
     "modalViews": {

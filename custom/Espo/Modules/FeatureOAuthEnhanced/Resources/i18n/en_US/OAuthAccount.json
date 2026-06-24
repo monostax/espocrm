@@ -2,6 +2,9 @@
     "fields": {
         "teams": "Teams",
         "assignedUsers": "Assigned Users",
+        "metaSystemUserId": "Meta System User ID",
+        "metaBusinessId": "Meta Business ID",
+        "metaTokenInfo": "Meta Token Info",
         "whatsappBusinessAccountId": "WABA ID",
         "whatsappPhoneNumberId": "Phone Number ID",
         "whatsappOnboardingType": "Onboarding Type",
@@ -15,10 +18,27 @@
         }
     },
     "tooltips": {
+        "metaSystemUserId": "App-scoped ID of the Meta System User this token belongs to. Populated automatically from the token when available.",
+        "metaBusinessId": "Optional Business Manager (portfolio) ID that owns this System User. Used for diagnostics and asset-scoped Graph API calls.",
+        "metaTokenInfo": "Diagnostic information returned by Meta's /debug_token endpoint when the System User token was set (app id, scopes, expiry). Read-only.",
         "whatsappBusinessAccountId": "WABA ID captured from the Embedded Signup popup. Read-only.",
         "whatsappPhoneNumberId": "Phone Number ID captured from the Embedded Signup popup. Read-only.",
         "whatsappOnboardingType": "Type of WhatsApp onboarding completed in the Embedded Signup popup.",
         "whatsappCoexistenceSyncedAt": "When the contacts + history sync (POST /smb_app_data) completed. Empty for non-Coexistence accounts. The sync has a 24-hour deadline after onboarding."
+    },
+    "labels": {
+        "Set System User Token": "Set System User Token",
+        "Meta — System User Token": "Meta — System User Token",
+        "Save Token": "Save Token"
+    },
+    "messages": {
+        "confirmSetSystemUserToken": "Paste the Meta System User access token. It will be validated against the Graph API and stored encrypted.",
+        "systemUserTokenPrompt": "Meta System User access token",
+        "systemUserTokenSet": "System User token validated and stored.",
+        "systemUserTokenFailed": "Could not validate or store the System User token.",
+        "systemUserTokenEmpty": "Please paste a token.",
+        "systemUserMissingClientId": "Set the Client ID (App ID) and Client Secret on the Meta (System User) provider before setting a token.",
+        "systemUserTokenMissingScopes": "Token saved, but it is missing scopes: {scopes}. WhatsApp/Business features may not work until you regenerate the token with these scopes."
     },
     "links": {
         "teams": "Teams",

@@ -7,6 +7,16 @@
             "exportDisabled": true,
             "utility": true,
             "fieldManagerParamList": []
+        },
+        "calendarEventType": {
+            "type": "enum",
+            "options": ["Appointment", "Meeting", "Call"],
+            "default": "Appointment",
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "utility": true,
+            "fieldManagerParamList": []
         }
     },
     "links": {

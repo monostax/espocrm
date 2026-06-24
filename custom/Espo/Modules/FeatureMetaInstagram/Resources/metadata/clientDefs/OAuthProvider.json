@@ -1,5 +1,6 @@
 {
     "detailActionList": [
+        "__APPEND__",
         {
             "name": "configureMetaInstagramWebhook",
             "label": "Configure Meta Webhook",

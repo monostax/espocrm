@@ -1,5 +1,6 @@
 {
     "detailActionList": [
+        "__APPEND__",
         {
             "name": "configureMetaLeadAdsWebhook",
             "label": "Configure Lead Ads Webhook",

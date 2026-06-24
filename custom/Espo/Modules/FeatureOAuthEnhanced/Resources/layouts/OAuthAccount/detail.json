@@ -4,9 +4,17 @@
         "style": "default",
         "rows": [
             [{ "name": "name" }, { "name": "provider" }],
+            [{ "name": "connectionStatus" }, { "name": "expiresAt" }],
             [{ "name": "teams" }, { "name": "assignedUsers" }],
             [{ "name": "description" }, false]
         ]
+    },
+    {
+        "label": "Meta System User",
+        "style": "default",
+        "rows": [
+            [{ "name": "metaSystemUserId" }, { "name": "metaBusinessId" }],
+            [{ "name": "metaTokenInfo" }, false]
+        ]
     }
 ]
-

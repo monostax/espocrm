@@ -359,6 +359,14 @@
             "groupIndex": 0
         },
         {
+            "name": "repair",
+            "label": "Repair",
+            "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
+            "actionFunction": "repair",
+            "checkVisibilityFunction": "isRepairAvailable",
+            "groupIndex": 0
+        },
+        {
             "name": "disconnect",
             "label": "Disconnect",
             "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",

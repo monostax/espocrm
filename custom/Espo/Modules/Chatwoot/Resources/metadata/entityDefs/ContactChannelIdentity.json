@@ -102,6 +102,11 @@
             "type": "belongsTo",
             "entity": "ChatwootInbox"
         },
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "channelIdentity"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

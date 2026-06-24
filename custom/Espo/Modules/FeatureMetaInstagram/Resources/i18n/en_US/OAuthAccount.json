@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "connectionStatus": "Connection Status"
+    },
+    "options": {
+        "connectionStatus": {
+            "connected": "Connected",
+            "expired": "Expired",
+            "revoked": "Revoked",
+            "disconnected": "Disconnected",
+            "providerInactive": "Provider Inactive",
+            "unknown": "Unknown"
+        }
+    },
+    "tooltips": {
+        "connectionStatus": "Real-time connection status based on actual token validity. In list view it is computed locally (token present, provider active, not expired); on the detail view it performs a live check against the provider API to detect revoked or expired tokens."
+    }
+}

@@ -92,6 +92,13 @@
             "maxLength": 100,
             "readOnly": true
         },
+        "igUserId": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "tooltip": "Instagram-scoped user id (IGSID) of the contact for this conversation. Populated only for Instagram conversations."
+        },
+        "channelIdentity": { "type": "link" },
         "opportunities": {
             "type": "linkMultiple",
             "columns": {
@@ -179,6 +186,11 @@
             "entity": "ChatwootInbox",
             "foreign": "conversations"
         },
+        "channelIdentity": {
+            "type": "belongsTo",
+            "entity": "ContactChannelIdentity",
+            "foreign": "chatwootConversations"
+        },
         "messages": {
             "type": "hasMany",
             "entity": "ChatwootMessage",
@@ -206,6 +218,9 @@
         },
         "lastActivityAt": {
             "columns": ["lastActivityAt"]
+        },
+        "igUserId": {
+            "columns": ["igUserId"]
         }
     },
     "collection": {
@@ -215,6 +230,7 @@
             "name",
             "contactDisplayName",
             "contactPhoneNumber",
+            "igUserId",
             "messages.content"
         ]
     },

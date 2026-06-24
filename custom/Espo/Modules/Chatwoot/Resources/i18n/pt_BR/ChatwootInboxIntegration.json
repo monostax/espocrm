@@ -52,6 +52,7 @@
         "Connection Details": "Detalhes da Conexão",
         "Error": "Erro",
         "Activate": "Ativar",
+        "Repair": "Reparar",
         "Disconnect": "Desconectar",
         "Reconnect": "Reconectar",
         "Scan QR Code": "Escanear QR Code",
@@ -113,6 +114,7 @@
         "channelFailed": "Falha na configuração do canal.",
         "confirmDisconnect": "Tem certeza que deseja desconectar este canal? A sessão WhatsApp será parada.",
         "confirmActivate": "Isso criará uma sessão WAHA e um canal de Chat. Continuar?",
+        "confirmReactivate": "Isso reparará a conexão do WhatsApp recriando a sessão e o app no WAHA. Sua caixa de entrada e conversas existentes são preservadas, mas pode ser necessário ler o QR Code novamente. Continuar?",
         "confirmActivateInstagram": "Isso conectará a Conta Business do Instagram ao Chatwoot e criará um canal de Chat. Continuar?",
         "noWahaPlatform": "Por favor, selecione uma Plataforma WAHA.",
         "noChatwootAccount": "Por favor, selecione uma Conta de Chat."

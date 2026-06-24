@@ -6,6 +6,34 @@
             "audited": false,
             "tooltip": true,
             "comment": "Set when the short-lived Instagram Login token was exchanged for a long-lived one via graph.instagram.com/access_token. Used by ChatwootInboxIntegration to skip re-exchange on re-activation."
+        },
+        "connectionStatus": {
+            "type": "enum",
+            "notStorable": true,
+            "readOnly": true,
+            "orderDisabled": true,
+            "directAccessDisabled": true,
+            "options": [
+                "connected",
+                "expired",
+                "revoked",
+                "disconnected",
+                "providerInactive",
+                "unknown"
+            ],
+            "default": "unknown",
+            "view": "views/fields/enum-styled",
+            "style": {
+                "connected": "success",
+                "expired": "danger",
+                "revoked": "danger",
+                "disconnected": "default",
+                "providerInactive": "warning",
+                "unknown": "default"
+            },
+            "tooltip": true,
+            "comment": "Real-time, validity-based connection status. Unlike hasAccessToken (mere token presence), this reflects whether the token is actually usable. Computed at read time by ConnectionStatus loaders: local-only in list views, live provider health-check on detail view."
         }
     }
 }
+

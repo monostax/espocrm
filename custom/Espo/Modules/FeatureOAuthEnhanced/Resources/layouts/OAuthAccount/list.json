@@ -1,2 +1,1 @@
-["name", "provider", "teams", "assignedUsers", "hasAccessToken"]
-
+["name", "provider", "connectionStatus", "teams", "assignedUsers", "hasAccessToken"]

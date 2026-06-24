@@ -47,6 +47,7 @@ define(
     function (Dep) {
 
     const WHATSAPP_PROVIDERS = ['meta-whatsapp', 'meta-whatsapp-coexistence'];
+    const SYSTEM_USER_PROVIDER = 'meta-system-user';
     const FB_SDK_URL = 'https://connect.facebook.net/en_US/sdk.js';
     const FB_API_VERSION = 'v22.0';
 
@@ -56,9 +57,18 @@ define(
         templateContent: `
             {{#if hasDisconnect}}
                 <div class="margin-bottom">
-                    <span class="label label-success label-md">{{translate 'Connected' scope='ExternalAccount'}}</span>
+                    {{#if isLiveConnected}}
+                        <span class="label label-success label-md">{{translate 'Connected' scope='ExternalAccount'}}</span>
+                    {{else}}
+                        <span class="label label-{{liveStatusStyle}} label-md">{{liveStatusLabel}}</span>
+                    {{/if}}
                 </div>
                 <button class="btn btn-default" data-action="disconnect">{{translate 'Disconnect' scope='ExternalAccount'}}</button>
+                {{#if isSystemUserConnected}}
+                    <button class="btn btn-default" data-action="generateSystemUserToken" style="margin-left: 6px;">
+                        {{translate 'Regenerate Token (Scopes)' category='labels' scope='OAuthAccount'}}
+                    </button>
+                {{/if}}
             {{/if}}
 
             {{#if hasEmbeddedSignup}}
@@ -80,6 +90,20 @@ define(
                 {{/if}}
             {{/if}}
 
+            {{#if hasSystemUserToken}}
+                <div class="margin-bottom">
+                    <span class="label label-default label-md">{{translate 'Disconnected' scope='ExternalAccount'}}</span>
+                </div>
+                <button class="btn btn-danger" data-action="setSystemUserToken">
+                    {{translate 'Set System User Token' category='labels' scope='OAuthAccount'}}
+                </button>
+                {{#if isMissingClientId}}
+                    <div class="text-danger small margin-top">
+                        {{translate 'systemUserMissingClientId' category='messages' scope='OAuthAccount'}}
+                    </div>
+                {{/if}}
+            {{/if}}
+
             {{#if hasFallbackConnect}}
                 <div class="margin-bottom">
                     <span class="label label-default label-md">{{translate 'Disconnected' scope='ExternalAccount'}}</span>
@@ -97,12 +121,14 @@ define(
             Dep.prototype.setup.call(this);
 
             this.addActionHandler('connectEmbeddedSignup', () => this.actionConnectEmbeddedSignup());
+            this.addActionHandler('setSystemUserToken', () => this.actionSetSystemUserToken());
         },
 
         data: function () {
             const isSet = this.model.attributes.hasAccessToken !== undefined;
             const providerType = this._getProviderType();
             const isWhatsAppProvider = WHATSAPP_PROVIDERS.indexOf(providerType) !== -1;
+            const isSystemUserProvider = providerType === SYSTEM_USER_PROVIDER;
 
             const hasDisconnect = !this.inProcess && isSet && this.model.attributes.hasAccessToken;
 
@@ -113,25 +139,51 @@ define(
 
             const oauthData = this.model.attributes.data || {};
 
-            const isMissingClientId = isWhatsAppProvider && canConnect && !oauthData.clientId;
+            const isMissingClientId =
+                (isWhatsAppProvider || isSystemUserProvider) && canConnect && !oauthData.clientId;
             const isMissingConfigId = isWhatsAppProvider && canConnect &&
                 providerType === 'meta-whatsapp-coexistence' &&
                 !this._getConfigurationId();
 
             const hasEmbeddedSignup = isWhatsAppProvider && canConnect;
-            const hasFallbackConnect = !isWhatsAppProvider && canConnect;
+            const hasSystemUserToken = isSystemUserProvider && canConnect;
+            const hasFallbackConnect = !isWhatsAppProvider && !isSystemUserProvider && canConnect;
 
             const embeddedSignupLabel = providerType === 'meta-whatsapp-coexistence'
                 ? this.translate('connectWithEmbeddedSignupCoexistence', 'labels', 'OAuthProvider')
                 : this.translate('connectWithEmbeddedSignup', 'labels', 'OAuthProvider');
 
+            // Real-time, validity-based status (computed server-side by the
+            // ConnectionStatus loaders). Unlike `hasAccessToken` (mere token
+            // presence) this reflects whether the token is actually usable, so
+            // a dead-but-present token no longer shows a green "Connected"
+            // badge. Falls back gracefully when the attribute is absent.
+            const liveStatus = this.model.get('connectionStatus') || null;
+            const isLiveConnected = !liveStatus || liveStatus === 'connected';
+
+            const liveStatusStyleMap = {
+                expired: 'danger',
+                revoked: 'danger',
+                disconnected: 'default',
+                providerInactive: 'warning',
+                unknown: 'default',
+            };
+            const liveStatusStyle = liveStatusStyleMap[liveStatus] || 'default';
+            const liveStatusLabel = liveStatus
+                ? this.getLanguage().translateOption(liveStatus, 'connectionStatus', 'OAuthAccount')
+                : '';
+
             return {
                 hasDisconnect,
                 hasEmbeddedSignup,
+                hasSystemUserToken,
                 hasFallbackConnect,
                 isMissingClientId,
                 isMissingConfigId,
                 embeddedSignupLabel,
+                isLiveConnected,
+                liveStatusStyle,
+                liveStatusLabel,
             };
         },
 
@@ -153,6 +205,133 @@ define(
          */
         _getConfigurationId: function () {
             return this.model.get('embeddedSignupConfigurationId') || null;
+        },
+
+        /**
+         * Prompt the admin to paste a Meta System User access token and send
+         * it to the backend for validation + encrypted storage.
+         *
+         * Unlike WhatsApp/Lead Ads/Google, System User tokens are not obtained
+         * through a browser authorization-code popup — an admin generates them
+         * in Business Manager (or via the System Users API) and pastes them
+         * here. The backend (POST /MetaSystemUserToken/set) validates the token
+         * against Meta's /debug_token endpoint and stores it on the same
+         * accessToken field the rest of the OAuth subsystem reads from.
+         *
+         * @private
+         */
+        actionSetSystemUserToken: function () {
+            const model = this.model;
+
+            const escapeAttr = (s) => String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            const helpText = this.translate('confirmSetSystemUserToken', 'messages', 'OAuthAccount');
+            const promptLabel = this.translate('systemUserTokenPrompt', 'messages', 'OAuthAccount');
+            const businessLabel = this.translate('metaBusinessId', 'fields', 'OAuthAccount');
+            const existingBusinessId = escapeAttr(model.get('metaBusinessId') || '');
+
+            const body =
+                '<p>' + escapeAttr(helpText) + '</p>' +
+                '<div class="form-group">' +
+                    '<label class="control-label">' + escapeAttr(promptLabel) + '</label>' +
+                    '<textarea class="form-control" data-name="systemUserToken" rows="4" ' +
+                        'style="font-family: var(--font-family-monospace);" autocomplete="off"></textarea>' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="control-label">' + escapeAttr(businessLabel) + '</label>' +
+                    '<input type="text" class="form-control" data-name="metaBusinessId" ' +
+                        'value="' + existingBusinessId + '" autocomplete="off">' +
+                '</div>';
+
+            const dialog = Espo.Ui.dialog({
+                backdrop: 'static',
+                className: 'dialog-confirm',
+                headerText: this.translate('Meta — System User Token', 'labels', 'OAuthAccount'),
+                body: body,
+                buttonList: [
+                    {
+                        name: 'save',
+                        text: this.translate('Save Token', 'labels', 'OAuthAccount'),
+                        style: 'danger',
+                        onClick: (d) => {
+                            const $el = d.$el ? d.$el : $(d.el);
+                            const token = ($el.find('[data-name="systemUserToken"]').val() || '').trim();
+                            const businessId = ($el.find('[data-name="metaBusinessId"]').val() || '').trim();
+
+                            if (!token) {
+                                Espo.Ui.error(
+                                    this.translate('systemUserTokenEmpty', 'messages', 'OAuthAccount')
+                                );
+
+                                return;
+                            }
+
+                            this._submitSystemUserToken(token, businessId, d);
+                        },
+                    },
+                    {
+                        name: 'cancel',
+                        text: this.translate('Cancel'),
+                        onClick: (d) => d.close(),
+                    },
+                ],
+            });
+
+            dialog.show();
+        },
+
+        /**
+         * @private
+         */
+        _submitSystemUserToken: async function (token, businessId, dialog) {
+            this.inProcess = true;
+            await this.reRender();
+            Espo.Ui.notifyWait();
+
+            try {
+                await Espo.Ajax.postRequest('MetaSystemUserToken/set', {
+                    oAuthAccountId: this.model.id,
+                    token: token,
+                    businessId: businessId || null,
+                }).then(response => {
+                    dialog.close();
+
+                    Espo.Ui.success(
+                        this.translate('systemUserTokenSet', 'messages', 'OAuthAccount')
+                    );
+
+                    if (response && response.missingScopes && response.missingScopes.length) {
+                        Espo.Ui.warning(
+                            this.translate('systemUserTokenMissingScopes', 'messages', 'OAuthAccount')
+                                .replace('{scopes}', response.missingScopes.join(', ')),
+                            { closeButton: true }
+                        );
+                    }
+                });
+
+                await this.model.fetch();
+            } catch (xhr) {
+                let errorMsg = this.translate('systemUserTokenFailed', 'messages', 'OAuthAccount');
+
+                if (xhr && xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                } else if (xhr && xhr.getResponseHeader) {
+                    const header = xhr.getResponseHeader('X-Status-Reason');
+
+                    if (header) {
+                        errorMsg = header;
+                    }
+                }
+
+                Espo.Ui.error(errorMsg);
+            } finally {
+                this.inProcess = false;
+                await this.reRender();
+            }
         },
 
         /**

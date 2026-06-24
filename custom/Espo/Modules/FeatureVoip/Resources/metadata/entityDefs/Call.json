@@ -1,0 +1,45 @@
+{
+    "fields": {
+        "twilioCallSid": {
+            "type": "varchar",
+            "index": true,
+            "readOnly": true
+        },
+        "recordingUrl": {
+            "type": "url",
+            "readOnly": true
+        },
+        "chatwootConversationId": {
+            "type": "int",
+            "readOnly": true
+        },
+        "chatwootAccountId": {
+            "type": "int",
+            "readOnly": true
+        },
+        "voipProvider": {
+            "type": "enum",
+            "options": ["voip_twilio"],
+            "default": "voip_twilio",
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": true
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "voipCalls"
+        }
+    },
+    "indexes": {
+        "tenantDateStart": {
+            "columns": ["tenantId", "dateStart", "deleted"]
+        }
+    }
+}

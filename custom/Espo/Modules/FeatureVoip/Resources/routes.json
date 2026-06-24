@@ -1,0 +1,12 @@
+[
+    {
+        "route": "/VoipWebhook/:accountId",
+        "method": "post",
+        "params": {
+            "controller": "VoipWebhook",
+            "action": "receive",
+            "accountId": ":accountId"
+        },
+        "noAuth": true
+    }
+]

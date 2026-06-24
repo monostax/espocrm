@@ -1881,6 +1881,52 @@ public function updateInbox(
 }
 
 /**
+ * Push VoIP settings into a Chatwoot inbox via the voip_calls#settings endpoint.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @param array<string, mixed> $voipConfig The VoIP config payload
+ * @return array<string, mixed>
+ * @throws Error
+ */
+public function updateVoipSettings(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId,
+    array $voipConfig
+): array {
+    $url = rtrim($platformUrl, '/')
+        . '/api/v1/accounts/' . $accountId
+        . '/inboxes/' . $inboxId
+        . '/voip_calls/settings';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+    ];
+
+    $response = $this->executeRequest($url, 'PATCH', json_encode($voipConfig), $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to update VoIP settings in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (updateVoipSettings): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
  * Delete an inbox from a Chatwoot account.
  *
  * @param string $platformUrl The Chatwoot platform URL

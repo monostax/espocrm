@@ -3,7 +3,8 @@
         "open": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Open",
         "pending": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Pending",
         "resolved": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Resolved",
-        "snoozed": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Snoozed"
+        "snoozed": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Snoozed",
+        "instagram": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\PrimaryFilters\\Instagram"
     },
     "boolFilterClassNameMap": {
         "assignedToMe": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootConversation\\BoolFilters\\AssignedToMe"

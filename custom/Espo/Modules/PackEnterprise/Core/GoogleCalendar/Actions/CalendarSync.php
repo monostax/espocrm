@@ -38,6 +38,7 @@ class CalendarSync extends Base
     private float $recurrentEventCounter = 0;
     private float $espoEventInsertCounter = 0;
     private float $espoEventUpdateCounter = 0;
+    private bool $clientRefreshed = false;
 
     /**
      * Fetch the list of Google Calendars for the authenticated user.
@@ -144,6 +145,7 @@ class CalendarSync extends Base
         $this->recurrentEventCounter = 0;
         $this->espoEventInsertCounter = 0;
         $this->espoEventUpdateCounter = 0;
+        $this->clientRefreshed = false;
     }
 
     /**
@@ -288,6 +290,16 @@ class CalendarSync extends Base
         $this->log->debug("MsxGoogleCalendar [CalendarSync/prepareData]: Fetching calendar info for googleCalendarId={$googleCalendarId}");
 
         $calendarInfo = $this->getClient()->getCalendarInfo($googleCalendarId);
+
+        if ($calendarInfo === false && !$this->clientRefreshed) {
+            $this->clientRefreshed = true;
+            $this->log->info(
+                "MsxGoogleCalendar [CalendarSync/prepareData]: getCalendarInfo failed, refreshing client and retrying"
+            );
+            $this->refreshClient();
+            $calendarInfo = $this->getClient()->getCalendarInfo($googleCalendarId);
+        }
+
         $googleTimeZone = (!empty($calendarInfo) && isset($calendarInfo['timeZone']))
             ? $calendarInfo['timeZone']
             : 'UTC';
@@ -513,27 +525,40 @@ class CalendarSync extends Base
         if (isset($result['success']) && $result['success'] === false) {
             $this->log->debug("MsxGoogleCalendar [CalendarSync/loadGoogleEvents]: API returned success=false, action=" . ($result['action'] ?? 'NONE'));
 
-            if (isset($result['action']) && $result['action'] === 'resetToken') {
-                $toSave = false;
+            if (isset($result['action']) && $result['action'] === 'resetToken' && !$this->clientRefreshed) {
+                $this->clientRefreshed = true;
+                $this->log->info(
+                    "MsxGoogleCalendar [CalendarSync/loadGoogleEvents]: resetToken, refreshing clients and retrying"
+                );
+                $this->refreshClient();
+                $this->eventManager->refreshClient();
 
-                if (!empty($pageToken)) {
-                    $this->log->debug("MsxGoogleCalendar [CalendarSync/loadGoogleEvents]: Resetting pageToken");
-                    $this->syncParams['calendar']->set('pageToken', '');
-                    $toSave = true;
-                }
-
-                if (empty($pageToken) && !empty($syncToken)) {
-                    $this->log->debug("MsxGoogleCalendar [CalendarSync/loadGoogleEvents]: Resetting syncToken");
-                    $this->syncParams['calendar']->set('syncToken', '');
-                    $toSave = true;
-                }
-
-                if ($toSave) {
-                    $this->entityManager->saveEntity($this->syncParams['calendar']);
-                }
+                $result = $this->eventManager->getEventList($params);
             }
 
-            return;
+            if (isset($result['success']) && $result['success'] === false) {
+                if (isset($result['action']) && $result['action'] === 'resetToken') {
+                    $toSave = false;
+
+                    if (!empty($pageToken)) {
+                        $this->log->debug("MsxGoogleCalendar [CalendarSync/loadGoogleEvents]: Resetting pageToken");
+                        $this->syncParams['calendar']->set('pageToken', '');
+                        $toSave = true;
+                    }
+
+                    if (empty($pageToken) && !empty($syncToken)) {
+                        $this->log->debug("MsxGoogleCalendar [CalendarSync/loadGoogleEvents]: Resetting syncToken");
+                        $this->syncParams['calendar']->set('syncToken', '');
+                        $toSave = true;
+                    }
+
+                    if ($toSave) {
+                        $this->entityManager->saveEntity($this->syncParams['calendar']);
+                    }
+                }
+
+                return;
+            }
         }
 
         $itemCount = isset($result['items']) && is_array($result['items']) ? count($result['items']) : 0;

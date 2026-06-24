@@ -1,0 +1,10 @@
+{
+    "readLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureMetaInstagram\\Classes\\FieldProcessing\\OAuthAccount\\ConnectionStatusDetailLoader"
+    ],
+    "listLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureMetaInstagram\\Classes\\FieldProcessing\\OAuthAccount\\ConnectionStatusListLoader"
+    ]
+}

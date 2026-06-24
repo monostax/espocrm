@@ -1,0 +1,97 @@
+[
+    {
+        "tabLabel": "$Overview",
+        "name": "identityPanel",
+        "label": "Identity",
+        "panelIconClass": "fas fa-id-badge",
+        "gridRow": 1,
+        "gridColSpan": 2,
+        "rows": [
+            [
+                {
+                    "name": "channelType"
+                },
+                {
+                    "name": "sourceId"
+                }
+            ],
+            [
+                {
+                    "name": "label"
+                },
+                {
+                    "name": "isPrimary"
+                }
+            ]
+        ]
+    },
+    {
+        "name": "relationshipsPanel",
+        "label": "Relationships",
+        "panelIconClass": "fas fa-link",
+        "gridRow": 2,
+        "gridColSpan": 2,
+        "rows": [
+            [
+                {
+                    "name": "contact"
+                },
+                {
+                    "name": "tenant"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootAccount"
+                },
+                {
+                    "name": "chatwootInbox"
+                }
+            ]
+        ]
+    },
+    {
+        "name": "timestampsPanel",
+        "label": "Timestamps",
+        "panelIconClass": "fas fa-clock",
+        "gridRow": 3,
+        "gridColSpan": 2,
+        "rows": [
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
+                }
+            ],
+            [
+                {
+                    "name": "createdBy"
+                },
+                {
+                    "name": "modifiedBy"
+                }
+            ]
+        ]
+    },
+    {
+        "gridRow": 4,
+        "gridColSpan": 2,
+        "rows": [
+            [
+                {
+                    "name": "chatwootConversationsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 2,
+                    "options": {
+                        "link": "chatwootConversations",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    }
+]
