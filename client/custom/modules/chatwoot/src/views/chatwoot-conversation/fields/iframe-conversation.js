@@ -59,6 +59,7 @@ class IframeConversationFieldView extends BaseFieldView {
                 style="width: 100%; height: 600px; border: none; margin: 0; padding: 0; border-radius: 4px;"
                 frameborder="0"
                 allowfullscreen
+                allow="microphone"
                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
             ></iframe>
         </div>

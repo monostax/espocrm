@@ -86,7 +86,7 @@ class SeedRole implements RebuildAction
             'portalPermission' => 'not-set',
             'groupEmailAccountPermission' => 'team',
             'exportPermission' => 'not-set',
-            'massUpdatePermission' => 'not-set',
+            'massUpdatePermission' => 'yes',
             'dataPrivacyPermission' => 'not-set',
             'followerManagementPermission' => 'team',
             'auditPermission' => 'not-set',
@@ -263,6 +263,12 @@ class SeedRole implements RebuildAction
                     'delete' => 'team',
                 ],
                 'ChatwootContactInbox' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'ContactChannelIdentity' => [
                     'create' => 'no',
                     'read' => 'team',
                     'edit' => 'no',
@@ -771,6 +777,7 @@ class SeedRole implements RebuildAction
                 'ChatwootAccountWebhook' => (object)[],
                 'ChatwootContact' => (object)[],
                 'ChatwootContactInbox' => (object)[],
+                'ContactChannelIdentity' => (object)[],
                 'ChatwootConversation' => (object)[],
                 'ChatwootInbox' => (object)[
                     'channelType' => (object)['read' => 'yes', 'edit' => 'no'],

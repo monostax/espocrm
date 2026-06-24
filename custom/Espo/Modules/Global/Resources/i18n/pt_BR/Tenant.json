@@ -18,6 +18,7 @@
     },
     "fields": {
         "name": "Nome",
+        "slug": "Slug",
         "description": "Descrição",
         "baseUserTeam": "Time Base de Usuários",
         "otherUserTeams": "Outros Times de Usuários",
@@ -27,5 +28,8 @@
         "modifiedAt": "Modificado Em",
         "createdBy": "Criado Por",
         "modifiedBy": "Modificado Por"
+    },
+    "tooltips": {
+        "slug": "Slug de URL estável e globalmente único para este ambiente. Usado para construir subdomínios por ambiente, como guest.<slug>.<dominio-gitops>. Formato: letras minúsculas, dígitos e hífens (ex.: \"b2b\", \"clinica\")."
     }
 }

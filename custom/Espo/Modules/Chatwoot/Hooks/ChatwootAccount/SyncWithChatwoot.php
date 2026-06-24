@@ -29,6 +29,7 @@ use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
+use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
 
 /**
  * Hook to synchronize ChatwootAccount with Chatwoot Platform API.
@@ -52,7 +53,8 @@ class SyncWithChatwoot
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private Log $log,
-        private ConciergeAvatarService $conciergeAvatarService
+        private ConciergeAvatarService $conciergeAvatarService,
+        private ConciergeEmailDomainResolver $conciergeEmailDomainResolver
     ) {}
 
     /**
@@ -130,7 +132,8 @@ class SyncWithChatwoot
                 $platformUrl,
                 $accessToken,
                 $chatwootAccountId,
-                $entity->get('name')
+                $entity->get('name'),
+                $entity
             );
 
             if (!$conciergeUser) {
@@ -233,6 +236,7 @@ class SyncWithChatwoot
      * @param string $accessToken
      * @param int $chatwootAccountId
      * @param string $accountName
+     * @param Entity $entity The ChatwootAccount entity (used to resolve tenant slug for email domain)
      * @return array<string, mixed>|null
      * @throws Error
      */
@@ -240,10 +244,11 @@ class SyncWithChatwoot
         string $platformUrl,
         string $accessToken,
         int $chatwootAccountId,
-        string $accountName
+        string $accountName,
+        Entity $entity
     ): ?array {
         // Generate concierge user credentials
-        $email = 'concierge.' . $chatwootAccountId . '@monostax-ext.com';
+        $email = $this->conciergeEmailDomainResolver->resolveEmail($entity, $chatwootAccountId);
         $name = '✦ Concierge (Monostax)';
         
         // Generate password meeting Chatwoot requirements

@@ -1,12 +1,16 @@
 [
     {
         "name": "name",
-        "width": 40,
+        "width": 30,
         "link": true
     },
     {
+        "name": "slug",
+        "width": 20
+    },
+    {
         "name": "baseUserTeam",
-        "width": 35
+        "width": 25
     },
     {
         "name": "createdAt",

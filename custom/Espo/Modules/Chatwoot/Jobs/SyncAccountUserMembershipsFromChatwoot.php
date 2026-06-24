@@ -374,7 +374,11 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
         $membership->set('availabilityStatus', $agentData['availability_status'] ?? 'offline');
         $membership->set('autoOffline', $agentData['auto_offline'] ?? true);
         $membership->set('confirmed', $agentData['confirmed'] ?? false);
-        $membership->set('avatarUrl', $agentData['thumbnail'] ?? null);
+        // Prefer the original blob URL (`avatar_url`) over the resized
+        // `thumbnail` representation. Mirroring the re-encoded thumbnail back
+        // into the CRM avatar would never byte-match what we pushed, driving an
+        // infinite re-encode loop (see AgentAvatarSyncService loop-prevention).
+        $membership->set('avatarUrl', $agentData['avatar_url'] ?? $agentData['thumbnail'] ?? null);
         $membership->set('customRoleId', $agentData['custom_role_id'] ?? null);
 
         // NOTE: isAI is intentionally NOT set here. It is a user-configured field

@@ -800,7 +800,7 @@
                 </div>
             </div>
             <div class="inbox-iframe-wrapper">
-                <iframe class="inbox-iframe" src="" frameborder="0" allowfullscreen sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+                <iframe class="inbox-iframe" src="" frameborder="0" allowfullscreen allow="microphone" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
                 <div class="inbox-iframe-placeholder">
                     <i class="ti ti-message-circle" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px;"></i>
                     <p style="color: #6b7280; font-size: 16px;">{{noSelectionMessage}}</p>

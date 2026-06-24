@@ -7,6 +7,16 @@
             "maxLength": 100,
             "trim": true
         },
+        "slug": {
+            "type": "varchar",
+            "required": true,
+            "unique": true,
+            "maxLength": 60,
+            "trim": true,
+            "pattern": "^[a-z0-9-]+$",
+            "tooltip": true,
+            "comment": "Stable, globally-unique URL slug for the tenant. Used to build per-tenant subdomains (e.g. guest.<slug>.<domain>). Format: lowercase letters, digits, hyphens."
+        },
         "description": {
             "type": "text"
         },
@@ -129,6 +139,10 @@
     "indexes": {
         "name": {
             "columns": ["name", "deleted"]
+        },
+        "slug": {
+            "columns": ["slug", "deleted"],
+            "unique": true
         },
         "baseUserTeamId": {
             "columns": ["baseUserTeamId"]

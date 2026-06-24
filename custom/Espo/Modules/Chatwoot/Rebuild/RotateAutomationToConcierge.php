@@ -30,6 +30,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootWahaAppTokenSync;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
+use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -44,7 +45,7 @@ use Espo\ORM\EntityManager;
  * NULL but a non-empty `api_key` inherited from the old automation user):
  *
  *   1. Create a fresh concierge user on the Chatwoot platform
- *      (`concierge.<id>@monostax-ext.com`, name "✦ Concierge (Monostax)").
+ *      (`concierge.<id>@guest.<tenant-slug>.<gitops-domain>`, name "✦ Concierge (Monostax)").
  *   2. Attach it to the Chatwoot account as administrator.
  *   3. Create a matching `ChatwootUser` entity in EspoCRM.
  *   4. Rotate `apiKey` to the fresh user's access token.
@@ -85,6 +86,7 @@ class RotateAutomationToConcierge implements RebuildAction
         private ChatwootApiClient $apiClient,
         private ChatwootAccountUserMembershipService $membershipService,
         private ConciergeAvatarService $conciergeAvatarService,
+        private ConciergeEmailDomainResolver $conciergeEmailDomainResolver,
         private ChatwootWahaAppTokenSync $wahaAppTokenSync,
         private Log $log,
     ) {}
@@ -210,7 +212,8 @@ class RotateAutomationToConcierge implements RebuildAction
             $backendUrl,
             $accessToken,
             (int) $chatwootAccountId,
-            (string) $account->get('name')
+            (string) $account->get('name'),
+            $account
         );
 
         if (!$conciergeData) {
@@ -368,6 +371,11 @@ class RotateAutomationToConcierge implements RebuildAction
      * than depending on it, because this class has a narrow, one-shot
      * lifetime and we don't want the two to drift behaviour.
      *
+     * @param string $backendUrl
+     * @param string $platformAccessToken
+     * @param int $chatwootAccountId
+     * @param string $accountName
+     * @param Entity $account The ChatwootAccount entity (used to resolve tenant slug for email domain)
      * @return array<string, mixed>|null
      */
     private function createConciergeUser(
@@ -375,8 +383,9 @@ class RotateAutomationToConcierge implements RebuildAction
         string $platformAccessToken,
         int $chatwootAccountId,
         string $accountName,
+        Entity $account,
     ): ?array {
-        $email = 'concierge.' . $chatwootAccountId . '@monostax-ext.com';
+        $email = $this->conciergeEmailDomainResolver->resolveEmail($account, $chatwootAccountId);
         $name = '✦ Concierge (Monostax)';
         $password = $this->generateSecurePassword();
 

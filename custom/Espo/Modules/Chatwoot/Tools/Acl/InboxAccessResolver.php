@@ -28,6 +28,9 @@ class InboxAccessResolver
      * Resolve CRM ChatwootInbox IDs the user can access via:
      * User -> ChatwootUser.assignedUserId -> ChatwootAccountUserMembership -> chatwootInboxes.
      *
+     * Memberships with role "administrator" grant access to ALL inboxes in
+     * that account, regardless of the per-membership chatwootInboxes link.
+     *
      * Returns `null` for unrestricted access (admins), otherwise a concrete allow-list.
      *
      * @return ?string[]
@@ -53,14 +56,36 @@ class InboxAccessResolver
             ->find();
 
         $inboxIdMap = [];
+        $administratorAccountIds = [];
 
         foreach ($membershipCollection as $membership) {
             if (!$membership instanceof CoreEntity) {
                 continue;
             }
 
+            if ($membership->get('role') === 'administrator') {
+                $accountId = $membership->get('chatwootAccountId');
+
+                if ($accountId) {
+                    $administratorAccountIds[] = $accountId;
+                }
+
+                continue;
+            }
+
             foreach ($membership->getLinkMultipleIdList('chatwootInboxes') as $inboxId) {
                 $inboxIdMap[$inboxId] = true;
+            }
+        }
+
+        if (count($administratorAccountIds)) {
+            $adminInboxCollection = $this->entityManager
+                ->getRDBRepository('ChatwootInbox')
+                ->where(['chatwootAccountId' => $administratorAccountIds])
+                ->find();
+
+            foreach ($adminInboxCollection as $inbox) {
+                $inboxIdMap[$inbox->getId()] = true;
             }
         }
 

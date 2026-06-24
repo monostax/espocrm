@@ -1,0 +1,7 @@
+{
+    "accessControlFilterClassNameMap": {
+        "all": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\AccessControlFilters\\ByMembershipInbox",
+        "onlyTeam": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\AccessControlFilters\\ByMembershipInbox",
+        "onlyOwn": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\AccessControlFilters\\ByMembershipInbox"
+    }
+}

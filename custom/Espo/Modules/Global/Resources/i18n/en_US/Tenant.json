@@ -1,6 +1,7 @@
 {
     "fields": {
         "name": "Name",
+        "slug": "Slug",
         "description": "Description",
         "baseUserTeam": "Base User Team",
         "otherUserTeams": "Other User Teams",
@@ -10,6 +11,9 @@
         "modifiedAt": "Modified At",
         "createdBy": "Created By",
         "modifiedBy": "Modified By"
+    },
+    "tooltips": {
+        "slug": "Stable, globally-unique URL slug for this tenant. Used to build per-tenant subdomains such as guest.<slug>.<gitops-domain>. Format: lowercase letters, digits, and hyphens (e.g. \"b2b\", \"clinica\")."
     },
     "links": {
         "baseUserTeam": "Base User Team",

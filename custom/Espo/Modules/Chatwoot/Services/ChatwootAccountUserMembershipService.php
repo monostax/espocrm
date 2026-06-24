@@ -624,8 +624,14 @@ class ChatwootAccountUserMembershipService
         if (isset($response['confirmed'])) {
             $membership->set('confirmed', $response['confirmed']);
         }
-        if (isset($response['thumbnail'])) {
-            $membership->set('avatarUrl', $response['thumbnail']);
+        // Prefer the original blob URL (`avatar_url`) over the resized
+        // `thumbnail` representation. The thumbnail is a `resize_to_fill`
+        // re-encode whose bytes differ from what we push, so mirroring it back
+        // would never byte-match `crmAvatarSyncHash` and would drive an
+        // infinite re-encode loop (generation loss → grayscale noise).
+        $avatarUrl = $response['avatar_url'] ?? $response['thumbnail'] ?? null;
+        if ($avatarUrl !== null) {
+            $membership->set('avatarUrl', $avatarUrl);
         }
         if (isset($response['custom_role_id'])) {
             $membership->set('customRoleId', $response['custom_role_id']);

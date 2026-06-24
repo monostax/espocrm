@@ -31,6 +31,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootWahaAppTokenSync;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
+use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -51,6 +52,7 @@ class SeedChatwootAccount implements RebuildAction
         private ChatwootApiClient $apiClient,
         private ChatwootAccountUserMembershipService $membershipService,
         private ConciergeAvatarService $conciergeAvatarService,
+        private ConciergeEmailDomainResolver $conciergeEmailDomainResolver,
         private ChatwootWahaAppTokenSync $wahaAppTokenSync,
         private Config $config,
         private Log $log
@@ -104,7 +106,8 @@ class SeedChatwootAccount implements RebuildAction
                     $backendUrl,
                     $accessToken,
                     (int) $existing->get('chatwootAccountId'),
-                    self::DEFAULT_NAME
+                    self::DEFAULT_NAME,
+                    $existing
                 );
                 
                 if ($conciergeUserData) {
@@ -350,16 +353,18 @@ class SeedChatwootAccount implements RebuildAction
      * @param string $platformAccessToken
      * @param int $chatwootAccountId
      * @param string $accountName
+     * @param Entity|null $account The ChatwootAccount entity (used to resolve tenant slug for email domain), or null if not yet created
      * @return array<string, mixed>|null User data including access_token, or null on failure
      */
     private function createConciergeUser(
         string $backendUrl,
         string $platformAccessToken,
         int $chatwootAccountId,
-        string $accountName
+        string $accountName,
+        ?Entity $account = null
     ): ?array {
         // Use the same naming convention as SyncWithChatwoot hook
-        $email = 'concierge.' . $chatwootAccountId . '@monostax-ext.com';
+        $email = $this->conciergeEmailDomainResolver->resolveEmail($account, $chatwootAccountId);
         $name = '✦ Concierge (Monostax)';
         $password = $this->generateSecurePassword();
 

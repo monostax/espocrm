@@ -212,6 +212,20 @@ class AgentAvatarSyncService
             return;
         }
 
+        // Loop-break (defense-in-depth): never push back bytes that we just
+        // pulled *from* Chatwoot. If the CRM avatar is byte-identical to the
+        // last thumbnail we mirrored down (`chatwootAvatarSyncHash`), pushing
+        // it would make Chatwoot re-encode it, we'd pull the re-encode, and the
+        // image would degrade one generation per round-trip. Realign the push
+        // hash so subsequent unrelated saves also no-op.
+        if ($payload !== null && $chatwootUser->get('chatwootAvatarSyncHash') === $newHash) {
+            if ($chatwootUser->get('crmAvatarSyncHash') !== $newHash) {
+                $chatwootUser->set('crmAvatarSyncHash', $newHash);
+                $this->entityManager->saveEntity($chatwootUser, ['silent' => true, 'skipHooks' => true]);
+            }
+            return;
+        }
+
         $resolved = $this->resolvePushContext($chatwootUser);
         if ($resolved === null) {
             return;
