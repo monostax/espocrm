@@ -155,6 +155,22 @@ class SeedRole implements RebuildAction
                     'edit' => 'own',
                     'delete' => 'own',
                 ],
+                // Google Meet — virtual entities (Meet/Graph API proxies).
+                // Services throw Forbidden without read access and the
+                // RecordDefs mark these read-only, so grant read-only `team`
+                // at the role level to keep the UI consistent with the backend.
+                'GoogleMeetSpace' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'GoogleMeetConferenceRecord' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'ChatwootAccount' => [
                         'create' => 'no',
                         'read' => 'team',
@@ -466,6 +482,17 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // FeatureMetaLeadAds — the Opportunity and Contact detail views
+                // have a read-only `metaLeadgenAnswers` bottom panel; without
+                // scope read access the metadata filter strips the link and the
+                // panel view throws "Link 'metaLeadgenAnswers' is not defined
+                // in model 'Opportunity'". Row-level ACL stays `team`.
+                'MetaLeadgenAnswer' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
 
                 // Reports (Advanced module). Full team CRUD at the base level
                 // so tenant users can author, view, and manage their own
@@ -705,6 +732,8 @@ class SeedRole implements RebuildAction
                 'OAuthAccount' => (object)[],
                 'MsxGoogleCalendar' => (object)[],
                 'MsxGoogleCalendarUser' => (object)[],
+                'GoogleMeetSpace' => (object)[],
+                'GoogleMeetConferenceRecord' => (object)[],
                 'OAuthProvider' => (object)[
                     'isGloballyShared' => (object)['read' => 'no', 'edit' => 'no'],
                 ],
@@ -765,6 +794,7 @@ class SeedRole implements RebuildAction
                 'MetaFacebookPage' => (object)[],
                 'MetaLeadForm' => (object)[],
                 'MetaLeadgenEvent' => (object)[],
+                'MetaLeadgenAnswer' => (object)[],
 
                 // Empty entry mirrors the convention used for every other
                 // scope in this map — no per-field overrides; the scope-level

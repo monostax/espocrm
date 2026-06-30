@@ -3,7 +3,8 @@
         "cpf": "CPF",
         "dataNascimento": "Data de Nascimento",
         "sexo": "Sexo",
-        "tenant": "Ambiente"
+        "tenant": "Ambiente",
+        "whatsAppOptedOut": "Opt-out do WhatsApp"
     },
     "links": {
         "tenant": "Ambiente"
@@ -21,6 +22,13 @@
         "Cases": "Casos",
         "Documents": "Documentos",
         "ChatwootConversations": "Chat / Conversas",
-        "Chatwoot": "Chat"
+        "Chatwoot": "Chat",
+        "Preferences": "Preferências"
+    },
+    "descriptions": {
+        "whatsAppOptedOut": "Indica se o contato optou por não receber mensagens via WhatsApp."
+    },
+    "tooltips": {
+        "whatsAppOptedOut": "Quando ativado, este contato será excluído de campanhas e mensagens em massa do WhatsApp. O opt-out pode ser definido manualmente ou automaticamente pelo sistema quando o contato solicita a parada das mensagens."
     }
 }

@@ -67,6 +67,7 @@ class ContactReconciler
      *   phoneNumber: ?string,
      *   email: ?string,
      *   identifier: ?string,
+     *   existingContactId?: ?string,
      *   contactInboxes?: list<array{source_id?: ?string, inbox?: array{id?: ?int, channel_type?: ?string}}>,
      *   inboxIdMap?: array<int, string>,
      * } $input
@@ -74,7 +75,7 @@ class ContactReconciler
      * @return array{
      *   contact: ?Entity,
      *   isNew: bool,
-     *   matchedBy: 'identity'|'phone'|'email'|'created'|'skipped',
+     *   matchedBy: 'existing'|'identity'|'phone'|'email'|'created'|'skipped',
      *   identities: list<Entity>,
      * }
      */
@@ -86,6 +87,7 @@ class ContactReconciler
         $name = $this->str($input['name'] ?? null);
         $rawPhone = $this->str($input['phoneNumber'] ?? null);
         $rawEmail = $this->str($input['email'] ?? null);
+        $existingContactId = $this->str($input['existingContactId'] ?? null);
         $contactInboxes = $input['contactInboxes'] ?? [];
         $inboxIdMap = $input['inboxIdMap'] ?? [];
 
@@ -172,13 +174,31 @@ class ContactReconciler
         $contact = null;
         $matchedBy = 'created';
 
-        // (1) Match by any candidate identity.
-        foreach ($candidateIdentities as $cand) {
-            $found = $this->findContactByIdentity($tenantId, $cand['channelType'], $cand['sourceId']);
+        // (0) Highest priority: an existing bridge already resolved this
+        // Chatwoot contact to a Contact. The bridge's chatwootContactId
+        // is the only key that survives source_id rotation (Chatwoot
+        // flips contact_inboxes[].source_id on some channels — e.g. a
+        // WhatsApp group JID can become an internal UUID between syncs).
+        // Honoring the prior link here makes rotation a no-op instead of
+        // spawning a duplicate Contact. We still validate the contact
+        // exists and belongs to this tenant before trusting it.
+        if ($existingContactId) {
+            $found = $this->findContactByIdAndTenant($existingContactId, $tenantId);
             if ($found) {
                 $contact = $found;
-                $matchedBy = 'identity';
-                break;
+                $matchedBy = 'existing';
+            }
+        }
+
+        // (1) Match by any candidate identity.
+        if (!$contact) {
+            foreach ($candidateIdentities as $cand) {
+                $found = $this->findContactByIdentity($tenantId, $cand['channelType'], $cand['sourceId']);
+                if ($found) {
+                    $contact = $found;
+                    $matchedBy = 'identity';
+                    break;
+                }
             }
         }
 
@@ -299,6 +319,37 @@ class ContactReconciler
             ->from('Contact')
             ->where([
                 $field => $value,
+                'tenantId' => $tenantId,
+            ])
+            ->withDeleted()
+            ->build();
+
+        $contact = $this->entityManager
+            ->getRDBRepository('Contact')
+            ->clone($query)
+            ->findOne();
+
+        if (!$contact) {
+            return null;
+        }
+
+        $this->entityManager->getRDBRepository('Contact')->restoreDeleted($contact->getId());
+        return $this->entityManager->getEntityById('Contact', $contact->getId());
+    }
+
+    /**
+     * Look up a Contact by id, but only if it belongs to the given
+     * tenant. Used to honor a pre-existing bridge link without ever
+     * trusting a cross-tenant id. Restores soft-deleted records.
+     */
+    private function findContactByIdAndTenant(string $contactId, string $tenantId): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('Contact')
+            ->where([
+                'id' => $contactId,
                 'tenantId' => $tenantId,
             ])
             ->withDeleted()

@@ -29,7 +29,7 @@
             "Lost": "Lost"
         },
         "followupStatus": {
-            "ActionNeeded": "Action Needed",
+            "ActionNeeded": "Follow-up Inactive",
             "FollowupActive": "Follow-up Active",
             "Ended": "Ended"
         }
@@ -55,7 +55,7 @@
         "lost": "Lost"
     },
     "boolFilters": {
-        "followupActionNeeded": "Follow-up: Action Needed",
+        "followupActionNeeded": "Follow-up: Inactive",
         "followupActive": "Follow-up: Active"
     }
 }

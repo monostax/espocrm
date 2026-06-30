@@ -270,9 +270,21 @@ class SyncContactsFromChatwoot implements JobDataLess
         $chatwootContactId = (int) $chatwootContact['id'];
         $contactInboxes = $chatwootContact['contact_inboxes'] ?? [];
 
-        // Reconcile (or auto-provision) the EspoCRM Contact FIRST.
-        // The bridge row is always created/updated next so it carries
-        // the resolved contactId.
+        // Look up the existing bridge row FIRST (including soft-deleted)
+        // so we can feed its already-resolved contactId into the
+        // reconciler. Chatwoot rotates contact_inboxes[].source_id on
+        // some channels (notably Channel::Api WhatsApp groups, where the
+        // group JID can flip to an internal UUID between syncs). Without
+        // this hint the reconciler treats the rotated source_id as a
+        // brand-new identity, fails every match strategy, and
+        // auto-provisions a duplicate Contact — orphaning the original.
+        // The bridge's chatwootContactId is the only truly stable key.
+        $existingCwtContact = $this->findChatwootContactIncludingDeleted($chatwootContactId, $espoAccountId);
+        $existingContactId = $existingCwtContact?->get('contactId');
+
+        // Reconcile (or auto-provision) the EspoCRM Contact.
+        // The bridge row is created/updated next so it carries the
+        // resolved contactId.
         $reconciled = $this->reconciler->reconcile([
             'tenantId' => $tenantId,
             'teamsIds' => $teamsIds,
@@ -281,13 +293,11 @@ class SyncContactsFromChatwoot implements JobDataLess
             'phoneNumber' => $chatwootContact['phone_number'] ?? null,
             'email' => $chatwootContact['email'] ?? null,
             'identifier' => $chatwootContact['identifier'] ?? null,
+            'existingContactId' => $existingContactId,
             'contactInboxes' => $contactInboxes,
             'inboxIdMap' => $this->buildInboxIdMap($contactInboxes, $espoAccountId),
         ]);
         $espoContact = $reconciled['contact'];
-
-        // Check if ChatwootContact already exists (including soft-deleted records)
-        $existingCwtContact = $this->findChatwootContactIncludingDeleted($chatwootContactId, $espoAccountId);
 
         if ($existingCwtContact) {
             $this->entityManager
@@ -355,9 +365,13 @@ class SyncContactsFromChatwoot implements JobDataLess
         $cwtContact->set('syncStatus', 'synced');
         $cwtContact->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
-        // Re-link to the resolved Contact whenever the bridge is
-        // currently orphaned or the reconciler found a better match.
-        if ($resolvedContactId && $cwtContact->get('contactId') !== $resolvedContactId) {
+        // Re-link to the resolved Contact only when the bridge is
+        // currently orphaned. Never overwrite an existing valid
+        // contact_id because the reconciler may match a different
+        // Contact through a transient inbox identity (e.g. sharing
+        // the same Chatwoot account). The merge hook is the proper
+        // path for reconciling divergent assignments.
+        if ($resolvedContactId && !$cwtContact->get('contactId')) {
             $cwtContact->set('contactId', $resolvedContactId);
         }
 

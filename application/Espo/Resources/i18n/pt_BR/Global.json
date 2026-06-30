@@ -435,8 +435,8 @@
         "updateThis": "{user} atualizou {entityType}",
         "createRelatedThis": "{user} criou {relatedEntityType} {relatedEntity} relacionado a {entityType}",
         "createRelated": "{user} criou {relatedEntityType} {relatedEntity} atribuido a {entityType} {entity}",
-        "relate": "{user} vinculado {relatedEntityType} {relatedEntity} com {entityType} {entity}",
-        "relateThis": "{user} vinculado {relatedEntityType} {relatedEntity} com essa {entityType}",
+        "relate": "{user} vinculou {relatedEntityType} {relatedEntity} a/ao {entityType} {entity}",
+        "relateThis": "{user} vinculou {relatedEntityType} {relatedEntity} a/ao {entityType}",
         "emailReceivedFromThis": "O e-mail {email} foi recebido de {from}",
         "emailReceivedInitialFromThis": "O e-mail {email} foi recebido de e {from} e criou um(a) {entityType}",
         "emailReceivedThis": "O e-mail {email} foi recebido",
@@ -497,8 +497,24 @@
             "Sexta",
             "Sábado"
         ],
-        "dayNamesShort": ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
-        "dayNamesMin": ["D", "S", "T", "Q", "Q", "S", "S"]
+        "dayNamesShort": [
+            "Dom",
+            "Seg",
+            "Ter",
+            "Qua",
+            "Qui",
+            "Sex",
+            "Sáb"
+        ],
+        "dayNamesMin": [
+            "D",
+            "S",
+            "T",
+            "Q",
+            "Q",
+            "S",
+            "S"
+        ]
     },
     "options": {
         "salutationName": {

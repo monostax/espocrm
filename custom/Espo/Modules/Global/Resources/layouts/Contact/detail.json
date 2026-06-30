@@ -6,13 +6,20 @@
             [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
             [{ "name": "cpf" }, { "name": "dataNascimento" }],
             [{ "name": "sexo" }, { "name": "title" }],
-            [{ "name": "address" }, false],
-            [{ "name": "whatsAppOptedOut" }, false]
+            [{ "name": "address" }, false]
         ]
     },
     {
         "label": "Details",
         "rows": [[{ "name": "description", "fullWidth": true }]]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Preferences",
+        "name": "preferencesTab",
+        "rows": [
+            [{ "name": "whatsAppOptedOut" }, false]
+        ]
     },
     {
         "tabBreak": true,

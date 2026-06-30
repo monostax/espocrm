@@ -3,7 +3,8 @@
         "cpf": "CPF",
         "dataNascimento": "Date of Birth",
         "sexo": "Sex",
-        "tenant": "Tenant"
+        "tenant": "Tenant",
+        "whatsAppOptedOut": "WhatsApp Opted Out"
     },
     "links": {
         "tenant": "Tenant"
@@ -21,6 +22,13 @@
         "Cases": "Cases",
         "Documents": "Documents",
         "ChatwootConversations": "Chat / Conversations",
-        "Chatwoot": "Chat"
+        "Chatwoot": "Chat",
+        "Preferences": "Preferences"
+    },
+    "descriptions": {
+        "whatsAppOptedOut": "Indicates whether the contact has opted out of receiving WhatsApp messages."
+    },
+    "tooltips": {
+        "whatsAppOptedOut": "When enabled, this contact will be excluded from WhatsApp campaigns and bulk messages. The opt-out can be set manually or automatically by the system when the contact requests to stop receiving messages."
     }
 }
