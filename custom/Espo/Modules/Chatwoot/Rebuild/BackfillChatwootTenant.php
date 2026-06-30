@@ -28,7 +28,8 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 
 /**
- * Backfills chatwoot_account.tenant_id and chatwoot_ai_agent_run.tenant_id.
+ * Backfills chatwoot_account.tenant_id, chatwoot_ai_agent_run.tenant_id,
+ * and whatsapp_campaign.tenant_id.
  *
  * Two passes, run sequentially and idempotent across repeated rebuilds:
  *
@@ -38,7 +39,9 @@ use Espo\ORM\EntityManager;
  *
  *   Pass 2 — chatwoot_ai_agent_run.tenant_id ← parent account's tenant_id.
  *
- * Both passes only touch rows whose tenant_id is currently NULL, so they
+ *   Pass 3 — whatsapp_campaign.tenant_id ← parent account's tenant_id.
+ *
+ * All passes only touch rows whose tenant_id is currently NULL, so they
  * never clobber an explicit assignment.
  *
  * Implemented via raw SQL to stay within a single statement per pass and
@@ -67,6 +70,7 @@ class BackfillChatwootTenant implements RebuildAction
 
         $this->backfillAccounts($pdo);
         $this->backfillRuns($pdo);
+        $this->backfillCampaigns($pdo);
     }
 
     /**
@@ -166,6 +170,60 @@ class BackfillChatwootTenant implements RebuildAction
             $this->log->info("BackfillChatwootTenant: backfilled tenant_id on {$count} ChatwootAiAgentRun row(s)");
         } catch (\Throwable $e) {
             $this->log->error('BackfillChatwootTenant: run backfill failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Copy chatwoot_account.tenant_id to whatsapp_campaign.tenant_id
+     * for every campaign that still has a NULL tenant.
+     */
+    private function backfillCampaigns(\PDO $pdo): void
+    {
+        if (!$this->tableExists($pdo, 'whatsapp_campaign')) {
+            $this->log->info('BackfillChatwootTenant: whatsapp_campaign table missing; skipping campaign backfill');
+            return;
+        }
+
+        if (!$this->columnExists($pdo, 'whatsapp_campaign', 'tenant_id')) {
+            $this->log->info('BackfillChatwootTenant: whatsapp_campaign.tenant_id column not yet created; skipping campaign backfill');
+            return;
+        }
+
+        $driver = $this->getDriverName($pdo);
+
+        try {
+            $sql = match ($driver) {
+                'mysql' => "
+                    UPDATE whatsapp_campaign c
+                    INNER JOIN chatwoot_account a ON a.id = c.chatwoot_account_id
+                    SET c.tenant_id = a.tenant_id
+                    WHERE c.tenant_id IS NULL
+                      AND a.tenant_id IS NOT NULL
+                      AND c.deleted = 0
+                ",
+                'pgsql' => "
+                    UPDATE whatsapp_campaign c
+                    SET tenant_id = a.tenant_id
+                    FROM chatwoot_account a
+                    WHERE a.id = c.chatwoot_account_id
+                      AND c.tenant_id IS NULL
+                      AND a.tenant_id IS NOT NULL
+                      AND c.deleted = 0
+                ",
+                default => null,
+            };
+
+            if ($sql === null) {
+                $this->log->warning(
+                    "BackfillChatwootTenant: unsupported driver '{$driver}', skipping campaign backfill"
+                );
+                return;
+            }
+
+            $count = $pdo->exec($sql);
+            $this->log->info("BackfillChatwootTenant: backfilled tenant_id on {$count} WhatsAppCampaign row(s)");
+        } catch (\Throwable $e) {
+            $this->log->error('BackfillChatwootTenant: campaign backfill failed: ' . $e->getMessage());
         }
     }
 

@@ -23,6 +23,13 @@
                 "aclScope": "Activities"
             },
             {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "contactIdAttribute": "id",
+                "order": 3
+            },
+            {
                 "name": "tasks",
                 "reference": "tasks",
                 "disabled": true

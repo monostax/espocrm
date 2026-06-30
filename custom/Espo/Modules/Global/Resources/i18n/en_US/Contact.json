@@ -25,6 +25,10 @@
         "Chatwoot": "Chat",
         "Preferences": "Preferences"
     },
+    "labels": {
+        "Conversations": "Conversations",
+        "No Contact linked": "No Contact linked"
+    },
     "descriptions": {
         "whatsAppOptedOut": "Indicates whether the contact has opted out of receiving WhatsApp messages."
     },

@@ -9,6 +9,7 @@
         "templateBody": "Corpo do Template",
         "credential": "Credencial",
         "chatwootAccount": "Chat / Conta",
+        "tenant": "Ambiente",
         "targetLists": "Listas Alvo",
         "manualContacts": "Contatos Manuais",
         "parameterMapping": "Mapeamento de Parâmetros",
@@ -31,6 +32,7 @@
     "links": {
         "credential": "Credencial",
         "chatwootAccount": "Chat / Conta",
+        "tenant": "Ambiente",
         "targetLists": "Listas Alvo",
         "manualContacts": "Contatos Manuais",
         "campaignContacts": "Destinatários",
@@ -57,6 +59,7 @@
     "tooltips": {
         "templateName": "Selecione o template de mensagem WhatsApp para usar nesta campanha. Os templates são obtidos da sua Conta Business do WhatsApp na Meta.",
         "parameterMapping": "Mapeia os parâmetros do template para campos do contato. Define quais dados do contato preenchem cada placeholder no template.",
-        "processedParams": "Os valores dos parâmetros resolvidos após processar o mapeamento com os dados reais dos contatos."
+        "processedParams": "Os valores dos parâmetros resolvidos após processar o mapeamento com os dados reais dos contatos.",
+        "tenant": "Ambiente denormalizado da conta Chatwoot pai da campanha. Definido automaticamente; usado para relatórios por ambiente e agregações sem ACL."
     }
 }

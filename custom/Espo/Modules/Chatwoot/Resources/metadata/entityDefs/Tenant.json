@@ -19,6 +19,11 @@
             "type": "hasMany",
             "entity": "ContactChannelIdentity",
             "foreign": "tenant"
+        },
+        "whatsAppCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "tenant"
         }
     }
 }

@@ -25,6 +25,10 @@
         "Chatwoot": "Chat",
         "Preferences": "Preferências"
     },
+    "labels": {
+        "Conversations": "Conversas",
+        "No Contact linked": "Nenhum Contato vinculado"
+    },
     "descriptions": {
         "whatsAppOptedOut": "Indica se o contato optou por não receber mensagens via WhatsApp."
     },

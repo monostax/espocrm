@@ -533,9 +533,28 @@ class ChatwootAccountUserMembershipService
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
         $teamsIds = $account ? $account->getLinkMultipleIdList('teams') : [];
 
-        // Load the ChatwootUser to get the name
+        // Load the ChatwootUser to get the name.
+        // A membership REQUIRES a resolvable ChatwootUser (the chatwootUser link is
+        // `required: true`). If the user cannot be loaded, refusing to create the
+        // membership prevents orphan records with a dangling FK and a bogus
+        // 'Unknown' name (see BackfillAccountUserMemberships orphan incident).
         $user = $this->entityManager->getEntityById('ChatwootUser', $userId);
-        $name = $user ? $user->get('name') : 'Unknown';
+
+        if (!$user) {
+            throw new \RuntimeException(
+                "Cannot create ChatwootAccountUserMembership: ChatwootUser '{$userId}' " .
+                "does not exist (account='{$accountId}'). Refusing to create an orphan membership."
+            );
+        }
+
+        $name = $user->get('name');
+
+        if ($name === null || $name === '') {
+            throw new \RuntimeException(
+                "Cannot create ChatwootAccountUserMembership: ChatwootUser '{$userId}' " .
+                "has no name (account='{$accountId}'). Refusing to create a membership with an empty name."
+            );
+        }
 
         $data = [
             'name' => $name,

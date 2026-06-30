@@ -1,6 +1,11 @@
 [
     {
-        "label": "",
+        "tabLabel": "$Overview",
+        "name": "informacoesPanel",
+        "label": "Informações",
+        "panelIconClass": "fas fa-info-circle",
+        "gridRow": 1,
+        "gridColSpan": 2,
         "rows": [
             [
                 {
@@ -9,36 +14,6 @@
                 {
                     "name": "account"
                 }
-            ],
-            [
-                {
-                    "name": "funnel"
-                },
-                {
-                    "name": "opportunityStage"
-                }
-            ],
-            [
-                {
-                    "name": "followupStatus"
-                },
-                {
-                    "name": "followupTimer"
-                }
-            ],
-            [
-                {
-                    "name": "followupCount"
-                },
-                {
-                    "name": "followupBreakoutLimit"
-                }
-            ],
-            [
-                {
-                    "name": "followupAiAgent"
-                },
-                false
             ],
             [
                 {
@@ -66,6 +41,94 @@
                 {
                     "name": "description",
                     "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "name": "funilPanel",
+        "label": "Funil & Estágio",
+        "panelIconClass": "fas fa-filter",
+        "gridRow": 1,
+        "gridColSpan": 2,
+        "rows": [
+            [
+                {
+                    "name": "funnel"
+                },
+                {
+                    "name": "opportunityStage"
+                }
+            ]
+        ]
+    },
+    {
+        "name": "followupPanel",
+        "label": "Follow-up",
+        "panelIconClass": "fas fa-sync-alt",
+        "gridRow": 2,
+        "gridColSpan": 4,
+        "rows": [
+            [
+                {
+                    "name": "followupStatus"
+                },
+                {
+                    "name": "followupTimer"
+                }
+            ],
+            [
+                {
+                    "name": "followupCount"
+                },
+                {
+                    "name": "followupBreakoutLimit"
+                }
+            ],
+            [
+                {
+                    "name": "followupAiAgent"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "$Documents",
+        "name": "documentsTab",
+        "rows": [
+            [
+                {
+                    "name": "documentsList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "documents",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "Meta Ads",
+        "name": "metaAdsTab",
+        "rows": [
+            [
+                {
+                    "name": "metaLeadgenAnswersList",
+                    "view": "global:views/fields/relationship-list",
+                    "noLabel": true,
+                    "span": 4,
+                    "options": {
+                        "link": "metaLeadgenAnswers",
+                        "layout": "listSmall",
+                        "recordsPerPage": 10
+                    }
                 }
             ]
         ]

@@ -82,6 +82,12 @@
             "type": "link",
             "required": true
         },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": true
+        },
         "targetLists": {
             "type": "linkMultiple"
         },
@@ -181,6 +187,11 @@
             "entity": "ChatwootAccount",
             "foreign": "whatsAppCampaigns"
         },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "whatsAppCampaigns"
+        },
         "targetLists": {
             "type": "hasMany",
             "entity": "TargetList",
@@ -251,6 +262,9 @@
         "createdAtId": {
             "unique": true,
             "columns": ["createdAt", "id"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
         }
     }
 }

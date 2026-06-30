@@ -62,8 +62,7 @@ use Espo\ORM\EntityManager;
  *
  * Ordering: this action MUST run AFTER `SeedChatwootAccount` (which
  * guarantees the `concierge_user_id` column exists via EspoCRM's
- * `entityDefs` rebuild) and AFTER `BackfillAccountUserMemberships`
- * (so we don't race it on unrelated membership reconciliation).
+ * `entityDefs` rebuild).
  */
 class RotateAutomationToConcierge implements RebuildAction
 {

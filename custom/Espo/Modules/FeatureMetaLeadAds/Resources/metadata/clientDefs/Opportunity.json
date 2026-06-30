@@ -1,17 +1,4 @@
 {
-    "bottomPanels": {
-        "detail": [
-            {
-                "name": "metaLeadgenAnswers",
-                "label": "Meta Lead Answers",
-                "view": "views/record/panels/relationship",
-                "select": false,
-                "create": false,
-                "rowActionsView": "feature-meta-lead-ads:views/record/row-actions/relationship-no-edit-no-remove",
-                "order": 50
-            }
-        ]
-    },
     "relationshipPanels": {
         "metaLeadgenAnswers": {
             "create": false,

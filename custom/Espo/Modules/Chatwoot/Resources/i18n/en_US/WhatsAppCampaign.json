@@ -9,6 +9,7 @@
         "templateBody": "Template Body",
         "credential": "Credential",
         "chatwootAccount": "Chat / Account",
+        "tenant": "Tenant",
         "targetLists": "Target Lists",
         "manualContacts": "Manual Contacts",
         "parameterMapping": "Parameter Mapping",
@@ -31,6 +32,7 @@
     "links": {
         "credential": "Credential",
         "chatwootAccount": "Chat / Account",
+        "tenant": "Tenant",
         "targetLists": "Target Lists",
         "manualContacts": "Manual Contacts",
         "campaignContacts": "Recipients",
@@ -57,6 +59,7 @@
     "tooltips": {
         "templateName": "Select the WhatsApp message template to use for this campaign. Templates are fetched from your Meta WhatsApp Business Account.",
         "parameterMapping": "Maps template parameters to contact fields. Define which contact data fills each placeholder in the template.",
-        "processedParams": "The resolved parameter values after processing the mapping against actual contact data."
+        "processedParams": "The resolved parameter values after processing the mapping against actual contact data.",
+        "tenant": "Denormalized tenant of the campaign's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations."
     }
 }

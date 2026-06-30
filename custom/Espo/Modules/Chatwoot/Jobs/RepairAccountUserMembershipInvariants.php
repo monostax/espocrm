@@ -39,6 +39,14 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
  */
 class RepairAccountUserMembershipInvariants implements JobDataLess
 {
+    /**
+     * Safety ceiling for Check 4 auto-deletion. If the share of orphaned
+     * memberships in an account exceeds this ratio, deletion is skipped and a
+     * warning is logged instead. Protects against a transient state where many
+     * ChatwootUser rows are temporarily unreadable from wiping a whole account.
+     */
+    private const ORPHAN_REMOVAL_MAX_RATIO = 0.5;
+
     public function __construct(
         private EntityManager $entityManager,
         private Log $log,
@@ -182,11 +190,20 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
     }
 
     /**
-     * Check 4 — Orphaned memberships (log-only).
+     * Check 4 — Orphaned memberships (auto-delete, threshold-guarded).
      *
-     * Queries memberships where the linked ChatwootAccount or ChatwootUser
-     * no longer exists (soft-deleted). Logs warnings only — do not auto-delete
-     * for safety.
+     * A membership whose linked ChatwootUser no longer exists is an orphan:
+     * its `chatwootUser` link is `required: true`, so it can never be enriched
+     * or matched against the authoritative Platform API user list. Such records
+     * surface in the UI as bogus "Unknown" agents. The
+     * SyncAccountUserMembershipsFromChatwoot stale-removal pass deliberately
+     * skips them (it can't resolve the user to compare against the remote list),
+     * so they would otherwise persist forever.
+     *
+     * This check removes them, guarded by ORPHAN_REMOVAL_MAX_RATIO so a
+     * transient state where many ChatwootUser rows are momentarily unreadable
+     * cannot wipe an entire account. Deletion uses ['skipChatwootSync' => true]
+     * since there is no resolvable remote agent to call back to.
      */
     private function check4OrphanedMemberships(string $accountId): void
     {
@@ -195,19 +212,31 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
             ->where(['chatwootAccountId' => $accountId])
             ->find();
 
-        $orphaned = 0;
+        $all = iterator_to_array($memberships);
+        $totalLocal = count($all);
 
-        foreach ($memberships as $membership) {
+        if ($totalLocal === 0) {
+            return;
+        }
+
+        // ── First pass: identify orphan candidates ──
+        $orphans = [];
+
+        foreach ($all as $membership) {
             try {
                 $userId = $membership->get('chatwootUserId');
+
+                // No user id at all is a different (and rarer) invariant break;
+                // treat it as an orphan candidate too since it can't be valid.
+                if (!$userId) {
+                    $orphans[] = $membership;
+                    continue;
+                }
+
                 $user = $this->entityManager->getEntityById('ChatwootUser', $userId);
 
                 if (!$user) {
-                    $orphaned++;
-                    $this->log->warning(
-                        "RepairAccountUserMembershipInvariants: Check 4 — orphaned membership {$membership->getId()} " .
-                        "(user {$userId} no longer exists)"
-                    );
+                    $orphans[] = $membership;
                 }
             } catch (\Throwable $e) {
                 $this->log->warning(
@@ -217,9 +246,50 @@ class RepairAccountUserMembershipInvariants implements JobDataLess
             }
         }
 
-        if ($orphaned > 0) {
+        if (empty($orphans)) {
+            return;
+        }
+
+        // ── Suspicious-drop threshold guard ──
+        $orphanCount = count($orphans);
+        $dropRatio = $orphanCount / $totalLocal;
+
+        if ($dropRatio > self::ORPHAN_REMOVAL_MAX_RATIO) {
+            $pct = round($dropRatio * 100);
+            $this->log->warning(
+                "RepairAccountUserMembershipInvariants: Check 4 — orphan removal BLOCKED for account {$accountId} — " .
+                "{$orphanCount}/{$totalLocal} ({$pct}%) memberships are orphaned, exceeding the " .
+                round(self::ORPHAN_REMOVAL_MAX_RATIO * 100) . "% safety threshold. " .
+                "This likely indicates a transient ChatwootUser read failure. Skipping deletion."
+            );
+            return;
+        }
+
+        // ── Second pass: delete confirmed orphans ──
+        $deleted = 0;
+
+        foreach ($orphans as $membership) {
+            $membershipName = $membership->get('name');
+            $userId = $membership->get('chatwootUserId');
+
+            try {
+                $this->entityManager->removeEntity($membership, ['skipChatwootSync' => true]);
+                $deleted++;
+                $this->log->info(
+                    "RepairAccountUserMembershipInvariants: Check 4 — removed orphaned membership " .
+                    "'{$membershipName}' ({$membership->getId()}; linked ChatwootUser '{$userId}' no longer exists)"
+                );
+            } catch (\Throwable $e) {
+                $this->log->error(
+                    "RepairAccountUserMembershipInvariants: Check 4 — failed to remove orphaned membership " .
+                    "{$membership->getId()}: " . $e->getMessage()
+                );
+            }
+        }
+
+        if ($deleted > 0) {
             $this->log->info(
-                "RepairAccountUserMembershipInvariants: Check 4 — found {$orphaned} orphaned membership(s) for account {$accountId} (log only, no auto-delete)"
+                "RepairAccountUserMembershipInvariants: Check 4 — removed {$deleted} orphaned membership(s) for account {$accountId}"
             );
         }
     }

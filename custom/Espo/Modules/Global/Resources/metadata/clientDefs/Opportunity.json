@@ -33,6 +33,33 @@
         "followupAiAgent": {
             "selectPrimaryFilterName": "aiOnly"
         }
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "order": 1
+            }
+        ]
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "tasks",
+                "reference": "tasks",
+                "disabled": true
+            },
+            {
+                "name": "documents",
+                "disabled": true
+            },
+            {
+                "name": "chatwootConversations",
+                "disabled": true
+            }
+        ]
     }
 }
 
