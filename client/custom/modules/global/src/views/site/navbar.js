@@ -188,8 +188,10 @@ class CustomNavbarSiteView extends NavbarSiteView {
             }
 
             console.warn(
-                `Navbar config ID "${urlNavbarId}" from URL query param not found, falling back to preference`,
+                `Navbar config ID "${urlNavbarId}" from URL query param not found, hiding navbar`,
             );
+
+            return HIDDEN_NAVBAR;
         }
 
         // 2. Fall back to user preference

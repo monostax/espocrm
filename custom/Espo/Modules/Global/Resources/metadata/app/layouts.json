@@ -65,6 +65,12 @@
         },
         "massUpdate": {
             "module": "Global"
+        },
+        "sidePanelsDetail": {
+            "module": "Global"
+        },
+        "bottomPanelsDetail": {
+            "module": "Global"
         }
     }
 }

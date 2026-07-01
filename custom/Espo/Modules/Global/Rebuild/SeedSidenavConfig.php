@@ -224,12 +224,6 @@ class SeedSidenavConfig implements RebuildAction
                         'iconClass' => 'ti ti-list',
                         'id' => 'activities-all',
                     ],
-                    (object) [
-                        'type' => 'url',
-                        'text' => '$Activities',
-                        'url' => '?navbar=activities#Activities',
-                        'iconClass' => 'ti ti-activity',
-                    ],
                 ],
             ],
             [

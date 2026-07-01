@@ -261,6 +261,13 @@ class SeedChatwootAccount implements RebuildAction
             getenv('HATCHET_CHATWOOT_WEBHOOK_URL') ?: null,
             ['message_created']
         );
+
+        $this->ensureWebhook(
+            $account,
+            'VoIP Call Mirror',
+            $this->buildVoipWebhookUrl($chatwootAccountId),
+            ['message_created', 'message_updated']
+        );
     }
 
     /**
@@ -279,25 +286,29 @@ class SeedChatwootAccount implements RebuildAction
             return;
         }
 
-        $existing = $this->entityManager
-            ->getRDBRepository('ChatwootAccountWebhook')
-            ->where([
-                'accountId' => $account->getId(),
-                'name' => $name,
-            ])
-            ->findOne();
+        $existing = $this->findExistingWebhook($account, $name, $url);
 
         if ($existing) {
-            // Migrate URL if it changed (e.g., switching from direct Hatchet to proxy)
-            $currentUrl = $existing->get('url');
-            if ($currentUrl && $url && $currentUrl !== $url) {
+            $changed = false;
+
+            if ($existing->get('url') !== $url) {
                 $existing->set('url', $url);
+                $changed = true;
+            }
+
+            $currentSubscriptions = $existing->get('subscriptions') ?? [];
+            if (!$this->sameStringSet($currentSubscriptions, $subscriptions)) {
+                $existing->set('subscriptions', $subscriptions);
+                $changed = true;
+            }
+
+            if ($changed) {
                 $this->entityManager->saveEntity($existing);
                 $this->log->info(
-                    "SeedChatwootAccount: Migrated webhook '{$name}' URL for account " .
-                    "{$account->getId()} from {$currentUrl} to {$url}"
+                    "SeedChatwootAccount: Repaired webhook '{$name}' for account {$account->getId()}"
                 );
             }
+
             return;
         }
 
@@ -328,6 +339,41 @@ class SeedChatwootAccount implements RebuildAction
     }
 
     /**
+     * @param array<string> $left
+     * @param array<string> $right
+     */
+    private function sameStringSet(array $left, array $right): bool
+    {
+        sort($left);
+        sort($right);
+
+        return $left === $right;
+    }
+
+    private function findExistingWebhook(Entity $account, string $name, string $url): ?Entity
+    {
+        $existing = $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $account->getId(),
+                'name' => $name,
+            ])
+            ->findOne();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $account->getId(),
+                'url' => $url,
+            ])
+            ->findOne();
+    }
+
+    /**
      * Build the WhatsApp Delivery webhook URL from CRM backend URL.
      */
     private function buildDeliveryWebhookUrl(int $chatwootAccountId): ?string
@@ -343,6 +389,21 @@ class SeedChatwootAccount implements RebuildAction
         }
 
         return rtrim($crmBackendUrl, '/') . '/api/v1/WhatsAppDeliveryWebhook/' . $chatwootAccountId;
+    }
+
+    private function buildVoipWebhookUrl(int $chatwootAccountId): ?string
+    {
+        $crmBackendUrl = getenv('CRM_BACKEND_URL') ?: $this->config->get('siteUrl');
+
+        if (!$crmBackendUrl) {
+            $this->log->warning(
+                'SeedChatwootAccount: Cannot build VoIP webhook URL — ' .
+                'neither CRM_BACKEND_URL env nor siteUrl config is set.'
+            );
+            return null;
+        }
+
+        return rtrim($crmBackendUrl, '/') . '/api/v1/VoipWebhook/' . $chatwootAccountId;
     }
 
     /**

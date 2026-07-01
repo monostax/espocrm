@@ -7,11 +7,17 @@
         },
         "recordingUrl": {
             "type": "url",
+            "view": "feature-voip:views/call/fields/recording-url",
             "readOnly": true
         },
         "chatwootConversationId": {
             "type": "int",
             "readOnly": true
+        },
+        "chatwootConversationRecord": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/link"
         },
         "chatwootAccountId": {
             "type": "int",
@@ -34,6 +40,11 @@
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant",
+            "foreign": "voipCalls"
+        },
+        "chatwootConversationRecord": {
+            "type": "belongsTo",
+            "entity": "ChatwootConversation",
             "foreign": "voipCalls"
         }
     },

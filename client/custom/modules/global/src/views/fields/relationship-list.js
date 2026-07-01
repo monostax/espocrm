@@ -68,6 +68,7 @@ class RelationshipListFieldView extends BaseFieldView {
                         <span class="panel-collapse-chevron fas {{#if isCollapsed}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></span>
                         {{#if icon}}<span class="relationship-list-entity-icon {{icon}}"{{#if iconColor}} style="color: {{iconColor}}"{{/if}}></span> {{/if}}
                         <span class="relationship-list-title-text">{{title}}</span>
+                        <span class="relationship-list-count badge" data-role="count" style="display: none;"></span>
                     </h4>
                 </div>
                 <div class="panel-body{{#if isCollapsed}} hidden{{/if}}">
@@ -109,6 +110,9 @@ class RelationshipListFieldView extends BaseFieldView {
 
     /** @type {string|null} */
     rowActionsView = "views/record/row-actions/relationship";
+
+    /** @type {boolean} */
+    hideIfEmpty = false;
 
     /** @type {string} */
     foreignEntityType = null;
@@ -202,7 +206,7 @@ class RelationshipListFieldView extends BaseFieldView {
     }
 
     /**
-     * Update the count badge in the header.
+     * Update the count badge in the header and on the containing tab button.
      * @param {number} count
      */
     updateCount(count) {
@@ -213,6 +217,28 @@ class RelationshipListFieldView extends BaseFieldView {
         } else {
             $badge.hide();
         }
+
+        this.updateTabCount(count);
+    }
+
+    /**
+     * Push the count onto the tab button that contains this panel (if any).
+     * A single tab (panel) may host several relationship-list fields, so we
+     * report the count keyed by this field's name and let the record view
+     * aggregate (sum) the per-field counts for the tab badge.
+     * @param {number} count
+     */
+    updateTabCount(count) {
+        const panelName = this.getContainingPanelName();
+        const recordViewObject = this.getRecordViewObject();
+
+        if (!panelName || !recordViewObject || !recordViewObject.updateTabCount) {
+            return;
+        }
+
+        const fieldKey = this.name || this.link;
+
+        recordViewObject.updateTabCount(panelName, count, fieldKey);
     }
 
     /**
@@ -286,6 +312,10 @@ class RelationshipListFieldView extends BaseFieldView {
             this.options.rowActionsView ||
             this.options.defs?.params?.rowActionsView ||
             "views/record/row-actions/relationship";
+        this.hideIfEmpty =
+            this.options.hideIfEmpty ??
+            this.options.defs?.params?.hideIfEmpty ??
+            false;
 
         this.setupCollapsedState();
 
@@ -381,6 +411,10 @@ class RelationshipListFieldView extends BaseFieldView {
     afterRender() {
         this.applyCollapsedState();
 
+        if (this.hideIfEmpty) {
+            this.applyEmptyVisibility(0);
+        }
+
         // Only setup relationship panel if we have a link AND the model has an ID
         // (i.e., we're in detail/edit mode of an existing record, not create mode)
         if (this.link && this.model.id) {
@@ -397,14 +431,29 @@ class RelationshipListFieldView extends BaseFieldView {
 
         if (!listView) return;
 
+        const handleCollection = (collection) => {
+            if (!collection) {
+                return;
+            }
+
+            const update = () => {
+                const count = typeof collection.total === "number"
+                    ? collection.total
+                    : collection.length;
+
+                this.updateCount(count);
+                this.applyEmptyVisibility(count);
+            };
+
+            update();
+
+            this.listenTo(collection, "sync reset update add remove", update);
+        };
+
         // Wait for the nested view to be ready and have a collection
         const tryListen = () => {
             if (listView.collection) {
-                this.updateCount(listView.collection.total || listView.collection.length);
-
-                this.listenTo(listView.collection, "sync", () => {
-                    this.updateCount(listView.collection.total || listView.collection.length);
-                });
+                handleCollection(listView.collection);
             }
         };
 
@@ -414,11 +463,7 @@ class RelationshipListFieldView extends BaseFieldView {
             setTimeout(() => {
                 const innerList = listView.getView("list");
                 if (innerList && innerList.collection) {
-                    this.updateCount(innerList.collection.total || innerList.collection.length);
-
-                    this.listenTo(innerList.collection, "sync", () => {
-                        this.updateCount(innerList.collection.total || innerList.collection.length);
-                    });
+                    handleCollection(innerList.collection);
                 } else {
                     tryListen();
                 }
@@ -428,17 +473,68 @@ class RelationshipListFieldView extends BaseFieldView {
                 setTimeout(() => {
                     const innerList = listView.getView("list");
                     if (innerList && innerList.collection) {
-                        this.updateCount(innerList.collection.total || innerList.collection.length);
-
-                        this.listenTo(innerList.collection, "sync", () => {
-                            this.updateCount(innerList.collection.total || innerList.collection.length);
-                        });
+                        handleCollection(innerList.collection);
                     } else {
                         tryListen();
                     }
                 }, 100);
             });
         }
+    }
+
+    /**
+     * Hide the containing layout panel/tab when requested and the related list is empty.
+     * @param {number} count
+     */
+    applyEmptyVisibility(count) {
+        if (!this.hideIfEmpty) {
+            return;
+        }
+
+        const panelName = this.getContainingPanelName();
+        const recordViewObject = this.getRecordViewObject();
+
+        if (!panelName || !recordViewObject) {
+            return;
+        }
+
+        if (count > 0) {
+            recordViewObject.showPanel(panelName, "relationshipListEmpty");
+        } else {
+            recordViewObject.hidePanel(panelName, false, "relationshipListEmpty");
+        }
+
+        if (recordViewObject._syncGridRowVisibility) {
+            recordViewObject._syncGridRowVisibility();
+        }
+
+        if (recordViewObject.calculateTabOverflow) {
+            setTimeout(() => recordViewObject.calculateTabOverflow(), 0);
+        }
+    }
+
+    /**
+     * @returns {string|null}
+     */
+    getContainingPanelName() {
+        if (!this.isRendered()) {
+            return null;
+        }
+
+        return this.$el.closest(".panel[data-name]").attr("data-name") || null;
+    }
+
+    /**
+     * @returns {Object|null}
+     */
+    getRecordViewObject() {
+        if (this.options.recordViewObject) {
+            return this.options.recordViewObject;
+        }
+
+        const parentView = this.getParentView ? this.getParentView() : null;
+
+        return parentView?.recordViewObject || parentView?.options?.recordViewObject || null;
     }
 
     setupRelationshipPanel() {

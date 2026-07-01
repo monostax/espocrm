@@ -7,6 +7,7 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\SyncTwilioCredentials;
 
 /**
  * Scheduled job to sync inboxes from Chatwoot to EspoCRM.
@@ -18,7 +19,8 @@ class SyncInboxesFromChatwoot implements JobDataLess
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
-        private Log $log
+        private Log $log,
+        private SyncTwilioCredentials $syncTwilioCredentials
     ) {}
 
     public function run(): void
@@ -142,6 +144,17 @@ class SyncInboxesFromChatwoot implements JobDataLess
                 $this->syncSingleInbox($chatwootInbox, $espoAccountId, $teamsIds);
                 $stats['synced']++;
                 $chatwootInboxIds[] = $chatwootInbox['id'];
+
+                // Mirror Twilio VoIP credentials into a CRM Credential so the
+                // CRM can proxy call recordings server-side. Only hits the
+                // privileged Chatwoot endpoint when the inbox has VoIP enabled.
+                $this->syncTwilioCredentials->syncForInbox(
+                    $platformUrl,
+                    $apiKey,
+                    $chatwootAccountId,
+                    $chatwootInbox,
+                    $teamsIds
+                );
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $inboxId = $chatwootInbox['id'] ?? 'unknown';

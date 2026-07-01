@@ -9,7 +9,7 @@
  ************************************************************************/
 
 define("global:views/opportunity/record/detail", [
-    "views/record/detail",
+    "global:views/record/detail",
 ], function (Dep) {
     return Dep.extend({
         mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle"],

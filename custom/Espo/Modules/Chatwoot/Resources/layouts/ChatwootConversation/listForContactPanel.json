@@ -1,24 +1,20 @@
 [
     {
-        "name": "inboxChannelType",
-        "view": "global:views/fields/svg-icon-varchar-only",
-        "width": 10,
-        "align": "center",
-        "noLabel": true
+        "name": "name",
+        "link": true,
+        "width": 30
     },
     {
         "name": "status",
-        "link": true,
+        "width": 15
+    },
+    {
+        "name": "lastActivityAt",
+        "view": "views/fields/datetime-short",
         "width": 20
     },
     {
-        "name": "lastMessageReceivedAt",
-        "view": "views/fields/datetime-short",
-        "width": 25
-    },
-    {
-        "name": "lastMessageSentAt",
-        "view": "views/fields/datetime-short",
-        "width": 25
+        "name": "messagesCount",
+        "width": 15
     }
 ]

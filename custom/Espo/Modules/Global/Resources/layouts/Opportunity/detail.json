@@ -5,6 +5,7 @@
         "label": "Informações",
         "panelIconClass": "fas fa-info-circle",
         "gridRow": 1,
+        "gridCol": 1,
         "gridColSpan": 2,
         "rows": [
             [
@@ -50,6 +51,7 @@
         "label": "Funil & Estágio",
         "panelIconClass": "fas fa-filter",
         "gridRow": 1,
+        "gridCol": 2,
         "gridColSpan": 2,
         "rows": [
             [
@@ -66,8 +68,9 @@
         "name": "followupPanel",
         "label": "Follow-up",
         "panelIconClass": "fas fa-sync-alt",
-        "gridRow": 2,
-        "gridColSpan": 4,
+        "gridRow": 1,
+        "gridCol": 2,
+        "gridColSpan": 2,
         "rows": [
             [
                 {
@@ -127,7 +130,8 @@
                     "options": {
                         "link": "metaLeadgenAnswers",
                         "layout": "listSmall",
-                        "recordsPerPage": 10
+                        "recordsPerPage": 10,
+                        "hideIfEmpty": true
                     }
                 }
             ]

@@ -14,7 +14,11 @@
     },
     "links": {
         "funnel": "Funil",
-        "opportunityStage": "Estágio"
+        "opportunityStage": "Estágio",
+        "metaLeadgenAnswers": "Respostas de Lead Meta"
+    },
+    "tabs": {
+        "Documents": "Documentos"
     },
     "labels": {
         "Select Funnel": "Selecionar Funil",

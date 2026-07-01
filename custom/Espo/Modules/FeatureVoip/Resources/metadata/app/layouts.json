@@ -1,0 +1,10 @@
+{
+    "Call": {
+        "detail": {
+            "module": "FeatureVoip"
+        },
+        "list": {
+            "module": "FeatureVoip"
+        }
+    }
+}

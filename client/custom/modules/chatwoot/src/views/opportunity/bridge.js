@@ -18,6 +18,12 @@ import View from "view";
 class OpportunityBridgeView extends View {
     template = "chatwoot:chatwoot-conversation/bridge";
 
+    /** Dashboard app id this bridge reports its count for. */
+    dashboardAppId = "fixed-opportunity";
+
+    /** Related links whose totals are summed into the tab count. */
+    countLinkList = ["opportunities"];
+
     /** @type {'loading'|'not-found'|'error'} */
     bridgeState = "loading";
 
@@ -146,6 +152,8 @@ class OpportunityBridgeView extends View {
 
             const entityId = response.list[0].id;
 
+            this._postCount(entityId);
+
             // Navigate to the related Opportunity list for this conversation
             this.getRouter().navigate(
                 `#ChatwootConversation/related/${entityId}/opportunities`,
@@ -161,6 +169,39 @@ class OpportunityBridgeView extends View {
             if (this.isRendered()) {
                 this.reRender();
             }
+        }
+    }
+
+    /**
+     * Fetch the total of each related link, sum them, and post the
+     * result to the Chatwoot parent window so it can render a tab badge.
+     * @param {string} entityId
+     */
+    async _postCount(entityId) {
+        try {
+            const totals = await Promise.all(
+                this.countLinkList.map(async (link) => {
+                    const res = await Espo.Ajax.getRequest(
+                        `ChatwootConversation/${entityId}/${link}`,
+                        { maxSize: 1, select: "id" },
+                    );
+
+                    return res.total > 0 ? res.total : 0;
+                }),
+            );
+
+            const count = totals.reduce((sum, total) => sum + total, 0);
+
+            window.parent.postMessage(
+                JSON.stringify({
+                    event: "dashboardAppCount",
+                    appId: this.dashboardAppId,
+                    count,
+                }),
+                "*",
+            );
+        } catch (e) {
+            console.error("OpportunityBridge: Failed to post count:", e);
         }
     }
 }

@@ -24,6 +24,13 @@
         "lastMessageReceivedAt": "Last Received",
         "lastMessageType": "Last Message Type"
     },
+    "links": {
+        "opportunities": "Opportunities",
+        "calls": "Calls",
+        "appointments": "Appointments",
+        "meetings": "Meetings",
+        "tasks": "Tasks"
+    },
     "options": {
         "status": {
             "open": "Open",

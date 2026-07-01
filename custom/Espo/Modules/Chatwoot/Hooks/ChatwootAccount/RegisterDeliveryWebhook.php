@@ -147,11 +147,16 @@ class RegisterDeliveryWebhook
 
         $webhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/VoipWebhook/' . $chatwootAccountId;
 
+        $subscriptions = ['message_created', 'message_updated'];
+
         // Idempotent on BOTH name and URL: a webhook with this URL may already
         // exist on Chatwoot (e.g. created manually or under a different name).
         // Matching on URL avoids the "422 Url has already been taken" loop.
-        if ($this->webhookExists($entity, 'VoIP Call Mirror') ||
-            $this->webhookExistsByUrl($entity, $webhookUrl)) {
+        // Existing webhooks are repaired so older deployments gain message_updated
+        // events needed for call status/duration/recording mirroring.
+        $existing = $this->findWebhookByNameOrUrl($entity, 'VoIP Call Mirror', $webhookUrl);
+        if ($existing) {
+            $this->repairWebhook($existing, $webhookUrl, $subscriptions);
             return;
         }
 
@@ -160,7 +165,7 @@ class RegisterDeliveryWebhook
                 'name' => 'VoIP Call Mirror',
                 'accountId' => $entity->getId(),
                 'url' => $webhookUrl,
-                'subscriptions' => ['message_created', 'message_updated'],
+                'subscriptions' => $subscriptions,
             ]);
 
             $this->log->info(
@@ -173,6 +178,64 @@ class RegisterDeliveryWebhook
                 "{$entity->getId()}: {$e->getMessage()}"
             );
         }
+    }
+
+    private function findWebhookByNameOrUrl(Entity $entity, string $name, string $url): ?Entity
+    {
+        $existing = $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $entity->getId(),
+                'name' => $name,
+            ])
+            ->findOne();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootAccountWebhook')
+            ->where([
+                'accountId' => $entity->getId(),
+                'url' => $url,
+            ])
+            ->findOne();
+    }
+
+    /**
+     * @param array<string> $subscriptions
+     */
+    private function repairWebhook(Entity $webhook, string $url, array $subscriptions): void
+    {
+        $changed = false;
+
+        if ($webhook->get('url') !== $url) {
+            $webhook->set('url', $url);
+            $changed = true;
+        }
+
+        $currentSubscriptions = $webhook->get('subscriptions') ?? [];
+        if (!$this->sameStringSet($currentSubscriptions, $subscriptions)) {
+            $webhook->set('subscriptions', $subscriptions);
+            $changed = true;
+        }
+
+        if ($changed) {
+            $this->entityManager->saveEntity($webhook);
+        }
+    }
+
+    /**
+     * @param array<string> $left
+     * @param array<string> $right
+     */
+    private function sameStringSet(array $left, array $right): bool
+    {
+        sort($left);
+        sort($right);
+
+        return $left === $right;
     }
 
     /**

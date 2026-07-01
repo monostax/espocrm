@@ -220,6 +220,7 @@ class RelatedListModalView extends ModalView {
             this.buttonList.unshift({
                 name: 'selectRelated',
                 label: 'Select',
+                labelTranslation: 'Global.labels.selectRelated',
                 pullLeft: true,
             });
         }

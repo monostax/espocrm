@@ -33,7 +33,7 @@ class SeedCredentialTypeTwilio implements RebuildAction
         $config = [
             'name' => 'Twilio',
             'code' => 'twilio',
-            'category' => 'apiAuth',
+            'category' => 'apiKey',
             'description' => 'Twilio account credentials for VoIP calling (Account SID, API Key, Auth Token, From Number).',
             'schema' => json_encode([
                 'type' => 'object',

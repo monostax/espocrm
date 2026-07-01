@@ -1830,6 +1830,61 @@ public function getInbox(
 }
 
 /**
+ * Get non-redacted VoIP (Twilio) credentials for an inbox.
+ *
+ * Hits the privileged Chatwoot endpoint
+ *   GET /api/v1/accounts/{account_id}/inboxes/{inbox_id}/voip_calls/credential_config
+ * which returns the raw twilio_api_key_secret / twilio_auth_token that the
+ * normal inbox JSON redacts. Requires an account API key belonging to a user
+ * who can update the inbox (administrator).
+ *
+ * Returns null on HTTP 404 (inbox missing or endpoint not deployed) so
+ * callers can skip credential sync gracefully.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @return array<string, mixed>|null Credential config, or null if 404
+ * @throws Error
+ */
+public function getInboxVoipCredentialConfig(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): ?array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+        . '/inboxes/' . $inboxId . '/voip_calls/credential_config';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] === 404) {
+        return null;
+    }
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to get inbox VoIP credential config from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (getInboxVoipCredentialConfig): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
  * Update (PATCH) an inbox in a Chatwoot account.
  *
  * Used to patch channel-level settings such as `provider_config` (e.g. to

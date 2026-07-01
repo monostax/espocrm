@@ -1,9 +1,26 @@
 [
-    {"name":"name","link": true},
-    {"name":"parent", "width": 22},
-    {"name":"status", "width": 12},
-    {"name":"direction", "width": 12},
-    {"name":"dateStart", "width": 15},
-    {"name":"recordingUrl", "width": 15},
-    {"name":"assignedUser", "width": 15}
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "parent",
+        "width": 22
+    },
+    {
+        "name": "status",
+        "width": 12
+    },
+    {
+        "name": "direction",
+        "width": 12
+    },
+    {
+        "name": "dateStart",
+        "width": 15
+    },
+    {
+        "name": "assignedUser",
+        "width": 15
+    }
 ]

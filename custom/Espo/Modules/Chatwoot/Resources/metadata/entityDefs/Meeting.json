@@ -1,0 +1,13 @@
+{
+    "fields": {
+        "chatwootConversations": { "type": "linkMultiple" }
+    },
+    "links": {
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "meetings",
+            "relationName": "chatwootConversationMeeting"
+        }
+    }
+}

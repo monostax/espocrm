@@ -2,9 +2,14 @@
     "fields": {
         "twilioCallSid": "SID da Chamada Twilio",
         "recordingUrl": "URL da Gravação",
+        "chatwootConversationRecord": "Conversa no Chatwoot",
         "chatwootConversationId": "ID da Conversa no Chatwoot",
         "chatwootAccountId": "ID da Conta no Chatwoot",
         "voipProvider": "Provedor VoIP"
+    },
+    "labels": {
+        "Conversations": "Conversas",
+        "No Contact linked": "Nenhum contato vinculado"
     },
     "options": {
         "voipProvider": {

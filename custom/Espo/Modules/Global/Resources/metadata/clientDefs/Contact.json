@@ -9,6 +9,13 @@
     "sidePanels": {
         "detail": [
             {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "contactIdAttribute": "id",
+                "order": 0
+            },
+            {
                 "name": "activities",
                 "view": "global:views/record/panels/activities",
                 "label": "Activities",
@@ -21,13 +28,6 @@
                 "view": "crm:views/record/panels/history",
                 "label": "History",
                 "aclScope": "Activities"
-            },
-            {
-                "name": "contactConversations",
-                "label": "Conversations",
-                "view": "chatwoot:views/contact/panels/conversations",
-                "contactIdAttribute": "id",
-                "order": 3
             },
             {
                 "name": "tasks",

@@ -2,23 +2,68 @@
     {
         "label": "Overview",
         "rows": [
-            [{ "name": "name" }, { "name": "accountName" }],
-            [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
-            [{ "name": "cpf" }, { "name": "dataNascimento" }],
-            [{ "name": "sexo" }, { "name": "title" }],
-            [{ "name": "address" }, false]
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "account"
+                }
+            ],
+            [
+                {
+                    "name": "emailAddress"
+                },
+                {
+                    "name": "phoneNumber"
+                }
+            ],
+            [
+                {
+                    "name": "cpf"
+                },
+                {
+                    "name": "dataNascimento"
+                }
+            ],
+            [
+                {
+                    "name": "sexo"
+                },
+                {
+                    "name": "title"
+                }
+            ],
+            [
+                {
+                    "name": "address"
+                },
+                false
+            ]
         ]
     },
     {
         "label": "Details",
-        "rows": [[{ "name": "description", "fullWidth": true }]]
+        "rows": [
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ]
     },
     {
         "tabBreak": true,
         "tabLabel": "$Preferences",
         "name": "preferencesTab",
         "rows": [
-            [{ "name": "whatsAppOptedOut" }, false]
+            [
+                {
+                    "name": "whatsAppOptedOut"
+                },
+                false
+            ]
         ]
     },
     {
@@ -38,29 +83,10 @@
                         "recordsPerPage": 10
                     }
                 }
-            ],[
-                {
-                    "name": "casesListNew",
-                    "view": "global:views/fields/relationship-list",
-                    "noLabel": true,
-                    "span": 4,
-                    "options": {
-                        "link": "cases",
-                        "layout": "listSmall",
-                        "recordsPerPage": 10
-                    }
-                }
-            ]
-        ]
-    },
-    {
-        "tabBreak": true,
-        "tabLabel": "$Cases",
-        "name": "casesTab",
-        "rows": [
+            ],
             [
                 {
-                    "name": "casesList",
+                    "name": "casesListNew",
                     "view": "global:views/fields/relationship-list",
                     "noLabel": true,
                     "span": 4,
@@ -92,26 +118,5 @@
                 }
             ]
         ]
-    },
-    {
-        "tabBreak": true,
-        "tabLabel": "$ChatwootConversations",
-        "name": "chatwootConversationsTab",
-        "rows": [
-            [
-                {
-                    "name": "chatwootConversationsList",
-                    "view": "global:views/fields/relationship-list",
-                    "noLabel": true,
-                    "span": 4,
-                    "options": {
-                        "link": "chatwootConversations",
-                        "layout": "listSmall",
-                        "recordsPerPage": 10
-                    }
-                }
-            ]
-        ]
     }
 ]
-

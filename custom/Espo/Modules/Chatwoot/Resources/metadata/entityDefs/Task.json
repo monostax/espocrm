@@ -2,6 +2,15 @@
     "fields": {
         "parent": {
             "entityList": ["Account", "Contact", "Lead", "Opportunity", "Case", "ChatwootConversation"]
+        },
+        "chatwootConversations": { "type": "linkMultiple" }
+    },
+    "links": {
+        "chatwootConversations": {
+            "type": "hasMany",
+            "entity": "ChatwootConversation",
+            "foreign": "tasks",
+            "relationName": "chatwootConversationTask"
         }
     }
 }

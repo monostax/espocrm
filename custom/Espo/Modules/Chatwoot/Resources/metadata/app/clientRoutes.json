@@ -13,6 +13,20 @@
         },
         "order": 0
     },
+    "CallBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/call-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
+    "ChatwootActivitiesBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/activities-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
     "ChatwootInbox": {
         "params": {
             "controller": "chatwoot:controllers/chatwoot",

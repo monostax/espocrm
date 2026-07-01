@@ -87,15 +87,16 @@ class VoipCallSync
         $dateStart = $this->resolveDateStart($meta, $callData, $data);
 
         $callDataArray = [
-            'name' => $this->buildCallName($callData, $direction),
+            'name' => $this->buildCallName($callData, $direction, $account),
             'status' => $crmStatus,
             'direction' => $direction,
             'twilioCallSid' => $callSid,
             'voipProvider' => $callData->voice_provider ?? 'voip_twilio',
-            'chatwootConversationId' => $data->conversation_id ?? null,
-            'chatwootAccountId' => $data->account_id ?? null,
+            'chatwootConversationId' => $data->conversation_id ?? $data->conversation->id ?? null,
+            'chatwootConversationRecordId' => $this->resolveChatwootConversationRecordId($data, $account),
+            'chatwootAccountId' => $data->account_id ?? $data->account->id ?? null,
             'dateStart' => $dateStart,
-            'assignedUserId' => $this->resolveAssignedUser($account),
+            'assignedUserId' => $this->resolveAssignedUser($account, $callData, $data),
             'tenantId' => $account->get('tenantId'),
         ];
 
@@ -114,7 +115,7 @@ class VoipCallSync
             $callDataArray['recordingUrl'] = $recordingUrl;
         }
 
-        if ($crmStatus === 'Held' && isset($meta->ended_at)) {
+        if (isset($meta->ended_at)) {
             $callDataArray['dateEnd'] = date('Y-m-d H:i:s', (int) $meta->ended_at);
         } elseif ($crmStatus === 'Held' && $duration) {
             $callDataArray['dateEnd'] = date('Y-m-d H:i:s', strtotime($dateStart) + (int) $duration);
@@ -210,13 +211,40 @@ class VoipCallSync
         $this->entityManager->saveEntity($call);
     }
 
-    private function buildCallName(object $callData, string $direction): string
+    private function buildCallName(object $callData, string $direction, Entity $account): string
     {
-        $from = $callData->from_number ?? '?';
-        $to = $callData->to_number ?? '?';
+        $from = $this->formatCallParticipant($callData->from_number ?? '?', $account);
+        $to = $this->formatCallParticipant($callData->to_number ?? '?', $account);
         $dir = $direction === 'Outbound' ? '→' : '←';
 
-        return "VoIP Call {$from} {$dir} {$to}";
+        return "VoIP {$from} {$dir} {$to}";
+    }
+
+    private function formatCallParticipant(string $value, Entity $account): string
+    {
+        $agentId = $this->agentIdFromClientIdentity($value);
+        if (!$agentId) {
+            return $value;
+        }
+
+        return $this->resolveChatwootAgentName($account, $agentId) ?? "Agent {$agentId}";
+    }
+
+    private function agentIdFromClientIdentity(?string $value): ?int
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if (preg_match('/\A\+?client:agent_\d+_(\d+)\z/', $value, $matches)) {
+            return (int) $matches[1];
+        }
+
+        if (preg_match('/\Aagent_\d+_(\d+)\z/', $value, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return null;
     }
 
     private function resolveDateStart(object $meta, object $callData, object $message): string
@@ -240,13 +268,107 @@ class VoipCallSync
         return date('Y-m-d H:i:s');
     }
 
-    private function resolveAssignedUser(Entity $account): ?string
+    private function resolveChatwootConversationRecordId(object $message, Entity $account): ?string
     {
+        $conversationExternalId = $message->conversation_id ?? $message->conversation->id ?? null;
+        if (!$conversationExternalId) {
+            return null;
+        }
+
+        $conversation = $this->entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->where([
+                'chatwootConversationId' => (int) $conversationExternalId,
+                'chatwootAccountId' => $account->getId(),
+            ])
+            ->findOne();
+
+        return $conversation ? $conversation->getId() : null;
+    }
+
+    private function resolveAssignedUser(Entity $account, object $callData, object $message): ?string
+    {
+        $agentAssignedUserId = $this->resolveAssignedUserFromChatwootAgent($account, $callData, $message);
+        if ($agentAssignedUserId) {
+            return $agentAssignedUserId;
+        }
+
         $assignedUser = $account->get('assignedUser');
         if ($assignedUser) {
             return $assignedUser->getId();
         }
 
         return null;
+    }
+
+    private function resolveAssignedUserFromChatwootAgent(Entity $account, object $callData, object $message): ?string
+    {
+        $chatwootAgentId = $callData->agent_id
+            ?? $this->agentIdFromClientIdentity($callData->from_number ?? null)
+            ?? $this->agentIdFromClientIdentity($callData->to_number ?? null)
+            ?? null;
+
+        if (!$chatwootAgentId && ($message->sender->type ?? null) === 'user') {
+            $chatwootAgentId = $message->sender->id ?? null;
+        }
+
+        if (!$chatwootAgentId) {
+            return null;
+        }
+
+        $chatwootUser = $this->resolveChatwootUser($account, (int) $chatwootAgentId);
+
+        if (!$chatwootUser) {
+            return null;
+        }
+
+        $membership = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->where([
+                'chatwootAccountId' => $account->getId(),
+                'chatwootUserId' => $chatwootUser->getId(),
+            ])
+            ->findOne();
+
+        if (!$membership) {
+            return null;
+        }
+
+        return $chatwootUser->get('assignedUserId');
+    }
+
+    private function resolveChatwootAgentName(Entity $account, int $chatwootAgentId): ?string
+    {
+        $chatwootUser = $this->resolveChatwootUser($account, $chatwootAgentId);
+        if (!$chatwootUser) {
+            return null;
+        }
+
+        $assignedUserId = $chatwootUser->get('assignedUserId');
+        if ($assignedUserId) {
+            $assignedUser = $this->entityManager->getEntityById('User', $assignedUserId);
+            $name = $assignedUser?->get('name');
+            if ($name) {
+                return $name;
+            }
+        }
+
+        return $chatwootUser->get('displayName') ?: $chatwootUser->get('name');
+    }
+
+    private function resolveChatwootUser(Entity $account, int $chatwootAgentId): ?Entity
+    {
+        $platformId = $account->get('platformId');
+        if (!$platformId) {
+            return null;
+        }
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootUser')
+            ->where([
+                'chatwootUserId' => $chatwootAgentId,
+                'platformId' => $platformId,
+            ])
+            ->findOne();
     }
 }

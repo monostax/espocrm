@@ -1,5 +1,5 @@
 {
-    "bottomPanels": {
+    "sidePanels": {
         "detail": [
             {
                 "name": "trackingEvents",

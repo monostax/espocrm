@@ -105,6 +105,13 @@
                 "stage": "stage"
             }
         },
+        "calls": {
+            "type": "linkMultiple",
+            "columns": {
+                "status": "status",
+                "dateStart": "dateStart"
+            }
+        },
         "assignedUser": {
             "type": "link",
             "view": "views/fields/assigned-user"
@@ -121,6 +128,20 @@
             "columns": {
                 "status": "status",
                 "dateStart": "dateStart"
+            }
+        },
+        "meetings": {
+            "type": "linkMultiple",
+            "columns": {
+                "status": "status",
+                "dateStart": "dateStart"
+            }
+        },
+        "tasks": {
+            "type": "linkMultiple",
+            "columns": {
+                "status": "status",
+                "dateEnd": "dateEnd"
             }
         },
         "documents": { "type": "linkMultiple" },
@@ -158,6 +179,12 @@
             "foreign": "chatwootConversations",
             "relationName": "chatwootConversationOpportunity"
         },
+        "calls": {
+            "type": "hasMany",
+            "entity": "Call",
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationCall"
+        },
         "cases": {
             "type": "hasMany",
             "entity": "Case",
@@ -177,9 +204,16 @@
             "relationName": "chatwootConversationDocument"
         },
         "tasks": {
-            "type": "hasChildren",
+            "type": "hasMany",
             "entity": "Task",
-            "foreign": "parent"
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationTask"
+        },
+        "meetings": {
+            "type": "hasMany",
+            "entity": "Meeting",
+            "foreign": "chatwootConversations",
+            "relationName": "chatwootConversationMeeting"
         },
         "inbox": {
             "type": "belongsTo",
@@ -242,15 +276,23 @@
                 "column": "chatwootConversationId"
             },
             {
-                "table": "ChatwootConversationOpportunity",
-                "column": "chatwootConversationId"
-            },
-            {
                 "table": "ChatwootConversationCase",
                 "column": "chatwootConversationId"
             },
             {
+                "table": "ChatwootConversationCall",
+                "column": "chatwootConversationId"
+            },
+            {
                 "table": "ChatwootConversationAppointment",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationMeeting",
+                "column": "chatwootConversationId"
+            },
+            {
+                "table": "ChatwootConversationTask",
                 "column": "chatwootConversationId"
             },
             {

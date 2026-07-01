@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
-        "Espo\\Modules\\FeatureVoip\\Rebuild\\SeedCredentialTypeTwilio"
+        "Espo\\Modules\\FeatureVoip\\Rebuild\\SeedCredentialTypeTwilio",
+        "Espo\\Modules\\FeatureVoip\\Rebuild\\BackfillCallConversationLink"
     ]
 }

@@ -61,6 +61,15 @@ define('chatwoot:views/contact/panels/conversations',
             }
         ],
 
+        actionList: [
+            {
+                label: 'Select',
+                labelTranslation: 'Global.labels.selectRelated',
+                action: 'selectConversation',
+                acl: 'edit'
+            }
+        ],
+
         setup: function () {
             Dep.prototype.setup.call(this);
 
@@ -70,12 +79,16 @@ define('chatwoot:views/contact/panels/conversations',
                 this.translate('Conversations', 'labels', this.model.entityType);
 
             this.contactIdAttribute = (this.options.defs || {}).contactIdAttribute || 'contactId';
+            this.contactTypeAttribute = (this.options.defs || {}).contactTypeAttribute;
+            this.requiredContactType = (this.options.defs || {}).requiredContactType;
 
             var contactId = this.model.get(this.contactIdAttribute);
+            var contactTypeMatches = !this.requiredContactType ||
+                this.model.get(this.contactTypeAttribute) === this.requiredContactType;
             var hasAccess = this.getAcl().check('Contact', 'read')
                 && this.getAcl().check('ChatwootConversation', 'read');
 
-            this.hasData = !!contactId && hasAccess;
+            this.hasData = !!contactId && contactTypeMatches && hasAccess;
 
             if (!this.hasData) {
                 return;
@@ -212,6 +225,57 @@ define('chatwoot:views/contact/panels/conversations',
 
         actionRefreshConversations: function () {
             this.loadConversations();
+        },
+
+        /**
+         * Open a select-records modal to link an existing ChatwootConversation
+         * to the Contact behind this panel.
+         */
+        actionSelectConversation: function () {
+            var contactId = this.model.get(this.contactIdAttribute);
+
+            if (!contactId) {
+                Espo.Ui.warning(this.translate('No Contact linked', 'labels', this.model.entityType));
+
+                return;
+            }
+
+            Espo.Ui.notifyWait();
+
+            this.createView('dialogSelectRelated', 'views/modals/select-records', {
+                scope: 'ChatwootConversation',
+                multiple: true,
+                createButton: false,
+            }, function (view) {
+                view.render();
+
+                Espo.Ui.notify(false);
+
+                this.listenToOnce(view, 'select', function (selectObj) {
+                    var ids = [];
+
+                    if (Object.prototype.toString.call(selectObj) === '[object Array]') {
+                        selectObj.forEach(function (model) {
+                            ids.push(model.id);
+                        });
+                    } else if (selectObj && selectObj.id) {
+                        ids.push(selectObj.id);
+                    }
+
+                    if (!ids.length) {
+                        return;
+                    }
+
+                    var url = 'Contact/' + contactId + '/chatwootConversations';
+
+                    Espo.Ajax.postRequest(url, {ids: ids})
+                        .then(function () {
+                            Espo.Ui.success(this.translate('Linked'));
+
+                            this.loadConversations();
+                        }.bind(this));
+                }.bind(this));
+            }.bind(this));
         },
     });
 });

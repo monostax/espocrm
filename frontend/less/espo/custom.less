@@ -4681,7 +4681,10 @@ html.is-iframe {
 }
 
 // Chatwoot Conversation embed specific styles
-html.is-chatwoot-conversation {
+html.is-chatwoot-conversation,
+html.is-chatwoot-opportunity,
+html.is-chatwoot-call,
+html.is-chatwoot-activities {
     // Hide header when embedded
     #header,
     body > header {
@@ -4709,6 +4712,13 @@ html.is-chatwoot-conversation {
                 max-width: 100% !important;
             }
         }
+    }
+}
+
+// Chatwoot Activities embed – panel spacing
+html.is-chatwoot-activities {
+    .chatwoot-conversation-bridge .bridge-detail-container {
+        padding: var(--container-padding);
     }
 }
 

@@ -1,0 +1,11 @@
+{
+    "documents": {
+        "disabled": true
+    },
+    "chatwootConversations": {
+        "disabled": true
+    },
+    "metaLeadgenAnswers": {
+        "disabled": true
+    }
+}

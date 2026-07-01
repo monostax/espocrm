@@ -1,0 +1,14 @@
+{
+    "fields": {
+        "voipCalls": {
+            "type": "linkMultiple"
+        }
+    },
+    "links": {
+        "voipCalls": {
+            "type": "hasMany",
+            "entity": "Call",
+            "foreign": "chatwootConversationRecord"
+        }
+    }
+}

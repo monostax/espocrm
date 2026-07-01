@@ -258,6 +258,7 @@ class RelationshipPanelView extends BottomPanelView {
 
             this.actionList.unshift({
                 label: 'Select',
+                labelTranslation: 'Global.labels.selectRelated',
                 action: this.defs.selectAction || 'selectRelated',
                 data: data,
                 acl: this.defs.selectRequiredAccess || 'edit',

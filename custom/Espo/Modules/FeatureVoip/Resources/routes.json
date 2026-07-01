@@ -8,5 +8,14 @@
             "accountId": ":accountId"
         },
         "noAuth": true
+    },
+    {
+        "route": "/VoipRecording/:id/stream",
+        "method": "get",
+        "params": {
+            "controller": "VoipRecording",
+            "action": "stream",
+            "id": ":id"
+        }
     }
 ]

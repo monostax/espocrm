@@ -654,6 +654,26 @@
         flex-shrink: 0;
     }
 
+    /* Count badge inside a drawer item */
+    .tab-drawer-item .tab-drawer-item-count {
+        margin-left: auto;
+        flex-shrink: 0;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 6px;
+        font-size: 11px;
+        line-height: 18px;
+        text-align: center;
+        border-radius: 9px;
+        background-color: var(--tab-count-bg, #e5e7eb);
+        color: var(--tab-count-color, #374151);
+    }
+
+    .tab-drawer-item.active .tab-drawer-item-count {
+        background-color: var(--primary-color, #337ab7);
+        color: #fff;
+    }
+
     /* Prevent body scroll when drawer is open */
     body.tab-drawer-open {
         overflow: hidden;
@@ -674,5 +694,49 @@
         background-color: var(--danger-color, #dc3545);
         border-radius: 50%;
     }
+}
+
+/* -------------------------------------------------------------------------
+ * Tab count badges (all viewports)
+ * ---------------------------------------------------------------------- */
+
+/* Count badge on a middle-tab button */
+.record .middle-tabs > button[data-role="middle-tab"] .middle-tab-count {
+    display: inline-block;
+    margin-left: 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: 9px;
+    background-color: var(--tab-count-bg, #e5e7eb);
+    color: var(--tab-count-color, #374151);
+}
+
+/* Emphasize the count on the active tab */
+.record .middle-tabs > button[data-role="middle-tab"].active .middle-tab-count {
+    background-color: var(--primary-color, #337ab7);
+    color: #fff;
+}
+
+/* Count badge in a relationship-list panel header */
+.relationship-list-field .panel-title .relationship-list-count {
+    display: inline-block;
+    margin-left: 8px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: 9px;
+    background-color: var(--tab-count-bg, #e5e7eb);
+    color: var(--tab-count-color, #374151);
 }
 

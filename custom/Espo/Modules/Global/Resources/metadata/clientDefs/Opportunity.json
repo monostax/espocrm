@@ -18,6 +18,7 @@
     "recordViews": {
         "detail": "global:views/opportunity/record/detail",
         "detailSmall": "global:views/opportunity/record/detail",
+        "edit": "global:views/opportunity/record/edit",
         "list": "global:views/opportunity/record/list",
         "listRelated": "global:views/opportunity/record/list",
         "kanban": "global:views/opportunity/record/kanban"
@@ -37,26 +38,39 @@
     "sidePanels": {
         "detail": [
             {
-                "name": "contactConversations",
-                "label": "Conversations",
-                "view": "chatwoot:views/contact/panels/conversations",
-                "order": 1
-            }
-        ]
-    },
-    "bottomPanels": {
-        "detail": [
+                "name": "activities",
+                "reference": "activities",
+                "view": "crm:views/opportunity/record/panels/activities"
+            },
+            {
+                "name": "history",
+                "reference": "history"
+            },
             {
                 "name": "tasks",
                 "reference": "tasks",
                 "disabled": true
             },
             {
-                "name": "documents",
-                "disabled": true
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "order": 0
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "activities",
+                "reference": "activities",
+                "view": "crm:views/opportunity/record/panels/activities"
             },
             {
-                "name": "chatwootConversations",
+                "name": "history",
+                "reference": "history"
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks",
                 "disabled": true
             }
         ]

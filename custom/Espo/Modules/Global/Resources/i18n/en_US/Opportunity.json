@@ -14,7 +14,11 @@
     },
     "links": {
         "funnel": "Funnel",
-        "opportunityStage": "Stage"
+        "opportunityStage": "Stage",
+        "metaLeadgenAnswers": "Meta Lead Answers"
+    },
+    "tabs": {
+        "Documents": "Documents"
     },
     "labels": {
         "Select Funnel": "Select Funnel",

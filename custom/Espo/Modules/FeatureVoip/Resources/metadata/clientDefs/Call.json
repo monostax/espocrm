@@ -1,0 +1,23 @@
+{
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "attendees",
+                "label": "Attendees",
+                "view": "crm:views/meeting/record/panels/attendees",
+                "sticked": true,
+                "isForm": true,
+                "notRefreshable": true
+            },
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "contactIdAttribute": "parentId",
+                "contactTypeAttribute": "parentType",
+                "requiredContactType": "Contact",
+                "order": 0
+            }
+        ]
+    }
+}

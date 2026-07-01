@@ -44,8 +44,19 @@
             "create": true,
             "select": true,
             "view": "views/record/panels/relationship",
+            "createHandler": "chatwoot:handlers/create-related/set-contact",
             "createAttributeMap": {
                 "name": "name",
+                "teamsIds": "teamsIds",
+                "teamsNames": "teamsNames"
+            }
+        },
+        "calls": {
+            "create": true,
+            "select": true,
+            "view": "views/record/panels/relationship",
+            "createHandler": "chatwoot:handlers/create-related/set-contact",
+            "createAttributeMap": {
                 "teamsIds": "teamsIds",
                 "teamsNames": "teamsNames"
             }
@@ -54,6 +65,36 @@
             "create": true,
             "select": true,
             "view": "views/record/panels/relationship",
+            "createAttributeMap": {
+                "teamsIds": "teamsIds",
+                "teamsNames": "teamsNames"
+            }
+        },
+        "appointments": {
+            "create": true,
+            "select": true,
+            "view": "views/record/panels/relationship",
+            "createHandler": "chatwoot:handlers/create-related/set-contact",
+            "createAttributeMap": {
+                "teamsIds": "teamsIds",
+                "teamsNames": "teamsNames"
+            }
+        },
+        "meetings": {
+            "create": true,
+            "select": true,
+            "view": "views/record/panels/relationship",
+            "createHandler": "chatwoot:handlers/create-related/set-contact",
+            "createAttributeMap": {
+                "teamsIds": "teamsIds",
+                "teamsNames": "teamsNames"
+            }
+        },
+        "tasks": {
+            "create": true,
+            "select": true,
+            "view": "views/record/panels/relationship",
+            "createHandler": "chatwoot:handlers/create-related/set-contact",
             "createAttributeMap": {
                 "teamsIds": "teamsIds",
                 "teamsNames": "teamsNames"

@@ -142,7 +142,8 @@
                     data-label="{{label}}"
                     {{#if icon}}data-icon="{{icon}}"{{/if}}
                     {{#if iconColor}}data-icon-color="{{iconColor}}"{{/if}}
-                >{{#if icon}}<span class="{{icon}}" style="font-size: 14px; width: 14px; height: 14px;{{#if iconColor}} color: {{iconColor}};{{/if}}"></span> {{/if}}{{label}}</button>
+                    {{#if hasCount}}data-count="{{count}}"{{/if}}
+                >{{#if icon}}<span class="{{icon}}" style="font-size: 14px; width: 14px; height: 14px;{{#if iconColor}} color: {{iconColor}};{{/if}}"></span> {{/if}}{{label}}<span class="middle-tab-count badge" data-role="tab-count"{{#unless hasCount}} style="display: none;"{{/unless}}>{{#if hasCount}}{{count}}{{/if}}</span></button>
                 {{/each}}
                 <button
                     class="btn btn-text btn-wide tab-more-btn hidden"

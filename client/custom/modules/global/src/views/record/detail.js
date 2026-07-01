@@ -18,6 +18,14 @@ class CustomDetailRecordView extends DetailRecordView {
     _gridRowMap = null;
 
     /**
+     * Grid layout: maps panel name -> gridCol number.
+     * Panels sharing the same gridRow AND gridCol are stacked vertically
+     * inside the same column container. Populated from `gridCol` properties.
+     * @private
+     */
+    _gridColMap = null;
+
+    /**
      * Grid layout: list of panel names that come from the bottom container.
      * @private
      */
@@ -241,6 +249,7 @@ class CustomDetailRecordView extends DetailRecordView {
                     label: $tab.attr("data-label"),
                     icon: $tab.attr("data-icon"),
                     iconColor: $tab.attr("data-icon-color"),
+                    count: $tab.attr("data-count"),
                     isActive: isActive,
                 });
 
@@ -276,6 +285,7 @@ class CustomDetailRecordView extends DetailRecordView {
                         label: $lastVisible.attr("data-label"),
                         icon: $lastVisible.attr("data-icon"),
                         iconColor: $lastVisible.attr("data-icon-color"),
+                        count: $lastVisible.attr("data-count"),
                         isActive: false,
                     });
                 }
@@ -310,11 +320,16 @@ class CustomDetailRecordView extends DetailRecordView {
                 const iconHtml = tab.icon
                     ? `<span class="icon ${tab.icon}"${tab.iconColor ? ` style="color: ${tab.iconColor}"` : ""}></span>`
                     : "";
+                const countValue = parseInt(tab.count, 10);
+                const countHtml = countValue > 0
+                    ? `<span class="tab-drawer-item-count badge" data-role="tab-count">${countValue}</span>`
+                    : "";
 
                 return `
                 <button class="tab-drawer-item ${activeClass}" data-role="tab-drawer-item" data-tab="${tab.index}">
                     ${iconHtml}
                     <span>${tab.label}</span>
+                    ${countHtml}
                 </button>
             `;
             })
@@ -418,6 +433,7 @@ class CustomDetailRecordView extends DetailRecordView {
                 let hidden = false;
                 let icon = null;
                 let iconColor = null;
+                let count = (typeof item.tabCount === "number") ? item.tabCount : null;
 
                 if (i > 0) {
                     hidden =
@@ -477,8 +493,120 @@ class CustomDetailRecordView extends DetailRecordView {
                     hidden: hidden,
                     icon: icon,
                     iconColor: iconColor,
+                    count: count,
+                    hasCount: count !== null && count > 0,
                 };
             });
+    }
+
+    /**
+     * Update the count badge shown on a tab button, resolved from the panel
+     * name that a relationship-list field lives in. Also mirrors the count into
+     * the mobile drawer item when present.
+     *
+     * A single tab (panel) may contain multiple relationship-list collections.
+     * Each field reports its own count under a stable `fieldKey`; the counts are
+     * kept in a per-tab map and summed so the badge reflects the total across
+     * all collections in that tab. When `fieldKey` is omitted (e.g. a static
+     * layout count) the value is stored under a synthetic key.
+     *
+     * @param {string} panelName The `data-name` of the panel containing the field.
+     * @param {number} count
+     * @param {string} [fieldKey] Stable identifier of the reporting field.
+     */
+    updateTabCount(panelName, count, fieldKey) {
+        if (!this.isRendered() || !panelName) {
+            return;
+        }
+
+        // Resolve the tab index from the rendered panel DOM.
+        const $panel = this.$el
+            .find(`.middle .panel[data-name="${panelName}"][data-tab]`)
+            .first();
+
+        if (!$panel.length) {
+            return;
+        }
+
+        const tabIndex = $panel.attr("data-tab");
+
+        if (tabIndex === undefined || tabIndex === null || tabIndex === "") {
+            return;
+        }
+
+        // Tab 0 is the "Overview" tab and never carries a relationship count.
+        if (parseInt(tabIndex, 10) === 0) {
+            return;
+        }
+
+        // Aggregate per-field counts so multiple collections in one tab sum up
+        // instead of overwriting each other (last-writer-wins).
+        this._tabCountMap = this._tabCountMap || {};
+
+        const bucket = this._tabCountMap[tabIndex] || (this._tabCountMap[tabIndex] = {});
+        const key = fieldKey || `__default__`;
+
+        bucket[key] = typeof count === "number" ? count : 0;
+
+        let total = 0;
+
+        Object.keys(bucket).forEach((k) => {
+            total += bucket[k] || 0;
+        });
+
+        this.renderTabCount(tabIndex, total);
+    }
+
+    /**
+     * Render (show/hide/update) the aggregated count badge on both the tab
+     * button and its mobile-drawer counterpart.
+     *
+     * @param {string|number} tabIndex
+     * @param {number} total
+     */
+    renderTabCount(tabIndex, total) {
+        const hasCount = typeof total === "number" && total > 0;
+
+        const $btn = this.$el.find(
+            `.middle-tabs > button[data-role="middle-tab"][data-tab="${tabIndex}"]`,
+        );
+
+        if ($btn.length) {
+            $btn.attr("data-count", hasCount ? total : "");
+
+            let $badge = $btn.find('[data-role="tab-count"]');
+
+            if (!$badge.length) {
+                $badge = $('<span class="middle-tab-count badge" data-role="tab-count"></span>');
+                $btn.append($badge);
+            }
+
+            if (hasCount) {
+                $badge.text(total).css("display", "");
+            } else {
+                $badge.text("").css("display", "none");
+            }
+        }
+
+        // Mirror to the mobile drawer item, if this tab is currently in the drawer.
+        const $drawerItem = this.$el.find(
+            `[data-role="tab-drawer-item"][data-tab="${tabIndex}"]`,
+        );
+
+        if ($drawerItem.length) {
+            let $drawerBadge = $drawerItem.find('[data-role="tab-count"]');
+
+            if (!$drawerBadge.length) {
+                $drawerBadge = $('<span class="tab-drawer-item-count badge" data-role="tab-count"></span>');
+                $drawerItem.append($drawerBadge);
+            }
+
+            if (hasCount) {
+                $drawerBadge.text(total).css("display", "");
+            } else {
+                $drawerBadge.text("").css("display", "none");
+            }
+        }
     }
 
     /**
@@ -615,6 +743,7 @@ class CustomDetailRecordView extends DetailRecordView {
      */
     _readGridRowFromLayout() {
         const gridRowMap = {};
+        const gridColMap = {};
         const gridColSpanMap = {};
         const bottomGridPanelNames = [];
 
@@ -632,6 +761,14 @@ class CustomDetailRecordView extends DetailRecordView {
 
                 const name = item.name || `panel-${index}`;
                 gridRowMap[name] = row;
+
+                if (typeof item.gridCol !== "undefined") {
+                    const col = Number(item.gridCol);
+
+                    if (Number.isFinite(col)) {
+                        gridColMap[name] = col;
+                    }
+                }
 
                 if (item.gridColSpan) {
                     gridColSpanMap[name] = Number(item.gridColSpan) || 1;
@@ -662,6 +799,14 @@ class CustomDetailRecordView extends DetailRecordView {
                 gridRowMap[item.name] = row;
                 bottomGridPanelNames.push(item.name);
 
+                if (typeof item.gridCol !== "undefined") {
+                    const col = Number(item.gridCol);
+
+                    if (Number.isFinite(col)) {
+                        gridColMap[item.name] = col;
+                    }
+                }
+
                 if (item.gridColSpan) {
                     gridColSpanMap[item.name] = Number(item.gridColSpan) || 1;
                 }
@@ -669,6 +814,7 @@ class CustomDetailRecordView extends DetailRecordView {
         }
 
         this._gridRowMap = gridRowMap;
+        this._gridColMap = gridColMap;
         this._gridColSpanMap = gridColSpanMap;
         this._bottomGridPanelNames = bottomGridPanelNames;
     }
@@ -699,6 +845,17 @@ class CustomDetailRecordView extends DetailRecordView {
             .record .panels-grid-row .panels-grid-col > .panel {
                 margin-bottom: 0;
                 flex: 1;
+            }
+
+            /*
+             * When a column stacks multiple panels (same gridRow + gridCol),
+             * earlier panels size to their content and only the last panel
+             * grows to fill the remaining column height so the column matches
+             * its sibling column's height. Stacked panels get vertical spacing.
+             */
+            .record .panels-grid-row .panels-grid-col > .panel:not(:last-child) {
+                flex: none;
+                margin-bottom: 10px;
             }
 
             .record .panels-grid-row .panels-grid-col > .panel .relationship-list-field > .panel {
@@ -803,10 +960,15 @@ class CustomDetailRecordView extends DetailRecordView {
         // Sort row numbers.
         const rowNumbers = Object.keys(rowGroups).map(Number).sort((a, b) => a - b);
 
+        const gridColMap = this._gridColMap || {};
+
         // For each row group, wrap the panels in a flex row.
         rowNumbers.forEach(rowNum => {
             const names = rowGroups[rowNum];
-            const $panels = [];
+
+            // Resolve each panel name to its DOM element (moving bottom panels
+            // into .middle as needed), preserving layout order.
+            const resolved = [];
             let $firstPanel = null;
 
             names.forEach(name => {
@@ -825,21 +987,47 @@ class CustomDetailRecordView extends DetailRecordView {
                 }
 
                 if ($panel.length) {
-                    $panels.push($panel);
+                    resolved.push({ name, $panel });
                     if (!$firstPanel) $firstPanel = $panel;
                 }
             });
 
-            if ($panels.length <= 1) {
-                // Single panel = full width, just apply card styling.
-                if ($panels.length === 1) {
-                    const $panel = $panels[0];
+            if (resolved.length === 0) {
+                return;
+            }
 
-                    $panel.css({
-                        'border-radius': 'var(--panel-border-radius)',
-                        'margin-bottom': $panel.hasClass('headered') ? '10px' : '',
-                    }).attr('data-grid-styled', '1');
+            // Group resolved panels into columns by gridCol.
+            // Panels sharing the same explicit gridCol are stacked (in layout
+            // order) inside one column container. Panels without an explicit
+            // gridCol each occupy their own implicit column, so existing
+            // one-panel-per-column layouts keep working unchanged.
+            const columns = [];
+            const columnByKey = {};
+            let implicitCounter = 0;
+
+            resolved.forEach(entry => {
+                const col = gridColMap[entry.name];
+                const hasExplicitCol = typeof col !== 'undefined';
+                const key = hasExplicitCol ? `col-${col}` : `implicit-${implicitCounter++}`;
+
+                if (!columnByKey[key]) {
+                    columnByKey[key] = { key, entries: [] };
+                    columns.push(columnByKey[key]);
                 }
+
+                columnByKey[key].entries.push(entry);
+            });
+
+            // A single column with a single panel = full-width panel; skip the
+            // flex-row wrapper and just apply card styling (legacy behaviour).
+            if (columns.length === 1 && columns[0].entries.length === 1) {
+                const $panel = columns[0].entries[0].$panel;
+
+                $panel.css({
+                    'border-radius': 'var(--panel-border-radius)',
+                    'margin-bottom': $panel.hasClass('headered') ? '10px' : '',
+                }).attr('data-grid-styled', '1');
+
                 return;
             }
 
@@ -856,23 +1044,37 @@ class CustomDetailRecordView extends DetailRecordView {
             // Insert row where the first panel is.
             $firstPanel.before($row);
 
-            // Move each panel into its own column container.
-            $panels.forEach($panel => {
+            // Build each column container and append its (possibly stacked) panels.
+            columns.forEach(column => {
                 const $col = $('<div class="panels-grid-col"></div>');
-                const panelName = $panel.attr('data-name');
-                const colSpan = (this._gridColSpanMap && this._gridColSpanMap[panelName]) || 1;
+
+                // Column flex weight comes from the largest gridColSpan of the
+                // panels it contains (they share the same visual column width).
+                let colSpan = 1;
+
+                column.entries.forEach(entry => {
+                    const span = (this._gridColSpanMap &&
+                        this._gridColSpanMap[entry.name]) || 1;
+
+                    if (span > colSpan) {
+                        colSpan = span;
+                    }
+                });
 
                 $col.css({
                     'flex': String(colSpan),
                     'min-width': '0',
                 });
 
-                // Card-like styling.
-                $panel.css({
-                    'border-radius': 'var(--panel-border-radius)',
+                column.entries.forEach(entry => {
+                    // Card-like styling.
+                    entry.$panel.css({
+                        'border-radius': 'var(--panel-border-radius)',
+                    });
+
+                    $col.append(entry.$panel);
                 });
 
-                $col.append($panel);
                 $row.append($col);
             });
         });
