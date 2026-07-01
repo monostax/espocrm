@@ -87,6 +87,67 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
     }
 
     /**
+     * GET ChatwootConversation/action/crmCounts?chatwootConversationId={id}&chatwootAccountId={accountId}
+     *
+     * Resolves the ChatwootConversation by its external Chatwoot ids and
+     * returns the number of related records per dashboard app tab, keyed by
+     * the Chatwoot fixed dashboard app ids. "fixed-activities" is the sum of
+     * appointments, meetings and tasks.
+     *
+     * Designed to be called cross-subdomain by the Chatwoot frontend (with the
+     * shared auth-token cookie) so tab badges can render on conversation load.
+     */
+    public function getActionCrmCounts(Request $request): object
+    {
+        $conversationId = $request->getQueryParam('chatwootConversationId');
+        $accountId = $request->getQueryParam('chatwootAccountId');
+
+        if (!$conversationId) {
+            throw new BadRequest('chatwootConversationId is required.');
+        }
+
+        if (!$this->acl->check('ChatwootConversation', 'read')) {
+            throw new Forbidden();
+        }
+
+        $where = ['chatwootConversationId' => (int) $conversationId];
+
+        if ($accountId) {
+            $where['chatwootAccountIdExternal'] = (int) $accountId;
+        }
+
+        $conversation = $this->getEntityManager()
+            ->getRDBRepository('ChatwootConversation')
+            ->where($where)
+            ->findOne();
+
+        if (!$conversation) {
+            throw new NotFound('Conversation not found.');
+        }
+
+        if (!$this->acl->check($conversation, 'read')) {
+            throw new Forbidden('Access denied.');
+        }
+
+        $repository = $this->getEntityManager()
+            ->getRDBRepository('ChatwootConversation');
+
+        $countLink = function (string $link) use ($repository, $conversation): int {
+            return $repository->getRelation($conversation, $link)->count();
+        };
+
+        $activities = $countLink('appointments')
+            + $countLink('meetings')
+            + $countLink('tasks');
+
+        return (object) [
+            'fixed-opportunity' => $countLink('opportunities'),
+            'fixed-call' => $countLink('calls'),
+            'fixed-activities' => $activities,
+        ];
+    }
+
+    /**
      * GET ChatwootConversation/action/agentsForAssignment?id={conversationId}
      * Returns the list of memberships available for assignment in the conversation's account.
      */
