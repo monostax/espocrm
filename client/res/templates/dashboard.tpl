@@ -9,6 +9,25 @@
             {{/if}}
         </div>
         <div class="col-sm-8 clearfix dashboard-header-controls">
+            {{#if showFunnelFilter}}
+            <div
+                class="dashboard-funnel-filter"
+                data-action="selectFunnel"
+                role="button"
+                tabindex="0"
+                title="{{translate 'Funnel' category='scopeNames' scope='Global'}}"
+            >
+                <span class="fas fa-filter"></span>
+                <span class="dashboard-funnel-filter-label">{{funnelLabel}}</span>
+                <a
+                    role="button"
+                    tabindex="0"
+                    class="dashboard-funnel-filter-clear{{#unless hasFunnel}} hidden{{/unless}}"
+                    data-action="clearFunnel"
+                    title="{{translate 'All Funnels' category='labels' scope='Global'}}"
+                ><span class="fas fa-times"></span></a>
+            </div>
+            {{/if}}
             {{#if showDateRange}}
             <div
                 class="dashboard-date-range"

@@ -16,11 +16,12 @@
  * JointGrid Report.
  *
  * Lives in the `global` module but extends the Advanced module's Report
- * dashlet view to reuse run-time URL building, error rendering and the report
- * helper.
+ * dashlet view (through `global:views/dashlets/report`, which adds the
+ * dashboard-wide funnel binding) to reuse run-time URL building, error
+ * rendering and the report helper.
  */
 define('global:views/dashlets/report-total-count', [
-    'advanced:views/dashlets/report',
+    'global:views/dashlets/report',
     'search-manager',
     'advanced:report-helper',
 ], function (Dep, SearchManager, ReportHelper) {
@@ -134,6 +135,12 @@ define('global:views/dashlets/report-total-count', [
          * Append the dashboard date range filter to the existing `where`
          * array when the dashlet is configured to bind to it.
          *
+         * The dashboard range *supersedes* any runtime filter the dashlet
+         * itself carries on the same field (`filtersData`) — otherwise a
+         * leftover per-dashlet filter (e.g. `createdAt: currentMonth`)
+         * would be ANDed with the dashboard range and silently shrink the
+         * effective window to the intersection of the two.
+         *
          * Sets `dateTime: true` (with timezone) when the target field is a
          * datetime / datetimeOptional field, and `date: true` when it's a
          * date field. Without these flags the backend would skip the
@@ -180,7 +187,10 @@ define('global:views/dashlets/report-total-count', [
                 item.date = true;
             }
 
-            where = where || [];
+            // Drop the dashlet's own filters targeting the bound field —
+            // the dashboard range replaces them.
+            where = (where || []).filter(o => !(o && o.attribute === field));
+
             where.push(item);
 
             return where;
@@ -188,6 +198,7 @@ define('global:views/dashlets/report-total-count', [
 
         afterRender: function () {
             this.attachDashboardDateRangeListener();
+            this.attachDashboardFunnelListener();
 
             this.$container = this.$el.find('.report-results-container');
             this.run();
@@ -609,7 +620,35 @@ define('global:views/dashlets/report-total-count', [
                 entries.push(dashboardRangeEntry);
             }
 
+            const dashboardFunnelEntry = this.buildDashboardFunnelEntry();
+
+            if (dashboardFunnelEntry) {
+                entries.push(dashboardFunnelEntry);
+            }
+
             return entries;
+        },
+
+        /**
+         * Build a description entry for the active dashboard-wide funnel
+         * filter, matching the shape returned by `buildFilterDisplayEntries`:
+         *   - `visible`: the funnel name.
+         *   - `tooltip`: prefixed with the translated Funnel scope name.
+         *
+         * Returns `null` when no funnel is selected or the report entity
+         * cannot be filtered by funnel.
+         */
+        buildDashboardFunnelEntry: function () {
+            const funnel = this.getDashboardFunnel();
+
+            if (!funnel || !funnel.name) {
+                return null;
+            }
+
+            return {
+                visible: funnel.name,
+                tooltip: this.translate('Funnel', 'scopeNames') + ': ' + funnel.name,
+            };
         },
 
         /**
@@ -635,12 +674,24 @@ define('global:views/dashlets/report-total-count', [
             const dateTime = this.getDateTime();
             const entityType = this.getOption('entityType');
 
+            // When the dashboard date range is bound and active, it
+            // supersedes the dashlet's own filter on the same field (see
+            // `applyDashboardDateRange`) — don't display the superseded one.
+            const supersededField = this.getOption('bindDashboardDateRange') &&
+                this.getDashboardDateRange()
+                ? (this.getOption('dashboardDateRangeField') || null)
+                : null;
+
             const entries = [];
 
             Object.keys(filtersData).forEach(fieldKey => {
                 const filter = filtersData[fieldKey];
 
                 if (!filter) {
+                    return;
+                }
+
+                if (supersededField && fieldKey.split('-')[0] === supersededField) {
                     return;
                 }
 

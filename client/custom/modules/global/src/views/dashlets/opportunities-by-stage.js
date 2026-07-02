@@ -8,7 +8,10 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-define('global:views/dashlets/opportunities-by-stage', ['crm:views/dashlets/opportunities-by-stage'], function (Dep) {
+define('global:views/dashlets/opportunities-by-stage', [
+    'crm:views/dashlets/opportunities-by-stage',
+    'global:helpers/dashboard-funnel',
+], function (Dep, DashboardFunnel) {
 
     return Dep.extend({
 
@@ -24,12 +27,35 @@ define('global:views/dashlets/opportunities-by-stage', ['crm:views/dashlets/oppo
                 }
             }
 
-            if (this.getOption('funnelId')) {
+            if (this.getFunnelId()) {
                 let separator = url.indexOf('?') === -1 ? '?' : '&';
-                url += separator + 'funnelId=' + this.getOption('funnelId');
+                url += separator + 'funnelId=' + this.getFunnelId();
             }
 
             return url;
+        },
+
+        /**
+         * The effective funnel id: the dashboard-wide funnel filter (when
+         * one is selected in the dashboard header) wins over the dashlet's
+         * own `funnel` option; otherwise falls back to the option.
+         *
+         * @return {string|null}
+         */
+        getFunnelId: function () {
+            const dashboardFunnel = DashboardFunnel.getFunnel(this);
+
+            if (dashboardFunnel) {
+                return dashboardFunnel.id;
+            }
+
+            return this.getOption('funnelId') || null;
+        },
+
+        afterRender: function () {
+            DashboardFunnel.listen(this, () => this.actionRefresh());
+
+            Dep.prototype.afterRender.call(this);
         },
 
         prepareData: function (response) {

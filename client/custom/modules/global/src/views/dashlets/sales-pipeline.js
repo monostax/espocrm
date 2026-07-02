@@ -8,7 +8,10 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-define('global:views/dashlets/sales-pipeline', ['crm:views/dashlets/sales-pipeline'], function (Dep) {
+define('global:views/dashlets/sales-pipeline', [
+    'crm:views/dashlets/sales-pipeline',
+    'global:helpers/dashboard-funnel',
+], function (Dep, DashboardFunnel) {
 
     return Dep.extend({
 
@@ -31,11 +34,34 @@ define('global:views/dashlets/sales-pipeline', ['crm:views/dashlets/sales-pipeli
                 separator = '&';
             }
 
-            if (this.getOption('funnelId')) {
-                url += separator + 'funnelId=' + this.getOption('funnelId');
+            if (this.getFunnelId()) {
+                url += separator + 'funnelId=' + this.getFunnelId();
             }
 
             return url;
+        },
+
+        /**
+         * The effective funnel id: the dashboard-wide funnel filter (when
+         * one is selected in the dashboard header) wins over the dashlet's
+         * own `funnel` option; otherwise falls back to the option.
+         *
+         * @return {string|null}
+         */
+        getFunnelId: function () {
+            const dashboardFunnel = DashboardFunnel.getFunnel(this);
+
+            if (dashboardFunnel) {
+                return dashboardFunnel.id;
+            }
+
+            return this.getOption('funnelId') || null;
+        },
+
+        afterRender: function () {
+            DashboardFunnel.listen(this, () => this.actionRefresh());
+
+            Dep.prototype.afterRender.call(this);
         },
 
         prepareData: function (response) {

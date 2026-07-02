@@ -24,7 +24,8 @@
         "Tab Label": "Tab Label",
         "Header Title": "Header Title",
         "Description": "Description",
-        "Show Date Range Picker": "Show Date Range Picker"
+        "Show Date Range Picker": "Show Date Range Picker",
+        "All Funnels": "All Funnels"
     },
     "fields": {
         "weight": "Weight",

@@ -151,6 +151,55 @@
     margin-top: 4px;
 }
 
+/* Funnel filter — a sibling control of the date range picker. */
+
+.dashboard-header .dashboard-funnel-filter {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--panel-border-color, #e0e0e0);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--panel-bg, transparent);
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.dashboard-header .dashboard-funnel-filter:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.dashboard-header .dashboard-funnel-filter .dashboard-funnel-filter-label {
+    font-weight: 500;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-header .dashboard-funnel-filter .dashboard-funnel-filter-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    color: var(--text-muted-color, #888);
+    font-size: 11px;
+}
+
+.dashboard-header .dashboard-funnel-filter .dashboard-funnel-filter-clear:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--text-color, #333);
+}
+
+.dashboard-header .dashboard-funnel-filter .dashboard-funnel-filter-clear.hidden {
+    display: none;
+}
+
 @media (max-width: 767px) {
     .dashboard-header .dashboard-header-controls {
         justify-content: flex-start;

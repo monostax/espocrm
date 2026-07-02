@@ -75,6 +75,15 @@ class DashboardView extends View {
     dateRangeEndDatepicker = null
 
     /**
+     * Currently selected dashboard-wide funnel filter.
+     * `null` means "all funnels" (no filtering).
+     *
+     * @private
+     * @type {{id: string, name: string}|null}
+     */
+    funnel = null
+
+    /**
      * @private
      * @type {Object.<string, import('views/dashlet').default>|null}
      */
@@ -137,6 +146,20 @@ class DashboardView extends View {
 
             this.closeDateRangePopover();
         },
+        /** @this DashboardView */
+        'click .dashboard-funnel-filter[data-action="selectFunnel"]': function (e) {
+            if ($(e.target).closest('[data-action="clearFunnel"]').length) {
+                return;
+            }
+
+            this.actionSelectFunnel();
+        },
+        /** @this DashboardView */
+        'click .dashboard-funnel-filter [data-action="clearFunnel"]': function (e) {
+            e.stopPropagation();
+
+            this.setFunnel(null);
+        },
     }
 
     data() {
@@ -161,12 +184,18 @@ class DashboardView extends View {
         // The date range picker is shown unless this tab explicitly opts out.
         const showDateRange = currentTabData.showDateRange !== false;
 
+        const showFunnelFilter = this.isFunnelFilterAvailable() &&
+            currentTabData.showFunnelFilter !== false;
+
         return {
             displayTitle: displayTitle,
             titleText: titleText,
             descriptionText: descriptionText,
             showDateRange: showDateRange,
             dateRangeLabel: this.formatDateRangeLabel(this.dateRange),
+            showFunnelFilter: showFunnelFilter,
+            funnelLabel: this.formatFunnelLabel(this.funnel),
+            hasFunnel: !!this.funnel,
             currentTab: this.currentTab,
             tabCount: this.dashboardLayout.length,
             dashboardLayout: this.dashboardLayout,
@@ -408,6 +437,7 @@ class DashboardView extends View {
         this.setupCurrentTabLayout();
 
         this.setupDateRange();
+        this.setupFunnel();
 
         this.cellHeight = this.getThemeManager().getParam('dashboardCellHeight');
 
@@ -548,6 +578,131 @@ class DashboardView extends View {
         }
 
         return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
+    }
+
+    /**
+     * Restore the dashboard-wide funnel filter from client storage.
+     *
+     * @private
+     */
+    setupFunnel() {
+        const stored = this.getStorage().get('state', 'dashboardFunnel');
+
+        this.funnel = stored && typeof stored === 'object' && stored.id
+            ? {id: stored.id, name: stored.name || ''}
+            : null;
+    }
+
+    /**
+     * Whether the funnel filter can be offered to the current user at all —
+     * the Funnel entity must exist and be readable.
+     *
+     * @private
+     * @return {boolean}
+     */
+    isFunnelFilterAvailable() {
+        if (!this.getMetadata().get(['scopes', 'Funnel'])) {
+            return false;
+        }
+
+        return this.getAcl().checkScope('Funnel', 'read');
+    }
+
+    /**
+     * Whether the funnel filter is exposed for the current tab.
+     *
+     * @return {boolean}
+     */
+    isFunnelFilterVisibleForCurrentTab() {
+        if (!this.isFunnelFilterAvailable()) {
+            return false;
+        }
+
+        const tab = this.dashboardLayout && this.dashboardLayout[this.currentTab];
+
+        return !!tab && tab.showFunnelFilter !== false;
+    }
+
+    /**
+     * Get the currently active dashboard funnel filter.
+     *
+     * Public API consumed by dashlets (mirrors `getDateRange()`). Returns
+     * `null` when no funnel is selected ("all funnels") or when the filter
+     * is hidden for the active tab — in both cases bound dashlets must not
+     * filter by funnel.
+     *
+     * @return {{id: string, name: string}|null}
+     */
+    getFunnel() {
+        if (!this.isFunnelFilterVisibleForCurrentTab()) {
+            return null;
+        }
+
+        return this.funnel
+            ? {id: this.funnel.id, name: this.funnel.name}
+            : null;
+    }
+
+    /**
+     * @private
+     * @param {{id: string, name: string}|null} funnel
+     * @return {string}
+     */
+    formatFunnelLabel(funnel) {
+        if (funnel && funnel.name) {
+            return funnel.name;
+        }
+
+        return this.translate('All Funnels', 'labels');
+    }
+
+    /**
+     * Set (or clear, with `null`) the dashboard-wide funnel filter, persist
+     * it to client storage, update the header control and notify dashlets.
+     *
+     * @param {{id: string, name: string}|null} funnel
+     */
+    setFunnel(funnel) {
+        this.funnel = funnel || null;
+
+        if (this.funnel) {
+            this.getStorage().set('state', 'dashboardFunnel', this.funnel);
+        } else {
+            this.getStorage().clear('state', 'dashboardFunnel');
+        }
+
+        this.$el.find('.dashboard-funnel-filter-label').text(this.formatFunnelLabel(this.funnel));
+        this.$el.find('.dashboard-funnel-filter-clear').toggleClass('hidden', !this.funnel);
+
+        this.trigger('dashboard-funnel-change', this.getFunnel());
+    }
+
+    /**
+     * Open the standard record-select modal for active funnels.
+     *
+     * @private
+     */
+    actionSelectFunnel() {
+        const viewName = this.getMetadata()
+                .get(['clientDefs', 'Funnel', 'modalViews', 'select']) ||
+            'views/modals/select-records';
+
+        this.createView('selectFunnelDialog', viewName, {
+            scope: 'Funnel',
+            multiple: false,
+            createButton: false,
+            primaryFilterName: 'active',
+            boolFilterList: ['onlyActive'],
+            forceSelectAllAttributes: true,
+        }, view => {
+            view.render();
+
+            this.listenToOnce(view, 'select', model => {
+                this.setFunnel({id: model.id, name: model.get('name') || ''});
+
+                view.close();
+            });
+        });
     }
 
     afterRender() {
@@ -1287,12 +1442,14 @@ class DashboardView extends View {
                     let title = tabTitles[name] || '';
                     let description = tabDescriptions[name] || '';
                     let showDateRange = tabShowDateRange[name];
+                    let showFunnelFilter;
 
                     this.dashboardLayout.forEach(d => {
                         if (d.name === name) {
                             layout = d.layout;
                             id = d.id;
                             slug = d.slug;
+                            showFunnelFilter = d.showFunnelFilter;
                         }
                     });
 
@@ -1331,6 +1488,13 @@ class DashboardView extends View {
                     // future versions change the default safely.
                     if (showDateRange === false) {
                         o.showDateRange = false;
+                    }
+
+                    // Not editable in the modal (yet) — preserved so that a
+                    // flag set via a deployed template or manually in the
+                    // layout JSON survives an Edit Dashboard save.
+                    if (showFunnelFilter === false) {
+                        o.showFunnelFilter = false;
                     }
 
                     dashboardLayout.push(o);
