@@ -80,7 +80,8 @@
         },
         "opportunity": {
             "type": "link",
-            "readOnly": true
+            "readOnly": true,
+            "comment": "Stored value is the creation-time link (set when this row's ingest created the Opportunity) and is what CapiDispatcher joins on. The DISPLAYED value is overridden at read time by ConversationOpportunityLoader with the conversation's most recent linked Opportunity (chatwootConversationOpportunity m2m), falling back to the stored link."
         },
         "chatwootConversation": {
             "type": "link",

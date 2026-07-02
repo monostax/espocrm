@@ -3,13 +3,13 @@
         "MetaLeadAds": "Meta Lead Ads"
     },
     "scopeNames": {
-        "MetaFacebookPage": "Página do Facebook",
-        "MetaLeadForm": "Formulário Meta Lead Ads",
-        "MetaLeadgenEvent": "Evento de Lead Meta"
+        "MetaFacebookPage": "Meta / Facebook / Página",
+        "MetaLeadForm": "Meta / Lead Ads / Formulário",
+        "MetaLeadgenEvent": "Meta / Lead Ads / Evento Recebido"
     },
     "scopeNamesPlural": {
-        "MetaFacebookPage": "Páginas do Facebook",
-        "MetaLeadForm": "Formulários Meta Lead Ads",
-        "MetaLeadgenEvent": "Eventos de Lead Meta"
+        "MetaFacebookPage": "Meta / Facebook / Páginas",
+        "MetaLeadForm": "Meta / Lead Ads / Formulários",
+        "MetaLeadgenEvent": "Meta / Lead Ads / Eventos Recebidos"
     }
 }

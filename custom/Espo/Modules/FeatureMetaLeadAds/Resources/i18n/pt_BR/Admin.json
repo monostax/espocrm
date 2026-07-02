@@ -1,9 +1,9 @@
 {
     "labels": {
         "Meta": "Meta",
-        "Facebook Pages": "Páginas do Facebook",
-        "Lead Forms": "Formulários de Lead",
-        "Leadgen Events": "Eventos de Leadgen"
+        "Facebook Pages": "Facebook / Páginas",
+        "Lead Forms": "Lead Ads / Formulários",
+        "Leadgen Events": "Lead Ads / Eventos Recebidos"
     },
     "descriptions": {
         "metaFacebookPages": "Gerenciar Páginas do Facebook conectadas para Meta Lead Ads.",

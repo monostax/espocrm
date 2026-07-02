@@ -26,6 +26,7 @@
         "tenant": "Tenant"
     },
     "labels": {
+        "Create MetaCapiDatasetSource": "Create Dataset Source",
         "Opportunity Creation": "Opportunity Creation"
     },
     "options": {

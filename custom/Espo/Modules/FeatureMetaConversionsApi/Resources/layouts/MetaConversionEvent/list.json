@@ -1,9 +1,10 @@
 [
-    { "name": "conversationName", "width": 18, "link": true },
-    { "name": "eventName", "width": 15 },
-    { "name": "channel", "width": 12 },
-    { "name": "sourceId", "width": 18 },
-    { "name": "contact", "width": 18 },
-    { "name": "opportunity", "width": 15 },
-    { "name": "eventTime", "width": 15 }
+    { "name": "conversationName", "width": 16, "link": true },
+    { "name": "eventName", "width": 13 },
+    { "name": "channel", "width": 10 },
+    { "name": "sourceId", "width": 16 },
+    { "name": "contact", "width": 16 },
+    { "name": "opportunity", "width": 13 },
+    { "name": "teams", "width": 13 },
+    { "name": "eventTime", "width": 13 }
 ]

@@ -1,6 +1,9 @@
 {
     "controller": "controllers/record",
     "iconClass": "ti ti-list-details",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
     "filterList": [
         { "name": "sent", "label": "Sent" },
         { "name": "failed", "label": "Failed" },

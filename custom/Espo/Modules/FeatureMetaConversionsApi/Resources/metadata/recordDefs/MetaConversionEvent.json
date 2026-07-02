@@ -1,0 +1,12 @@
+{
+    "readOnly": true,
+    "createDisabled": true,
+    "updateDisabled": true,
+    "deleteDisabled": true,
+    "readLoaderClassNameList": [
+        "Espo\\Modules\\FeatureMetaConversionsApi\\Classes\\FieldProcessing\\MetaConversionEvent\\ConversationOpportunityLoader"
+    ],
+    "listLoaderClassNameList": [
+        "Espo\\Modules\\FeatureMetaConversionsApi\\Classes\\FieldProcessing\\MetaConversionEvent\\ConversationOpportunityLoader"
+    ]
+}

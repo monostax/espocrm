@@ -1,6 +1,7 @@
 {
     "controller": "controllers/record",
     "iconClass": "ti ti-brand-facebook",
+    "createDisabled": true,
     "boolFilterList": ["onlyMy"],
     "menu": {
         "list": {

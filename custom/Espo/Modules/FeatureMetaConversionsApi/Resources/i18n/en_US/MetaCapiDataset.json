@@ -20,6 +20,9 @@
         "eventLogs": "Event Logs",
         "sources": "Messaging Sources"
     },
+    "labels": {
+        "Create MetaCapiDataset": "Create Dataset"
+    },
     "options": {
         "lastEventStatus": {
             "": "—",

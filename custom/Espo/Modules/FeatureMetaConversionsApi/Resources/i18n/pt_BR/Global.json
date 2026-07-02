@@ -1,15 +1,15 @@
 {
     "scopeNames": {
-        "MetaCapiDataset": "Meta CAPI / Dataset",
-        "MetaCapiEventLog": "Meta CAPI / Histórico de Eventos",
-        "MetaCapiDatasetSource": "Meta CAPI / Origem do Dataset",
-        "MetaConversionEvent": "Meta CAPI / Evento de Conversão"
+        "MetaCapiDataset": "Meta / CAPI / Integração",
+        "MetaCapiEventLog": "Meta / CAPI / Eventos Enviados",
+        "MetaCapiDatasetSource": "Meta / CAPI / Roteamento",
+        "MetaConversionEvent": "Meta / CAPI / Eventos Recebidos"
     },
     "scopeNamesPlural": {
-        "MetaCapiDataset": "Meta CAPI / Datasets",
-        "MetaCapiEventLog": "Meta CAPI / Histórico de Eventos",
-        "MetaCapiDatasetSource": "Meta CAPI / Origens do Dataset",
-        "MetaConversionEvent": "Meta CAPI / Eventos de Conversão"
+        "MetaCapiDataset": "Meta / CAPI / Integrações",
+        "MetaCapiEventLog": "Meta / CAPI / Eventos Enviados",
+        "MetaCapiDatasetSource": "Meta / CAPI / Roteamentos",
+        "MetaConversionEvent": "Meta / CAPI / Eventos Recebidos"
     },
     "labels": {
         "Meta Conversions API": "API de Conversões da Meta"

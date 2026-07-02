@@ -1,7 +1,7 @@
 {
     "labels": {
         "Meta": "Meta",
-        "WhatsApp Accounts": "Contas WhatsApp"
+        "WhatsApp Accounts": "WhatsApp / Contas"
     },
     "descriptions": {
         "whatsAppBusinessAccounts": "Gerenciar contas Meta WhatsApp Business e números de telefone."

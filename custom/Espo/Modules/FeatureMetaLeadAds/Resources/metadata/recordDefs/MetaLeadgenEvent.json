@@ -1,4 +1,7 @@
 {
+    "createDisabled": true,
+    "updateDisabled": true,
+    "deleteDisabled": true,
     "massActions": {
         "retryLeadgenIngest": {
             "implementationClassName": "Espo\\Modules\\FeatureMetaLeadAds\\Classes\\MassAction\\MetaLeadgenEvent\\MassRetryIngest"

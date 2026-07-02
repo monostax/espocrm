@@ -1,5 +1,6 @@
 {
     "controller": "controllers/record",
+    "createDisabled": true,
     "bottomPanels": {
         "detail": [
             {

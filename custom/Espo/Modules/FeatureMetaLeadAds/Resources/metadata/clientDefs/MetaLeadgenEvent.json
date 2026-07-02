@@ -1,5 +1,8 @@
 {
     "controller": "controllers/record",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
     "menu": {
         "detail": {
             "buttons": [

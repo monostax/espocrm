@@ -1,10 +1,10 @@
 {
     "labels": {
         "Meta": "Meta",
-        "CAPI Datasets": "Datasets CAPI",
-        "CAPI Dataset Sources": "Origens do Dataset CAPI",
-        "Conversion Events": "Eventos de Conversão",
-        "CAPI Event Log": "Log de Eventos CAPI"
+        "CAPI Datasets": "CAPI / Integrações",
+        "CAPI Dataset Sources": "CAPI / Roteamentos",
+        "Conversion Events": "CAPI / Eventos Recebidos",
+        "CAPI Event Log": "CAPI / Eventos Enviados"
     },
     "descriptions": {
         "metaCapiDatasets": "Gerenciar datasets, pixels e tokens de acesso da Meta Conversions API.",

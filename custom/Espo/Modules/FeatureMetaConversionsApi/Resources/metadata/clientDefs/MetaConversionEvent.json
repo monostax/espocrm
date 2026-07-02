@@ -1,5 +1,8 @@
 {
     "controller": "controllers/record",
     "iconClass": "ti ti-arrow-guide",
+    "createDisabled": true,
+    "editDisabled": true,
+    "deleteDisabled": true,
     "boolFilterList": ["onlyMy"]
 }

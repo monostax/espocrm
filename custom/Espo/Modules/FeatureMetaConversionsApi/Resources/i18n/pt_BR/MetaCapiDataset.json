@@ -20,6 +20,9 @@
         "eventLogs": "Histórico de Eventos",
         "sources": "Origens de Mensagens"
     },
+    "labels": {
+        "Create MetaCapiDataset": "Criar Integração"
+    },
     "options": {
         "lastEventStatus": {
             "": "—",
