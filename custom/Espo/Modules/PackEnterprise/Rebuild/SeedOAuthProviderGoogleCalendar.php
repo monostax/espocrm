@@ -92,7 +92,10 @@ class SeedOAuthProviderGoogleCalendar implements RebuildAction
     {
         $teams = $this->entityManager->getRepository('Team')
             ->select(['id'])
-            ->where(['deleted' => 0])
+            // NB: must be boolean false (not int 0) — on Postgres the ORM
+            // renders int as a literal and "boolean = integer" is an error.
+            // (The ORM also auto-filters deleted rows; kept for explicitness.)
+            ->where(['deleted' => false])
             ->find();
 
         $ids = [];

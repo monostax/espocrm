@@ -16,6 +16,18 @@ class EnsureJobGroupIndex implements RebuildAction
     public function process(): void
     {
         $pdo = $this->dbHelper->getPDO();
+        $isPg = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql';
+
+        if ($isPg) {
+            // No SHOW INDEX on PostgreSQL; IF NOT EXISTS makes the probe
+            // unnecessary. Unquoted index names fold to lowercase, and
+            // `group` is a reserved word — double-quote it.
+            $this->log->info("EnsureJobGroupIndex: Ensuring IDX_GROUP on job(group, created_at).");
+
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_group ON job (\"group\", created_at)");
+
+            return;
+        }
 
         $stmt = $pdo->query("SHOW INDEX FROM job WHERE Key_name = 'IDX_GROUP'");
         $exists = $stmt->fetch() !== false;

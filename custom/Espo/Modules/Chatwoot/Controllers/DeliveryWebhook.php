@@ -81,13 +81,23 @@ class DeliveryWebhook
             throw new NotFound("Account not found.");
         }
 
-        $webhookSecret = $this->findWebhookSecret($account->getId());
+        $webhookSecrets = $this->findWebhookSecrets($account->getId());
 
-        if ($webhookSecret) {
+        if ($webhookSecrets !== []) {
             $signature = $_SERVER['HTTP_X_CHATWOOT_SIGNATURE'] ?? null;
             $timestamp = $_SERVER['HTTP_X_CHATWOOT_TIMESTAMP'] ?? null;
 
-            if (!$this->validateChatwootSignature($rawBody, $signature, $timestamp, $webhookSecret)) {
+            $valid = false;
+
+            foreach ($webhookSecrets as $webhookSecret) {
+                if ($this->validateChatwootSignature($rawBody, $signature, $timestamp, $webhookSecret)) {
+                    $valid = true;
+
+                    break;
+                }
+            }
+
+            if (!$valid) {
                 $this->log->warning("DeliveryWebhook: Invalid HMAC signature for account {$accountId}");
                 throw new Forbidden('Invalid signature.');
             }
@@ -296,22 +306,45 @@ class DeliveryWebhook
     }
 
     /**
-     * Find the webhook secret for a given EspoCRM ChatwootAccount.
-     * Looks up the ChatwootAccountWebhook that has the delivery URL pattern.
+     * Find all candidate webhook secrets for a given EspoCRM ChatwootAccount.
+     *
+     * Multiple ChatwootAccountWebhook rows exist per account (delivery status,
+     * Hatchet AI agent, VoIP mirror, ...), each with its own secret. Previously
+     * only the most recently created row was consulted, so the signature was
+     * often checked against the wrong webhook's secret and valid deliveries
+     * were rejected with 403. Rows whose URL matches the delivery webhook
+     * pattern are tried first; the rest serve as fallback.
+     *
+     * @return string[]
      */
-    private function findWebhookSecret(string $espoAccountId): ?string
+    private function findWebhookSecrets(string $espoAccountId): array
     {
-        $webhook = $this->entityManager
+        $webhooks = $this->entityManager
             ->getRDBRepository('ChatwootAccountWebhook')
             ->where(['accountId' => $espoAccountId])
             ->order('createdAt', 'DESC')
-            ->findOne();
+            ->find();
 
-        if ($webhook) {
-            return $webhook->get('webhookSecret');
+        $deliverySecrets = [];
+        $otherSecrets = [];
+
+        foreach ($webhooks as $webhook) {
+            $secret = $webhook->get('webhookSecret');
+
+            if (!is_string($secret) || $secret === '') {
+                continue;
+            }
+
+            $url = (string) ($webhook->get('url') ?? '');
+
+            if (str_contains($url, '/WhatsAppDeliveryWebhook/')) {
+                $deliverySecrets[] = $secret;
+            } else {
+                $otherSecrets[] = $secret;
+            }
         }
 
-        return null;
+        return array_values(array_unique(array_merge($deliverySecrets, $otherSecrets)));
     }
 
     /**

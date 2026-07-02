@@ -292,11 +292,11 @@ class ChatwootAccountMembershipOrchestrator
             $stmt = $pdo->prepare("
                 SELECT cu.id
                 FROM chatwoot_user cu
-                INNER JOIN entity_email_address eea ON eea.entity_id = cu.id AND eea.entity_type = 'ChatwootUser' AND eea.deleted = 0
-                INNER JOIN email_address ea ON ea.id = eea.email_address_id AND ea.deleted = 0
+                INNER JOIN entity_email_address eea ON eea.entity_id = cu.id AND eea.entity_type = 'ChatwootUser' AND eea.deleted = false
+                INNER JOIN email_address ea ON ea.id = eea.email_address_id AND ea.deleted = false
                 WHERE ea.lower = LOWER(?)
                   AND cu.platform_id = ?
-                  AND cu.deleted = 0
+                  AND cu.deleted = false
                 ORDER BY cu.created_at DESC
                 LIMIT 1
             ");

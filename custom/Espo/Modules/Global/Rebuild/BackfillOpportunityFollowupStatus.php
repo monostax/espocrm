@@ -44,10 +44,10 @@ class BackfillOpportunityFollowupStatus implements RebuildAction
 
         try {
             $countStmt = $pdo->query(
-                "SELECT COUNT(*) FROM `opportunity` "
-                . "WHERE `status` IN ('Won', 'Lost') "
-                . "AND (`followup_status` IS NULL OR `followup_status` != 'Ended') "
-                . "AND `deleted` = 0"
+                "SELECT COUNT(*) FROM opportunity "
+                . "WHERE status IN ('Won', 'Lost') "
+                . "AND (followup_status IS NULL OR followup_status != 'Ended') "
+                . "AND deleted = false"
             );
             $remaining = (int) $countStmt->fetchColumn();
         } catch (Throwable $e) {
@@ -74,11 +74,11 @@ class BackfillOpportunityFollowupStatus implements RebuildAction
             // user-driven change. The AutoSetFollowupStatusOnClose hook would
             // produce the same result, but firing it per-row is wasteful here.
             $stmt = $pdo->prepare(
-                "UPDATE `opportunity` "
-                . "SET `followup_status` = 'Ended' "
-                . "WHERE `status` IN ('Won', 'Lost') "
-                . "AND (`followup_status` IS NULL OR `followup_status` != 'Ended') "
-                . "AND `deleted` = 0"
+                "UPDATE opportunity "
+                . "SET followup_status = 'Ended' "
+                . "WHERE status IN ('Won', 'Lost') "
+                . "AND (followup_status IS NULL OR followup_status != 'Ended') "
+                . "AND deleted = false"
             );
             $stmt->execute();
 

@@ -57,19 +57,25 @@ class BackfillChannelIdentities implements RebuildAction
      * rebuild. This correlated subquery resolves the primary email
      * address and aliases it as `email` so downstream code that reads
      * `$row['email']` is unchanged. `primary` is a reserved word and
-     * must stay backticked.
+     * must stay quoted — backticked on MySQL/MariaDB, double-quoted on
+     * PostgreSQL — hence a method instead of a const.
      */
-    private const EMAIL_SUBQUERY = "(
+    private function emailSubquery(\PDO $pdo): string
+    {
+        $q = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql' ? '"' : '`';
+
+        return "(
                 SELECT ea.name
                 FROM entity_email_address eea
                 INNER JOIN email_address ea
-                    ON ea.id = eea.email_address_id AND ea.deleted = 0
+                    ON ea.id = eea.email_address_id AND ea.deleted = false
                 WHERE eea.entity_id = cc.id
                   AND eea.entity_type = 'ChatwootContact'
-                  AND eea.deleted = 0
-                ORDER BY eea.`primary` DESC, ea.id ASC
+                  AND eea.deleted = false
+                ORDER BY eea.{$q}primary{$q} DESC, ea.id ASC
                 LIMIT 1
             ) AS email";
+    }
 
     public function __construct(
         private EntityManager $entityManager,
@@ -249,25 +255,26 @@ class BackfillChannelIdentities implements RebuildAction
      */
     private function fetchLinkedRows(): array
     {
+        $pdo = $this->entityManager->getPDO();
         $sql = "
             SELECT
                 cc.id,
                 cc.contact_id,
                 cc.chatwoot_account_id,
                 cc.phone_number,
-                " . self::EMAIL_SUBQUERY . ",
+                " . $this->emailSubquery($pdo) . ",
                 cc.identifier,
                 cc.name,
                 a.tenant_id
             FROM chatwoot_contact cc
-            INNER JOIN chatwoot_account a ON a.id = cc.chatwoot_account_id AND a.deleted = 0
-            WHERE cc.deleted = 0
+            INNER JOIN chatwoot_account a ON a.id = cc.chatwoot_account_id AND a.deleted = false
+            WHERE cc.deleted = false
               AND cc.contact_id IS NOT NULL
               AND a.tenant_id IS NOT NULL
               AND a.tenant_id <> ''
             LIMIT " . self::PASS_LIMIT . "
         ";
-        return $this->entityManager->getPDO()->query($sql)->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        return $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
@@ -275,24 +282,25 @@ class BackfillChannelIdentities implements RebuildAction
      */
     private function fetchUnlinkedRows(): array
     {
+        $pdo = $this->entityManager->getPDO();
         $sql = "
             SELECT
                 cc.id,
                 cc.chatwoot_account_id,
                 cc.phone_number,
-                " . self::EMAIL_SUBQUERY . ",
+                " . $this->emailSubquery($pdo) . ",
                 cc.identifier,
                 cc.name,
                 a.tenant_id
             FROM chatwoot_contact cc
-            INNER JOIN chatwoot_account a ON a.id = cc.chatwoot_account_id AND a.deleted = 0
-            WHERE cc.deleted = 0
+            INNER JOIN chatwoot_account a ON a.id = cc.chatwoot_account_id AND a.deleted = false
+            WHERE cc.deleted = false
               AND cc.contact_id IS NULL
               AND a.tenant_id IS NOT NULL
               AND a.tenant_id <> ''
             LIMIT " . self::PASS_LIMIT . "
         ";
-        return $this->entityManager->getPDO()->query($sql)->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        return $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
@@ -312,8 +320,8 @@ class BackfillChannelIdentities implements RebuildAction
                    ci.name AS inbox_name,
                    cib.source_id
             FROM chatwoot_contact_inbox cib
-            LEFT JOIN chatwoot_inbox ci ON ci.id = cib.inbox_id AND ci.deleted = 0
-            WHERE cib.chatwoot_contact_id = :id AND cib.deleted = 0
+            LEFT JOIN chatwoot_inbox ci ON ci.id = cib.inbox_id AND ci.deleted = false
+            WHERE cib.chatwoot_contact_id = :id AND cib.deleted = false
         ";
         $stmt = $this->entityManager->getPDO()->prepare($sql);
         $stmt->execute([':id' => $chatwootContactEntityId]);
@@ -330,7 +338,7 @@ class BackfillChannelIdentities implements RebuildAction
             FROM entity_team et
             WHERE et.entity_id = :id
               AND et.entity_type = 'ChatwootAccount'
-              AND et.deleted = 0
+              AND et.deleted = false
         ";
         $stmt = $this->entityManager->getPDO()->prepare($sql);
         $stmt->execute([':id' => $chatwootAccountId]);
@@ -387,7 +395,7 @@ class BackfillChannelIdentities implements RebuildAction
             FROM chatwoot_inbox
             WHERE chatwoot_inbox_id IN ({$placeholders})
               AND chatwoot_account_id = ?
-              AND deleted = 0
+              AND deleted = false
         ";
         $stmt = $this->entityManager->getPDO()->prepare($sql);
         $params = $rawIds;
@@ -412,13 +420,13 @@ class BackfillChannelIdentities implements RebuildAction
         $now = date('Y-m-d H:i:s');
 
         $stmt = $pdo->prepare(
-            "UPDATE chatwoot_contact SET contact_id = :cid, modified_at = :now WHERE id = :id AND deleted = 0"
+            "UPDATE chatwoot_contact SET contact_id = :cid, modified_at = :now WHERE id = :id AND deleted = false"
         );
         $stmt->execute([':cid' => $contactId, ':now' => $now, ':id' => $chatwootContactEntityId]);
 
         $stmt = $pdo->prepare(
             "UPDATE chatwoot_contact_inbox SET contact_id = :cid "
-            . "WHERE chatwoot_contact_id = :id AND deleted = 0"
+            . "WHERE chatwoot_contact_id = :id AND deleted = false"
         );
         $stmt->execute([':cid' => $contactId, ':id' => $chatwootContactEntityId]);
 
@@ -426,7 +434,7 @@ class BackfillChannelIdentities implements RebuildAction
         // backfill them too so the AI agent's reads see consistent data.
         $stmt = $pdo->prepare(
             "UPDATE chatwoot_conversation SET contact_id = :cid "
-            . "WHERE chatwoot_contact_id = :id AND deleted = 0 AND contact_id IS NULL"
+            . "WHERE chatwoot_contact_id = :id AND deleted = false AND contact_id IS NULL"
         );
         $stmt->execute([':cid' => $contactId, ':id' => $chatwootContactEntityId]);
     }

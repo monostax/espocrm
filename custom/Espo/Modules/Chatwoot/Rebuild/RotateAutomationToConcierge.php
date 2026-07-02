@@ -599,12 +599,25 @@ class RotateAutomationToConcierge implements RebuildAction
     {
         try {
             $pdo = $this->entityManager->getPDO();
-            $stmt = $pdo->prepare(
-                "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS " .
-                "WHERE TABLE_SCHEMA = DATABASE() " .
-                "AND TABLE_NAME = 'chatwoot_account' " .
-                "AND COLUMN_NAME = 'automation_user_id' LIMIT 1"
-            );
+            $isPg = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql';
+
+            // information_schema.columns exists on both engines, but the
+            // schema-scoping function differs (DATABASE() vs current_schema()).
+            if ($isPg) {
+                $stmt = $pdo->prepare(
+                    "SELECT 1 FROM information_schema.columns " .
+                    "WHERE table_schema = current_schema() " .
+                    "AND table_name = 'chatwoot_account' " .
+                    "AND column_name = 'automation_user_id' LIMIT 1"
+                );
+            } else {
+                $stmt = $pdo->prepare(
+                    "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS " .
+                    "WHERE TABLE_SCHEMA = DATABASE() " .
+                    "AND TABLE_NAME = 'chatwoot_account' " .
+                    "AND COLUMN_NAME = 'automation_user_id' LIMIT 1"
+                );
+            }
             $stmt->execute();
             return (bool) $stmt->fetchColumn();
         } catch (\Throwable $e) {
@@ -624,6 +637,18 @@ class RotateAutomationToConcierge implements RebuildAction
     {
         try {
             $pdo = $this->entityManager->getPDO();
+            $isPg = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql';
+
+            if ($isPg) {
+                // PostgreSQL supports IF EXISTS on both statements, which
+                // makes the partial-state tolerance declarative. Index
+                // names fold to lowercase when created unquoted.
+                $pdo->exec('DROP INDEX IF EXISTS idx_automation_user_id');
+                $pdo->exec('ALTER TABLE chatwoot_account DROP COLUMN IF EXISTS automation_user_id');
+                $this->log->info('RotateAutomationToConcierge: Dropped legacy column chatwoot_account.automation_user_id');
+
+                return;
+            }
 
             // Drop index first (MySQL requires it before the column).
             // Detect index existence defensively so we don't blow up on

@@ -175,13 +175,13 @@ class MergeRotatedDuplicateContacts implements RebuildAction
                 cct.contact_id    AS dup_contact,
                 ci.contact_id     AS orig_contact
             FROM chatwoot_contact cct
-            INNER JOIN contact dup ON dup.id = cct.contact_id AND dup.deleted = 0
+            INNER JOIN contact dup ON dup.id = cct.contact_id AND dup.deleted = false
             INNER JOIN contact_channel_identity ci
                 ON ci.source_id = cct.identifier
                AND ci.tenant_id = dup.tenant_id
-               AND ci.deleted = 0
-            INNER JOIN contact orig ON orig.id = ci.contact_id AND orig.deleted = 0
-            WHERE cct.deleted = 0
+               AND ci.deleted = false
+            INNER JOIN contact orig ON orig.id = ci.contact_id AND orig.deleted = false
+            WHERE cct.deleted = false
               AND cct.contact_id IS NOT NULL
               AND cct.identifier IS NOT NULL
               AND cct.contact_id <> ci.contact_id
@@ -210,19 +210,19 @@ class MergeRotatedDuplicateContacts implements RebuildAction
 
         $stmt = $pdo->prepare(
             'UPDATE chatwoot_contact SET contact_id = :cid, modified_at = :now '
-            . 'WHERE id = :id AND deleted = 0'
+            . 'WHERE id = :id AND deleted = false'
         );
         $stmt->execute([':cid' => $origContactId, ':now' => $now, ':id' => $bridgeId]);
 
         $stmt = $pdo->prepare(
             'UPDATE chatwoot_contact_inbox SET contact_id = :cid '
-            . 'WHERE chatwoot_contact_id = :id AND deleted = 0'
+            . 'WHERE chatwoot_contact_id = :id AND deleted = false'
         );
         $stmt->execute([':cid' => $origContactId, ':id' => $bridgeId]);
 
         $stmt = $pdo->prepare(
             'UPDATE chatwoot_conversation SET contact_id = :cid '
-            . 'WHERE chatwoot_contact_id = :id AND deleted = 0'
+            . 'WHERE chatwoot_contact_id = :id AND deleted = false'
         );
         $stmt->execute([':cid' => $origContactId, ':id' => $bridgeId]);
     }
@@ -237,7 +237,7 @@ class MergeRotatedDuplicateContacts implements RebuildAction
     {
         $select = $pdo->prepare(
             'SELECT id, tenant_id, channel_type, source_id '
-            . 'FROM contact_channel_identity WHERE contact_id = :cid AND deleted = 0'
+            . 'FROM contact_channel_identity WHERE contact_id = :cid AND deleted = false'
         );
         $select->execute([':cid' => $dupContactId]);
         $identities = $select->fetchAll(\PDO::FETCH_ASSOC) ?: [];
@@ -246,14 +246,14 @@ class MergeRotatedDuplicateContacts implements RebuildAction
             'SELECT id FROM contact_channel_identity '
             . 'WHERE contact_id = :orig AND tenant_id = :tenant '
             . 'AND channel_type = :channel AND source_id = :source '
-            . 'AND deleted = 0 LIMIT 1'
+            . 'AND deleted = false LIMIT 1'
         );
         $repoint = $pdo->prepare(
             'UPDATE contact_channel_identity SET contact_id = :orig, modified_at = :now '
             . 'WHERE id = :id'
         );
         $softDelete = $pdo->prepare(
-            'UPDATE contact_channel_identity SET deleted = 1, modified_at = :now WHERE id = :id'
+            'UPDATE contact_channel_identity SET deleted = true, modified_at = :now WHERE id = :id'
         );
         $now = date('Y-m-d H:i:s');
 
@@ -281,7 +281,7 @@ class MergeRotatedDuplicateContacts implements RebuildAction
     private function isDuplicateSafeToDelete(\PDO $pdo, string $dupContactId): bool
     {
         $bridgeCount = $pdo->prepare(
-            'SELECT COUNT(*) FROM chatwoot_contact WHERE contact_id = :cid AND deleted = 0'
+            'SELECT COUNT(*) FROM chatwoot_contact WHERE contact_id = :cid AND deleted = false'
         );
         $bridgeCount->execute([':cid' => $dupContactId]);
         if ((int) $bridgeCount->fetchColumn() > 0) {
@@ -292,9 +292,11 @@ class MergeRotatedDuplicateContacts implements RebuildAction
             if (!$this->tableExists($pdo, $table) || !$this->columnExists($pdo, $table, 'contact_id')) {
                 continue;
             }
-            // `case` is a reserved word; backtick every table name.
+            // `case` is a reserved word; quote every table name with the
+            // driver's identifier quote character.
+            $quoted = $this->quoteIdentifier($pdo, $table);
             $stmt = $pdo->prepare(
-                "SELECT COUNT(*) FROM `{$table}` WHERE contact_id = :cid AND deleted = 0"
+                "SELECT COUNT(*) FROM {$quoted} WHERE contact_id = :cid AND deleted = false"
             );
             $stmt->execute([':cid' => $dupContactId]);
             if ((int) $stmt->fetchColumn() > 0) {
@@ -308,7 +310,7 @@ class MergeRotatedDuplicateContacts implements RebuildAction
     private function softDeleteContact(\PDO $pdo, string $contactId): void
     {
         $stmt = $pdo->prepare(
-            'UPDATE contact SET deleted = 1, modified_at = :now WHERE id = :id'
+            'UPDATE contact SET deleted = true, modified_at = :now WHERE id = :id'
         );
         $stmt->execute([':now' => date('Y-m-d H:i:s'), ':id' => $contactId]);
     }
@@ -316,7 +318,8 @@ class MergeRotatedDuplicateContacts implements RebuildAction
     private function tableExists(\PDO $pdo, string $table): bool
     {
         try {
-            $pdo->query("SELECT 1 FROM `{$table}` LIMIT 1");
+            $quoted = $this->quoteIdentifier($pdo, $table);
+            $pdo->query("SELECT 1 FROM {$quoted} LIMIT 1");
             return true;
         } catch (\Throwable) {
             return false;
@@ -326,10 +329,23 @@ class MergeRotatedDuplicateContacts implements RebuildAction
     private function columnExists(\PDO $pdo, string $table, string $column): bool
     {
         try {
-            $pdo->query("SELECT `{$column}` FROM `{$table}` LIMIT 1");
+            $quotedTable = $this->quoteIdentifier($pdo, $table);
+            $quotedColumn = $this->quoteIdentifier($pdo, $column);
+            $pdo->query("SELECT {$quotedColumn} FROM {$quotedTable} LIMIT 1");
             return true;
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * Quote an identifier with the driver-appropriate quote character:
+     * double quotes on PostgreSQL, backticks on MySQL/MariaDB.
+     */
+    private function quoteIdentifier(\PDO $pdo, string $identifier): string
+    {
+        $isPg = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql';
+
+        return $isPg ? "\"{$identifier}\"" : "`{$identifier}`";
     }
 }

@@ -197,8 +197,12 @@ class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
             $data['teamsIds'] = $teamsIds;
         }
 
-        // Use silent option to suppress hooks/notifications (Decision #19)
-        $conversationEntity = $entityManager->createEntity('ChatwootConversation', $data, ['silent' => true]);
+        // Use silent option to suppress hooks/notifications (Decision #19).
+        // Chatwoot returns the already-open conversation for channels limited to
+        // a single open conversation (e.g. WhatsApp), and the background sync job
+        // may ingest the conversation concurrently — so find-or-create instead of
+        // a blind insert (avoids UNIQ_UNIQUE_CONVERSATION violations).
+        $conversationEntity = $this->findOrCreateLocalConversation($data);
 
         // Return data needed by the client to open the conversation
         $result = new stdClass();
@@ -207,5 +211,62 @@ class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
         $result->id = $conversationEntity->getId();
 
         return $result;
+    }
+
+    /**
+     * Find an existing local ChatwootConversation or create it, tolerating
+     * unique constraint violations (race with SyncConversationsFromChatwoot
+     * or a repeated request for the same open conversation).
+     *
+     * Mirrors ContactChatwoot::createEntityWithDuplicateHandling.
+     *
+     * @param array<string, mixed> $data Entity data (must contain
+     *   chatwootConversationId and chatwootAccountId).
+     * @throws Error
+     */
+    private function findOrCreateLocalConversation(array $data): \Espo\ORM\Entity
+    {
+        $entityManager = $this->getEntityManager();
+
+        $where = [
+            'chatwootConversationId' => $data['chatwootConversationId'],
+            'chatwootAccountId' => $data['chatwootAccountId'],
+        ];
+
+        $existing = $entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->where($where)
+            ->findOne();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        try {
+            return $entityManager->createEntity('ChatwootConversation', $data, ['silent' => true]);
+        } catch (Error $e) {
+            if (stripos($e->getMessage(), 'duplicate') === false) {
+                throw $e;
+            }
+        } catch (\PDOException $e) {
+            $isDuplicate = (string) $e->getCode() === '23000'
+                || str_contains($e->getMessage(), 'Duplicate entry');
+
+            if (!$isDuplicate) {
+                throw new Error("Failed to create ChatwootConversation: " . $e->getMessage());
+            }
+        }
+
+        // Lost the race — fetch the row that won.
+        $existing = $entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->where($where)
+            ->findOne();
+
+        if (!$existing) {
+            throw new Error("Duplicate detected for ChatwootConversation but existing record not found.");
+        }
+
+        return $existing;
     }
 }

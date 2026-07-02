@@ -40,12 +40,21 @@ class BackfillMetaIgLongLivedExchangedAt implements RebuildAction
     public function process(): void
     {
         $pdo = $this->entityManager->getPDO();
+        $isPg = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql';
 
         // Bail out if the column doesn't exist yet (first rebuild after
         // pulling in the entityDefs change but before schema rebuild).
-        $colCheck = $pdo->query(
-            "SHOW COLUMNS FROM o_auth_account LIKE 'meta_ig_long_lived_exchanged_at'"
-        );
+        // SHOW COLUMNS is MySQL-only; PostgreSQL probes information_schema.
+        $colCheck = $isPg
+            ? $pdo->query(
+                "SELECT 1 FROM information_schema.columns " .
+                "WHERE table_schema = current_schema() " .
+                "AND table_name = 'o_auth_account' " .
+                "AND column_name = 'meta_ig_long_lived_exchanged_at' LIMIT 1"
+            )
+            : $pdo->query(
+                "SHOW COLUMNS FROM o_auth_account LIKE 'meta_ig_long_lived_exchanged_at'"
+            );
 
         if (!$colCheck || !$colCheck->fetch()) {
             $this->log->info(
@@ -56,18 +65,36 @@ class BackfillMetaIgLongLivedExchangedAt implements RebuildAction
             return;
         }
 
-        $sql = <<<SQL
-            UPDATE o_auth_account oa
-            INNER JOIN o_auth_provider op
-                ON op.id = oa.provider_id
-                AND op.provider = 'meta-instagram'
-            SET oa.meta_ig_long_lived_exchanged_at = COALESCE(oa.modified_at, UTC_TIMESTAMP())
-            WHERE oa.deleted = 0
-              AND oa.meta_ig_long_lived_exchanged_at IS NULL
-              AND oa.access_token IS NOT NULL
-              AND oa.expires_at IS NOT NULL
-              AND oa.expires_at > DATE_ADD(UTC_TIMESTAMP(), INTERVAL 2 DAY)
-        SQL;
+        // MySQL's multi-table UPDATE ... INNER JOIN has no direct
+        // PostgreSQL equivalent; the PG branch uses UPDATE ... FROM.
+        // The MySQL string is kept byte-identical to the original.
+        if ($isPg) {
+            $sql = <<<SQL
+                UPDATE o_auth_account oa
+                SET meta_ig_long_lived_exchanged_at = COALESCE(oa.modified_at, (NOW() AT TIME ZONE 'UTC'))
+                FROM o_auth_provider op
+                WHERE op.id = oa.provider_id
+                  AND op.provider = 'meta-instagram'
+                  AND oa.deleted = false
+                  AND oa.meta_ig_long_lived_exchanged_at IS NULL
+                  AND oa.access_token IS NOT NULL
+                  AND oa.expires_at IS NOT NULL
+                  AND oa.expires_at > ((NOW() AT TIME ZONE 'UTC') + INTERVAL '2 days')
+            SQL;
+        } else {
+            $sql = <<<SQL
+                UPDATE o_auth_account oa
+                INNER JOIN o_auth_provider op
+                    ON op.id = oa.provider_id
+                    AND op.provider = 'meta-instagram'
+                SET oa.meta_ig_long_lived_exchanged_at = COALESCE(oa.modified_at, UTC_TIMESTAMP())
+                WHERE oa.deleted = 0
+                  AND oa.meta_ig_long_lived_exchanged_at IS NULL
+                  AND oa.access_token IS NOT NULL
+                  AND oa.expires_at IS NOT NULL
+                  AND oa.expires_at > DATE_ADD(UTC_TIMESTAMP(), INTERVAL 2 DAY)
+            SQL;
+        }
 
         $affected = $pdo->exec($sql);
 

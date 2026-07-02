@@ -57,8 +57,8 @@ class EnforceReportApplyAcl implements RebuildAction
         $pdo = $this->entityManager->getPDO();
 
         $countStmt = $pdo->query(
-            "SELECT COUNT(*) FROM `report` " .
-            "WHERE (`apply_acl` IS NULL OR `apply_acl` = 0) AND `deleted` = 0"
+            "SELECT COUNT(*) FROM report " .
+            "WHERE (apply_acl IS NULL OR apply_acl = false) AND deleted = false"
         );
         $remaining = (int) $countStmt->fetchColumn();
 
@@ -75,8 +75,8 @@ class EnforceReportApplyAcl implements RebuildAction
             // field is non-admin read-only via entityAcl override, so the
             // semantics of the change are admin-scoped by design.
             $stmt = $pdo->prepare(
-                "UPDATE `report` SET `apply_acl` = 1 " .
-                "WHERE (`apply_acl` IS NULL OR `apply_acl` = 0) AND `deleted` = 0"
+                "UPDATE report SET apply_acl = true " .
+                "WHERE (apply_acl IS NULL OR apply_acl = false) AND deleted = false"
             );
             $stmt->execute();
 

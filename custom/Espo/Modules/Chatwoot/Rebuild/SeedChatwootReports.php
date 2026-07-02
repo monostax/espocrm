@@ -370,7 +370,7 @@ class SeedChatwootReports implements RebuildAction
         try {
             $pdo = $this->entityManager->getPDO();
             $stmt = $pdo->prepare(
-                'UPDATE `report` SET `deleted` = 0 WHERE `id` = :id AND `deleted` = 1'
+                'UPDATE report SET deleted = false WHERE id = :id AND deleted = true'
             );
             $stmt->execute(['id' => $reportId]);
 

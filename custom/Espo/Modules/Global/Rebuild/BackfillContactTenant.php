@@ -59,8 +59,10 @@ class BackfillContactTenant implements RebuildAction
         $pdo = $this->entityManager->getPDO();
 
         // Count remaining work for progress logging.
+        // NB: no backticks / integer boolean — must be valid on both MySQL
+        // and Postgres (crmDatabasePlatform = "Postgresql" on Neon tenants).
         $countStmt = $pdo->query(
-            "SELECT COUNT(*) FROM `contact` WHERE `tenant_id` IS NULL AND `deleted` = 0"
+            "SELECT COUNT(*) FROM contact WHERE tenant_id IS NULL AND deleted = false"
         );
         $remaining = (int) $countStmt->fetchColumn();
 
@@ -127,7 +129,7 @@ class BackfillContactTenant implements RebuildAction
                 // ValidateUniqueCpf) on every backfilled row — this is pure
                 // data migration, not a user-driven change.
                 $stmt = $pdo->prepare(
-                    "UPDATE `contact` SET `tenant_id` = :tenantId WHERE `id` = :id AND `tenant_id` IS NULL"
+                    "UPDATE contact SET tenant_id = :tenantId WHERE id = :id AND tenant_id IS NULL"
                 );
                 $stmt->execute([
                     'tenantId' => $tenantId,

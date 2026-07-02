@@ -61,6 +61,7 @@ class MigrateLeadgenEventPageId implements RebuildAction
 
         try {
             $pdo = $this->entityManager->getPDO();
+            $isPg = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql';
 
             // Defensive: only run if both columns exist. Avoids errors when
             // rebuild fires before the schema-rebuild step has added
@@ -95,7 +96,15 @@ class MigrateLeadgenEventPageId implements RebuildAction
             // (idempotent) AND the legacy value LOOKS LIKE a Meta numeric
             // (10..32 chars, all digits) — protects rows already converted
             // on a previous run that happened to have a 17-char CRM id.
-            $sql1 = "UPDATE meta_leadgen_event
+            // Regex-match operator differs per driver (REGEXP vs ~).
+            $sql1 = $isPg
+                ? "UPDATE meta_leadgen_event
+                     SET meta_page_id = page_id
+                     WHERE deleted = false
+                       AND meta_page_id IS NULL
+                       AND page_id IS NOT NULL
+                       AND page_id ~ '^[0-9]{10,32}$'"
+                : "UPDATE meta_leadgen_event
                      SET meta_page_id = page_id
                      WHERE deleted = 0
                        AND meta_page_id IS NULL
@@ -108,7 +117,23 @@ class MigrateLeadgenEventPageId implements RebuildAction
             // MetaFacebookPage (resolved by meta_facebook_page.page_id =
             // our newly-copied meta_page_id). Rows without a local match
             // get NULL — the link is genuinely unknown.
-            $sql2 = "UPDATE meta_leadgen_event e
+            // MySQL's multi-table UPDATE ... LEFT JOIN has no PostgreSQL
+            // equivalent (UPDATE ... FROM is inner-join-like), so the PG
+            // branch uses a correlated scalar subquery, which also yields
+            // NULL when no local Page matches.
+            $sql2 = $isPg
+                ? "UPDATE meta_leadgen_event e
+                     SET page_id = (
+                       SELECT p.id
+                       FROM meta_facebook_page p
+                       WHERE p.page_id = e.meta_page_id
+                         AND p.deleted = false
+                       LIMIT 1
+                     )
+                     WHERE e.deleted = false
+                       AND e.meta_page_id IS NOT NULL
+                       AND (e.page_id IS NULL OR LENGTH(e.page_id) <> 17)"
+                : "UPDATE meta_leadgen_event e
                      LEFT JOIN meta_facebook_page p
                        ON p.page_id = e.meta_page_id
                        AND p.deleted = 0
@@ -160,12 +185,23 @@ class MigrateLeadgenEventPageId implements RebuildAction
     private function columnExists(PDO $pdo, string $table, string $column): bool
     {
         try {
-            $st = $pdo->prepare(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            // information_schema.columns exists on both engines; only the
+            // schema-scoping function differs (DATABASE() vs current_schema()).
+            $isPg = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql';
+
+            $st = $isPg
+                ? $pdo->prepare(
+                    "SELECT COUNT(*) FROM information_schema.columns
+                 WHERE table_schema = current_schema()
+                   AND table_name = :t
+                   AND column_name = :c"
+                )
+                : $pdo->prepare(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                  WHERE TABLE_SCHEMA = DATABASE()
                    AND TABLE_NAME = :t
                    AND COLUMN_NAME = :c"
-            );
+                );
             $st->execute([':t' => $table, ':c' => $column]);
 
             return (int) $st->fetchColumn() > 0;

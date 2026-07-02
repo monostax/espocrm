@@ -56,12 +56,12 @@ class BackfillTenantAclTeams implements RebuildAction
             try {
                 // Soft-delete entity_team rows that don't match baseUserTeam.
                 $stmt = $pdo->prepare(
-                    "UPDATE `entity_team`
-                     SET `deleted` = 1
-                     WHERE `entity_type` = 'Tenant'
-                       AND `entity_id` = :entityId
-                       AND `deleted` = 0"
-                    . ($baseTeamId ? " AND `team_id` <> :keepTeamId" : "")
+                    "UPDATE entity_team
+                     SET deleted = true
+                     WHERE entity_type = 'Tenant'
+                       AND entity_id = :entityId
+                       AND deleted = false"
+                    . ($baseTeamId ? " AND team_id <> :keepTeamId" : "")
                 );
                 $params = ['entityId' => $tenantId];
                 if ($baseTeamId) {
@@ -77,12 +77,12 @@ class BackfillTenantAclTeams implements RebuildAction
 
                 // Restore a previously-deleted row, if any.
                 $restoreStmt = $pdo->prepare(
-                    "UPDATE `entity_team`
-                     SET `deleted` = 0
-                     WHERE `entity_type` = 'Tenant'
-                       AND `entity_id` = :entityId
-                       AND `team_id` = :teamId
-                       AND `deleted` = 1"
+                    "UPDATE entity_team
+                     SET deleted = false
+                     WHERE entity_type = 'Tenant'
+                       AND entity_id = :entityId
+                       AND team_id = :teamId
+                       AND deleted = true"
                 );
                 $restoreStmt->execute([
                     'entityId' => $tenantId,
@@ -96,11 +96,11 @@ class BackfillTenantAclTeams implements RebuildAction
 
                 // Check if a live row already exists.
                 $checkStmt = $pdo->prepare(
-                    "SELECT 1 FROM `entity_team`
-                     WHERE `entity_type` = 'Tenant'
-                       AND `entity_id` = :entityId
-                       AND `team_id` = :teamId
-                       AND `deleted` = 0
+                    "SELECT 1 FROM entity_team
+                     WHERE entity_type = 'Tenant'
+                       AND entity_id = :entityId
+                       AND team_id = :teamId
+                       AND deleted = false
                      LIMIT 1"
                 );
                 $checkStmt->execute([
@@ -113,8 +113,8 @@ class BackfillTenantAclTeams implements RebuildAction
                 }
 
                 $insertStmt = $pdo->prepare(
-                    "INSERT INTO `entity_team` (`entity_id`, `entity_type`, `team_id`, `deleted`)
-                     VALUES (:entityId, 'Tenant', :teamId, 0)"
+                    "INSERT INTO entity_team (entity_id, entity_type, team_id, deleted)
+                     VALUES (:entityId, 'Tenant', :teamId, false)"
                 );
                 $insertStmt->execute([
                     'entityId' => $tenantId,

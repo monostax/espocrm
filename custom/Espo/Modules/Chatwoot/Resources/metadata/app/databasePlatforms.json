@@ -1,0 +1,8 @@
+{
+    "Mysql": {
+        "preRebuildActionClassNameList": [
+            "__APPEND__",
+            "Espo\\Modules\\Chatwoot\\Rebuild\\PurgeWahaSessionLabelTombstones"
+        ]
+    }
+}

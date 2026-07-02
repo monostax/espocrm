@@ -165,9 +165,14 @@ class CleanupAgentAvatarSyncLoop
      */
     private function findUsersWithMirroredAvatar(\PDO $pdo): array
     {
+        // `user` is a reserved word on PostgreSQL (and quoting is
+        // harmless on MySQL), so quote it with the driver's identifier
+        // quote character.
+        $q = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql' ? '"' : '`';
+
         $sql = "
             SELECT u.id
-            FROM user u
+            FROM {$q}user{$q} u
             JOIN attachment a ON a.id = u.avatar_id
             WHERE a.name LIKE :prefix
               AND a.field = 'avatar'

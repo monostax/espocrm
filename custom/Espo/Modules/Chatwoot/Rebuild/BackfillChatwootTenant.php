@@ -31,7 +31,11 @@ use Espo\ORM\EntityManager;
  * Backfills chatwoot_account.tenant_id, chatwoot_ai_agent_run.tenant_id,
  * and whatsapp_campaign.tenant_id.
  *
- * Two passes, run sequentially and idempotent across repeated rebuilds:
+ * Passes, run sequentially and idempotent across repeated rebuilds:
+ *
+ *   Pass 0 — normalizes legacy sentinel values ('', 'NULL', '0') stored in
+ *            tenant_id columns (written by old Drizzle defaults) to real SQL
+ *            NULL, so the subsequent passes can repair those rows.
  *
  *   Pass 1 — chatwoot_account.tenant_id ← tenant whose base_user_team_id is
  *            in the account's entity_team membership. Skips accounts whose
@@ -41,7 +45,7 @@ use Espo\ORM\EntityManager;
  *
  *   Pass 3 — whatsapp_campaign.tenant_id ← parent account's tenant_id.
  *
- * All passes only touch rows whose tenant_id is currently NULL, so they
+ * Passes 1-3 only touch rows whose tenant_id is currently NULL, so they
  * never clobber an explicit assignment.
  *
  * Implemented via raw SQL to stay within a single statement per pass and
@@ -68,9 +72,42 @@ class BackfillChatwootTenant implements RebuildAction
             return;
         }
 
+        $this->normalizeSentinels($pdo);
         $this->backfillAccounts($pdo);
         $this->backfillRuns($pdo);
         $this->backfillCampaigns($pdo);
+    }
+
+    /**
+     * Convert legacy sentinel tenant_id values (empty string, literal 'NULL',
+     * '0' — written by old Drizzle defaults) to real SQL NULL so that the
+     * backfill passes (which filter on IS NULL) can repair those rows and
+     * downstream cascade hooks stop propagating garbage tenant ids.
+     */
+    private function normalizeSentinels(\PDO $pdo): void
+    {
+        foreach (['chatwoot_account', 'chatwoot_ai_agent_run', 'whatsapp_campaign'] as $table) {
+            if (!$this->tableExists($pdo, $table) || !$this->columnExists($pdo, $table, 'tenant_id')) {
+                continue;
+            }
+
+            try {
+                $count = $pdo->exec(
+                    "UPDATE {$table} SET tenant_id = NULL " .
+                    "WHERE tenant_id IS NOT NULL AND TRIM(tenant_id) IN ('', 'NULL', '0')"
+                );
+
+                if ($count) {
+                    $this->log->info(
+                        "BackfillChatwootTenant: normalized {$count} sentinel tenant_id value(s) on {$table}"
+                    );
+                }
+            } catch (\Throwable $e) {
+                $this->log->error(
+                    "BackfillChatwootTenant: sentinel normalization failed for {$table}: " . $e->getMessage()
+                );
+            }
+        }
     }
 
     /**
@@ -95,12 +132,12 @@ class BackfillChatwootTenant implements RebuildAction
                             ON et.team_id = t.base_user_team_id
                             AND et.entity_type = 'ChatwootAccount'
                             AND et.entity_id = a.id
-                            AND et.deleted = 0
-                        WHERE t.deleted = 0
+                            AND et.deleted = false
+                        WHERE t.deleted = false
                         HAVING COUNT(DISTINCT t.id) = 1
                     )
                     WHERE a.tenant_id IS NULL
-                      AND a.deleted = 0
+                      AND a.deleted = false
                 ",
                 default => null,
             };
@@ -154,7 +191,7 @@ class BackfillChatwootTenant implements RebuildAction
                     WHERE a.id = r.chatwoot_account_id
                       AND r.tenant_id IS NULL
                       AND a.tenant_id IS NOT NULL
-                      AND r.deleted = 0
+                      AND r.deleted = false
                 ",
                 default => null,
             };
@@ -208,7 +245,7 @@ class BackfillChatwootTenant implements RebuildAction
                     WHERE a.id = c.chatwoot_account_id
                       AND c.tenant_id IS NULL
                       AND a.tenant_id IS NOT NULL
-                      AND c.deleted = 0
+                      AND c.deleted = false
                 ",
                 default => null,
             };

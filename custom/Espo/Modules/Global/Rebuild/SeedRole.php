@@ -1306,7 +1306,7 @@ class SeedRole implements RebuildAction
     {
         try {
             $pdo = $this->entityManager->getPDO();
-            $sql = "UPDATE `role` SET `deleted` = 0 WHERE `id` = :id AND `deleted` = 1";
+            $sql = "UPDATE role SET deleted = false WHERE id = :id AND deleted = true";
             $stmt = $pdo->prepare($sql);
             $stmt->execute(['id' => $roleId]);
             

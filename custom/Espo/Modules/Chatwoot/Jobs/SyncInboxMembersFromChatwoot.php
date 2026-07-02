@@ -410,7 +410,8 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
     /**
      * Reconcile label for an existing membership-inbox combination (create if missing).
      *
-     * @return bool True if successful or already exists, false if WAHA label limit reached.
+     * @return bool True if successful or already exists, false if further label
+     *   creation for this inbox should stop (see createLabelForMembershipInbox).
      */
     private function reconcileLabelForMembershipInbox(Entity $membership, Entity $inboxIntegration): bool
     {
@@ -434,7 +435,9 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
     /**
      * Create a WAHA label for a membership-inbox combination.
      *
-     * @return bool True if successful or skipped (non-fatal), false if WAHA label limit reached.
+     * @return bool True if successful or skipped (non-fatal), false if further
+     *   label creation for this inbox should stop (WAHA label limit reached or
+     *   the WAHA session is unavailable).
      */
     private function createLabelForMembershipInbox(Entity $membership, Entity $inboxIntegration): bool
     {
@@ -529,6 +532,18 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
                 $this->log->warning(
                     "SyncInboxMembersFromChatwoot: WAHA label limit reached for integration {$inboxIntegration->getId()} " .
                     "(session: {$inboxIntegration->get('wahaSessionName')}). Remaining memberships will not get labels."
+                );
+                return false;
+            }
+
+            // Detect WAHA session unavailable (HTTP 422, e.g. session deleted
+            // server-side or not started). Retrying other memberships against
+            // the same session is pointless within this run — bail out for
+            // this inbox. Self-heals on a later run if the session comes back.
+            if (str_contains($message, 'HTTP 422')) {
+                $this->log->warning(
+                    "SyncInboxMembersFromChatwoot: WAHA session unavailable for integration {$inboxIntegration->getId()} " .
+                    "(session: {$inboxIntegration->get('wahaSessionName')}). Skipping label sync for this inbox: {$message}"
                 );
                 return false;
             }

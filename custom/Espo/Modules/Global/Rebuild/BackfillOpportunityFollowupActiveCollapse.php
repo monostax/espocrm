@@ -54,9 +54,9 @@ class BackfillOpportunityFollowupActiveCollapse implements RebuildAction
 
         try {
             $countStmt = $pdo->query(
-                "SELECT COUNT(*) FROM `opportunity` "
-                . "WHERE `followup_status` IN ('WaitingReply', 'FollowupScheduled') "
-                . "AND `deleted` = 0"
+                "SELECT COUNT(*) FROM opportunity "
+                . "WHERE followup_status IN ('WaitingReply', 'FollowupScheduled') "
+                . "AND deleted = false"
             );
             $remaining = (int) $countStmt->fetchColumn();
         } catch (Throwable $e) {
@@ -91,10 +91,10 @@ class BackfillOpportunityFollowupActiveCollapse implements RebuildAction
             // `followup_ai_agent_id` is intentionally NOT touched here: rows
             // stay NULL until the next AI-driven write populates provenance.
             $stmt = $pdo->prepare(
-                "UPDATE `opportunity` "
-                . "SET `followup_status` = 'FollowupActive' "
-                . "WHERE `followup_status` IN ('WaitingReply', 'FollowupScheduled') "
-                . "AND `deleted` = 0"
+                "UPDATE opportunity "
+                . "SET followup_status = 'FollowupActive' "
+                . "WHERE followup_status IN ('WaitingReply', 'FollowupScheduled') "
+                . "AND deleted = false"
             );
             $stmt->execute();
 
