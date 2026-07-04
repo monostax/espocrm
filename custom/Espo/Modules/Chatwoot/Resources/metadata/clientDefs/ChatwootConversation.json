@@ -39,11 +39,61 @@
         "detail": [
         ]
     },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "opportunities",
+                "link": "opportunities",
+                "label": "Opportunities",
+                "view": "chatwoot:views/activities/relationship-panel",
+                "create": true,
+                "select": true,
+                "layout": "listSmallChatwoot",
+                "createHandler": "chatwoot:handlers/create-related/set-contact",
+                "createAttributeMap": {
+                    "name": "name",
+                    "teamsIds": "teamsIds",
+                    "teamsNames": "teamsNames"
+                },
+                "order": 1
+            },
+            {
+                "name": "appointments",
+                "link": "appointments",
+                "label": "Appointments",
+                "view": "chatwoot:views/activities/relationship-panel",
+                "create": true,
+                "select": true,
+                "layout": "listSmallChatwoot",
+                "createHandler": "chatwoot:handlers/create-related/set-contact",
+                "createAttributeMap": {
+                    "teamsIds": "teamsIds",
+                    "teamsNames": "teamsNames"
+                },
+                "order": 2
+            },
+            {
+                "name": "documents",
+                "link": "documents",
+                "label": "Documents",
+                "view": "chatwoot:views/activities/relationship-panel",
+                "create": true,
+                "select": true,
+                "layout": "listSmallForChatwootConversation",
+                "createAttributeMap": {
+                    "teamsIds": "teamsIds",
+                    "teamsNames": "teamsNames"
+                },
+                "order": 3
+            }
+        ]
+    },
     "relationshipPanels": {
         "opportunities": {
             "create": true,
             "select": true,
             "view": "views/record/panels/relationship",
+            "layout": "listSmallChatwoot",
             "createHandler": "chatwoot:handlers/create-related/set-contact",
             "createAttributeMap": {
                 "name": "name",
@@ -74,6 +124,7 @@
             "create": true,
             "select": true,
             "view": "views/record/panels/relationship",
+            "layout": "listSmallChatwoot",
             "createHandler": "chatwoot:handlers/create-related/set-contact",
             "createAttributeMap": {
                 "teamsIds": "teamsIds",

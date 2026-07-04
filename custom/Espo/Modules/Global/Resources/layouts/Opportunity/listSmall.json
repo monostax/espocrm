@@ -2,26 +2,27 @@
     {
         "name": "name",
         "link": true,
-        "width": 30
+        "width": 25
+    },
+    {
+        "name": "funnel",
+        "width": 15
     },
     {
         "name": "opportunityStage",
-        "width": 20
+        "width": 15
+    },
+    {
+        "name": "followupStatus",
+        "width": 15
+    },
+    {
+        "name": "followupTimer",
+        "width": 15
     },
     {
         "name": "amount",
         "align": "right",
-        "width": 20
-    },
-    {
-        "name": "closeDate",
-        "width": 15
-    },
-    {
-        "name": "assignedUser",
         "width": 15
     }
 ]
-
-
-

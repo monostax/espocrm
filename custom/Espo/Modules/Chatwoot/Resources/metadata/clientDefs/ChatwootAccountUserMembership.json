@@ -110,10 +110,23 @@
                 "label": "tabInboxes",
                 "view": "views/record/panels/relationship",
                 "layout": "listSmall",
-                "select": false,
+                "select": true,
                 "create": false,
                 "unlinkDisabled": true,
+                "selectHandler": "chatwoot:handlers/chatwoot-account-user-membership/select-chatwoot-inbox",
                 "order": 1
+            },
+            {
+                "name": "chatwootTeams",
+                "label": "Chat / Teams",
+                "view": "views/record/panels/relationship",
+                "layout": "listSmall",
+                "select": true,
+                "create": false,
+                "unlinkDisabled": true,
+                "selectHandler": "chatwoot:handlers/chatwoot-account-user-membership/select-chatwoot-team",
+                "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
+                "order": 2
             }
         ],
         "detailSmall": [
@@ -122,36 +135,38 @@
                 "label": "tabInboxes",
                 "view": "views/record/panels/relationship",
                 "layout": "listSmall",
-                "select": false,
+                "select": true,
                 "create": false,
                 "unlinkDisabled": true,
+                "selectHandler": "chatwoot:handlers/chatwoot-account-user-membership/select-chatwoot-inbox",
                 "order": 1
-            }
-        ]
-    },
-    "bottomPanels": {
-        "detail": [
+            },
             {
                 "name": "chatwootTeams",
                 "label": "Chat / Teams",
                 "view": "views/record/panels/relationship",
+                "layout": "listSmall",
                 "select": true,
                 "create": false,
+                "unlinkDisabled": true,
+                "selectHandler": "chatwoot:handlers/chatwoot-account-user-membership/select-chatwoot-team",
                 "rowActionsView": "views/record/row-actions/relationship-view-and-unlink",
-                "order": 5,
-                "disabled": false
+                "order": 2
             }
         ]
     },
     "relationshipPanels": {
         "chatwootInboxes": {
-            "select": false,
+            "select": true,
             "create": false,
-            "unlinkDisabled": true
+            "unlinkDisabled": true,
+            "selectHandler": "chatwoot:handlers/chatwoot-account-user-membership/select-chatwoot-inbox"
         },
         "chatwootTeams": {
             "create": false,
             "select": true,
+            "unlinkDisabled": true,
+            "selectHandler": "chatwoot:handlers/chatwoot-account-user-membership/select-chatwoot-team",
             "view": "views/record/panels/relationship"
         }
     }

@@ -16,45 +16,5 @@
                 }
             ]
         ]
-    },
-   {
-       
-        "gridRow": 2,
-        "gridColSpan": 2,
-        "rows": [
-            [
-                {
-                    "name": "opportunitiesList",
-                    "view": "global:views/fields/relationship-list",
-                    "noLabel": true,
-                    "span": 2,
-                    "options": {
-                        "link": "opportunities",
-                        "layout": "listSmall",
-                        "recordsPerPage": 10
-                    }
-                }
-            ]
-        ]
-    },
-    {
-        "gridRow": 2,
-        "gridColSpan": 2,
-        "rows": [
-            [
-                {
-                    "name": "documentsList",
-                    "view": "global:views/fields/relationship-list",
-                    "noLabel": true,
-                    "span": 2,
-                    "options": {
-                        "link": "documents",
-                        "layout": "listSmallForChatwootConversation",
-                        "recordsPerPage": 10
-                    }
-                }
-            ]
-        ]
     }
 ]
-

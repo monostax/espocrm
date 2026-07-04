@@ -66,16 +66,18 @@ define('crm:views/record/row-actions/history', ['views/record/row-actions/relati
                 ]);
             }
 
-            if (this.options.acl.delete) {
-                list.push({
-                    action: 'removeRelated',
-                    label: 'Remove',
-                    data: {
-                        id: this.model.id
-                    },
-                    groupIndex: 0,
-                });
-            }
+            // Monostax: delete ('removeRelated') is intentionally not available
+            // in relationship panel row dropdowns.
+            // if (this.options.acl.delete) {
+            //     list.push({
+            //         action: 'removeRelated',
+            //         label: 'Remove',
+            //         data: {
+            //             id: this.model.id
+            //         },
+            //         groupIndex: 0,
+            //     });
+            // }
 
             return list;
         },

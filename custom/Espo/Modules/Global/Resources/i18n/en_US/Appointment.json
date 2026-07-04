@@ -29,6 +29,8 @@
         }
     },
     "labels": {
-        "Create Appointment": "Create Appointment"
+        "Create Appointment": "Create Appointment",
+        "Conversations": "Conversations",
+        "No Contact linked": "No Contact linked"
     }
 }

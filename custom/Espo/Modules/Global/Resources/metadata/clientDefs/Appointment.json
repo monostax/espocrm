@@ -48,6 +48,13 @@
                         {"name": "modifiedAt"}
                     ]
                 }
+            },
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "contactIdAttribute": "customerId",
+                "order": 1
             }
         ],
         "detailSmall": [
@@ -65,6 +72,13 @@
                         {"name": "modifiedAt"}
                     ]
                 }
+            },
+            {
+                "name": "contactConversations",
+                "label": "Conversations",
+                "view": "chatwoot:views/contact/panels/conversations",
+                "contactIdAttribute": "customerId",
+                "order": 1
             }
         ],
         "edit": [

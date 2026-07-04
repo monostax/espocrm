@@ -1,6 +1,7 @@
 {
     "controller": "controllers/record",
     "iconClass": "ti ti-users-group",
+    "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-team/defaults-preparator",
     "bottomPanels": {
         "detail": [
             {

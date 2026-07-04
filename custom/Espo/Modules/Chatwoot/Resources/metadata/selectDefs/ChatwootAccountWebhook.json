@@ -1,0 +1,7 @@
+{
+    "accessControlFilterClassNameMap": {
+        "all": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootAccountWebhook\\AccessControlFilters\\Mandatory",
+        "onlyTeam": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootAccountWebhook\\AccessControlFilters\\Mandatory",
+        "onlyOwn": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootAccountWebhook\\AccessControlFilters\\Mandatory"
+    }
+}

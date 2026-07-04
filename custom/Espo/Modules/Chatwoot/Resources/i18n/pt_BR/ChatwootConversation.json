@@ -53,7 +53,10 @@
         "Chat": "Chat",
         "Assign Agent": "Atribuir Agente",
         "Unassigned": "Não Atribuído",
-        "More Options": "Mais Opções"
+        "More Options": "Mais Opções",
+        "Opportunities": "Oportunidades",
+        "Appointments": "Agendamentos",
+        "Documents": "Documentos"
     },
     "tabs": {
         "Conversation": "Chat / Conversa",

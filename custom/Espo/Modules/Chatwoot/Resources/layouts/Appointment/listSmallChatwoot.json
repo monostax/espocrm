@@ -1,0 +1,7 @@
+[
+    {"name": "name", "link": true, "width": 30},
+    {"name": "status", "width": 15},
+    {"name": "dateStart", "width": 20},
+    {"name": "location", "width": 20},
+    {"name": "professionals", "width": 15}
+]

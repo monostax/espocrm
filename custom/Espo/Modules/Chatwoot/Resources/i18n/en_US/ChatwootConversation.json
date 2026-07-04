@@ -46,7 +46,10 @@
         "Chat": "Chat",
         "Assign Agent": "Assign Agent",
         "Unassigned": "Unassigned",
-        "More Options": "More Options"
+        "More Options": "More Options",
+        "Opportunities": "Opportunities",
+        "Appointments": "Appointments",
+        "Documents": "Documents"
     },
     "tabs": {
         "Conversation": "Conversation",

@@ -66,16 +66,19 @@ class RelationshipRowActionsView extends DefaultRowActionsView {
 
         this.getAdditionalActionList().forEach(item => list.push(item));
 
-        if (this.options.acl.delete && !this.options.removeDisabled) {
-            list.push({
-                action: 'removeRelated',
-                label: 'Remove',
-                data: {
-                    id: this.model.id,
-                },
-                groupIndex: 0,
-            });
-        }
+        // Monostax: delete ('removeRelated') is intentionally not available
+        // in relationship panel row dropdowns. Records must be unlinked
+        // ('Desatribuir'), never deleted from here.
+        // if (this.options.acl.delete && !this.options.removeDisabled) {
+        //     list.push({
+        //         action: 'removeRelated',
+        //         label: 'Remove',
+        //         data: {
+        //             id: this.model.id,
+        //         },
+        //         groupIndex: 0,
+        //     });
+        // }
 
         return list;
     }

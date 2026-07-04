@@ -17,8 +17,7 @@
     },
     {
         "name": "followupTimer",
-        "width": 12,
-        "hidden": true
+        "width": 12
     },
     {
         "name": "followupCount",
@@ -41,4 +40,3 @@
         "width": 10
     }
 ]
-

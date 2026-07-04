@@ -16,7 +16,8 @@
         "customer": "Cliente",
         "assignedUsers": "Participantes",
         "professionals": "Profissionais",
-        "location": "Unidade"
+        "location": "Unidade",
+        "chatwootConversations": "Chat / Conversas"
     },
     "options": {
         "status": {
@@ -27,6 +28,8 @@
         }
         },
         "labels": {
-            "Create Appointment": "Cadastrar Agendamento"
+            "Create Appointment": "Cadastrar Agendamento",
+            "Conversations": "Conversas",
+            "No Contact linked": "Nenhum Contato vinculado"
         }
 }
