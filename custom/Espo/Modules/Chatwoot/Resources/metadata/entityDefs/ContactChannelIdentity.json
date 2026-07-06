@@ -36,6 +36,12 @@
             "maxLength": 255,
             "tooltip": "Channel-specific identifier (E.164 phone for whatsapp/sms, scoped user id for instagram/telegram/facebook, lowercased email for email, etc.)"
         },
+        "whatsappLid": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "tooltip": "WhatsApp LID (privacy identifier, e.g. 272628082307301@lid) observed for this WhatsApp identity. Kept alongside the E.164 sourceId so LID-keyed chats reconcile to the same identity."
+        },
         "label": {
             "type": "varchar",
             "maxLength": 255,
@@ -130,6 +136,9 @@
         },
         "channelSource": {
             "columns": ["channelType", "sourceId", "deleteId"]
+        },
+        "tenantWhatsappLid": {
+            "columns": ["tenantId", "whatsappLid", "deleteId"]
         },
         "createdAt": {
             "columns": ["createdAt"]

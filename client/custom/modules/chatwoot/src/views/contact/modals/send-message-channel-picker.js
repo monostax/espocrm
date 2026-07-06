@@ -364,6 +364,13 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 if (this.contactPhoneNumber) {
                     return { hasIdentifier: true, hint: null };
                 }
+                // LID-era: a contact whose WhatsApp chat is keyed by a LID
+                // (privacy identifier) may have no phone number, but the
+                // backend can still reuse the linked Chatwoot contact via
+                // its whatsapp ContactChannelIdentity.
+                if (this._hasIdentityFor(accountId, "whatsapp")) {
+                    return { hasIdentifier: true, hint: null };
+                }
                 return {
                     hasIdentifier: false,
                     hint: this.translate("Contact has no phone number", "labels", "Contact"),

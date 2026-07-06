@@ -1461,17 +1461,24 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 return;
             }
 
-            // Build WhatsApp chatId from contactPhoneNumber
-            $phoneNumber = $conversation->get('contactPhoneNumber');
-            if (!$phoneNumber) {
-                $this->log->debug("SyncConversationsFromChatwoot: Conversation has no contactPhoneNumber");
-                return;
-            }
+            // Build the WhatsApp chatId: prefer the LID chat (WhatsApp
+            // privacy identifier) observed for this contact — LID-keyed
+            // chats don't answer to {digits}@c.us — falling back to the
+            // phone-based chat id.
+            $chatId = $this->resolveLidChatId($conversation);
 
-            $chatId = $this->buildChatId($phoneNumber);
             if (!$chatId) {
-                $this->log->debug("SyncConversationsFromChatwoot: Could not build chatId from phone number {$phoneNumber}");
-                return;
+                $phoneNumber = $conversation->get('contactPhoneNumber');
+                if (!$phoneNumber) {
+                    $this->log->debug("SyncConversationsFromChatwoot: Conversation has no contactPhoneNumber");
+                    return;
+                }
+
+                $chatId = $this->buildChatId($phoneNumber);
+                if (!$chatId) {
+                    $this->log->debug("SyncConversationsFromChatwoot: Could not build chatId from phone number {$phoneNumber}");
+                    return;
+                }
             }
 
             // Determine which labels to set
@@ -1780,6 +1787,30 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
         // WhatsApp chatId format for individual chats
         return $cleaned . '@c.us';
+    }
+
+    /**
+     * Resolve the LID-keyed WhatsApp chat id ("<digits>@lid") for a
+     * conversation's contact, when one was observed. Stored on the
+     * contact's whatsapp ContactChannelIdentity by ContactReconciler.
+     */
+    private function resolveLidChatId(Entity $conversation): ?string
+    {
+        $contactId = $conversation->get('contactId');
+        if (!$contactId) {
+            return null;
+        }
+
+        $identity = $this->entityManager
+            ->getRDBRepository('ContactChannelIdentity')
+            ->where([
+                'contactId' => $contactId,
+                'channelType' => 'whatsapp',
+            ])
+            ->findOne();
+
+        $lid = $identity?->get('whatsappLid');
+        return $lid ?: null;
     }
 
     /**

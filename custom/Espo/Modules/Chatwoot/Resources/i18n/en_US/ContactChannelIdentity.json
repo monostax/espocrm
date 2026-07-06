@@ -6,6 +6,7 @@
     "fields": {
         "channelType": "Channel Type",
         "sourceId": "Source ID",
+        "whatsappLid": "WhatsApp LID",
         "label": "Label",
         "isPrimary": "Primary",
         "contact": "Contact",
@@ -39,6 +40,7 @@
     },
     "tooltips": {
         "sourceId": "Channel-specific identifier (E.164 phone for WhatsApp/SMS, scoped user id for Instagram/Telegram/Facebook, lowercased email for Email, etc.)",
+        "whatsappLid": "WhatsApp privacy identifier (LID) observed for this WhatsApp identity. Kept alongside the phone number so LID-keyed chats resolve to the same identity.",
         "label": "Optional human-readable label (e.g. Instagram username)",
         "chatwootAccount": "Originating Chatwoot account where this identity was first observed",
         "chatwootInbox": "Originating Chatwoot inbox (if applicable)"

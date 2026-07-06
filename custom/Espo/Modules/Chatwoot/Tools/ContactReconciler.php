@@ -25,21 +25,27 @@ use Espo\ORM\EntityManager;
  *
  * Match order (per-tenant, never global):
  *
- *   1. ContactChannelIdentity by (tenantId, channelType, sourceId)
+ *   0. Prior bridge link (existingContactId), validated against tenant.
+ *
+ *   1. WhatsApp LID — WhatsApp's durable privacy identifier
+ *      ("…@lid", from the Chatwoot contact identifier or a LID-shaped
+ *      contact_inboxes[].source_id). Stored on the whatsapp identity's
+ *      whatsappLid column, NEVER as its own identity row and NEVER
+ *      treated as a phone number.
+ *
+ *   1b. ContactChannelIdentity by (tenantId, channelType, sourceId)
  *      — derived from `contact_inboxes[].source_id` + inbox channel_type.
  *      This is what makes Instagram / Telegram / Facebook contacts
  *      reconcile correctly when they have no phone and no email.
- *
- *   2. ContactChannelIdentity by (tenantId, 'whatsapp', E.164(phone)).
  *      A WhatsApp number is the canonical phone identity once we've
  *      seen it from any inbox, so this lets us merge a phone-typed
  *      Chatwoot contact with a previously seen WhatsApp identity.
  *
- *   3. Contact.phoneNumber within tenant, normalized via
+ *   2. Contact.phoneNumber within tenant, normalized via
  *      `PhoneNormalizer::normalize()`. Stops the `+5511…` vs `5511…`
  *      bug where the inbound dedup was using raw strings.
  *
- *   4. Contact.emailAddress within tenant, lowercased.
+ *   3. Contact.emailAddress within tenant, lowercased.
  *
  * If none match, a new Contact is auto-provisioned (even with NULL
  * phone AND NULL email — the previous code skipped this case, which
@@ -87,6 +93,7 @@ class ContactReconciler
         $name = $this->str($input['name'] ?? null);
         $rawPhone = $this->str($input['phoneNumber'] ?? null);
         $rawEmail = $this->str($input['email'] ?? null);
+        $identifier = $this->str($input['identifier'] ?? null);
         $existingContactId = $this->str($input['existingContactId'] ?? null);
         $contactInboxes = $input['contactInboxes'] ?? [];
         $inboxIdMap = $input['inboxIdMap'] ?? [];
@@ -113,8 +120,14 @@ class ContactReconciler
         // Build the set of (channelType, sourceId) pairs to consider.
         // We dedupe via a string key so two inboxes of the same channel
         // with the same source_id collapse to one identity row.
-        /** @var array<string, array{channelType:string, sourceId:string, label:?string, chatwootInboxId:?string}> $candidateIdentities */
+        /** @var array<string, array{channelType:string, sourceId:string, label:?string, chatwootInboxId:?string, whatsappLid?:?string}> $candidateIdentities */
         $candidateIdentities = [];
+
+        // WhatsApp LID (privacy identifier, "…@lid") observed anywhere in
+        // the payload. It is a durable identity but NOT a phone number, so
+        // it never becomes its own identity row — it rides on the single
+        // whatsapp identity (whatsappLid column).
+        $observedLid = null;
 
         foreach ($contactInboxes as $ci) {
             $rawChannel = $ci['inbox']['channel_type'] ?? null;
@@ -124,6 +137,10 @@ class ContactReconciler
             }
             $channel = $this->mapChannelType($rawChannel);
             if (!$channel) {
+                continue;
+            }
+            if (str_ends_with($sourceId, '@lid')) {
+                $observedLid ??= $sourceId;
                 continue;
             }
             // Normalize phone-bearing channels so we never store two
@@ -171,6 +188,40 @@ class ContactReconciler
             ];
         }
 
+        // WAHA contacts for LID-keyed WhatsApp chats carry the LID as their
+        // Chatwoot identifier. Attach it to the (single) whatsapp identity
+        // so the same person reconciles to one Contact even while the phone
+        // number is unknown — and converges onto the phone-keyed identity
+        // once the number resolves.
+        if ($identifier && str_ends_with($identifier, '@lid')) {
+            $observedLid ??= $identifier;
+        }
+
+        if ($observedLid) {
+            $attached = false;
+            foreach ($candidateIdentities as &$cand) {
+                if ($cand['channelType'] === 'whatsapp') {
+                    $cand['whatsappLid'] = $observedLid;
+                    $attached = true;
+                    break;
+                }
+            }
+            unset($cand);
+
+            if (!$attached) {
+                // Phone unknown (yet): key the whatsapp identity by the LID.
+                // upsertIdentity() rotates sourceId to the E.164 in place as
+                // soon as a later sync learns the phone number.
+                $candidateIdentities['whatsapp|' . $observedLid] = [
+                    'channelType' => 'whatsapp',
+                    'sourceId' => $observedLid,
+                    'label' => null,
+                    'chatwootInboxId' => null,
+                    'whatsappLid' => $observedLid,
+                ];
+            }
+        }
+
         $contact = null;
         $matchedBy = 'created';
 
@@ -190,7 +241,17 @@ class ContactReconciler
             }
         }
 
-        // (1) Match by any candidate identity.
+        // (1) Match by WhatsApp LID — the most specific durable identity
+        // (survives the phone number being unknown or hidden).
+        if (!$contact && $observedLid) {
+            $found = $this->findContactByWhatsappLid($tenantId, $observedLid);
+            if ($found) {
+                $contact = $found;
+                $matchedBy = 'identity';
+            }
+        }
+
+        // (1b) Match by any candidate identity.
         if (!$contact) {
             foreach ($candidateIdentities as $cand) {
                 $found = $this->findContactByIdentity($tenantId, $cand['channelType'], $cand['sourceId']);
@@ -265,7 +326,8 @@ class ContactReconciler
                 $cand['sourceId'],
                 $cand['label'],
                 $chatwootAccountId,
-                $cand['chatwootInboxId']
+                $cand['chatwootInboxId'],
+                $cand['whatsappLid'] ?? null
             );
         }
 
@@ -293,6 +355,33 @@ class ContactReconciler
             ])
             ->findOne();
 
+        return $this->contactFromIdentity($identity);
+    }
+
+    /**
+     * Find a Contact via the WhatsApp LID stored on a whatsapp
+     * ContactChannelIdentity (whatsappLid column, or a LID-keyed
+     * sourceId for identities whose phone never resolved).
+     */
+    private function findContactByWhatsappLid(string $tenantId, string $lid): ?Entity
+    {
+        $identity = $this->entityManager
+            ->getRDBRepository('ContactChannelIdentity')
+            ->where([
+                'tenantId' => $tenantId,
+                'channelType' => 'whatsapp',
+                'OR' => [
+                    ['whatsappLid' => $lid],
+                    ['sourceId' => $lid],
+                ],
+            ])
+            ->findOne();
+
+        return $this->contactFromIdentity($identity);
+    }
+
+    private function contactFromIdentity(?Entity $identity): ?Entity
+    {
         if (!$identity) {
             return null;
         }
@@ -444,6 +533,19 @@ class ContactReconciler
         $changed = false;
         [$firstName, $lastName] = $this->splitName($name);
 
+        // A Contact auto-created from a LID-only WhatsApp chat got the raw
+        // LID as its name. Replace it as soon as a real name shows up
+        // (Chatwoot-side enrichment resolves it shortly after creation).
+        $existingFirst = (string) ($contact->get('firstName') ?? '');
+        if ($firstName
+            && !str_ends_with($firstName, '@lid')
+            && str_ends_with($existingFirst, '@lid')
+        ) {
+            $contact->set('firstName', $firstName);
+            $contact->set('lastName', $lastName);
+            $changed = true;
+        }
+
         if (!$contact->get('firstName') && $firstName) {
             $contact->set('firstName', $firstName);
             $changed = true;
@@ -483,6 +585,12 @@ class ContactReconciler
      *
      * Restores soft-deleted rows in-place so the unique index never
      * blocks a re-add.
+     *
+     * WhatsApp identities carry the LID (privacy identifier) in the
+     * whatsappLid column. A row created before the phone number was
+     * known is keyed by the LID; once the E.164 arrives we find it via
+     * whatsappLid and rotate sourceId in place — one row per WhatsApp
+     * identity, always.
      */
     public function upsertIdentity(
         string $contactId,
@@ -492,24 +600,26 @@ class ContactReconciler
         ?string $label,
         ?string $chatwootAccountId,
         ?string $chatwootInboxId,
+        ?string $whatsappLid = null,
     ): Entity {
         // Look up with-deleted so we can restore instead of duplicating.
-        $query = $this->entityManager
-            ->getQueryBuilder()
-            ->select()
-            ->from('ContactChannelIdentity')
-            ->where([
+        $existing = $this->findIdentityWithDeleted([
+            'tenantId' => $tenantId,
+            'channelType' => $channelType,
+            'sourceId' => $sourceId,
+        ]);
+
+        // LID-keyed row from before the phone resolved.
+        if (!$existing && $whatsappLid) {
+            $existing = $this->findIdentityWithDeleted([
                 'tenantId' => $tenantId,
                 'channelType' => $channelType,
-                'sourceId' => $sourceId,
-            ])
-            ->withDeleted()
-            ->build();
-
-        $existing = $this->entityManager
-            ->getRDBRepository('ContactChannelIdentity')
-            ->clone($query)
-            ->findOne();
+                'OR' => [
+                    ['whatsappLid' => $whatsappLid],
+                    ['sourceId' => $whatsappLid],
+                ],
+            ]);
+        }
 
         if ($existing) {
             $this->entityManager
@@ -521,6 +631,17 @@ class ContactReconciler
             $changed = false;
             if ($existing->get('contactId') !== $contactId) {
                 $existing->set('contactId', $contactId);
+                $changed = true;
+            }
+            // Rotate a LID-keyed sourceId to the canonical E.164 once the
+            // phone number is known (never the other way around).
+            if ($existing->get('sourceId') !== $sourceId && !str_ends_with($sourceId, '@lid')) {
+                $existing->set('sourceId', $sourceId);
+                $existing->set('name', $channelType . ':' . $sourceId);
+                $changed = true;
+            }
+            if ($whatsappLid && $existing->get('whatsappLid') !== $whatsappLid) {
+                $existing->set('whatsappLid', $whatsappLid);
                 $changed = true;
             }
             if ($label && $existing->get('label') !== $label) {
@@ -547,10 +668,30 @@ class ContactReconciler
             'tenantId' => $tenantId,
             'channelType' => $channelType,
             'sourceId' => $sourceId,
+            'whatsappLid' => $whatsappLid,
             'label' => $label,
             'chatwootAccountId' => $chatwootAccountId,
             'chatwootInboxId' => $chatwootInboxId,
         ], ['silent' => true]);
+    }
+
+    /**
+     * @param array<string, mixed> $where
+     */
+    private function findIdentityWithDeleted(array $where): ?Entity
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->select()
+            ->from('ContactChannelIdentity')
+            ->where($where)
+            ->withDeleted()
+            ->build();
+
+        return $this->entityManager
+            ->getRDBRepository('ContactChannelIdentity')
+            ->clone($query)
+            ->findOne();
     }
 
     /**

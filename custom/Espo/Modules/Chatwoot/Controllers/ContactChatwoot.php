@@ -597,31 +597,63 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             $rawPhone = $contact->get('phoneNumber');
             $normalizedPhone = PhoneNormalizer::normalize($rawPhone);
 
-            if (!$normalizedPhone) {
-                throw new BadRequest(
-                    "Contact has no valid phone number. A phone number is required "
-                    . "for this channel."
+            if ($normalizedPhone) {
+                $searchResult = $apiClient->searchContactByPhone(
+                    $platformUrl,
+                    $accountApiKey,
+                    $externalAccountId,
+                    $normalizedPhone
                 );
+
+                if ($searchResult
+                    && isset($searchResult['phone_number'])
+                    && $searchResult['phone_number'] === $normalizedPhone
+                ) {
+                    $externalContactId = (int) ($searchResult['id'] ?? 0);
+                    return [
+                        'externalContactId' => $externalContactId,
+                        'chatwootContactData' => $searchResult,
+                        'wasCreated' => false,
+                        'sourceId' => $normalizedPhone,
+                    ];
+                }
             }
 
-            $searchResult = $apiClient->searchContactByPhone(
-                $platformUrl,
-                $accountApiKey,
-                $externalAccountId,
-                $normalizedPhone
-            );
+            // LID-era fallback: the person may already exist in Chatwoot
+            // keyed by a WhatsApp LID (identifier "…@lid") with the phone
+            // number not yet enriched (or never resolvable for privacy-
+            // enabled users), so the phone search misses them. Reuse the
+            // local bridge link instead of creating a phone-keyed duplicate
+            // — that would fork the WhatsApp thread (outbound on the phone
+            // contact, replies on the LID contact).
+            $existingBridge = $entityManager
+                ->getRDBRepository('ChatwootContact')
+                ->where([
+                    'contactId' => $contactEntityId,
+                    'chatwootAccountId' => $inboxAccountId,
+                ])
+                ->findOne();
 
-            if ($searchResult
-                && isset($searchResult['phone_number'])
-                && $searchResult['phone_number'] === $normalizedPhone
-            ) {
-                $externalContactId = (int) ($searchResult['id'] ?? 0);
+            if ($existingBridge && $existingBridge->get('chatwootContactId')) {
                 return [
-                    'externalContactId' => $externalContactId,
-                    'chatwootContactData' => $searchResult,
+                    'externalContactId' => (int) $existingBridge->get('chatwootContactId'),
+                    'chatwootContactData' => [
+                        'id' => (int) $existingBridge->get('chatwootContactId'),
+                        'name' => $existingBridge->get('name'),
+                        'phone_number' => $existingBridge->get('phoneNumber'),
+                        'email' => $existingBridge->get('email'),
+                        'identifier' => $existingBridge->get('identifier'),
+                    ],
                     'wasCreated' => false,
-                    'sourceId' => $normalizedPhone,
+                    'sourceId' => $normalizedPhone ?: ($existingBridge->get('identifier') ?: null),
                 ];
+            }
+
+            if (!$normalizedPhone) {
+                throw new BadRequest(
+                    "Contact has no valid phone number and no linked Chatwoot "
+                    . "contact. A phone number is required for this channel."
+                );
             }
 
             $createResponse = $apiClient->createContact(

@@ -80,6 +80,16 @@ class SeedScheduledJobs implements RebuildAction
             'scheduling' => '*/5 * * * *',
         ],
         [
+            'name' => 'Sync Teams from Chatwoot',
+            'job' => 'SyncTeamsFromChatwoot',
+            'scheduling' => '* * * * *',
+        ],
+        [
+            'name' => 'Sync Labels from Chatwoot',
+            'job' => 'SyncLabelsFromChatwoot',
+            'scheduling' => '* * * * *',
+        ],
+        [
             'name' => 'Repair Account User Membership Invariants',
             'job' => 'RepairAccountUserMembershipInvariants',
             'scheduling' => '*/30 * * * *',

@@ -6,6 +6,7 @@
     "fields": {
         "channelType": "Tipo de Canal",
         "sourceId": "Identificador",
+        "whatsappLid": "LID do WhatsApp",
         "label": "Rótulo",
         "isPrimary": "Principal",
         "contact": "Contato",
@@ -37,6 +38,7 @@
     },
     "tooltips": {
         "sourceId": "Identificador específico do canal (telefone E.164 para WhatsApp/SMS, id de usuário escopado para Instagram/Telegram/Facebook, e-mail em minúsculas para Email, etc.)",
+        "whatsappLid": "Identificador de privacidade do WhatsApp (LID) observado para esta identidade. Mantido junto ao telefone para que conversas chaveadas por LID resolvam para a mesma identidade.",
         "label": "Rótulo legível opcional (ex.: nome de usuário do Instagram)",
         "chatwootAccount": "Conta do Chatwoot onde esta identidade foi observada pela primeira vez",
         "chatwootInbox": "Caixa de entrada do Chatwoot de origem (se aplicável)"

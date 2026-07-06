@@ -81,7 +81,15 @@
         "accountUserMembershipsWithFunnelAccess": {
             "type": "hasMany",
             "entity": "ChatwootAccountUserMembership",
-            "foreign": "funnelsToManage"
+            "foreign": "funnelsToManage",
+            "additionalColumns": {
+                "description": {
+                    "type": "text"
+                }
+            },
+            "columnAttributeMap": {
+                "description": "description"
+            }
         }
     },
     "collection": {

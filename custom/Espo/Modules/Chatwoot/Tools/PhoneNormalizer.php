@@ -35,6 +35,17 @@ class PhoneNormalizer
             return null;
         }
 
+        // WhatsApp LID identifiers (e.g. "272628082307301@lid") are privacy
+        // identifiers, NOT phone numbers. Stripping non-digits would mint a
+        // plausible-looking but bogus E.164 number.
+        if (str_contains($phone, '@lid')) {
+            return null;
+        }
+
+        // An explicit "+" prefix means the number is already in
+        // international format — never guess/prepend a country code.
+        $hasPlus = str_starts_with(ltrim($phone), '+');
+
         // Remove all non-digit characters
         $digits = preg_replace('/\D/', '', $phone);
 
@@ -53,6 +64,13 @@ class PhoneNormalizer
                     $digits = '55' . $ddd . '9' . $local;
                 }
             }
+            return '+' . $digits;
+        }
+
+        // Explicitly international input ("+…"): trust it as-is. Prevents
+        // doubling the country code (e.g. "+55459858828" must NOT become
+        // "+5555459858828" via the Brazilian-local heuristic below).
+        if ($hasPlus) {
             return '+' . $digits;
         }
 

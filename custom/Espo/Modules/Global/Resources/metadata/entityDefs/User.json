@@ -45,7 +45,21 @@
             "type": "hasMany",
             "entity": "ChatwootAccountUserMembership",
             "foreign": "calendarsToManage",
-            "relationName": "chatwootAccountUserMembershipCalendarUser"
+            "relationName": "chatwootAccountUserMembershipCalendarUser",
+            "additionalColumns": {
+                "description": {
+                    "type": "text"
+                },
+                "eventType": {
+                    "type": "varchar",
+                    "len": 36,
+                    "default": "Appointment"
+                }
+            },
+            "columnAttributeMap": {
+                "description": "description",
+                "eventType": "eventType"
+            }
         },
         "tenants": {
             "type": "hasMany",
