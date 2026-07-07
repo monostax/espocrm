@@ -7,7 +7,6 @@ namespace Espo\Modules\FeatureTrackingEvent\Controllers;
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
 use Espo\Core\Utils\Log;
-use Espo\Modules\FeatureTrackingEvent\Entities\TrackingSource;
 use Espo\Modules\FeatureTrackingEvent\Services\TrackingEventIngester;
 use Throwable;
 
@@ -16,30 +15,30 @@ use Throwable;
  *
  * Routes (both noAuth, defined in Resources/routes.json):
  *   POST    /TrackingEvent/receive/:sourceId   — accept an event payload.
- *   OPTIONS /TrackingEvent/receive/:sourceId   — CORS preflight.
+ *   OPTIONS /TrackingEvent/receive/:sourceId   — CORS preflight (NOTE: in
+ *     the containerized deployment Apache answers all OPTIONS requests
+ *     before PHP; this handler only runs where that rewrite is absent.
+ *     The browser SDK therefore uses CORS "simple requests" only —
+ *     Content-Type: text/plain, no custom headers — which need no
+ *     preflight at all).
  *
  * URL registered in client SDKs:
  *   https://{host}/api/v1/TrackingEvent/receive/{trackingSourceId}
  *
- * Identity:
- *   - The path param `:sourceId` IS the public TrackingSource id.
- *   - The signing secret (TrackingSource.signingSecret, encrypted at rest)
- *     is verified against the X-Tracking-Signature header if set on the
- *     source. Sources with no secret accept anonymous traffic — intended
- *     for low-trust public site beacons.
+ * Trust model (see {@see TrackingEventIngester} for the full pipeline):
+ *   - Trusted sources (kind=Server/Chatwoot/Other) MUST sign the raw body
+ *     with HMAC-SHA256 in the X-Tracking-Signature header.
+ *   - Public sources (kind=Website/Mobile) are unsigned; they are gated by
+ *     Origin allow-list (Website), rate limiting and privileged-field
+ *     stripping instead.
  *
  * Response strategy:
- *   - 200 / 202 on accepted events (synchronous validation, async indexing).
- *   - 400 on malformed payload (missing required keys, bad JSON).
- *   - 401 on bad HMAC.
- *   - 404 on unknown / inactive source.
- *   - Never leak the existence/absence of a specific source via timing —
- *     {@see TrackingEventIngester} handles constant-time secret comparison.
- *
- * NOTE: this is a SCAFFOLD. The {@see TrackingEventIngester} service is a
- * stub — actual HMAC verification, payload normalization, event-type lookup,
- * anonymous-id stitching and persistence still need implementing. Until
- * then, the endpoint returns 501 Not Implemented.
+ *   - 202 on accepted events; also 202 for deliberately skipped ones
+ *     (unknown code with auto-create off) so the endpoint is not an oracle.
+ *   - 400 on malformed payload, 401 on bad HMAC, 403 on disallowed Origin,
+ *     404 on unknown/inactive source, 429 (+ Retry-After) on rate limit.
+ *   - CORS headers are echoed only when the origin passed the allow-list
+ *     (never on 403).
  */
 class TrackingEventReceiver
 {
@@ -83,7 +82,15 @@ class TrackingEventReceiver
             return;
         }
 
-        $this->applyCorsHeaders($response, $request->getHeader('Origin'));
+        // Never echo CORS allow headers back to an origin that failed the
+        // allow-list — a 403 response must not be readable cross-origin.
+        if ($result->status !== 403) {
+            $this->applyCorsHeaders($response, $request->getHeader('Origin'));
+        }
+
+        if ($result->status === 429) {
+            $response->setHeader('Retry-After', '60');
+        }
 
         $response->setStatus($result->status, $result->statusText);
         $response->setHeader('Content-Type', 'application/json');

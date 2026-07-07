@@ -34,23 +34,52 @@
             "importDisabled": true,
             "directAccessDisabled": true
         },
+        "trackerSnippet": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "utility": true,
+            "view": "feature-tracking-event:views/tracking-source/fields/tracker-snippet",
+            "tooltip": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true,
+            "directAccessDisabled": true,
+            "comment": "Computed client-side: copy-paste <script> install snippet (async loader for lib/tracker.js + init/page calls). Only relevant for kind=Website."
+        },
         "signingSecret": {
             "type": "password",
             "dbType": "text",
             "tooltip": true,
             "audited": false,
-            "comment": "HMAC-SHA256 secret. If set, X-Tracking-Signature header is required on every ingest call. Strongly recommended."
+            "comment": "HMAC-SHA256 secret, encrypted at rest (EncryptSecrets hook). Mandatory for trusted kinds (Server/Chatwoot/Other) — X-Tracking-Signature header is verified on every ingest call. Not used for public kinds (Website/Mobile): browsers cannot keep secrets."
+        },
+        "identityVerificationSecret": {
+            "type": "password",
+            "dbType": "text",
+            "tooltip": true,
+            "audited": false,
+            "comment": "Optional HMAC-SHA256 secret for verified identify() calls from public sources, encrypted at rest. The customer's backend signs the identifier (email) server-side and the browser SDK passes the signature in the event body. Without it, identify claims from public sources are treated as unverified."
         },
         "allowedOrigins": {
             "type": "text",
             "tooltip": true,
-            "comment": "One CORS origin per line (e.g. https://www.example.com). Only honoured for kind=Website."
+            "comment": "One CORS origin per line (e.g. https://www.example.com). Mandatory for kind=Website — browser ingestion is rejected unless the Origin header matches. Ignored for other kinds."
         },
         "allowUnknownEventCode": {
             "type": "bool",
             "default": true,
             "tooltip": true,
             "comment": "If true, ingestion auto-creates a TrackingEventType (category=Custom) for unknown codes. Turn off once your event dictionary stabilises."
+        },
+        "rateLimitPerMinute": {
+            "type": "int",
+            "default": 600,
+            "min": 0,
+            "tooltip": true,
+            "comment": "Max ingest requests per minute for this source (fixed window, best-effort). 0 = unlimited. A separate per-IP limit also applies to public kinds."
         },
         "description": {
             "type": "text"

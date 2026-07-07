@@ -1,34 +1,58 @@
 [
     {
+        "tabLabel": "$Overview",
+        "name": "overviewPanel",
         "label": "Overview",
+        "panelIconClass": "ti ti-broadcast",
+        "gridRow": 1,
+        "gridCol": 1,
+        "gridColSpan": 2,
         "rows": [
             [{ "name": "name" }, { "name": "isActive" }],
             [{ "name": "kind" }, { "name": "allowUnknownEventCode" }],
-            [{ "name": "ingestUrl" }, false],
-            [{ "name": "description" }, false]
+            [{ "name": "ingestUrl", "fullWidth": true }],
+            [{ "name": "trackerSnippet", "fullWidth": true }],
+            [{ "name": "description", "fullWidth": true }]
         ]
     },
     {
+        "name": "securityPanel",
         "label": "Security",
+        "panelIconClass": "ti ti-shield-lock",
+        "gridRow": 1,
+        "gridCol": 2,
+        "gridColSpan": 1,
         "rows": [
-            [{ "name": "signingSecret" }, false],
-            [{ "name": "allowedOrigins" }, false]
+            [{ "name": "signingSecret", "fullWidth": true }],
+            [{ "name": "identityVerificationSecret", "fullWidth": true }],
+            [{ "name": "allowedOrigins", "fullWidth": true }],
+            [{ "name": "rateLimitPerMinute", "fullWidth": true }]
         ]
     },
     {
+        "name": "statisticsPanel",
         "label": "Statistics",
+        "panelIconClass": "ti ti-chart-bar",
+        "gridRow": 2,
+        "gridCol": 1,
+        "gridColSpan": 2,
         "rows": [
             [{ "name": "totalEventsReceived" }, { "name": "lastEventReceivedAt" }],
             [{ "name": "lastEventStatus" }, false],
-            [{ "name": "lastEventError" }, false]
+            [{ "name": "lastEventError", "fullWidth": true }]
         ]
     },
     {
+        "name": "systemPanel",
         "label": "System",
+        "panelIconClass": "ti ti-settings",
+        "gridRow": 2,
+        "gridCol": 2,
+        "gridColSpan": 1,
         "rows": [
             [{ "name": "createdAt" }, { "name": "createdBy" }],
             [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
-            [{ "name": "teams" }, false]
+            [{ "name": "teams", "fullWidth": true }]
         ]
     }
 ]

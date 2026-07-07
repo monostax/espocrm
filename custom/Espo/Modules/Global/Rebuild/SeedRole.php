@@ -1221,6 +1221,27 @@ class SeedRole implements RebuildAction
                         'edit' => 'team',
                         'delete' => 'no',
                     ],
+
+                    // FeatureTrackingEvent — tenant-admin manages ingestion
+                    // configuration through the Configurations panel
+                    // (adminForUserPanel): creates Tracking Sources (ingest
+                    // URL + signing secret rotation) and curates the
+                    // TrackingEventType dictionary. TrackingEvent itself
+                    // stays read-only for every tenant role (see base) —
+                    // it's an append-only ledger enforced by the BlockWrite/
+                    // BlockDelete record hooks regardless of ACL.
+                    'TrackingSource' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'TrackingEventType' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
                 ],
                 'fieldData' => [
                     ...$tenantBase['fieldData']

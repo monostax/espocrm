@@ -4,16 +4,20 @@
         "Tracking Events": "Tracking Events"
     },
     "messages": {
-        "ingestUrlPendingSave": "Save this source to reveal the ingest URL."
+        "ingestUrlPendingSave": "Save this source to reveal the ingest URL.",
+        "trackerSnippetPendingSave": "Save this source to generate the install snippet."
     },
     "fields": {
         "name": "Name",
         "kind": "Kind",
         "isActive": "Active",
         "ingestUrl": "Ingest URL",
+        "trackerSnippet": "Install Snippet",
         "signingSecret": "Signing Secret",
+        "identityVerificationSecret": "Identity Verification Secret",
         "allowedOrigins": "Allowed Origins",
         "allowUnknownEventCode": "Auto-create Unknown Codes",
+        "rateLimitPerMinute": "Rate Limit (per minute)",
         "description": "Description",
         "lastEventReceivedAt": "Last Event Received",
         "lastEventStatus": "Last Event Status",
@@ -24,9 +28,12 @@
     },
     "tooltips": {
         "ingestUrl": "Public URL to POST events to. The path id is the row id — anyone with this URL can attempt ingestion, so always set a signing secret for production sources.",
-        "signingSecret": "HMAC-SHA256 secret used to verify the X-Tracking-Signature header. Strongly recommended for every source — without it, anyone with the ingest URL can post events.",
-        "allowedOrigins": "One CORS origin per line (e.g. https://www.example.com). Only honoured for kind=Website — browser ingestion is blocked unless the Origin matches.",
+        "trackerSnippet": "Paste this snippet into your site's <head> (every page you want tracked). It loads the tracker asynchronously and sends a page_view on load. Track custom events with mstx('track', 'event_code', {...}); identify visitors with mstx('identify', email). The page's origin must be listed in Allowed Origins.",
+        "signingSecret": "HMAC-SHA256 secret used to verify the X-Tracking-Signature header. Required for trusted kinds (Server, Chatwoot, Other); not used for Website/Mobile — browsers cannot keep secrets. Stored encrypted; write-only (never readable back through the API).",
+        "identityVerificationSecret": "Optional secret for verified identify() calls from public sources. Your backend signs the visitor's email with HMAC-SHA256 and the browser SDK sends the signature in the event body — identity claims without a valid signature are treated as unverified. Stored encrypted; write-only.",
+        "allowedOrigins": "One CORS origin per line (e.g. https://www.example.com). Required for kind=Website — browser ingestion is rejected unless the Origin header matches. Not applicable to other kinds.",
         "allowUnknownEventCode": "If true, ingestion auto-creates a TrackingEventType (category=Custom) for unknown codes. Turn off once your event dictionary stabilises.",
+        "rateLimitPerMinute": "Maximum ingest requests per minute for this source (best-effort fixed window). 0 = unlimited. Public sources are additionally rate-limited per client IP.",
         "lastEventError": "Last non-success status reason. Updated on every ingest attempt regardless of outcome.",
         "tenant": "Derived from the first selected team via Tenant.baseUserTeam. Set automatically by the AssignTenantFromTeam hook — assign teams to populate this."
     },

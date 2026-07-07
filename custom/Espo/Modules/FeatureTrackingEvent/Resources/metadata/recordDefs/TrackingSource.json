@@ -1,0 +1,14 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureTrackingEvent\\Classes\\RecordHooks\\TrackingSource\\ValidateKindRequirements"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureTrackingEvent\\Classes\\RecordHooks\\TrackingSource\\ValidateKindRequirements"
+    ],
+    "outputFilterClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureTrackingEvent\\Classes\\Record\\TrackingSource\\OutputFilter"
+    ]
+}

@@ -14,6 +14,7 @@
         "value": "Value",
         "currency": "Currency",
         "status": "Status",
+        "channel": "Channel",
         "errorMessage": "Error",
         "trackingSource": "Source",
         "trackingEventType": "Event Type",
@@ -28,6 +29,7 @@
         "value": "Monetary value of the event (e.g. order total). Optional.",
         "contact": "Set when the visitor was already identified, or backfilled by AnonymousStitcher.",
         "parent": "Polymorphic subject — additional context (e.g. 'Pricing Page View during Opportunity O-123').",
+        "channel": "Trust marker: 'Server' = HMAC-verified trusted source; 'Browser' = public unsigned source (Website/Mobile). Downstream consumers weight events accordingly.",
         "tenant": "Inherited from the parent TrackingEventType (auto-set by CascadeTenantFromEventType hook)."
     },
     "options": {
@@ -37,6 +39,10 @@
             "Processed": "Processed",
             "Failed": "Failed",
             "Skipped": "Skipped"
+        },
+        "channel": {
+            "server": "Server",
+            "browser": "Browser"
         },
         "currency": {
             "": "—",

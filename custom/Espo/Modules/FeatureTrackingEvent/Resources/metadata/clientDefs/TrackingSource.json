@@ -20,5 +20,62 @@
             "select": false,
             "rowActionsView": "feature-tracking-event:views/record/row-actions/relationship-no-edit-no-remove"
         }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "signingSecret": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "kind",
+                            "value": ["Server", "Chatwoot", "Other"]
+                        }
+                    ]
+                }
+            },
+            "trackerSnippet": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "kind",
+                            "value": "Website"
+                        }
+                    ]
+                }
+            },
+            "identityVerificationSecret": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "kind",
+                            "value": ["Website", "Mobile"]
+                        }
+                    ]
+                }
+            },
+            "allowedOrigins": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "kind",
+                            "value": "Website"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "kind",
+                            "value": "Website"
+                        }
+                    ]
+                }
+            }
+        }
     }
 }

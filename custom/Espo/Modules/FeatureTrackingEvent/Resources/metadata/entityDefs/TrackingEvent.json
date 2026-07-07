@@ -92,6 +92,18 @@
                 "Skipped": "warning"
             }
         },
+        "channel": {
+            "type": "enum",
+            "options": ["server", "browser"],
+            "default": "browser",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Trust marker set by the ingester: 'server' = HMAC-verified trusted source; 'browser' = public unsigned source (Website/Mobile). Downstream consumers (e.g. CAPI dispatch) should weight accordingly.",
+            "style": {
+                "server": "success",
+                "browser": "default"
+            }
+        },
         "errorMessage": {
             "type": "text",
             "readOnly": true

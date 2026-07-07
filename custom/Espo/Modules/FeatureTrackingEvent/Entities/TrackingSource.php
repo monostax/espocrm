@@ -37,4 +37,23 @@ class TrackingSource extends Entity
     public const STATUS_SKIPPED = 'Skipped';
     public const STATUS_BAD_REQUEST = 'BadRequest';
     public const STATUS_UNAUTHORIZED = 'Unauthorized';
+
+    /** Kinds that ingest through the public, unsigned (browser/app) path. */
+    private const PUBLIC_KINDS = [
+        self::KIND_WEBSITE,
+        self::KIND_MOBILE,
+    ];
+
+    /**
+     * Whether this source ingests through the trusted path (HMAC signature
+     * mandatory). Single source of truth for the kind→trust policy, used by
+     * the ingester, the save-validation record hook and clientDefs mirrors.
+     *
+     * Trusted: Server, Chatwoot, Other (server-to-server integrations).
+     * Public:  Website, Mobile (clients that cannot keep a secret).
+     */
+    public function isTrustedKind(): bool
+    {
+        return !in_array($this->get('kind'), self::PUBLIC_KINDS, true);
+    }
 }

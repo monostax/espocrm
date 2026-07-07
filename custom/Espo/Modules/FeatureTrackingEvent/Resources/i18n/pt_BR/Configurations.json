@@ -1,0 +1,18 @@
+{
+    "labels": {
+        "Tracking": "Rastreamento",
+        "Sources": "Rastreamento / Fontes",
+        "Event Types": "Rastreamento / Tipos de Evento",
+        "Events": "Rastreamento / Eventos Recebidos"
+    },
+    "descriptions": {
+        "trackingSources": "Gerencie os canais de ingestão de eventos de rastreamento (sites, server-side, chat, mobile).",
+        "trackingEventTypes": "Defina o dicionário por tenant de códigos de evento que o endpoint de ingestão aceita.",
+        "trackingEvents": "Audite os eventos brutos recebidos dos clientes e o resultado do religamento downstream."
+    },
+    "keywords": {
+        "trackingSources": "rastreamento,evento,fonte,ingestao,webhook,hmac",
+        "trackingEventTypes": "rastreamento,evento,tipo,codigo,categoria,dicionario",
+        "trackingEvents": "rastreamento,evento,registro,atribuicao,anonimo,religar"
+    }
+}

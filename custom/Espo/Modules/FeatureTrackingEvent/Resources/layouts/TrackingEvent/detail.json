@@ -1,22 +1,39 @@
 [
     {
+        "tabLabel": "$Overview",
+        "name": "overviewPanel",
         "label": "Overview",
+        "panelIconClass": "ti ti-activity",
+        "gridRow": 1,
+        "gridCol": 1,
+        "gridColSpan": 2,
         "rows": [
             [{ "name": "name" }, { "name": "status" }],
             [{ "name": "code" }, { "name": "occurredAt" }],
             [{ "name": "trackingSource" }, { "name": "trackingEventType" }],
-            [{ "name": "receivedAt" }, false]
+            [{ "name": "receivedAt" }, { "name": "channel" }]
         ]
     },
     {
+        "name": "identityPanel",
         "label": "Identity",
+        "panelIconClass": "ti ti-user-search",
+        "gridRow": 1,
+        "gridCol": 2,
+        "gridColSpan": 1,
         "rows": [
-            [{ "name": "contact" }, { "name": "anonymousId" }],
-            [{ "name": "parent" }, false]
+            [{ "name": "contact", "fullWidth": true }],
+            [{ "name": "anonymousId", "fullWidth": true }],
+            [{ "name": "parent", "fullWidth": true }]
         ]
     },
     {
+        "name": "contextPanel",
         "label": "Context",
+        "panelIconClass": "ti ti-world",
+        "gridRow": 2,
+        "gridCol": 1,
+        "gridColSpan": 2,
         "rows": [
             [{ "name": "url" }, { "name": "referrer" }],
             [{ "name": "userAgent" }, { "name": "ipAddress" }],
@@ -24,18 +41,26 @@
         ]
     },
     {
-        "label": "Payload",
+        "name": "systemPanel",
+        "label": "System",
+        "panelIconClass": "ti ti-settings",
+        "gridRow": 2,
+        "gridCol": 2,
+        "gridColSpan": 1,
         "rows": [
-            [{ "name": "payload" }, false],
-            [{ "name": "attribution" }, false],
-            [{ "name": "errorMessage" }, false]
+            [{ "name": "createdAt", "fullWidth": true }],
+            [{ "name": "teams", "fullWidth": true }]
         ]
     },
     {
-        "label": "System",
+        "name": "payloadPanel",
+        "label": "Payload",
+        "panelIconClass": "ti ti-code",
+        "gridRow": 3,
         "rows": [
-            [{ "name": "createdAt" }, false],
-            [{ "name": "teams" }, false]
+            [{ "name": "payload", "fullWidth": true }],
+            [{ "name": "attribution", "fullWidth": true }],
+            [{ "name": "errorMessage", "fullWidth": true }]
         ]
     }
 ]

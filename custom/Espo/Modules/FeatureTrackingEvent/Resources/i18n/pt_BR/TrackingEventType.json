@@ -1,6 +1,9 @@
 {
     "labels": {
-        "Create TrackingEventType": "Criar Tipo de Evento"
+        "Create TrackingEventType": "Criar Tipo de Evento",
+        "Overview": "Visão Geral",
+        "Statistics": "Estatísticas",
+        "System": "Sistema"
     },
     "fields": {
         "name": "Nome",

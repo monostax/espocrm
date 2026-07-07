@@ -1,0 +1,14 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureTrackingEvent\\Classes\\RecordHooks\\TrackingEvent\\BlockWrite"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureTrackingEvent\\Classes\\RecordHooks\\TrackingEvent\\BlockWrite"
+    ],
+    "beforeDeleteHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureTrackingEvent\\Classes\\RecordHooks\\TrackingEvent\\BlockDelete"
+    ]
+}

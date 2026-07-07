@@ -1,21 +1,36 @@
 [
     {
+        "tabLabel": "$Overview",
+        "name": "overviewPanel",
         "label": "Overview",
+        "panelIconClass": "ti ti-list-details",
+        "gridRow": 1,
+        "gridCol": 1,
+        "gridColSpan": 2,
         "rows": [
             [{ "name": "name" }, { "name": "code" }],
             [{ "name": "category" }, { "name": "isActive" }],
             [{ "name": "isHighValue" }, false],
-            [{ "name": "description" }, false]
+            [{ "name": "description", "fullWidth": true }]
         ]
     },
     {
+        "name": "statisticsPanel",
         "label": "Statistics",
+        "panelIconClass": "ti ti-chart-bar",
+        "gridRow": 1,
+        "gridCol": 2,
+        "gridColSpan": 1,
         "rows": [
-            [{ "name": "totalEventsReceived" }, { "name": "lastEventAt" }]
+            [{ "name": "totalEventsReceived", "fullWidth": true }],
+            [{ "name": "lastEventAt", "fullWidth": true }]
         ]
     },
     {
+        "name": "systemPanel",
         "label": "System",
+        "panelIconClass": "ti ti-settings",
+        "gridRow": 2,
         "rows": [
             [{ "name": "createdAt" }, { "name": "createdBy" }],
             [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
