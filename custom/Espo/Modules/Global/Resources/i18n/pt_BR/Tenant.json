@@ -20,6 +20,8 @@
         "name": "Nome",
         "slug": "Slug",
         "description": "Descrição",
+        "language": "Idioma Padrão",
+        "timeZone": "Fuso Horário Padrão",
         "baseUserTeam": "Time Base de Usuários",
         "otherUserTeams": "Outros Times de Usuários",
         "clinicaNasNuvensSettings": "Perfis Clínica Nas Nuvens",
@@ -30,6 +32,8 @@
         "modifiedBy": "Modificado Por"
     },
     "tooltips": {
-        "slug": "Slug de URL estável e globalmente único para este ambiente. Usado para construir subdomínios por ambiente, como guest.<slug>.<dominio-gitops>. Formato: letras minúsculas, dígitos e hífens (ex.: \"b2b\", \"clinica\")."
+        "slug": "Slug de URL estável e globalmente único para este ambiente. Usado para construir subdomínios por ambiente, como guest.<slug>.<dominio-gitops>. Formato: letras minúsculas, dígitos e hífens (ex.: \"b2b\", \"clinica\").",
+        "language": "Idioma padrão deste ambiente. Aplicado a textos gerados pelo servidor (ex.: nomes de eventos de rastreamento) e definido como preferência inicial de usuários adicionados ao ambiente. Vazio = padrão da instância.",
+        "timeZone": "Fuso horário padrão deste ambiente. Definido como preferência inicial de usuários adicionados ao ambiente. Vazio = padrão da instância."
     }
 }

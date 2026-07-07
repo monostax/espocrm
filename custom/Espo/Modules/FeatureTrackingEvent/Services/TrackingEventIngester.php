@@ -86,6 +86,7 @@ class TrackingEventIngester
         private RateLimiter $rateLimiter,
         private TrackingEventPersister $persister,
         private ContactToken $contactToken,
+        private TrackingEventNameBuilder $nameBuilder,
     ) {}
 
     public function ingest(
@@ -198,8 +199,15 @@ class TrackingEventIngester
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $occurredAt = $this->resolveOccurredAt($data['occurredAt'] ?? null, $now);
 
+        $url = $this->str($data['url'] ?? null, 1024);
+
+        // Context fragment: page/form title if the SDK sent one, else the
+        // URL path ('/pricing').
+        $nameDetail = $this->str($data['title'] ?? null, 120)
+            ?? $this->urlPath($url);
+
         $attributes = [
-            'name' => $code . ' @ ' . $occurredAt,
+            'name' => $this->nameBuilder->build($code, $tenantId, $type->get('name'), $nameDetail),
             'code' => $code,
             'occurredAt' => $occurredAt,
             'receivedAt' => $now->format('Y-m-d H:i:s'),
@@ -207,7 +215,7 @@ class TrackingEventIngester
             'channel' => $trusted ? TrackingEvent::CHANNEL_SERVER : TrackingEvent::CHANNEL_BROWSER,
             'trackingSourceId' => $source->getId(),
             'trackingEventTypeId' => $type->getId(),
-            'url' => $this->str($data['url'] ?? null, 1024),
+            'url' => $url,
             'referrer' => $this->str($data['referrer'] ?? null, 1024),
             'userAgent' => $this->str(($trusted ? ($data['userAgent'] ?? null) : null) ?? $userAgent, 512),
             'ipAddress' => $this->str(($trusted ? ($data['ipAddress'] ?? null) : null) ?? $clientIp, 64),
@@ -498,6 +506,25 @@ class TrackingEventIngester
         }
 
         return mb_substr($value, 0, $maxLength);
+    }
+
+    /**
+     * Path component of a URL, for name context ('/pricing'). Root path
+     * yields null (adds no information).
+     */
+    private function urlPath(?string $url): ?string
+    {
+        if ($url === null) {
+            return null;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (!is_string($path) || $path === '' || $path === '/') {
+            return null;
+        }
+
+        return $path;
     }
 
     /**

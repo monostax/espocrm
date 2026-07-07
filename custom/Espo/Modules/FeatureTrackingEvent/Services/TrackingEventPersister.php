@@ -61,6 +61,7 @@ class TrackingEventPersister
     public function __construct(
         private EntityManager $entityManager,
         private Log $log,
+        private TrackingEventNameBuilder $nameBuilder,
     ) {}
 
     public function normalizeCode(mixed $raw): ?string
@@ -104,7 +105,7 @@ class TrackingEventPersister
             $type = $this->entityManager->getNewEntity(TrackingEventType::ENTITY_TYPE);
 
             $type->set([
-                'name' => $code,
+                'name' => $this->nameBuilder->labelForCode($code, $tenantId),
                 'code' => $code,
                 'category' => $category,
                 'isActive' => true,

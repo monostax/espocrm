@@ -50,6 +50,7 @@ class InternalEventRecorder
         private EntityManager $entityManager,
         private Log $log,
         private TrackingEventPersister $persister,
+        private TrackingEventNameBuilder $nameBuilder,
     ) {}
 
     /**
@@ -63,7 +64,9 @@ class InternalEventRecorder
      *     value?: mixed,
      *     currency?: ?string,
      *     properties?: array<string, mixed>,
-     * } $options
+     *     detail?: ?string,
+     * } $options 'detail' is a short human context fragment appended to the
+     *     event name (e.g. the opportunity name).
      */
     public function record(string $tenantId, string $code, array $options = []): ?string
     {
@@ -192,8 +195,12 @@ class InternalEventRecorder
 
         $properties = is_array($options['properties'] ?? null) ? $options['properties'] : [];
 
+        $detail = is_string($options['detail'] ?? null) && $options['detail'] !== ''
+            ? $options['detail']
+            : null;
+
         $attributes = [
-            'name' => $normalized . ' @ ' . $occurredAt,
+            'name' => $this->nameBuilder->build($normalized, $tenantId, $type->get('name'), $detail),
             'code' => $normalized,
             'occurredAt' => $occurredAt,
             'receivedAt' => $occurredAt,

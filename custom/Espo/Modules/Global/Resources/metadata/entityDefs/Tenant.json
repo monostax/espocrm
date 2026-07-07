@@ -20,6 +20,18 @@
         "description": {
             "type": "text"
         },
+        "language": {
+            "type": "enum",
+            "view": "views/preferences/fields/language",
+            "tooltip": true,
+            "comment": "Tenant default language. Empty = inherit instance default (config 'language'). Used for server-generated text (e.g. TrackingEvent/TrackingEventType names) and copied into Preferences of newly linked users."
+        },
+        "timeZone": {
+            "type": "enum",
+            "view": "views/preferences/fields/time-zone",
+            "tooltip": true,
+            "comment": "Tenant default time zone. Empty = inherit instance default (config 'timeZone'). Copied into Preferences of newly linked users; reserved for future server-side per-tenant formatting."
+        },
         "baseUserTeam": {
             "type": "link",
             "view": "views/fields/link"

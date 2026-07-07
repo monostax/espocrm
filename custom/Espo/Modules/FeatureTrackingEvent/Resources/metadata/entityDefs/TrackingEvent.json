@@ -4,7 +4,7 @@
             "type": "varchar",
             "maxLength": 200,
             "readOnly": true,
-            "comment": "Human label: '{code} @ {occurredAt}'."
+            "comment": "Human label: '{typeLabel} · {detail}' composed by TrackingEventNameBuilder in the tenant's language (Tenant.language -> instance default). Detail = link name, page title/path, WA phone, opportunity name... Frozen at creation; backfillable via 'php command.php tracking-event:rebuild-names'."
         },
         "code": {
             "type": "varchar",

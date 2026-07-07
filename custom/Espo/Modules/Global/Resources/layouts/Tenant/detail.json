@@ -12,6 +12,14 @@
             ],
             [
                 {
+                    "name": "language"
+                },
+                {
+                    "name": "timeZone"
+                }
+            ],
+            [
+                {
                     "name": "description",
                     "fullWidth": true
                 }

@@ -81,6 +81,7 @@ class TrackingLinkRedirector
         private TrackingEventPersister $persister,
         private RateLimiter $rateLimiter,
         private ContactToken $contactToken,
+        private TrackingEventNameBuilder $nameBuilder,
     ) {}
 
     /**
@@ -244,7 +245,7 @@ class TrackingLinkRedirector
         }
 
         $attributes = [
-            'name' => $code . ' @ ' . $nowString,
+            'name' => $this->nameBuilder->build($code, $tenantId, $type->get('name'), $link->get('name')),
             'code' => $code,
             'occurredAt' => $nowString,
             'receivedAt' => $nowString,

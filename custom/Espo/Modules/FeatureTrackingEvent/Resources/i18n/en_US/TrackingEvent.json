@@ -55,5 +55,15 @@
             "MXN": "MXN",
             "ARS": "ARS"
         }
+    },
+    "eventCodeLabels": {
+        "page_view": "Page View",
+        "link_clicked": "Link Click",
+        "form_submitted": "Form Submitted",
+        "whatsapp_click": "WhatsApp Click",
+        "whatsapp_conversation_linked": "WhatsApp Conversation Linked",
+        "opportunity_stage_changed": "Opportunity Stage Changed",
+        "opportunity_won": "Opportunity Won",
+        "opportunity_lost": "Opportunity Lost"
     }
 }

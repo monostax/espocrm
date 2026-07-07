@@ -1,0 +1,7 @@
+{
+    "tracking-event:rebuild-names": {
+        "className": "Espo\\Modules\\FeatureTrackingEvent\\Classes\\ConsoleCommands\\TrackingEventRebuildNames",
+        "listed": true,
+        "noSystemUser": true
+    }
+}

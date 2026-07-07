@@ -92,6 +92,7 @@ class TrackStageChange implements AfterSave
             'parentType' => Opportunity::ENTITY_TYPE,
             'parentId' => $entity->getId(),
             'properties' => $properties,
+            'detail' => $entity->get('name') ?: null,
         ];
 
         $this->recorder->record($tenantId, self::CODE_STAGE_CHANGED, $base);

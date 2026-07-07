@@ -68,6 +68,7 @@ class WhatsAppAttributionLinker
         private Log $log,
         private TrackingEventPersister $persister,
         private JobSchedulerFactory $jobSchedulerFactory,
+        private TrackingEventNameBuilder $nameBuilder,
     ) {}
 
     /**
@@ -361,8 +362,14 @@ class WhatsAppAttributionLinker
 
         $occurredAtString = $occurredAt->format('Y-m-d H:i:s');
 
+        // Context fragment: the business WhatsApp number, else the link slug.
+        $nameDetail = is_string($payload['waPhone'] ?? null)
+            ? '+' . $payload['waPhone']
+            : ($payload['slug'] ?? null);
+
         $attributes = [
-            'name' => self::EVENT_CODE . ' @ ' . $occurredAtString,
+            'name' => $this->nameBuilder->build(
+                self::EVENT_CODE, $tenantId, $type->get('name'), $nameDetail),
             'code' => self::EVENT_CODE,
             'occurredAt' => $occurredAtString,
             'receivedAt' => $now->format('Y-m-d H:i:s'),

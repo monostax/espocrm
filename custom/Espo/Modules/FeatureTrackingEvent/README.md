@@ -18,6 +18,7 @@ downstream use (Meta CAPI / Google Offline Conversions dispatch).
 - [Payload reference](#payload-reference)
 - [Response codes](#response-codes)
 - [Event types and auto-creation](#event-types-and-auto-creation)
+- [Event and type names](#event-and-type-names)
 - [Anonymous-to-Contact stitching](#anonymous-to-contact-stitching)
 - [Tenancy, teams and permissions](#tenancy-teams-and-permissions)
 - [Rate limiting](#rate-limiting)
@@ -469,6 +470,35 @@ Events resolve to a `TrackingEventType` by `(code, tenant)`:
 Types carry per-type counters (`totalEventsReceived`, `lastEventAt`),
 bumped atomically (`SET x = x + 1`) alongside the source counters.
 
+## Event and type names
+
+`TrackingEvent.name` is a human label — `{typeLabel} · {detail}` — composed
+by `TrackingEventNameBuilder` at persist time (no timestamp: `occurredAt`
+is its own column). Examples:
+
+- `Clique em Link · WhatsApp Inbound` (short-link click; detail = link name)
+- `Visualização de Página · /precos` (page view; detail = payload `title`,
+  else URL path)
+- `Conversa do WhatsApp Vinculada · +5511933253711`
+- `Oportunidade Ganha · Projeto ACME` (internal events; detail = the
+  `detail` option passed to `InternalEventRecorder`)
+
+The label part resolves as: **TrackingEventType.name** when it differs
+from the raw code (types are tenant-editable — renaming a type improves
+future event names), else the i18n map `TrackingEvent > eventCodeLabels`
+(en_US + pt_BR shipped), else prettified code (`form_submitted` → `Form
+Submitted`). Language ladder: `Tenant.language` → instance default →
+`en_US`. Auto-created types are seeded with the translated label instead
+of the raw code. Names are data frozen at creation — they are not
+re-rendered per viewing user's locale.
+
+Backfill legacy `{code} @ {timestamp}` rows (idempotent, `--dry-run`
+supported):
+
+```sh
+php command.php tracking-event:rebuild-names
+```
+
 ## Anonymous-to-Contact stitching
 
 When an event arrives with **both** a resolved Contact and an
@@ -566,6 +596,7 @@ custom/Espo/Modules/FeatureTrackingEvent/
 ├── Services/TrackingEventPersister.php        # shared persistence core (types, teams, counters)
 ├── Services/InternalEventRecorder.php         # in-process events (kind=CRM, opt-in)
 ├── Services/TrackingLinkRedirector.php        # slug -> record click -> 302 (+param pass-through, wa.me embed)
+├── Services/TrackingEventNameBuilder.php      # human event/type names ({label} · {detail}, tenant language)
 ├── Services/ContactToken.php                  # stateless HMAC contact tokens (tenant-bound)
 ├── Services/ZeroWidthCodec.php                # invisible payloads in WhatsApp texts (tintim wire format)
 ├── Services/WhatsAppAttributionLinker.php     # conversation <-> click join (token / time-window)
