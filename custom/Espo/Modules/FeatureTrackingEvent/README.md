@@ -611,10 +611,12 @@ custom/Espo/Modules/FeatureTrackingEvent/
 ├── Classes/RecordHooks/TrackingSource/ValidateKindRequirements.php
 ├── Classes/RecordHooks/TrackingEvent/{BlockWrite,BlockDelete}.php  # append-only
 ├── Classes/Record/TrackingSource/OutputFilter.php                  # secret masking
+├── Classes/FieldSanitizers/AsciiUrl.php                            # IRI -> URI for pasted targetUrls
+├── Classes/ConsoleCommands/TrackingEventRebuildNames.php           # name backfill (tracking-event:rebuild-names)
 └── Resources/{metadata,layouts,i18n,routes.json,module.json}
 
 client/custom/modules/feature-tracking-event/
 ├── lib/tracker.js                             # public browser SDK (plain JS)
 ├── src/views/tracking-source/fields/{ingest-url,tracker-snippet}.js
-└── src/views/tracking-link/fields/short-url.js
+└── src/views/tracking-link/fields/{short-url,target-url}.js
 ```
