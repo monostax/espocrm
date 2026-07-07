@@ -27,9 +27,10 @@
         "events": "Events"
     },
     "tooltips": {
+        "kind": "Where events come from. Website/Mobile ingest through the public (unsigned) path; Server/Chat/Other are server-to-server and require a signing secret. CRM (Internal) enables tracking of events the CRM emits about itself (e.g. Opportunity stage changes): create one CRM source per tenant to turn it on — it never ingests over HTTP, and deactivating it turns internal tracking off.",
         "ingestUrl": "Public URL to POST events to. The path id is the row id — anyone with this URL can attempt ingestion, so always set a signing secret for production sources.",
         "trackerSnippet": "Paste this snippet into your site's <head> (every page you want tracked). It loads the tracker asynchronously and sends a page_view on load. Track custom events with mstx('track', 'event_code', {...}); identify visitors with mstx('identify', email). The page's origin must be listed in Allowed Origins.",
-        "signingSecret": "HMAC-SHA256 secret used to verify the X-Tracking-Signature header. Required for trusted kinds (Server, Chatwoot, Other); not used for Website/Mobile — browsers cannot keep secrets. Stored encrypted; write-only (never readable back through the API).",
+        "signingSecret": "HMAC-SHA256 secret used to verify the X-Tracking-Signature header. Required for trusted kinds (Server, Chat, Other); not used for Website/Mobile — browsers cannot keep secrets. Stored encrypted; write-only (never readable back through the API).",
         "identityVerificationSecret": "Optional secret for verified identify() calls from public sources. Your backend signs the visitor's email with HMAC-SHA256 and the browser SDK sends the signature in the event body — identity claims without a valid signature are treated as unverified. Stored encrypted; write-only.",
         "allowedOrigins": "One CORS origin per line (e.g. https://www.example.com). Required for kind=Website — browser ingestion is rejected unless the Origin header matches. Not applicable to other kinds.",
         "allowUnknownEventCode": "If true, ingestion auto-creates a TrackingEventType (category=Custom) for unknown codes. Turn off once your event dictionary stabilises.",
@@ -40,10 +41,11 @@
     "options": {
         "kind": {
             "Website": "Website",
-            "Chatwoot": "Chatwoot",
+            "Chatwoot": "Chat",
             "Server": "Server",
             "Mobile": "Mobile",
-            "Other": "Other"
+            "Other": "Other",
+            "CRM": "CRM (Internal)"
         },
         "lastEventStatus": {
             "": "—",

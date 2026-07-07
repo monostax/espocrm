@@ -10,12 +10,9 @@ use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Crypt;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureTrackingEvent\Entities\TrackingEvent;
-use Espo\Modules\FeatureTrackingEvent\Entities\TrackingEventType;
 use Espo\Modules\FeatureTrackingEvent\Entities\TrackingSource;
 use Espo\Modules\FeatureTrackingEvent\Jobs\AnonymousStitcher;
 use Espo\ORM\EntityManager;
-use Espo\ORM\Query\Part\Condition;
-use Espo\ORM\Query\Part\Expression;
 use Throwable;
 
 /**
@@ -44,16 +41,11 @@ use Throwable;
  * (no preflight; sendBeacon-compatible), and Espo's getParsedBody()
  * rejects text/plain anyway.
  *
- * Persistence is silent (suppresses stream/notifications and our Cascade*
- * hooks, which early-return on silent) with tenancy (teamsIds/tenantId) set
- * explicitly from the resolved TrackingEventType, falling back to the
- * source's teams, then to Tenant.baseUserTeam. NOTE: saves deliberately do
- * NOT use skipHooks — linkMultiple attributes (teamsIds) are persisted by
- * the core FieldProcessing hook, so skipHooks would silently drop team
- * assignment (and with it tenant isolation).
- *
- * Counter bumps use atomic `SET total = total + 1` UPDATE queries to avoid
- * read-modify-write lost updates under load.
+ * Persistence concerns (event-type resolution/auto-create, the teams
+ * fallback chain, silent saves, atomic counter bumps, source status
+ * bookkeeping) are delegated to TrackingEventPersister, which is shared
+ * with InternalEventRecorder so the external and in-process write paths
+ * cannot drift.
  *
  * Canonical payload shape (all optional unless noted):
  * {
@@ -82,12 +74,6 @@ class TrackingEventIngester
     /** Replay window for timestamped identity signatures (seconds). */
     private const IDENTITY_SIGNATURE_MAX_AGE = 86400;
 
-    private const CODE_PATTERN = '/^[a-z][a-z0-9_]{0,63}$/';
-
-    private const CURRENCIES = ['USD', 'EUR', 'BRL', 'GBP', 'MXN', 'ARS'];
-
-    private const PARENT_TYPES = ['Lead', 'Opportunity', 'Contact', 'Account'];
-
     /** Payload keys only the trusted path may assert. */
     private const PRIVILEGED_KEYS = ['contactId', 'ipAddress', 'userAgent', 'parentType', 'parentId'];
 
@@ -97,6 +83,7 @@ class TrackingEventIngester
         private Log $log,
         private JobSchedulerFactory $jobSchedulerFactory,
         private RateLimiter $rateLimiter,
+        private TrackingEventPersister $persister,
     ) {}
 
     public function ingest(
@@ -110,6 +97,13 @@ class TrackingEventIngester
         $source = $this->entityManager->getEntityById(TrackingSource::ENTITY_TYPE, $sourceId);
 
         if (!$source instanceof TrackingSource || !$source->get('isActive')) {
+            return IngestResult::notFound();
+        }
+
+        if ($source->isInternalKind()) {
+            // kind=CRM is the in-process channel (InternalEventRecorder).
+            // It must never accept events over HTTP — pretend it does not
+            // exist.
             return IngestResult::notFound();
         }
 
@@ -155,7 +149,7 @@ class TrackingEventIngester
             }
         }
 
-        $code = $this->normalizeCode($data['code'] ?? null);
+        $code = $this->persister->normalizeCode($data['code'] ?? null);
 
         if ($code === null) {
             return $this->reject(
@@ -173,7 +167,7 @@ class TrackingEventIngester
             return $this->reject($source, TrackingSource::STATUS_BAD_REQUEST, 'source is not fully configured');
         }
 
-        $type = $this->resolveEventType($source, $code, $tenantId);
+        $type = $this->persister->resolveEventType($source, $code, $tenantId);
 
         if ($type === null) {
             return $this->reject(
@@ -188,7 +182,7 @@ class TrackingEventIngester
             return $this->reject($source, TrackingSource::STATUS_SKIPPED, "event code '{$code}' is inactive", IngestResult::skipped());
         }
 
-        $teamsIds = $this->resolveTeamsIds($type, $source, $tenantId);
+        $teamsIds = $this->persister->resolveTeamsIds($type, $source, $tenantId);
 
         if ($teamsIds === []) {
             $this->log->error("TrackingEventIngester: source={$sourceId} type={$code} resolve no teams; refusing ingest.");
@@ -202,49 +196,43 @@ class TrackingEventIngester
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $occurredAt = $this->resolveOccurredAt($data['occurredAt'] ?? null, $now);
 
+        $attributes = [
+            'name' => $code . ' @ ' . $occurredAt,
+            'code' => $code,
+            'occurredAt' => $occurredAt,
+            'receivedAt' => $now->format('Y-m-d H:i:s'),
+            'status' => TrackingEvent::STATUS_RECEIVED,
+            'channel' => $trusted ? TrackingEvent::CHANNEL_SERVER : TrackingEvent::CHANNEL_BROWSER,
+            'trackingSourceId' => $source->getId(),
+            'trackingEventTypeId' => $type->getId(),
+            'url' => $this->str($data['url'] ?? null, 1024),
+            'referrer' => $this->str($data['referrer'] ?? null, 1024),
+            'userAgent' => $this->str(($trusted ? ($data['userAgent'] ?? null) : null) ?? $userAgent, 512),
+            'ipAddress' => $this->str(($trusted ? ($data['ipAddress'] ?? null) : null) ?? $clientIp, 64),
+            'anonymousId' => $anonymousId,
+            'contactId' => $contact?->getId(),
+            'payload' => (object) $data,
+            'attribution' => is_array($data['attribution'] ?? null) ? (object) $data['attribution'] : null,
+            'value' => is_numeric($data['value'] ?? null) ? (float) $data['value'] : null,
+            'currency' => in_array($data['currency'] ?? null, TrackingEventPersister::CURRENCIES, true) ? $data['currency'] : '',
+            'teamsIds' => $teamsIds,
+            'tenantId' => $tenantId,
+        ];
+
+        if ($trusted) {
+            $this->applyParent($attributes, $data);
+        }
+
         try {
-            /** @var TrackingEvent $event */
-            $event = $this->entityManager->getNewEntity(TrackingEvent::ENTITY_TYPE);
-
-            $event->set([
-                'name' => $code . ' @ ' . $occurredAt,
-                'code' => $code,
-                'occurredAt' => $occurredAt,
-                'receivedAt' => $now->format('Y-m-d H:i:s'),
-                'status' => TrackingEvent::STATUS_RECEIVED,
-                'channel' => $trusted ? TrackingEvent::CHANNEL_SERVER : TrackingEvent::CHANNEL_BROWSER,
-                'trackingSourceId' => $source->getId(),
-                'trackingEventTypeId' => $type->getId(),
-                'url' => $this->str($data['url'] ?? null, 1024),
-                'referrer' => $this->str($data['referrer'] ?? null, 1024),
-                'userAgent' => $this->str(($trusted ? ($data['userAgent'] ?? null) : null) ?? $userAgent, 512),
-                'ipAddress' => $this->str(($trusted ? ($data['ipAddress'] ?? null) : null) ?? $clientIp, 64),
-                'anonymousId' => $anonymousId,
-                'contactId' => $contact?->getId(),
-                'payload' => (object) $data,
-                'attribution' => is_array($data['attribution'] ?? null) ? (object) $data['attribution'] : null,
-                'value' => is_numeric($data['value'] ?? null) ? (float) $data['value'] : null,
-                'currency' => in_array($data['currency'] ?? null, self::CURRENCIES, true) ? $data['currency'] : '',
-                'teamsIds' => $teamsIds,
-                'tenantId' => $tenantId,
-            ]);
-
-            if ($trusted) {
-                $this->applyParent($event, $data);
-            }
-
-            // silent: no stream/notification noise; Cascade* hooks early-return.
-            // NOT skipHooks: the FieldProcessing common hook must run to
-            // persist teamsIds (entity_team) — team ACL isolation depends on it.
-            $this->entityManager->saveEntity($event, ['silent' => true]);
+            $event = $this->persister->persistEvent($attributes);
         } catch (Throwable $e) {
             $this->log->error("TrackingEventIngester: failed to persist event for source={$sourceId}: " . $e->getMessage());
 
             return $this->reject($source, TrackingSource::STATUS_BAD_REQUEST, 'persistence failure');
         }
 
-        $this->bumpSourceCounters($source, $now);
-        $this->bumpTypeCounters($type, $now);
+        $this->persister->bumpSourceCounters($source, $now);
+        $this->persister->bumpTypeCounters($type, $now);
 
         if ($contact !== null && $anonymousId !== null) {
             $this->jobSchedulerFactory
@@ -275,7 +263,7 @@ class TrackingEventIngester
 
         $source = $this->entityManager->getEntityById(TrackingSource::ENTITY_TYPE, $sourceId);
 
-        if (!$source instanceof TrackingSource || !$source->get('isActive')) {
+        if (!$source instanceof TrackingSource || !$source->get('isActive') || $source->isInternalKind()) {
             return false;
         }
 
@@ -337,55 +325,6 @@ class TrackingEventIngester
         }
 
         return null;
-    }
-
-    /**
-     * Resolve the TrackingEventType for (code, tenant), auto-creating a
-     * Custom-category row when the source allows it. Handles the
-     * codeTenant unique-index race by re-fetching on duplicate key.
-     */
-    private function resolveEventType(TrackingSource $source, string $code, string $tenantId): ?TrackingEventType
-    {
-        $repo = $this->entityManager->getRDBRepository(TrackingEventType::ENTITY_TYPE);
-
-        $type = $repo
-            ->where(['code' => $code, 'tenantId' => $tenantId, 'deleted' => false])
-            ->findOne();
-
-        if ($type instanceof TrackingEventType) {
-            return $type;
-        }
-
-        if (!$source->get('allowUnknownEventCode')) {
-            return null;
-        }
-
-        try {
-            /** @var TrackingEventType $type */
-            $type = $this->entityManager->getNewEntity(TrackingEventType::ENTITY_TYPE);
-
-            $type->set([
-                'name' => $code,
-                'code' => $code,
-                'category' => TrackingEventType::CATEGORY_CUSTOM,
-                'isActive' => true,
-                'teamsIds' => $this->sourceTeamsIds($source),
-                'tenantId' => $tenantId,
-            ]);
-
-            // silent (no stream noise) but NOT skipHooks — see event save.
-            $this->entityManager->saveEntity($type, ['silent' => true]);
-
-            return $type;
-        } catch (Throwable) {
-            // Concurrent first-sight of the same code: unique index
-            // codeTenant fired for the other request. Re-fetch.
-            $type = $repo
-                ->where(['code' => $code, 'tenantId' => $tenantId, 'deleted' => false])
-                ->findOne();
-
-            return $type instanceof TrackingEventType ? $type : null;
-        }
     }
 
     /**
@@ -489,72 +428,20 @@ class TrackingEventIngester
     }
 
     /**
-     * Teams for the new event row, in fallback order:
-     *   1. the resolved TrackingEventType's teams,
-     *   2. the TrackingSource's teams,
-     *   3. the Tenant's baseUserTeam (the inverse of the
-     *      AssignTenantFromTeam derivation — every tenant has one).
-     *
-     * @return list<string>
-     */
-    private function resolveTeamsIds(TrackingEventType $type, TrackingSource $source, string $tenantId): array
-    {
-        try {
-            $teamsIds = $type->getLinkMultipleIdList('teams');
-        } catch (Throwable) {
-            $teamsIds = [];
-        }
-
-        if ($teamsIds !== []) {
-            return array_values(array_unique($teamsIds));
-        }
-
-        $teamsIds = $this->sourceTeamsIds($source);
-
-        if ($teamsIds !== []) {
-            return $teamsIds;
-        }
-
-        return $this->tenantBaseTeamIds($tenantId);
-    }
-
-    /** @return list<string> */
-    private function tenantBaseTeamIds(string $tenantId): array
-    {
-        try {
-            $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
-            $baseTeamId = $tenant?->get('baseUserTeamId');
-
-            return is_string($baseTeamId) && $baseTeamId !== '' ? [$baseTeamId] : [];
-        } catch (Throwable) {
-            return [];
-        }
-    }
-
-    /** @return list<string> */
-    private function sourceTeamsIds(TrackingSource $source): array
-    {
-        try {
-            return array_values(array_unique($source->getLinkMultipleIdList('teams')));
-        } catch (Throwable) {
-            return [];
-        }
-    }
-
-    /**
+     * @param array<string, mixed> $attributes
      * @param array<string, mixed> $data
      */
-    private function applyParent(TrackingEvent $event, array $data): void
+    private function applyParent(array &$attributes, array $data): void
     {
         $parentType = $data['parentType'] ?? null;
         $parentId = $data['parentId'] ?? null;
 
         if (
-            is_string($parentType) && in_array($parentType, self::PARENT_TYPES, true) &&
+            is_string($parentType) && in_array($parentType, TrackingEventPersister::PARENT_TYPES, true) &&
             is_string($parentId) && $parentId !== ''
         ) {
-            $event->set('parentType', $parentType);
-            $event->set('parentId', $parentId);
+            $attributes['parentType'] = $parentType;
+            $attributes['parentId'] = $parentId;
         }
     }
 
@@ -577,17 +464,6 @@ class TrackingEventIngester
         }
 
         return $now->format('Y-m-d H:i:s');
-    }
-
-    private function normalizeCode(mixed $raw): ?string
-    {
-        if (!is_string($raw)) {
-            return null;
-        }
-
-        $code = strtolower(trim($raw));
-
-        return preg_match(self::CODE_PATTERN, $code) === 1 ? $code : null;
     }
 
     private function str(mixed $value, int $maxLength): ?string
@@ -616,9 +492,8 @@ class TrackingEventIngester
     }
 
     /**
-     * Failure/skip bookkeeping on the source row: status + error + timestamp,
-     * WITHOUT bumping totalEventsReceived (accepted events only). Runs as a
-     * direct UPDATE so no hooks/streams fire.
+     * Failure/skip bookkeeping on the source row (status + error + timestamp,
+     * no counter bump), mapped to the caller-facing IngestResult.
      */
     private function reject(
         TrackingSource $source,
@@ -626,62 +501,8 @@ class TrackingEventIngester
         string $error,
         ?IngestResult $result = null,
     ): IngestResult {
-        $this->updateSource($source, [
-            'lastEventReceivedAt' => (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
-            'lastEventStatus' => $status,
-            'lastEventError' => $error,
-        ]);
+        $this->persister->recordRejection($source, $status, $error);
 
         return $result ?? IngestResult::badRequest($error);
-    }
-
-    private function bumpSourceCounters(TrackingSource $source, DateTimeImmutable $now): void
-    {
-        $this->updateSource($source, [
-            'totalEventsReceived' => Expression::add(Expression::column('totalEventsReceived'), 1),
-            'lastEventReceivedAt' => $now->format('Y-m-d H:i:s'),
-            'lastEventStatus' => TrackingSource::STATUS_ACCEPTED,
-            'lastEventError' => null,
-        ]);
-    }
-
-    private function bumpTypeCounters(TrackingEventType $type, DateTimeImmutable $now): void
-    {
-        try {
-            $query = $this->entityManager
-                ->getQueryBuilder()
-                ->update()
-                ->in(TrackingEventType::ENTITY_TYPE)
-                ->set([
-                    'totalEventsReceived' => Expression::add(Expression::column('totalEventsReceived'), 1),
-                    'lastEventAt' => $now->format('Y-m-d H:i:s'),
-                ])
-                ->where(Condition::equal(Expression::column('id'), $type->getId()))
-                ->build();
-
-            $this->entityManager->getQueryExecutor()->execute($query);
-        } catch (Throwable $e) {
-            $this->log->warning('TrackingEventIngester: type counter bump failed — ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $set
-     */
-    private function updateSource(TrackingSource $source, array $set): void
-    {
-        try {
-            $query = $this->entityManager
-                ->getQueryBuilder()
-                ->update()
-                ->in(TrackingSource::ENTITY_TYPE)
-                ->set($set)
-                ->where(Condition::equal(Expression::column('id'), $source->getId()))
-                ->build();
-
-            $this->entityManager->getQueryExecutor()->execute($query);
-        } catch (Throwable $e) {
-            $this->log->warning('TrackingEventIngester: source status update failed — ' . $e->getMessage());
-        }
     }
 }

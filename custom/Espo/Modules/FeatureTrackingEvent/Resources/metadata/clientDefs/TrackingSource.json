@@ -23,7 +23,38 @@
     },
     "dynamicLogic": {
         "fields": {
+            "ingestUrl": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "kind",
+                            "value": "CRM"
+                        }
+                    ]
+                }
+            },
+            "rateLimitPerMinute": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "kind",
+                            "value": "CRM"
+                        }
+                    ]
+                }
+            },
             "signingSecret": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "kind",
+                            "value": ["Server", "Chatwoot", "Other"]
+                        }
+                    ]
+                },
                 "required": {
                     "conditionGroup": [
                         {

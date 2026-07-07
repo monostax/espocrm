@@ -31,9 +31,10 @@
         "events": "Eventos"
     },
     "tooltips": {
+        "kind": "De onde os eventos vêm. Site/Mobile ingerem pelo caminho público (sem assinatura); Servidor/Chat/Outro são server-to-server e exigem segredo de assinatura. CRM (Interno) habilita o rastreamento de eventos que o próprio CRM emite (ex: mudanças de etapa de Oportunidade): crie uma fonte CRM por tenant para ligar — ela nunca ingere via HTTP, e desativá-la desliga o rastreamento interno.",
         "ingestUrl": "URL pública para POST de eventos. O id no caminho é o id do registro — qualquer um com essa URL pode tentar ingestão, então configure sempre um segredo de assinatura em produção.",
         "trackerSnippet": "Cole este snippet no <head> do seu site (em toda página que deseja rastrear). Ele carrega o tracker de forma assíncrona e envia um page_view ao carregar. Rastreie eventos customizados com mstx('track', 'codigo_evento', {...}); identifique visitantes com mstx('identify', email). A origem da página precisa constar em Origens Permitidas.",
-        "signingSecret": "Segredo HMAC-SHA256 usado para validar o cabeçalho X-Tracking-Signature. Obrigatório para tipos confiáveis (Servidor, Chatwoot, Outro); não usado em Site/Mobile — navegadores não guardam segredos. Armazenado criptografado; somente escrita (nunca legível de volta pela API).",
+        "signingSecret": "Segredo HMAC-SHA256 usado para validar o cabeçalho X-Tracking-Signature. Obrigatório para tipos confiáveis (Servidor, Chat, Outro); não usado em Site/Mobile — navegadores não guardam segredos. Armazenado criptografado; somente escrita (nunca legível de volta pela API).",
         "identityVerificationSecret": "Segredo opcional para chamadas identify() verificadas de fontes públicas. Seu backend assina o e-mail do visitante com HMAC-SHA256 e o SDK do navegador envia a assinatura no corpo do evento — reivindicações de identidade sem assinatura válida são tratadas como não verificadas. Armazenado criptografado; somente escrita.",
         "allowedOrigins": "Uma origem CORS por linha (ex: https://www.exemplo.com). Obrigatório para kind=Site — a ingestão via navegador é rejeitada se a origem não casar com a lista. Não se aplica aos demais tipos.",
         "allowUnknownEventCode": "Se ligado, a ingestão cria automaticamente um TrackingEventType (categoria=Custom) para códigos desconhecidos. Desligue após estabilizar seu dicionário de eventos.",
@@ -44,10 +45,11 @@
     "options": {
         "kind": {
             "Website": "Site",
-            "Chatwoot": "Chatwoot",
+            "Chatwoot": "Chat",
             "Server": "Servidor",
             "Mobile": "Mobile",
-            "Other": "Outro"
+            "Other": "Outro",
+            "CRM": "CRM (Interno)"
         },
         "lastEventStatus": {
             "": "—",

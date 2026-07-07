@@ -10,11 +10,14 @@
         "kind": {
             "type": "enum",
             "required": true,
-            "options": ["Website", "Chatwoot", "Server", "Mobile", "Other"],
+            "options": ["Website", "Chatwoot", "Server", "Mobile", "Other", "CRM"],
             "default": "Website",
             "style": {
-                "Server": "info"
-            }
+                "Server": "info",
+                "CRM": "primary"
+            },
+            "tooltip": true,
+            "comment": "CRM = internal-only channel: user-created (one per tenant, enforced by ValidateSingleCrmSourcePerTenant) to opt in to events the CRM emits about itself; never ingests over HTTP."
         },
         "isActive": {
             "type": "bool",

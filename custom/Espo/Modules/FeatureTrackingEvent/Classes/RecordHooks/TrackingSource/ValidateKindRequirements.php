@@ -22,6 +22,14 @@ use Espo\ORM\Entity;
  *   - kind=Mobile: exempt from both. Native apps send no Origin header and
  *     cannot keep a secret; abuse control is rate limiting + field
  *     stripping on the public path.
+ *   - kind=CRM: the internal-only channel. Created BY THE USER (this is the
+ *     opt-in switch for internal CRM event tracking — no CRM source means
+ *     no recording). Exempt from signingSecret and allowedOrigins: the
+ *     ingest endpoint refuses kind=CRM outright, so there is nothing to
+ *     sign and no browser to gate. Tenant scoping and the one-per-tenant
+ *     uniqueness rule are enforced at ORM level by
+ *     Hooks\TrackingSource\ValidateSingleCrmSourcePerTenant, which runs
+ *     after tenantId has been derived from teams.
  *
  * Registered as SaveHook (single signature, accepted for both beforeCreate
  * and beforeUpdate) via recordDefs/TrackingSource.json. Runs before the
@@ -41,6 +49,10 @@ class ValidateKindRequirements implements SaveHook
     public function process(Entity $entity): void
     {
         if (!$entity instanceof TrackingSource) {
+            return;
+        }
+
+        if ($entity->isInternalKind()) {
             return;
         }
 
