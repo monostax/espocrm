@@ -144,7 +144,7 @@ Dependency-free, ~4 KB gzipped, command-queue API on `window.mstx`.
 
 | Command | Effect |
 |---|---|
-| `mstx('init', ingestUrl)` | Required first. Captures UTM/click-id attribution from the landing URL (last-touch, persisted 30 days in `localStorage`). |
+| `mstx('init', ingestUrl [, options])` | Required first. Captures UTM/click-id attribution from the landing URL (last-touch, persisted 30 days in `localStorage`). Options: `decorateWaLinks` (default `true`) — embed the visitor id into WhatsApp anchors' pre-filled text; `decorateShortLinks` (default `true`) — append `mstx_a={anonymousId}` to TrackingLink short-URL anchors; `shortLinkHosts` (array) — extra hostnames treated as short-link domains (your `trackingLinkDomain`). |
 | `mstx('page' [, props])` | Sends a `page_view` event. `title` and `path` are added automatically. |
 | `mstx('track', code [, props])` | Sends a custom event. `code` must match `[a-z][a-z0-9_]{0,63}` (server lowercases, then rejects anything else). `props.value` (number) and `props.currency` (`USD/EUR/BRL/GBP/MXN/ARS`) are lifted to top-level payload fields; everything else travels under `properties`. |
 | `mstx('identify', email [, signature [, timestamp]])` | Attaches an identity claim to all subsequent events (persisted across pages). See [Verified identity](#verified-identity-identify). |
@@ -295,12 +295,21 @@ teams; the tenant is derived from teams as everywhere else.
   etc.) are recorded with `payload.isLikelyBot=true`, not dropped —
   dedupe in analytics, the ledger keeps raw truth.
 
-**Identity handoff.** The redirect mints a fresh `anonymousId`, stamps it
-on the click event and appends it to the target URL as `mstx_a`;
-`tracker.js` on the landing page adopts it (when the browser has none
-yet), so the click joins the visitor's journey and is stitched
-retroactively when they identify. `mstx_l={slug}` is captured into
-attribution like a UTM.
+**Identity handoff.** The click is recorded under the visitor's own
+`anonymousId` whenever the page runs `tracker.js`: its short-link
+decorator (default on; `mstx('init', url, {decorateShortLinks: false})`
+to disable) rewrites short-link anchors at interaction time with
+`mstx_a={anonymousId}` — first-party `localStorage` only, no cookies —
+so the click (and any WhatsApp conversation it produces) joins the
+visitor's page-view history. Anchors are recognized by the
+`/api/v1/TrackingLink/go/` path on any host; when you use a dedicated
+short domain, list it: `mstx('init', url, {shortLinkHosts:
+["mstx.to"]})`. Clicks arriving without a valid `mstx_a` (shared links,
+QR codes, other people's forwards) get a fresh minted id. Either way the
+id is appended to the target URL as `mstx_a` and `tracker.js` on the
+landing page adopts it (when the browser has none yet), so the click
+joins the visitor's journey and is stitched retroactively when they
+identify. `mstx_l={slug}` is captured into attribution like a UTM.
 
 **Known-recipient links.** Mint a per-recipient URL (read ACL on both
 records + same tenant enforced):
@@ -347,11 +356,13 @@ text. Two producers:
 
 - **TrackingLink → wa.me target.** When `targetUrl` is a
   `wa.me`/`*.whatsapp.com` click-to-chat URL, the redirector embeds the
-  click's minted `anonymousId` into the `text` param instead of the
-  (useless there) `mstx_*` query handoff. The click event additionally
-  carries `payload.isWhatsApp` + `payload.waPhone`. The target **must
-  have a `text` param** — with nothing visible to embed into, the link
-  still redirects/records but relies on the time-window fallback.
+  click's `anonymousId` — the visitor's own tracker.js id when the anchor
+  was decorated (`mstx_a`), else a fresh per-click mint — into the `text`
+  param instead of the (useless there) `mstx_*` query handoff. The click
+  event additionally carries `payload.isWhatsApp` + `payload.waPhone`.
+  The target **must have a `text` param** — with nothing visible to
+  embed into, the link still redirects/records but relies on the
+  time-window fallback.
 - **tracker.js decorator** (default on; `mstx('init', url,
   {decorateWaLinks: false})` to disable). WhatsApp anchors on the page
   are rewritten at interaction time with the *stored* visitor id — this
@@ -366,9 +377,11 @@ origin click's `attribution` (fbclid/utm_*) and `trackingLink`, carries
 the reconciled Contact, and schedules the anonymous-history stitch.
 Match ladder, best first:
 
-1. **token** — exact: zero-width payload decoded from the message. One
-   linked event per `anonymousId` (idempotent across re-syncs; each new
-   click mints a fresh id, so mid-lifecycle clicks produce new events).
+1. **token** — exact: zero-width payload decoded from the message. The
+   linked event's `parent` is the origin click/session event, and
+   consumption is per-origin: re-syncs and re-sent identical messages
+   are no-ops, while a new click by the same visitor (sticky browser id)
+   is a new origin and links a fresh conversation.
 2. *(ctwa_clid — Meta click-to-WhatsApp ads referral — is handled by
    FeatureMetaConversionsApi, not here.)*
 3. **time_window** — fuzzy fallback for erased pre-filled text: a NEW
@@ -506,7 +519,22 @@ When an event arrives with **both** a resolved Contact and an
 anonymous id via job group). It retroactively assigns that Contact to every
 earlier anonymous event with the same `anonymousId` in the same tenant
 (batches of 500, idempotent) — pre-signup browsing history attaches to the
-person the moment they identify.
+person the moment they identify. The same happens when a WhatsApp
+conversation is linked by token (see above).
+
+**Returning visitors are linked continuously.** Stitched rows KEEP their
+`anonymousId` — the `(anonymousId, contact)` pair on the ledger is the
+identity map. Every later contact-less event (SDK events, short-link
+clicks, tokenless linked conversations) resolves its Contact at write time
+via `TrackingEventPersister::resolveContactIdByAnonymousId` (most recent
+attributed row wins, contact re-verified, backed by the
+`(anonymousId, occurredAt)` index), so a known browser never goes
+anonymous again between identify moments.
+
+Trade-offs, deliberately accepted: a **shared browser** keeps resolving to
+the first identified person until a newer identify/stitch supersedes it
+(last stitch wins), and `mstx('reset')` — call it on logout — is what
+severs a browser from the Contact (a fresh id is minted).
 
 ## Tenancy, teams and permissions
 

@@ -54,7 +54,7 @@
             "readOnly": true,
             "index": true,
             "tooltip": true,
-            "comment": "Opaque visitor id for un-identified traffic. Cleared by AnonymousStitcher once the visitor identifies and the row is rewired to contactId."
+            "comment": "Opaque visitor id for un-identified traffic. KEPT after stitching: the (anonymousId, contact) pair on stitched rows is the returning-visitor identity map (TrackingEventPersister::resolveContactIdByAnonymousId)."
         },
         "payload": {
             "type": "jsonObject",
@@ -128,14 +128,14 @@
             "type": "link",
             "readOnly": true,
             "tooltip": true,
-            "comment": "Set when the visitor was already identified, or backfilled by AnonymousStitcher."
+            "comment": "Set when the visitor was already identified, resolved as a returning known browser (anonymousId previously stitched), or backfilled by AnonymousStitcher."
         },
         "parent": {
             "type": "linkParent",
-            "entityList": ["Lead", "Opportunity", "Contact", "Account"],
+            "entityList": ["Lead", "Opportunity", "Contact", "Account", "TrackingEvent"],
             "readOnly": true,
             "tooltip": true,
-            "comment": "Polymorphic subject — additional context (e.g. 'Pricing Page View during Opportunity O-123')."
+            "comment": "Polymorphic subject — additional context (e.g. 'Pricing Page View during Opportunity O-123'). For whatsapp_conversation_linked events: the origin click/session TrackingEvent (WhatsAppAttributionLinker's consumption marker)."
         },
         "createdAt": {
             "type": "datetime",
@@ -211,7 +211,7 @@
         },
         "parent": {
             "type": "belongsToParent",
-            "entityList": ["Lead", "Opportunity", "Contact", "Account"]
+            "entityList": ["Lead", "Opportunity", "Contact", "Account", "TrackingEvent"]
         }
     },
     "collection": {
@@ -222,10 +222,13 @@
         "code": { "columns": ["code"] },
         "occurredAt": { "columns": ["occurredAt"] },
         "anonymousId": { "columns": ["anonymousId", "deleted"] },
+        "anonymousIdOccurredAt": { "columns": ["anonymousId", "occurredAt"] },
         "contactId": { "columns": ["contactId", "deleted"] },
+        "contactIdOccurredAt": { "columns": ["contactId", "occurredAt"] },
         "status": { "columns": ["status"] },
         "tenantId": { "columns": ["tenantId", "deleted"] },
         "trackingLinkId": { "columns": ["trackingLinkId", "deleted"] },
+        "trackingLinkIdOccurredAt": { "columns": ["trackingLinkId", "occurredAt"] },
         "parent": { "columns": ["parentType", "parentId"] }
     }
 }

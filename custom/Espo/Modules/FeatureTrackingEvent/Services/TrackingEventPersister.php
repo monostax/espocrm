@@ -182,6 +182,57 @@ class TrackingEventPersister
     }
 
     /**
+     * Returning-visitor identity map: the Contact this anonymousId was last
+     * stitched/attributed to, read straight from the event ledger (most
+     * recent row carrying BOTH the id and a contact — no separate mapping
+     * table to migrate or drift). AnonymousStitcher keeps anonymousId on
+     * stitched rows precisely so this lookup works.
+     *
+     * The Contact is re-verified (exists, same tenant, not deleted) before
+     * use. Returns null for unknown ids — callers fall back to anonymous.
+     *
+     * Trade-off (documented in README): a shared browser keeps resolving to
+     * the first identified person until a newer identify/stitch or an SDK
+     * `reset` supersedes it — last stitch wins.
+     */
+    public function resolveContactIdByAnonymousId(?string $anonymousId, string $tenantId): ?string
+    {
+        if ($anonymousId === null || $anonymousId === '' || $tenantId === '') {
+            return null;
+        }
+
+        try {
+            $mapped = $this->entityManager
+                ->getRDBRepository(TrackingEvent::ENTITY_TYPE)
+                ->where([
+                    'anonymousId' => $anonymousId,
+                    'tenantId' => $tenantId,
+                    'contactId!=' => null,
+                    'deleted' => false,
+                ])
+                ->order('occurredAt', 'DESC')
+                ->findOne();
+
+            $contactId = $mapped?->get('contactId');
+
+            if (!is_string($contactId) || $contactId === '') {
+                return null;
+            }
+
+            $contact = $this->entityManager
+                ->getRDBRepository('Contact')
+                ->where(['id' => $contactId, 'tenantId' => $tenantId, 'deleted' => false])
+                ->findOne();
+
+            return $contact?->getId();
+        } catch (Throwable $e) {
+            $this->log->warning('TrackingEventPersister: returning-visitor lookup failed — ' . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
      * Persist a fully-assembled event row. Throws on failure — callers
      * decide how a persistence error maps to their result type.
      *

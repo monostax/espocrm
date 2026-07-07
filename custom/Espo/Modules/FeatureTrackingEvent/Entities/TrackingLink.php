@@ -16,10 +16,13 @@ use Espo\Core\ORM\Entity;
  * to `targetUrl`.
  *
  * Identity model:
- *   - Anonymous clicks: the redirect mints a fresh anonymousId, stamps it on
- *     the click event and appends `mstx_a` to the target URL so tracker.js
- *     on the landing page adopts it — the click merges into the visitor's
- *     journey and is stitched retroactively when they identify.
+ *   - Anonymous clicks: the redirect records the click under the visitor's
+ *     own anonymousId when tracker.js's short-link decorator handed it in
+ *     via `mstx_a` (joining the click to the page-view history), else
+ *     mints a fresh one; the id is appended as `mstx_a` to the target URL
+ *     so tracker.js on the landing page adopts it — the click merges into
+ *     the visitor's journey and is stitched retroactively when they
+ *     identify.
  *   - Known-recipient clicks: a per-recipient `?c={token}` (HMAC, see
  *     Services\ContactToken) resolves the Contact at redirect time and is
  *     passed through as `mstx_c` so tracker.js identifies the landing

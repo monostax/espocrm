@@ -26,12 +26,16 @@ use Throwable;
  * by FeatureMetaConversionsApi:
  *
  *   TOKEN — every newly-synced incoming message is scanned for a
- *   zero-width payload (ZeroWidthCodec) carrying the anonymousId minted at
- *   click time by TrackingLinkRedirector (or embedded client-side by
- *   tracker.js's WhatsApp link decorator). Exact, works at any point in
- *   the customer lifecycle: each new click mints a new id, so repeat
- *   clicks produce fresh linked events. One linked event per anonymousId
- *   (idempotent across re-syncs; a re-sent identical message is a no-op).
+ *   zero-width payload (ZeroWidthCodec) carrying an anonymousId: the
+ *   visitor's own sticky browser id when the click came through
+ *   tracker.js's short-link/WhatsApp decorators, else the per-click id
+ *   minted by TrackingLinkRedirector. Exact, works at any point in the
+ *   customer lifecycle. The linked event's parent is set to the origin
+ *   click/session event, and consumption is per-origin: re-syncs and
+ *   re-sent identical messages are no-ops, while a NEW click by the same
+ *   visitor produces a fresh origin and therefore a fresh linked event
+ *   (sticky ids make per-anonymousId dedupe wrong — it would silently
+ *   drop every conversation after the visitor's first).
  *
  *   TIME WINDOW — when a NEW conversation starts with no token (lead
  *   erased the pre-filled text, or the target had no text param to embed
@@ -43,9 +47,11 @@ use Throwable;
  *
  * The linked event copies the origin click's attribution snapshot
  * (fbclid/utm_*) and trackingLink so it is self-sufficient for downstream
- * dispatch, resolves its source from the origin event (same tenant
- * enforced), and schedules AnonymousStitcher when a Contact is known —
- * which retroactively assigns the whole anonymous web history.
+ * dispatch, points at the origin via parent (the consumption marker),
+ * resolves its source from the origin event (same tenant enforced), and
+ * schedules AnonymousStitcher when a Contact is known — which
+ * retroactively assigns the whole anonymous web history (page views
+ * included, when the click carried the visitor's tracker.js id).
  *
  * Both public methods NEVER throw — attribution must never break a sync.
  */
@@ -95,11 +101,15 @@ class WhatsAppAttributionLinker
                 return false;
             }
 
-            if ($tenantId === '' || $this->isConsumed($anonymousId, $tenantId)) {
+            if ($tenantId === '') {
                 return false;
             }
 
-            $origin = $this->findOriginEvent($anonymousId, $tenantId);
+            $origin = $this->findOriginEvent(
+                $anonymousId,
+                $tenantId,
+                $this->parseUtc($this->strOrNull($context['occurredAt'] ?? null)),
+            );
 
             if ($origin === null) {
                 $this->log->info(
@@ -107,6 +117,10 @@ class WhatsAppAttributionLinker
                     . "in tenant={$tenantId}; skipping."
                 );
 
+                return false;
+            }
+
+            if ($this->isConsumed($origin, $tenantId)) {
                 return false;
             }
 
@@ -171,16 +185,21 @@ class WhatsAppAttributionLinker
     }
 
     /**
-     * One linked event per anonymousId: dedupes re-synced/re-sent tokens
-     * AND stops the time-window matcher from double-consuming a click.
+     * One linked event per ORIGIN event (linked events point at their
+     * origin via parent): dedupes re-synced/re-sent tokens AND stops the
+     * time-window matcher from double-consuming a click, while repeat
+     * clicks under the same sticky visitor id still link fresh
+     * conversations. (Pre-parent rows deduped per anonymousId; their ids
+     * were per-click `lnk_` mints, so the semantics were identical.)
      */
-    private function isConsumed(string $anonymousId, string $tenantId): bool
+    private function isConsumed(TrackingEvent $origin, string $tenantId): bool
     {
         $existing = $this->entityManager
             ->getRDBRepository(TrackingEvent::ENTITY_TYPE)
             ->where([
                 'code' => self::EVENT_CODE,
-                'anonymousId' => $anonymousId,
+                'parentType' => TrackingEvent::ENTITY_TYPE,
+                'parentId' => $origin->getId(),
                 'tenantId' => $tenantId,
                 'deleted' => false,
             ])
@@ -190,21 +209,36 @@ class WhatsAppAttributionLinker
     }
 
     /**
-     * The visitor's most recent prior event under this anonymousId — the
-     * short-link click, or any tracker.js event when the id was embedded
-     * client-side. Carries the source, attribution and link context the
-     * linked event inherits.
+     * The visitor's most recent event under this anonymousId at message
+     * time — the short-link click, or any tracker.js event when the id was
+     * embedded client-side. Carries the source, attribution and link
+     * context the linked event inherits. Capped at the message timestamp
+     * (+ skew) so a re-sync after further browsing still resolves the SAME
+     * origin (deterministic consumption). Sticky ids keep their history
+     * (stitched rows retain anonymousId), so the cap is what pins the
+     * origin, not the stitch state.
      */
-    private function findOriginEvent(string $anonymousId, string $tenantId): ?TrackingEvent
-    {
+    private function findOriginEvent(
+        string $anonymousId,
+        string $tenantId,
+        ?DateTimeImmutable $notAfter,
+    ): ?TrackingEvent {
+        $where = [
+            'anonymousId' => $anonymousId,
+            'tenantId' => $tenantId,
+            'code!=' => self::EVENT_CODE,
+            'deleted' => false,
+        ];
+
+        if ($notAfter !== null) {
+            $where['occurredAt<='] = $notAfter
+                ->modify('+' . self::CLOCK_SKEW_SECONDS . ' seconds')
+                ->format('Y-m-d H:i:s');
+        }
+
         $origin = $this->entityManager
             ->getRDBRepository(TrackingEvent::ENTITY_TYPE)
-            ->where([
-                'anonymousId' => $anonymousId,
-                'tenantId' => $tenantId,
-                'code!=' => self::EVENT_CODE,
-                'deleted' => false,
-            ])
+            ->where($where)
             ->order('occurredAt', 'DESC')
             ->findOne();
 
@@ -284,7 +318,7 @@ class WhatsAppAttributionLinker
                 continue; // unfurl-preview GETs are recorded but never matched
             }
 
-            if ($this->isConsumed($anonymousId, $tenantId)) {
+            if ($this->isConsumed($candidate, $tenantId)) {
                 continue;
             }
 
@@ -333,7 +367,10 @@ class WhatsAppAttributionLinker
             return false;
         }
 
-        $verifiedContactId = $this->verifyContactId($contactId, $tenantId);
+        // Chatwoot's reconciled contact first; else the returning-visitor
+        // ledger lookup (the token's id may have been stitched before).
+        $verifiedContactId = $this->verifyContactId($contactId, $tenantId)
+            ?? $this->persister->resolveContactIdByAnonymousId($anonymousId, $tenantId);
 
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $occurredAt = $this->parseUtc($this->strOrNull($context['occurredAt'] ?? null)) ?? $now;
@@ -378,6 +415,8 @@ class WhatsAppAttributionLinker
             'trackingSourceId' => $source->getId(),
             'trackingEventTypeId' => $type->getId(),
             'trackingLinkId' => $origin->get('trackingLinkId'),
+            'parentType' => TrackingEvent::ENTITY_TYPE,
+            'parentId' => $origin->getId(),
             'anonymousId' => $anonymousId,
             'contactId' => $verifiedContactId,
             'payload' => (object) $payload,

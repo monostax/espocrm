@@ -15,7 +15,8 @@ use Espo\ORM\EntityManager;
  * identifies (the Mixpanel "alias/merge" model).
  *
  * Scheduled by TrackingEventIngester whenever an event resolves BOTH a
- * Contact and an anonymousId. Job data:
+ * Contact and an anonymousId, and by WhatsAppAttributionLinker when a
+ * conversation is linked. Job data:
  *   contactId   — resolved Contact id.
  *   anonymousId — the visitor id whose history should be rewired.
  *   tenantId    — tenant scope; rows from other tenants are never touched.
@@ -23,8 +24,12 @@ use Espo\ORM\EntityManager;
  * For every prior TrackingEvent in the tenant that carries this anonymousId
  * and no contact yet:
  *   - contact is set,
- *   - anonymousId is cleared (per entityDefs contract),
- *   - status flips Received → Stitched.
+ *   - status flips Received → Stitched,
+ *   - anonymousId is KEPT: the (anonymousId, contact) pair on stitched
+ *     rows is the identity map for returning visitors — later events from
+ *     the same browser resolve their Contact at ingest time
+ *     (TrackingEventPersister::resolveContactIdByAnonymousId) instead of
+ *     staying anonymous until the next identify.
  *
  * Idempotent: the query filters contactId=null, so redelivered/duplicate
  * jobs (job groups serialize but do NOT dedupe) find nothing to do.
@@ -79,7 +84,6 @@ class AnonymousStitcher implements Job
 
             foreach ($events as $event) {
                 $event->set('contactId', $contactId);
-                $event->set('anonymousId', null);
                 $event->set('status', TrackingEvent::STATUS_STITCHED);
 
                 $this->entityManager->saveEntity($event, ['skipHooks' => true, 'silent' => true]);

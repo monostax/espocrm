@@ -196,6 +196,14 @@ class TrackingEventIngester
         $anonymousId = $this->str($data['anonymousId'] ?? null, 64);
         $contact = $this->resolveContact($source, $data, $trusted, $tenantId);
 
+        // Returning known browser: no explicit identity on this event, but
+        // the anonymousId was stitched to a Contact before — resolve from
+        // the ledger so the visitor's events stay linked continuously, not
+        // only at identify moments. No stitch job needed (history is
+        // already stitched; this event is born attributed).
+        $contactId = $contact?->getId()
+            ?? $this->persister->resolveContactIdByAnonymousId($anonymousId, $tenantId);
+
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $occurredAt = $this->resolveOccurredAt($data['occurredAt'] ?? null, $now);
 
@@ -220,7 +228,7 @@ class TrackingEventIngester
             'userAgent' => $this->str(($trusted ? ($data['userAgent'] ?? null) : null) ?? $userAgent, 512),
             'ipAddress' => $this->str(($trusted ? ($data['ipAddress'] ?? null) : null) ?? $clientIp, 64),
             'anonymousId' => $anonymousId,
-            'contactId' => $contact?->getId(),
+            'contactId' => $contactId,
             'payload' => (object) $data,
             'attribution' => is_array($data['attribution'] ?? null) ? (object) $data['attribution'] : null,
             'value' => is_numeric($data['value'] ?? null) ? (float) $data['value'] : null,
@@ -351,7 +359,11 @@ class TrackingEventIngester
      *                     (identitySignature [+ identityTimestamp], 24h
      *                     replay window); otherwise accepted as a soft,
      *                     Mixpanel-style claim.
-     *   4. none         — the event stays anonymous (anonymousId only).
+     *   4. none         — the event carries no explicit identity. The
+     *                     caller (ingest()) then tries the returning-visitor
+     *                     ledger lookup by anonymousId
+     *                     (TrackingEventPersister::resolveContactIdByAnonymousId)
+     *                     before the event finally stays anonymous.
      *
      * @param array<string, mixed> $data
      */

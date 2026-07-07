@@ -37,9 +37,13 @@ use Throwable;
  *
  *   IDENTITY. `?c={ContactToken}` resolves the Contact at redirect time
  *   (must verify AND belong to the link's tenant, else degrades to
- *   anonymous). A fresh anonymousId is minted either way and handed to the
- *   landing page as `mstx_a` so tracker.js can adopt it — anonymous clicks
- *   join the visitor's future journey and are stitched when they identify.
+ *   anonymous). The visitor id: when the click comes from a page running
+ *   tracker.js, its short-link decorator appends `mstx_a={anonymousId}`
+ *   (first-party localStorage id — no cookies) and that id is adopted, so
+ *   the click joins the visitor's existing page-view history. Otherwise a
+ *   fresh `lnk_` id is minted. Either way the id is handed to the landing
+ *   page as `mstx_a` so tracker.js can adopt it — anonymous clicks join
+ *   the visitor's future journey and are stitched when they identify.
  *   The token is passed through as `mstx_c` so tracker.js identifies the
  *   landing session too. `mstx_l={slug}` ties landing attribution to the
  *   link.
@@ -50,11 +54,14 @@ use Throwable;
  *
  *   WHATSAPP TARGETS. When targetUrl is a wa.me / *.whatsapp.com
  *   click-to-chat URL there is no landing page to run tracker.js, so the
- *   mstx_* query handoff is useless. Instead the minted anonymousId is
+ *   mstx_* query handoff is useless. Instead the anonymousId (the
+ *   visitor's own when handed in via mstx_a, else the minted one) is
  *   embedded into the pre-filled `text` param as invisible zero-width
  *   characters (ZeroWidthCodec — the tintim.app technique); when the lead
  *   sends the message unmodified, the Chatwoot sync pipeline extracts it
- *   (WhatsAppAttributionLinker) and joins the conversation to this click.
+ *   (WhatsAppAttributionLinker) and joins the conversation to this click —
+ *   and, when the id came from tracker.js, to the visitor's whole
+ *   page-view history via AnonymousStitcher.
  *   The click event carries payload.isWhatsApp + payload.waPhone (the
  *   destination number) so tokenless conversations can still be matched
  *   by time proximity.
@@ -68,7 +75,10 @@ class TrackingLinkRedirector
     private const LINK_LIMIT_PER_MINUTE = 600;
 
     /** Query params consumed by this endpoint (never forwarded as-is). */
-    private const RESERVED_PARAMS = ['c'];
+    private const RESERVED_PARAMS = ['c', 'mstx_a'];
+
+    /** Visitor ids we accept via mstx_a (mirror: WhatsAppAttributionLinker). */
+    private const ANON_ID_PATTERN = '/^[A-Za-z0-9_\-.]{8,64}$/';
 
     private const BOT_UA_PATTERN =
         '/bot|crawl|spider|slurp|preview|scan|monitor|curl|wget|python-requests|headless|' .
@@ -116,7 +126,12 @@ class TrackingLinkRedirector
             return null;
         }
 
-        $anonymousId = 'lnk_' . bin2hex(random_bytes(14)); // 32 chars, fits SDK format
+        // tracker.js's short-link decorator hands the visitor's own id in
+        // via mstx_a — recording the click under it joins the click (and
+        // any WhatsApp conversation it produces) to the visitor's page-view
+        // history. Absent/invalid: mint a throwaway per-click id.
+        $anonymousId = $this->visitorAnonymousId($query)
+            ?? 'lnk_' . bin2hex(random_bytes(14)); // 32 chars, fits SDK format
 
         $token = isset($query['c']) && is_string($query['c']) ? $query['c'] : null;
 
@@ -221,7 +236,11 @@ class TrackingLinkRedirector
             return;
         }
 
-        $contactId = $this->resolveContactId($token, $tenantId);
+        // Token identity first; else returning known browser — a visitor
+        // handed in via mstx_a whose id was stitched to a Contact before
+        // resolves immediately (minted lnk_ ids never match; cheap miss).
+        $contactId = $this->resolveContactId($token, $tenantId)
+            ?? $this->persister->resolveContactIdByAnonymousId($anonymousId, $tenantId);
 
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $nowString = $now->format('Y-m-d H:i:s');
@@ -271,6 +290,24 @@ class TrackingLinkRedirector
         $this->persister->bumpSourceCounters($source, $now);
         $this->persister->bumpTypeCounters($type, $now);
         $this->bumpLinkCounters($link, $now);
+    }
+
+    /**
+     * The visitor id handed in by tracker.js's short-link decorator
+     * (`mstx_a`), when well-formed. Unauthenticated input — shape-validated
+     * and length-capped; a bad value silently falls back to minting.
+     *
+     * @param array<string, mixed> $query
+     */
+    private function visitorAnonymousId(array $query): ?string
+    {
+        $value = $query['mstx_a'] ?? null;
+
+        if (!is_string($value) || preg_match(self::ANON_ID_PATTERN, $value) !== 1) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**

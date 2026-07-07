@@ -50,6 +50,17 @@
  *       `whatsapp_click` event is tracked on click. Links whose `text`
  *       param is absent are left untouched (an invisible-only message
  *       would look empty). Pass {decorateWaLinks: false} to disable.
+ *       options.decorateShortLinks (default true): TrackingLink short
+ *       URLs (the CRM's /api/v1/TrackingLink/go/{slug} path on any host,
+ *       plus any host listed in options.shortLinkHosts — the tenant's
+ *       dedicated short domain) are decorated at interaction time with
+ *       `mstx_a={anonymousId}`, so the redirect records the click under
+ *       THIS browser's visitor id instead of minting a throwaway one.
+ *       That is what joins the visitor's page views to the click — and,
+ *       for WhatsApp-target links, to the conversation (the redirector
+ *       embeds the same id into the pre-filled message). First-party
+ *       only: the id never leaves this site except on the clicked URL —
+ *       no cookies involved. Pass {decorateShortLinks: false} to disable.
  *   mstx('page' [, props])
  *       Tracks a `page_view` event (title/path added automatically).
  *   mstx('track', code [, props])
@@ -105,7 +116,10 @@
     var state = {
         endpoint: null,
         identity: null, // {email, identitySignature?, identityTimestamp?} | {contactToken}
-        waDecoratorInstalled: false,
+        decoratorInstalled: false,
+        decorateWa: true,
+        decorateShortLinks: true,
+        shortLinkHosts: [],
     };
 
     // In-memory fallbacks for storage-less contexts (some private modes).
@@ -439,7 +453,11 @@
                 return;
             }
 
-            var url = decorateWaAnchor(anchor);
+            if (state.decorateShortLinks) {
+                decorateShortLinkAnchor(anchor);
+            }
+
+            var url = state.decorateWa ? decorateWaAnchor(anchor) : null;
 
             // Track once per actual activation (mousedown/touchstart only
             // pre-decorate for middle-click / tap navigation).
@@ -457,15 +475,62 @@
     }
 
     /**
+     * TrackingLink short-URL detection: the CRM API redirect path on any
+     * host, or a configured dedicated short domain (any path there is a
+     * slug). Server mirror: TrackingLinkRedirector::publicUrl().
+     */
+    function isShortLinkUrl(url) {
+        if (url.pathname.indexOf('/api/v1/TrackingLink/go/') !== -1) {
+            return true;
+        }
+
+        var host = (url.hostname || '').toLowerCase();
+
+        for (var i = 0; i < state.shortLinkHosts.length; i++) {
+            if (host === state.shortLinkHosts[i]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Hand this browser's anonymousId to the short-link redirect as
+     * `mstx_a` so the click event is recorded under the visitor's own id
+     * (TrackingLinkRedirector adopts it instead of minting a `lnk_` one) —
+     * joining the click, and any WhatsApp conversation it produces, to the
+     * visitor's page-view history. Idempotent.
+     */
+    function decorateShortLinkAnchor(anchor) {
+        try {
+            var url = new URL(anchor.href, window.location.href);
+
+            if (!isShortLinkUrl(url)) {
+                return;
+            }
+
+            var id = anonymousId();
+
+            if (url.searchParams.get('mstx_a') === id) {
+                return;
+            }
+
+            url.searchParams.set('mstx_a', id);
+            anchor.href = url.toString();
+        } catch (e) {}
+    }
+
+    /**
      * Delegated (capture-phase) so dynamically-added CTAs are covered and
      * the rewrite lands before the browser reads the href for navigation.
      */
-    function setupWaDecorator() {
-        if (state.waDecoratorInstalled || !window.URL || !document.addEventListener) {
+    function setupLinkDecorator() {
+        if (state.decoratorInstalled || !window.URL || !document.addEventListener) {
             return;
         }
 
-        state.waDecoratorInstalled = true;
+        state.decoratorInstalled = true;
 
         document.addEventListener('mousedown', handleWaInteraction, true);
         document.addEventListener('touchstart', handleWaInteraction, true);
@@ -525,8 +590,21 @@
         captureAttribution();
         consumeLinkHandoff();
 
-        if (!isPlainObject(options) || options.decorateWaLinks !== false) {
-            setupWaDecorator();
+        if (isPlainObject(options)) {
+            state.decorateWa = options.decorateWaLinks !== false;
+            state.decorateShortLinks = options.decorateShortLinks !== false;
+
+            if (options.shortLinkHosts instanceof Array) {
+                for (var i = 0; i < options.shortLinkHosts.length; i++) {
+                    if (typeof options.shortLinkHosts[i] === 'string' && options.shortLinkHosts[i] !== '') {
+                        state.shortLinkHosts.push(options.shortLinkHosts[i].toLowerCase());
+                    }
+                }
+            }
+        }
+
+        if (state.decorateWa || state.decorateShortLinks) {
+            setupLinkDecorator();
         }
     };
 
