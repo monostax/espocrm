@@ -17,6 +17,12 @@
                 "description": "trackingEventTypes"
             },
             {
+                "url": "#TrackingLink",
+                "label": "Links",
+                "iconClass": "ti ti-link",
+                "description": "trackingLinks"
+            },
+            {
                 "url": "#TrackingEvent",
                 "label": "Events",
                 "iconClass": "ti ti-activity",

@@ -18,6 +18,7 @@
         "errorMessage": "Error",
         "trackingSource": "Source",
         "trackingEventType": "Event Type",
+        "trackingLink": "Tracking Link",
         "contact": "Contact",
         "parent": "Subject",
         "tenant": "Tenant"
@@ -28,6 +29,7 @@
         "attribution": "Resolved attribution snapshot (utm_*, click ids, referrer chain) at ingest time.",
         "value": "Monetary value of the event (e.g. order total). Optional.",
         "contact": "Set when the visitor was already identified, or backfilled by AnonymousStitcher.",
+        "trackingLink": "Set only for clicks recorded by the short-link redirect endpoint.",
         "parent": "Polymorphic subject — additional context (e.g. 'Pricing Page View during Opportunity O-123').",
         "channel": "Trust marker: 'Server' = HMAC-verified trusted source; 'Browser' = public unsigned source (Website/Mobile). Downstream consumers weight events accordingly.",
         "tenant": "Inherited from the parent TrackingEventType (auto-set by CascadeTenantFromEventType hook)."

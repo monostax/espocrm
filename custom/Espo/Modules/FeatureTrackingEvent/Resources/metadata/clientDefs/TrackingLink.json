@@ -1,0 +1,24 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-link",
+    "boolFilterList": ["onlyMy"],
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "events",
+                "label": "Events",
+                "view": "views/record/panels/relationship",
+                "select": false,
+                "create": false,
+                "rowActionsView": "feature-tracking-event:views/record/row-actions/relationship-no-edit-no-remove"
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "events": {
+            "create": false,
+            "select": false,
+            "rowActionsView": "feature-tracking-event:views/record/row-actions/relationship-no-edit-no-remove"
+        }
+    }
+}

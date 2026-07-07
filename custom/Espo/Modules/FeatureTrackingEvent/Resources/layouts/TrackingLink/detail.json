@@ -1,0 +1,54 @@
+[
+    {
+        "tabLabel": "$Overview",
+        "name": "overviewPanel",
+        "label": "Overview",
+        "panelIconClass": "ti ti-link",
+        "gridRow": 1,
+        "gridCol": 1,
+        "gridColSpan": 2,
+        "rows": [
+            [{ "name": "name" }, { "name": "isActive" }],
+            [{ "name": "targetUrl", "fullWidth": true }],
+            [{ "name": "shortUrl", "fullWidth": true }],
+            [{ "name": "description", "fullWidth": true }]
+        ]
+    },
+    {
+        "name": "trackingPanel",
+        "label": "Tracking",
+        "panelIconClass": "ti ti-activity",
+        "gridRow": 1,
+        "gridCol": 2,
+        "gridColSpan": 1,
+        "rows": [
+            [{ "name": "trackingSource", "fullWidth": true }],
+            [{ "name": "eventCode", "fullWidth": true }],
+            [{ "name": "slug", "fullWidth": true }]
+        ]
+    },
+    {
+        "name": "statisticsPanel",
+        "label": "Statistics",
+        "panelIconClass": "ti ti-chart-bar",
+        "gridRow": 2,
+        "gridCol": 1,
+        "gridColSpan": 2,
+        "rows": [
+            [{ "name": "totalClicks" }, { "name": "lastClickAt" }]
+        ]
+    },
+    {
+        "name": "systemPanel",
+        "label": "System",
+        "panelIconClass": "ti ti-settings",
+        "gridRow": 2,
+        "gridCol": 2,
+        "gridColSpan": 1,
+        "rows": [
+            [{ "name": "createdAt" }, { "name": "createdBy" }],
+            [{ "name": "modifiedAt" }, { "name": "modifiedBy" }],
+            [{ "name": "teams", "fullWidth": true }]
+        ]
+    }
+]

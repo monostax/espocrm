@@ -25,6 +25,7 @@
         "errorMessage": "Erro",
         "trackingSource": "Fonte",
         "trackingEventType": "Tipo de Evento",
+        "trackingLink": "Link Rastreável",
         "contact": "Contato",
         "parent": "Assunto",
         "tenant": "Tenant"
@@ -35,6 +36,7 @@
         "attribution": "Snapshot de atribuição resolvida (utm_*, click ids, cadeia de referrers) no momento do ingest.",
         "value": "Valor monetário do evento (ex: total do pedido). Opcional.",
         "contact": "Preenchido quando o visitante já era identificado, ou retroativamente pelo AnonymousStitcher.",
+        "trackingLink": "Preenchido apenas para cliques gravados pelo endpoint de redirecionamento de links curtos.",
         "parent": "Assunto polimórfico — contexto adicional (ex: 'Visita à Página de Preços durante Oportunidade O-123').",
         "channel": "Marcador de confiança: 'Servidor' = fonte confiável verificada por HMAC; 'Navegador' = fonte pública sem assinatura (Site/Mobile). Consumidores downstream ponderam os eventos de acordo.",
         "tenant": "Herdado do TrackingEventType pai (definido automaticamente pelo hook CascadeTenantFromEventType)."

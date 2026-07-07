@@ -266,6 +266,15 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // TrackingLink: regular tenant users can see team links
+                // (e.g. to copy the short URL); management is tenant-admin
+                // (override below).
+                'TrackingLink' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'ChatwootUser' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -832,6 +841,7 @@ class SeedRole implements RebuildAction
                 'TrackingEvent' => (object)[],
                 'TrackingEventType' => (object)[],
                 'TrackingSource' => (object)[],
+                'TrackingLink' => (object)[],
 
                 'Unidade' => (object)[],
                 'Profissional' => (object)[],
@@ -1237,6 +1247,12 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                     ],
                     'TrackingEventType' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'TrackingLink' => [
                         'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',

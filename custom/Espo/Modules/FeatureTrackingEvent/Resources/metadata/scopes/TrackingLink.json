@@ -1,0 +1,11 @@
+{
+    "entity": "TrackingLink",
+    "isCustom": false,
+    "module": "FeatureTrackingEvent",
+    "tab": true,
+    "object": true,
+    "acl": "team",
+    "aclLevel": "team",
+    "stream": false,
+    "languageCategory": "Tracking Events"
+}

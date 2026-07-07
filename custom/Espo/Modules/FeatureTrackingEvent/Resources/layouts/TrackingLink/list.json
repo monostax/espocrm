@@ -1,0 +1,9 @@
+[
+    { "name": "name", "link": true },
+    { "name": "slug" },
+    { "name": "isActive" },
+    { "name": "trackingSource" },
+    { "name": "tenant" },
+    { "name": "totalClicks" },
+    { "name": "lastClickAt" }
+]

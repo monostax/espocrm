@@ -11,6 +11,9 @@ downstream use (Meta CAPI / Google Offline Conversions dispatch).
 - [Installing via Google Tag Manager](#installing-via-google-tag-manager)
 - [Browser SDK reference](#browser-sdk-reference)
 - [Server-side (trusted) tracking](#server-side-trusted-tracking)
+- [Internal CRM events (kind=CRM)](#internal-crm-events-kindcrm)
+- [Trackable short links (TrackingLink)](#trackable-short-links-trackinglink)
+- [WhatsApp click-to-chat attribution](#whatsapp-click-to-chat-attribution)
 - [Verified identity (`identify`)](#verified-identity-identify)
 - [Payload reference](#payload-reference)
 - [Response codes](#response-codes)
@@ -26,13 +29,14 @@ downstream use (Meta CAPI / Google Offline Conversions dispatch).
 
 ## Concepts
 
-Three entities:
+Four entities:
 
 | Entity | Role |
 |---|---|
 | **TrackingSource** | A credentialed ingestion endpoint ("write key"). Has a kind, secrets, origin allow-list, rate limit and counters. Managed by tenant admins under **Configurations** in the navbar. |
 | **TrackingEventType** | The per-tenant event dictionary (`page_view`, `purchase`, …). Auto-created on first sight when the source allows it. |
 | **TrackingEvent** | One row per received event. **Append-only ledger** — creation happens only through the ingest pipeline; UI/API edits and deletes are blocked by record hooks (delete is admin-only). |
+| **TrackingLink** | A trackable short link: `GET .../go/{slug}` records a click event and 302-redirects to the target URL (see [Trackable short links](#trackable-short-links-trackinglink)). |
 
 ### Trust model
 
@@ -41,7 +45,7 @@ The source's `kind` decides how much the payload is trusted
 
 | Kind | Path | Authentication | May assert |
 |---|---|---|---|
-| `Server`, `Chatwoot` ("Chat"), `Other` | **Trusted** | Mandatory HMAC-SHA256 body signature (`X-Tracking-Signature`) | `contactId`, `ipAddress`, `userAgent`, `parentType`/`parentId`, `occurredAt` |
+| `Server`, `Other` | **Trusted** | Mandatory HMAC-SHA256 body signature (`X-Tracking-Signature`) | `contactId`, `ipAddress`, `userAgent`, `parentType`/`parentId`, `occurredAt` |
 | `Website` | **Public** | None — the source id in the URL is a public write key. Gated by the `Origin` allow-list + per-IP rate limit | Nothing privileged — those fields are stripped; IP/UA are derived server-side |
 | `Mobile` | **Public** | None (no Origin check either — native apps have no Origin) | Same as Website |
 | `CRM` ("CRM (Internal)") | **Internal-only** | None needed — never reachable over HTTP (the endpoint answers 404 for it). Events are written in-process by `InternalEventRecorder` | Everything — the writer is the CRM itself (see [Internal CRM events](#internal-crm-events-kindcrm)) |
@@ -158,9 +162,10 @@ Behavior details:
 
 - **Anonymous id** — UUID persisted in `localStorage` (`mstx_anon`), with
   in-memory fallback when storage is unavailable.
-- **Attribution** — `utm_source|medium|campaign|term|content`, `gclid`,
-  `fbclid`, `msclkid`, `ttclid` captured whenever present in the URL
-  (last-touch wins), stored with `landing_page`/`referrer`/`captured_at`,
+- **Attribution** — `utm_source|medium|campaign|term|content|id`, `gclid`,
+  `wbraid`, `gbraid`, `fbclid`, `msclkid`, `ttclid` captured whenever present
+  in the URL (last-touch wins), stored with
+  `landing_page`/`referrer`/`captured_at`,
   expires after 30 days, attached to every event as `attribution`.
 - **Transport** — `fetch` with `Content-Type: text/plain` and
   `keepalive: true`, falling back to `navigator.sendBeacon`. `text/plain`
@@ -174,7 +179,7 @@ Behavior details:
 
 ## Server-side (trusted) tracking
 
-For kind `Server` / `Chatwoot` / `Other`, a **Signing Secret** is mandatory
+For kind `Server` / `Other`, a **Signing Secret** is mandatory
 (validated on save). Sign the **raw request body** with HMAC-SHA256 and
 send the hex digest in `X-Tracking-Signature` (optional `sha256=` prefix).
 
@@ -253,6 +258,129 @@ Recording is fail-safe: `InternalEventRecorder.record()` never throws — a
 tracking failure is logged and can never break the user's save. Tenancy is
 derived from the opportunity's teams (`teams -> Tenant.baseUserTeam`,
 unambiguous single match required).
+
+---
+
+## Trackable short links (TrackingLink)
+
+Mautic/bit.ly-style links that record a click event and redirect
+(**Configurations → Tracking → Links**, tenant-admin):
+
+```
+GET https://{crm-host}/api/v1/TrackingLink/go/{slug}     (noAuth)
+  -> records TrackingEvent (code = eventCode, default link_clicked)
+  -> 302 to targetUrl (+ forwarded params + mstx_* handoff)
+```
+
+Create a link with a **name**, a **target URL** and a **tracking source**
+(same tenant; not `CRM (Internal)`). The immutable random `slug` and the
+copy-paste **Short URL** appear after save. Teams default to the source's
+teams; the tenant is derived from teams as everywhere else.
+
+**Invariants** (`Services/TrackingLinkRedirector`):
+
+- **Redirect > record.** Once an active slug resolves, the visitor is
+  redirected no matter what — rate limits (600/min/link + the public
+  per-IP cap) and recording failures only skip the *event*, never the
+  redirect. Inactive/unknown slug = `404` (deactivating a link kills it;
+  to keep redirecting but stop counting, deactivate its Event Type
+  instead).
+- **Param pass-through.** Ad platforms append click ids to whatever URL
+  they're given — every incoming query param (`fbclid`, `gclid`,
+  `utm_*`, …) is forwarded onto the target URL *and* captured server-side
+  into the click event's `attribution` (ad-block-proof: the redirect is
+  server-observed).
+- **Bot flagging.** Unfurl/scanner hits (WhatsApp/Slack/Telegram previews
+  etc.) are recorded with `payload.isLikelyBot=true`, not dropped —
+  dedupe in analytics, the ledger keeps raw truth.
+
+**Identity handoff.** The redirect mints a fresh `anonymousId`, stamps it
+on the click event and appends it to the target URL as `mstx_a`;
+`tracker.js` on the landing page adopts it (when the browser has none
+yet), so the click joins the visitor's journey and is stitched
+retroactively when they identify. `mstx_l={slug}` is captured into
+attribution like a UTM.
+
+**Known-recipient links.** Mint a per-recipient URL (read ACL on both
+records + same tenant enforced):
+
+```
+POST /api/v1/TrackingLink/mintContactUrl
+{"id": "{linkId}", "contactId": "{contactId}", "ttlDays": 90}
+-> {"url": "https://.../{slug}?c={token}"}
+```
+
+The `c` token is a stateless HMAC (`Services/ContactToken`, signed with
+the installation `cryptKey`, tenant-bound, default TTL 90 days). The click
+lands with `contactId` set, and the token is forwarded as `mstx_c` so the
+landing session identifies too (the ingester verifies `contactToken`
+body fields on both paths) — which stitches the recipient's prior
+anonymous browsing history. Invalid/expired/foreign tokens degrade
+silently to the anonymous path.
+
+**Dedicated short domain.** Set the `trackingLinkDomain` config (e.g.
+`https://mstx.to`) and route `GET {domain}/{slug}` →
+`/api/v1/TrackingLink/go/{slug}` at the edge — **and nothing else on that
+host**. Keeping the CRM origin out of public links means a
+phishing/blocklist incident on the link domain never taints the login
+origin, and no CRM cookies ride along with redirect GETs. Prefer a
+separate apex over a subdomain (subdomains share Safe-Browsing/mail
+reputation with the root). `shortUrl` and minted URLs use it
+automatically; empty = fall back to `{siteUrl}/api/v1/TrackingLink/go/…`.
+
+---
+
+## WhatsApp click-to-chat attribution
+
+Joins WhatsApp conversations to the web click/session that produced them
+— who messaged you *because of which ad/campaign* (the tintim.app model).
+Requires the Chatwoot module (inbound messages arrive via its
+conversation sync).
+
+**Send side — invisible token.** The visitor's `anonymousId` is embedded
+into the pre-filled message as zero-width Unicode characters
+(`Services/ZeroWidthCodec`; wire-compatible with tintim: `U+FEFF` region
+markers, `U+2060` char separators, `U+200B`/`U+200C` binary digits).
+Invisible to the lead, survives the WhatsApp hop as ordinary message
+text. Two producers:
+
+- **TrackingLink → wa.me target.** When `targetUrl` is a
+  `wa.me`/`*.whatsapp.com` click-to-chat URL, the redirector embeds the
+  click's minted `anonymousId` into the `text` param instead of the
+  (useless there) `mstx_*` query handoff. The click event additionally
+  carries `payload.isWhatsApp` + `payload.waPhone`. The target **must
+  have a `text` param** — with nothing visible to embed into, the link
+  still redirects/records but relies on the time-window fallback.
+- **tracker.js decorator** (default on; `mstx('init', url,
+  {decorateWaLinks: false})` to disable). WhatsApp anchors on the page
+  are rewritten at interaction time with the *stored* visitor id — this
+  covers WhatsApp CTAs that never went through a short link — and a
+  `whatsapp_click` event is tracked.
+
+**Receive side** (`Services/WhatsAppAttributionLinker`, invoked by the
+Chatwoot module's conversation sync — lazy FQCN, same pattern as the
+Meta CAPI bridge). Every newly-synced incoming message is scanned;
+matches record a `whatsapp_conversation_linked` event that copies the
+origin click's `attribution` (fbclid/utm_*) and `trackingLink`, carries
+the reconciled Contact, and schedules the anonymous-history stitch.
+Match ladder, best first:
+
+1. **token** — exact: zero-width payload decoded from the message. One
+   linked event per `anonymousId` (idempotent across re-syncs; each new
+   click mints a fresh id, so mid-lifecycle clicks produce new events).
+2. *(ctwa_clid — Meta click-to-WhatsApp ads referral — is handled by
+   FeatureMetaConversionsApi, not here.)*
+3. **time_window** — fuzzy fallback for erased pre-filled text: a NEW
+   tokenless conversation is matched to the nearest unconsumed, non-bot
+   wa.me short-link click targeting the receiving inbox's number within
+   15 minutes. Marked `payload.matchType="time_window"` so downstream
+   dispatch can weigh it accordingly (token matches are
+   `matchType="token"`).
+
+Caveats: the lead must send the pre-filled text unmodified for tier 1
+(hence marketing copy like *"envie esta mensagem sem apagá-la"*); the
+zero-width technique is undocumented WhatsApp behavior — valid Unicode
+that clients currently preserve, but treat tiers 2–3 as the safety net.
 
 ---
 
@@ -432,16 +560,23 @@ Status/Error** update on *every* attempt, success or failure. If they are
 ```
 custom/Espo/Modules/FeatureTrackingEvent/
 ├── Controllers/TrackingEventReceiver.php      # noAuth POST/OPTIONS endpoint
+├── Controllers/TrackingLinkRedirect.php       # noAuth GET short-link redirect
+├── Controllers/TrackingLinkMint.php           # authenticated per-recipient URL minting
 ├── Services/TrackingEventIngester.php         # HTTP pipeline (trust, normalize)
 ├── Services/TrackingEventPersister.php        # shared persistence core (types, teams, counters)
 ├── Services/InternalEventRecorder.php         # in-process events (kind=CRM, opt-in)
+├── Services/TrackingLinkRedirector.php        # slug -> record click -> 302 (+param pass-through, wa.me embed)
+├── Services/ContactToken.php                  # stateless HMAC contact tokens (tenant-bound)
+├── Services/ZeroWidthCodec.php                # invisible payloads in WhatsApp texts (tintim wire format)
+├── Services/WhatsAppAttributionLinker.php     # conversation <-> click join (token / time-window)
 ├── Services/RateLimiter.php                   # fixed-window source/IP limits
 ├── Services/IngestResult.php                  # typed outcomes -> HTTP responses
 ├── Jobs/AnonymousStitcher.php                 # retroactive contact stitching
-├── Entities/{TrackingSource,TrackingEvent,TrackingEventType}.php
+├── Entities/{TrackingSource,TrackingEvent,TrackingEventType,TrackingLink}.php
 ├── Hooks/Opportunity/TrackStageChange.php     # stage/won/lost -> internal events
 ├── Hooks/TrackingSource/EncryptSecrets.php    # secrets encrypted at rest
 ├── Hooks/TrackingSource/ValidateSingleCrmSourcePerTenant.php  # one CRM source per tenant
+├── Hooks/TrackingLink/{GenerateSlug,CascadeTeamsFromSource,AssignTenantFromTeam,ValidateLink}.php
 ├── Classes/RecordHooks/TrackingSource/ValidateKindRequirements.php
 ├── Classes/RecordHooks/TrackingEvent/{BlockWrite,BlockDelete}.php  # append-only
 ├── Classes/Record/TrackingSource/OutputFilter.php                  # secret masking
@@ -449,5 +584,6 @@ custom/Espo/Modules/FeatureTrackingEvent/
 
 client/custom/modules/feature-tracking-event/
 ├── lib/tracker.js                             # public browser SDK (plain JS)
-└── src/views/tracking-source/fields/{ingest-url,tracker-snippet}.js
+├── src/views/tracking-source/fields/{ingest-url,tracker-snippet}.js
+└── src/views/tracking-link/fields/short-url.js
 ```

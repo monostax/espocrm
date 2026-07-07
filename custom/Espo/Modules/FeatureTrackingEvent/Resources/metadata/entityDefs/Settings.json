@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "trackingLinkDomain": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": true,
+            "comment": "Optional dedicated short-link origin (e.g. https://mstx.to). Used to render TrackingLink.shortUrl and by the mint endpoint. The edge must route GET {trackingLinkDomain}/{slug} to /api/v1/TrackingLink/go/{slug} and NOTHING else (keeps the CRM origin out of public links - phishing/blocklist blast-radius isolation). Empty = fall back to {siteUrl}/api/v1/TrackingLink/go/{slug}."
+        }
+    }
+}

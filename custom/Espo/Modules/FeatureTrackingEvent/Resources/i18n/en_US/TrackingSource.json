@@ -24,7 +24,8 @@
         "lastEventError": "Last Event Error",
         "totalEventsReceived": "Total Events",
         "tenant": "Tenant",
-        "events": "Events"
+        "events": "Events",
+        "trackingLinks": "Tracking Links"
     },
     "tooltips": {
         "kind": "Where events come from. Website/Mobile ingest through the public (unsigned) path; Server/Chat/Other are server-to-server and require a signing secret. CRM (Internal) enables tracking of events the CRM emits about itself (e.g. Opportunity stage changes): create one CRM source per tenant to turn it on — it never ingests over HTTP, and deactivating it turns internal tracking off.",
@@ -41,7 +42,6 @@
     "options": {
         "kind": {
             "Website": "Website",
-            "Chatwoot": "Chat",
             "Server": "Server",
             "Mobile": "Mobile",
             "Other": "Other",

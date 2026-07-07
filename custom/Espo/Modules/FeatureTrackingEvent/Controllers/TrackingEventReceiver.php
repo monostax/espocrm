@@ -26,7 +26,7 @@ use Throwable;
  *   https://{host}/api/v1/TrackingEvent/receive/{trackingSourceId}
  *
  * Trust model (see {@see TrackingEventIngester} for the full pipeline):
- *   - Trusted sources (kind=Server/Chatwoot/Other) MUST sign the raw body
+ *   - Trusted sources (kind=Server/Other) MUST sign the raw body
  *     with HMAC-SHA256 in the X-Tracking-Signature header.
  *   - Public sources (kind=Website/Mobile) are unsigned; they are gated by
  *     Origin allow-list (Website), rate limiting and privileged-field

@@ -12,7 +12,7 @@ use Espo\Core\ORM\Entity;
  * The entity id IS the public ingestion slug: external systems POST to
  * /api/v1/TrackingEvent/receive/{sourceId}. Each source owns:
  *   - a signingSecret (encrypted at rest, used for HMAC-SHA256 verification)
- *   - a kind (Website / Chatwoot / Server / Mobile / Other / CRM)
+ *   - a kind (Website / Server / Mobile / Other / CRM)
  *   - optional CORS allow-list for browser-side ingestion
  *   - per-tenant scoping derived from selected teams
  *   - allowUnknownEventCode: if true, unknown TrackingEventType codes are
@@ -28,7 +28,6 @@ class TrackingSource extends Entity
     public const ENTITY_TYPE = 'TrackingSource';
 
     public const KIND_WEBSITE = 'Website';
-    public const KIND_CHATWOOT = 'Chatwoot';
     public const KIND_SERVER = 'Server';
     public const KIND_MOBILE = 'Mobile';
     public const KIND_OTHER = 'Other';
@@ -59,7 +58,7 @@ class TrackingSource extends Entity
      * mandatory). Single source of truth for the kind→trust policy, used by
      * the ingester, the save-validation record hook and clientDefs mirrors.
      *
-     * Trusted: Server, Chatwoot, Other (server-to-server integrations).
+     * Trusted: Server, Other (server-to-server integrations).
      * Public:  Website, Mobile (clients that cannot keep a secret).
      * CRM:     neither — internal-only; the ingester refuses it over HTTP
      *          before any trust decision (isInternalKind()).

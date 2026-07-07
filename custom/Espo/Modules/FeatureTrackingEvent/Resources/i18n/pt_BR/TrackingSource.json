@@ -28,7 +28,8 @@
         "lastEventError": "Erro do Último Evento",
         "totalEventsReceived": "Total de Eventos",
         "tenant": "Tenant",
-        "events": "Eventos"
+        "events": "Eventos",
+        "trackingLinks": "Links Rastreáveis"
     },
     "tooltips": {
         "kind": "De onde os eventos vêm. Site/Mobile ingerem pelo caminho público (sem assinatura); Servidor/Chat/Outro são server-to-server e exigem segredo de assinatura. CRM (Interno) habilita o rastreamento de eventos que o próprio CRM emite (ex: mudanças de etapa de Oportunidade): crie uma fonte CRM por tenant para ligar — ela nunca ingere via HTTP, e desativá-la desliga o rastreamento interno.",
@@ -45,7 +46,6 @@
     "options": {
         "kind": {
             "Website": "Site",
-            "Chatwoot": "Chat",
             "Server": "Servidor",
             "Mobile": "Mobile",
             "Other": "Outro",

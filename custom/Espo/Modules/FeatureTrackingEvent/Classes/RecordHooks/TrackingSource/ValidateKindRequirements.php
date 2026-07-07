@@ -13,7 +13,7 @@ use Espo\ORM\Entity;
  * Enforces kind-dependent requirements on TrackingSource at the API layer.
  *
  * Trust policy (see TrackingSource::isTrustedKind()):
- *   - Trusted kinds (Server / Chatwoot / Other): a signingSecret is
+ *   - Trusted kinds (Server / Other): a signingSecret is
  *     MANDATORY — the ingest endpoint verifies HMAC-SHA256 on every call,
  *     so a trusted source without a secret could never ingest anything.
  *   - kind=Website: a non-empty allowedOrigins allow-list is MANDATORY —

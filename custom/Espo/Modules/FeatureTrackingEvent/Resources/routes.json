@@ -18,5 +18,23 @@
             "sourceId": ":sourceId"
         },
         "noAuth": true
+    },
+    {
+        "route": "/TrackingLink/go/:slug",
+        "method": "get",
+        "params": {
+            "controller": "TrackingLinkRedirect",
+            "action": "go",
+            "slug": ":slug"
+        },
+        "noAuth": true
+    },
+    {
+        "route": "/TrackingLink/mintContactUrl",
+        "method": "post",
+        "params": {
+            "controller": "TrackingLinkMint",
+            "action": "mintContactUrl"
+        }
     }
 ]

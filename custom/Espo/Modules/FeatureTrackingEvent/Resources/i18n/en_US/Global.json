@@ -5,11 +5,13 @@
     "scopeNames": {
         "TrackingSource": "Tracking Source",
         "TrackingEventType": "Tracking Event Type",
-        "TrackingEvent": "Tracking Event"
+        "TrackingEvent": "Tracking Event",
+        "TrackingLink": "Tracking Link"
     },
     "scopeNamesPlural": {
         "TrackingSource": "Tracking Sources",
         "TrackingEventType": "Tracking Event Types",
-        "TrackingEvent": "Tracking Events"
+        "TrackingEvent": "Tracking Events",
+        "TrackingLink": "Tracking Links"
     }
 }

@@ -3,16 +3,19 @@
         "Tracking": "Tracking",
         "Sources": "Sources",
         "Event Types": "Event Types",
+        "Links": "Links",
         "Events": "Events"
     },
     "descriptions": {
         "trackingSources": "Manage ingestion channels for tracking events (websites, server-side, chat, mobile).",
         "trackingEventTypes": "Define the per-tenant dictionary of event codes the ingestion endpoint will accept.",
+        "trackingLinks": "Create trackable short links that record a click event and redirect to a target URL. WhatsApp targets (wa.me) also attribute the resulting conversation to the click.",
         "trackingEvents": "Audit raw tracking events received from clients and downstream stitching outcomes."
     },
     "keywords": {
         "trackingSources": "tracking,event,source,ingest,webhook,hmac",
         "trackingEventTypes": "tracking,event,type,code,category,dictionary",
+        "trackingLinks": "tracking,link,short,url,redirect,click,utm,qr,whatsapp,wa.me",
         "trackingEvents": "tracking,event,ledger,attribution,anonymous,stitch"
     }
 }

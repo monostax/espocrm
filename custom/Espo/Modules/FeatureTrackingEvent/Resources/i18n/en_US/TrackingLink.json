@@ -1,0 +1,34 @@
+{
+    "labels": {
+        "Create TrackingLink": "Create Tracking Link",
+        "Tracking Events": "Tracking Events"
+    },
+    "messages": {
+        "shortUrlPendingSave": "Save this link to generate the short URL."
+    },
+    "fields": {
+        "name": "Name",
+        "slug": "Slug",
+        "targetUrl": "Target URL",
+        "eventCode": "Event Code",
+        "isActive": "Active",
+        "shortUrl": "Short URL",
+        "description": "Description",
+        "totalClicks": "Total Clicks",
+        "lastClickAt": "Last Click",
+        "trackingSource": "Tracking Source",
+        "tenant": "Tenant",
+        "events": "Events"
+    },
+    "tooltips": {
+        "slug": "Immutable random short code — the public URL path. Generated on save; cannot be changed afterwards (the URL may already be printed in emails/posts).",
+        "targetUrl": "Where visitors are redirected (302). Query params on the short URL (fbclid, gclid, utm_*) are forwarded to this URL automatically, so ad attribution survives the hop. WhatsApp targets (wa.me / api.whatsapp.com) get special handling: the visitor id is embedded invisibly into the pre-filled text so the resulting conversation is attributed to this link — include a text parameter with a visible message.",
+        "eventCode": "TrackingEvent code recorded on every click (default link_clicked). Use a specific code (e.g. promo_qr_scanned) to segment campaigns; deactivate the code's Event Type row to mute recording while keeping the redirect alive.",
+        "isActive": "When off, the link stops redirecting entirely (404) — use it to kill a dead campaign. To keep redirecting but stop recording, deactivate the Event Type instead.",
+        "shortUrl": "The public URL to share. Uses the dedicated short-link domain when configured (trackingLinkDomain), keeping the CRM's own domain out of public links.",
+        "totalClicks": "Convenience counter — includes preview-bot hits (WhatsApp/Slack unfurls flagged isLikelyBot in the event payload). The Events panel below is the source of truth.",
+        "teams": "Defaults to the tracking source's teams when left empty. Determines which users can see this link.",
+        "tenant": "Derived from teams via Tenant.baseUserTeam. Must match the tracking source's tenant.",
+        "trackingSource": "Source the click events attribute to (same tenant; not CRM (Internal) — link clicks arrive over HTTP). Its 'Auto-create Unknown Codes' setting gates new event codes."
+    }
+}

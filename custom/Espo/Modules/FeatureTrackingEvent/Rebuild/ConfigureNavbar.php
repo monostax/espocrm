@@ -33,6 +33,7 @@ class ConfigureNavbar implements RebuildAction
     private const GROUP_ITEMS = [
         'TrackingSource',
         'TrackingEventType',
+        'TrackingLink',
         'TrackingEvent',
     ];
 

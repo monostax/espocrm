@@ -363,6 +363,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'chatwootAccountId' => $espoAccountId,
         ]);
 
+        $isNewConversation = $existingConversation === null;
+
         $conversation = null;
         $result = 'skipped';
 
@@ -392,9 +394,23 @@ class SyncConversationsFromChatwoot implements JobDataLess
         // Sync messages for this conversation
         if ($conversation && $result === 'synced') {
             $messages = $chatwootConversation['messages'] ?? [];
+            $tokenCandidates = [];
             if (!empty($messages)) {
-                $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId, $teamId);
+                $tokenCandidates = $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId, $teamId);
             }
+
+            // Join the conversation to the web click that produced it
+            // (zero-width token in the message text, or time-proximity to a
+            // wa.me short-link click). Safe no-op when the
+            // FeatureTrackingEvent module is not present.
+            $this->linkWhatsAppAttribution(
+                $tokenCandidates,
+                $isNewConversation,
+                $chatwootInbox,
+                $chatwootConversation,
+                $cwtContact,
+                $tenantId,
+            );
         }
 
         // Ingest any Click-to-WhatsApp / Instagram conversion events carried
@@ -465,6 +481,85 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $this->log->error(
                 'SyncConversationsFromChatwoot: conversion-event ingest failed for conversation '
                 . (string) $conversation->getId() . ': ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Hand newly-synced incoming messages to the FeatureTrackingEvent
+     * WhatsApp attribution linker (tintim-style click ↔ conversation join).
+     *
+     * Two tiers, mirroring the linker:
+     *   - token: any new incoming message carrying a zero-width payload
+     *     (collected by syncMessages — marker presence pre-checked there);
+     *   - time window: a brand-new conversation with no token anywhere is
+     *     matched against recent wa.me short-link clicks targeting this
+     *     inbox's number.
+     *
+     * Resolved lazily by FQCN so the Chatwoot module carries no hard
+     * dependency on the FeatureTrackingEvent module (same pattern as
+     * ingestConversionEvents above).
+     *
+     * @param array<int, array{content: string, wamid: ?string, chatwootMessageId: mixed, occurredAt: ?string}> $tokenCandidates
+     * @param array<string, mixed> $chatwootConversation Raw Chatwoot payload.
+     */
+    private function linkWhatsAppAttribution(
+        array $tokenCandidates,
+        bool $isNewConversation,
+        ?Entity $chatwootInbox,
+        array $chatwootConversation,
+        Entity $cwtContact,
+        ?string $tenantId
+    ): void {
+        if (!$tenantId) {
+            return;
+        }
+
+        if ($tokenCandidates === [] && !$isNewConversation) {
+            return; // nothing to link, no fallback applicable
+        }
+
+        $linkerClass = 'Espo\\Modules\\FeatureTrackingEvent\\Services\\WhatsAppAttributionLinker';
+
+        if (!class_exists($linkerClass)) {
+            return;
+        }
+
+        try {
+            $linker = $this->injectableFactory->create($linkerClass);
+
+            $contactId = $cwtContact->get('contactId');
+            $conversationId = $chatwootConversation['id'] ?? null;
+
+            foreach ($tokenCandidates as $candidate) {
+                $linker->linkFromMessageContent(
+                    $candidate['content'],
+                    $contactId,
+                    $tenantId,
+                    [
+                        'wamid' => $candidate['wamid'],
+                        'chatwootMessageId' => $candidate['chatwootMessageId'],
+                        'chatwootConversationId' => $conversationId,
+                        'occurredAt' => $candidate['occurredAt'],
+                    ]
+                );
+            }
+
+            // Fallback for leads who erased the pre-filled text: match the
+            // nearest recent short-link click aimed at this inbox's number.
+            if ($isNewConversation && $tokenCandidates === []) {
+                $linker->linkByTimeWindow(
+                    $chatwootInbox ? $chatwootInbox->get('phoneNumber') : null,
+                    $contactId,
+                    $tenantId,
+                    $this->convertChatwootTimestamp($chatwootConversation['created_at'] ?? null),
+                    ['chatwootConversationId' => $conversationId]
+                );
+            }
+        } catch (\Throwable $e) {
+            $this->log->error(
+                'SyncConversationsFromChatwoot: WhatsApp attribution link failed for conversation '
+                . (string) ($chatwootConversation['id'] ?? '?') . ': ' . $e->getMessage()
             );
         }
     }
@@ -945,6 +1040,11 @@ class SyncConversationsFromChatwoot implements JobDataLess
      * Sync messages for a conversation.
      *
      * @param string|null $teamId Team ID to assign to synced entities
+     * @return array<int, array{content: string, wamid: ?string, chatwootMessageId: mixed, occurredAt: ?string}>
+     *   NEWLY-created incoming messages whose content carries a zero-width
+     *   attribution marker (U+FEFF) — candidates for the WhatsApp
+     *   attribution linker. Only new rows qualify, which makes the
+     *   downstream linking naturally idempotent across re-syncs.
      */
     private function syncMessages(
         array $messages,
@@ -952,7 +1052,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
         Entity $cwtContact,
         string $espoAccountId,
         ?string $teamId = null
-    ): void {
+    ): array {
+        $tokenCandidates = [];
+
         foreach ($messages as $messageData) {
             $chatwootMessageId = $messageData['id'] ?? null;
             if (!$chatwootMessageId) {
@@ -1031,6 +1133,21 @@ class SyncConversationsFromChatwoot implements JobDataLess
                         $data['teamsIds'] = [$teamId];
                     }
                     $this->entityManager->createEntity('ChatwootMessage', $data);
+
+                    // New incoming message carrying a zero-width attribution
+                    // marker: candidate for the WhatsApp attribution linker
+                    // (any point in the lifecycle — each click mints a new
+                    // token, so mid-conversation clicks matter too).
+                    if ($messageType === 'incoming' && is_string($content) && str_contains($content, "\u{FEFF}")) {
+                        $tokenCandidates[] = [
+                            'content' => $content,
+                            'wamid' => isset($messageData['source_id']) && is_string($messageData['source_id'])
+                                ? $messageData['source_id']
+                                : null,
+                            'chatwootMessageId' => $chatwootMessageId,
+                            'occurredAt' => $this->convertChatwootTimestamp($messageData['created_at'] ?? null),
+                        ];
+                    }
                 }
             } catch (\Exception $e) {
                 $this->log->debug(
@@ -1091,6 +1208,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
         
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
+
+        return $tokenCandidates;
     }
 
     /**

@@ -14,6 +14,11 @@
             "type": "hasMany",
             "entity": "TrackingEvent",
             "foreign": "tenant"
+        },
+        "trackingLinks": {
+            "type": "hasMany",
+            "entity": "TrackingLink",
+            "foreign": "tenant"
         }
     }
 }

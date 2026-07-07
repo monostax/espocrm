@@ -1,0 +1,38 @@
+{
+    "labels": {
+        "Create TrackingLink": "Criar Link Rastreável",
+        "Tracking Events": "Rastreamento / Eventos Recebidos",
+        "Overview": "Visão Geral",
+        "Tracking": "Rastreamento",
+        "Statistics": "Estatísticas",
+        "System": "Sistema"
+    },
+    "messages": {
+        "shortUrlPendingSave": "Salve este link para gerar a URL curta."
+    },
+    "fields": {
+        "name": "Nome",
+        "slug": "Slug",
+        "targetUrl": "URL de Destino",
+        "eventCode": "Código do Evento",
+        "isActive": "Ativo",
+        "shortUrl": "URL Curta",
+        "description": "Descrição",
+        "totalClicks": "Total de Cliques",
+        "lastClickAt": "Último Clique",
+        "trackingSource": "Fonte de Rastreamento",
+        "tenant": "Tenant",
+        "events": "Eventos"
+    },
+    "tooltips": {
+        "slug": "Código curto aleatório e imutável — o caminho da URL pública. Gerado ao salvar; não pode ser alterado depois (a URL pode já estar impressa em e-mails/posts).",
+        "targetUrl": "Para onde os visitantes são redirecionados (302). Parâmetros de query na URL curta (fbclid, gclid, utm_*) são repassados a esta URL automaticamente, preservando a atribuição de anúncios. Destinos WhatsApp (wa.me / api.whatsapp.com) têm tratamento especial: o id do visitante é embutido de forma invisível no texto pré-preenchido, atribuindo a conversa resultante a este link — inclua um parâmetro text com uma mensagem visível.",
+        "eventCode": "Código do TrackingEvent gravado a cada clique (padrão link_clicked). Use um código específico (ex: promo_qr_scanned) para segmentar campanhas; desative o Tipo de Evento do código para silenciar a gravação mantendo o redirecionamento vivo.",
+        "isActive": "Quando desligado, o link para de redirecionar (404) — use para encerrar uma campanha morta. Para continuar redirecionando sem gravar, desative o Tipo de Evento.",
+        "shortUrl": "A URL pública para compartilhar. Usa o domínio dedicado de links curtos quando configurado (trackingLinkDomain), mantendo o domínio do CRM fora de links públicos.",
+        "totalClicks": "Contador de conveniência — inclui acessos de bots de preview (unfurls de WhatsApp/Slack marcados com isLikelyBot no payload do evento). O painel de Eventos abaixo é a fonte da verdade.",
+        "teams": "Herda os teams da fonte de rastreamento quando vazio. Determina quais usuários podem ver este link.",
+        "tenant": "Derivado dos teams via Tenant.baseUserTeam. Precisa coincidir com o tenant da fonte de rastreamento.",
+        "trackingSource": "Fonte à qual os eventos de clique são atribuídos (mesmo tenant; não pode ser CRM (Interno) — cliques chegam via HTTP). A opção 'Criar Códigos Desconhecidos' dela controla novos códigos de evento."
+    }
+}

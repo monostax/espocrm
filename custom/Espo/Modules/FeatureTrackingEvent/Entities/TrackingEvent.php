@@ -38,7 +38,7 @@ class TrackingEvent extends Entity
     public const STATUS_FAILED = 'Failed';
     public const STATUS_SKIPPED = 'Skipped';
 
-    /** Event ingested through the trusted, HMAC-verified path (kind=Server/Chatwoot/Other). */
+    /** Event ingested through the trusted, HMAC-verified path (kind=Server/Other). */
     public const CHANNEL_SERVER = 'server';
 
     /** Event ingested through the public, unsigned path (kind=Website/Mobile). */

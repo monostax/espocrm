@@ -47,6 +47,17 @@ class TrackingEventPersister
 
     public const PARENT_TYPES = ['Lead', 'Opportunity', 'Contact', 'Account'];
 
+    /**
+     * Ad-platform / campaign query params captured into TrackingEvent
+     * attribution. Server-side mirror of tracker.js's ATTRIBUTION_PARAMS
+     * (plain-JS SDK cannot import this — keep the two lists in sync).
+     */
+    public const ATTRIBUTION_PARAMS = [
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+        'utm_id',
+        'gclid', 'wbraid', 'gbraid', 'fbclid', 'msclkid', 'ttclid',
+    ];
+
     public function __construct(
         private EntityManager $entityManager,
         private Log $log,

@@ -118,6 +118,12 @@
             "required": true,
             "readOnly": true
         },
+        "trackingLink": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Set only for events recorded by the TrackingLink redirect endpoint (link clicks)."
+        },
         "contact": {
             "type": "link",
             "readOnly": true,
@@ -193,6 +199,11 @@
             "entity": "TrackingEventType",
             "foreign": "events"
         },
+        "trackingLink": {
+            "type": "belongsTo",
+            "entity": "TrackingLink",
+            "foreign": "events"
+        },
         "contact": {
             "type": "belongsTo",
             "entity": "Contact",
@@ -214,6 +225,7 @@
         "contactId": { "columns": ["contactId", "deleted"] },
         "status": { "columns": ["status"] },
         "tenantId": { "columns": ["tenantId", "deleted"] },
+        "trackingLinkId": { "columns": ["trackingLinkId", "deleted"] },
         "parent": { "columns": ["parentType", "parentId"] }
     }
 }

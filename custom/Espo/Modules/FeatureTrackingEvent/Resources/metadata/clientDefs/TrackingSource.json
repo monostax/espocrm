@@ -51,7 +51,7 @@
                         {
                             "type": "in",
                             "attribute": "kind",
-                            "value": ["Server", "Chatwoot", "Other"]
+                            "value": ["Server", "Other"]
                         }
                     ]
                 },
@@ -60,7 +60,7 @@
                         {
                             "type": "in",
                             "attribute": "kind",
-                            "value": ["Server", "Chatwoot", "Other"]
+                            "value": ["Server", "Other"]
                         }
                     ]
                 }

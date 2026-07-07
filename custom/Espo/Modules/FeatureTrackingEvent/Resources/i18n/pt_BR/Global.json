@@ -5,11 +5,13 @@
     "scopeNames": {
         "TrackingSource": "Rastreamento / Fonte",
         "TrackingEventType": "Tipo de Evento de Rastreamento",
-        "TrackingEvent": "Evento de Rastreamento"
+        "TrackingEvent": "Evento de Rastreamento",
+        "TrackingLink": "Link Rastreável"
     },
     "scopeNamesPlural": {
         "TrackingSource": "Fontes de Rastreamento",
         "TrackingEventType": "Rastreamento / Tipos de Evento",
-        "TrackingEvent": "Rastreamento / Eventos Recebidos"
+        "TrackingEvent": "Rastreamento / Eventos Recebidos",
+        "TrackingLink": "Rastreamento / Links"
     }
 }

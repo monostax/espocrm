@@ -28,9 +28,28 @@
  *   mstx("page");
  *
  * Commands:
- *   mstx('init', ingestUrl)
+ *   mstx('init', ingestUrl [, options])
  *       Must be called first. Captures UTM/click-id attribution from the
- *       landing URL (last-touch, persisted 30 days).
+ *       landing URL (last-touch, persisted 30 days). Also consumes the
+ *       TrackingLink redirect handoff params when present:
+ *         mstx_a — anonymousId minted by the short-link redirect; adopted
+ *                  when this browser has none yet, so the click event and
+ *                  the landing session share one visitor id.
+ *         mstx_c — CRM-minted ContactToken (per-recipient links); stored
+ *                  as the identity and sent as `contactToken` with every
+ *                  event, which also triggers retroactive stitching of the
+ *                  visitor's prior anonymous history.
+ *         mstx_l — the link slug; captured into attribution like a UTM.
+ *       options.decorateWaLinks (default true): WhatsApp click-to-chat
+ *       links (wa.me / *.whatsapp.com) are decorated at interaction time —
+ *       the visitor's anonymousId is embedded into the pre-filled `text`
+ *       param as invisible zero-width characters (server mirror:
+ *       ZeroWidthCodec). When the lead sends that message, the CRM's
+ *       Chatwoot pipeline extracts the id and joins the WhatsApp
+ *       conversation to this browser's attribution history. A
+ *       `whatsapp_click` event is tracked on click. Links whose `text`
+ *       param is absent are left untouched (an invisible-only message
+ *       would look empty). Pass {decorateWaLinks: false} to disable.
  *   mstx('page' [, props])
  *       Tracks a `page_view` event (title/path added automatically).
  *   mstx('track', code [, props])
@@ -74,14 +93,19 @@
     var KEY_ATTRIBUTION = 'mstx_attr';
 
     var ATTRIBUTION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+    // Server-side mirror: TrackingEventPersister::ATTRIBUTION_PARAMS
+    // (mstx_l — the short-link slug — is client-side only).
     var ATTRIBUTION_PARAMS = [
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-        'gclid', 'fbclid', 'msclkid', 'ttclid',
+        'utm_id',
+        'gclid', 'wbraid', 'gbraid', 'fbclid', 'msclkid', 'ttclid',
+        'mstx_l',
     ];
 
     var state = {
         endpoint: null,
-        identity: null, // {email, identitySignature?, identityTimestamp?}
+        identity: null, // {email, identitySignature?, identityTimestamp?} | {contactToken}
+        waDecoratorInstalled: false,
     };
 
     // In-memory fallbacks for storage-less contexts (some private modes).
@@ -258,10 +282,194 @@
         try {
             var data = JSON.parse(raw);
 
-            if (isPlainObject(data) && typeof data.email === 'string') {
+            if (isPlainObject(data) &&
+                (typeof data.email === 'string' || typeof data.contactToken === 'string')
+            ) {
                 state.identity = data;
             }
         } catch (e) {}
+    }
+
+    /**
+     * TrackingLink redirect handoff (see TrackingLinkRedirector): adopt the
+     * redirect-minted anonymousId when this browser has none, and store the
+     * per-recipient ContactToken as the identity when present. A stored
+     * email identity (explicit identify call) is never overwritten by a
+     * token from a possibly-forwarded link.
+     */
+    function consumeLinkHandoff() {
+        var params = queryParams();
+
+        if (typeof params.mstx_a === 'string' && params.mstx_a !== '' && !storageGet(KEY_ANON)) {
+            storageSet(KEY_ANON, params.mstx_a.slice(0, 64));
+        }
+
+        if (typeof params.mstx_c === 'string' && params.mstx_c !== '' &&
+            !(state.identity && state.identity.email)
+        ) {
+            state.identity = {contactToken: params.mstx_c.slice(0, 512)};
+
+            try {
+                storageSet(KEY_IDENTITY, JSON.stringify(state.identity));
+            } catch (e) {}
+        }
+    }
+
+    /*
+     * WhatsApp click-to-chat attribution (server mirror: ZeroWidthCodec +
+     * TrackingLinkRedirector — keep the wire format in sync). The visitor's
+     * anonymousId is encoded as invisible zero-width characters inside the
+     * pre-filled message text: U+FEFF delimits the region; one group per
+     * ASCII character, separated by U+2060, minimal-length binary with
+     * U+200B = 0 and U+200C = 1.
+     */
+    var ZW_MARKER = '\uFEFF';
+    var ZW_ZERO = '\u200B';
+    var ZW_ONE = '\u200C';
+    var ZW_SEP = '\u2060';
+
+    function encodeInvisible(payload) {
+        if (typeof payload !== 'string' || payload === '' || payload.length > 64 ||
+            !/^[\x21-\x7E]+$/.test(payload)
+        ) {
+            return null;
+        }
+
+        var groups = [];
+
+        for (var i = 0; i < payload.length; i++) {
+            var bits = payload.charCodeAt(i).toString(2);
+            var group = '';
+
+            for (var j = 0; j < bits.length; j++) {
+                group += bits.charAt(j) === '0' ? ZW_ZERO : ZW_ONE;
+            }
+
+            groups.push(group);
+        }
+
+        return ZW_MARKER + groups.join(ZW_SEP) + ZW_MARKER;
+    }
+
+    /** Inserted before the last character so edge-trimming never eats it. */
+    function embedInvisible(text, payload) {
+        var encoded = encodeInvisible(payload);
+
+        if (!encoded || typeof text !== 'string' || text.length < 2) {
+            return text;
+        }
+
+        return text.slice(0, -1) + encoded + text.slice(-1);
+    }
+
+    function isWhatsAppHost(host) {
+        host = (host || '').toLowerCase();
+
+        return host === 'wa.me' || host === 'www.wa.me' ||
+            host === 'whatsapp.com' || host.slice(-13) === '.whatsapp.com';
+    }
+
+    function waPhoneFromUrl(url) {
+        try {
+            var candidate = url.searchParams.get('phone');
+
+            if (!candidate) {
+                var segment = url.pathname.replace(/^\/+/, '').split('/')[0];
+
+                if (segment && segment.toLowerCase() !== 'send') {
+                    candidate = segment;
+                }
+            }
+
+            if (!candidate) {
+                return null;
+            }
+
+            var digits = candidate.replace(/\D+/g, '');
+
+            return digits.length >= 8 && digits.length <= 15 ? digits : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Rewrite a WhatsApp anchor's `text` param with the embedded
+     * anonymousId. Idempotent (skips when a marker is already present —
+     * ours from an earlier interaction, or the short-link redirector's).
+     * Returns the parsed URL when the anchor is a WhatsApp link.
+     */
+    function decorateWaAnchor(anchor) {
+        try {
+            var url = new URL(anchor.href, window.location.href);
+
+            if (!isWhatsAppHost(url.hostname)) {
+                return null;
+            }
+
+            var text = url.searchParams.get('text');
+
+            if (text && text.indexOf(ZW_MARKER) === -1) {
+                url.searchParams.set('text', embedInvisible(text, anonymousId()));
+                anchor.href = url.toString();
+            }
+
+            return url;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function handleWaInteraction(event) {
+        try {
+            var node = event.target;
+            var anchor = null;
+
+            while (node && node.tagName) {
+                if (node.tagName === 'A' && node.href) {
+                    anchor = node;
+
+                    break;
+                }
+
+                node = node.parentNode;
+            }
+
+            if (!anchor) {
+                return;
+            }
+
+            var url = decorateWaAnchor(anchor);
+
+            // Track once per actual activation (mousedown/touchstart only
+            // pre-decorate for middle-click / tap navigation).
+            if (url && event.type === 'click') {
+                var props = {};
+                var phone = waPhoneFromUrl(url);
+
+                if (phone) {
+                    props.wa_phone = phone;
+                }
+
+                api.track('whatsapp_click', props);
+            }
+        } catch (e) {}
+    }
+
+    /**
+     * Delegated (capture-phase) so dynamically-added CTAs are covered and
+     * the rewrite lands before the browser reads the href for navigation.
+     */
+    function setupWaDecorator() {
+        if (state.waDecoratorInstalled || !window.URL || !document.addEventListener) {
+            return;
+        }
+
+        state.waDecoratorInstalled = true;
+
+        document.addEventListener('mousedown', handleWaInteraction, true);
+        document.addEventListener('touchstart', handleWaInteraction, true);
+        document.addEventListener('click', handleWaInteraction, true);
     }
 
     function sendBeacon(json) {
@@ -306,7 +514,7 @@
 
     var api = {};
 
-    api.init = function (ingestUrl) {
+    api.init = function (ingestUrl, options) {
         if (typeof ingestUrl !== 'string' || ingestUrl === '') {
             return;
         }
@@ -315,6 +523,11 @@
 
         loadIdentity();
         captureAttribution();
+        consumeLinkHandoff();
+
+        if (!isPlainObject(options) || options.decorateWaLinks !== false) {
+            setupWaDecorator();
+        }
     };
 
     api.track = function (code, props) {
@@ -358,14 +571,20 @@
         }
 
         if (state.identity) {
-            body.email = state.identity.email;
-
-            if (state.identity.identitySignature) {
-                body.identitySignature = state.identity.identitySignature;
+            if (state.identity.contactToken) {
+                body.contactToken = state.identity.contactToken;
             }
 
-            if (state.identity.identityTimestamp) {
-                body.identityTimestamp = state.identity.identityTimestamp;
+            if (state.identity.email) {
+                body.email = state.identity.email;
+
+                if (state.identity.identitySignature) {
+                    body.identitySignature = state.identity.identitySignature;
+                }
+
+                if (state.identity.identityTimestamp) {
+                    body.identityTimestamp = state.identity.identityTimestamp;
+                }
             }
         }
 

@@ -18,7 +18,7 @@ use Throwable;
 /**
  * Synchronous ingestion pipeline for tracking events. Dual trust model:
  *
- *   TRUSTED path — kind=Server/Chatwoot/Other (server-to-server):
+ *   TRUSTED path — kind=Server/Other (server-to-server):
  *     - X-Tracking-Signature (hex HMAC-SHA256 of the raw body, optional
  *       "sha256=" prefix) is MANDATORY and verified in constant time.
  *     - Payload may claim contactId, ipAddress, userAgent, occurredAt and
@@ -53,6 +53,7 @@ use Throwable;
  *   "occurredAt": "2026-07-07T12:00:00Z",
  *   "anonymousId": "anon-abc",
  *   "contactId": "...",                  // trusted only
+ *   "contactToken": "b64url.b64url",     // CRM-minted ContactToken (both paths)
  *   "email": "user@example.com",         // identity claim
  *   "identitySignature": "hex",          // HMAC(email) or HMAC(email:ts)
  *   "identityTimestamp": 1780000000,     // unix seconds; 24h replay window
@@ -84,6 +85,7 @@ class TrackingEventIngester
         private JobSchedulerFactory $jobSchedulerFactory,
         private RateLimiter $rateLimiter,
         private TrackingEventPersister $persister,
+        private ContactToken $contactToken,
     ) {}
 
     public function ingest(
@@ -329,14 +331,19 @@ class TrackingEventIngester
 
     /**
      * Identity resolution, in decreasing order of trust:
-     *   1. contactId — trusted path only; must exist within the tenant.
-     *   2. email     — trusted path: accepted as-is.
-     *                  public path: when identityVerificationSecret is
-     *                  configured, requires a valid body-borne HMAC
-     *                  (identitySignature [+ identityTimestamp], 24h replay
-     *                  window); otherwise accepted as a soft, Mixpanel-style
-     *                  claim.
-     *   3. none      — the event stays anonymous (anonymousId only).
+     *   1. contactId    — trusted path only; must exist within the tenant.
+     *   2. contactToken — both paths: a CRM-minted, HMAC-signed ContactToken
+     *                     (short-link handoff: tracker.js forwards the
+     *                     `mstx_c` param). Self-authenticating — we minted
+     *                     it — but its embedded tenant must match the
+     *                     source's tenant.
+     *   3. email        — trusted path: accepted as-is.
+     *                     public path: when identityVerificationSecret is
+     *                     configured, requires a valid body-borne HMAC
+     *                     (identitySignature [+ identityTimestamp], 24h
+     *                     replay window); otherwise accepted as a soft,
+     *                     Mixpanel-style claim.
+     *   4. none         — the event stays anonymous (anonymousId only).
      *
      * @param array<string, mixed> $data
      */
@@ -358,6 +365,24 @@ class TrackingEventIngester
 
                 $this->log->warning("TrackingEventIngester: payload contactId={$contactId} not found in tenant={$tenantId}; falling back to email/anonymous.");
             }
+        }
+
+        $tokenRaw = $data['contactToken'] ?? null;
+
+        if (is_string($tokenRaw) && $tokenRaw !== '') {
+            $tokenData = $this->contactToken->verify($tokenRaw);
+
+            if ($tokenData !== null && $tokenData['tenantId'] === $tenantId) {
+                $contact = $repo
+                    ->where(['id' => $tokenData['contactId'], 'tenantId' => $tenantId, 'deleted' => false])
+                    ->findOne();
+
+                if ($contact) {
+                    return $contact;
+                }
+            }
+
+            // Invalid/expired/foreign token: degrade to email/anonymous.
         }
 
         $email = $data['email'] ?? null;
