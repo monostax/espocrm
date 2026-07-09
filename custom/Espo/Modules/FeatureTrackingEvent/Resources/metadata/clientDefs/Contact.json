@@ -1,6 +1,7 @@
 {
     "sidePanels": {
         "detail": [
+            "__APPEND__",
             {
                 "name": "trackingEvents",
                 "label": "Tracking Events",

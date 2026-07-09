@@ -39,6 +39,13 @@ use Espo\ORM\EntityManager;
  *      WhatsApp inbox, after a STRICT phone equality match against
  *      Chatwoot's contact search (we never reuse a non-exact hit).
  *
+ * ContactChannelIdentity awareness:
+ *   - The push phone falls back to a whatsapp identity's source_id when
+ *     Contact.phoneNumber is empty (same as the initiate-conversation
+ *     controller), so identity-only contacts still sync.
+ *   - Handle-like social identities (instagram/facebook/twitter) are
+ *     pushed as `additional_attributes.social_profiles`.
+ *
  * Loop suppression: every write inside this module passes
  * `['silent' => true]` on Contact saves (see SyncContactsFromChatwoot,
  * SyncConversationsFromChatwoot). We short-circuit on that flag, so
@@ -87,7 +94,14 @@ class SyncToChatwoot
 
     private function process(Entity $contact): void
     {
-        $phone = PhoneNormalizer::normalize($contact->get('phoneNumber'));
+        $identities = $this->loadChannelIdentities($contact->getId());
+
+        // Phone resolution: the Contact.phoneNumber field first, then any
+        // whatsapp ContactChannelIdentity whose source_id normalizes to a
+        // valid E.164 (manual identity entry or webhook-materialized rows).
+        // Same fallback as Controllers/ContactChatwoot.php.
+        $phone = PhoneNormalizer::normalize($contact->get('phoneNumber'))
+            ?: $this->phoneFromIdentities($identities);
 
         if (!$phone) {
             // Without a normalizable phone there is no inbox-bound identity
@@ -121,7 +135,7 @@ class SyncToChatwoot
             }
 
             try {
-                $this->pushToAccount($contact, $account, $phone);
+                $this->pushToAccount($contact, $account, $phone, $identities);
             } catch (\Throwable $e) {
                 // Per-account failure must not abort other accounts.
                 $this->log->error(
@@ -132,7 +146,10 @@ class SyncToChatwoot
         }
     }
 
-    private function pushToAccount(Entity $contact, Entity $account, string $phone): void
+    /**
+     * @param Entity[] $identities
+     */
+    private function pushToAccount(Entity $contact, Entity $account, string $phone, array $identities): void
     {
         // Credential resolution mirrors SyncChatwootContactMerge::mergeChatwootContactsForAccount.
         $platform = $this->entityManager
@@ -156,17 +173,22 @@ class SyncToChatwoot
             return;
         }
 
-        $payload = $this->buildPayload($contact, $phone);
+        $payload = $this->buildPayload($contact, $phone, $identities);
 
         // Path A — existing local link: PATCH only, no inbox required.
-        $existingLink = $this->entityManager
-            ->getRDBRepository('ChatwootContact')
-            ->where([
-                'chatwootAccountId' => $account->getId(),
-                'contactId' => $contact->getId(),
-                'syncStatus!=' => 'merged',
-            ])
-            ->findOne();
+        // A contact may map to SEVERAL Chatwoot contacts on one account
+        // (one per WhatsApp number — a Chatwoot contact holds a single
+        // phone_number). Only a bridge already carrying the push phone,
+        // or one with no phone yet (LID-era row awaiting enrichment),
+        // may be updated. NEVER rewrite a bridge holding a DIFFERENT
+        // number — that would fork its WhatsApp thread. With no
+        // compatible bridge we fall through to Path B and create/link
+        // a Chatwoot contact keyed by this phone.
+        $existingLink = $this->findBridgeForPhone(
+            $account->getId(),
+            $contact->getId(),
+            $phone
+        );
 
         if ($existingLink) {
             $extContactId = (int) $existingLink->get('chatwootContactId');
@@ -279,9 +301,17 @@ class SyncToChatwoot
     /**
      * Build the Chatwoot contact payload from an Espo Contact entity.
      *
+     * Social handles from ContactChannelIdentity rows (e.g. a manually
+     * entered instagram handle) are pushed as
+     * `additional_attributes.social_profiles`. Chatwoot's contact update
+     * endpoint merges `additional_attributes` with the stored hash, so
+     * unrelated attributes survive; the `social_profiles` key itself is
+     * replaced, which is why we send every handle we know at once.
+     *
+     * @param Entity[] $identities
      * @return array<string, mixed>
      */
-    private function buildPayload(Entity $contact, string $phone): array
+    private function buildPayload(Entity $contact, string $phone, array $identities): array
     {
         $firstName = (string) $contact->get('firstName');
         $lastName = (string) $contact->get('lastName');
@@ -291,11 +321,173 @@ class SyncToChatwoot
             $name = (string) ($contact->get('name') ?: $phone);
         }
 
-        return [
+        $payload = [
             'name' => $name,
             'phone_number' => $phone,
             'email' => $contact->get('emailAddress') ?: null,
         ];
+
+        $socialProfiles = $this->buildSocialProfiles($identities);
+
+        if ($socialProfiles) {
+            $payload['additional_attributes'] = [
+                'social_profiles' => $socialProfiles,
+            ];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * The contact's ContactChannelIdentity rows, primary rows first.
+     *
+     * @return Entity[]
+     */
+    private function loadChannelIdentities(string $contactId): array
+    {
+        $collection = $this->entityManager
+            ->getRDBRepository('ContactChannelIdentity')
+            ->where(['contactId' => $contactId])
+            ->order('isPrimary', 'DESC')
+            ->find();
+
+        return iterator_to_array($collection);
+    }
+
+    /**
+     * The ChatwootContact bridge row that may safely receive an update
+     * for $phone:
+     *
+     *   1. a bridge whose phoneNumber normalizes to $phone (exact
+     *      same identity in Chatwoot), else
+     *   2. a bridge with no phone number at all (LID-era contact whose
+     *      phone was never enriched — updating it with the phone is the
+     *      intended enrichment), else
+     *   3. null — every bridge holds a DIFFERENT number. The caller
+     *      creates a separate Chatwoot contact for $phone instead of
+     *      rewriting one belonging to another number.
+     */
+    private function findBridgeForPhone(string $accountId, string $contactId, string $phone): ?Entity
+    {
+        $links = $this->entityManager
+            ->getRDBRepository('ChatwootContact')
+            ->where([
+                'chatwootAccountId' => $accountId,
+                'contactId' => $contactId,
+                'syncStatus!=' => 'merged',
+            ])
+            ->limit(0, 20)
+            ->find();
+
+        $phoneless = null;
+        $mismatched = 0;
+
+        foreach ($links as $link) {
+            $linkPhone = PhoneNormalizer::normalize((string) $link->get('phoneNumber'));
+
+            if ($linkPhone === $phone) {
+                return $link;
+            }
+
+            if (!$linkPhone) {
+                $phoneless ??= $link;
+
+                continue;
+            }
+
+            $mismatched++;
+        }
+
+        if ($phoneless) {
+            return $phoneless;
+        }
+
+        if ($mismatched > 0) {
+            $this->log->info(
+                "SyncToChatwoot: Contact {$contactId} has {$mismatched} bridge(s) on "
+                . "account {$accountId} holding other phone numbers; "
+                . "will create/link a separate Chatwoot contact for {$phone}"
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve an E.164 phone from the contact's whatsapp identities.
+     * LID source_ids are rejected by PhoneNormalizer.
+     *
+     * @param Entity[] $identities
+     */
+    private function phoneFromIdentities(array $identities): ?string
+    {
+        foreach ($identities as $identity) {
+            if ($identity->get('channelType') !== 'whatsapp') {
+                continue;
+            }
+
+            $phone = PhoneNormalizer::normalize((string) $identity->get('sourceId'));
+
+            if ($phone) {
+                return $phone;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Map handle-like social identities to Chatwoot's
+     * `additional_attributes.social_profiles` keys.
+     *
+     * The dedicated handle column is preferred; legacy rows that carry a
+     * handle-like value in sourceId (manual entry before the handle
+     * column existed) are honored as a fallback. Numeric page-scoped user
+     * IDs are never pushed — they are routing keys, not profile handles.
+     * First identity per channel wins (primary rows are ordered first).
+     *
+     * @param Entity[] $identities
+     * @return array<string, string>
+     */
+    private function buildSocialProfiles(array $identities): array
+    {
+        $channelToProfileKey = [
+            'instagram' => 'instagram',
+            'facebook' => 'facebook',
+            'twitter' => 'twitter',
+        ];
+
+        $profiles = [];
+
+        foreach ($identities as $identity) {
+            $channelType = (string) $identity->get('channelType');
+            $profileKey = $channelToProfileKey[$channelType] ?? null;
+
+            if (!$profileKey || isset($profiles[$profileKey])) {
+                continue;
+            }
+
+            $handle = trim((string) $identity->get('handle'));
+
+            if ($handle === '') {
+                // Legacy fallback: handle-keyed sourceId.
+                $handle = trim((string) $identity->get('sourceId'));
+            }
+
+            // Handle-like only: reject numeric scoped IDs and anything
+            // that is not a plausible username.
+            if (
+                $handle === '' ||
+                ctype_digit($handle) ||
+                !preg_match('/^[A-Za-z0-9._-]+$/', $handle)
+            ) {
+                continue;
+            }
+
+            $profiles[$profileKey] = $handle;
+        }
+
+        return $profiles;
     }
 
     /**

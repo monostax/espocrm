@@ -63,6 +63,7 @@
         "whatsapp_click": "WhatsApp Click",
         "whatsapp_conversation_linked": "WhatsApp Conversation Linked",
         "opportunity_stage_changed": "Opportunity Stage Changed",
+        "opportunity_created": "Opportunity Created",
         "opportunity_won": "Opportunity Won",
         "opportunity_lost": "Opportunity Lost"
     }

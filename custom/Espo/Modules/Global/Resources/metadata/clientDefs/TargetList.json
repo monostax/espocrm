@@ -1,0 +1,19 @@
+{
+    "relationshipPanels": {
+        "opportunities": {
+            "create": false,
+            "select": false,
+            "unlinkDisabled": true
+        }
+    },
+    "detailActionList": [
+        {
+            "name": "launchOutreach",
+            "label": "Launch Outreach",
+            "handler": "global:handlers/target-list/detail-actions",
+            "actionFunction": "launchOutreach",
+            "checkVisibilityFunction": "isLaunchOutreachAvailable",
+            "groupIndex": 0
+        }
+    ]
+}

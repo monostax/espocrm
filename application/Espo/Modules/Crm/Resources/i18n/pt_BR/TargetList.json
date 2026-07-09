@@ -5,7 +5,7 @@
         "entryCount": "Contagem de entrada",
         "campaigns": "Campanhas",
         "endDate": "Data final",
-        "targetLists": "Lista de alvos",
+        "targetLists": "Audiências",
         "includingActionList": "Incluindo",
         "excludingActionList": "Excluindo",
         "optedOutCount": "Quant. Desistentes",
@@ -30,7 +30,7 @@
         }
     },
     "labels": {
-        "Create TargetList": "Cadastrar Lista de Alvos",
+        "Create TargetList": "Cadastrar Audiência",
         "Opted Out": "Cancelado",
         "Cancel Opt-Out": "Cancelar Cancelamento",
         "Opt-Out": "Cancelar"

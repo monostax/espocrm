@@ -82,13 +82,30 @@ define('chatwoot:views/contact/panels/conversations',
             this.contactTypeAttribute = (this.options.defs || {}).contactTypeAttribute;
             this.requiredContactType = (this.options.defs || {}).requiredContactType;
 
-            var contactId = this.model.get(this.contactIdAttribute);
-            var contactTypeMatches = !this.requiredContactType ||
-                this.model.get(this.contactTypeAttribute) === this.requiredContactType;
-            var hasAccess = this.getAcl().check('Contact', 'read')
+            this.hasAccess = this.getAcl().check('Contact', 'read')
                 && this.getAcl().check('ChatwootConversation', 'read');
 
-            this.hasData = !!contactId && contactTypeMatches && hasAccess;
+            // The contact id attribute may not be set yet when the panel is
+            // created (e.g. when the detail view is opened from a list/kanban
+            // view the model carries only list-layout attributes and the full
+            // record arrives later via fetch). React to its arrival/changes.
+            this.listenTo(
+                this.model,
+                'change:' + this.contactIdAttribute,
+                this.controlContactChange,
+                this
+            );
+
+            if (this.contactTypeAttribute) {
+                this.listenTo(
+                    this.model,
+                    'change:' + this.contactTypeAttribute,
+                    this.controlContactChange,
+                    this
+                );
+            }
+
+            this.hasData = this.checkHasData();
 
             if (!this.hasData) {
                 return;
@@ -96,10 +113,64 @@ define('chatwoot:views/contact/panels/conversations',
 
             this.wait(true);
 
+            this.createCollection(function () {
+                this.loadConversations();
+            }.bind(this));
+        },
+
+        /**
+         * Whether the panel has a linked contact to fetch conversations for.
+         *
+         * @return {boolean}
+         */
+        checkHasData: function () {
+            var contactId = this.model.get(this.contactIdAttribute);
+            var contactTypeMatches = !this.requiredContactType ||
+                this.model.get(this.contactTypeAttribute) === this.requiredContactType;
+
+            return !!contactId && contactTypeMatches && this.hasAccess;
+        },
+
+        /**
+         * @param {function} callback
+         */
+        createCollection: function (callback) {
             this.getCollectionFactory().create('ChatwootConversation', function (collection) {
                 collection.maxSize = this.recordsPerPage;
                 this.collection = collection;
 
+                callback();
+            }.bind(this));
+        },
+
+        /**
+         * Re-evaluate the linked contact after the model attributes changed
+         * (initial fetch completed or the contact link was changed/removed).
+         */
+        controlContactChange: function () {
+            var hasData = this.checkHasData();
+
+            if (!hasData && !this.hasData) {
+                return;
+            }
+
+            this.hasData = hasData;
+
+            if (!hasData) {
+                if (this.isRendered()) {
+                    this.reRender();
+                }
+
+                return;
+            }
+
+            if (this.collection) {
+                this.loadConversations();
+
+                return;
+            }
+
+            this.createCollection(function () {
                 this.loadConversations();
             }.bind(this));
         },
@@ -176,6 +247,8 @@ define('chatwoot:views/contact/panels/conversations',
                 view.render();
 
                 // Make entire row clickable (not just <a> links).
+                // Re-bind on each render to avoid stacking handlers.
+                this.$el.off('click', '.list-row');
                 this.$el.on('click', '.list-row', function (e) {
                     if ($(e.target).closest('a.link').length) {
                         // Already handled by the selectable handler.

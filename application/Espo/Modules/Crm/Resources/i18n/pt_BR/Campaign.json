@@ -5,8 +5,8 @@
         "type": "Tipo",
         "startDate": "Data de início",
         "endDate": "Data de fim",
-        "targetLists": "Lista de Alvos",
-        "excludingTargetLists": "Excluindo Lista de Alvos",
+        "targetLists": "Audiências",
+        "excludingTargetLists": "Excluindo Audiências",
         "sentCount": "Enviar",
         "openedCount": "Abertos",
         "clickedCount": "Clicados",
@@ -27,8 +27,8 @@
         "budgetCurrency": "Moeda do Budget"
     },
     "links": {
-        "targetLists": "Lista de alvos",
-        "excludingTargetLists": "Excluindo Lista de Alvos",
+        "targetLists": "Audiências",
+        "excludingTargetLists": "Excluindo Audiências",
         "accounts": "Empresas",
         "contacts": "Contatos",
         "opportunities": "Oportunidades",
@@ -55,14 +55,14 @@
     },
     "labels": {
         "Create Campaign": "Cadastrar Campanha",
-        "Target Lists": "Lista de Alvos",
+        "Target Lists": "Audiências",
         "Statistics": "Estatísticas",
         "Unsubscribe": "Cancelar Subscrição",
         "Mass Emails": "Emails em Massa",
         "Email Templates": "Templates de email",
         "Unsubscribe again": "Cancelar inscrição novamente",
         "Subscribe again": "Inscreva-se novamente",
-        "Create Target List": "Cadastrar Lista de Alvo",
+        "Create Target List": "Cadastrar Audiência",
         "Mail Merge": "Mala Direta",
         "Generate Mail Merge PDF": "Gerar PDF de mala direta"
     },

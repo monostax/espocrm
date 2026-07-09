@@ -1,0 +1,16 @@
+{
+    "labels": {
+        "Outreach Flow": "Fluxo de Outbound",
+        "Opportunities": "Oportunidades",
+        "Won": "Ganhas",
+        "Lost": "Perdidas",
+        "Stage": "Estágio",
+        "Entered": "Entraram",
+        "Avg Time to Reach": "Tempo Médio até o Estágio",
+        "Avg Time to Win": "Tempo Médio até Ganhar"
+    },
+    "messages": {
+        "noOutreachOpportunities": "Nenhuma oportunidade originada por esta lista ainda. As métricas aparecem quando oportunidades são criadas com esta lista como origem.",
+        "noFlowEvents": "Nenhuma movimentação de funil registrada ainda. As transições de estágio são rastreadas quando o tenant possui uma Fonte de Rastreamento CRM ativa."
+    }
+}

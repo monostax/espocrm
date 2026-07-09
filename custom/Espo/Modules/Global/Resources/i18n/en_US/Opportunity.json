@@ -10,12 +10,15 @@
         "funnel": "Funnel",
         "opportunityStage": "Stage",
         "stageName": "Stage Name",
-        "stageProbability": "Stage Probability"
+        "stageProbability": "Stage Probability",
+        "sourceChannel": "Source Channel",
+        "sourceTargetList": "Source Target List"
     },
     "links": {
         "funnel": "Funnel",
         "opportunityStage": "Stage",
-        "metaLeadgenAnswers": "Meta Lead Answers"
+        "metaLeadgenAnswers": "Meta Lead Answers",
+        "sourceTargetList": "Source Target List"
     },
     "tabs": {
         "Documents": "Documents"
@@ -42,6 +45,14 @@
             "ActionNeeded": "Follow-up Inactive",
             "FollowupActive": "Follow-up Active",
             "Ended": "Ended"
+        },
+        "sourceChannel": {
+            "": "",
+            "Outbound": "Outbound",
+            "MetaLeadAds": "Meta Lead Ads",
+            "CTWA": "CTWA (Click-to-WhatsApp)",
+            "TrackingLink": "Tracking Link",
+            "InboundOrganic": "Inbound Organic"
         }
     },
     "tooltips": {
@@ -53,7 +64,9 @@
         "followupBreakoutLimit": "Maximum number of consecutive follow-ups the AI may send before it must stop contacting the prospect. Acts as a per-deal safety net; the AI may set its own value but if it doesn't, this default applies.",
         "followupAiAgent": "The AI agent currently driving this opportunity's follow-up loop. NULL when the loop is operator-driven or inactive.",
         "funnel": "The sales funnel this opportunity belongs to. Stages will be filtered based on the selected funnel.",
-        "opportunityStage": "The current stage of this opportunity. Stages are filtered by the selected funnel."
+        "opportunityStage": "The current stage of this opportunity. Stages are filtered by the selected funnel.",
+        "sourceChannel": "The acquisition channel that originated this opportunity. Set once at creation (first touch) and never overwritten.",
+        "sourceTargetList": "The outreach batch (Target List) that originated this opportunity. Only set for Outbound opportunities, at creation time."
     },
     "messages": {
         "stageDeprecated": "The enum 'Stage' field has been replaced with a link to OpportunityStage. This allows custom stages with different probabilities and styles.",

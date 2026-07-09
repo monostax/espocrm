@@ -246,6 +246,7 @@ hidden for this kind (not applicable).
 | Code | When | Extras |
 |---|---|---|
 | `opportunity_stage_changed` | Every `opportunityStage` transition, including the initial stage on create (`fromStageId: null`) | — |
+| `opportunity_created` | Opportunity created (alongside the initial `opportunity_stage_changed`) | Distinct code so creations are filterable and mutable per-code |
 | `opportunity_won` | Derived `status` transitions to `Won` | `value`/`currency` from the opportunity amount |
 | `opportunity_lost` | Derived `status` transitions to `Lost` | — |
 

@@ -57,10 +57,53 @@ use Espo\ORM\EntityManager;
  */
 class ContactReconciler
 {
+    /**
+     * Social channels whose routable sourceId is a numeric page-scoped
+     * user id, and whose human handle is a distinct, non-routable value.
+     */
+    public const HANDLE_CHANNELS = ['instagram', 'facebook', 'twitter'];
+
     public function __construct(
         private EntityManager $entityManager,
         private Log $log,
     ) {}
+
+    /**
+     * Whether a sourceId is usable to route an outbound message on the
+     * channel. For handle-channels (instagram/facebook/twitter) only the
+     * numeric page-scoped user id routes — a handle does not. WhatsApp
+     * LIDs are also non-routable as source_ids for initiation.
+     */
+    public static function isRoutableSourceId(string $channelType, string $sourceId): bool
+    {
+        if ($sourceId === '') {
+            return false;
+        }
+
+        if (in_array($channelType, self::HANDLE_CHANNELS, true)) {
+            return ctype_digit($sourceId);
+        }
+
+        if (str_ends_with($sourceId, '@lid')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Canonical handle form: trimmed, @-stripped, lowercased.
+     */
+    public static function normalizeHandle(?string $handle): ?string
+    {
+        if ($handle === null) {
+            return null;
+        }
+
+        $normalized = strtolower(ltrim(trim($handle), '@'));
+
+        return $normalized !== '' ? $normalized : null;
+    }
 
     /**
      * Find or create a Contact for the given Chatwoot identity material.
@@ -76,6 +119,7 @@ class ContactReconciler
      *   existingContactId?: ?string,
      *   contactInboxes?: list<array{source_id?: ?string, inbox?: array{id?: ?int, channel_type?: ?string}}>,
      *   inboxIdMap?: array<int, string>,
+     *   socialProfiles?: array<string, ?string>,
      * } $input
      *
      * @return array{
@@ -97,6 +141,21 @@ class ContactReconciler
         $existingContactId = $this->str($input['existingContactId'] ?? null);
         $contactInboxes = $input['contactInboxes'] ?? [];
         $inboxIdMap = $input['inboxIdMap'] ?? [];
+
+        // Chatwoot's channel webhooks store the human username on the
+        // contact as additional_attributes.social_profiles (e.g.
+        // Instagram's webhooks_base_service sets social_profiles.instagram
+        // = user['username']). Normalized handles keyed by our channel
+        // enum; attached to matching candidates below so handle-keyed
+        // manual identities merge with scoped-id observations.
+        $socialHandles = [];
+        foreach (($input['socialProfiles'] ?? []) as $profileKey => $profileValue) {
+            $channel = strtolower(trim((string) $profileKey));
+            $handle = self::normalizeHandle($this->str($profileValue));
+            if ($handle && in_array($channel, self::HANDLE_CHANNELS, true)) {
+                $socialHandles[$channel] = $handle;
+            }
+        }
 
         // Without a tenant we can't safely scope the dedup, so we
         // refuse to act rather than do a global match (the previous
@@ -164,6 +223,7 @@ class ContactReconciler
                 'sourceId' => $sourceId,
                 'label' => $this->str($ci['inbox']['name'] ?? null),
                 'chatwootInboxId' => $cwInboxId !== null ? ($inboxIdMap[$cwInboxId] ?? null) : null,
+                'handle' => $socialHandles[$channel] ?? null,
             ];
         }
 
@@ -263,6 +323,27 @@ class ContactReconciler
             }
         }
 
+        // (1c) Match by social handle. A manually entered identity is
+        // keyed by the handle (the scoped id was unknown at entry time);
+        // the first inbound message carries both the scoped id (source_id)
+        // and the username (social_profiles). Matching here — and the
+        // handle lookup inside upsertIdentity — is what rotates that
+        // handle-keyed row into the routable scoped-id row instead of
+        // spawning a duplicate Contact.
+        if (!$contact) {
+            foreach ($candidateIdentities as $cand) {
+                if (empty($cand['handle'])) {
+                    continue;
+                }
+                $found = $this->findContactByHandle($tenantId, $cand['channelType'], $cand['handle']);
+                if ($found) {
+                    $contact = $found;
+                    $matchedBy = 'identity';
+                    break;
+                }
+            }
+        }
+
         // (2,3) Match by Contact.phoneNumber (E.164-normalized) within tenant.
         if (!$contact && $normalizedPhone) {
             $found = $this->findContactByField($tenantId, 'phoneNumber', $normalizedPhone)
@@ -327,7 +408,8 @@ class ContactReconciler
                 $cand['label'],
                 $chatwootAccountId,
                 $cand['chatwootInboxId'],
-                $cand['whatsappLid'] ?? null
+                $cand['whatsappLid'] ?? null,
+                $cand['handle'] ?? null
             );
         }
 
@@ -373,6 +455,29 @@ class ContactReconciler
                 'OR' => [
                     ['whatsappLid' => $lid],
                     ['sourceId' => $lid],
+                ],
+            ])
+            ->findOne();
+
+        return $this->contactFromIdentity($identity);
+    }
+
+    /**
+     * Find a Contact via a social identity's handle. Matches both the
+     * handle column (scoped-id rows enriched with the username) and
+     * handle-keyed sourceIds (manual entry before the scoped id was
+     * known).
+     */
+    private function findContactByHandle(string $tenantId, string $channelType, string $handle): ?Entity
+    {
+        $identity = $this->entityManager
+            ->getRDBRepository('ContactChannelIdentity')
+            ->where([
+                'tenantId' => $tenantId,
+                'channelType' => $channelType,
+                'OR' => [
+                    ['handle' => $handle],
+                    ['sourceId' => $handle],
                 ],
             ])
             ->findOne();
@@ -591,6 +696,12 @@ class ContactReconciler
      * known is keyed by the LID; once the E.164 arrives we find it via
      * whatsappLid and rotate sourceId in place — one row per WhatsApp
      * identity, always.
+     *
+     * Social identities (instagram/facebook/twitter) follow the same
+     * pattern with the handle: a manually entered row is keyed by the
+     * handle; once the first inbound message reveals the numeric
+     * page-scoped user id we find the row via the handle and rotate
+     * sourceId to the scoped id, keeping the handle in the handle column.
      */
     public function upsertIdentity(
         string $contactId,
@@ -601,7 +712,10 @@ class ContactReconciler
         ?string $chatwootAccountId,
         ?string $chatwootInboxId,
         ?string $whatsappLid = null,
+        ?string $handle = null,
     ): Entity {
+        $handle = self::normalizeHandle($handle);
+
         // Look up with-deleted so we can restore instead of duplicating.
         $existing = $this->findIdentityWithDeleted([
             'tenantId' => $tenantId,
@@ -621,6 +735,20 @@ class ContactReconciler
             ]);
         }
 
+        // Handle-keyed row from before the scoped id resolved (manual
+        // entry / import), or a scoped-id row already enriched with the
+        // same username. Mirrors the LID pattern for social channels.
+        if (!$existing && $handle && in_array($channelType, self::HANDLE_CHANNELS, true)) {
+            $existing = $this->findIdentityWithDeleted([
+                'tenantId' => $tenantId,
+                'channelType' => $channelType,
+                'OR' => [
+                    ['handle' => $handle],
+                    ['sourceId' => $handle],
+                ],
+            ]);
+        }
+
         if ($existing) {
             $this->entityManager
                 ->getRDBRepository('ContactChannelIdentity')
@@ -633,15 +761,24 @@ class ContactReconciler
                 $existing->set('contactId', $contactId);
                 $changed = true;
             }
-            // Rotate a LID-keyed sourceId to the canonical E.164 once the
-            // phone number is known (never the other way around).
-            if ($existing->get('sourceId') !== $sourceId && !str_ends_with($sourceId, '@lid')) {
+            // Rotate the sourceId toward the more canonical/routable form:
+            // LID-keyed → E.164 once the phone is known, handle-keyed →
+            // scoped id once the first inbound message reveals it. Never
+            // the other way around.
+            if (
+                $existing->get('sourceId') !== $sourceId
+                && $this->shouldRotateSourceId($channelType, (string) $existing->get('sourceId'), $sourceId)
+            ) {
                 $existing->set('sourceId', $sourceId);
                 $existing->set('name', $channelType . ':' . $sourceId);
                 $changed = true;
             }
             if ($whatsappLid && $existing->get('whatsappLid') !== $whatsappLid) {
                 $existing->set('whatsappLid', $whatsappLid);
+                $changed = true;
+            }
+            if ($handle && $existing->get('handle') !== $handle) {
+                $existing->set('handle', $handle);
                 $changed = true;
             }
             if ($label && $existing->get('label') !== $label) {
@@ -669,10 +806,35 @@ class ContactReconciler
             'channelType' => $channelType,
             'sourceId' => $sourceId,
             'whatsappLid' => $whatsappLid,
+            'handle' => $handle,
             'label' => $label,
             'chatwootAccountId' => $chatwootAccountId,
             'chatwootInboxId' => $chatwootInboxId,
         ], ['silent' => true]);
+    }
+
+    /**
+     * A stored sourceId is only ever replaced by a MORE canonical one:
+     *
+     * - never by a WhatsApp LID (the E.164 wins);
+     * - for handle-channels, only a routable (numeric scoped-id) value
+     *   may replace a non-routable (handle-keyed) one — a scoped id is
+     *   never downgraded to a handle, and one scoped id never overwrites
+     *   another (different pages yield different IGSIDs for the same
+     *   person: those are distinct identity rows).
+     */
+    private function shouldRotateSourceId(string $channelType, string $existingSourceId, string $newSourceId): bool
+    {
+        if (str_ends_with($newSourceId, '@lid')) {
+            return false;
+        }
+
+        if (in_array($channelType, self::HANDLE_CHANNELS, true)) {
+            return self::isRoutableSourceId($channelType, $newSourceId)
+                && !self::isRoutableSourceId($channelType, $existingSourceId);
+        }
+
+        return true;
     }
 
     /**

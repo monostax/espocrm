@@ -7,6 +7,8 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillOpportunityVersionNumber",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootTenant",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChannelIdentities",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChannelIdentityTeams",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillContactFieldsFromIdentities",
         "Espo\\Modules\\Chatwoot\\Rebuild\\MergeRotatedDuplicateContacts",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootReports",
         "Espo\\Modules\\Chatwoot\\Rebuild\\RotateAutomationToConcierge",

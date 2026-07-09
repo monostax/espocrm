@@ -981,6 +981,10 @@ class LeadgenIngester
             $opp->set('accountId', $contact->get('accountId'));
             $opp->set('funnelId',  $leadForm->get('funnelId'));
 
+            // First-touch attribution: this Opportunity exists because a Meta
+            // Lead Ads form was submitted. Immutable (readOnlyAfterCreate).
+            $opp->set('sourceChannel', 'MetaLeadAds');
+
             // Pick a stage that ACTUALLY belongs to the configured funnel.
             // The form's `opportunityStageId` may be stale (a stage that
             // belonged to a now-deleted funnel, or a leftover from when the

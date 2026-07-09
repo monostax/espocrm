@@ -22,6 +22,10 @@ use Throwable;
  * Emitted codes:
  *   - opportunity_stage_changed — every opportunityStage transition,
  *     including the initial stage on create (fromStage=null);
+ *   - opportunity_created — lifecycle milestone overlay emitted alongside
+ *     the initial stage_changed on create. Redundant with
+ *     stage_changed+isNew, but a distinct code makes creations filterable
+ *     in the event list UI and mutable per-code via TrackingEventType;
  *   - opportunity_won / opportunity_lost — on the derived status
  *     transitioning to Won/Lost (status is synced from the stage's
  *     probability by Global\Hooks\Opportunity\SyncFromOpportunityStage in
@@ -36,6 +40,10 @@ use Throwable;
  *
  * The recorder never throws; a tracking failure can never break the save.
  *
+ * Properties carry acquisition attribution (sourceChannel, sourceTargetListId/
+ * Name from Global's Opportunity fields) so downstream analytics can segment
+ * funnel conversion and won-value by channel and by outreach batch.
+ *
  * @implements AfterSave<Opportunity>
  */
 class TrackStageChange implements AfterSave
@@ -43,6 +51,7 @@ class TrackStageChange implements AfterSave
     public static int $order = 25;
 
     public const CODE_STAGE_CHANGED = 'opportunity_stage_changed';
+    public const CODE_CREATED = 'opportunity_created';
     public const CODE_WON = 'opportunity_won';
     public const CODE_LOST = 'opportunity_lost';
 
@@ -97,6 +106,10 @@ class TrackStageChange implements AfterSave
 
         $this->recorder->record($tenantId, self::CODE_STAGE_CHANGED, $base);
 
+        if ($isNew) {
+            $this->recorder->record($tenantId, self::CODE_CREATED, $base);
+        }
+
         $newStatus = $entity->get('status');
         $oldStatus = $entity->getFetched('status');
 
@@ -135,8 +148,39 @@ class TrackStageChange implements AfterSave
             'amount' => $entity->get('amount'),
             'amountCurrency' => $entity->get('amountCurrency'),
             'assignedUserId' => $entity->get('assignedUserId'),
+            'sourceChannel' => $entity->get('sourceChannel') ?: null,
+            'sourceTargetListId' => $entity->get('sourceTargetListId') ?: null,
+            'sourceTargetListName' => $this->sourceTargetListName($entity),
             'isNew' => $isNew,
         ];
+    }
+
+    /**
+     * Resolves the source target list name for analytics segmentation by
+     * outreach batch. Falls back to a fetch when the name attribute is not
+     * populated on the entity (ORM-level saves).
+     */
+    private function sourceTargetListName(Opportunity $entity): ?string
+    {
+        $id = $entity->get('sourceTargetListId');
+
+        if (!$id) {
+            return null;
+        }
+
+        $name = $entity->get('sourceTargetListName');
+
+        if ($name) {
+            return $name;
+        }
+
+        try {
+            $targetList = $this->entityManager->getEntityById('TargetList', $id);
+
+            return $targetList?->get('name');
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function stageName(?string $stageId): ?string

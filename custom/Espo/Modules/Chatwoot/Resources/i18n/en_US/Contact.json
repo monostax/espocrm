@@ -1,4 +1,13 @@
 {
+    "fields": {
+        "channelIdentitiesData": "Channel Identities",
+        "whatsappNumber": "WhatsApp Number",
+        "instagramHandle": "Instagram Handle"
+    },
+    "messages": {
+        "channelIdentityConflict": "The {channelType} identity \"{sourceId}\" already belongs to another contact.",
+        "channelIdentityConflictContact": "Contact: {contactName}"
+    },
     "labels": {
         "Send Message": "Send Message",
         "Select Channel": "Select Channel",

@@ -1,0 +1,16 @@
+{
+    "labels": {
+        "Outreach Flow": "Outreach Flow",
+        "Opportunities": "Opportunities",
+        "Won": "Won",
+        "Lost": "Lost",
+        "Stage": "Stage",
+        "Entered": "Entered",
+        "Avg Time to Reach": "Avg Time to Reach",
+        "Avg Time to Win": "Avg Time to Win"
+    },
+    "messages": {
+        "noOutreachOpportunities": "No opportunities originated by this list yet. Metrics appear once opportunities are created with this list as their source.",
+        "noFlowEvents": "No funnel motion recorded yet. Stage transitions are tracked once the tenant has an active CRM Tracking Source."
+    }
+}

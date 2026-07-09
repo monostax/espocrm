@@ -1,0 +1,13 @@
+{
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "outreachFlowMetrics",
+                "label": "Outreach Flow",
+                "view": "feature-tracking-event:views/target-list/record/panels/outreach-flow-metrics",
+                "aclScope": "Opportunity",
+                "order": 4
+            }
+        ]
+    }
+}

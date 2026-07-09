@@ -10,14 +10,14 @@
     "campaign": "Campanha",
     "emailTemplate": "Template de email",
     "inboundEmail": "Conta de Email",
-    "targetLists": "Listas de Alvo",
-    "excludingTargetLists": "Excluindo Listas de Alvo",
+    "targetLists": "Audiências",
+    "excludingTargetLists": "Excluindo Audiências",
     "optOutEntirely": "Cancelado Completamente",
     "smtpAccount": "Conta SMTP"
   },
   "links": {
-    "targetLists": "Listas de Alvo",
-    "excludingTargetLists": "Excluindo Listas de Alvos",
+    "targetLists": "Audiências",
+    "excludingTargetLists": "Excluindo Audiências",
     "queueItems": "Itens da Fila",
     "campaign": "Campanha",
     "emailTemplate": "Modelo de Email",

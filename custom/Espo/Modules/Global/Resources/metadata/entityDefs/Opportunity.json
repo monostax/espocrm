@@ -136,6 +136,21 @@
             "type": "link",
             "required": true,
             "view": "views/fields/assigned-user"
+        },
+        "sourceChannel": {
+            "type": "enum",
+            "options": ["", "Outbound", "MetaLeadAds", "CTWA", "TrackingLink", "InboundOrganic"],
+            "default": "",
+            "audited": true,
+            "readOnlyAfterCreate": true,
+            "tooltip": true
+        },
+        "sourceTargetList": {
+            "type": "link",
+            "entity": "TargetList",
+            "audited": true,
+            "readOnlyAfterCreate": true,
+            "tooltip": true
         }
     },
     "links": {
@@ -152,6 +167,11 @@
         "followupAiAgent": {
             "type": "belongsTo",
             "entity": "ChatwootAccountUserMembership"
+        },
+        "sourceTargetList": {
+            "type": "belongsTo",
+            "entity": "TargetList",
+            "foreign": "opportunities"
         },
         "teams": {
             "type": "hasMany",

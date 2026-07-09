@@ -1,0 +1,55 @@
+{
+    "fields": {
+        "opportunitiesCount": {
+            "type": "int",
+            "readOnly": true,
+            "notStorable": true,
+            "orderDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "tooltip": true
+        },
+        "openOpportunitiesCount": {
+            "type": "int",
+            "readOnly": true,
+            "notStorable": true,
+            "orderDisabled": true,
+            "layoutListDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "wonOpportunitiesCount": {
+            "type": "int",
+            "readOnly": true,
+            "notStorable": true,
+            "orderDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "lostOpportunitiesCount": {
+            "type": "int",
+            "readOnly": true,
+            "notStorable": true,
+            "orderDisabled": true,
+            "layoutListDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "wonOpportunitiesAmount": {
+            "type": "float",
+            "readOnly": true,
+            "notStorable": true,
+            "orderDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "tooltip": true
+        }
+    },
+    "links": {
+        "opportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "sourceTargetList"
+        }
+    }
+}

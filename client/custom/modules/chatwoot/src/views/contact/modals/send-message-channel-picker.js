@@ -78,6 +78,13 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
             // accountId -> Set<channelType> of identities the contact already has
             this.identitiesByAccount = {};
 
+            // Set<channelType> of identities without a ChatwootAccount link.
+            // Manually-entered identities (Contact edit form) are not
+            // account-scoped; the backend falls back to a tenant-scoped
+            // lookup for them, so the picker must treat them as valid for
+            // any inbox the user can see.
+            this.identitiesTenantWide = {};
+
             this.channels = [];
             this.availableInboxes = [];
             this.isLoading = true;
@@ -189,32 +196,82 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
          * identity for. Used by `_checkRequiredIdentifier` to enable a
          * "Nova Conversa" row only when the backend can plausibly reach
          * the contact on that channel within the inbox's account.
+         *
+         * Identities without a chatwootAccountId (e.g. entered manually
+         * on the Contact edit form) are collected into a tenant-wide set
+         * instead — mirroring the backend's tenant-scoped fallback in
+         * `ContactChatwoot::resolveExternalContactForChannel`.
          */
         _buildIdentityIndex: function (identities) {
             var byAccount = {};
+            var tenantWide = {};
 
             identities.forEach(function (identity) {
                 var ct = (identity.channelType || "").toLowerCase();
                 var accountId = identity.chatwootAccountId;
-                if (!ct || !accountId) {
+                if (!ct) {
+                    return;
+                }
+                // Only ROUTABLE identities enable a "Nova Conversa" row.
+                // For instagram/facebook/twitter the routable source_id is
+                // the numeric page-scoped user id — a handle-keyed row
+                // (manual entry, scoped id not yet observed) cannot
+                // address an outbound message. Mirrors
+                // ContactReconciler::isRoutableSourceId on the PHP side.
+                if (!this._isRoutableIdentity(ct, identity.sourceId)) {
+                    return;
+                }
+                if (!accountId) {
+                    tenantWide[ct] = true;
                     return;
                 }
                 if (!byAccount[accountId]) {
                     byAccount[accountId] = {};
                 }
                 byAccount[accountId][ct] = true;
-            });
+            }, this);
 
             this.identitiesByAccount = byAccount;
+            this.identitiesTenantWide = tenantWide;
+        },
+
+        /**
+         * Whether an identity's sourceId can address an outbound message
+         * on its channel. Handle-channels require the numeric page-scoped
+         * user id; WhatsApp LIDs are non-routable for initiation.
+         */
+        _isRoutableIdentity: function (channelType, sourceId) {
+            var sid = (sourceId || "").toString();
+
+            if (!sid) {
+                return false;
+            }
+
+            if (["instagram", "facebook", "twitter"].indexOf(channelType) !== -1) {
+                return /^\d+$/.test(sid);
+            }
+
+            if (sid.slice(-4) === "@lid") {
+                return false;
+            }
+
+            return true;
         },
 
         /**
          * Returns true when the contact has at least one
          * ContactChannelIdentity row of `channelType` within
-         * `chatwootAccountId`.
+         * `chatwootAccountId`, or a tenant-wide (account-less)
+         * identity of that channelType.
          */
         _hasIdentityFor: function (chatwootAccountId, channelType) {
-            if (!chatwootAccountId || !channelType) {
+            if (!channelType) {
+                return false;
+            }
+            if (this.identitiesTenantWide[channelType]) {
+                return true;
+            }
+            if (!chatwootAccountId) {
                 return false;
             }
             var bucket = this.identitiesByAccount[chatwootAccountId];

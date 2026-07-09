@@ -6,6 +6,7 @@
     "fields": {
         "channelType": "Tipo de Canal",
         "sourceId": "Identificador",
+        "handle": "Usuário (handle)",
         "whatsappLid": "LID do WhatsApp",
         "label": "Rótulo",
         "isPrimary": "Principal",
@@ -37,7 +38,8 @@
         }
     },
     "tooltips": {
-        "sourceId": "Identificador específico do canal (telefone E.164 para WhatsApp/SMS, id de usuário escopado para Instagram/Telegram/Facebook, e-mail em minúsculas para Email, etc.)",
+        "sourceId": "Identificador roteável específico do canal (telefone E.164 para WhatsApp/SMS, id de usuário escopado para Instagram/Facebook, id de chat para Telegram, e-mail em minúsculas para Email). Identidades sociais inseridas manualmente podem manter o handle aqui temporariamente até a primeira mensagem recebida resolver o id escopado.",
+        "handle": "Nome de usuário legível (ex.: usuário do Instagram, sem @, em minúsculas). Não roteável — mantido junto ao Identificador escopado para que ambas as observações se fundam em uma única identidade.",
         "whatsappLid": "Identificador de privacidade do WhatsApp (LID) observado para esta identidade. Mantido junto ao telefone para que conversas chaveadas por LID resolvam para a mesma identidade.",
         "label": "Rótulo legível opcional (ex.: nome de usuário do Instagram)",
         "chatwootAccount": "Conta do Chatwoot onde esta identidade foi observada pela primeira vez",

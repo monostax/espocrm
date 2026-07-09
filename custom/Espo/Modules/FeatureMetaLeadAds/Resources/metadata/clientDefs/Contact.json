@@ -1,6 +1,7 @@
 {
     "bottomPanels": {
         "detail": [
+            "__APPEND__",
             {
                 "name": "metaLeadgenAnswers",
                 "label": "Meta Lead Answers",

@@ -296,6 +296,7 @@ class SyncContactsFromChatwoot implements JobDataLess
             'existingContactId' => $existingContactId,
             'contactInboxes' => $contactInboxes,
             'inboxIdMap' => $this->buildInboxIdMap($contactInboxes, $espoAccountId),
+            'socialProfiles' => $chatwootContact['additional_attributes']['social_profiles'] ?? [],
         ]);
         $espoContact = $reconciled['contact'];
 

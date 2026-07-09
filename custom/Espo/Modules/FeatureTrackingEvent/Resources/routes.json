@@ -36,5 +36,14 @@
             "controller": "TrackingLinkMint",
             "action": "mintContactUrl"
         }
+    },
+    {
+        "route": "/TargetList/:id/outreachMetrics",
+        "method": "get",
+        "params": {
+            "controller": "TargetListOutreachMetrics",
+            "action": "metrics",
+            "id": ":id"
+        }
     }
 ]

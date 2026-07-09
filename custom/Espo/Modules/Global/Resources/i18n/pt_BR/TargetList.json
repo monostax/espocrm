@@ -1,0 +1,25 @@
+{
+    "fields": {
+        "opportunitiesCount": "Oportunidades",
+        "openOpportunitiesCount": "Oportunidades Abertas",
+        "wonOpportunitiesCount": "Oportunidades Ganhas",
+        "lostOpportunitiesCount": "Oportunidades Perdidas",
+        "wonOpportunitiesAmount": "Valor Ganho"
+    },
+    "links": {
+        "opportunities": "Oportunidades"
+    },
+    "labels": {
+        "Outbound Metrics": "Métricas de Outbound",
+        "Launch Outreach": "Iniciar Prospecção",
+        "Launch": "Iniciar"
+    },
+    "messages": {
+        "launchOutreachInfo": "Cria uma oportunidade por contato elegível desta lista, no funil e estágio escolhidos. Contatos com opt-out, que já possuem oportunidade desta lista, ou com oportunidade aberta no funil são ignorados.",
+        "launchOutreachScheduled": "Prospecção agendada: {scheduled} oportunidades sendo criadas ({skipped} ignoradas)."
+    },
+    "tooltips": {
+        "opportunitiesCount": "Número de oportunidades originadas por esta lista (atribuídas via Lista de Prospecção de Origem na criação).",
+        "wonOpportunitiesAmount": "Soma do valor das oportunidades Ganhas originadas por esta lista. Assume uma única moeda."
+    }
+}

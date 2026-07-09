@@ -25,16 +25,19 @@ use Throwable;
  * save and rate-limit interference. This service goes straight to the
  * shared TrackingEventPersister instead.
  *
- * Source model: OPT-IN. The tenant (or an admin) creates a TrackingSource
- * with kind=CRM — that single row is the enable switch for internal CRM
- * event tracking. The recorder resolves it by (kind=CRM, tenantId); no
- * source (or an inactive one) means recording is silently skipped.
+ * Source model: OPT-OUT (auto-provisioned). Every tenant gets a
+ * TrackingSource with kind=CRM automatically — created on tenant creation
+ * (ProvisionCrmTrackingSource hook) and lazily here on first record() for
+ * tenants that predate auto-provisioning (CrmSourceProvisioner). The
+ * recorder resolves it by (kind=CRM, tenantId); a tenant opts out by
+ * deactivating or deleting the row — the provisioner treats any existing
+ * row (active or not, even soft-deleted) as final and never recreates it.
  * ValidateSingleCrmSourcePerTenant enforces at most one CRM source per
  * tenant, so events can never be split or duplicated across sources, and
  * the ingester refuses kind=CRM over HTTP entirely (isInternalKind()).
  *
  * Tenant control levers (no code changes needed):
- *   - no kind=CRM source / deactivate it          -> all internal events off;
+ *   - deactivate/delete the kind=CRM source       -> all internal events off;
  *   - deactivate a single TrackingEventType row   -> that code off;
  *   - disable allowUnknownEventCode on the source -> only pre-created codes.
  *
@@ -51,6 +54,7 @@ class InternalEventRecorder
         private Log $log,
         private TrackingEventPersister $persister,
         private TrackingEventNameBuilder $nameBuilder,
+        private CrmSourceProvisioner $provisioner,
     ) {}
 
     /**
@@ -164,8 +168,16 @@ class InternalEventRecorder
         $source = $this->findSource($tenantId);
 
         if ($source === null) {
-            // No active kind=CRM source for this tenant: internal tracking
-            // is not enabled. Silent by design — no log spam per save.
+            // Opt-out backfill: tenants created before auto-provisioning
+            // have no kind=CRM source yet — create it on first use. Respects
+            // explicit opt-out: any existing (inactive/deleted) row makes
+            // the provisioner return null, and recording stays off.
+            $source = $this->provisioner->provision($tenantId);
+        }
+
+        if ($source === null) {
+            // Tenant opted out (deactivated/deleted source) or provisioning
+            // failed. Silent by design — no log spam per save.
             return null;
         }
 

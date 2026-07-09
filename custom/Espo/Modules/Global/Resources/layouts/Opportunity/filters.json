@@ -2,6 +2,8 @@
     "funnel",
     "assignedUser",
     "teams",
+    "sourceChannel",
+    "sourceTargetList",
     "followupStatus",
     "followupTimer",
     "followupCount",

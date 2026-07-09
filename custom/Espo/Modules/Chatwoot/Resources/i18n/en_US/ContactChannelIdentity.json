@@ -6,6 +6,7 @@
     "fields": {
         "channelType": "Channel Type",
         "sourceId": "Source ID",
+        "handle": "Handle",
         "whatsappLid": "WhatsApp LID",
         "label": "Label",
         "isPrimary": "Primary",
@@ -39,7 +40,8 @@
         }
     },
     "tooltips": {
-        "sourceId": "Channel-specific identifier (E.164 phone for WhatsApp/SMS, scoped user id for Instagram/Telegram/Facebook, lowercased email for Email, etc.)",
+        "sourceId": "Routable channel-specific identifier (E.164 phone for WhatsApp/SMS, page-scoped user id for Instagram/Facebook, chat id for Telegram, lowercased email for Email). Manually entered social identities may temporarily hold the handle here until the first inbound message resolves the scoped id.",
+        "handle": "Human-readable username/handle (e.g. Instagram username, @-stripped, lowercased). Not routable — kept alongside the scoped-id Source ID so both observations merge into one identity.",
         "whatsappLid": "WhatsApp privacy identifier (LID) observed for this WhatsApp identity. Kept alongside the phone number so LID-keyed chats resolve to the same identity.",
         "label": "Optional human-readable label (e.g. Instagram username)",
         "chatwootAccount": "Originating Chatwoot account where this identity was first observed",

@@ -1,0 +1,18 @@
+[
+    {
+        "rows": [
+            [{"name": "name"}, {"name": "entryCount"}],
+            [{"name": "category"}, {"name": "optedOutCount"}],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    },
+    {
+        "label": "Outbound Metrics",
+        "name": "outboundMetricsPanel",
+        "rows": [
+            [{"name": "opportunitiesCount"}, {"name": "openOpportunitiesCount"}],
+            [{"name": "wonOpportunitiesCount"}, {"name": "lostOpportunitiesCount"}],
+            [{"name": "wonOpportunitiesAmount"}, false]
+        ]
+    }
+]

@@ -1,0 +1,10 @@
+{
+    "readLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\TargetList\\OpportunityMetricsLoader"
+    ],
+    "listLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\TargetList\\OpportunityMetricsLoader"
+    ]
+}

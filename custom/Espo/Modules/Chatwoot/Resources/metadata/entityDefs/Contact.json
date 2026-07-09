@@ -3,6 +3,44 @@
         "whatsAppOptedOut": {
             "type": "bool",
             "default": false
+        },
+        "channelIdentitiesData": {
+            "type": "jsonArray",
+            "notStorable": true,
+            "orderDisabled": true,
+            "importDisabled": true,
+            "directAccessDisabled": true,
+            "directUpdateDisabled": true,
+            "notExportable": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutDefaultSidePanelDisabled": true,
+            "view": "chatwoot:views/contact/fields/channel-identities",
+            "loaderClassName": "Espo\\Modules\\Chatwoot\\Classes\\FieldProcessing\\Contact\\ChannelIdentitiesLoader"
+        },
+        "whatsappNumber": {
+            "type": "varchar",
+            "maxLength": 36,
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "dynamicLogicDisabled": true,
+            "tooltip": "Write-only helper for CSV import and API. Creates/updates a WhatsApp channel identity for the contact. Normalized to E.164."
+        },
+        "instagramHandle": {
+            "type": "varchar",
+            "maxLength": 255,
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "dynamicLogicDisabled": true,
+            "tooltip": "Write-only helper for CSV import and API. Creates/updates an Instagram channel identity for the contact. The @ prefix is stripped."
         }
     },
     "links": {

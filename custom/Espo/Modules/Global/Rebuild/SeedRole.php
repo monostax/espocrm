@@ -294,10 +294,10 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                 ],
                 'ContactChannelIdentity' => [
-                    'create' => 'no',
+                    'create' => 'yes',
                     'read' => 'team',
-                    'edit' => 'no',
-                    'delete' => 'no',
+                    'edit' => 'team',
+                    'delete' => 'team',
                 ],
                 'ChatwootContact' => [
                     'create' => 'no',

@@ -597,6 +597,24 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             $rawPhone = $contact->get('phoneNumber');
             $normalizedPhone = PhoneNormalizer::normalize($rawPhone);
 
+            // Fallback: the Contact record may have no phone number while a
+            // whatsapp ContactChannelIdentity holds the E.164 phone as its
+            // source_id (e.g. identity entered manually or materialized from
+            // a webhook before the phone field was enriched). Reuse it so
+            // outbound initiation works without duplicating the number onto
+            // the Contact.
+            if (!$normalizedPhone && $phoneBased) {
+                $identityPhone = $this->findPhoneFromChannelIdentity(
+                    $contactEntityId,
+                    $inboxAccountId,
+                    $chatwootAccount
+                );
+
+                if ($identityPhone) {
+                    $normalizedPhone = $identityPhone;
+                }
+            }
+
             if ($normalizedPhone) {
                 $searchResult = $apiClient->searchContactByPhone(
                     $platformUrl,
@@ -766,34 +784,32 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
                 );
             }
 
-            $identity = $entityManager
-                ->getRDBRepository('ContactChannelIdentity')
-                ->where([
-                    'contactId' => $contactEntityId,
-                    'channelType' => $mappedChannelType,
-                    'chatwootAccountId' => $inboxAccountId,
-                ])
-                ->findOne();
+            // Only ROUTABLE identities can initiate: for instagram/facebook
+            // the source_id must be the numeric page-scoped user id — a
+            // handle-keyed row (manual entry, scoped id not yet observed)
+            // would create an unroutable contact_inbox on Chatwoot.
+            $identity = $this->findRoutableIdentity($mappedChannelType, [
+                'contactId' => $contactEntityId,
+                'channelType' => $mappedChannelType,
+                'chatwootAccountId' => $inboxAccountId,
+            ]);
 
             // Fallback: tenant-scoped lookup (in case the identity was
             // observed in another account that shares the same tenant).
             if (!$identity) {
-                $identity = $entityManager
-                    ->getRDBRepository('ContactChannelIdentity')
-                    ->where([
-                        'contactId' => $contactEntityId,
-                        'channelType' => $mappedChannelType,
-                        'tenantId' => $tenantId,
-                    ])
-                    ->findOne();
+                $identity = $this->findRoutableIdentity($mappedChannelType, [
+                    'contactId' => $contactEntityId,
+                    'channelType' => $mappedChannelType,
+                    'tenantId' => $tenantId,
+                ]);
             }
 
             if (!$identity) {
                 $channelLabel = ucfirst($mappedChannelType);
                 throw new BadRequest(
-                    "Contact has no {$channelLabel} identifier. The customer "
-                    . "must send a message first before a new conversation "
-                    . "can be opened on this channel."
+                    "Contact has no routable {$channelLabel} identifier. The "
+                    . "customer must send a message first before a new "
+                    . "conversation can be opened on this channel."
                 );
             }
 
@@ -883,6 +899,102 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         }
         $trimmed = trim($tenantId);
         return $trimmed !== '' ? $trimmed : null;
+    }
+
+    /**
+     * First ContactChannelIdentity matching $where whose sourceId is
+     * routable on the channel (ContactReconciler::isRoutableSourceId) —
+     * skipping handle-keyed rows that cannot address an outbound message.
+     *
+     * @param array<string, mixed> $where
+     */
+    private function findRoutableIdentity(string $channelType, array $where): ?\Espo\ORM\Entity
+    {
+        $identities = $this->getEntityManager()
+            ->getRDBRepository('ContactChannelIdentity')
+            ->where($where)
+            ->order('isPrimary', 'DESC')
+            ->limit(0, 20)
+            ->find();
+
+        foreach ($identities as $identity) {
+            $sourceId = (string) $identity->get('sourceId');
+
+            if (ContactReconciler::isRoutableSourceId($channelType, $sourceId)) {
+                return $identity;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve an E.164 phone number from the contact's whatsapp
+     * ContactChannelIdentity rows.
+     *
+     * Lookup order mirrors the identity-based channel resolution:
+     * account-scoped first, then tenant-scoped (covers identities
+     * created without a ChatwootAccount link, e.g. manual entry on
+     * the Contact edit form).
+     *
+     * Within each scope, primary identities win (a contact may hold
+     * several whatsapp numbers) and rows whose source_id does not
+     * normalize (e.g. a LID identifier) are skipped rather than
+     * aborting the lookup.
+     *
+     * Returns null when no identity carries a normalizable phone.
+     */
+    private function findPhoneFromChannelIdentity(
+        string $contactEntityId,
+        string $inboxAccountId,
+        \Espo\ORM\Entity $chatwootAccount
+    ): ?string {
+        $phone = $this->phoneFromIdentitiesWhere([
+            'contactId' => $contactEntityId,
+            'channelType' => 'whatsapp',
+            'chatwootAccountId' => $inboxAccountId,
+        ]);
+
+        if ($phone) {
+            return $phone;
+        }
+
+        $tenantId = $this->extractTenantId($chatwootAccount);
+
+        if (!$tenantId) {
+            return null;
+        }
+
+        return $this->phoneFromIdentitiesWhere([
+            'contactId' => $contactEntityId,
+            'channelType' => 'whatsapp',
+            'tenantId' => $tenantId,
+        ]);
+    }
+
+    /**
+     * First normalizable E.164 among matching identities, primary first.
+     *
+     * @param array<string, mixed> $where
+     */
+    private function phoneFromIdentitiesWhere(array $where): ?string
+    {
+        $identities = $this->getEntityManager()
+            ->getRDBRepository('ContactChannelIdentity')
+            ->where($where)
+            ->order('isPrimary', 'DESC')
+            ->limit(0, 20)
+            ->find();
+
+        foreach ($identities as $identity) {
+            $phone = PhoneNormalizer::normalize((string) $identity->get('sourceId'));
+
+            if ($phone) {
+                return $phone;
+            }
+        }
+
+        return null;
     }
 
     /**

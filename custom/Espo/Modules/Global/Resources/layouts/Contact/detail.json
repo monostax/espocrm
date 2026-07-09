@@ -38,7 +38,9 @@
                 {
                     "name": "address"
                 },
-                false
+                {
+                    "name": "channelIdentitiesData"
+                }
             ]
         ]
     },

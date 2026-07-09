@@ -21,8 +21,8 @@
         "createdContact": "Contato",
         "createdOpportunity": "Oportunidade",
         "campaign": "Campanha",
-        "targetLists": "Listas de Alvo",
-        "targetList": "Lista Alvo",
+        "targetLists": "Audiências",
+        "targetList": "Audiência",
         "industry": "Ramo de Atividade",
         "acceptanceStatus": "Status de Aceitação",
         "opportunityAmountCurrency": "Moeda do Valor da Oportunidade",
@@ -30,7 +30,7 @@
         "convertedAt": "Convertido Em"
     },
     "links": {
-        "targetLists": "Lista de Alvos",
+        "targetLists": "Audiências",
         "campaignLogRecords": "Logs das Campanhas",
         "campaign": "Campanha",
         "createdAccount": "Empresa",

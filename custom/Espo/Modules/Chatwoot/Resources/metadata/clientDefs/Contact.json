@@ -1,4 +1,7 @@
 {
+    "saveErrorHandlers": {
+        "channelIdentityConflict": "chatwoot:handlers/contact/channel-identity-conflict"
+    },
     "menu": {
         "detail": {
             "buttons": [

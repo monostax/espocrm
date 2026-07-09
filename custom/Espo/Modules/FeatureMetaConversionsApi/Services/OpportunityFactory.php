@@ -232,6 +232,14 @@ class OpportunityFactory
             // MetaConversionEvent rows for this Opportunity.
             $opp->set('metaCapiDatasetSourceId', $source->getId());
 
+            // First-touch attribution. 'CTWA' means click-to-WhatsApp ad —
+            // stamp it only for the whatsapp channel. Instagram-originated
+            // conversions stay unclassified ('') rather than being mislabeled;
+            // the metaCapiDatasetSource link still carries full provenance.
+            if ($channel !== MetaConversionEvent::CHANNEL_INSTAGRAM) {
+                $opp->set('sourceChannel', 'CTWA');
+            }
+
             // Save WITH hooks — SendCapiOnStageChange fires here. If the
             // landing stage has a metaCapiEventName on a CAPI-enabled funnel,
             // the dispatcher detects this Opportunity's CTWA/IG attribution
