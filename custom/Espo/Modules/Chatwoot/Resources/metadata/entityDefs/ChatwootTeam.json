@@ -73,6 +73,12 @@
         },
         "accountUserMemberships": {
             "type": "linkMultiple"
+        },
+        "chatwootInboxes": {
+            "type": "linkMultiple"
+        },
+        "chatwootInboxIntegrations": {
+            "type": "linkMultiple"
         }
     },
     "links": {
@@ -99,6 +105,18 @@
             "type": "hasMany",
             "entity": "ChatwootAccountUserMembership",
             "relationName": "chatwootAccountUserMembershipChatwootTeam",
+            "foreign": "chatwootTeams"
+        },
+        "chatwootInboxes": {
+            "type": "hasMany",
+            "entity": "ChatwootInbox",
+            "relationName": "chatwootInboxChatwootTeam",
+            "foreign": "chatwootTeams"
+        },
+        "chatwootInboxIntegrations": {
+            "type": "hasMany",
+            "entity": "ChatwootInboxIntegration",
+            "relationName": "chatwootInboxIntegrationChatwootTeam",
             "foreign": "chatwootTeams"
         }
     },

@@ -338,6 +338,8 @@ class ChatwootApiClient
      * @param int $accountId The Chatwoot account ID
      * @param int $userId The Chatwoot user ID
      * @param string $role The role for the user in this account (e.g., 'agent', 'administrator')
+     * @param bool|null $globalAdmin Whether the account user gets account-wide inbox visibility
+     *                               (only meaningful for role 'administrator'). Null omits the field.
      * @return array<string, mixed> Response data from Chatwoot API
      * @throws Error
      */
@@ -346,14 +348,21 @@ class ChatwootApiClient
         string $accessToken,
         int $accountId,
         int $userId,
-        string $role = 'agent'
+        string $role = 'agent',
+        ?bool $globalAdmin = null
     ): array {
         $url = rtrim($platformUrl, '/') . '/platform/api/v1/accounts/' . $accountId . '/account_users';
         
-        $payload = json_encode([
+        $data = [
             'user_id' => $userId,
             'role' => $role
-        ]);
+        ];
+
+        if ($globalAdmin !== null) {
+            $data['global_admin'] = $globalAdmin;
+        }
+
+        $payload = json_encode($data);
         
         if ($payload === false) {
             throw new Error('Failed to encode account user data to JSON.');
@@ -2373,6 +2382,101 @@ public function updateInboxMembers(
     }
 
     // Response format: { "payload": [agents...] }
+    return $response['body']['payload'] ?? $response['body'];
+}
+
+/**
+ * List teams linked to an inbox in Chatwoot.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @return array<int, array<string, mixed>> List of team objects linked to the inbox
+ * @throws Error
+ */
+public function listInboxTeams(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inbox_teams/' . $inboxId;
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'GET', null, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to list inbox teams from Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (listInboxTeams): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    // Response format: { "payload": [teams...] }
+    return $response['body']['payload'] ?? $response['body'];
+}
+
+/**
+ * Update teams linked to an inbox in Chatwoot (replace-all semantics).
+ *
+ * Replaces the entire team list for the given inbox with the provided team IDs.
+ * Sending an empty array unlinks all teams. Chatwoot materializes members of
+ * linked teams into inbox members automatically.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @param array<int> $teamIds Chatwoot platform team IDs to set as inbox teams
+ * @return array<int, array<string, mixed>> Updated list of inbox teams
+ * @throws Error
+ */
+public function updateInboxTeams(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId,
+    array $teamIds
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inbox_teams';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $payload = json_encode([
+        'inbox_id' => $inboxId,
+        'team_ids' => $teamIds,
+    ]);
+
+    $response = $this->executeRequest($url, 'PATCH', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to update inbox teams in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (updateInboxTeams): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    // Response format: { "payload": [teams...] }
     return $response['body']['payload'] ?? $response['body'];
 }
 

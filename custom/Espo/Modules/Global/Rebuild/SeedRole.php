@@ -425,6 +425,16 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                // Allocation layer for WhatsApp campaigns: splits one audience
+                // across N campaigns by weighted buckets. Entry rows
+                // (WhatsAppCampaignDistributionEntry) follow this scope via a
+                // custom AccessChecker, so no role grant is needed for them.
+                'WhatsAppCampaignDistribution' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
                 'TargetList' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -800,6 +810,7 @@ class SeedRole implements RebuildAction
                 'WhatsAppBusinessAccountPhoneNumber' => (object)[],
                 'WhatsAppBusinessAccountWebhook' => (object)[],
                 'WhatsAppCampaign' => (object)[],
+                'WhatsAppCampaignDistribution' => (object)[],
 
                 // Meta / Conversions API + Lead Ads + Instagram.
                 // Empty fieldData entries mirror the convention used for every
@@ -832,6 +843,17 @@ class SeedRole implements RebuildAction
                 'ChatwootConversation' => (object)[],
                 'ChatwootInbox' => (object)[
                     'channelType' => (object)['read' => 'yes', 'edit' => 'no'],
+                    // Linking Chatwoot teams to an inbox GRANTS the team's
+                    // members access to that inbox in Chatwoot (department-
+                    // scoped inbox privacy). Regular tenant users may see the
+                    // links but only tenant-admin may change them (override
+                    // in the tenant-admin role below).
+                    'chatwootTeams' => (object)['read' => 'yes', 'edit' => 'no'],
+                ],
+                'ChatwootInboxIntegration' => (object)[
+                    // Same rationale as ChatwootInbox.chatwootTeams — teams
+                    // set here are auto-linked to the inbox at provisioning.
+                    'chatwootTeams' => (object)['read' => 'yes', 'edit' => 'no'],
                 ],
                 'ChatwootMessage' => (object)[],
                 'ChatwootAiAgentRun' => (object)[],
@@ -1260,7 +1282,17 @@ class SeedRole implements RebuildAction
                     ],
                 ],
                 'fieldData' => [
-                    ...$tenantBase['fieldData']
+                    ...$tenantBase['fieldData'],
+                    // Tenant-admin manages inbox↔team links (grants Chatwoot
+                    // inbox access to department teams); base tenant role is
+                    // read-only on these fields.
+                    'ChatwootInbox' => (object)[
+                        'channelType' => (object)['read' => 'yes', 'edit' => 'no'],
+                        'chatwootTeams' => (object)['read' => 'yes', 'edit' => 'yes'],
+                    ],
+                    'ChatwootInboxIntegration' => (object)[
+                        'chatwootTeams' => (object)['read' => 'yes', 'edit' => 'yes'],
+                    ],
                 ]
             ],
             // Tenant User API role - inherits from tenant, adds Webhook access

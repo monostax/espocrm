@@ -1,11 +1,13 @@
 {
-    "fields": {
-        "cpf": "CPF",
-        "dataNascimento": "Date of Birth",
-        "sexo": "Sex",
-        "tenant": "Tenant",
-        "whatsAppOptedOut": "WhatsApp Opted Out"
-    },
+ "fields": {
+  "cpf": "CPF",
+  "dataNascimento": "Date of Birth",
+  "sexo": "Sex",
+  "source": "Source",
+  "tags": "Tags",
+  "tenant": "Tenant",
+  "whatsAppOptedOut": "WhatsApp Opted Out"
+ },
     "links": {
         "tenant": "Tenant"
     },
@@ -15,6 +17,19 @@
             "M": "Male",
             "F": "Female",
             "Outro": "Other"
+        },
+        "source": {
+            "": "",
+            "Call": "Call",
+            "Email": "Email",
+            "Existing Customer": "Existing Customer",
+            "Partner": "Partner",
+            "Public Relations": "Public Relations",
+            "Web Site": "Web Site",
+            "Campaign": "Campaign",
+            "Meta Lead Ads": "Meta Lead Ads",
+            "Cal.com": "Cal.com",
+            "Other": "Other"
         }
     },
     "tabs": {
@@ -32,7 +47,8 @@
     "descriptions": {
         "whatsAppOptedOut": "Indicates whether the contact has opted out of receiving WhatsApp messages."
     },
-    "tooltips": {
-        "whatsAppOptedOut": "When enabled, this contact will be excluded from WhatsApp campaigns and bulk messages. The opt-out can be set manually or automatically by the system when the contact requests to stop receiving messages."
-    }
+ "tooltips": {
+  "whatsAppOptedOut": "When enabled, this contact will be excluded from WhatsApp campaigns and bulk messages. The opt-out can be set manually or automatically by the system when the contact requests to stop receiving messages.",
+  "tags": "Free-form labels for segmentation (e.g. import batch, niche, region). Type any value and press Enter. On CSV import, map a column with comma-separated values to this field. Reports and Target Lists can filter by tag."
+ }
 }

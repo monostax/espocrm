@@ -274,13 +274,15 @@ class SyncWithChatwoot
 
         $chatwootUserId = $userResponse['id'];
 
-        // Attach user to account as administrator
+        // Attach user to account as administrator with account-wide inbox
+        // visibility (concierge is the CRM integration user).
         $accountUserResponse = $this->apiClient->attachUserToAccount(
             $platformUrl,
             $accessToken,
             $chatwootAccountId,
             $chatwootUserId,
-            'administrator'
+            'administrator',
+            true
         );
 
         $this->log->info("Created concierge user (ID: $chatwootUserId) for account $chatwootAccountId");

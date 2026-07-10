@@ -29,7 +29,10 @@
         "modifiedAt": "Modificado em",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
-        "teams": "Times"
+        "teams": "Times",
+        "abWeightOriginal": "% da Audiência — Original (A)",
+        "abWeight": "% da Audiência",
+        "abActivate": "Iniciar imediatamente"
     },
     "links": {
         "chatwootInbox": "Caixa de Entrada WhatsApp",
@@ -48,6 +51,9 @@
         "Send Campaign": "Enviar Campanha",
         "Abort Campaign": "Abortar Campanha",
         "Stop Enrollment": "Encerrar Inscrição",
+        "Create A/B Test": "Criar Teste A/B",
+        "Add Variant": "Adicionar Variante",
+        "Variant": "Variante",
         "Recipients": "Destinatários"
     },
     "options": {
@@ -72,7 +78,13 @@
         "confirmStopEnrollment": "Encerrar a inscrição de novos contatos nesta campanha? Contatos já inscritos ainda serão processados e a campanha será concluída quando terminarem.",
         "stoppingEnrollment": "Encerrando inscrição...",
         "enrollmentStopped": "Inscrição encerrada.",
-        "failedToStopEnrollment": "Falha ao encerrar a inscrição"
+        "failedToStopEnrollment": "Falha ao encerrar a inscrição",
+        "abTestHint": "A audiência (Listas Alvo) é movida para uma nova Distribuição de Campanha e dividida entre a campanha original e as variantes conforme os percentuais abaixo. Os percentuais são rebalanceados ao adicionar ou remover variantes e devem somar 100.",
+        "creatingAbTest": "Criando teste A/B...",
+        "abTestCreated": "Teste A/B criado.",
+        "abTestCreatedActivationFailed": "Teste A/B criado, mas a ativação falhou: {error} Revise a distribuição e ative-a manualmente.",
+        "failedToCreateAbTest": "Falha ao criar o teste A/B",
+        "weightsMustSumTo100": "Os percentuais da audiência devem somar 100 (soma atual: {sum})."
     },
     "tooltips": {
         "chatwootInbox": "Selecione uma caixa de entrada Meta Cloud API ativa. A conta de Chat e as credenciais Meta usadas para carregar templates e enviar são derivadas da conexão de canal dessa caixa.",

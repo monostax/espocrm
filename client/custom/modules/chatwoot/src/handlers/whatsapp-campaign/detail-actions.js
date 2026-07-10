@@ -14,6 +14,10 @@ define("chatwoot:handlers/whatsapp-campaign/detail-actions", [], function () {
             this.view = view;
         }
 
+        translate(key, category = "messages") {
+            return this.view.translate(key, category, "WhatsAppCampaign");
+        }
+
         isSendAvailable() {
             const status = this.view.model.get("status");
             return status === "Draft";
@@ -29,87 +33,89 @@ define("chatwoot:handlers/whatsapp-campaign/detail-actions", [], function () {
             return status === "Sending" && this.view.model.get("continuousEnrollment");
         }
 
-        stopEnrollment() {
-            const model = this.view.model;
+        isCreateAbTestAvailable() {
+            const status = this.view.model.get("status");
+            return status === "Draft";
+        }
 
-            Espo.Ui.confirm(
-                "Stop enrolling new contacts into this campaign? Contacts already enrolled will still be processed, and the campaign will complete once they are done.",
+        createAbTest() {
+            const view = this.view;
+
+            view.createView(
+                "createAbTestDialog",
+                "chatwoot:views/whatsapp-campaign/modals/create-ab-test",
                 {
-                    confirmText: "Stop Enrollment",
-                    cancelText: this.view.translate("Cancel"),
-                    confirmStyle: "danger",
+                    model: view.model,
                 },
-                () => {
-                    Espo.Ui.notify("Stopping enrollment...");
+                (dialog) => {
+                    dialog.render();
 
-                    Espo.Ajax.postRequest(`WhatsAppCampaign/${model.id}/stopEnrollment`)
-                        .then((response) => {
-                            Espo.Ui.success("Enrollment stopped.");
-                            model.set(response);
-                            this.view.reRender();
-                        })
-                        .catch((xhr) => {
-                            let errorMsg = "Failed to stop enrollment";
-                            if (xhr?.responseJSON?.message) {
-                                errorMsg = xhr.responseJSON.message;
-                            }
-                            Espo.Ui.error(errorMsg);
-                        });
+                    view.listenToOnce(dialog, "done", (response) => {
+                        if (response && response.id) {
+                            view.getRouter().navigate(
+                                "#WhatsAppCampaignDistribution/view/" + response.id,
+                                { trigger: true },
+                            );
+                        }
+                    });
                 },
             );
         }
 
         sendCampaign() {
-            const model = this.view.model;
-
-            Espo.Ui.confirm(
-                "Are you sure you want to send this campaign? This will start sending messages to all targeted contacts.",
-                {
-                    confirmText: "Send Campaign",
-                    cancelText: this.view.translate("Cancel"),
-                    confirmStyle: "danger",
-                },
-                () => {
-                    Espo.Ui.notify("Launching campaign...");
-
-                    Espo.Ajax.postRequest(`WhatsAppCampaign/${model.id}/send`)
-                        .then((response) => {
-                            Espo.Ui.success("Campaign launched successfully.");
-                            model.set(response);
-                            this.view.reRender();
-                        })
-                        .catch((xhr) => {
-                            let errorMsg = "Failed to launch campaign";
-                            if (xhr?.responseJSON?.message) {
-                                errorMsg = xhr.responseJSON.message;
-                            }
-                            Espo.Ui.error(errorMsg);
-                        });
-                },
-            );
+            this.runAction({
+                confirmMessage: this.translate("confirmSendCampaign"),
+                confirmText: this.translate("Send Campaign", "labels"),
+                url: "send",
+                notifyMessage: this.translate("launchingCampaign"),
+                successMessage: this.translate("campaignLaunched"),
+                errorMessage: this.translate("failedToLaunchCampaign"),
+            });
         }
 
         abortCampaign() {
+            this.runAction({
+                confirmMessage: this.translate("confirmAbortCampaign"),
+                confirmText: this.translate("Abort Campaign", "labels"),
+                url: "abort",
+                notifyMessage: this.translate("abortingCampaign"),
+                successMessage: this.translate("campaignAborted"),
+                errorMessage: this.translate("failedToAbortCampaign"),
+            });
+        }
+
+        stopEnrollment() {
+            this.runAction({
+                confirmMessage: this.translate("confirmStopEnrollment"),
+                confirmText: this.translate("Stop Enrollment", "labels"),
+                url: "stopEnrollment",
+                notifyMessage: this.translate("stoppingEnrollment"),
+                successMessage: this.translate("enrollmentStopped"),
+                errorMessage: this.translate("failedToStopEnrollment"),
+            });
+        }
+
+        runAction(o) {
             const model = this.view.model;
 
             Espo.Ui.confirm(
-                "Are you sure you want to abort this campaign? Messages already sent will not be recalled.",
+                o.confirmMessage,
                 {
-                    confirmText: "Abort Campaign",
+                    confirmText: o.confirmText,
                     cancelText: this.view.translate("Cancel"),
                     confirmStyle: "danger",
                 },
                 () => {
-                    Espo.Ui.notify("Aborting campaign...");
+                    Espo.Ui.notify(o.notifyMessage);
 
-                    Espo.Ajax.postRequest(`WhatsAppCampaign/${model.id}/abort`)
+                    Espo.Ajax.postRequest(`WhatsAppCampaign/${model.id}/${o.url}`)
                         .then((response) => {
-                            Espo.Ui.success("Campaign aborted.");
+                            Espo.Ui.success(o.successMessage);
                             model.set(response);
                             this.view.reRender();
                         })
                         .catch((xhr) => {
-                            let errorMsg = "Failed to abort campaign";
+                            let errorMsg = o.errorMessage;
                             if (xhr?.responseJSON?.message) {
                                 errorMsg = xhr.responseJSON.message;
                             }
@@ -120,4 +126,3 @@ define("chatwoot:handlers/whatsapp-campaign/detail-actions", [], function () {
         }
     };
 });
-

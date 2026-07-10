@@ -449,13 +449,16 @@ class SeedChatwootAccount implements RebuildAction
                 return null;
             }
 
-            // Add user to account as administrator
+            // Add user to account as administrator with account-wide inbox
+            // visibility (concierge is the CRM integration user and must see
+            // every inbox regardless of department/team scoping).
             $accountUserResponse = $this->apiClient->attachUserToAccount(
                 $backendUrl,
                 $platformAccessToken,
                 $chatwootAccountId,
                 $chatwootUserId,
-                'administrator'
+                'administrator',
+                true
             );
 
             $this->log->info("SeedChatwootAccount: Created concierge user (ID: {$chatwootUserId}) for account {$chatwootAccountId}");

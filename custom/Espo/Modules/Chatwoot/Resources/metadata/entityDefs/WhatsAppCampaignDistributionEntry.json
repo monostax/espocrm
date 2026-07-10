@@ -1,0 +1,52 @@
+{
+    "fields": {
+        "distribution": {
+            "type": "link",
+            "required": true
+        },
+        "campaign": {
+            "type": "link",
+            "required": true
+        },
+        "weight": {
+            "type": "int",
+            "required": true,
+            "min": 1,
+            "max": 100,
+            "default": 50,
+            "tooltip": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "distribution": {
+            "type": "belongsTo",
+            "entity": "WhatsAppCampaignDistribution",
+            "foreign": "entries"
+        },
+        "campaign": {
+            "type": "belongsTo",
+            "entity": "WhatsAppCampaign",
+            "foreign": "distributionEntries"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "asc"
+    },
+    "indexes": {
+        "distribution": {
+            "columns": ["distributionId", "deleted"]
+        },
+        "campaign": {
+            "columns": ["campaignId", "deleted"]
+        }
+    }
+}

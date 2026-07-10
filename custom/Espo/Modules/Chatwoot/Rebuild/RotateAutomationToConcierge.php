@@ -414,7 +414,8 @@ class RotateAutomationToConcierge implements RebuildAction
                 $platformAccessToken,
                 $chatwootAccountId,
                 $chatwootUserId,
-                'administrator'
+                'administrator',
+                true // global_admin: concierge needs account-wide inbox visibility
             );
 
             $userAccessToken = $userResponse['access_token'] ?? null;

@@ -110,6 +110,10 @@
         },
         "accountUserMemberships": {
             "type": "linkMultiple"
+        },
+        "chatwootTeams": {
+            "type": "linkMultiple",
+            "tooltip": true
         }
     },
     "links": {
@@ -145,6 +149,12 @@
             "relationName": "chatwootAccountUserMembershipChatwootInbox",
             "foreign": "chatwootInboxes"
         },
+        "chatwootTeams": {
+            "type": "hasMany",
+            "entity": "ChatwootTeam",
+            "relationName": "chatwootInboxChatwootTeam",
+            "foreign": "chatwootInboxes"
+        },
         "whatsAppCampaigns": {
             "type": "hasMany",
             "entity": "WhatsAppCampaign",
@@ -163,7 +173,8 @@
     "cascadeDelete": {
         "links": ["conversations", "contactInboxes"],
         "junctionTables": [
-            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootInboxId"}
+            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootInboxId"},
+            {"table": "ChatwootInboxChatwootTeam", "column": "chatwootInboxId"}
         ]
     }
 }

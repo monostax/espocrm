@@ -135,6 +135,33 @@
         }
     },
     {
+        "route": "/WhatsAppCampaign/:id/createAbTest",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppCampaign",
+            "action": "createAbTest",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WhatsAppCampaignDistribution/:id/activate",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppCampaignDistribution",
+            "action": "activate",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/WhatsAppCampaignDistribution/:id/stop",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppCampaignDistribution",
+            "action": "stop",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/ChatwootAccountUserMembership/:id/enableAiProfile",
         "method": "post",
         "params": {

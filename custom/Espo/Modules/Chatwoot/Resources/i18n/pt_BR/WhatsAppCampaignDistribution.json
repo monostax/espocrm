@@ -1,0 +1,57 @@
+{
+    "fields": {
+        "name": "Nome",
+        "status": "Status",
+        "continuous": "Inscrição Contínua",
+        "targetLists": "Listas Alvo",
+        "excludeCampaigns": "Excluir Destinatários das Campanhas",
+        "excludingTargetLists": "Listas Alvo de Exclusão",
+        "totalEnrolled": "Total de Inscritos",
+        "startedAt": "Iniciada em",
+        "stoppedAt": "Encerrada em",
+        "createdAt": "Criado em",
+        "modifiedAt": "Modificado em",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times"
+    },
+    "links": {
+        "targetLists": "Listas Alvo",
+        "excludeCampaigns": "Excluir Destinatários das Campanhas",
+        "excludingTargetLists": "Listas Alvo de Exclusão",
+        "entries": "Campanhas",
+        "createdBy": "Criado por",
+        "modifiedBy": "Modificado por",
+        "teams": "Times"
+    },
+    "labels": {
+        "Create WhatsAppCampaignDistribution": "Cadastrar Distribuição de Campanha",
+        "Activate Distribution": "Ativar Distribuição",
+        "Stop Distribution": "Encerrar Distribuição",
+        "Campaigns": "Campanhas"
+    },
+    "options": {
+        "status": {
+            "Draft": "Rascunho",
+            "Active": "Ativa",
+            "Stopped": "Encerrada"
+        }
+    },
+    "messages": {
+        "confirmActivateDistribution": "Ativar esta distribuição? Os contatos da audiência serão divididos entre as campanhas vinculadas conforme os pesos e o envio de mensagens será iniciado.",
+        "activatingDistribution": "Ativando distribuição...",
+        "distributionActivated": "Distribuição ativada.",
+        "failedToActivateDistribution": "Falha ao ativar a distribuição",
+        "confirmStopDistribution": "Encerrar esta distribuição? Nenhum novo contato será inscrito. Contatos já inscritos ainda serão processados e as campanhas serão concluídas quando terminarem.",
+        "stoppingDistribution": "Encerrando distribuição...",
+        "distributionStopped": "Distribuição encerrada.",
+        "failedToStopDistribution": "Falha ao encerrar a distribuição"
+    },
+    "tooltips": {
+        "continuous": "Quando habilitado, contatos adicionados às Listas Alvo após a ativação são inscritos e divididos automaticamente entre as campanhas. A distribuição permanece Ativa até ser encerrada. Quando desabilitado, a audiência é dividida uma única vez na ativação e a distribuição é encerrada automaticamente quando todas as campanhas terminarem.",
+        "targetLists": "A audiência desta distribuição. Os contatos destas listas são divididos entre as campanhas vinculadas conforme os pesos.",
+        "excludeCampaigns": "Contatos já alcançados (Enviado, Entregue, Lido ou Respondido) por estas campanhas são excluídos da inscrição.",
+        "excludingTargetLists": "Contatos que são membros destas listas são excluídos da inscrição.",
+        "totalEnrolled": "Número total de destinatários inscritos em todas as campanhas desta distribuição."
+    }
+}

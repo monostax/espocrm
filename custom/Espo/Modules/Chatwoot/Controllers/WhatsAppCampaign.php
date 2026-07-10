@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\Chatwoot\Services\WhatsAppCampaignService;
+use Espo\Modules\Chatwoot\Services\WhatsAppCampaignDistributionService;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use stdClass;
 
@@ -252,6 +253,50 @@ class WhatsAppCampaign extends Record
             'valid' => true,
             'template' => $template,
         ];
+    }
+
+    /**
+     * Create an A/B/n test from a Draft campaign: clones it as N template
+     * variants and wires everything into a new campaign distribution.
+     *
+     * POST /api/v1/WhatsAppCampaign/:id/createAbTest
+     * Body: { weight, variants: [{ name, weight, templateName, ... }], activate }
+     */
+    public function postActionCreateAbTest(Request $request, Response $response): stdClass
+    {
+        $id = $request->getRouteParam('id');
+
+        if (!$id) {
+            throw new BadRequest('Missing campaign ID.');
+        }
+
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $id);
+
+        if (!$campaign) {
+            throw new NotFound("Campaign {$id} not found.");
+        }
+
+        if (!$this->acl->check($campaign, 'edit')) {
+            throw new Forbidden('No edit access to the campaign.');
+        }
+
+        if (
+            !$this->acl->checkScope('WhatsAppCampaign', 'create') ||
+            !$this->acl->checkScope('WhatsAppCampaignDistribution', 'create')
+        ) {
+            throw new Forbidden('No create access to campaigns or campaign distributions.');
+        }
+
+        $data = $request->getParsedBody();
+
+        $result = $this->injectableFactory
+            ->create(WhatsAppCampaignDistributionService::class)
+            ->createAbTest($id, $data);
+
+        $responseData = (object) $result['distribution']->getValueMap();
+        $responseData->activationError = $result['activationError'];
+
+        return $responseData;
     }
 
     private function getWhatsAppCampaignService(): WhatsAppCampaignService

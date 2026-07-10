@@ -1,7 +1,29 @@
 [
-    {"name":"name", "link":true},
-    {"name":"account","width":25},
-    {"name":"emailAddress", "notSortable": true, "width": 20},
-    {"name":"phoneNumber", "notSortable": true, "width": 18},
-    {"name":"tenant", "width": 15}
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "account",
+        "width": 25
+    },
+    {
+        "name": "emailAddress",
+        "notSortable": true,
+        "width": 20
+    },
+    {
+        "name": "phoneNumber",
+        "notSortable": true,
+        "width": 18
+    },
+    {
+        "name": "tags",
+        "notSortable": true,
+        "width": 15
+    },
+    {
+        "name": "tenant",
+        "width": 15
+    }
 ]

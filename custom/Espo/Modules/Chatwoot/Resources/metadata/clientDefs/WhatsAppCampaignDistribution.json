@@ -1,0 +1,84 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-arrows-split-2",
+    "dynamicLogic": {
+        "fields": {
+            "continuous": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "targetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Stopped"
+                        }
+                    ]
+                }
+            },
+            "excludeCampaigns": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "excludingTargetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "entries",
+                "label": "Campaigns",
+                "view": "views/record/panels/relationship",
+                "link": "entries",
+                "select": false,
+                "create": true,
+                "layout": "listSmall",
+                "order": 5
+            }
+        ]
+    },
+    "detailActionList": [
+        {
+            "name": "activateDistribution",
+            "label": "Activate Distribution",
+            "handler": "chatwoot:handlers/whatsapp-campaign-distribution/detail-actions",
+            "actionFunction": "activateDistribution",
+            "checkVisibilityFunction": "isActivateAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "stopDistribution",
+            "label": "Stop Distribution",
+            "handler": "chatwoot:handlers/whatsapp-campaign-distribution/detail-actions",
+            "actionFunction": "stopDistribution",
+            "checkVisibilityFunction": "isStopAvailable",
+            "groupIndex": 1
+        }
+    ]
+}

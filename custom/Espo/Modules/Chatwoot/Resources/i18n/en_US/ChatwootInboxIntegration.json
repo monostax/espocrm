@@ -33,14 +33,16 @@
         "wahaIgnoreChannels": "Ignore Channels",
         "wahaIgnoreBroadcast": "Ignore Broadcast",
         "autoPendingEnabled": "Auto-Pending Enabled",
-        "team": "Team"
+        "team": "Team",
+        "chatwootTeams": "Chatwoot Teams"
     },
     "links": {
         "wahaPlatform": "WAHA Platform",
         "chatwootAccount": "Chat / Account",
         "chatwootInbox": "Chat / Account / Channel",
         "oAuthAccount": "Meta Account",
-        "team": "Team"
+        "team": "Team",
+        "chatwootTeams": "Chatwoot Teams"
     },
     "labels": {
         "Create ChatwootInboxIntegration": "Create Chat / Connection",
@@ -104,7 +106,8 @@
         "wahaIgnoreGroups": "Ignore Group chats. No webhooks or stored messages for group conversations.",
         "wahaIgnoreChannels": "Ignore Channel messages. No webhooks or stored messages for channels.",
         "wahaIgnoreBroadcast": "Ignore Broadcast lists (*@broadcast), excluding status@broadcast. Use 'Ignore Status' for Status.",
-        "autoPendingEnabled": "When enabled, conversations in this inbox will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response."
+        "autoPendingEnabled": "When enabled, conversations in this inbox will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response.",
+        "chatwootTeams": "Chatwoot teams to link to the inbox when it is provisioned. Members of linked teams automatically get access to the inbox in Chatwoot."
     },
     "messages": {
         "channelCreated": "Channel created. Click Activate to start the connection.",
@@ -117,6 +120,7 @@
         "confirmReactivate": "This will repair the WhatsApp connection by recreating the WAHA session and app. Your existing inbox and conversations are preserved, but you may need to scan the QR code again. Continue?",
         "confirmActivateInstagram": "This will connect the Instagram Business Account to Chatwoot and create a Chat / Inbox. Continue?",
         "noWahaPlatform": "Please select a WAHA Platform.",
-        "noChatwootAccount": "Please select a Chat / Account."
+        "noChatwootAccount": "Please select a Chat / Account.",
+        "chatwootTeamMustBelongToSameAccount": "Only Chatwoot teams from the same Chat Account can be linked to this Connection."
     }
 }

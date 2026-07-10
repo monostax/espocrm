@@ -36,6 +36,14 @@
             ],
             [
                 {
+                    "name": "source"
+                },
+                {
+                    "name": "tags"
+                }
+            ],
+            [
+                {
                     "name": "address"
                 },
                 {

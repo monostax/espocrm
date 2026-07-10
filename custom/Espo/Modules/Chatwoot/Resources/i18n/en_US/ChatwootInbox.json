@@ -4,11 +4,13 @@
         "chatwootInboxIntegration": "Channel Connection",
         "status": "Status",
         "channelType": "Channel Type",
-        "autoPendingEnabled": "Auto-Pending Enabled"
+        "autoPendingEnabled": "Auto-Pending Enabled",
+        "chatwootTeams": "Chatwoot Teams"
     },
     "links": {
         "accountUserMemberships": "Chat / Inbox / Agents",
-        "chatwootInboxIntegration": "Channel Connection"
+        "chatwootInboxIntegration": "Channel Connection",
+        "chatwootTeams": "Chatwoot Teams"
     },
     "labels": {
         "metadata": "Metadata",
@@ -23,6 +25,10 @@
     },
     "messages": {
         "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",
-        "accountMembershipMustBelongToSameAccount": "Only account memberships from the same Chat Account can be linked to this Inbox."
+        "accountMembershipMustBelongToSameAccount": "Only account memberships from the same Chat Account can be linked to this Inbox.",
+        "chatwootTeamMustBelongToSameAccount": "Only Chatwoot teams from the same Chat Account can be linked to this Inbox."
+    },
+    "tooltips": {
+        "chatwootTeams": "Chatwoot teams linked to this inbox. Members of linked teams automatically become inbox collaborators in Chatwoot (department-scoped inbox access)."
     }
 }

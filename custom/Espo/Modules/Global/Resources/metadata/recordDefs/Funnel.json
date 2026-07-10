@@ -1,6 +1,6 @@
 {
-    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General"
+    "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
+    "afterCreateHookClassNameList": [
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\Funnel\\AfterCreateDuplicate"
+    ]
 }
-
-
-

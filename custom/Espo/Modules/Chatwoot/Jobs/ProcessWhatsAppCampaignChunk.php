@@ -430,8 +430,10 @@ class ProcessWhatsAppCampaignChunk implements Job
     /**
      * Check if all campaign contacts have been processed and mark completion.
      *
-     * Campaigns with continuous enrollment enabled are never auto-completed;
-     * they stay in Sending until enrollment is stopped or the campaign is aborted.
+     * Campaigns with continuous enrollment enabled, or managed by an Active
+     * continuous campaign distribution, are never auto-completed; they stay
+     * in Sending until enrollment / the distribution is stopped or the
+     * campaign is aborted.
      *
      * @param string $campaignId Campaign entity ID
      */
@@ -451,7 +453,8 @@ class ProcessWhatsAppCampaignChunk implements Job
             if (
                 $campaign &&
                 $campaign->get('status') === 'Sending' &&
-                !$campaign->get('continuousEnrollment')
+                !$campaign->get('continuousEnrollment') &&
+                !$this->isInActiveDistribution($campaignId)
             ) {
                 $campaign->set([
                     'status' => 'Completed',
@@ -462,6 +465,39 @@ class ProcessWhatsAppCampaignChunk implements Job
                 $this->log->info("ProcessWhatsAppCampaignChunk: Campaign {$campaignId} completed.");
             }
         }
+    }
+
+    /**
+     * Whether the campaign is an executor of an Active continuous
+     * campaign distribution (allocation layer keeps enrolling recipients).
+     */
+    private function isInActiveDistribution(string $campaignId): bool
+    {
+        $entries = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignDistributionEntry')
+            ->where(['campaignId' => $campaignId])
+            ->find();
+
+        foreach ($entries as $entry) {
+            $distributionId = $entry->get('distributionId');
+
+            if (!$distributionId) {
+                continue;
+            }
+
+            $distribution = $this->entityManager
+                ->getEntityById('WhatsAppCampaignDistribution', $distributionId);
+
+            if (
+                $distribution &&
+                $distribution->get('status') === 'Active' &&
+                $distribution->get('continuous')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

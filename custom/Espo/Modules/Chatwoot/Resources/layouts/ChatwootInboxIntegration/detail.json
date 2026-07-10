@@ -35,6 +35,12 @@
                     "name": "instagramBusinessAccountId",
                     "span": 4
                 }
+            ],
+            [
+                {
+                    "name": "chatwootTeams",
+                    "span": 8
+                }
             ]
         ]
     },

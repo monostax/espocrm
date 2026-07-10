@@ -19,6 +19,8 @@
         "WahaSessionLabel": "Etiqueta de Sessão",
         "WhatsAppCampaign": "Campanha WhatsApp",
         "WhatsAppCampaignContact": "Contato da Campanha WhatsApp",
+        "WhatsAppCampaignDistribution": "Distribuição de Campanha",
+        "WhatsAppCampaignDistributionEntry": "Entrada de Distribuição de Campanha",
         "ChatwootAccountUserMembership": "Chat / Conta / Agente"
     },
     "scopeNamesPlural": {
@@ -41,6 +43,8 @@
         "WahaSessionLabel": "Etiquetas de Sessão",
         "WhatsAppCampaign": "Campanhas WhatsApp",
         "WhatsAppCampaignContact": "Contatos da Campanha WhatsApp",
+        "WhatsAppCampaignDistribution": "Distribuições de Campanha",
+        "WhatsAppCampaignDistributionEntry": "Entradas de Distribuição de Campanha",
         "ChatwootAccountUserMembership": "Chat / Conta / Agentes"
     },
     "labels": {

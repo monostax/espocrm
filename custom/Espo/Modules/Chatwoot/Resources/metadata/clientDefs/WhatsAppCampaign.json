@@ -178,6 +178,14 @@
             "groupIndex": 0
         },
         {
+            "name": "createAbTest",
+            "label": "Create A/B Test",
+            "handler": "chatwoot:handlers/whatsapp-campaign/detail-actions",
+            "actionFunction": "createAbTest",
+            "checkVisibilityFunction": "isCreateAbTestAvailable",
+            "groupIndex": 0
+        },
+        {
             "name": "abortCampaign",
             "label": "Abort Campaign",
             "handler": "chatwoot:handlers/whatsapp-campaign/detail-actions",

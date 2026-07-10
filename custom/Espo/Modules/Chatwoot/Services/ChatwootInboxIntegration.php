@@ -1764,7 +1764,59 @@ class ChatwootInboxIntegration
 
         $this->entityManager->saveEntity($inbox, ['silent' => true]);
 
+        $this->linkProvisionedInboxAccess($channel, $inbox);
+
         return $inbox->getId();
+    }
+
+    /**
+     * Grant department/AI access to a freshly provisioned inbox.
+     *
+     * - Links the integration's ChatwootTeams to the local ChatwootInbox. The
+     *   SyncInboxTeams hook pushes the list to Chatwoot (inbox_teams), where
+     *   members of linked teams are materialized into inbox members
+     *   (department-scoped inbox privacy).
+     * - Links every AI account-user membership of the account to the inbox.
+     *   The SyncInboxMembership hook pushes the member list to Chatwoot so AI
+     *   agents can read/reply on the inbox regardless of team configuration.
+     *
+     * Best-effort: failures are logged and never abort provisioning; the
+     * links can be fixed manually on the ChatwootInbox record afterwards.
+     */
+    private function linkProvisionedInboxAccess(Entity $channel, Entity $inbox): void
+    {
+        try {
+            $repository = $this->entityManager->getRDBRepository('ChatwootInbox');
+
+            $teamsRelation = $repository->getRelation($inbox, 'chatwootTeams');
+
+            foreach ($channel->getLinkMultipleIdList('chatwootTeams') as $teamId) {
+                if (!$teamsRelation->isRelatedById($teamId)) {
+                    $teamsRelation->relateById($teamId);
+                }
+            }
+
+            $membershipsRelation = $repository->getRelation($inbox, 'accountUserMemberships');
+
+            $aiMemberships = $this->entityManager
+                ->getRDBRepository('ChatwootAccountUserMembership')
+                ->where([
+                    'chatwootAccountId' => $inbox->get('chatwootAccountId'),
+                    'isAI' => true,
+                ])
+                ->find();
+
+            foreach ($aiMemberships as $membership) {
+                if (!$membershipsRelation->isRelatedById($membership->getId())) {
+                    $membershipsRelation->relateById($membership->getId());
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                'ChatwootInboxIntegration: failed to link provisioned inbox access for inbox ' .
+                $inbox->getId() . ': ' . $e->getMessage()
+            );
+        }
     }
 
     /**

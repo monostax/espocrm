@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "distribution": "Distribuição",
+        "campaign": "Campanha",
+        "weight": "Peso (%)",
+        "createdAt": "Criado em",
+        "modifiedAt": "Modificado em"
+    },
+    "links": {
+        "distribution": "Distribuição",
+        "campaign": "Campanha"
+    },
+    "labels": {
+        "Create WhatsAppCampaignDistributionEntry": "Adicionar Campanha"
+    },
+    "tooltips": {
+        "weight": "Percentual da audiência alocado para esta campanha. Os pesos de todas as entradas devem somar 100. Os contatos são atribuídos de forma determinística pelo hash do número de telefone, então o mesmo contato sempre cai na mesma campanha."
+    }
+}

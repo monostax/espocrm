@@ -1,0 +1,128 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "link": true
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Draft",
+                "Active",
+                "Stopped"
+            ],
+            "default": "Draft",
+            "style": {
+                "Draft": null,
+                "Active": "warning",
+                "Stopped": "success"
+            }
+        },
+        "continuous": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "targetLists": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "excludeCampaigns": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "excludingTargetLists": {
+            "type": "linkMultiple",
+            "tooltip": true
+        },
+        "totalEnrolled": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0,
+            "tooltip": true
+        },
+        "startedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "stoppedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        }
+    },
+    "links": {
+        "targetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "whatsAppCampaignDistributions",
+            "relationName": "whatsAppCampaignDistributionTargetList"
+        },
+        "excludeCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "excludedByDistributions",
+            "relationName": "whatsAppCampaignDistributionExcludeCampaign"
+        },
+        "excludingTargetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "whatsAppCampaignDistributionsExcluding",
+            "relationName": "whatsAppCampaignDistributionExcludingTargetList"
+        },
+        "entries": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignDistributionEntry",
+            "foreign": "distribution"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "status": {
+            "columns": ["status", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        }
+    }
+}

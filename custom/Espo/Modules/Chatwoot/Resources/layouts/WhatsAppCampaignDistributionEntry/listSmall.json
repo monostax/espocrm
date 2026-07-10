@@ -1,0 +1,11 @@
+[
+    {
+        "name": "campaign",
+        "width": 60,
+        "link": true
+    },
+    {
+        "name": "weight",
+        "width": 40
+    }
+]

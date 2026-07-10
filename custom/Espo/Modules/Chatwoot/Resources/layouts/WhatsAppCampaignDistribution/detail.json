@@ -1,0 +1,62 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "continuous"
+                },
+                {
+                    "name": "totalEnrolled"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Audience",
+        "rows": [
+            [
+                {
+                    "name": "targetLists",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Exclusions",
+        "name": "exclusions",
+        "rows": [
+            [
+                {
+                    "name": "excludeCampaigns"
+                },
+                {
+                    "name": "excludingTargetLists"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Timeline",
+        "name": "timeline",
+        "rows": [
+            [
+                {
+                    "name": "startedAt"
+                },
+                {
+                    "name": "stoppedAt"
+                }
+            ]
+        ]
+    }
+]

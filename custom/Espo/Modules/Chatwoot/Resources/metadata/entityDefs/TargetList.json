@@ -11,6 +11,18 @@
             "entity": "WhatsAppCampaign",
             "foreign": "excludingTargetLists",
             "layoutRelationshipsDisabled": true
+        },
+        "whatsAppCampaignDistributions": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignDistribution",
+            "foreign": "targetLists",
+            "layoutRelationshipsDisabled": true
+        },
+        "whatsAppCampaignDistributionsExcluding": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignDistribution",
+            "foreign": "excludingTargetLists",
+            "layoutRelationshipsDisabled": true
         }
     }
 }

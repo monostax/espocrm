@@ -249,6 +249,10 @@
             "type": "linkMultiple",
             "view": "views/fields/teams",
             "readOnly": true
+        },
+        "chatwootTeams": {
+            "type": "linkMultiple",
+            "tooltip": true
         }
     },
     "links": {
@@ -288,6 +292,12 @@
             "type": "hasOne",
             "entity": "ChatwootInbox",
             "foreign": "chatwootInboxIntegration"
+        },
+        "chatwootTeams": {
+            "type": "hasMany",
+            "entity": "ChatwootTeam",
+            "relationName": "chatwootInboxIntegrationChatwootTeam",
+            "foreign": "chatwootInboxIntegrations"
         },
         "wahaSessionLabels": {
             "type": "hasMany",

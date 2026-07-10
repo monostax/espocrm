@@ -13,6 +13,32 @@
             "options": ["", "M", "F", "Outro"],
             "default": ""
         },
+        "source": {
+            "type": "enum",
+            "options": [
+                "",
+                "Call",
+                "Email",
+                "Existing Customer",
+                "Partner",
+                "Public Relations",
+                "Web Site",
+                "Campaign",
+                "Meta Lead Ads",
+                "Cal.com",
+                "Other"
+            ],
+            "default": "",
+            "audited": true
+        },
+        "tags": {
+            "type": "multiEnum",
+            "options": [],
+            "allowCustomOptions": true,
+            "displayAsLabel": true,
+            "storeArrayValues": true,
+            "tooltip": true
+        },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
         },

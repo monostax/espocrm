@@ -29,7 +29,10 @@
         "modifiedAt": "Modified At",
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
-        "teams": "Teams"
+        "teams": "Teams",
+        "abWeightOriginal": "Audience % — Original (A)",
+        "abWeight": "Audience %",
+        "abActivate": "Start immediately"
     },
     "links": {
         "chatwootInbox": "WhatsApp Inbox",
@@ -48,6 +51,9 @@
         "Send Campaign": "Send Campaign",
         "Abort Campaign": "Abort Campaign",
         "Stop Enrollment": "Stop Enrollment",
+        "Create A/B Test": "Create A/B Test",
+        "Add Variant": "Add Variant",
+        "Variant": "Variant",
         "Recipients": "Recipients"
     },
     "options": {
@@ -72,7 +78,13 @@
         "confirmStopEnrollment": "Stop enrolling new contacts into this campaign? Contacts already enrolled will still be processed, and the campaign will complete once they are done.",
         "stoppingEnrollment": "Stopping enrollment...",
         "enrollmentStopped": "Enrollment stopped.",
-        "failedToStopEnrollment": "Failed to stop enrollment"
+        "failedToStopEnrollment": "Failed to stop enrollment",
+        "abTestHint": "The audience (Target Lists) is moved to a new Campaign Distribution and split between the original campaign and the variants by the percentages below. Percentages are rebalanced when variants are added or removed and must sum to 100.",
+        "creatingAbTest": "Creating A/B test...",
+        "abTestCreated": "A/B test created.",
+        "abTestCreatedActivationFailed": "A/B test created, but activation failed: {error} Review the distribution and activate it manually.",
+        "failedToCreateAbTest": "Failed to create A/B test",
+        "weightsMustSumTo100": "Audience percentages must sum to 100 (current sum: {sum})."
     },
     "tooltips": {
         "chatwootInbox": "Select an active Meta Cloud API inbox. The Chat account and Meta credentials used to load templates and send are derived from that inbox's channel connection.",

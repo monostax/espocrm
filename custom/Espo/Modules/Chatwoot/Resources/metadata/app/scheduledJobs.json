@@ -58,6 +58,12 @@
         "isSystem": false,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\EnrollWhatsAppCampaignContacts"
+    },
+    "ProcessWhatsAppCampaignDistributions": {
+        "name": "Process WhatsApp Campaign Distributions",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\ProcessWhatsAppCampaignDistributions"
     }
 }
 

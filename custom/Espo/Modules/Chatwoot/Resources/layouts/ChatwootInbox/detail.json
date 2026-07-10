@@ -18,6 +18,12 @@
                 {
                     "name": "websiteUrl"
                 }
+            ],
+            [
+                {
+                    "name": "chatwootTeams"
+                },
+                false
             ]
         ]
     },

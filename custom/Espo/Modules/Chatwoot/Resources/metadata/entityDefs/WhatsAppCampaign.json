@@ -253,6 +253,18 @@
             "entity": "WhatsAppCampaignContact",
             "foreign": "whatsAppCampaign"
         },
+        "distributionEntries": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignDistributionEntry",
+            "foreign": "campaign",
+            "layoutRelationshipsDisabled": true
+        },
+        "excludedByDistributions": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignDistribution",
+            "foreign": "excludeCampaigns",
+            "layoutRelationshipsDisabled": true
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

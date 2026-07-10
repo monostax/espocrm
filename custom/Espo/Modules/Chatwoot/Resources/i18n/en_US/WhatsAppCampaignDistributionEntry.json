@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "distribution": "Distribution",
+        "campaign": "Campaign",
+        "weight": "Weight (%)",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At"
+    },
+    "links": {
+        "distribution": "Distribution",
+        "campaign": "Campaign"
+    },
+    "labels": {
+        "Create WhatsAppCampaignDistributionEntry": "Add Campaign"
+    },
+    "tooltips": {
+        "weight": "Percentage of the audience allocated to this campaign. Weights of all entries must sum to 100. Contacts are assigned deterministically by phone number hash, so the same contact always lands in the same campaign."
+    }
+}

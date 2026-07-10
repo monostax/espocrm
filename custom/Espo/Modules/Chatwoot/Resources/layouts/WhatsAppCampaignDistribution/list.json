@@ -1,0 +1,26 @@
+[
+    {
+        "name": "name",
+        "width": 25
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "continuous",
+        "width": 10
+    },
+    {
+        "name": "totalEnrolled",
+        "width": 10
+    },
+    {
+        "name": "startedAt",
+        "width": 15
+    },
+    {
+        "name": "createdAt",
+        "width": 15
+    }
+]

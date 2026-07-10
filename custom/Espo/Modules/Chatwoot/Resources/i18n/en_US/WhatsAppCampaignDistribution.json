@@ -1,0 +1,57 @@
+{
+    "fields": {
+        "name": "Name",
+        "status": "Status",
+        "continuous": "Continuous Enrollment",
+        "targetLists": "Target Lists",
+        "excludeCampaigns": "Exclude Recipients of Campaigns",
+        "excludingTargetLists": "Excluding Target Lists",
+        "totalEnrolled": "Total Enrolled",
+        "startedAt": "Started At",
+        "stoppedAt": "Stopped At",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams"
+    },
+    "links": {
+        "targetLists": "Target Lists",
+        "excludeCampaigns": "Exclude Recipients of Campaigns",
+        "excludingTargetLists": "Excluding Target Lists",
+        "entries": "Campaigns",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams"
+    },
+    "labels": {
+        "Create WhatsAppCampaignDistribution": "Create Campaign Distribution",
+        "Activate Distribution": "Activate Distribution",
+        "Stop Distribution": "Stop Distribution",
+        "Campaigns": "Campaigns"
+    },
+    "options": {
+        "status": {
+            "Draft": "Draft",
+            "Active": "Active",
+            "Stopped": "Stopped"
+        }
+    },
+    "messages": {
+        "confirmActivateDistribution": "Activate this distribution? Audience contacts will be split across the linked campaigns by their weights and message sending will start.",
+        "activatingDistribution": "Activating distribution...",
+        "distributionActivated": "Distribution activated.",
+        "failedToActivateDistribution": "Failed to activate distribution",
+        "confirmStopDistribution": "Stop this distribution? No new contacts will be enrolled. Contacts already enrolled will still be processed, and the campaigns will complete once they are done.",
+        "stoppingDistribution": "Stopping distribution...",
+        "distributionStopped": "Distribution stopped.",
+        "failedToStopDistribution": "Failed to stop distribution"
+    },
+    "tooltips": {
+        "continuous": "When enabled, contacts added to the Target Lists after activation are automatically enrolled and split across the campaigns. The distribution stays Active until you stop it. When disabled, the audience is split once at activation and the distribution stops automatically when all campaigns finish.",
+        "targetLists": "The audience of this distribution. Contacts from these lists are split across the linked campaigns by their weights.",
+        "excludeCampaigns": "Contacts already reached (Sent, Delivered, Read, or Replied) by these campaigns are excluded from enrollment.",
+        "excludingTargetLists": "Contacts that are members of these lists are excluded from enrollment.",
+        "totalEnrolled": "Total number of recipients enrolled across all campaigns of this distribution."
+    }
+}
