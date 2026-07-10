@@ -2,7 +2,10 @@
     "entity": true,
     "layouts": true,
     "tab": false,
-    "acl": false,
+    "acl": true,
+    "aclActionList": ["create", "read", "edit", "delete"],
+    "aclLevelList": ["all", "team", "own", "no"],
+    "aclFieldLevelList": ["yes", "no"],
     "customizable": false,
     "importable": false,
     "notifications": false,
@@ -10,6 +13,5 @@
     "disabled": false,
     "type": "Base",
     "module": "Chatwoot",
-    "object": false
+    "object": true
 }
-

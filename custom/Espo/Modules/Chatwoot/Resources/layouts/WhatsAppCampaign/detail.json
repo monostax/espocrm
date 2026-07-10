@@ -14,7 +14,9 @@
                 {
                     "name": "scheduledAt"
                 },
-                false
+                {
+                    "name": "continuousEnrollment"
+                }
             ]
         ]
     },
@@ -23,10 +25,8 @@
         "rows": [
             [
                 {
-                    "name": "credential"
-                },
-                {
-                    "name": "chatwootAccount"
+                    "name": "chatwootInbox",
+                    "fullWidth": true
                 }
             ],
             [

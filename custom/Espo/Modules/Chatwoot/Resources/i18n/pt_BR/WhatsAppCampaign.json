@@ -7,6 +7,7 @@
         "wabaId": "ID WABA",
         "templateCategory": "Categoria do Template",
         "templateBody": "Corpo do Template",
+        "chatwootInbox": "Caixa de Entrada WhatsApp",
         "credential": "Credencial",
         "chatwootAccount": "Chat / Conta",
         "tenant": "Ambiente",
@@ -15,6 +16,7 @@
         "parameterMapping": "Mapeamento de Parâmetros",
         "processedParams": "Parâmetros Processados",
         "scheduledAt": "Agendado para",
+        "continuousEnrollment": "Inscrição Contínua",
         "startedAt": "Iniciado em",
         "completedAt": "Concluído em",
         "sentCount": "Enviados",
@@ -30,6 +32,7 @@
         "teams": "Times"
     },
     "links": {
+        "chatwootInbox": "Caixa de Entrada WhatsApp",
         "credential": "Credencial",
         "chatwootAccount": "Chat / Conta",
         "tenant": "Ambiente",
@@ -44,6 +47,7 @@
         "Create WhatsAppCampaign": "Cadastrar Campanha WhatsApp",
         "Send Campaign": "Enviar Campanha",
         "Abort Campaign": "Abortar Campanha",
+        "Stop Enrollment": "Encerrar Inscrição",
         "Recipients": "Destinatários"
     },
     "options": {
@@ -56,10 +60,26 @@
             "Paused": "Pausada"
         }
     },
+    "messages": {
+        "confirmSendCampaign": "Tem certeza de que deseja enviar esta campanha? Isso iniciará o envio de mensagens para todos os contatos segmentados.",
+        "launchingCampaign": "Lançando campanha...",
+        "campaignLaunched": "Campanha lançada com sucesso.",
+        "failedToLaunchCampaign": "Falha ao lançar a campanha",
+        "confirmAbortCampaign": "Tem certeza de que deseja abortar esta campanha? Mensagens já enviadas não serão canceladas.",
+        "abortingCampaign": "Abortando campanha...",
+        "campaignAborted": "Campanha abortada.",
+        "failedToAbortCampaign": "Falha ao abortar a campanha",
+        "confirmStopEnrollment": "Encerrar a inscrição de novos contatos nesta campanha? Contatos já inscritos ainda serão processados e a campanha será concluída quando terminarem.",
+        "stoppingEnrollment": "Encerrando inscrição...",
+        "enrollmentStopped": "Inscrição encerrada.",
+        "failedToStopEnrollment": "Falha ao encerrar a inscrição"
+    },
     "tooltips": {
-        "templateName": "Selecione o template de mensagem WhatsApp para usar nesta campanha. Os templates são obtidos da sua Conta Business do WhatsApp na Meta.",
-        "parameterMapping": "Mapeia os parâmetros do template para campos do contato. Define quais dados do contato preenchem cada placeholder no template.",
+        "chatwootInbox": "Selecione uma caixa de entrada Meta Cloud API ativa. A conta de Chat e as credenciais Meta usadas para carregar templates e enviar são derivadas da conexão de canal dessa caixa.",
+        "templateName": "Selecione o template de mensagem WhatsApp para usar nesta campanha. Os templates são obtidos da Conta Business do WhatsApp na Meta vinculada à caixa de entrada selecionada.",
+        "parameterMapping": "Mapeia os parâmetros do template para campos do contato. Define quais dados do contato preenche cada placeholder no template.",
         "processedParams": "Os valores dos parâmetros resolvidos após processar o mapeamento com os dados reais dos contatos.",
+        "continuousEnrollment": "Quando habilitado, contatos adicionados às Listas Alvo ou aos Contatos Manuais após o início da campanha são inscritos e recebem a mensagem automaticamente. A campanha permanece no status Enviando até que a inscrição seja encerrada ou a campanha abortada.",
         "tenant": "Ambiente denormalizado da conta Chatwoot pai da campanha. Definido automaticamente; usado para relatórios por ambiente e agregações sem ACL."
     }
 }

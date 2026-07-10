@@ -1,0 +1,3 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\Chatwoot\\Classes\\Acl\\WhatsAppCampaignContact\\AccessChecker"
+}

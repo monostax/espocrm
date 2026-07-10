@@ -75,13 +75,25 @@
             "layoutListDisabled": true,
             "layoutMassUpdateDisabled": true
         },
+        "chatwootInbox": {
+            "type": "link",
+            "required": false,
+            "view": "chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox",
+            "tooltip": true
+        },
         "credential": {
             "type": "link",
-            "required": true
+            "required": false,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
         },
         "chatwootAccount": {
             "type": "link",
-            "required": true
+            "required": false,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
         },
         "tenant": {
             "type": "link",
@@ -113,6 +125,11 @@
             "readOnly": true,
             "tooltip": true,
             "view": "views/fields/json-object"
+        },
+        "continuousEnrollment": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
         },
         "scheduledAt": {
             "type": "datetime"
@@ -179,6 +196,11 @@
         }
     },
     "links": {
+        "chatwootInbox": {
+            "type": "belongsTo",
+            "entity": "ChatwootInbox",
+            "foreign": "whatsAppCampaigns"
+        },
         "credential": {
             "type": "belongsTo",
             "entity": "Credential"

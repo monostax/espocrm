@@ -44,9 +44,9 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 '<span class="fas fa-exclamation-triangle"></span> {{loadError}}' +
             '</span>' +
             '{{/if}}' +
-            '{{#if noCredential}}' +
+            '{{#if noInbox}}' +
             '<span class="text-muted small">' +
-                'Select a Credential first.' +
+                'Select a WhatsApp Inbox first.' +
             '</span>' +
             '{{/if}}' +
             '{{#if hasHeaderMedia}}' +
@@ -96,7 +96,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
         data: function () {
             const data = Dep.prototype.data.call(this);
 
-            const credentialId = this.model.get('credentialId');
+            const hasAuth = this.hasTemplateAuth();
             const currentName = this.model.get(this.name);
             const currentLang = this.model.get('templateLanguage');
 
@@ -108,7 +108,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
             data.isLoading = this.isLoading;
             data.loadingMessage = this.loadingMessage || 'Loading...';
             data.loadError = this.loadError;
-            data.noCredential = !this.isLoading && !this.loadError && !credentialId;
+            data.noInbox = !this.isLoading && !this.loadError && !hasAuth;
             data.selectPlaceholder = this.isLoading
                 ? 'Loading...'
                 : 'Select a template';
@@ -131,11 +131,10 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
             this.currentTemplateParams = [];
             this.currentHeaderMedia = null;
 
-            this.listenTo(this.model, 'change:credentialId', () => {
+            this.listenTo(this.model, 'change:credentialId change:chatwootInboxId', () => {
                 if (this.isEditMode()) {
                     this.model.set('templateName', null);
                     this.model.set('templateLanguage', null);
-                    this.model.set('wabaId', null);
                     this.model.set('parameterMapping', null);
                     this.model.set('headerMediaUrl', null);
                     this.model.set('headerMediaType', null);
@@ -144,6 +143,14 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     this.resolveAndFetchTemplates();
                 }
             });
+        },
+
+        hasTemplateAuth: function () {
+            return !!(
+                this.model.get('credentialId') ||
+                (this.model.get('_oAuthAccountId') && (this.model.get('wabaId') || this.model.get('_businessAccountId'))) ||
+                this.model.get('chatwootInboxId')
+            );
         },
 
         afterRender: function () {
@@ -168,9 +175,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     }
                 });
 
-                const credentialId = this.model.get('credentialId');
-
-                if (credentialId && this.templateOptions.length === 0 && !this.isLoading && !this.loadError) {
+                if (this.hasTemplateAuth() && this.templateOptions.length === 0 && !this.isLoading && !this.loadError) {
                     this.resolveAndFetchTemplates();
                 }
             }
@@ -307,18 +312,102 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
             this.model.set('parameterMapping', hasAny ? mapping : null);
         },
-
         resolveAndFetchTemplates: function () {
             const credentialId = this.model.get('credentialId');
+            const oAuthAccountId = this.model.get('_oAuthAccountId');
+            const wabaId = this.model.get('wabaId') || this.model.get('_businessAccountId');
+            const inboxId = this.model.get('chatwootInboxId');
 
-            if (!credentialId) {
+            if (!credentialId && !(oAuthAccountId && wabaId) && !inboxId) {
                 this.templateOptions = [];
                 this.isLoading = false;
                 this.loadError = null;
                 this.reRender();
+
                 return;
             }
 
+            // Prefer already-derived OAuth + WABA (from inbox), then credential, else resolve inbox.
+            if (oAuthAccountId && wabaId) {
+                this.model.set('wabaId', wabaId, {silent: true});
+                this.fetchTemplates({
+                    oAuthAccountId: oAuthAccountId,
+                    businessAccountId: wabaId,
+                });
+
+                return;
+            }
+
+            if (credentialId) {
+                this.resolveCredentialAndFetch(credentialId);
+
+                return;
+            }
+
+            if (inboxId) {
+                this.isLoading = true;
+                this.loadingMessage = 'Resolving inbox...';
+                this.loadError = null;
+                this.templateOptions = [];
+                this.reRender();
+
+                if (this.currentRequest) {
+                    this.currentRequest.abort();
+                    this.currentRequest = null;
+                }
+
+                this.currentRequest = Espo.Ajax.getRequest('WhatsAppCampaign/action/resolveInbox', {
+                    chatwootInboxId: inboxId,
+                });
+
+                this.currentRequest
+                    .then(result => {
+                        this.currentRequest = null;
+
+                        this.model.set({
+                            chatwootAccountId: result.chatwootAccountId || null,
+                            chatwootAccountName: result.chatwootAccountName || null,
+                            credentialId: result.credentialId || null,
+                            credentialName: result.credentialName || null,
+                            wabaId: result.wabaId || null,
+                        }, {silent: true});
+
+                        this.model.set('_oAuthAccountId', result.oAuthAccountId || null, {silent: true});
+                        this.model.set('_businessAccountId', result.wabaId || null, {silent: true});
+
+                        if (result.oAuthAccountId && result.wabaId) {
+                            this.fetchTemplates({
+                                oAuthAccountId: result.oAuthAccountId,
+                                businessAccountId: result.wabaId,
+                            });
+                        } else if (result.credentialId) {
+                            this.resolveCredentialAndFetch(result.credentialId);
+                        } else {
+                            this.isLoading = false;
+                            this.loadError = 'Inbox has no Meta Cloud API credentials (OAuth or Credential).';
+                            this.reRender();
+                        }
+                    })
+                    .catch(xhr => {
+                        this.currentRequest = null;
+                        this.isLoading = false;
+
+                        if (xhr && xhr.statusText === 'abort') {
+                            return;
+                        }
+
+                        let msg = 'Failed to resolve inbox.';
+                        if (xhr?.responseJSON?.message) {
+                            msg = xhr.responseJSON.message;
+                        }
+
+                        this.loadError = msg;
+                        this.reRender();
+                    });
+            }
+        },
+
+        resolveCredentialAndFetch: function (credentialId) {
             this.isLoading = true;
             this.loadingMessage = 'Resolving credential...';
             this.loadError = null;
@@ -344,11 +433,12 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                         this.isLoading = false;
                         this.loadError = 'Credential does not contain a WABA ID.';
                         this.reRender();
+
                         return;
                     }
 
                     this.model.set('wabaId', wabaId);
-                    this.fetchTemplates(credentialId);
+                    this.fetchTemplates({credentialId: credentialId, wabaId: wabaId});
                 })
                 .catch(xhr => {
                     this.currentRequest = null;
@@ -368,7 +458,8 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 });
         },
 
-        fetchTemplates: function (credentialId) {
+        fetchTemplates: function (params) {
+            this.isLoading = true;
             this.loadingMessage = 'Loading templates...';
             this.reRender();
 
@@ -377,9 +468,10 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 this.currentRequest = null;
             }
 
-            this.currentRequest = Espo.Ajax.getRequest('WhatsAppBusinessAccountMessageTemplate', {
-                credentialId: credentialId,
-            });
+            this.currentRequest = Espo.Ajax.getRequest(
+                'WhatsAppBusinessAccountMessageTemplate',
+                params
+            );
 
             this.currentRequest
                 .then(response => {
@@ -433,7 +525,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     }
 
                     if (list.length === 0) {
-                        this.loadError = 'No templates found for this credential.';
+                        this.loadError = 'No templates found for this inbox.';
                     } else if (this.templateOptions.length === 0) {
                         this.loadError = 'No APPROVED templates found.';
                     }

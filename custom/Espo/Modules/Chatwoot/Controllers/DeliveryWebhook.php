@@ -217,7 +217,8 @@ class DeliveryWebhook
         $currentRank = self::STATUS_ORDER[$currentStatus] ?? -1;
         $newRank = self::STATUS_ORDER[$newStatus] ?? -1;
 
-        if ($newRank <= $currentRank && $newStatus !== 'Failed') {
+        // Failed is terminal: never re-apply Failed (or regress). Other statuses only move forward.
+        if ($currentStatus === 'Failed' || ($newRank <= $currentRank && $newStatus !== 'Failed')) {
             return (object) ['success' => true, 'message' => 'Status not advanced.'];
         }
 

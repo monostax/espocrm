@@ -20,6 +20,9 @@
         "tabConversations": "Conversas",
         "Create ChatwootInbox": "Cadastrar Canal de Chat"
     },
+    "presetFilters": {
+        "whatsappCloudApi": "WhatsApp Cloud API"
+    },
     "messages": {
         "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",
         "accountMembershipMustBelongToSameAccount": "Apenas membros da conta do mesmo Chat Account podem ser vinculados a esta Inbox."

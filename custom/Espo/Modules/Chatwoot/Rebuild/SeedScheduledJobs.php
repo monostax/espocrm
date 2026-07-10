@@ -94,6 +94,11 @@ class SeedScheduledJobs implements RebuildAction
             'job' => 'RepairAccountUserMembershipInvariants',
             'scheduling' => '*/30 * * * *',
         ],
+        [
+            'name' => 'Enroll New WhatsApp Campaign Contacts',
+            'job' => 'EnrollWhatsAppCampaignContacts',
+            'scheduling' => '* * * * *',
+        ],
     ];
 
     public function __construct(

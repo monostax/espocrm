@@ -301,16 +301,20 @@ class WhatsAppCampaignService
             throw new Forbidden("Campaign can only be launched from Draft status (current: {$campaign->get('status')}).");
         }
 
-        // Validate required fields
+        // Prefer explicit inbox; account is derived from it (or set for legacy rows).
+        if (!$campaign->get('chatwootInboxId') && !$campaign->get('chatwootAccountId')) {
+            throw new Error('Campaign must have a WhatsApp Inbox selected (Meta Cloud API).');
+        }
+
         $chatwootAccountId = $campaign->get('chatwootAccountId');
         if (!$chatwootAccountId) {
-            throw new Error('Campaign must have a Chatwoot Account linked.');
+            throw new Error('Campaign must have a Chatwoot Account linked (select a WhatsApp Inbox).');
         }
 
         // Resolve audience
         $audience = $this->resolveAudience($campaignId);
 
-        if (empty($audience)) {
+        if (empty($audience) && !$campaign->get('continuousEnrollment')) {
             throw new Error('Campaign has no valid recipients. Check TargetLists and manual contacts.');
         }
 
@@ -324,13 +328,7 @@ class WhatsAppCampaignService
         $platform = $this->entityManager->getEntityById('ChatwootPlatform', $chatwootAccount->get('platformId'));
 
         if ($platform) {
-            $whatsappInbox = $this->entityManager
-                ->getRDBRepository('ChatwootInbox')
-                ->where([
-                    'chatwootAccountId' => $chatwootAccountId,
-                    'channelType' => 'Channel::Whatsapp',
-                ])
-                ->findOne();
+            $whatsappInbox = $this->resolveCampaignInbox($campaign, $chatwootAccountId);
 
             if ($whatsappInbox) {
                 $this->chatwootApiClient->syncInboxTemplates(
@@ -342,45 +340,253 @@ class WhatsAppCampaignService
             }
         }
 
-        foreach ($audience as $item) {
-            $this->entityManager->createEntity('WhatsAppCampaignContact', [
-                'whatsAppCampaignId' => $campaignId,
-                'contactId' => $item['contactId'],
-                'chatwootAccountId' => $chatwootAccountId,
-                'phoneNumber' => $item['phoneNumber'],
-                'contactName' => $item['contactName'],
-                'status' => 'Pending',
-            ]);
-        }
+        $createdIds = $this->createCampaignContacts($campaign, $audience);
 
         // Update campaign counters
         $campaign->set([
             'status' => 'Sending',
-            'totalRecipients' => count($audience),
+            'totalRecipients' => count($createdIds),
             'startedAt' => date('Y-m-d H:i:s'),
         ]);
         $this->entityManager->saveEntity($campaign);
 
-        // Schedule chunk processing jobs
-        $totalContacts = count($audience);
-        $totalChunks = (int) ceil($totalContacts / self::CHUNK_SIZE);
-
-        for ($i = 0; $i < $totalChunks; $i++) {
-            $jobScheduler = $this->jobSchedulerFactory->create();
-
-            $jobScheduler
-                ->setClassName('Espo\\Modules\\Chatwoot\\Jobs\\ProcessWhatsAppCampaignChunk')
-                ->setData([
-                    'campaignId' => $campaignId,
-                    'chunkOffset' => $i * self::CHUNK_SIZE,
-                    'chunkSize' => self::CHUNK_SIZE,
-                ])
-                ->schedule();
-        }
+        // Schedule chunk processing jobs (explicit ID lists; safe for later enrollments)
+        $totalContacts = count($createdIds);
+        $totalChunks = $this->scheduleChunkJobs($campaignId, $createdIds);
 
         $this->log->info("WhatsAppCampaignService: Launched campaign {$campaignId} with {$totalContacts} recipients in {$totalChunks} chunks.");
 
         return $campaign;
+    }
+
+    /**
+     * Enroll newly added contacts into a running campaign.
+     *
+     * Re-resolves the audience (target lists + manual contacts, with all
+     * opt-out and exclusion guards) and enrolls only contacts not already
+     * present in the campaign. Used by the continuous-enrollment sweep job.
+     *
+     * Idempotent: dedupes by contactId and phoneNumber against existing
+     * WhatsAppCampaignContact rows; the unique DB index
+     * (contactId, whatsAppCampaignId) guards against races.
+     *
+     * @param string $campaignId Campaign entity ID
+     * @return int Number of newly enrolled contacts
+     * @throws NotFound
+     */
+    public function enrollNewContacts(string $campaignId): int
+    {
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+
+        if (!$campaign) {
+            throw new NotFound("Campaign {$campaignId} not found.");
+        }
+
+        if ($campaign->get('status') !== 'Sending' || !$campaign->get('continuousEnrollment')) {
+            return 0;
+        }
+
+        $audience = $this->resolveAudience($campaignId);
+
+        if (empty($audience)) {
+            return 0;
+        }
+
+        // Diff against already-enrolled rows (by contactId and phoneNumber).
+        $existingRows = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignContact')
+            ->where(['whatsAppCampaignId' => $campaignId])
+            ->select(['id', 'contactId', 'phoneNumber'])
+            ->find();
+
+        $enrolledContactIds = [];
+        $enrolledPhones = [];
+
+        foreach ($existingRows as $row) {
+            if ($row->get('contactId')) {
+                $enrolledContactIds[$row->get('contactId')] = true;
+            }
+            if ($row->get('phoneNumber')) {
+                $enrolledPhones[$row->get('phoneNumber')] = true;
+            }
+        }
+
+        $newAudience = array_values(array_filter(
+            $audience,
+            function ($item) use ($enrolledContactIds, $enrolledPhones) {
+                return !isset($enrolledContactIds[$item['contactId']])
+                    && !isset($enrolledPhones[$item['phoneNumber']]);
+            }
+        ));
+
+        if (empty($newAudience)) {
+            return 0;
+        }
+
+        $createdIds = $this->createCampaignContacts($campaign, $newAudience);
+
+        if (empty($createdIds)) {
+            return 0;
+        }
+
+        $totalRows = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignContact')
+            ->where(['whatsAppCampaignId' => $campaignId])
+            ->count();
+
+        $campaign->set(['totalRecipients' => $totalRows]);
+        $this->entityManager->saveEntity($campaign);
+
+        $this->scheduleChunkJobs($campaignId, $createdIds);
+
+        $this->log->info(
+            "WhatsAppCampaignService: Enrolled " . count($createdIds) .
+            " new contacts into campaign {$campaignId}."
+        );
+
+        return count($createdIds);
+    }
+
+    /**
+     * Stop continuous enrollment on a running campaign.
+     *
+     * Disables the flag; if no Pending/Retry recipients remain, the campaign
+     * is completed immediately. Otherwise the remaining chunk jobs will
+     * complete it once they finish.
+     *
+     * @param string $campaignId Campaign entity ID
+     * @return \Espo\ORM\Entity Updated campaign entity
+     * @throws Forbidden
+     * @throws NotFound
+     */
+    public function stopEnrollment(string $campaignId): \Espo\ORM\Entity
+    {
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+
+        if (!$campaign) {
+            throw new NotFound("Campaign {$campaignId} not found.");
+        }
+
+        if ($campaign->get('status') !== 'Sending' || !$campaign->get('continuousEnrollment')) {
+            throw new Forbidden('Campaign is not a running campaign with continuous enrollment enabled.');
+        }
+
+        $campaign->set('continuousEnrollment', false);
+
+        $pendingOrRetryCount = $this->entityManager
+            ->getRDBRepository('WhatsAppCampaignContact')
+            ->where([
+                'whatsAppCampaignId' => $campaignId,
+                'status' => ['Pending', 'Retry'],
+            ])
+            ->count();
+
+        if ($pendingOrRetryCount === 0) {
+            $campaign->set([
+                'status' => 'Completed',
+                'completedAt' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $this->entityManager->saveEntity($campaign);
+
+        $this->log->info("WhatsAppCampaignService: Stopped enrollment for campaign {$campaignId}.");
+
+        return $campaign;
+    }
+
+    /**
+     * Create Pending WhatsAppCampaignContact rows for an audience.
+     *
+     * Duplicate enrollments (unique index on contactId + whatsAppCampaignId)
+     * are logged and skipped, making this safe under concurrent sweeps.
+     *
+     * @param \Espo\ORM\Entity $campaign
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
+     * @return string[] Created WhatsAppCampaignContact IDs
+     */
+    private function createCampaignContacts(\Espo\ORM\Entity $campaign, array $audience): array
+    {
+        $createdIds = [];
+
+        foreach ($audience as $item) {
+            try {
+                $entity = $this->entityManager->createEntity('WhatsAppCampaignContact', [
+                    'whatsAppCampaignId' => $campaign->getId(),
+                    'contactId' => $item['contactId'],
+                    'chatwootAccountId' => $campaign->get('chatwootAccountId'),
+                    'phoneNumber' => $item['phoneNumber'],
+                    'contactName' => $item['contactName'],
+                    'status' => 'Pending',
+                ]);
+
+                $createdIds[] = $entity->getId();
+            } catch (\Throwable $e) {
+                $this->log->warning(
+                    "WhatsAppCampaignService: Skipped enrolling contact {$item['contactId']} " .
+                    "into campaign {$campaign->getId()}: {$e->getMessage()}"
+                );
+            }
+        }
+
+        return $createdIds;
+    }
+
+    /**
+     * Schedule chunk processing jobs for a set of campaign contact rows.
+     *
+     * Each job receives an explicit ID list (not offset paging), so jobs
+     * scheduled by later enrollments cannot interfere with earlier ones.
+     *
+     * @param string $campaignId Campaign entity ID
+     * @param string[] $campaignContactIds WhatsAppCampaignContact IDs
+     * @return int Number of scheduled chunks
+     */
+    private function scheduleChunkJobs(string $campaignId, array $campaignContactIds): int
+    {
+        $chunks = array_chunk($campaignContactIds, self::CHUNK_SIZE);
+
+        foreach ($chunks as $chunk) {
+            $this->jobSchedulerFactory
+                ->create()
+                ->setClassName('Espo\\Modules\\Chatwoot\\Jobs\\ProcessWhatsAppCampaignChunk')
+                ->setData([
+                    'campaignId' => $campaignId,
+                    'campaignContactIds' => $chunk,
+                ])
+                ->schedule();
+        }
+
+        return count($chunks);
+    }
+
+    /**
+     * Resolve the ChatwootInbox used for a campaign send path.
+     *
+     * Prefers the explicitly selected inbox; falls back to first Cloud API /
+     * Coexistence Integration inbox on the account for legacy campaigns.
+     *
+     * @return \Espo\ORM\Entity|null ChatwootInbox entity
+     */
+    public function resolveCampaignInbox(\Espo\ORM\Entity $campaign, string $chatwootAccountId): ?\Espo\ORM\Entity
+    {
+        $selectedInboxId = $campaign->get('chatwootInboxId');
+
+        if ($selectedInboxId) {
+            $inbox = $this->entityManager->getEntityById('ChatwootInbox', $selectedInboxId);
+
+            if ($inbox && $inbox->get('chatwootAccountId') === $chatwootAccountId) {
+                return $inbox;
+            }
+        }
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->where([
+                'chatwootAccountId' => $chatwootAccountId,
+                'channelType' => ['whatsappCloudApi', 'whatsappCoexistence'],
+            ])
+            ->findOne();
     }
 
     /**

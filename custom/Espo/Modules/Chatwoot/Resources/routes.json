@@ -126,6 +126,15 @@
         }
     },
     {
+        "route": "/WhatsAppCampaign/:id/stopEnrollment",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppCampaign",
+            "action": "stopEnrollment",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/ChatwootAccountUserMembership/:id/enableAiProfile",
         "method": "post",
         "params": {

@@ -52,6 +52,12 @@
         "isSystem": true,
         "scheduling": "*/15 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\RemoveOrphanedInboxIntegrations"
+    },
+    "EnrollWhatsAppCampaignContacts": {
+        "name": "Enroll New WhatsApp Campaign Contacts",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\EnrollWhatsAppCampaignContacts"
     }
 }
 

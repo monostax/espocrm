@@ -24,6 +24,41 @@ define("chatwoot:handlers/whatsapp-campaign/detail-actions", [], function () {
             return ["Sending", "Scheduled"].includes(status);
         }
 
+        isStopEnrollmentAvailable() {
+            const status = this.view.model.get("status");
+            return status === "Sending" && this.view.model.get("continuousEnrollment");
+        }
+
+        stopEnrollment() {
+            const model = this.view.model;
+
+            Espo.Ui.confirm(
+                "Stop enrolling new contacts into this campaign? Contacts already enrolled will still be processed, and the campaign will complete once they are done.",
+                {
+                    confirmText: "Stop Enrollment",
+                    cancelText: this.view.translate("Cancel"),
+                    confirmStyle: "danger",
+                },
+                () => {
+                    Espo.Ui.notify("Stopping enrollment...");
+
+                    Espo.Ajax.postRequest(`WhatsAppCampaign/${model.id}/stopEnrollment`)
+                        .then((response) => {
+                            Espo.Ui.success("Enrollment stopped.");
+                            model.set(response);
+                            this.view.reRender();
+                        })
+                        .catch((xhr) => {
+                            let errorMsg = "Failed to stop enrollment";
+                            if (xhr?.responseJSON?.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            Espo.Ui.error(errorMsg);
+                        });
+                },
+            );
+        }
+
         sendCampaign() {
             const model = this.view.model;
 

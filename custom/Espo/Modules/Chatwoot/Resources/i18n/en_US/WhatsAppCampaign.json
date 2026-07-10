@@ -7,6 +7,7 @@
         "wabaId": "WABA ID",
         "templateCategory": "Template Category",
         "templateBody": "Template Body",
+        "chatwootInbox": "WhatsApp Inbox",
         "credential": "Credential",
         "chatwootAccount": "Chat / Account",
         "tenant": "Tenant",
@@ -15,6 +16,7 @@
         "parameterMapping": "Parameter Mapping",
         "processedParams": "Processed Parameters",
         "scheduledAt": "Scheduled At",
+        "continuousEnrollment": "Continuous Enrollment",
         "startedAt": "Started At",
         "completedAt": "Completed At",
         "sentCount": "Sent",
@@ -30,6 +32,7 @@
         "teams": "Teams"
     },
     "links": {
+        "chatwootInbox": "WhatsApp Inbox",
         "credential": "Credential",
         "chatwootAccount": "Chat / Account",
         "tenant": "Tenant",
@@ -44,6 +47,7 @@
         "Create WhatsAppCampaign": "Create WhatsApp Campaign",
         "Send Campaign": "Send Campaign",
         "Abort Campaign": "Abort Campaign",
+        "Stop Enrollment": "Stop Enrollment",
         "Recipients": "Recipients"
     },
     "options": {
@@ -56,10 +60,26 @@
             "Paused": "Paused"
         }
     },
+    "messages": {
+        "confirmSendCampaign": "Are you sure you want to send this campaign? This will start sending messages to all targeted contacts.",
+        "launchingCampaign": "Launching campaign...",
+        "campaignLaunched": "Campaign launched successfully.",
+        "failedToLaunchCampaign": "Failed to launch campaign",
+        "confirmAbortCampaign": "Are you sure you want to abort this campaign? Messages already sent will not be recalled.",
+        "abortingCampaign": "Aborting campaign...",
+        "campaignAborted": "Campaign aborted.",
+        "failedToAbortCampaign": "Failed to abort campaign",
+        "confirmStopEnrollment": "Stop enrolling new contacts into this campaign? Contacts already enrolled will still be processed, and the campaign will complete once they are done.",
+        "stoppingEnrollment": "Stopping enrollment...",
+        "enrollmentStopped": "Enrollment stopped.",
+        "failedToStopEnrollment": "Failed to stop enrollment"
+    },
     "tooltips": {
-        "templateName": "Select the WhatsApp message template to use for this campaign. Templates are fetched from your Meta WhatsApp Business Account.",
+        "chatwootInbox": "Select an active Meta Cloud API inbox. The Chat account and Meta credentials used to load templates and send are derived from that inbox's channel connection.",
+        "templateName": "Select the WhatsApp message template to use for this campaign. Templates are fetched from the Meta WhatsApp Business Account linked to the selected inbox.",
         "parameterMapping": "Maps template parameters to contact fields. Define which contact data fills each placeholder in the template.",
         "processedParams": "The resolved parameter values after processing the mapping against actual contact data.",
+        "continuousEnrollment": "When enabled, contacts added to the Target Lists or Manual Contacts after the campaign starts are automatically enrolled and messaged. The campaign stays in Sending status until you stop enrollment or abort it.",
         "tenant": "Denormalized tenant of the campaign's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations."
     }
 }

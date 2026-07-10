@@ -18,6 +18,9 @@
         "tabContacts": "Contacts",
         "tabConversations": "Conversations"
     },
+    "presetFilters": {
+        "whatsappCloudApi": "WhatsApp Cloud API"
+    },
     "messages": {
         "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",
         "accountMembershipMustBelongToSameAccount": "Only account memberships from the same Chat Account can be linked to this Inbox."

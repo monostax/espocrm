@@ -14,18 +14,7 @@
                     ]
                 }
             },
-            "credential": {
-                "readOnly": {
-                    "conditionGroup": [
-                        {
-                            "type": "notEquals",
-                            "attribute": "status",
-                            "value": "Draft"
-                        }
-                    ]
-                }
-            },
-            "chatwootAccount": {
+            "chatwootInbox": {
                 "readOnly": {
                     "conditionGroup": [
                         {
@@ -43,11 +32,50 @@
                             "type": "notEquals",
                             "attribute": "status",
                             "value": "Draft"
+                        },
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Sending"
+                                },
+                                {
+                                    "type": "isFalse",
+                                    "attribute": "continuousEnrollment"
+                                }
+                            ]
                         }
                     ]
                 }
             },
             "manualContacts": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        },
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Sending"
+                                },
+                                {
+                                    "type": "isFalse",
+                                    "attribute": "continuousEnrollment"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "continuousEnrollment": {
                 "readOnly": {
                     "conditionGroup": [
                         {
@@ -155,6 +183,14 @@
             "handler": "chatwoot:handlers/whatsapp-campaign/detail-actions",
             "actionFunction": "abortCampaign",
             "checkVisibilityFunction": "isAbortAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "stopEnrollment",
+            "label": "Stop Enrollment",
+            "handler": "chatwoot:handlers/whatsapp-campaign/detail-actions",
+            "actionFunction": "stopEnrollment",
+            "checkVisibilityFunction": "isStopEnrollmentAvailable",
             "groupIndex": 1
         }
     ]

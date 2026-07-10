@@ -144,6 +144,11 @@
             "entity": "ChatwootAccountUserMembership",
             "relationName": "chatwootAccountUserMembershipChatwootInbox",
             "foreign": "chatwootInboxes"
+        },
+        "whatsAppCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "chatwootInbox"
         }
     },
     "indexes": {

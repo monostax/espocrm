@@ -2744,7 +2744,11 @@ public function deleteConversation(
         $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
             . '/conversations/' . $conversationId . '/messages';
 
-        $processedParams = [];
+        // Chatwoot's Meta template API requires `processed_params` to be a JSON
+        // object (hash), never a JSON array. An empty PHP array encodes as `[]`,
+        // which Chatwoot rejects with "processed params must be of type hash".
+        // Use stdClass so an empty payload serializes as `{}`.
+        $processedParams = new \stdClass();
 
         if (!empty($params)) {
             $bodyParams = new \stdClass();
@@ -2752,11 +2756,11 @@ public function deleteConversation(
                 $k = (string) $key;
                 $bodyParams->$k = (string) $value;
             }
-            $processedParams['body'] = $bodyParams;
+            $processedParams->body = $bodyParams;
         }
 
         if ($headerMediaUrl && $headerMediaType) {
-            $processedParams['header'] = [
+            $processedParams->header = [
                 'media_url' => $headerMediaUrl,
                 'media_type' => $headerMediaType,
             ];
