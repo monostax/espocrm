@@ -257,6 +257,13 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
                 $remoteRole = $remoteAccountUser['role'] ?? 'agent';
                 $remoteAccountUserId = (int) $remoteAccountUser['id'];
 
+                // Mirror of Chatwoot `account_users.global_admin` (account-wide inbox
+                // visibility for administrators). Scoped admins (false) are resolved
+                // through inbox membership by InboxAccessResolver, like agents.
+                // Defaults to false when the platform API omits the field (older
+                // Chatwoot versions) — fail-closed.
+                $remoteGlobalAdmin = (bool) ($remoteAccountUser['global_admin'] ?? false);
+
                 // Resolve local ChatwootUser by (chatwootUserId, platformId)
                 $localUser = $this->entityManager
                     ->getRDBRepository('ChatwootUser')
@@ -286,12 +293,14 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
 
                 $isNew = !$existingMembership;
 
-                // Upsert membership (creates or updates role + chatwootAccountUserId)
+                // Upsert membership (creates or updates role + chatwootAccountUserId + globalAdmin)
                 $membership = $this->membershipService->upsertMembership(
                     $espoAccountId,
                     $localUser->getId(),
                     $remoteRole,
-                    $remoteAccountUserId
+                    $remoteAccountUserId,
+                    null,
+                    $remoteGlobalAdmin
                 );
 
                 // Enrich with agent profile data if available

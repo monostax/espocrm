@@ -17,7 +17,9 @@ use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\WhatsAppCampaignOpportunityService;
 use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
@@ -50,6 +52,7 @@ class ProcessWhatsAppCampaignChunk implements Job
         private ChatwootApiClient $chatwootApiClient,
         private TemplateRendererFactory $templateRendererFactory,
         private WhatsAppOptOutService $optOutService,
+        private WhatsAppCampaignOpportunityService $opportunityService,
         private Log $log,
     ) {}
 
@@ -181,6 +184,7 @@ class ProcessWhatsAppCampaignChunk implements Job
             'headerMediaUrl' => $headerMediaUrl,
             'headerMediaType' => $headerMediaType,
             'parameterMapping' => $parameterMapping,
+            'createOpportunity' => (bool) $campaign->get('createOpportunity'),
         ];
 
         // --- First pass: process all Pending contacts in this chunk ---
@@ -279,6 +283,18 @@ class ProcessWhatsAppCampaignChunk implements Job
                 }
             }
 
+            // Atomically claim the row (Pending/Retry -> Processing) before
+            // any network I/O. A concurrent or duplicate job cannot claim the
+            // same row, so a recipient can never be sent twice.
+            if (!$this->claimContact($campaignContact)) {
+                $this->log->info(
+                    "ProcessWhatsAppCampaignChunk: Contact {$campaignContact->getId()} " .
+                    "already claimed by another worker; skipping."
+                );
+
+                continue;
+            }
+
             try {
                 if ($processedCount > 0) {
                     usleep(self::RATE_LIMIT_DELAY_MS * 1000);
@@ -324,16 +340,24 @@ class ProcessWhatsAppCampaignChunk implements Job
                     $ctx['headerMediaType']
                 );
 
+                $messageId = trim((string) ($result['message_id'] ?? ''));
+                $conversationId = trim((string) ($result['conversation_id'] ?? ''));
+
+                if ($messageId === '' || $conversationId === '') {
+                    throw new Error(
+                        'Chatwoot accepted the send but did not return message and conversation IDs; refusing Opportunity attribution.'
+                    );
+                }
+
                 $campaignContact->set([
                     'status' => 'Sent',
-                    'chatwootMessageId' => (string) ($result['message_id'] ?? ''),
-                    'chatwootConversationId' => (string) ($result['conversation_id'] ?? ''),
+                    'chatwootMessageId' => $messageId,
+                    'chatwootConversationId' => $conversationId,
                     'sentAt' => date('Y-m-d H:i:s'),
                     'processedParams' => $params,
                 ]);
                 $this->entityManager->saveEntity($campaignContact);
 
-                $this->incrementCampaignCounter($campaignId, 'sentCount');
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
                 $this->log->error("ProcessWhatsAppCampaignChunk: Failed to process contact {$campaignContact->getId()}: {$errorMessage}");
@@ -357,6 +381,7 @@ class ProcessWhatsAppCampaignChunk implements Job
                         'status' => 'Failed',
                         'failedAt' => date('Y-m-d H:i:s'),
                         'failedReason' => substr($errorMessage, 0, 5000),
+                        'opportunityAttributionStatus' => 'NotRequested',
                     ]);
                     $this->entityManager->saveEntity($campaignContact);
 
@@ -371,10 +396,111 @@ class ProcessWhatsAppCampaignChunk implements Job
                 }
             }
 
+            if ($campaignContact->get('status') === 'Sent') {
+                try {
+                    $this->incrementCampaignCounter($campaignId, 'sentCount');
+                } catch (\Throwable $e) {
+                    $this->log->error(sprintf(
+                        'ProcessWhatsAppCampaignChunk: Could not increment sent counter for recipient=%s: %s',
+                        $campaignContact->getId(),
+                        $e->getMessage(),
+                    ));
+                }
+
+                if ($ctx['createOpportunity']) {
+                    $this->attributeOpportunity($campaignContact);
+                }
+            }
+
             $processedCount++;
         }
 
         return $processedCount;
+    }
+
+    /**
+     * Atomically claim a recipient row before sending.
+     *
+     * Performs a conditional UPDATE (id + expected status) so that exactly
+     * one worker can transition the row from Pending/Retry to Processing.
+     * Rows left in Processing by a crashed worker are recovered by the
+     * RepairWhatsAppCampaignRecipients job — they are never resent, because
+     * the message may already have been accepted remotely.
+     */
+    private function claimContact(Entity $campaignContact): bool
+    {
+        $expectedStatus = $campaignContact->get('status');
+
+        if (!in_array($expectedStatus, ['Pending', 'Retry'], true)) {
+            return false;
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        $updateQuery = $this->entityManager
+            ->getQueryBuilder()
+            ->update()
+            ->in('WhatsAppCampaignContact')
+            ->set([
+                'status' => 'Processing',
+                'claimedAt' => $now,
+            ])
+            ->where([
+                'id' => $campaignContact->getId(),
+                'status' => $expectedStatus,
+            ])
+            ->build();
+
+        $sth = $this->entityManager->getQueryExecutor()->execute($updateQuery);
+
+        if ($sth->rowCount() === 0) {
+            return false;
+        }
+
+        $campaignContact->set([
+            'status' => 'Processing',
+            'claimedAt' => $now,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Opportunity attribution has its own failure state. It must never throw
+     * into the message retry path after the template send was persisted.
+     */
+    private function attributeOpportunity(Entity $campaignContact): void
+    {
+        try {
+            $this->opportunityService->attributeSuccessfulSend($campaignContact);
+        } catch (\Throwable $e) {
+            $this->log->error(sprintf(
+                'ProcessWhatsAppCampaignChunk: Opportunity attribution failed for recipient=%s: %s',
+                $campaignContact->getId(),
+                $e->getMessage(),
+            ));
+
+            try {
+                $fresh = $this->entityManager->getEntityById(
+                    'WhatsAppCampaignContact',
+                    $campaignContact->getId()
+                );
+
+                if ($fresh) {
+                    $fresh->set([
+                        'opportunityAttributionStatus' => 'Failed',
+                        'opportunityAttributionError' => substr($e->getMessage(), 0, 5000),
+                    ]);
+                    $this->entityManager->saveEntity($fresh);
+                }
+            } catch (\Throwable $persistenceError) {
+                $this->log->error(sprintf(
+                    'ProcessWhatsAppCampaignChunk: Could not persist Opportunity attribution failure for recipient=%s: %s',
+                    $campaignContact->getId(),
+                    $persistenceError->getMessage(),
+                ));
+            }
+        }
     }
 
     /**
@@ -398,6 +524,7 @@ class ProcessWhatsAppCampaignChunk implements Job
                 'status' => 'Failed',
                 'failedAt' => date('Y-m-d H:i:s'),
                 'failedReason' => $lastReason,
+                'opportunityAttributionStatus' => 'NotRequested',
             ]);
             $this->entityManager->saveEntity($campaignContact);
 
@@ -443,7 +570,7 @@ class ProcessWhatsAppCampaignChunk implements Job
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where([
                 'whatsAppCampaignId' => $campaignId,
-                'status' => ['Pending', 'Retry'],
+                'status' => ['Pending', 'Retry', 'Processing'],
             ])
             ->count();
 
@@ -777,6 +904,7 @@ class ProcessWhatsAppCampaignChunk implements Job
                 'status' => 'Failed',
                 'failedAt' => date('Y-m-d H:i:s'),
                 'failedReason' => $reason,
+                'opportunityAttributionStatus' => 'NotRequested',
             ]);
             $this->entityManager->saveEntity($contact);
             $this->incrementCampaignCounter($campaignId, 'failedCount');

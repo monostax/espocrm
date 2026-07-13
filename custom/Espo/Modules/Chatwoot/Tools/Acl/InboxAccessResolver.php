@@ -28,10 +28,13 @@ class InboxAccessResolver
      * Resolve CRM ChatwootInbox IDs the user can access via:
      * User -> ChatwootUser.assignedUserId -> ChatwootAccountUserMembership -> chatwootInboxes.
      *
-     * Memberships with role "administrator" grant access to ALL inboxes in
-     * that account, regardless of the per-membership chatwootInboxes link.
+     * Memberships with role "administrator" AND globalAdmin = true grant access
+     * to ALL inboxes in that account. Scoped administrators (globalAdmin = false)
+     * are resolved through the per-membership chatwootInboxes link, exactly like
+     * agents — mirroring Chatwoot's `account_users.global_admin` semantics where
+     * scoped admins only see inboxes they are members of (directly or via teams).
      *
-     * Returns `null` for unrestricted access (admins), otherwise a concrete allow-list.
+     * Returns `null` for unrestricted access (Espo admins), otherwise a concrete allow-list.
      *
      * @return ?string[]
      */
@@ -63,7 +66,7 @@ class InboxAccessResolver
                 continue;
             }
 
-            if ($membership->get('role') === 'administrator') {
+            if ($membership->get('role') === 'administrator' && $membership->get('globalAdmin')) {
                 $accountId = $membership->get('chatwootAccountId');
 
                 if ($accountId) {

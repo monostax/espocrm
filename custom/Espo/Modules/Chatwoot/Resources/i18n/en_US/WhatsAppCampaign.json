@@ -17,6 +17,11 @@
         "processedParams": "Processed Parameters",
         "scheduledAt": "Scheduled At",
         "continuousEnrollment": "Continuous Enrollment",
+        "createOpportunity": "Create Opportunities After Send",
+        "funnel": "Opportunity Funnel",
+        "opportunityStage": "Initial Opportunity Stage",
+        "opportunityAssignedUser": "Opportunity Assigned User",
+        "opportunities": "Opportunities",
         "startedAt": "Started At",
         "completedAt": "Completed At",
         "sentCount": "Sent",
@@ -42,6 +47,10 @@
         "targetLists": "Target Lists",
         "manualContacts": "Manual Contacts",
         "campaignContacts": "Recipients",
+        "funnel": "Opportunity Funnel",
+        "opportunityStage": "Initial Opportunity Stage",
+        "opportunityAssignedUser": "Opportunity Assigned User",
+        "opportunities": "Opportunities",
         "createdBy": "Created By",
         "modifiedBy": "Modified By",
         "teams": "Teams"
@@ -54,7 +63,9 @@
         "Create A/B Test": "Create A/B Test",
         "Add Variant": "Add Variant",
         "Variant": "Variant",
-        "Recipients": "Recipients"
+        "Recipients": "Recipients",
+        "Opportunity Creation": "Opportunity Creation",
+        "Opportunities": "Opportunities"
     },
     "options": {
         "status": {
@@ -92,6 +103,10 @@
         "parameterMapping": "Maps template parameters to contact fields. Define which contact data fills each placeholder in the template.",
         "processedParams": "The resolved parameter values after processing the mapping against actual contact data.",
         "continuousEnrollment": "When enabled, contacts added to the Target Lists or Manual Contacts after the campaign starts are automatically enrolled and messaged. The campaign stays in Sending status until you stop enrollment or abort it.",
+        "createOpportunity": "When enabled, a successful WhatsApp send creates or reuses an open Opportunity for the Contact in the configured funnel. Failed sends never create Opportunities.",
+        "funnel": "The funnel used to find an existing open Opportunity or create a new one after a successful send.",
+        "opportunityStage": "Required open stage for newly created Opportunities. Reused Opportunities keep their current stage.",
+        "opportunityAssignedUser": "Assigned user for newly created Opportunities. The user must belong to a funnel team.",
         "tenant": "Denormalized tenant of the campaign's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations."
     }
 }

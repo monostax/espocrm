@@ -42,6 +42,14 @@
             ],
             [
                 {
+                    "name": "whatsAppCampaigns"
+                },
+                {
+                    "name": "whatsAppCampaignTargetLists"
+                }
+            ],
+            [
+                {
                     "name": "contacts"
                 },
                 false

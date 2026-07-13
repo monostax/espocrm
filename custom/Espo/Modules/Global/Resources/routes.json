@@ -3,10 +3,5 @@
         "route": "/Activities/action/list",
         "method": "get",
         "actionClassName": "Espo\\Modules\\Global\\Tools\\Activities\\Api\\GetList"
-    },
-    {
-        "route": "/TargetList/:id/launchOutreach",
-        "method": "post",
-        "actionClassName": "Espo\\Modules\\Global\\Tools\\TargetList\\Api\\PostLaunchOutreach"
     }
 ]

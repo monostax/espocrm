@@ -1,4 +1,5 @@
 {
+    "importUpdateEntityFinderClassName": "Espo\\Modules\\Chatwoot\\Tools\\ContactImportUpdateEntityFinder",
     "fields": {
         "whatsAppOptedOut": {
             "type": "bool",

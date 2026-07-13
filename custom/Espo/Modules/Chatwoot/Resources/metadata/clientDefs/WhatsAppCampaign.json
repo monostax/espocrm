@@ -86,6 +86,98 @@
                     ]
                 }
             },
+            "createOpportunity": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "funnel": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "opportunityStage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "opportunityAssignedUser": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
             "excludeCampaigns": {
                 "readOnly": {
                     "conditionGroup": [
@@ -165,6 +257,16 @@
                 "rowActionsView": false,
                 "layout": "listSmall",
                 "order": 10
+            },
+            {
+                "name": "opportunities",
+                "label": "Opportunities",
+                "view": "views/record/panels/relationship",
+                "link": "opportunities",
+                "select": false,
+                "create": false,
+                "rowActionsView": false,
+                "order": 20
             }
         ]
     },

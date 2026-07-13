@@ -12,6 +12,14 @@
         "width": 10
     },
     {
+        "name": "opportunity",
+        "width": 20
+    },
+    {
+        "name": "opportunityAttributionStatus",
+        "width": 12
+    },
+    {
         "name": "sentAt",
         "width": 15
     },

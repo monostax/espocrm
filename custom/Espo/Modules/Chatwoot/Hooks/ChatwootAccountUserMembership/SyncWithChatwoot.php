@@ -67,7 +67,9 @@ class SyncWithChatwoot
         }
 
         // Only fire on NEW memberships — update path doesn't need API sync
-        // (role changes are propagated by agent sync jobs)
+        // (role changes are propagated by agent sync jobs; globalAdmin is a
+        // readOnly mirror of Chatwoot `account_users.global_admin`, managed
+        // on the Chatwoot side and synced back by the membership sync job)
         if (!$entity->isNew()) {
             return;
         }
@@ -129,11 +131,23 @@ class SyncWithChatwoot
 
         $role = $entity->get('role') ?? 'agent';
 
+        // Only send global_admin when explicitly true (server-side code paths).
+        // Chatwoot's Platform API POST /account_users is an idempotent upsert
+        // (find_or_initialize_by(user_id) + update!), so sending an explicit
+        // `false` here could demote an existing remote global admin when a
+        // membership row is re-created in the CRM before the first sync pass.
+        // Omitting the field preserves the remote flag. The field is readOnly
+        // in the CRM (Chatwoot is the source of truth, mirrored by the
+        // membership sync job), so tenant users cannot self-promote through
+        // this hook.
+        $globalAdmin = $entity->get('globalAdmin') ? true : null;
+
         // --- API call ---
         try {
             $this->log->info(
                 'SyncWithChatwoot: Attaching user ' . $externalUserId .
-                ' to Chatwoot account ' . $externalAccountId . ' with role ' . $role
+                ' to Chatwoot account ' . $externalAccountId . ' with role ' . $role .
+                ($globalAdmin !== null ? ' (global_admin=true)' : '')
             );
 
             $this->apiClient->attachUserToAccount(
@@ -141,7 +155,8 @@ class SyncWithChatwoot
                 $accessToken,
                 $externalAccountId,
                 $externalUserId,
-                $role
+                $role,
+                $globalAdmin
             );
 
             // Mark as synced

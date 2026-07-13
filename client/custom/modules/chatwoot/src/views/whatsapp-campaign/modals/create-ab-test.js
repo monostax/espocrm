@@ -33,12 +33,10 @@ define(
                 ' style="border-top: 1px solid var(--border-color, #ededed);' +
                 ' padding-top: 10px; margin-top: 10px;">' +
                 '<div class="clearfix" style="margin-bottom: 4px;">' +
-                "{{#if ../canRemove}}" +
-                '<span class="pull-right">' +
+                '<span class="pull-right variant-remove{{#unless ../canRemove}} hidden{{/unless}}">' +
                 '<a role="button" data-action="removeVariant" data-key="{{key}}"' +
                 ' class="text-danger small">{{../removeLabel}}</a>' +
                 "</span>" +
-                "{{/if}}" +
                 '<span class="text-muted small">{{label}}</span>' +
                 "</div>" +
                 '<div class="record no-side-margin variant-record" data-key="{{key}}"></div>' +
@@ -106,6 +104,7 @@ define(
                 this.variantModels = {};
                 this.variantLetters = {};
                 this.variantSeq = 0;
+                this.pendingVariantKeys = {};
 
                 const mainModel = (this.mainModel = new Model());
 
@@ -161,6 +160,8 @@ define(
             },
 
             addVariant: function () {
+                this.fetchFormData();
+
                 const seq = this.variantSeq++;
                 const key = "variantRecord" + seq;
                 const letter = String.fromCharCode(66 + seq); // B, C, D...
@@ -209,6 +210,13 @@ define(
                 this.variantModels[key] = model;
                 this.variantLetters[key] = letter;
 
+                if (this.isRendered()) {
+                    this.addVariantContainer(key);
+                }
+
+                this.pendingVariantKeys[key] = true;
+                this.updateLoadingState();
+
                 this.createView(key, "views/record/edit-for-modal", {
                     model: model,
                     selector: '.variant-record[data-key="' + key + '"]',
@@ -244,13 +252,19 @@ define(
                             ],
                         },
                     ],
+                }, (view) => {
+                    const renderPromise = this.isRendered()
+                        ? view.render()
+                        : Promise.resolve();
+
+                    renderPromise.then(() => {
+                        delete this.pendingVariantKeys[key];
+                        this.updateLoadingState();
+                    });
                 });
 
                 this.rebalanceWeights();
-
-                if (this.isRendered()) {
-                    this.reRender();
-                }
+                this.updateRemoveControls();
             },
 
             removeVariant: function (key) {
@@ -264,13 +278,100 @@ define(
                     return;
                 }
 
+                this.fetchFormData();
                 this.clearView(key);
                 this.variantKeys.splice(index, 1);
                 delete this.variantModels[key];
                 delete this.variantLetters[key];
+                delete this.pendingVariantKeys[key];
+
+                this.$el
+                    .find('.variant-block[data-key="' + key + '"]')
+                    .remove();
 
                 this.rebalanceWeights();
-                this.reRender();
+                this.updateRemoveControls();
+                this.updateLoadingState();
+            },
+
+            fetchFormData: function () {
+                const mainView = this.getView("recordMain");
+
+                if (mainView) {
+                    this.mainModel.set(mainView.fetch(), { silent: true });
+                }
+
+                this.variantKeys.forEach((key) => {
+                    const view = this.getView(key);
+
+                    if (view) {
+                        this.variantModels[key].set(view.fetch(), { silent: true });
+                    }
+                });
+            },
+
+            addVariantContainer: function (key) {
+                const $remove = $("<span>")
+                    .addClass("pull-right variant-remove")
+                    .append(
+                        $("<a>")
+                            .attr({
+                                role: "button",
+                                "data-action": "removeVariant",
+                                "data-key": key,
+                            })
+                            .addClass("text-danger small")
+                            .text(this.translate("Remove")),
+                    );
+                const $header = $("<div>")
+                    .addClass("clearfix")
+                    .css("margin-bottom", "4px")
+                    .append(
+                        $remove,
+                        $("<span>")
+                            .addClass("text-muted small")
+                            .text(
+                                this.translateScoped("Variant", "labels") +
+                                    " " +
+                                    this.variantLetters[key],
+                            ),
+                    );
+                const $block = $("<div>")
+                    .addClass("variant-block")
+                    .attr("data-key", key)
+                    .css({
+                        "border-top": "1px solid var(--border-color, #ededed)",
+                        "padding-top": "10px",
+                        "margin-top": "10px",
+                    })
+                    .append(
+                        $header,
+                        $("<div>")
+                            .addClass("record no-side-margin variant-record")
+                            .attr("data-key", key),
+                    );
+
+                this.$el.find(".variants-list").append($block);
+            },
+
+            updateRemoveControls: function () {
+                this.$el
+                    .find(".variant-remove")
+                    .toggleClass("hidden", this.variantKeys.length <= 1);
+            },
+
+            updateLoadingState: function () {
+                const isLoading = Object.keys(this.pendingVariantKeys).length > 0;
+
+                if (isLoading) {
+                    this.disableButton("create");
+                } else {
+                    this.enableButton("create");
+                }
+
+                this.$el
+                    .find('[data-action="addVariant"]')
+                    .prop("disabled", isLoading);
             },
 
             /**
@@ -312,6 +413,14 @@ define(
             actionCreate: function () {
                 const mainView = this.getView("recordMain");
                 const variantViews = this.variantKeys.map((key) => this.getView(key));
+
+                if (
+                    !mainView ||
+                    Object.keys(this.pendingVariantKeys).length ||
+                    variantViews.some((view) => !view || !view.isFullyRendered())
+                ) {
+                    return;
+                }
 
                 let invalid = mainView.validate();
 
@@ -402,6 +511,11 @@ define(
 
                         Espo.Ui.error(errorMsg);
                     });
+            },
+
+            onRemove: function () {
+                this.variantKeys.forEach((key) => this.clearView(key));
+                Dep.prototype.onRemove.call(this);
             },
         });
     },

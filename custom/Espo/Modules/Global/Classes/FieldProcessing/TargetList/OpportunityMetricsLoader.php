@@ -28,8 +28,8 @@ use PDO;
  * opportunitiesCount, openOpportunitiesCount, wonOpportunitiesCount,
  * lostOpportunitiesCount, wonOpportunitiesAmount.
  *
- * Counts opportunities attributed to the list via the sourceTargetList link
- * (stamped once at creation — see Global's Opportunity entityDefs). One
+ * Counts opportunities attributed through either immutable sourceTargetList
+ * first-touch or WhatsApp campaign contribution provenance. One
  * aggregate GROUP BY query per record, mirroring the stock EntryCountLoader
  * pattern (Crm\Classes\FieldProcessing\TargetList).
  *
@@ -99,6 +99,18 @@ class OpportunityMetricsLoader implements Loader
      */
     private function fetchAggregates(Entity $entity): array
     {
+        $where = ['sourceTargetListId' => $entity->getId()];
+        $contributedOpportunityIds = $this->contributedOpportunityIds($entity);
+
+        if ($contributedOpportunityIds !== []) {
+            $where = [
+                'OR' => [
+                    ['sourceTargetListId' => $entity->getId()],
+                    ['id' => $contributedOpportunityIds],
+                ],
+            ];
+        }
+
         try {
             $subQuery = $this->selectBuilderFactory
                 ->create()
@@ -107,7 +119,7 @@ class OpportunityMetricsLoader implements Loader
                 ->withStrictAccessControl()
                 ->buildQueryBuilder()
                 ->select(['id'])
-                ->where(['sourceTargetListId' => $entity->getId()])
+                ->where($where)
                 ->build();
         } catch (Forbidden|BadRequest) {
             // No Opportunity read access for the current user.
@@ -144,5 +156,29 @@ class OpportunityMetricsLoader implements Loader
         }
 
         return $result;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function contributedOpportunityIds(Entity $targetList): array
+    {
+        try {
+            $collection = $this->entityManager
+                ->getRDBRepository(TargetList::ENTITY_TYPE)
+                ->getRelation($targetList, 'whatsAppCampaignOpportunities')
+                ->select(['id'])
+                ->find();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach ($collection as $opportunity) {
+            $ids[] = $opportunity->getId();
+        }
+
+        return array_values(array_unique($ids));
     }
 }

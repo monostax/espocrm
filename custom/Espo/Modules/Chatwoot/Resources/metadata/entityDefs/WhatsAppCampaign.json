@@ -131,6 +131,32 @@
             "default": false,
             "tooltip": true
         },
+        "createOpportunity": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "funnel": {
+            "type": "link",
+            "entity": "Funnel",
+            "tooltip": true
+        },
+        "opportunityStage": {
+            "type": "link",
+            "entity": "OpportunityStage",
+            "view": "global:views/opportunity/fields/opportunity-stage",
+            "tooltip": true
+        },
+        "opportunityAssignedUser": {
+            "type": "link",
+            "entity": "User",
+            "view": "views/fields/assigned-user",
+            "tooltip": true
+        },
+        "opportunities": {
+            "type": "linkMultiple",
+            "readOnly": true
+        },
         "scheduledAt": {
             "type": "datetime"
         },
@@ -252,6 +278,24 @@
             "type": "hasMany",
             "entity": "WhatsAppCampaignContact",
             "foreign": "whatsAppCampaign"
+        },
+        "funnel": {
+            "type": "belongsTo",
+            "entity": "Funnel"
+        },
+        "opportunityStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "opportunityAssignedUser": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "opportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "whatsAppCampaigns",
+            "relationName": "whatsAppCampaignOpportunity"
         },
         "distributionEntries": {
             "type": "hasMany",

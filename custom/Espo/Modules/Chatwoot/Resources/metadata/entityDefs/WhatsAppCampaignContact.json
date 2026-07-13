@@ -38,6 +38,7 @@
             "type": "enum",
             "options": [
                 "Pending",
+                "Processing",
                 "Retry",
                 "Sent",
                 "Delivered",
@@ -51,6 +52,7 @@
             "default": "Pending",
             "style": {
                 "Pending": null,
+                "Processing": "primary",
                 "Retry": "warning",
                 "Sent": "primary",
                 "Delivered": "success",
@@ -61,6 +63,11 @@
                 "Bounced": "warning",
                 "Blocked": "danger"
             }
+        },
+        "claimedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "tooltip": true
         },
         "processedParams": {
             "type": "jsonObject"
@@ -94,6 +101,41 @@
             "default": 0,
             "readOnly": true
         },
+        "targetLists": {
+            "type": "linkMultiple",
+            "readOnly": true
+        },
+        "opportunity": {
+            "type": "link",
+            "readOnly": true
+        },
+        "opportunityAttributionStatus": {
+            "type": "enum",
+            "options": ["NotRequested", "Pending", "Linked", "Failed"],
+            "default": "NotRequested",
+            "readOnly": true,
+            "style": {
+                "NotRequested": null,
+                "Pending": "warning",
+                "Linked": "success",
+                "Failed": "danger"
+            }
+        },
+        "opportunityAttributionAction": {
+            "type": "enum",
+            "options": ["", "Created", "Reused"],
+            "default": "",
+            "readOnly": true
+        },
+        "opportunityAttributionError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "opportunityAttributionStage": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true
@@ -122,6 +164,21 @@
             "type": "belongsTo",
             "entity": "ChatwootAccount",
             "foreign": "whatsAppCampaignContacts"
+        },
+        "targetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "whatsAppCampaignContacts",
+            "relationName": "whatsAppCampaignContactTargetList"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity",
+            "foreign": "whatsAppCampaignContacts"
+        },
+        "opportunityAttributionStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
         }
     },
     "indexes": {
@@ -131,12 +188,24 @@
         "chatwootConversationId": {
             "columns": ["chatwootConversationId"]
         },
+        "accountConversation": {
+            "columns": ["chatwootAccountId", "chatwootConversationId"]
+        },
         "campaignStatus": {
             "columns": ["whatsAppCampaignId", "status"]
+        },
+        "statusClaimedAt": {
+            "columns": ["status", "claimedAt"]
         },
         "contactCampaign": {
             "columns": ["contactId", "whatsAppCampaignId"],
             "unique": true
+        },
+        "opportunityId": {
+            "columns": ["opportunityId"]
+        },
+        "opportunityAttributionStatus": {
+            "columns": ["opportunityAttributionStatus"]
         }
     },
     "collection": {

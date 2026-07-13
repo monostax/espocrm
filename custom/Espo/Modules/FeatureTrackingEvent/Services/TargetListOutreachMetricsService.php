@@ -62,7 +62,9 @@ class TargetListOutreachMetricsService
 
     public function build(string $targetListId, User $user): stdClass
     {
-        $opportunityCreatedAtMap = $this->fetchOpportunityCreatedAtMap($targetListId, $user);
+        $contributions = $this->contributionBaselines($targetListId);
+
+        $opportunityCreatedAtMap = $this->fetchOpportunityCreatedAtMap($targetListId, $user, $contributions);
 
         $opportunityCount = count($opportunityCreatedAtMap);
 
@@ -80,6 +82,8 @@ class TargetListOutreachMetricsService
 
         $aggregate = $this->aggregateEvents($opportunityCreatedAtMap);
 
+        $this->seedContributionStages($aggregate, $contributions, $opportunityCreatedAtMap);
+
         return (object) [
             'opportunityCount' => $opportunityCount,
             'trackedOpportunityCount' => count($aggregate['trackedOppIds']),
@@ -95,10 +99,23 @@ class TargetListOutreachMetricsService
      * ACL-filtered (team/tenant) id => createdAt map of the batch's
      * opportunities, for the given user.
      *
+     * @param array<string, array{baseline: DateTimeImmutable, stageId: ?string}> $contributions
      * @return array<string, DateTimeImmutable> opportunityId => createdAt
      */
-    private function fetchOpportunityCreatedAtMap(string $targetListId, User $user): array
+    private function fetchOpportunityCreatedAtMap(string $targetListId, User $user, array $contributions): array
     {
+        $where = ['sourceTargetListId' => $targetListId];
+        $contributedOpportunityIds = array_keys($contributions);
+
+        if ($contributedOpportunityIds !== []) {
+            $where = [
+                'OR' => [
+                    ['sourceTargetListId' => $targetListId],
+                    ['id' => $contributedOpportunityIds],
+                ],
+            ];
+        }
+
         try {
             $query = $this->selectBuilderFactory
                 ->create()
@@ -107,7 +124,7 @@ class TargetListOutreachMetricsService
                 ->withStrictAccessControl()
                 ->buildQueryBuilder()
                 ->select(['id', 'createdAt'])
-                ->where(['sourceTargetListId' => $targetListId])
+                ->where($where)
                 ->limit(0, self::OPPORTUNITY_LIMIT)
                 ->build();
         } catch (Forbidden|BadRequest) {
@@ -136,7 +153,115 @@ class TargetListOutreachMetricsService
             }
         }
 
+        foreach ($contributions as $opportunityId => $contribution) {
+            if (isset($map[$opportunityId])) {
+                $map[$opportunityId] = $contribution['baseline'];
+            }
+        }
+
         return $map;
+    }
+
+    /**
+     * The first successful campaign send is the metric baseline for an
+     * Opportunity contributed by this Target List. Historical first-touch
+     * records without campaign recipients continue to use Opportunity.createdAt.
+     *
+     * The stage snapshot captured at attribution time (both for created and
+     * reused Opportunities) travels with the baseline, so reused records —
+     * which are deliberately never mutated — still appear in the funnel at
+     * the stage they occupied when the Target List contributed them.
+     *
+     * @return array<string, array{baseline: DateTimeImmutable, stageId: ?string}>
+     */
+    private function contributionBaselines(string $targetListId): array
+    {
+        $targetList = $this->entityManager->getEntityById('TargetList', $targetListId);
+
+        if (!$targetList) {
+            return [];
+        }
+
+        try {
+            $collection = $this->entityManager
+                ->getRDBRepository('TargetList')
+                ->getRelation($targetList, 'whatsAppCampaignContacts')
+                ->select(['id', 'opportunityId', 'sentAt', 'opportunityAttributionStageId'])
+                ->where(['opportunityAttributionStatus' => 'Linked'])
+                ->find();
+        } catch (Throwable) {
+            return [];
+        }
+
+        $baselines = [];
+
+        foreach ($collection as $campaignContact) {
+            $opportunityId = $campaignContact->get('opportunityId');
+            $sentAt = $this->toDateTime($campaignContact->get('sentAt'));
+
+            if (!is_string($opportunityId) || $opportunityId === '' || $sentAt === null) {
+                continue;
+            }
+
+            $stageId = $campaignContact->get('opportunityAttributionStageId');
+            $stageId = is_string($stageId) && $stageId !== '' ? $stageId : null;
+
+            if (
+                !isset($baselines[$opportunityId])
+                || $sentAt < $baselines[$opportunityId]['baseline']
+            ) {
+                $baselines[$opportunityId] = [
+                    'baseline' => $sentAt,
+                    'stageId' => $stageId ?? ($baselines[$opportunityId]['stageId'] ?? null),
+                ];
+            }
+        }
+
+        return $baselines;
+    }
+
+    /**
+     * Seed a baseline stage entry for contributed Opportunities.
+     *
+     * Reused Opportunities are never saved during attribution, so no ledger
+     * event exists at (or after) the send baseline until the next stage
+     * change. The attribution stage snapshot provides that entry, keeping
+     * trackedOpportunityCount and per-stage percentages complete.
+     *
+     * @param array{stages: array<string, array{name: ?string, enteredAt: array<string, DateTimeImmutable>}>, trackedOppIds: array<string, true>} $aggregate
+     * @param array<string, array{baseline: DateTimeImmutable, stageId: ?string}> $contributions
+     * @param array<string, DateTimeImmutable> $opportunityCreatedAtMap
+     */
+    private function seedContributionStages(
+        array &$aggregate,
+        array $contributions,
+        array $opportunityCreatedAtMap
+    ): void {
+        foreach ($contributions as $opportunityId => $contribution) {
+            $stageId = $contribution['stageId'];
+            $baseline = $opportunityCreatedAtMap[$opportunityId] ?? null;
+
+            // Skip snapshots without a stage and opportunities filtered out
+            // by ACL.
+            if ($stageId === null || $baseline === null) {
+                continue;
+            }
+
+            $aggregate['trackedOppIds'][$opportunityId] = true;
+
+            if (!isset($aggregate['stages'][$stageId])) {
+                $aggregate['stages'][$stageId] = [
+                    'name' => null,
+                    'enteredAt' => [],
+                ];
+            }
+
+            $existing = $aggregate['stages'][$stageId]['enteredAt'][$opportunityId] ?? null;
+
+            if ($existing === null || $baseline < $existing) {
+                $aggregate['stages'][$stageId]['enteredAt'][$opportunityId] = $baseline;
+            }
+        }
     }
 
     /**
@@ -183,6 +308,12 @@ class TargetListOutreachMetricsService
                 $occurredAt = $this->toDateTime($event->get('occurredAt'));
 
                 if (!is_string($oppId) || $oppId === '' || $occurredAt === null) {
+                    continue;
+                }
+
+                $baseline = $opportunityCreatedAtMap[$oppId] ?? null;
+
+                if ($baseline !== null && $occurredAt < $baseline) {
                     continue;
                 }
 

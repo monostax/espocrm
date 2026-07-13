@@ -64,6 +64,12 @@
         "isSystem": false,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\ProcessWhatsAppCampaignDistributions"
+    },
+    "RepairWhatsAppCampaignRecipients": {
+        "name": "Repair WhatsApp Campaign Recipients",
+        "isSystem": false,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\RepairWhatsAppCampaignRecipients"
     }
 }
 

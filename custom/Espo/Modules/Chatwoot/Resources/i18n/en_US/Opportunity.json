@@ -3,6 +3,12 @@
         "Send Message": "Send Message"
     },
     "fields": {
-        "createdByAIAgent": "Created by AI Agent"
+        "createdByAIAgent": "Created by AI Agent",
+        "whatsAppCampaigns": "WhatsApp Campaigns",
+        "whatsAppCampaignTargetLists": "Campaign Target Lists"
+    },
+    "links": {
+        "whatsAppCampaigns": "WhatsApp Campaigns",
+        "whatsAppCampaignTargetLists": "Campaign Target Lists"
     }
 }

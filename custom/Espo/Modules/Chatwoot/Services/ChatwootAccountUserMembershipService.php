@@ -59,6 +59,10 @@ class ChatwootAccountUserMembershipService
      *                          (default) to leave it at the entity default (false) on create
      *                          and untouched on update. Pass `true` for concierge/AI-agent
      *                          memberships.
+     * @param bool|null $globalAdmin When non-null, sets the membership's `globalAdmin` flag
+     *                          (mirror of Chatwoot `account_users.global_admin` — account-wide
+     *                          inbox visibility for administrators). Pass `null` to leave the
+     *                          entity default (false) on create and untouched on update.
      * @return Entity The upserted ChatwootAccountUserMembership entity
      */
     public function upsertMembership(
@@ -66,7 +70,8 @@ class ChatwootAccountUserMembershipService
         string $userId,
         string $role,
         ?int $chatwootAccountUserId = null,
-        ?bool $isAI = null
+        ?bool $isAI = null,
+        ?bool $globalAdmin = null
     ): Entity {
         $existing = $this->entityManager
             ->getRDBRepository('ChatwootAccountUserMembership')
@@ -77,10 +82,10 @@ class ChatwootAccountUserMembershipService
             ->findOne();
 
         if (!$existing) {
-            return $this->createMembership($accountId, $userId, $role, $chatwootAccountUserId, $isAI);
+            return $this->createMembership($accountId, $userId, $role, $chatwootAccountUserId, $isAI, $globalAdmin);
         }
 
-        return $this->updateMembership($existing, $role, $chatwootAccountUserId, $isAI);
+        return $this->updateMembership($existing, $role, $chatwootAccountUserId, $isAI, $globalAdmin);
     }
 
     /**
@@ -527,7 +532,8 @@ class ChatwootAccountUserMembershipService
         string $userId,
         string $role,
         ?int $chatwootAccountUserId = null,
-        ?bool $isAI = null
+        ?bool $isAI = null,
+        ?bool $globalAdmin = null
     ): Entity {
         // Load the ChatwootAccount to get teamsIds
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
@@ -573,6 +579,10 @@ class ChatwootAccountUserMembershipService
             $data['isAI'] = $isAI;
         }
 
+        if ($globalAdmin !== null) {
+            $data['globalAdmin'] = $globalAdmin;
+        }
+
         $membership = $this->entityManager->createEntity(
             'ChatwootAccountUserMembership',
             $data,
@@ -593,7 +603,8 @@ class ChatwootAccountUserMembershipService
         Entity $membership,
         string $role,
         ?int $chatwootAccountUserId = null,
-        ?bool $isAI = null
+        ?bool $isAI = null,
+        ?bool $globalAdmin = null
     ): Entity {
         $dirty = false;
 
@@ -609,6 +620,11 @@ class ChatwootAccountUserMembershipService
 
         if ($isAI !== null && (bool) $membership->get('isAI') !== $isAI) {
             $membership->set('isAI', $isAI);
+            $dirty = true;
+        }
+
+        if ($globalAdmin !== null && (bool) $membership->get('globalAdmin') !== $globalAdmin) {
+            $membership->set('globalAdmin', $globalAdmin);
             $dirty = true;
         }
 

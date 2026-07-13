@@ -16,6 +16,13 @@
         "repliedAt": "Replied At",
         "failedAt": "Failed At",
         "failedReason": "Failed Reason",
+        "targetLists": "Contributing Target Lists",
+        "opportunity": "Opportunity",
+        "opportunityAttributionStatus": "Opportunity Status",
+        "opportunityAttributionAction": "Opportunity Action",
+        "opportunityAttributionError": "Opportunity Error",
+        "opportunityAttributionStage": "Opportunity Stage at Attribution",
+        "claimedAt": "Claimed At",
         "createdAt": "Created At",
         "modifiedAt": "Modified At"
     },
@@ -23,7 +30,10 @@
         "whatsAppCampaign": "WhatsApp Campaign",
         "contact": "Contact",
         "chatwootContact": "Chat / Contact",
-        "chatwootAccount": "Chat / Account"
+        "chatwootAccount": "Chat / Account",
+        "targetLists": "Contributing Target Lists",
+        "opportunity": "Opportunity",
+        "opportunityAttributionStage": "Opportunity Stage at Attribution"
     },
     "labels": {
         "Create WhatsAppCampaignContact": "Create Campaign Contact"
@@ -31,6 +41,8 @@
     "options": {
         "status": {
             "Pending": "Pending",
+            "Processing": "Processing",
+            "Retry": "Retry",
             "Sent": "Sent",
             "Delivered": "Delivered",
             "Read": "Read",
@@ -39,10 +51,24 @@
             "OptedOut": "Opted Out",
             "Bounced": "Bounced",
             "Blocked": "Blocked"
+        },
+        "opportunityAttributionStatus": {
+            "NotRequested": "Not Requested",
+            "Pending": "Pending",
+            "Linked": "Linked",
+            "Failed": "Failed"
+        },
+        "opportunityAttributionAction": {
+            "Created": "Created",
+            "Reused": "Reused"
         }
     },
     "tooltips": {
         "chatwootMessageId": "The message ID in the Chat platform for tracking delivery status.",
-        "chatwootConversationId": "The conversation ID in the Chat platform where the message was sent."
+        "chatwootConversationId": "The conversation ID in the Chat platform where the message was sent.",
+        "targetLists": "Target Lists that actually contributed this recipient when the campaign audience was enrolled.",
+        "opportunityAttributionStatus": "Opportunity processing is independent from message delivery. A Failed value does not retry the WhatsApp message.",
+        "opportunityAttributionStage": "The stage the Opportunity occupied when this send was attributed. Immutable snapshot used by Target List flow metrics.",
+        "claimedAt": "When a send worker claimed this recipient. Stale claims are recovered automatically without resending."
     }
 }

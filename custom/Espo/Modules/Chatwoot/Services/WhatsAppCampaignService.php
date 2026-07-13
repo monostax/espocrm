@@ -34,7 +34,8 @@ class WhatsAppCampaignService
         private MetaGraphApiClient $metaGraphApiClient,
         private ChatwootApiClient $chatwootApiClient,
         private Log $log,
-        private JobSchedulerFactory $jobSchedulerFactory
+        private JobSchedulerFactory $jobSchedulerFactory,
+        private WhatsAppCampaignOpportunityService $opportunityService,
     ) {}
 
     /**
@@ -81,7 +82,7 @@ class WhatsAppCampaignService
      * numbers, removes duplicates, and applies campaign/list exclusions.
      *
      * @param string $campaignId Campaign entity ID
-     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}>
      * @throws Error
      */
     public function resolveAudience(string $campaignId): array
@@ -143,7 +144,7 @@ class WhatsAppCampaignService
      * @param iterable<\Espo\ORM\Entity> $manualContacts Contact entities
      * @param string[] $excludeCampaignIds WhatsAppCampaign IDs whose reached recipients are excluded
      * @param iterable<\Espo\ORM\Entity> $excludingTargetLists TargetList entities whose members are excluded
-     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}>
      */
     public function resolveAudienceFromSources(
         iterable $targetLists,
@@ -152,12 +153,14 @@ class WhatsAppCampaignService
         iterable $excludingTargetLists
     ): array {
         $audience = [];
-        $seenPhones = [];
+        $audienceIndexByPhone = [];
+        $ambiguousPhones = [];
         $whatsAppOptedOutCount = 0;
 
         // 1. Collect contacts from TargetLists (filter per-list opt-outs and global whatsAppOptedOut)
 
         foreach ($targetLists as $targetList) {
+            $targetListId = (string) $targetList->getId();
             $contacts = $this->entityManager
                 ->getRDBRepository('TargetList')
                 ->getRelation($targetList, 'contacts')
@@ -177,16 +180,30 @@ class WhatsAppCampaignService
                     continue;
                 }
 
-                if (isset($seenPhones[$phone])) {
-                    $this->log->debug("WhatsAppCampaignService: Duplicate phone {$phone} skipped (contact {$contact->getId()})");
+                if (isset($audienceIndexByPhone[$phone])) {
+                    $index = $audienceIndexByPhone[$phone];
+
+                    if ($audience[$index]['contactId'] !== $contact->getId()) {
+                        $ambiguousPhones[$phone] = true;
+                        $this->log->warning(
+                            "WhatsAppCampaignService: Phone {$phone} belongs to multiple Contacts; " .
+                            "excluding it because recipient and Target List provenance are ambiguous."
+                        );
+
+                        continue;
+                    }
+
+                    $audience[$index]['targetListIds'][] = $targetListId;
+
                     continue;
                 }
 
-                $seenPhones[$phone] = true;
+                $audienceIndexByPhone[$phone] = count($audience);
                 $audience[] = [
                     'contactId' => $contact->getId(),
                     'phoneNumber' => $phone,
                     'contactName' => trim(($contact->get('firstName') ?? '') . ' ' . ($contact->get('lastName') ?? '')),
+                    'targetListIds' => [$targetListId],
                 ];
             }
         }
@@ -205,21 +222,39 @@ class WhatsAppCampaignService
                 continue;
             }
 
-            if (isset($seenPhones[$phone])) {
-                $this->log->debug("WhatsAppCampaignService: Duplicate manual phone {$phone} skipped (contact {$contact->getId()})");
+            if (isset($audienceIndexByPhone[$phone])) {
+                $index = $audienceIndexByPhone[$phone];
+
+                if ($audience[$index]['contactId'] !== $contact->getId()) {
+                    $ambiguousPhones[$phone] = true;
+                    $this->log->warning(
+                        "WhatsAppCampaignService: Manual phone {$phone} belongs to multiple Contacts; excluding it."
+                    );
+                } else {
+                    $this->log->debug("WhatsAppCampaignService: Duplicate manual phone {$phone} skipped (contact {$contact->getId()})");
+                }
+
                 continue;
             }
 
-            $seenPhones[$phone] = true;
+            $audienceIndexByPhone[$phone] = count($audience);
             $audience[] = [
                 'contactId' => $contact->getId(),
                 'phoneNumber' => $phone,
                 'contactName' => trim(($contact->get('firstName') ?? '') . ' ' . ($contact->get('lastName') ?? '')),
+                'targetListIds' => [],
             ];
         }
 
         if ($whatsAppOptedOutCount > 0) {
             $this->log->info("WhatsAppCampaignService: Skipped {$whatsAppOptedOutCount} contacts with whatsAppOptedOut flag.");
+        }
+
+        if ($ambiguousPhones !== []) {
+            $audience = array_values(array_filter(
+                $audience,
+                static fn (array $item): bool => !isset($ambiguousPhones[$item['phoneNumber']])
+            ));
         }
 
         $audienceBeforeExclusions = count($audience);
@@ -235,6 +270,12 @@ class WhatsAppCampaignService
             $this->log->info("WhatsAppCampaignService: Excluded {$excludedCount} contacts via campaign/list exclusions.");
         }
 
+        foreach ($audience as &$item) {
+            $item['targetListIds'] = array_values(array_unique($item['targetListIds']));
+            sort($item['targetListIds']);
+        }
+        unset($item);
+
         return $audience;
     }
 
@@ -242,8 +283,8 @@ class WhatsAppCampaignService
      * Remove contacts that were successfully reached in the given campaigns.
      *
      * @param string[] $excludeCampaignIds WhatsAppCampaign IDs
-     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
-     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}> $audience
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}>
      */
     private function applyExcludeCampaigns(array $excludeCampaignIds, array $audience): array
     {
@@ -281,8 +322,8 @@ class WhatsAppCampaignService
      * Remove contacts that appear in the given excluding target lists.
      *
      * @param iterable<\Espo\ORM\Entity> $excludingTargetLists TargetList entities
-     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
-     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}> $audience
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}>
      */
     private function applyExcludingTargetLists(iterable $excludingTargetLists, array $audience): array
     {
@@ -343,6 +384,8 @@ class WhatsAppCampaignService
         if (!$chatwootAccountId) {
             throw new Error('Campaign must have a Chatwoot Account linked (select a WhatsApp Inbox).');
         }
+
+        $this->opportunityService->assertConfiguration($campaign);
 
         // Resolve audience
         $audience = $this->resolveAudience($campaignId);
@@ -440,7 +483,7 @@ class WhatsAppCampaignService
      * guards against races.
      *
      * @param string $campaignId Campaign entity ID
-     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}> $audience
      * @return int Number of newly enrolled contacts
      * @throws NotFound
      */
@@ -469,28 +512,56 @@ class WhatsAppCampaignService
         $existingRows = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where(['whatsAppCampaignId' => $campaignId])
-            ->select(['id', 'contactId', 'phoneNumber'])
+            ->select(['id', 'contactId', 'phoneNumber', 'status'])
             ->find();
 
         $enrolledContactIds = [];
         $enrolledPhones = [];
+        $unsentRowByContactId = [];
+        $unsentRowByPhone = [];
 
         foreach ($existingRows as $row) {
+            $isUnsent = in_array($row->get('status'), ['Pending', 'Retry'], true);
+
             if ($row->get('contactId')) {
                 $enrolledContactIds[$row->get('contactId')] = true;
+
+                if ($isUnsent) {
+                    $unsentRowByContactId[$row->get('contactId')] = $row;
+                }
             }
             if ($row->get('phoneNumber')) {
                 $enrolledPhones[$row->get('phoneNumber')] = true;
+
+                if ($isUnsent) {
+                    $unsentRowByPhone[$row->get('phoneNumber')] = $row;
+                }
             }
         }
 
-        $newAudience = array_values(array_filter(
-            $audience,
-            function ($item) use ($enrolledContactIds, $enrolledPhones) {
-                return !isset($enrolledContactIds[$item['contactId']])
-                    && !isset($enrolledPhones[$item['phoneNumber']]);
+        $newAudience = [];
+
+        foreach ($audience as $item) {
+            if (
+                !isset($enrolledContactIds[$item['contactId']])
+                && !isset($enrolledPhones[$item['phoneNumber']])
+            ) {
+                $newAudience[] = $item;
+
+                continue;
             }
-        ));
+
+            // Already enrolled: merge newly contributing Target Lists into
+            // rows that have not been sent yet. Send-time provenance stays
+            // immutable for rows that already left Pending/Retry.
+            $row = $unsentRowByContactId[$item['contactId']]
+                ?? $unsentRowByPhone[$item['phoneNumber']]
+                ?? null;
+
+            if ($row && !empty($item['targetListIds'])) {
+                $this->mergeTargetListsIntoRecipient($row, $item['targetListIds']);
+            }
+        }
 
         if (empty($newAudience)) {
             return 0;
@@ -518,6 +589,35 @@ class WhatsAppCampaignService
         );
 
         return count($createdIds);
+    }
+
+    /**
+     * Merge newly contributing Target Lists into an existing unsent
+     * recipient row, so its send-time provenance reflects every list that
+     * actually contributed the contact by the time the message goes out.
+     *
+     * Best-effort: a relation failure must never abort enrollment.
+     *
+     * @param string[] $targetListIds
+     */
+    private function mergeTargetListsIntoRecipient(\Espo\ORM\Entity $row, array $targetListIds): void
+    {
+        try {
+            $relation = $this->entityManager
+                ->getRDBRepository('WhatsAppCampaignContact')
+                ->getRelation($row, 'targetLists');
+
+            foreach ($targetListIds as $targetListId) {
+                if (!$relation->isRelatedById($targetListId)) {
+                    $relation->relateById($targetListId);
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                "WhatsAppCampaignService: Could not merge Target List provenance into " .
+                "recipient {$row->getId()}: {$e->getMessage()}"
+            );
+        }
     }
 
     /**
@@ -550,7 +650,7 @@ class WhatsAppCampaignService
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where([
                 'whatsAppCampaignId' => $campaignId,
-                'status' => ['Pending', 'Retry'],
+                'status' => ['Pending', 'Retry', 'Processing'],
             ])
             ->count();
 
@@ -569,18 +669,19 @@ class WhatsAppCampaignService
     }
 
     /**
-     * Activate a campaign as an executor for a campaign distribution.
+     * Validate that a campaign can be activated as a distribution executor,
+     * without mutating any state.
      *
-     * Unlike launch(), no audience is resolved: the distribution (allocation
-     * layer) enrolls recipients. Validates the send infrastructure, syncs
-     * templates, and transitions the campaign to Sending. Idempotent for
-     * campaigns already in Sending status.
+     * Used to preflight ALL entry campaigns of a distribution before any of
+     * them is transitioned, so a validation failure on a later entry cannot
+     * leave earlier entries in Sending while the distribution stays Draft.
      *
      * @param string $campaignId Campaign entity ID
+     * @return \Espo\ORM\Entity The validated campaign
      * @throws Error
      * @throws NotFound
      */
-    public function activateForDistribution(string $campaignId): void
+    public function assertCanActivateForDistribution(string $campaignId): \Espo\ORM\Entity
     {
         $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
 
@@ -591,7 +692,7 @@ class WhatsAppCampaignService
         $status = $campaign->get('status');
 
         if ($status === 'Sending') {
-            return;
+            return $campaign;
         }
 
         if ($status !== 'Draft') {
@@ -609,6 +710,37 @@ class WhatsAppCampaignService
             throw new Error("Campaign {$campaignId} must have a Chatwoot Account linked (select a WhatsApp Inbox).");
         }
 
+        $this->opportunityService->assertConfiguration($campaign);
+
+        $chatwootAccount = $this->entityManager->getEntityById('ChatwootAccount', $chatwootAccountId);
+        if (!$chatwootAccount) {
+            throw new Error("Linked Chatwoot Account not found for campaign {$campaignId}.");
+        }
+
+        return $campaign;
+    }
+
+    /**
+     * Activate a campaign as an executor for a campaign distribution.
+     *
+     * Unlike launch(), no audience is resolved: the distribution (allocation
+     * layer) enrolls recipients. Validates the send infrastructure, syncs
+     * templates, and transitions the campaign to Sending. Idempotent for
+     * campaigns already in Sending status.
+     *
+     * @param string $campaignId Campaign entity ID
+     * @throws Error
+     * @throws NotFound
+     */
+    public function activateForDistribution(string $campaignId): void
+    {
+        $campaign = $this->assertCanActivateForDistribution($campaignId);
+
+        if ($campaign->get('status') === 'Sending') {
+            return;
+        }
+
+        $chatwootAccountId = $campaign->get('chatwootAccountId');
         $chatwootAccount = $this->entityManager->getEntityById('ChatwootAccount', $chatwootAccountId);
         if (!$chatwootAccount) {
             throw new Error("Linked Chatwoot Account not found for campaign {$campaignId}.");
@@ -685,7 +817,7 @@ class WhatsAppCampaignService
      * are logged and skipped, making this safe under concurrent sweeps.
      *
      * @param \Espo\ORM\Entity $campaign
-     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string}> $audience
+     * @param array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}> $audience
      * @return string[] Created WhatsAppCampaignContact IDs
      */
     private function createCampaignContacts(\Espo\ORM\Entity $campaign, array $audience): array
@@ -693,6 +825,9 @@ class WhatsAppCampaignService
         $createdIds = [];
 
         foreach ($audience as $item) {
+            $transactionManager = $this->entityManager->getTransactionManager();
+            $transactionManager->start();
+
             try {
                 $entity = $this->entityManager->createEntity('WhatsAppCampaignContact', [
                     'whatsAppCampaignId' => $campaign->getId(),
@@ -701,10 +836,23 @@ class WhatsAppCampaignService
                     'phoneNumber' => $item['phoneNumber'],
                     'contactName' => $item['contactName'],
                     'status' => 'Pending',
+                    'opportunityAttributionStatus' => $campaign->get('createOpportunity')
+                        ? 'Pending'
+                        : 'NotRequested',
                 ]);
+
+                foreach ($item['targetListIds'] ?? [] as $targetListId) {
+                    $this->entityManager
+                        ->getRDBRepository('WhatsAppCampaignContact')
+                        ->getRelation($entity, 'targetLists')
+                        ->relateById($targetListId);
+                }
+
+                $transactionManager->commit();
 
                 $createdIds[] = $entity->getId();
             } catch (\Throwable $e) {
+                $transactionManager->rollback();
                 $this->log->warning(
                     "WhatsAppCampaignService: Skipped enrolling contact {$item['contactId']} " .
                     "into campaign {$campaign->getId()}: {$e->getMessage()}"

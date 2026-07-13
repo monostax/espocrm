@@ -1,6 +1,8 @@
 {
     "fields": {
         "chatwootConversations": { "type": "linkMultiple" },
+        "whatsAppCampaigns": { "type": "linkMultiple", "readOnly": true },
+        "whatsAppCampaignTargetLists": { "type": "linkMultiple", "readOnly": true },
         "createdByAIAgent": { "type": "bool", "default": false }
     },
     "links": {
@@ -9,6 +11,24 @@
             "entity": "ChatwootConversation",
             "foreign": "opportunities",
             "relationName": "chatwootConversationOpportunity"
+        },
+        "whatsAppCampaigns": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaign",
+            "foreign": "opportunities",
+            "relationName": "whatsAppCampaignOpportunity"
+        },
+        "whatsAppCampaignTargetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "whatsAppCampaignOpportunities",
+            "relationName": "whatsAppCampaignOpportunityTargetList"
+        },
+        "whatsAppCampaignContacts": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignContact",
+            "foreign": "opportunity",
+            "layoutRelationshipsDisabled": true
         }
     }
 }

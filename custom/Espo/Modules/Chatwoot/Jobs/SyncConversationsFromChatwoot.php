@@ -958,6 +958,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
 
         $this->entityManager->saveEntity($conversation, ['silent' => true]);
+        $this->linkCampaignOpportunities(
+            $conversation,
+            (string) $conversation->get('chatwootAccountId')
+        );
 
         // Update WhatsApp chat labels if assignee changed
         if ($assigneeChanged && $chatwootInbox) {
@@ -1032,9 +1036,73 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $data['teamsIds'] = [$teamId];
         }
 
-        $this->entityManager->createEntity('ChatwootConversation', $data, ['silent' => true]);
+        $conversation = $this->entityManager
+            ->createEntity('ChatwootConversation', $data, ['silent' => true]);
+        $this->linkCampaignOpportunities($conversation, $espoAccountId);
 
         return 'synced';
+    }
+
+    /**
+     * Repair the campaign Opportunity link after the remote conversation has
+     * been synchronized into a local ChatwootConversation record.
+     *
+     * Attribution repair is strictly best-effort: any failure here (stale
+     * Opportunity ID, relation error, transient database problem) is logged
+     * and must never abort the main conversation synchronization.
+     */
+    private function linkCampaignOpportunities(Entity $conversation, string $espoAccountId): void
+    {
+        $externalConversationId = $conversation->get('chatwootConversationId');
+
+        if ($externalConversationId === null || $externalConversationId === '') {
+            return;
+        }
+
+        try {
+            $campaignContacts = $this->entityManager
+                ->getRDBRepository('WhatsAppCampaignContact')
+                ->where([
+                    'chatwootAccountId' => $espoAccountId,
+                    'chatwootConversationId' => (string) $externalConversationId,
+                    'opportunityId!=' => null,
+                ])
+                ->select(['id', 'opportunityId'])
+                ->find();
+
+            $relation = $this->entityManager
+                ->getRDBRepository('ChatwootConversation')
+                ->getRelation($conversation, 'opportunities');
+
+            foreach ($campaignContacts as $campaignContact) {
+                $opportunityId = $campaignContact->get('opportunityId');
+
+                if (!is_string($opportunityId) || $opportunityId === '') {
+                    continue;
+                }
+
+                try {
+                    // Skip stale links to deleted Opportunities.
+                    if (!$this->entityManager->getEntityById('Opportunity', $opportunityId)) {
+                        continue;
+                    }
+
+                    if (!$relation->isRelatedById($opportunityId)) {
+                        $relation->relateById($opportunityId);
+                    }
+                } catch (\Throwable $e) {
+                    $this->log->warning(
+                        "SyncConversationsFromChatwoot: Could not link Opportunity {$opportunityId} " .
+                        "to conversation {$conversation->getId()}: {$e->getMessage()}"
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                "SyncConversationsFromChatwoot: Campaign Opportunity link repair failed for " .
+                "conversation {$conversation->getId()}: {$e->getMessage()}"
+            );
+        }
     }
 
     /**

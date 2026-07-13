@@ -17,6 +17,11 @@
         "processedParams": "Parâmetros Processados",
         "scheduledAt": "Agendado para",
         "continuousEnrollment": "Inscrição Contínua",
+        "createOpportunity": "Criar Oportunidades após o Envio",
+        "funnel": "Funil da Oportunidade",
+        "opportunityStage": "Estágio Inicial da Oportunidade",
+        "opportunityAssignedUser": "Responsável pela Oportunidade",
+        "opportunities": "Oportunidades",
         "startedAt": "Iniciado em",
         "completedAt": "Concluído em",
         "sentCount": "Enviados",
@@ -42,6 +47,10 @@
         "targetLists": "Listas Alvo",
         "manualContacts": "Contatos Manuais",
         "campaignContacts": "Destinatários",
+        "funnel": "Funil da Oportunidade",
+        "opportunityStage": "Estágio Inicial da Oportunidade",
+        "opportunityAssignedUser": "Responsável pela Oportunidade",
+        "opportunities": "Oportunidades",
         "createdBy": "Criado por",
         "modifiedBy": "Modificado por",
         "teams": "Times"
@@ -54,7 +63,9 @@
         "Create A/B Test": "Criar Teste A/B",
         "Add Variant": "Adicionar Variante",
         "Variant": "Variante",
-        "Recipients": "Destinatários"
+        "Recipients": "Destinatários",
+        "Opportunity Creation": "Criação de Oportunidades",
+        "Opportunities": "Oportunidades"
     },
     "options": {
         "status": {
@@ -92,6 +103,10 @@
         "parameterMapping": "Mapeia os parâmetros do template para campos do contato. Define quais dados do contato preenche cada placeholder no template.",
         "processedParams": "Os valores dos parâmetros resolvidos após processar o mapeamento com os dados reais dos contatos.",
         "continuousEnrollment": "Quando habilitado, contatos adicionados às Listas Alvo ou aos Contatos Manuais após o início da campanha são inscritos e recebem a mensagem automaticamente. A campanha permanece no status Enviando até que a inscrição seja encerrada ou a campanha abortada.",
+        "createOpportunity": "Quando habilitado, um envio bem-sucedido pelo WhatsApp cria ou reutiliza uma Oportunidade aberta para o Contato no funil configurado. Envios com falha nunca criam Oportunidades.",
+        "funnel": "O funil usado para localizar uma Oportunidade aberta existente ou criar uma nova após um envio bem-sucedido.",
+        "opportunityStage": "Estágio aberto obrigatório para novas Oportunidades. Oportunidades reutilizadas mantêm o estágio atual.",
+        "opportunityAssignedUser": "Responsável pelas novas Oportunidades. O usuário deve pertencer a um time do funil.",
         "tenant": "Ambiente denormalizado da conta Chatwoot pai da campanha. Definido automaticamente; usado para relatórios por ambiente e agregações sem ACL."
     }
 }

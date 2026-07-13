@@ -45,8 +45,10 @@ use Espo\ORM\Entity;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Acl\Table;
 use Espo\Core\AclManager;
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\InjectableFactory;
 use Espo\Core\FieldValidation\Failure;
 use Espo\Core\FieldValidation\FieldValidationManager;
 use Espo\Core\FileStorage\Manager as FileStorageManager;
@@ -98,7 +100,8 @@ class Import
         private JobSchedulerFactory $jobSchedulerFactory,
         private Log $log,
         private FieldValidationManager $fieldValidationManager,
-        private PhoneNumberSanitizer $phoneNumberSanitizer
+        private PhoneNumberSanitizer $phoneNumberSanitizer,
+        private InjectableFactory $injectableFactory
 
     ) {
         $this->params = Params::create();
@@ -441,6 +444,17 @@ class Import
             }
         }
 
+        $valueMap = $this->prepareRowValueMap($attributeList, $row);
+        $lookupValues = (array) $params->getDefaultValues();
+
+        foreach ((array) $valueMap as $attribute => $value) {
+            if ($value !== '') {
+                $lookupValues[$attribute] = $value;
+            }
+        }
+
+        $lookupValues = (object) $lookupValues;
+
         $recordService = $this->recordServiceContainer->get($this->entityType);
 
         if (
@@ -451,10 +465,21 @@ class Import
                 return null;
             }
 
-            $entity = $this->entityManager
-                ->getRDBRepository($this->entityType)
-                ->where($whereClause)
-                ->findOne();
+            try {
+                $entity = $this->findEntityForUpdate($whereClause, $lookupValues);
+            } catch (BadRequest $e) {
+                $this->log->error('Import: ' . $e->getMessage());
+
+                $this->createError(
+                    null,
+                    $index,
+                    $row,
+                    $import,
+                    $errorIndex
+                );
+
+                return ['isError' => true];
+            }
 
             if (
                 $entity &&
@@ -504,8 +529,6 @@ class Import
         $entity->set($params->getDefaultValues());
 
         // Values are not supposed to be sanitized with the field Sanitizer.
-        $valueMap = $this->prepareRowValueMap($attributeList, $row);
-
         $failureList = [];
 
         foreach ($attributeList as $i => $attribute) {
@@ -644,6 +667,38 @@ class Import
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $whereClause
+     */
+    private function findEntityForUpdate(array $whereClause, stdClass $values): ?CoreEntity
+    {
+        assert(is_string($this->entityType));
+
+        $className = $this->metadata->get([
+            'entityDefs',
+            $this->entityType,
+            'importUpdateEntityFinderClassName',
+        ]);
+
+        if (!$className) {
+            $entity = $this->entityManager
+                ->getRDBRepository($this->entityType)
+                ->where($whereClause)
+                ->findOne();
+
+            return $entity instanceof CoreEntity ? $entity : null;
+        }
+
+        /** @var class-string<UpdateEntityFinder> $className */
+        $finder = $this->injectableFactory->create($className);
+
+        if (!$finder instanceof UpdateEntityFinder) {
+            throw new Error("Import update entity finder '{$className}' must implement " . UpdateEntityFinder::class . '.');
+        }
+
+        return $finder->find($whereClause, $this->user, $values);
     }
 
     private function processForeignAttribute(CoreEntity $entity, string $attribute): void

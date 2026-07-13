@@ -4,6 +4,7 @@
         "chatwootAccount": "Chat / Conta",
         "chatwootUser": "Chat / Usuário",
         "role": "Função",
+        "globalAdmin": "Admin Global",
         "email": "Email",
         "availableName": "Nome Disponível",
         "availabilityStatus": "Status de Disponibilidade",
@@ -95,6 +96,7 @@
         "calendarDescription": "Texto interno (até ~4000 caracteres) com orientações específicas do profissional/local — ex.: tipos de atendimento, restrições de idade, instruções de preparo. Será injetado no prompt do sistema do agente IA, mas NUNCA citado literalmente ao cliente.",
         "calendarEventType": "Tipo de entidade CRM que o agente IA deve criar ao agendar para este calendário. Appointment é o padrão; Meeting e Call também são suportados.",
         "funnelsToManage": "Selecione os funis de oportunidade que este agente IA pode gerenciar. O agente pode criar, atualizar e excluir oportunidades nesses funis. Cada funil pode ter instruções personalizadas para a IA. Use o campo \"Instruções Internas\" ao lado de cada funil para registrar orientações específicas (uso interno — nunca citado literalmente ao cliente).",
-        "description": "Texto interno (até ~4000 caracteres) com orientações específicas do funil — ex.: restrições de valor, público-alvo, critérios de qualificação. Será injetado no prompt do sistema do agente IA, mas NUNCA citado literalmente ao cliente."
+        "description": "Texto interno (até ~4000 caracteres) com orientações específicas do funil — ex.: restrições de valor, público-alvo, critérios de qualificação. Será injetado no prompt do sistema do agente IA, mas NUNCA citado literalmente ao cliente.",
+        "globalAdmin": "Concede visibilidade de todos os canais da conta para administradores. Quando desabilitado, um administrador vê apenas os canais dos quais é membro (diretamente ou via equipes). Espelhado automaticamente do Chat (fonte da verdade) — gerencie por lá."
     }
 }

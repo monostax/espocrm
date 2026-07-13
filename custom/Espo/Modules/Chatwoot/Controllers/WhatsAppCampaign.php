@@ -43,6 +43,8 @@ class WhatsAppCampaign extends Record
             throw new BadRequest('Missing campaign ID.');
         }
 
+        $campaign = $this->requireEditableCampaign($id);
+        $this->assertOpportunityCreateAccess($campaign);
         $campaign = $this->getWhatsAppCampaignService()->launch($id);
 
         return (object) $campaign->getValueMap();
@@ -61,6 +63,7 @@ class WhatsAppCampaign extends Record
             throw new BadRequest('Missing campaign ID.');
         }
 
+        $this->requireEditableCampaign($id);
         $campaign = $this->getWhatsAppCampaignService()->abort($id);
 
         return (object) $campaign->getValueMap();
@@ -79,6 +82,7 @@ class WhatsAppCampaign extends Record
             throw new BadRequest('Missing campaign ID.');
         }
 
+        $this->requireEditableCampaign($id);
         $campaign = $this->getWhatsAppCampaignService()->stopEnrollment($id);
 
         return (object) $campaign->getValueMap();
@@ -289,6 +293,10 @@ class WhatsAppCampaign extends Record
 
         $data = $request->getParsedBody();
 
+        if (!empty($data->activate)) {
+            $this->assertOpportunityCreateAccess($campaign);
+        }
+
         $result = $this->injectableFactory
             ->create(WhatsAppCampaignDistributionService::class)
             ->createAbTest($id, $data);
@@ -302,5 +310,46 @@ class WhatsAppCampaign extends Record
     private function getWhatsAppCampaignService(): WhatsAppCampaignService
     {
         return $this->injectableFactory->create(WhatsAppCampaignService::class);
+    }
+
+    private function requireEditableCampaign(string $id): \Espo\ORM\Entity
+    {
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $id);
+
+        if (!$campaign) {
+            throw new NotFound("Campaign {$id} not found.");
+        }
+
+        if (!$this->acl->check($campaign, 'edit')) {
+            throw new Forbidden('No edit access to the campaign.');
+        }
+
+        return $campaign;
+    }
+
+    private function assertOpportunityCreateAccess(\Espo\ORM\Entity $campaign): void
+    {
+        if (!$campaign->get('createOpportunity')) {
+            return;
+        }
+
+        if (!$this->acl->checkScope('Opportunity', 'create')) {
+            throw new Forbidden('No create access to Opportunities.');
+        }
+
+        foreach ([
+            ['Funnel', 'funnelId'],
+            ['OpportunityStage', 'opportunityStageId'],
+            ['User', 'opportunityAssignedUserId'],
+        ] as [$entityType, $attribute]) {
+            $linkedId = $campaign->get($attribute);
+            $linked = $linkedId
+                ? $this->entityManager->getEntityById($entityType, $linkedId)
+                : null;
+
+            if (!$linked || !$this->acl->check($linked, 'read')) {
+                throw new Forbidden("No read access to the configured {$entityType}.");
+            }
+        }
     }
 }

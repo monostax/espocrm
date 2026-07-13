@@ -195,7 +195,12 @@ class ChatwootAccountMembershipOrchestrator
                     (int) $externalAccountId,
                     $externalUserId,
                     $roleResyncOldRole,
-                    $role
+                    $role,
+                    // Preserve global_admin across the detach/re-attach cycle —
+                    // detaching destroys the Chatwoot account_users row, and
+                    // re-attaching without the flag would silently demote a
+                    // global admin to a membership-scoped one.
+                    (bool) $membership->get('globalAdmin')
                 );
 
                 $roleResynced = true;
@@ -237,7 +242,8 @@ class ChatwootAccountMembershipOrchestrator
                         (int) $externalAccountId,
                         (int) $roleResyncExternalUserId,
                         $role,
-                        $roleResyncOldRole
+                        $roleResyncOldRole,
+                        (bool) $membership->get('globalAdmin')
                     );
                 } catch (\Throwable $roleRollbackException) {
                     $this->log->error(
@@ -376,7 +382,8 @@ class ChatwootAccountMembershipOrchestrator
         int $externalAccountId,
         int $externalUserId,
         string $oldRole,
-        string $newRole
+        string $newRole,
+        ?bool $globalAdmin = null
     ): void {
         $this->apiClient->detachUserFromAccount(
             $platformUrl,
@@ -391,7 +398,8 @@ class ChatwootAccountMembershipOrchestrator
                 $accessToken,
                 $externalAccountId,
                 $externalUserId,
-                $newRole
+                $newRole,
+                $globalAdmin
             );
         } catch (\Throwable $e) {
             try {
@@ -400,7 +408,8 @@ class ChatwootAccountMembershipOrchestrator
                     $accessToken,
                     $externalAccountId,
                     $externalUserId,
-                    $oldRole
+                    $oldRole,
+                    $globalAdmin
                 );
             } catch (\Throwable $restoreException) {
                 $this->log->error(

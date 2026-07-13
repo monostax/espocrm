@@ -564,7 +564,8 @@ class SeedChatwootAccount implements RebuildAction
                 $chatwootUser->getId(),
                 'administrator',
                 $accountUserId,
-                true // isAI — concierge memberships are AI-enabled by default
+                true, // isAI — concierge memberships are AI-enabled by default
+                true // globalAdmin — mirrors the global_admin=true attach above
             );
 
             // Proactively stamp the avatar URL we just uploaded to Chatwoot.

@@ -16,6 +16,13 @@
         "repliedAt": "Respondido em",
         "failedAt": "Falhou em",
         "failedReason": "Motivo da Falha",
+        "targetLists": "Listas Alvo de Origem",
+        "opportunity": "Oportunidade",
+        "opportunityAttributionStatus": "Status da Oportunidade",
+        "opportunityAttributionAction": "Ação da Oportunidade",
+        "opportunityAttributionError": "Erro da Oportunidade",
+        "opportunityAttributionStage": "Estágio da Oportunidade na Atribuição",
+        "claimedAt": "Reivindicado em",
         "createdAt": "Criado em",
         "modifiedAt": "Modificado em"
     },
@@ -23,7 +30,10 @@
         "whatsAppCampaign": "Campanha WhatsApp",
         "contact": "Contato",
         "chatwootContact": "Chat / Contato",
-        "chatwootAccount": "Chat / Conta"
+        "chatwootAccount": "Chat / Conta",
+        "targetLists": "Listas Alvo de Origem",
+        "opportunity": "Oportunidade",
+        "opportunityAttributionStage": "Estágio da Oportunidade na Atribuição"
     },
     "labels": {
         "Create WhatsAppCampaignContact": "Cadastrar Contato da Campanha"
@@ -31,6 +41,8 @@
     "options": {
         "status": {
             "Pending": "Pendente",
+            "Processing": "Processando",
+            "Retry": "Tentar Novamente",
             "Sent": "Enviado",
             "Delivered": "Entregue",
             "Read": "Lido",
@@ -39,10 +51,24 @@
             "OptedOut": "Optou por Sair",
             "Bounced": "Devolvido",
             "Blocked": "Bloqueado"
+        },
+        "opportunityAttributionStatus": {
+            "NotRequested": "Não Solicitado",
+            "Pending": "Pendente",
+            "Linked": "Vinculada",
+            "Failed": "Falhou"
+        },
+        "opportunityAttributionAction": {
+            "Created": "Criada",
+            "Reused": "Reutilizada"
         }
     },
     "tooltips": {
         "chatwootMessageId": "O ID da mensagem na plataforma de Chat para rastreamento do status de entrega.",
-        "chatwootConversationId": "O ID da conversa na plataforma de Chat onde a mensagem foi enviada."
+        "chatwootConversationId": "O ID da conversa na plataforma de Chat onde a mensagem foi enviada.",
+        "targetLists": "Listas Alvo que realmente contribuíram este destinatário quando a audiência da campanha foi inscrita.",
+        "opportunityAttributionStatus": "O processamento da Oportunidade é independente do envio da mensagem. Uma falha não reenvia a mensagem do WhatsApp.",
+        "opportunityAttributionStage": "O estágio que a Oportunidade ocupava quando este envio foi atribuído. Snapshot imutável usado pelas métricas de fluxo da Lista Alvo.",
+        "claimedAt": "Quando um processador de envio reivindicou este destinatário. Reivindicações abandonadas são recuperadas automaticamente sem reenvio."
     }
 }

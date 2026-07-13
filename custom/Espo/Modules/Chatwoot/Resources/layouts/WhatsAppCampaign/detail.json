@@ -65,6 +65,32 @@
         ]
     },
     {
+        "label": "Opportunity Creation",
+        "name": "opportunityCreation",
+        "rows": [
+            [
+                {
+                    "name": "createOpportunity"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "funnel"
+                },
+                {
+                    "name": "opportunityStage"
+                }
+            ],
+            [
+                {
+                    "name": "opportunityAssignedUser"
+                },
+                false
+            ]
+        ]
+    },
+    {
         "label": "Statistics",
         "name": "statistics",
         "rows": [

@@ -271,7 +271,8 @@ class RotateAutomationToConcierge implements RebuildAction
                 $newChatwootUser->getId(),
                 'administrator',
                 isset($conciergeData['account_user_id']) ? (int) $conciergeData['account_user_id'] : null,
-                true // isAI — concierge memberships are AI-enabled by default
+                true, // isAI — concierge memberships are AI-enabled by default
+                true // globalAdmin — mirrors the global_admin=true attach above
             );
 
             // Proactively stamp the avatar URL we just uploaded to Chatwoot

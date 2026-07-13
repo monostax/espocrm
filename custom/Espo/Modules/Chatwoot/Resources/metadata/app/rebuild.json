@@ -12,7 +12,8 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\MergeRotatedDuplicateContacts",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootReports",
         "Espo\\Modules\\Chatwoot\\Rebuild\\RotateAutomationToConcierge",
-        "Espo\\Modules\\Chatwoot\\Rebuild\\SeedWahaPlatform"
+        "Espo\\Modules\\Chatwoot\\Rebuild\\SeedWahaPlatform",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillMembershipGlobalAdmin"
     ]
 }
 

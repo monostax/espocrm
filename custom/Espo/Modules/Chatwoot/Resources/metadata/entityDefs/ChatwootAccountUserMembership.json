@@ -26,6 +26,12 @@
             "default": "agent",
             "required": true
         },
+        "globalAdmin": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
         "email": {
             "type": "varchar",
             "maxLength": 255,

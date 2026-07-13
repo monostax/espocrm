@@ -23,6 +23,20 @@
             "entity": "WhatsAppCampaignDistribution",
             "foreign": "excludingTargetLists",
             "layoutRelationshipsDisabled": true
+        },
+        "whatsAppCampaignContacts": {
+            "type": "hasMany",
+            "entity": "WhatsAppCampaignContact",
+            "foreign": "targetLists",
+            "relationName": "whatsAppCampaignContactTargetList",
+            "layoutRelationshipsDisabled": true
+        },
+        "whatsAppCampaignOpportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "whatsAppCampaignTargetLists",
+            "relationName": "whatsAppCampaignOpportunityTargetList",
+            "layoutRelationshipsDisabled": true
         }
     }
 }

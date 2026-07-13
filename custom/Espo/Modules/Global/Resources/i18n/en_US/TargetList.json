@@ -10,13 +10,7 @@
         "opportunities": "Opportunities"
     },
     "labels": {
-        "Outbound Metrics": "Outbound Metrics",
-        "Launch Outreach": "Launch Outreach",
-        "Launch": "Launch"
-    },
-    "messages": {
-        "launchOutreachInfo": "Creates one opportunity per eligible contact of this list, in the chosen funnel and stage. Contacts that opted out, already have an opportunity from this list, or have an open opportunity in the funnel are skipped.",
-        "launchOutreachScheduled": "Launch scheduled: {scheduled} opportunities being created ({skipped} skipped)."
+        "Outbound Metrics": "Outbound Metrics"
     },
     "tooltips": {
         "opportunitiesCount": "Number of opportunities originated by this list (attributed via Source Target List at creation).",

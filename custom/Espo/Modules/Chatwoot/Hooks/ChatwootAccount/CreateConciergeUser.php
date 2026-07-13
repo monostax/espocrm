@@ -96,7 +96,8 @@ class CreateConciergeUser
                     $chatwootUser->getId(),
                     'administrator',
                     $accountUserId,
-                    true // isAI — concierge memberships are AI-enabled by default
+                    true, // isAI — concierge memberships are AI-enabled by default
+                    true // globalAdmin — mirrors the global_admin=true attach in SyncWithChatwoot
                 );
 
                 // Proactively stamp the avatar we just uploaded to Chatwoot onto

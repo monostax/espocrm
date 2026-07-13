@@ -78,6 +78,13 @@ class WhatsAppCampaignDistributionService
             }
         }
 
+        // Preflight every entry campaign (status, infrastructure, Opportunity
+        // routing) before mutating any of them, so a validation failure on a
+        // later entry cannot leave earlier entries in Sending.
+        foreach ($entries as $entry) {
+            $this->campaignService->assertCanActivateForDistribution($entry->get('campaignId'));
+        }
+
         foreach ($entries as $entry) {
             $this->campaignService->activateForDistribution($entry->get('campaignId'));
         }
@@ -396,6 +403,10 @@ class WhatsAppCampaignDistributionService
                 'parameterMapping' => $variantData->parameterMapping ?? null,
                 'headerMediaUrl' => $variantData->headerMediaUrl ?? null,
                 'headerMediaType' => $variantData->headerMediaType ?? null,
+                'createOpportunity' => (bool) $campaign->get('createOpportunity'),
+                'funnelId' => $campaign->get('funnelId'),
+                'opportunityStageId' => $campaign->get('opportunityStageId'),
+                'opportunityAssignedUserId' => $campaign->get('opportunityAssignedUserId'),
                 'continuousEnrollment' => false,
             ]);
             $this->entityManager->saveEntity($variant);
@@ -643,7 +654,7 @@ class WhatsAppCampaignDistributionService
     /**
      * Resolve the distribution's audience from its target lists and exclusions.
      *
-     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string}>
+     * @return array<int, array{contactId: string, phoneNumber: string, contactName: string, targetListIds: string[]}>
      */
     private function resolveDistributionAudience(Entity $distribution): array
     {
@@ -758,7 +769,7 @@ class WhatsAppCampaignDistributionService
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where([
                 'whatsAppCampaignId' => $campaignId,
-                'status' => ['Pending', 'Retry'],
+                'status' => ['Pending', 'Retry', 'Processing'],
             ])
             ->count();
 
