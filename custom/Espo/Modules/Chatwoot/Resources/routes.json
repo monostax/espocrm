@@ -53,6 +53,15 @@
         }
     },
     {
+        "route": "/ChatwootPasswordSync",
+        "method": "post",
+        "params": {
+            "controller": "ChatwootPasswordSync",
+            "action": "receive"
+        },
+        "noAuth": true
+    },
+    {
         "route": "/WahaLabelWebhook/:channelId",
         "method": "post",
         "params": {

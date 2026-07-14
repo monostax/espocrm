@@ -13,6 +13,7 @@ namespace Espo\Modules\FeatureOAuthEnhanced;
 
 use Espo\Core\Binding\Binder;
 use Espo\Core\Binding\BindingProcessor;
+use Espo\Modules\FeatureOAuthEnhanced\Tools\OAuth\GenericProviderFactory;
 use Espo\Modules\FeatureOAuthEnhanced\Tools\OAuth\TokenSetter;
 
 /**
@@ -25,6 +26,11 @@ class Binding implements BindingProcessor
         $binder->bindImplementation(
             \Espo\Tools\OAuth\TokenSetter::class,
             TokenSetter::class
+        );
+
+        $binder->bindImplementation(
+            \Espo\Tools\OAuth\GenericProviderFactory::class,
+            GenericProviderFactory::class
         );
     }
 }
