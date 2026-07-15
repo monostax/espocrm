@@ -3,6 +3,12 @@
     "iconClass": "ti ti-user-shield",
     "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-account-user-membership/defaults-preparator",
     "defaultSidePanelFieldList": ["teams"],
+    "filterList": [
+        {
+            "name": "aiOnly",
+            "style": "info"
+        }
+    ],
     "viewSetupHandlers": {
         "record/detail": [
             "chatwoot:handlers/chatwoot-account-user-membership/record-detail-setup"

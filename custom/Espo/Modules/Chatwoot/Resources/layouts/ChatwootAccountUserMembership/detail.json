@@ -155,6 +155,12 @@
                 {
                     "name": "ignoreStatusBroadcast"
                 }
+            ],
+            [
+                {
+                    "name": "followupsEnabled"
+                },
+                false
             ]
         ]
     }

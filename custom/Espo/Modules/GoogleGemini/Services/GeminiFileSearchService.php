@@ -265,6 +265,12 @@ class GeminiFileSearchService
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
+            // 404 means the document no longer exists - removal is guaranteed either way.
+            if ($httpCode === 404) {
+                $this->log->debug('Document already absent from File Search Store: ' . $documentName);
+                return true;
+            }
+
             if ($httpCode !== 200) {
                 $this->log->warning('Failed to delete document from File Search Store. HTTP ' . $httpCode);
                 return false;

@@ -17,6 +17,7 @@
         "ignoreGroups": "Ignorar Grupos",
         "ignoreStatusBroadcast": "Ignorar Broadcasts de Status",
         "contextualTransferIsEnabled": "Habilitar Transferência Contextual (IA)",
+        "followupsEnabled": "Follow-up Automático Ativado",
         "transferScenarios": "Cenários de Transferência",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
@@ -58,6 +59,9 @@
         "Save": "Salvar",
         "Cancel": "Cancelar"
     },
+    "presetFilters": {
+        "aiOnly": "Agentes de IA"
+    },
     "messages": {
         "confirmEnableAiProfile": "Isto habilitará as capacidades de IA para este membro da conta. Continuar?",
         "confirmDisableAiProfile": "Isto desativará as capacidades de IA deste membro da conta. Continuar?",
@@ -87,6 +91,7 @@
         }
     },
     "tooltips": {
+        "followupsEnabled": "Quando desativado, este agente IA nunca executa follow-ups automáticos: novas oportunidades criadas por ele NÃO são armadas com o loop de follow-up, follow-ups agendados de oportunidades conduzidas por ele deixam de disparar, e oportunidades atualmente em 'Follow-up Ativo' conduzidas por este agente são redefinidas para 'Ação Necessária' no momento em que você desativa. O agente continua criando e atualizando oportunidades normalmente.",
         "chatwootAccountUserId": "O ID do membro da conta no Chat. Este campo é preenchido automaticamente após a sincronização.",
         "chatwootInboxes": "Os canais aos quais este membro da conta tem acesso. Gerenciado automaticamente pela sincronização de membros de canal.",
         "isAI": "Habilite para configurar este membro como um agente com inteligência artificial.",

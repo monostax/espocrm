@@ -19,6 +19,7 @@ use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Entities\Attachment;
 use Espo\Modules\GoogleGemini\Services\GeminiFileSearchService;
+use Espo\Modules\GoogleGemini\Services\GeminiIndexingService;
 
 /**
  * Job to index a KnowledgeBaseArticle to Gemini File Search.
@@ -28,14 +29,22 @@ use Espo\Modules\GoogleGemini\Services\GeminiFileSearchService;
  * This job is NON-BLOCKING: it uploads content to Gemini and creates
  * GeminiFileSearchStoreUploadOperation entities to track the async operations.
  * A separate scheduled job (ProcessUploadOperations) polls these operations.
+ *
+ * Delete operations are guaranteed: failed deletions are retried with a
+ * backoff, and in-flight upload operations are resolved so that documents
+ * created after the delete request are also removed.
  */
 class IndexArticle implements Job
 {
     private const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
+    /** Maximum number of retry attempts for delete operations. */
+    private const MAX_DELETE_ATTEMPTS = 10;
+
     public function __construct(
         private EntityManager $entityManager,
         private GeminiFileSearchService $geminiService,
+        private GeminiIndexingService $indexingService,
         private FileStorageManager $fileStorageManager,
         private Log $log
     ) {}
@@ -45,7 +54,8 @@ class IndexArticle implements Job
         $articleId = $data->get('articleId');
         $operation = $data->get('operation') ?? 'index';
         $geminiDocumentName = $data->get('geminiDocumentName');
-        $geminiAttachmentDocuments = $data->get('geminiAttachmentDocuments');
+        $geminiAttachmentDocuments = $this->normalizeAttachmentDocuments($data->get('geminiAttachmentDocuments'));
+        $attempt = (int) ($data->get('attempt') ?? 0);
 
         if (!$articleId) {
             $this->log->error('GoogleGemini IndexArticle: No articleId provided');
@@ -54,11 +64,12 @@ class IndexArticle implements Job
 
         $article = $this->entityManager->getEntityById('KnowledgeBaseArticle', $articleId);
 
-        // For delete operations, we can proceed even if article is already deleted
-        // as long as we have the document names
-        if (!$article && $operation === 'delete' && ($geminiDocumentName || $geminiAttachmentDocuments)) {
+        // For delete operations, we can proceed even if article is already deleted:
+        // document names come from the job data and in-flight upload operations
+        // are resolved by article ID.
+        if (!$article && $operation === 'delete') {
             $this->log->info("GoogleGemini IndexArticle: Article {$articleId} already deleted, using stored document names");
-            $this->deleteDocumentsByName($geminiDocumentName, $geminiAttachmentDocuments, $articleId);
+            $this->deleteDocumentsByName($geminiDocumentName, $geminiAttachmentDocuments, $articleId, $attempt);
             return;
         }
 
@@ -70,7 +81,7 @@ class IndexArticle implements Job
         try {
             match ($operation) {
                 'index', 'update' => $this->indexArticle($article),
-                'delete' => $this->deleteArticle($article),
+                'delete' => $this->deleteArticle($article, $attempt),
                 default => $this->log->warning("GoogleGemini IndexArticle: Unknown operation: {$operation}"),
             };
         } catch (\Exception $e) {
@@ -341,7 +352,7 @@ class IndexArticle implements Job
         }
 
         // Delete attachment documents
-        $attachmentDocuments = $article->get('geminiAttachmentDocuments') ?? [];
+        $attachmentDocuments = $this->normalizeAttachmentDocuments($article->get('geminiAttachmentDocuments'));
         foreach ($attachmentDocuments as $doc) {
             if (isset($doc['documentName'])) {
                 $this->geminiService->deleteDocument($doc['documentName']);
@@ -351,60 +362,107 @@ class IndexArticle implements Job
 
     /**
      * Delete an article from Gemini File Search (body + all attachments).
+     *
+     * Removal is guaranteed: in-flight upload operations are resolved (their
+     * resulting documents deleted), document references are only cleared once
+     * the corresponding document is confirmed removed, and any leftover work
+     * is retried with a backoff.
      */
-    private function deleteArticle(Entity $article): void
+    private function deleteArticle(Entity $article, int $attempt = 0): void
     {
         $articleId = $article->getId();
-        $hasDocuments = false;
-        $allDeleted = true;
 
-        // Cancel any pending operations
-        $this->cancelPendingOperations($articleId);
+        // Resolve upload operations first: in-flight uploads may create
+        // documents after this job runs, and completed operations track
+        // documents that might not be referenced on the article yet.
+        $unresolvedOperations = $this->resolveOperationsForDelete($articleId);
+
+        $remainingBodyDoc = null;
+        $remainingAttachmentDocs = [];
 
         // Delete article body document
         $documentName = $article->get('geminiDocumentName');
-        if ($documentName) {
-            $hasDocuments = true;
-            if (!$this->geminiService->deleteDocument($documentName)) {
-                $allDeleted = false;
-                $this->log->warning("GoogleGemini IndexArticle: Failed to delete body document for {$articleId}");
-            }
+        if ($documentName && !$this->geminiService->deleteDocument($documentName)) {
+            $remainingBodyDoc = $documentName;
+            $this->log->warning("GoogleGemini IndexArticle: Failed to delete body document for {$articleId}");
         }
 
         // Delete attachment documents
-        $attachmentDocuments = $article->get('geminiAttachmentDocuments') ?? [];
+        $attachmentDocuments = $this->normalizeAttachmentDocuments($article->get('geminiAttachmentDocuments'));
         foreach ($attachmentDocuments as $doc) {
-            if (isset($doc['documentName'])) {
-                $hasDocuments = true;
-                if (!$this->geminiService->deleteDocument($doc['documentName'])) {
-                    $allDeleted = false;
-                    $this->log->warning("GoogleGemini IndexArticle: Failed to delete attachment document {$doc['documentName']} for {$articleId}");
-                }
+            if (!isset($doc['documentName'])) {
+                continue;
+            }
+
+            if (!$this->geminiService->deleteDocument($doc['documentName'])) {
+                $remainingAttachmentDocs[] = $doc;
+                $this->log->warning("GoogleGemini IndexArticle: Failed to delete attachment document {$doc['documentName']} for {$articleId}");
             }
         }
 
-        if (!$hasDocuments) {
-            $this->log->debug("GoogleGemini IndexArticle: Article {$articleId} has no Gemini documents");
+        $fullyRemoved = $remainingBodyDoc === null
+            && empty($remainingAttachmentDocs)
+            && $unresolvedOperations === 0;
+
+        // Keep only the references that were NOT confirmed removed, so that
+        // retries target exactly the leftover documents.
+        $article->set('geminiDocumentName', $remainingBodyDoc);
+        $article->set('geminiAttachmentDocuments', $remainingAttachmentDocs);
+        $article->set('geminiLastProcessedAt', date('Y-m-d H:i:s'));
+
+        if ($fullyRemoved) {
+            $article->set('geminiIndexStatus', 'NotIndexed');
+            $article->set('geminiIndexError', null);
+            $this->saveArticleSilently($article);
+
+            $this->log->info("GoogleGemini IndexArticle: Removed all documents from file search store for {$articleId}");
             return;
         }
 
-        if ($allDeleted) {
-            // Clear all document references
-            $this->updateArticleStatus($article, 'NotIndexed', null, null, null, []);
-            $this->log->info("GoogleGemini IndexArticle: Deleted all documents for {$articleId}");
-        } else {
-            $this->log->warning("GoogleGemini IndexArticle: Some documents failed to delete for {$articleId}");
+        if ($attempt >= self::MAX_DELETE_ATTEMPTS) {
+            $article->set('geminiIndexStatus', 'Failed');
+            $article->set('geminiIndexError', 'Failed to remove documents from file search store after ' . $attempt . ' retries');
+            $this->saveArticleSilently($article);
+
+            $this->log->error(
+                "GoogleGemini IndexArticle: Giving up removing documents for {$articleId} after {$attempt} retries"
+            );
+            return;
         }
+
+        $article->set('geminiIndexError', 'Removal from file search store incomplete, retrying');
+        $this->saveArticleSilently($article);
+
+        $this->log->warning(
+            "GoogleGemini IndexArticle: Removal incomplete for {$articleId} " .
+            "({$unresolvedOperations} unresolved operation(s)), scheduling retry " . ($attempt + 1)
+        );
+
+        $this->indexingService->queueArticleIndexing(
+            $articleId,
+            'delete',
+            null,
+            null,
+            $attempt + 1
+        );
     }
 
     /**
      * Delete documents from Gemini by name (when article entity is already deleted).
      * Used for mass delete operations where the article is deleted before the job runs.
+     *
+     * Removal is guaranteed: failed deletions and unresolved upload operations
+     * trigger a retry carrying only the leftover document names.
      */
-    private function deleteDocumentsByName(?string $documentName, ?array $attachmentDocuments, string $articleId): void
+    private function deleteDocumentsByName(?string $documentName, ?array $attachmentDocuments, string $articleId, int $attempt = 0): void
     {
+        // Resolve upload operations that may still create (or already track)
+        // documents for this deleted article.
+        $unresolvedOperations = $this->resolveOperationsForDelete($articleId);
+
         $deletedCount = 0;
-        $failedCount = 0;
+        $remainingBodyDoc = null;
+        $remainingAttachmentDocs = [];
 
         // Delete article body document
         if ($documentName) {
@@ -412,28 +470,173 @@ class IndexArticle implements Job
                 $deletedCount++;
                 $this->log->debug("GoogleGemini IndexArticle: Deleted body document {$documentName} for removed article {$articleId}");
             } else {
-                $failedCount++;
+                $remainingBodyDoc = $documentName;
                 $this->log->warning("GoogleGemini IndexArticle: Failed to delete body document {$documentName} for removed article {$articleId}");
             }
         }
 
         // Delete attachment documents
-        if ($attachmentDocuments) {
-            foreach ($attachmentDocuments as $doc) {
-                if (isset($doc['documentName'])) {
-                    if ($this->geminiService->deleteDocument($doc['documentName'])) {
-                        $deletedCount++;
-                        $this->log->debug("GoogleGemini IndexArticle: Deleted attachment document {$doc['documentName']} for removed article {$articleId}");
-                    } else {
-                        $failedCount++;
-                        $this->log->warning("GoogleGemini IndexArticle: Failed to delete attachment document {$doc['documentName']} for removed article {$articleId}");
-                    }
-                }
+        foreach ($this->normalizeAttachmentDocuments($attachmentDocuments) as $doc) {
+            if (!isset($doc['documentName'])) {
+                continue;
+            }
+
+            if ($this->geminiService->deleteDocument($doc['documentName'])) {
+                $deletedCount++;
+                $this->log->debug("GoogleGemini IndexArticle: Deleted attachment document {$doc['documentName']} for removed article {$articleId}");
+            } else {
+                $remainingAttachmentDocs[] = $doc;
+                $this->log->warning("GoogleGemini IndexArticle: Failed to delete attachment document {$doc['documentName']} for removed article {$articleId}");
             }
         }
 
-        $this->log->info("GoogleGemini IndexArticle: Deleted {$deletedCount} document(s) for removed article {$articleId}" . 
-            ($failedCount > 0 ? ", {$failedCount} failed" : ""));
+        $fullyRemoved = $remainingBodyDoc === null
+            && empty($remainingAttachmentDocs)
+            && $unresolvedOperations === 0;
+
+        if ($fullyRemoved) {
+            $this->log->info("GoogleGemini IndexArticle: Deleted {$deletedCount} document(s) for removed article {$articleId}");
+            return;
+        }
+
+        if ($attempt >= self::MAX_DELETE_ATTEMPTS) {
+            $this->log->error(
+                "GoogleGemini IndexArticle: Giving up removing documents for removed article {$articleId} " .
+                "after {$attempt} retries (" . count($remainingAttachmentDocs) . " attachment doc(s), " .
+                ($remainingBodyDoc ? 'body doc pending, ' : '') .
+                "{$unresolvedOperations} unresolved operation(s))"
+            );
+            return;
+        }
+
+        $this->log->warning(
+            "GoogleGemini IndexArticle: Removal incomplete for removed article {$articleId} " .
+            "({$unresolvedOperations} unresolved operation(s)), scheduling retry " . ($attempt + 1)
+        );
+
+        $this->indexingService->queueArticleIndexing(
+            $articleId,
+            'delete',
+            $remainingBodyDoc,
+            $remainingAttachmentDocs,
+            $attempt + 1
+        );
+    }
+
+    /**
+     * Resolve upload operations for an article being removed from the file search store.
+     *
+     * - Pending/Processing operations are polled: if done, the resulting document
+     *   is deleted and the operation is cancelled; if still in flight, it counts
+     *   as unresolved so the caller schedules a retry.
+     * - Completed operations that track a document name have that document
+     *   deleted too (it may not be referenced on the article yet).
+     *
+     * @return int Number of operations that could not be resolved yet.
+     */
+    private function resolveOperationsForDelete(string $articleId): int
+    {
+        $operations = $this->entityManager
+            ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
+            ->where([
+                'knowledgeBaseArticleId' => $articleId,
+                'status' => ['Pending', 'Processing', 'Completed'],
+            ])
+            ->find();
+
+        $unresolved = 0;
+
+        foreach ($operations as $operation) {
+            $status = $operation->get('status');
+
+            if ($status === 'Completed') {
+                // Document already tracked on the operation - make sure it is gone.
+                $trackedDocName = $operation->get('geminiDocumentName');
+                if ($trackedDocName && !$this->geminiService->deleteDocument($trackedDocName)) {
+                    $unresolved++;
+                }
+                continue;
+            }
+
+            $operationName = $operation->get('operationName');
+            $result = $operationName ? $this->geminiService->getOperationStatus($operationName) : null;
+
+            if ($operationName && ($result === null || !($result['done'] ?? false))) {
+                // Still in flight (or API error) - the document may be created
+                // later, so the caller must retry.
+                $unresolved++;
+                continue;
+            }
+
+            if ($result !== null && !isset($result['error'])) {
+                $createdDocName = $this->extractDocumentName($result);
+                if ($createdDocName && !$this->geminiService->deleteDocument($createdDocName)) {
+                    $unresolved++;
+                    continue;
+                }
+            }
+
+            $operation->set('status', 'Failed');
+            $operation->set('errorMessage', 'Cancelled: content removed from file search store');
+            $operation->set('completedAt', date('Y-m-d H:i:s'));
+            $this->entityManager->saveEntity($operation, ['silent' => true]);
+        }
+
+        if ($unresolved > 0) {
+            $this->log->debug("GoogleGemini IndexArticle: {$unresolved} upload operation(s) unresolved for article {$articleId}");
+        }
+
+        return $unresolved;
+    }
+
+    /**
+     * Extract document name from a completed operation response.
+     */
+    private function extractDocumentName(array $operationResult): ?string
+    {
+        return $operationResult['response']['documentName']
+            ?? $operationResult['response']['name']
+            ?? $operationResult['response']['document']['name']
+            ?? $operationResult['metadata']['document']
+            ?? null;
+    }
+
+    /**
+     * Normalize an attachment documents list to an array of associative arrays.
+     * Values may come as stdClass objects (from job data or JSON attributes).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeAttachmentDocuments(mixed $documents): array
+    {
+        if (!$documents) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ((array) $documents as $doc) {
+            if (is_object($doc)) {
+                $doc = (array) $doc;
+            }
+
+            if (is_array($doc)) {
+                $normalized[] = $doc;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Save the article without triggering indexing hooks.
+     */
+    private function saveArticleSilently(Entity $article): void
+    {
+        $this->entityManager->saveEntity($article, [
+            'silent' => true,
+            'skipGeminiIndexing' => true,
+        ]);
     }
 
     /**

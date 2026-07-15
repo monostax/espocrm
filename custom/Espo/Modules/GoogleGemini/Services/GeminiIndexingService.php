@@ -34,13 +34,15 @@ class GeminiIndexingService
      * @param string $operation Operation type: 'index', 'update', 'delete'
      * @param string|null $geminiDocumentName The Gemini document name (required for delete when article is already removed)
      * @param array<int, array<string, string>>|null $geminiAttachmentDocuments Array of attachment document info (for delete when article is already removed)
+     * @param int $attempt Retry attempt number (0 for the initial run). Retries are scheduled with a delay.
      * @return void
      */
     public function queueArticleIndexing(
         string $articleId,
         string $operation = 'index',
         ?string $geminiDocumentName = null,
-        ?array $geminiAttachmentDocuments = null
+        ?array $geminiAttachmentDocuments = null,
+        int $attempt = 0
     ): void {
         try {
             $data = [
@@ -57,13 +59,27 @@ class GeminiIndexingService
                 $data['geminiAttachmentDocuments'] = $geminiAttachmentDocuments;
             }
 
-            $this->jobSchedulerFactory->create()
+            if ($attempt > 0) {
+                $data['attempt'] = $attempt;
+            }
+
+            $scheduler = $this->jobSchedulerFactory->create()
                 ->setClassName(IndexArticle::class)
                 ->setQueue(QueueName::E0)
-                ->setData($data)
-                ->schedule();
+                ->setData($data);
 
-            $this->log->debug("GoogleGemini: Queued article {$operation} for ID: {$articleId}");
+            if ($attempt > 0) {
+                // Back off retries: 1 minute per attempt, capped at 10 minutes.
+                $delayMinutes = min($attempt, 10);
+                $scheduler->setDelay(new \DateInterval("PT{$delayMinutes}M"));
+            }
+
+            $scheduler->schedule();
+
+            $this->log->debug(
+                "GoogleGemini: Queued article {$operation} for ID: {$articleId}" .
+                ($attempt > 0 ? " (retry attempt {$attempt})" : "")
+            );
         } catch (\Exception $e) {
             $this->log->error(
                 "GoogleGemini: Failed to queue article indexing for {$articleId}: " . 

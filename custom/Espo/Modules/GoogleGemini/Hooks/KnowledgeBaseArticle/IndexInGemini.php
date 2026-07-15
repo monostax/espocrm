@@ -68,10 +68,11 @@ class IndexInGemini implements AfterSave, AfterRemove
             return;
         }
 
-        // Only index published articles
+        // Only index published articles. Any other status must be removed
+        // from the file search store if it was previously indexed.
         $status = $entity->get('status');
         if ($status !== 'Published') {
-            $this->log->debug("GoogleGemini: Skipping indexing for article {$entity->getId()} with status: {$status}");
+            $this->handleNotPublished($entity, $status);
             return;
         }
 
@@ -103,6 +104,52 @@ class IndexInGemini implements AfterSave, AfterRemove
     }
 
     /**
+     * Handle an article that is saved with a status other than Published.
+     * If the article has (or may have) content in the Gemini file search store,
+     * queue a delete operation to remove it.
+     */
+    private function handleNotPublished(Entity $entity, ?string $status): void
+    {
+        if (!$this->hasGeminiPresence($entity)) {
+            $this->log->debug(
+                "GoogleGemini: Skipping indexing for article {$entity->getId()} with status: {$status}"
+            );
+
+            return;
+        }
+
+        $this->log->info(
+            "GoogleGemini: Article {$entity->getId()} status changed to '{$status}', " .
+            "queueing removal from file search store"
+        );
+
+        $this->indexingService->queueArticleIndexing(
+            $entity->getId(),
+            'delete'
+        );
+    }
+
+    /**
+     * Whether the article has (or may still get) documents in the Gemini file search store.
+     * Covers indexed documents as well as in-flight (Pending) upload operations.
+     */
+    private function hasGeminiPresence(Entity $entity): bool
+    {
+        if ($entity->get('geminiDocumentName')) {
+            return true;
+        }
+
+        $attachmentDocuments = $entity->get('geminiAttachmentDocuments');
+        if (!empty($attachmentDocuments)) {
+            return true;
+        }
+
+        // Pending means uploads are in flight; documents may appear after the
+        // operations complete, so a delete still has to be queued.
+        return in_array($entity->get('geminiIndexStatus'), ['Pending', 'Indexed'], true);
+    }
+
+    /**
      * After an article is removed, queue it for deletion from Gemini.
      * 
      * @param Entity $entity The KnowledgeBaseArticle entity
@@ -115,22 +162,22 @@ class IndexInGemini implements AfterSave, AfterRemove
             return;
         }
 
-        // Only attempt deletion if the article had a Gemini document
-        $geminiDocumentName = $entity->get('geminiDocumentName');
-        $geminiAttachmentDocuments = $entity->get('geminiAttachmentDocuments');
-
-        if (!$geminiDocumentName && empty($geminiAttachmentDocuments)) {
+        // Only attempt deletion if the article had (or may still get) Gemini documents
+        if (!$this->hasGeminiPresence($entity)) {
             $this->log->debug("GoogleGemini: Skipping deletion for article {$entity->getId()} - not indexed");
             return;
         }
 
+        $geminiDocumentName = $entity->get('geminiDocumentName');
+        $geminiAttachmentDocuments = $entity->get('geminiAttachmentDocuments');
+
         $this->log->info("GoogleGemini: Queueing deletion for article: {$entity->getId()}");
-        
+
         $this->indexingService->queueArticleIndexing(
             $entity->getId(),
             'delete',
             $geminiDocumentName,
-            $geminiAttachmentDocuments
+            $geminiAttachmentDocuments ?? []
         );
     }
 }

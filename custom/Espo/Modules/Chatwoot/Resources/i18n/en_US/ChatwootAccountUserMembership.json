@@ -17,6 +17,7 @@
         "ignoreGroups": "Ignore Groups",
         "ignoreStatusBroadcast": "Ignore WAHA Status Broadcasts",
         "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",
+        "followupsEnabled": "Automatic Follow-up Enabled",
         "transferScenarios": "Transfer Scenarios",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
@@ -56,6 +57,9 @@
         "Save": "Save",
         "Cancel": "Cancel"
     },
+    "presetFilters": {
+        "aiOnly": "AI Agents"
+    },
     "messages": {
         "confirmEnableAiProfile": "This will enable AI capabilities for this account member. Continue?",
         "confirmDisableAiProfile": "This will disable AI capabilities for this account member. Continue?",
@@ -85,6 +89,7 @@
         }
     },
     "tooltips": {
+        "followupsEnabled": "When disabled, this AI agent never runs automated follow-ups: new opportunities it creates are NOT armed with a follow-up loop, scheduled follow-ups for opportunities it drives stop firing, and any opportunities currently in 'Follow-up Active' driven by this agent are reset to 'Action Needed' the moment you disable it. The agent can still create and update opportunities normally.",
         "chatwootAccountUserId": "The account-user membership ID in Chat. This field is automatically populated after sync.",
         "chatwootInboxes": "The inboxes this account member has access to. Managed automatically by the inbox member sync.",
         "isAI": "Enable to configure this member as an AI-powered agent.",

@@ -24,6 +24,11 @@
             "default": false,
             "tooltip": true
         },
+        "followupsEnabled": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

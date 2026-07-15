@@ -89,6 +89,11 @@
             "type": "bool",
             "default": false
         },
+        "followupsEnabled": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
         "transferScenarios": {
             "type": "text",
             "rowsMin": 10

@@ -16,7 +16,11 @@
         "team": "Permissão / Times",
         "isActive": "Ativo",
         "isDefault": "É Padrão",
+        "followupsEnabled": "Follow-up Automático Ativado",
         "opportunityStages": "Estágios da Oportunidade"
+    },
+    "tooltips": {
+        "followupsEnabled": "Quando desativado, oportunidades deste funil nunca executam follow-ups automáticos: a IA não arma novas oportunidades com o loop de follow-up, follow-ups agendados deixam de disparar, e oportunidades atualmente em 'Follow-up Ativo' são redefinidas para 'Ação Necessária' no momento em que você desativa. A IA continua criando e atualizando oportunidades neste funil normalmente."
     },
     "boolFilters": {
         "onlyMy": "Atribuído a Mim"
