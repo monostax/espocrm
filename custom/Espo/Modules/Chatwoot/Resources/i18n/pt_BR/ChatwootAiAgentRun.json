@@ -45,6 +45,9 @@
     "options": {
         "kind": {
             "customer-message": "Mensagem do Cliente",
+            "private-mention": "@Menção em Nota Privada",
+            "public-mention": "@Menção Pública",
+            "scheduled-message": "Mensagem Agendada",
             "followup-trigger": "Disparador de Follow-up"
         }
     }

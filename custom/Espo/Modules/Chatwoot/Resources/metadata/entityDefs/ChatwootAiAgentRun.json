@@ -14,7 +14,13 @@
         },
         "kind": {
             "type": "enum",
-            "options": ["customer-message", "followup-trigger"],
+            "options": [
+                "customer-message",
+                "private-mention",
+                "public-mention",
+                "scheduled-message",
+                "followup-trigger"
+            ],
             "default": "customer-message",
             "required": true,
             "readOnly": true

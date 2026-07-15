@@ -43,7 +43,7 @@
         "hatchetEventId": "Hatchet Event ID"
     },
     "tooltips": {
-        "kind": "How this run was triggered: 'customer-message' (a contact sent a message that the AI replied to) or 'followup-trigger' (a scheduled follow-up fired without an inbound message).",
+        "kind": "How this run was triggered: 'customer-message' (a contact sent a message that the AI replied to), 'private-mention' (a human agent @mentioned the AI in a private note — internal usage, invisible to the customer), 'public-mention' (a human agent @mentioned the AI in a public reply), 'scheduled-message' (a scheduled private note without a mention dispatched into an AI-assigned conversation), or 'followup-trigger' (a scheduled follow-up fired without an inbound message). Rows persisted before the five-way split carry only the legacy binary values ('customer-message' includes old mention runs).",
         "agent": "The AI agent membership that produced this run.",
         "conversation": "The conversation this run engaged with.",
         "tenant": "Denormalized tenant of the run's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations.",
@@ -70,6 +70,9 @@
     "options": {
         "kind": {
             "customer-message": "Customer Message",
+            "private-mention": "Private Note @Mention",
+            "public-mention": "Public @Mention",
+            "scheduled-message": "Scheduled Message",
             "followup-trigger": "Follow-up Trigger"
         }
     }

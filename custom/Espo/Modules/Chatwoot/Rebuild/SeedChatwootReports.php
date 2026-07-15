@@ -97,6 +97,194 @@ class SeedChatwootReports implements RebuildAction
     {
         return [
             [
+                // LLM token consumption per Tenant (Ambiente) per day —
+                // the cost-drilldown counterpart to the conversations
+                // reports. Sums the producer-reported token counters and
+                // counts runs, grouped by day + tenant.
+                //
+                // Column semantics (all producer-derived, readOnly ints
+                // on ChatwootAiAgentRun):
+                //   SUM:inputTokens        — total prompt tokens billed
+                //   SUM:cachedInputTokens  — subset of input served from
+                //                            the implicit-context cache
+                //                            (billed at a discount; the
+                //                            cache-miss spend is
+                //                            input − cachedInput)
+                //   SUM:outputTokens       — completion tokens (the
+                //                            expensive side)
+                //   COUNT:id               — number of runs
+                //
+                // Not internal — SUM/COUNT grouping is native engine
+                // capability (unlike the COUNT-DISTINCT that forced the
+                // ConversationsEngaged* internal classes). Date group
+                // first so DateBucketPadder pads empty days for free.
+                //
+                // Performance: served by the purpose-built
+                // `(tenantId, runAt, deleted)` composite index.
+                //
+                // ACL: globally shared + applyAcl — tenant users only see
+                // their own rows (team-trimmed), so tenant identities
+                // never leak across environments; org admins see all
+                // tenants side by side.
+                'staticId' => 'chwRptTokTnDay',
+                'name' => 'AI Agent Run (Uso de Tokens por Ambiente / Por Dia)',
+                'description' =>
+                    'Consumo de tokens LLM (entrada, entrada em cache, ' .
+                    'saída) e número de execuções do Agente IA, agrupado ' .
+                    'por dia e por Ambiente. Use para acompanhar o gasto ' .
+                    'diário por tenant. ACL-strict: cada usuário vê ' .
+                    'somente as execuções permitidas por sua ACL em ' .
+                    'ChatwootAiAgentRun.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => [
+                    'SUM:inputTokens',
+                    'SUM:cachedInputTokens',
+                    'SUM:outputTokens',
+                    'COUNT:id',
+                ],
+                'groupBy' => ['DAY:runAt', 'tenant'],
+                'runtimeFilters' => ['runAt', 'tenant', 'model', 'kind'],
+                'orderBy' => [],
+                'depth' => 2,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                // Tenant cost-ranking view: token totals + run count per
+                // Tenant (no date grouping), ordered by total tokens
+                // descending — answers "which tenant is driving the
+                // spend?" in one glance. Scope the window with the
+                // `runAt` runtime filter (e.g. last 30 days).
+                //
+                // `SUM:totalTokens` is included here (and omitted from
+                // the daily report) because it is the natural ranking
+                // key; input/cached/output break the total down.
+                'staticId' => 'chwRptTokTn',
+                'name' => 'AI Agent Run (Uso de Tokens por Ambiente / Total)',
+                'description' =>
+                    'Total de tokens LLM (total, entrada, entrada em ' .
+                    'cache, saída) e execuções do Agente IA por Ambiente, ' .
+                    'ordenado do maior para o menor consumo. Use o filtro ' .
+                    'de período (runAt) para limitar a janela analisada. ' .
+                    'ACL-strict: cada usuário vê somente as execuções ' .
+                    'permitidas por sua ACL em ChatwootAiAgentRun.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => [
+                    'SUM:totalTokens',
+                    'SUM:inputTokens',
+                    'SUM:cachedInputTokens',
+                    'SUM:outputTokens',
+                    'COUNT:id',
+                ],
+                'groupBy' => ['tenant'],
+                'runtimeFilters' => ['runAt', 'model', 'kind'],
+                'orderBy' => ['DESC:SUM:totalTokens'],
+                'depth' => 1,
+                'chartType' => 'BarHorizontal',
+                'fillEmptyDateBuckets' => false,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                // Pricing matrix: Tenant × Model with the three billable
+                // token classes. This is the direct input for a cost /
+                // price-sheet calculation, since LLM pricing is per
+                // model and per token class:
+                //
+                //   cost ≈ (input − cached) × p_in
+                //        + cached × p_cacheRead   (discounted)
+                //        + output × p_out         (the expensive side)
+                //
+                // Grid engine caps grouping at 2 dimensions, so the
+                // date window is a runtime filter (`runAt`) rather than
+                // a group. Use `kind` to isolate follow-up spend.
+                'staticId' => 'chwRptTokTnMdl',
+                'name' => 'AI Agent Run (Uso de Tokens por Ambiente / Por Modelo)',
+                'description' =>
+                    'Matriz Ambiente × Modelo LLM com tokens de entrada, ' .
+                    'entrada em cache e saída — a base para cálculo de ' .
+                    'custo, já que o preço é por modelo e por classe de ' .
+                    'token. Use o filtro de período (runAt) para limitar ' .
+                    'a janela. ACL-strict: cada usuário vê somente as ' .
+                    'execuções permitidas por sua ACL em ChatwootAiAgentRun.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => [
+                    'SUM:totalTokens',
+                    'SUM:inputTokens',
+                    'SUM:cachedInputTokens',
+                    'SUM:outputTokens',
+                    'COUNT:id',
+                ],
+                'groupBy' => ['tenant', 'model'],
+                'runtimeFilters' => ['runAt', 'kind'],
+                'orderBy' => ['DESC:SUM:totalTokens'],
+                'depth' => 2,
+                'chartType' => 'BarHorizontal',
+                'fillEmptyDateBuckets' => false,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                // Spend split per trigger class per day. `kind` is
+                // producer-set (resolved by the chatwoot-agent
+                // workflow's process-message, which consults the
+                // Chatwoot mention table): 'customer-message'
+                // (inbound contact message), 'private-mention'
+                // (human agent asked the AI via private-note
+                // @mention — internal usage, customer never sees the
+                // trigger), 'public-mention' (customer-visible
+                // @mention), 'scheduled-message' (scheduled note),
+                // 'followup-trigger' (proactive follow-up run).
+                // This is the billing dimension: it separates
+                // customer-driven spend from internal @mention usage
+                // and proactive follow-up cadence. Rows persisted
+                // before the five-way split only carry the legacy
+                // binary values (old mention runs are bucketed under
+                // 'customer-message').
+                //
+                // Note: `kind=followup-trigger` counts every
+                // follow-up RUN (tokens are burned even when the AI
+                // decides not to message) — distinct from the
+                // `sentFollowupMessage` flag used by chwRptFuMsgAgDay.
+                'staticId' => 'chwRptTokKindDay',
+                'name' => 'AI Agent Run (Uso de Tokens por Tipo / Por Dia)',
+                'description' =>
+                    'Consumo de tokens LLM e execuções por dia, dividido ' .
+                    'por tipo de gatilho: Mensagem do Cliente, @Menção em ' .
+                    'Nota Privada, @Menção Pública, Mensagem Agendada e ' .
+                    'Disparador de Follow-up. Use para separar o gasto ' .
+                    'gerado por clientes do uso interno (@menções de ' .
+                    'agentes) e de follow-ups proativos — a base para ' .
+                    'cobrança por tipo de uso. ACL-strict: cada usuário ' .
+                    'vê somente as execuções permitidas por sua ACL em ' .
+                    'ChatwootAiAgentRun.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => [
+                    'SUM:inputTokens',
+                    'SUM:cachedInputTokens',
+                    'SUM:outputTokens',
+                    'COUNT:id',
+                ],
+                'groupBy' => ['DAY:runAt', 'kind'],
+                'runtimeFilters' => ['runAt', 'tenant', 'model'],
+                'orderBy' => [],
+                'depth' => 2,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
                 'staticId' => 'chwRptCvTnDay',
                 'name' => 'AI Agent Run (Conversas Engajadas por Ambiente / Por Dia)',
                 'description' =>
