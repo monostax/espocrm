@@ -4,6 +4,12 @@
         "isSystem": true,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\GoogleGemini\\Jobs\\ProcessUploadOperations"
+    },
+    "ReconcileGeminiFileSearchStores": {
+        "name": "Reconcile Gemini File Search Stores",
+        "isSystem": true,
+        "scheduling": "17 3 * * *",
+        "jobClassName": "Espo\\Modules\\GoogleGemini\\Jobs\\ReconcileFileSearchStores"
     }
 }
 

@@ -99,10 +99,10 @@ class ProcessUploadOperations implements Job
         $operationName = $operation->get('operationName');
         $attempts = (int) $operation->get('attempts');
 
-        // Check if max attempts exceeded
+        // Check if max attempts exceeded - do a final poll so a document
+        // created server-side is not silently orphaned.
         if ($attempts >= self::MAX_ATTEMPTS) {
-            $this->markOperationFailed($operation, 'Max polling attempts exceeded');
-            return true;
+            return $this->finalizeExpiredOperation($operation);
         }
 
         // Update status to Processing and increment attempts
@@ -129,7 +129,7 @@ class ProcessUploadOperations implements Job
             } else {
                 // Operation succeeded
                 $documentName = $this->extractDocumentName($result);
-                $this->markOperationCompleted($operation, $result, $documentName);
+                $this->handleCompletedOperation($operation, $result, $documentName);
                 $this->log->info("GoogleGemini ProcessUploadOperations: Operation {$operationId} completed" .
                     ($documentName ? " with document {$documentName}" : ""));
             }
@@ -139,6 +139,76 @@ class ProcessUploadOperations implements Job
         // Still in progress - will check again on next run
         $this->log->debug("GoogleGemini ProcessUploadOperations: Operation {$operationId} still in progress (attempt {$attempts})");
         return false;
+    }
+
+    /**
+     * Finalize an operation that exceeded the polling attempt limit.
+     *
+     * A final status check is performed: if the operation actually completed
+     * server-side, the resulting document is either recorded (normal flow) or
+     * deleted (discard flag), so it does not end up orphaned in the store.
+     *
+     * @return bool Always true (the operation is finalized either way)
+     */
+    private function finalizeExpiredOperation(Entity $operation): bool
+    {
+        $operationId = $operation->getId();
+        $operationName = $operation->get('operationName');
+
+        $result = $operationName ? $this->geminiService->getOperationStatus($operationName) : null;
+
+        if ($result !== null && ($result['done'] ?? false)) {
+            if (isset($result['error'])) {
+                $this->markOperationFailed($operation, json_encode($result['error']));
+                return true;
+            }
+
+            $documentName = $this->extractDocumentName($result);
+            $this->handleCompletedOperation($operation, $result, $documentName);
+
+            $this->log->info(
+                "GoogleGemini ProcessUploadOperations: Operation {$operationId} resolved on final poll" .
+                ($documentName ? " with document {$documentName}" : "")
+            );
+
+            return true;
+        }
+
+        // The upload may still complete server-side later and create a
+        // document; the reconciliation job removes it if left unreferenced.
+        $this->markOperationFailed($operation, 'Max polling attempts exceeded');
+        $this->log->warning("GoogleGemini ProcessUploadOperations: Operation {$operationId} failed: max polling attempts exceeded");
+
+        return true;
+    }
+
+    /**
+     * Handle a successfully completed upload operation.
+     *
+     * If the operation was flagged for discard (superseded by a re-index),
+     * the resulting document is deleted instead of being recorded.
+     */
+    private function handleCompletedOperation(Entity $operation, array $response, ?string $documentName): void
+    {
+        if ($operation->get('discardDocument')) {
+            if ($documentName && !$this->geminiService->deleteDocument($documentName)) {
+                $this->log->warning(
+                    "GoogleGemini ProcessUploadOperations: Failed to delete discarded document {$documentName} " .
+                    "for operation {$operation->getId()} (reconciliation job will retry)"
+                );
+            }
+
+            $operation->set('status', 'Failed');
+            $operation->set('response', $response);
+            $operation->set('geminiDocumentName', $documentName);
+            $operation->set('errorMessage', 'Cancelled: superseded by re-index, document discarded');
+            $operation->set('completedAt', date('Y-m-d H:i:s'));
+            $this->entityManager->saveEntity($operation, ['silent' => true]);
+
+            return;
+        }
+
+        $this->markOperationCompleted($operation, $response, $documentName);
     }
 
     /**
@@ -174,10 +244,12 @@ class ProcessUploadOperations implements Job
             return;
         }
 
-        // Get all operations for this article
+        // Get all operations for this article, oldest first, so the most
+        // recent completed upload deterministically wins for the body doc.
         $operations = $this->entityManager
             ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
             ->where(['knowledgeBaseArticleId' => $articleId])
+            ->order('createdAt')
             ->find();
 
         $pendingCount = 0;
@@ -207,12 +279,23 @@ class ProcessUploadOperations implements Job
                     ];
                 }
             } elseif ($status === 'Failed') {
-                $failedCount++;
+                // Cancelled/superseded operations (re-index housekeeping) are
+                // not real failures and must not affect the article status.
+                $errorMessage = (string) $op->get('errorMessage');
+
+                if (!str_starts_with($errorMessage, 'Cancelled:') && !str_starts_with($errorMessage, 'Superseded:')) {
+                    $failedCount++;
+                }
             }
         }
 
         // If there are still pending operations, don't update article yet
         if ($pendingCount > 0) {
+            return;
+        }
+
+        // Nothing meaningful to report (e.g. all operations were cancelled)
+        if ($completedCount === 0 && $failedCount === 0) {
             return;
         }
 

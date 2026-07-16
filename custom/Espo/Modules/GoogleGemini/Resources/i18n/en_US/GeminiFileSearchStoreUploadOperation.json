@@ -17,6 +17,7 @@
         "response": "Response",
         "errorMessage": "Error Message",
         "attempts": "Attempts",
+        "discardDocument": "Discard Document",
         "completedAt": "Completed At",
         "teams": "Teams"
     },
@@ -34,7 +35,8 @@
     },
     "tooltips": {
         "operationName": "The Gemini API operation resource name (e.g., fileSearchStores/xxx/upload/operations/yyy)",
-        "geminiDocumentName": "The resulting document resource name in Gemini after successful upload"
+        "geminiDocumentName": "The resulting document resource name in Gemini after successful upload",
+        "discardDocument": "When true, the upload was superseded by a re-index and the resulting document will be deleted upon completion instead of being recorded"
     }
 }
 

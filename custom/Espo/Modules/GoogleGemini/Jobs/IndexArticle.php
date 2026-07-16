@@ -112,8 +112,10 @@ class IndexArticle implements Job
         // Delete all previously indexed documents (article body + attachments)
         $this->deleteExistingDocuments($article);
 
-        // Cancel any pending operations for this article
-        $this->cancelPendingOperations($articleId);
+        // Resolve previous upload operations: delete documents they created
+        // (referenced on the article or not) and flag still-in-flight uploads
+        // so their resulting documents are discarded upon completion.
+        $this->resolveOperationsForReindex($articleId);
 
         // Build content
         $content = $this->buildArticleContent($article);
@@ -315,28 +317,91 @@ class IndexArticle implements Job
     }
 
     /**
-     * Cancel any pending operations for an article (when re-indexing).
+     * Resolve previous upload operations when re-indexing an article.
+     *
+     * Documents created by uploads are removed even when they were never
+     * referenced on the article (e.g. rapid consecutive saves):
+     *
+     * - Completed operations: the tracked document is deleted (it is being
+     *   superseded by the re-index) and the operation is marked superseded.
+     * - Pending/Processing operations are polled once: if done, the resulting
+     *   document is deleted; if still in flight, the operation is flagged with
+     *   discardDocument so ProcessUploadOperations deletes the document once
+     *   the upload completes, instead of abandoning it.
      */
-    private function cancelPendingOperations(string $articleId): void
+    private function resolveOperationsForReindex(string $articleId): void
     {
-        $pendingOperations = $this->entityManager
+        $operations = $this->entityManager
             ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
             ->where([
                 'knowledgeBaseArticleId' => $articleId,
-                'status' => ['Pending', 'Processing'],
+                'status' => ['Pending', 'Processing', 'Completed'],
             ])
             ->find();
 
-        foreach ($pendingOperations as $operation) {
+        foreach ($operations as $operation) {
+            $status = $operation->get('status');
+
+            if ($status === 'Completed') {
+                // The document is superseded by the re-index - remove it.
+                // deleteDocument() treats 404 as success, so documents already
+                // removed via the article references are handled gracefully.
+                $trackedDocName = $operation->get('geminiDocumentName');
+
+                if ($trackedDocName && !$this->geminiService->deleteDocument($trackedDocName)) {
+                    $this->log->warning(
+                        "GoogleGemini IndexArticle: Failed to delete superseded document {$trackedDocName} " .
+                        "for article {$articleId} (reconciliation job will retry)"
+                    );
+                }
+
+                $operation->set('status', 'Failed');
+                $operation->set('errorMessage', 'Superseded: article re-indexed');
+                $operation->set('completedAt', date('Y-m-d H:i:s'));
+                $this->entityManager->saveEntity($operation, ['silent' => true]);
+
+                continue;
+            }
+
+            // Pending/Processing: poll once - the upload may already have created a document.
+            $operationName = $operation->get('operationName');
+            $result = $operationName ? $this->geminiService->getOperationStatus($operationName) : null;
+
+            if ($operationName && ($result === null || !($result['done'] ?? false))) {
+                // Still in flight (or API error). Flag the operation so that
+                // ProcessUploadOperations deletes the resulting document once
+                // the upload completes, instead of orphaning it.
+                $operation->set('discardDocument', true);
+                $operation->set('errorMessage', 'Superseded: article re-indexed, document will be discarded');
+                $this->entityManager->saveEntity($operation, ['silent' => true]);
+
+                $this->log->debug(
+                    "GoogleGemini IndexArticle: Operation {$operation->getId()} still in flight for article {$articleId}, flagged for discard"
+                );
+
+                continue;
+            }
+
+            if ($result !== null && !isset($result['error'])) {
+                $createdDocName = $this->extractDocumentName($result);
+
+                if ($createdDocName && !$this->geminiService->deleteDocument($createdDocName)) {
+                    $this->log->warning(
+                        "GoogleGemini IndexArticle: Failed to delete document {$createdDocName} from " .
+                        "cancelled upload for article {$articleId} (reconciliation job will retry)"
+                    );
+                }
+            }
+
             $operation->set('status', 'Failed');
             $operation->set('errorMessage', 'Cancelled: article re-indexed');
             $operation->set('completedAt', date('Y-m-d H:i:s'));
             $this->entityManager->saveEntity($operation, ['silent' => true]);
         }
 
-        $count = count($pendingOperations);
+        $count = count($operations);
         if ($count > 0) {
-            $this->log->debug("GoogleGemini IndexArticle: Cancelled {$count} pending operations for article {$articleId}");
+            $this->log->debug("GoogleGemini IndexArticle: Resolved {$count} previous operations for article {$articleId}");
         }
     }
 
