@@ -100,6 +100,11 @@ class SyncWithChatwoot implements CreateHook
             }
 
             $chatwootUserId = $userResponse['id'];
+
+            if (($userResponse['created'] ?? null) !== true) {
+                throw new Error('Chatwoot did not confirm creation of a new user.');
+            }
+
             $createdUserId = $chatwootUserId;
             
             $this->log->info('Chatwoot user created successfully with ID: ' . $chatwootUserId);

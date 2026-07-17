@@ -57,7 +57,7 @@ class WahaSessionApp
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -113,7 +113,7 @@ class WahaSessionApp
         }
 
         foreach ($platforms as $platform) {
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $apiKey = $platform->get('apiKey');
             $platId = $platform->getId();
 
@@ -171,7 +171,7 @@ class WahaSessionApp
             throw new NotFound("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -219,7 +219,7 @@ class WahaSessionApp
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -406,7 +406,7 @@ class WahaSessionApp
             // Get platform URL
             $platform = $chatwootAccount->get('platform');
             if ($platform) {
-                $config['url'] = rtrim($platform->get('url') ?? '', '/');
+                $config['url'] = rtrim($platform->get('backendUrl') ?? '', '/');
             }
 
             // Account details
@@ -468,7 +468,7 @@ class WahaSessionApp
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -513,7 +513,7 @@ class WahaSessionApp
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {

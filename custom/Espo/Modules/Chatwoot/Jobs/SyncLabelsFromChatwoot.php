@@ -187,7 +187,7 @@ class SyncLabelsFromChatwoot implements JobDataLess
             $this->log->info("SyncLabelsFromChatwoot: Deleting label {$label->get('name')} (not in Chatwoot)");
             
             // Delete silently to avoid triggering hook (which would try to delete from Chatwoot)
-            $this->entityManager->deleteEntity($label, ['silent' => true]);
+            $this->entityManager->removeEntity($label, ['silent' => true]);
         }
     }
 }

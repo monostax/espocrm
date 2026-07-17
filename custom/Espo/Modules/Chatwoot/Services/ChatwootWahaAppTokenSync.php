@@ -158,7 +158,7 @@ class ChatwootWahaAppTokenSync
             return 'skipped';
         }
 
-        $platformUrl = $wahaPlatform->get('backendUrl') ?: $wahaPlatform->get('url');
+        $platformUrl = $wahaPlatform->get('backendUrl');
         $wahaApiKey = $wahaPlatform->get('apiKey');
 
         if (!$platformUrl || !$wahaApiKey) {

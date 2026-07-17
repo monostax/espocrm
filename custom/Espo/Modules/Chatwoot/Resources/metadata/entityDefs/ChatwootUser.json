@@ -26,6 +26,7 @@
         "assignedUser": {
             "type": "link",
             "required": false,
+            "readOnly": true,
             "view": "views/fields/assigned-user",
             "tooltip": true
         },

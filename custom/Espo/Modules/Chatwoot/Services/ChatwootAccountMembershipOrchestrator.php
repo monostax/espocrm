@@ -121,7 +121,7 @@ class ChatwootAccountMembershipOrchestrator
         $roleResyncExternalUserId = null;
 
         try {
-            $chatwootUser = $this->findChatwootUser($platformId, $userId, $email);
+            $chatwootUser = $this->findChatwootUser($platformId, $userId);
 
             if (!$chatwootUser) {
                 $generatedPassword = $this->generatePassword();
@@ -137,7 +137,13 @@ class ChatwootAccountMembershipOrchestrator
                     throw new Error('Chatwoot API response missing user ID.');
                 }
 
-                $createdRemoteUserId = (int) $userResponse['id'];
+                $remoteUserId = (int) $userResponse['id'];
+
+                if (($userResponse['created'] ?? null) !== true) {
+                    throw new Error('Chatwoot did not confirm creation of a new user.');
+                }
+
+                $createdRemoteUserId = $remoteUserId;
 
                 $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
                     'name' => $name,
@@ -145,7 +151,7 @@ class ChatwootAccountMembershipOrchestrator
                     'password' => $generatedPassword,
                     'platformId' => $platformId,
                     'assignedUserId' => $userId,
-                    'chatwootUserId' => $createdRemoteUserId,
+                    'chatwootUserId' => $remoteUserId,
                     'teamsIds' => $teamsIds,
                 ], ['silent' => true]);
             }
@@ -271,9 +277,9 @@ class ChatwootAccountMembershipOrchestrator
         }
     }
 
-    private function findChatwootUser(string $platformId, string $userId, string $email): ?Entity
+    private function findChatwootUser(string $platformId, string $userId): ?Entity
     {
-        $byAssigned = $this->entityManager
+        return $this->entityManager
             ->getRDBRepository('ChatwootUser')
             ->where([
                 'platformId' => $platformId,
@@ -281,55 +287,6 @@ class ChatwootAccountMembershipOrchestrator
             ])
             ->order('createdAt', 'DESC')
             ->findOne();
-
-        if ($byAssigned) {
-            return $byAssigned;
-        }
-
-        // Fallback: look up by email using EspoCRM's email address lookup.
-        // ChatwootUser.email is of EspoCRM type "email" which stores data in the
-        // email_address / entity_email_address junction tables — NOT as a column
-        // on chatwoot_user. A simple ->where(['email' => ...]) silently returns
-        // no results. We must query the junction tables explicitly.
-        $byEmail = null;
-
-        if ($email) {
-            $pdo = $this->entityManager->getPDO();
-            $stmt = $pdo->prepare("
-                SELECT cu.id
-                FROM chatwoot_user cu
-                INNER JOIN entity_email_address eea ON eea.entity_id = cu.id AND eea.entity_type = 'ChatwootUser' AND eea.deleted = false
-                INNER JOIN email_address ea ON ea.id = eea.email_address_id AND ea.deleted = false
-                WHERE ea.lower = LOWER(?)
-                  AND cu.platform_id = ?
-                  AND cu.deleted = false
-                ORDER BY cu.created_at DESC
-                LIMIT 1
-            ");
-            $stmt->execute([$email, $platformId]);
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-            if ($row) {
-                $byEmail = $this->entityManager->getEntityById('ChatwootUser', $row['id']);
-            }
-        }
-
-        if (!$byEmail) {
-            return null;
-        }
-
-        $assignedUserId = $byEmail->get('assignedUserId');
-
-        if ($assignedUserId && $assignedUserId !== $userId) {
-            throw new Forbidden('chatwootUserAlreadyAssignedToAnotherUser');
-        }
-
-        if (!$assignedUserId) {
-            $byEmail->set('assignedUserId', $userId);
-            $this->entityManager->saveEntity($byEmail, ['silent' => true]);
-        }
-
-        return $byEmail;
     }
 
     /**

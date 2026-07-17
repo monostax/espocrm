@@ -342,35 +342,23 @@ class ChatwootAccountUserMembershipService
             $platformUserId = $chatwootUser->get('chatwootUserId');
 
             if (!$platformUserId && $email) {
-                try {
-                    // Create platform user via Platform API
-                    $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, [
-                        'name' => $name,
-                        'email' => $email,
-                        'password' => bin2hex(random_bytes(16)),
-                    ]);
+                $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, [
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => bin2hex(random_bytes(16)),
+                ]);
 
-                    $platformUserId = $userResponse['id'] ?? null;
+                $platformUserId = $userResponse['id'] ?? null;
 
-                    if ($platformUserId) {
-                        $chatwootUser->set('chatwootUserId', $platformUserId);
-                        $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
-                    }
-                } catch (\Throwable $e) {
-                    // If the user already exists on Chatwoot, continue and let createAgent()
-                    // attach/reuse by email. If that also conflicts, recover from listAgents().
-                    if ($this->isDuplicateChatwootEntityError($e->getMessage())) {
-                        $this->log->warning(
-                            "syncAgentToChatwoot: Chatwoot user already exists for email {$email}; " .
-                            "continuing with agent reconciliation. Error: " . $e->getMessage()
-                        );
-                    } else {
-                        throw $e;
-                    }
+                if (!$platformUserId || ($userResponse['created'] ?? null) !== true) {
+                    throw new \RuntimeException('Chatwoot did not confirm creation of a new user.');
                 }
+
+                $chatwootUser->set('chatwootUserId', $platformUserId);
+                $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
             }
 
-            if (!$platformUserId && !$email) {
+            if (!$platformUserId) {
                 throw new \RuntimeException('Could not resolve or create platform user ID.');
             }
 
@@ -403,19 +391,14 @@ class ChatwootAccountUserMembershipService
 
                 $existingAgent = $this->findAgentByEmail($platformUrl, $accountApiKey, (int) $chatwootAccountId, $email);
 
-                if (!$existingAgent) {
+                if (!$existingAgent || (int) ($existingAgent['id'] ?? 0) !== (int) $platformUserId) {
                     throw $e;
                 }
 
                 $this->populateMembershipFromAgentResponse($membership, $existingAgent);
 
-                if (!$chatwootUser->get('chatwootUserId') && isset($existingAgent['id'])) {
-                    $chatwootUser->set('chatwootUserId', (int) $existingAgent['id']);
-                    $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
-                }
-
                 $this->log->info(
-                    "syncAgentToChatwoot: Reused existing Chatwoot agent for membership {$membership->getId()} by email {$email}"
+                    "syncAgentToChatwoot: Reused the bound Chatwoot agent for membership {$membership->getId()}"
                 );
             }
 

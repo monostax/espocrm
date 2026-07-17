@@ -540,7 +540,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
             // server-side or not started). Retrying other memberships against
             // the same session is pointless within this run — bail out for
             // this inbox. Self-heals on a later run if the session comes back.
-            if (str_contains($message, 'HTTP 422')) {
+            if (str_contains($message, 'HTTP 404') || str_contains($message, 'HTTP 422')) {
                 $this->log->warning(
                     "SyncInboxMembersFromChatwoot: WAHA session unavailable for integration {$inboxIntegration->getId()} " .
                     "(session: {$inboxIntegration->get('wahaSessionName')}). Skipping label sync for this inbox: {$message}"

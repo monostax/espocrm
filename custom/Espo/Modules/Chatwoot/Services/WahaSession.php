@@ -72,7 +72,7 @@ class WahaSession
         }
 
         foreach ($platforms as $platform) {
-            $platformUrl = $platform->get('url');
+            $platformUrl = $platform->get('backendUrl');
             $apiKey = $platform->get('apiKey');
             $platId = $platform->getId();
 
@@ -120,7 +120,7 @@ class WahaSession
             throw new NotFound("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -164,7 +164,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -209,7 +209,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -250,7 +250,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -281,7 +281,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -316,7 +316,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -351,7 +351,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -386,7 +386,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
@@ -421,7 +421,7 @@ class WahaSession
             throw new Error("WahaPlatform with ID '{$platformId}' not found.");
         }
 
-        $platformUrl = $platform->get('url');
+        $platformUrl = $platform->get('backendUrl');
         $apiKey = $platform->get('apiKey');
 
         if (!$platformUrl || !$apiKey) {
