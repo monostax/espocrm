@@ -226,7 +226,7 @@ class ChatwootPasswordSync
                 continue;
             }
 
-            $rowEmail = $chatwootUser->get('email');
+            $rowEmail = $chatwootUser->get('emailAddress');
 
             if (!is_string($rowEmail) || strtolower($rowEmail) !== strtolower($email)) {
                 continue;

@@ -90,7 +90,7 @@ class SyncWithChatwoot implements CreateHook
             }
 
             // Create user on Chatwoot Platform API
-            $this->log->info('Creating Chatwoot user: ' . $entity->get('email'));
+            $this->log->info('Creating Chatwoot user: ' . $entity->get('emailAddress'));
             
             $userData = $this->prepareUserData($entity);
             $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, $userData);
@@ -130,7 +130,7 @@ class SyncWithChatwoot implements CreateHook
         } catch (\Exception $e) {
             // ROLLBACK: If anything failed, log for manual cleanup
             $this->log->error(
-                'Failed to create Chatwoot user for ' . $entity->get('email') . 
+                'Failed to create Chatwoot user for ' . $entity->get('emailAddress') .
                 ': ' . $e->getMessage()
             );
             
@@ -159,7 +159,7 @@ class SyncWithChatwoot implements CreateHook
     {
         $data = [
             'name' => $entity->get('name'),
-            'email' => $entity->get('email'),
+            'email' => $entity->get('emailAddress'),
             'password' => $entity->get('password'),
             'custom_attributes' => []
         ];

@@ -9,7 +9,7 @@
             "type": "varchar",
             "maxLength": 255
         },
-        "email": {
+        "emailAddress": {
             "type": "email",
             "required": true
         },

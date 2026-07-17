@@ -6,8 +6,11 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\CreateParams;
+use Espo\Core\Record\CreateResult;
 use Espo\Core\Record\UpdateParams;
+use Espo\Core\Record\UpdateResult;
 use Espo\Core\Record\DeleteParams;
+use Espo\Core\Record\DeleteResult;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialConfigCipher;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use Espo\ORM\Entity;
@@ -31,7 +34,7 @@ class Credential extends Record
         }
     }
 
-    public function create(\stdClass $data, ?CreateParams $params = null): Entity
+    public function create(\stdClass $data, CreateParams $params = new CreateParams()): CreateResult
     {
         // Validate config against schema before creation.
         if (isset($data->credentialTypeId) && $data->credentialTypeId !== '') {
@@ -42,16 +45,19 @@ class Credential extends Record
             );
         }
 
-        $entity = parent::create($data, $params);
+        $result = parent::create($data, $params);
 
         // Log creation
-        $this->logHistory($entity, 'created');
+        $this->logHistory($result->getEntity(), 'created');
 
-        return $entity;
+        return $result;
     }
 
-    public function update(string $id, \stdClass $data, ?UpdateParams $params = null): Entity
-    {
+    public function update(
+        string $id,
+        \stdClass $data,
+        UpdateParams $params = new UpdateParams()
+    ): UpdateResult {
         $entity = $this->getEntity($id);
         if (!$entity) {
             throw new NotFound();
@@ -80,15 +86,16 @@ class Credential extends Record
             }
         }
 
-        $entity = parent::update($id, $data, $params);
+        $result = parent::update($id, $data, $params);
+        $entity = $result->getEntity();
 
         // Log update
         $this->logHistory($entity, 'updated', $previousConfig, $entity->get('config'));
 
-        return $entity;
+        return $result;
     }
 
-    public function delete(string $id, ?DeleteParams $params = null): void
+    public function delete(string $id, DeleteParams $params = new DeleteParams()): DeleteResult
     {
         $entity = $this->getEntity($id);
         if ($entity) {
@@ -96,7 +103,7 @@ class Credential extends Record
             $this->logHistory($entity, 'deleted', $entity->get('config'), null);
         }
 
-        parent::delete($id, $params);
+        return parent::delete($id, $params);
     }
 
     /**

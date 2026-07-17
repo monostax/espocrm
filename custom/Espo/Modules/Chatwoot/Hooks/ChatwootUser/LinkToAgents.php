@@ -60,7 +60,7 @@ class LinkToAgents
         // Memberships are created by SyncAccountUserMembershipsFromChatwoot.
         // The upsertMembership() call below is a safety net for edge cases.
 
-        $email = $entity->get('email');
+        $email = $entity->get('emailAddress');
         $platformId = $entity->get('platformId');
         $userId = $entity->getId();
 

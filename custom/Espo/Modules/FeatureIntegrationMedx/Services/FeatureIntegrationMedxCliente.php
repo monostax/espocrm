@@ -5,9 +5,9 @@ namespace Espo\Modules\FeatureIntegrationMedx\Services;
 use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Record\CreateParams;
+use Espo\Core\Record\CreateResult;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Record\FindParams;
-use Espo\Core\Record\ReadParams;
 use Espo\Core\Record\Service as RecordService;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Select\SearchParams;
@@ -92,11 +92,6 @@ class FeatureIntegrationMedxCliente extends RecordService implements
         'religiao',
     ];
 
-    public function read(string $id, ReadParams $params): Entity
-    {
-        return parent::read($id, $params);
-    }
-
     public function find(SearchParams $searchParams, ?FindParams $params = null): RecordCollection
     {
         $this->assertSearchParamsUseStorableFields($searchParams);
@@ -104,7 +99,7 @@ class FeatureIntegrationMedxCliente extends RecordService implements
         return parent::find($searchParams, $params);
     }
 
-    public function create(stdClass $data, CreateParams $params): Entity
+    public function create(stdClass $data, CreateParams $params = new CreateParams()): CreateResult
     {
         $settingsId = $this->normalizeNullableString($data->settingsId ?? null);
 
@@ -150,7 +145,7 @@ class FeatureIntegrationMedxCliente extends RecordService implements
                         $this->mergeTeamsIntoClienteAnchor($existing, $rawTeamIdList);
                         $this->enrichEntities([$existing], true);
 
-                        return $existing;
+                        return new CreateResult($existing);
                     }
                 }
             }
@@ -158,12 +153,12 @@ class FeatureIntegrationMedxCliente extends RecordService implements
             $this->assertClienteExistsBeforeCreate($rawClienteId, $preCreateCredential);
         }
 
-        $entity = parent::create($data, $params);
+        $entity = parent::create($data, $params)->getEntity();
 
         $this->enrichEntities([$entity], true);
         $entity = $this->persistClienteAfterCreate($entity);
 
-        return $entity;
+        return new CreateResult($entity);
     }
 
     public function hydrateAfterImport(string $id): void

@@ -6,9 +6,11 @@ use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Record\CreateParams;
+use Espo\Core\Record\CreateResult;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Record\FindParams;
 use Espo\Core\Record\ReadParams;
+use Espo\Core\Record\ReadResult;
 use Espo\Core\Record\Service as RecordService;
 use Espo\Core\Select\SearchParams;
 use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Services\ClinicaNasNuvensIntegrationProfileResolver;
@@ -148,7 +150,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
      */
     private array $consultaTipoAnchorCache = [];
 
-    public function read(string $id, ReadParams $params): Entity
+    public function read(string $id, ReadParams $params = new ReadParams()): ReadResult
     {
         return parent::read($id, $params);
     }
@@ -160,7 +162,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         return parent::find($searchParams, $params);
     }
 
-    public function create(stdClass $data, CreateParams $params): Entity
+    public function create(stdClass $data, CreateParams $params = new CreateParams()): CreateResult
     {
         $settingsId = $this->normalizeNullableString($data->settingsId ?? null);
 
@@ -211,7 +213,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                         $this->discoverAndCreateFaturamentoAnchors($existing, $this->extractTeamIdList($existing));
                         $this->enrichEntities([$existing], true);
 
-                        return $existing;
+                        return new CreateResult($existing);
                     }
                 }
             }
@@ -219,7 +221,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $this->assertAgendamentoExistsBeforeCreate($rawAgendamentoId, $preCreateCredential);
         }
 
-        $entity = parent::create($data, $params);
+        $entity = parent::create($data, $params)->getEntity();
 
         $teamIdList = $this->extractTeamIdList($entity);
 
@@ -240,7 +242,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
                 $entity->getId() . "'."
             );
 
-            return $entity;
+            return new CreateResult($entity);
         }
 
         $credentialId = $credential->getId();
@@ -256,7 +258,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
             $entity = $this->persistAgendamentoAfterCreate($entity);
             $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
 
-            return $entity;
+            return new CreateResult($entity);
         }
 
         try {
@@ -311,7 +313,7 @@ class FeatureIntegrationClinicaNasNuvensAgendamento extends RecordService implem
         $entity = $this->persistAgendamentoAfterCreate($entity);
         $this->discoverAndCreateFaturamentoAnchors($entity, $teamIdList);
 
-        return $entity;
+        return new CreateResult($entity);
     }
 
     public function hydrateAfterImport(string $id): void

@@ -13,6 +13,7 @@ namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
+use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
@@ -26,8 +27,10 @@ use stdClass;
  * Provides custom actions for enabling/disabling AI agent profiles
  * on membership entities.
  */
-class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Base
+class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Base implements Di\EntityManagerAware
 {
+    use Di\EntityManagerSetter;
+
     /**
      * POST ChatwootAccountUserMembership/:id/enableAiProfile
      *
@@ -46,7 +49,7 @@ class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Bas
             throw new BadRequest("ID is required.");
         }
 
-        $membership = $this->getEntityManager()->getEntityById('ChatwootAccountUserMembership', $id);
+        $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $id);
 
         if (!$membership) {
             throw new NotFound("Membership not found.");
@@ -86,7 +89,7 @@ class ChatwootAccountUserMembership extends \Espo\Core\Templates\Controllers\Bas
             throw new BadRequest("ID is required.");
         }
 
-        $membership = $this->getEntityManager()->getEntityById('ChatwootAccountUserMembership', $id);
+        $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $id);
 
         if (!$membership) {
             throw new NotFound("Membership not found.");

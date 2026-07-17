@@ -157,7 +157,7 @@ class CreateConciergeUser
             // Concierge users are system users, not tied to a specific EspoCRM user
             $attributes = [
                 'name' => $name,
-                'email' => $email,
+                'emailAddress' => $email,
                 'password' => $password,
                 'displayName' => $name,
                 'platformId' => $platformId,
@@ -170,7 +170,6 @@ class CreateConciergeUser
             }
 
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', $attributes, [
-                'skipHooks' => true, // Skip hooks to avoid recursive creation
                 'silent' => true
             ]);
 

@@ -82,7 +82,7 @@ class ValidateBeforeSync implements CreateHook
         }
 
         // Validate email is set
-        if (!$entity->get('email')) {
+        if (!$entity->get('emailAddress')) {
             throw new BadRequest('Email is required for ChatwootUser.');
         }
 
@@ -92,11 +92,10 @@ class ValidateBeforeSync implements CreateHook
         }
 
         // Check for duplicate email in the same platform.
-        // ChatwootUser.email is of EspoCRM type "email" which stores data in the
-        // email_address / entity_email_address junction tables — NOT as a column
-        // on chatwoot_user. A simple ->where(['email' => ...]) silently returns
-        // no results. We must query the junction tables explicitly.
-        $email = $entity->get('email');
+        // ChatwootUser.emailAddress is stored in the email address junction
+        // tables. Query them explicitly to keep duplicate detection scoped to
+        // this Chatwoot platform.
+        $email = $entity->get('emailAddress');
         $pdo = $this->entityManager->getPDO();
         $stmt = $pdo->prepare("
             SELECT cu.id

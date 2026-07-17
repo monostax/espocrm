@@ -512,7 +512,7 @@ class SeedChatwootAccount implements RebuildAction
             // Create the ChatwootUser entity
             $attributes = [
                 'name' => $conciergeUserData['name'],
-                'email' => $conciergeUserData['email'],
+                'emailAddress' => $conciergeUserData['email'],
                 'password' => $conciergeUserData['password'],
                 'displayName' => $conciergeUserData['name'],
                 'platformId' => $platform->getId(),
@@ -530,7 +530,6 @@ class SeedChatwootAccount implements RebuildAction
             }
 
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', $attributes, [
-                'skipHooks' => true,
                 'silent' => true
             ]);
 

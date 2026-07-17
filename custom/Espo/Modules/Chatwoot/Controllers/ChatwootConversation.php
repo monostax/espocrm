@@ -10,13 +10,15 @@
 namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
+use Espo\Core\Di;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Select\SelectBuilderFactory;
 
-class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
+class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base implements Di\EntityManagerAware
 {
+    use Di\EntityManagerSetter;
 
     /**
      * GET ChatwootConversation/action/statusCounts
@@ -51,7 +53,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
                 ])
                 ->build();
 
-            $mine = $this->getEntityManager()
+            $mine = $this->entityManager
                 ->getRDBRepository('ChatwootConversation')
                 ->clone($mineQuery)
                 ->count();
@@ -72,7 +74,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
                 ])
                 ->build();
 
-            $others = $this->getEntityManager()
+            $others = $this->entityManager
                 ->getRDBRepository('ChatwootConversation')
                 ->clone($othersQuery)
                 ->count();
@@ -116,7 +118,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
             $where['chatwootAccountIdExternal'] = (int) $accountId;
         }
 
-        $conversation = $this->getEntityManager()
+        $conversation = $this->entityManager
             ->getRDBRepository('ChatwootConversation')
             ->where($where)
             ->findOne();
@@ -129,7 +131,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
             throw new Forbidden('Access denied.');
         }
 
-        $repository = $this->getEntityManager()
+        $repository = $this->entityManager
             ->getRDBRepository('ChatwootConversation');
 
         $countLink = function (string $link) use ($repository, $conversation): int {
@@ -164,7 +166,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
         }
 
         // Get the conversation
-        $conversation = $this->getEntityManager()->getEntityById('ChatwootConversation', $id);
+        $conversation = $this->entityManager->getEntityById('ChatwootConversation', $id);
         
         if (!$conversation) {
             throw new NotFound('Conversation not found.');
@@ -183,7 +185,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
         }
 
         // Fetch memberships for this account
-        $memberships = $this->getEntityManager()
+        $memberships = $this->entityManager
             ->getRDBRepository('ChatwootAccountUserMembership')
             ->where(['chatwootAccountId' => $accountId])
             ->order('name')
@@ -195,7 +197,7 @@ class ChatwootConversation extends \Espo\Core\Templates\Controllers\Base
             $platformUserId = null;
             $userId = $membership->get('chatwootUserId');
             if ($userId) {
-                $chatwootUser = $this->getEntityManager()->getEntityById('ChatwootUser', $userId);
+                $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $userId);
                 if ($chatwootUser) {
                     $platformUserId = $chatwootUser->get('chatwootUserId');
                 }

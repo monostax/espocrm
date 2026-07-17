@@ -356,7 +356,7 @@ class RotateAutomationToConcierge implements RebuildAction
      */
     private function isLegacyUser(Entity $chatwootUser): bool
     {
-        $email = (string) $chatwootUser->get('email');
+        $email = (string) $chatwootUser->get('emailAddress');
         if ($email === '') {
             return false;
         }
@@ -471,7 +471,7 @@ class RotateAutomationToConcierge implements RebuildAction
 
             $attributes = [
                 'name' => $conciergeUserData['name'],
-                'email' => $conciergeUserData['email'],
+                'emailAddress' => $conciergeUserData['email'],
                 'password' => $conciergeUserData['password'],
                 'displayName' => $conciergeUserData['name'],
                 'platformId' => $platform->getId(),
@@ -489,7 +489,6 @@ class RotateAutomationToConcierge implements RebuildAction
             }
 
             $chatwootUser = $this->entityManager->createEntity('ChatwootUser', $attributes, [
-                'skipHooks' => true,
                 'silent' => true,
             ]);
 

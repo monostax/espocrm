@@ -207,9 +207,9 @@ class ChatwootAccountUserMembershipService
             throw new \Espo\Core\Exceptions\BadRequest('CRM User email is required to create an AI agent profile.');
         }
 
-        // Keep ChatwootUser email in sync if it differed
-        if ($email !== $chatwootUser->get('email')) {
-            $chatwootUser->set('email', $email);
+        // Keep ChatwootUser email in sync if it differed.
+        if ($email !== $chatwootUser->get('emailAddress')) {
+            $chatwootUser->set('emailAddress', $email);
             $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
         }
 
@@ -314,8 +314,7 @@ class ChatwootAccountUserMembershipService
         // Resolve email through a multi-step fallback chain:
         // 1. Membership's email varchar field (populated by sync job from Chatwoot API)
         // 2. ChatwootUser's assigned CRM User email (most reliable source)
-        // 3. ChatwootUser's email field (EspoCRM "email" type — stored in junction table,
-        //    may be empty if entity was created with ['silent' => true])
+        // 3. ChatwootUser's emailAddress field.
         $email = $membership->get('email');
 
         if (!$email) {
@@ -329,7 +328,7 @@ class ChatwootAccountUserMembershipService
         }
 
         if (!$email) {
-            $email = $chatwootUser->get('email');
+            $email = $chatwootUser->get('emailAddress');
         }
 
         $name = $membership->get('name') ?: $chatwootUser->get('name') ?: 'Agent';

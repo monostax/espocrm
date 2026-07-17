@@ -13,6 +13,7 @@ namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
+use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
@@ -31,8 +32,10 @@ use stdClass;
  *
  * Route: POST Contact/:id/initiateConversation
  */
-class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
+class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements Di\EntityManagerAware
 {
+    use Di\EntityManagerSetter;
+
     /**
      * POST Contact/:id/initiateConversation
      *
@@ -61,7 +64,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
             throw new BadRequest("inboxId is required in request body.");
         }
 
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         // === Layer 1: Contact ACL (Decision #9) ===
         $contact = $entityManager->getEntityById('Contact', $contactEntityId);
@@ -94,7 +97,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         }
 
         // === Layer 2: Chatwoot membership validation ===
-        $currentUserId = $this->getUser()->getId();
+        $currentUserId = $this->user->getId();
 
         $chatwootUser = $entityManager
             ->getRDBRepository('ChatwootUser')
@@ -121,7 +124,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         // === Layer 3: Inbox access validation (Decision #3) ===
         $inboxAccessResolver = $this->injectableFactory->create(InboxAccessResolver::class);
 
-        if (!$inboxAccessResolver->canAccessInboxId($this->getUser(), $inboxEntityId)) {
+        if (!$inboxAccessResolver->canAccessInboxId($this->user, $inboxEntityId)) {
             throw new Forbidden("You do not have access to this inbox.");
         }
 
@@ -333,7 +336,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         array $chatwootContactData,
         array $teamsIds
     ): \Espo\ORM\Entity {
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         // Check for existing (including soft-deleted) — same pattern as SyncContactsFromChatwoot
         $query = $entityManager
@@ -416,7 +419,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         array $teamsIds,
         ?string $sourceId = null
     ): \Espo\ORM\Entity {
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         // Check for existing
         $existing = $entityManager
@@ -515,7 +518,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         }
 
         // When contact was found (not created), check existing local records
-        $existingContactInbox = $this->getEntityManager()
+        $existingContactInbox = $this->entityManager
             ->getRDBRepository('ChatwootContactInbox')
             ->where([
                 'chatwootInboxId' => $externalInboxId,
@@ -580,7 +583,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
         string $accountApiKey,
         int $externalAccountId
     ): array {
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         $phoneBased = $mappedChannelType === 'whatsapp' || $mappedChannelType === 'sms';
         $emailBased = $mappedChannelType === 'email';
@@ -910,7 +913,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
      */
     private function findRoutableIdentity(string $channelType, array $where): ?\Espo\ORM\Entity
     {
-        $identities = $this->getEntityManager()
+        $identities = $this->entityManager
             ->getRDBRepository('ContactChannelIdentity')
             ->where($where)
             ->order('isPrimary', 'DESC')
@@ -979,7 +982,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
      */
     private function phoneFromIdentitiesWhere(array $where): ?string
     {
-        $identities = $this->getEntityManager()
+        $identities = $this->entityManager
             ->getRDBRepository('ContactChannelIdentity')
             ->where($where)
             ->order('isPrimary', 'DESC')
@@ -1034,7 +1037,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
      */
     private function createEntityWithDuplicateHandling(string $entityType, array $data): \Espo\ORM\Entity
     {
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         try {
             return $entityManager->createEntity($entityType, $data, ['silent' => true]);
@@ -1071,7 +1074,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base
      */
     private function findExistingByUniqueFields(string $entityType, array $data): \Espo\ORM\Entity
     {
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
         $where = [];
 
         switch ($entityType) {

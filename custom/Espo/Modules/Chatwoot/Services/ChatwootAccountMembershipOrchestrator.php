@@ -147,7 +147,7 @@ class ChatwootAccountMembershipOrchestrator
 
                 $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
                     'name' => $name,
-                    'email' => $email,
+                    'emailAddress' => $email,
                     'password' => $generatedPassword,
                     'platformId' => $platformId,
                     'assignedUserId' => $userId,
@@ -156,8 +156,8 @@ class ChatwootAccountMembershipOrchestrator
                 ], ['silent' => true]);
             }
 
-            if ($chatwootUser->get('email') !== $email) {
-                $chatwootUser->set('email', $email);
+            if ($chatwootUser->get('emailAddress') !== $email) {
+                $chatwootUser->set('emailAddress', $email);
                 $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
             }
 

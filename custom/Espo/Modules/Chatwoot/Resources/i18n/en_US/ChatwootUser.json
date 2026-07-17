@@ -2,7 +2,7 @@
     "fields": {
         "name": "Name",
         "displayName": "Display Name",
-        "email": "Email",
+        "emailAddress": "Email",
         "password": "Password",
         "platform": "Platform",
         "assignedUser": "Assigned User",

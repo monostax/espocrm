@@ -12,7 +12,7 @@
             ],
             [
                 {
-                    "name": "email"
+                    "name": "emailAddress"
                 },
                 {
                     "name": "password"

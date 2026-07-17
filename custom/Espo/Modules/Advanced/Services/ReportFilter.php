@@ -22,6 +22,7 @@ use Espo\Modules\Advanced\Entities\ReportFilter as ReportFilterEntity;
 use Espo\Modules\Advanced\Tools\ReportFilter\Service;
 use Espo\ORM\Entity;
 use Espo\Services\Record;
+use stdClass;
 
 /**
  * @extends Record<ReportFilterEntity>
@@ -35,17 +36,17 @@ class ReportFilter extends Record
      */
     protected $forceSelectAllAttributes = true;
 
-    protected function afterCreateEntity(Entity $entity, $data)
+    protected function afterCreateEntity(Entity $entity, stdClass $data): void
     {
         $this->createFilterService()->rebuild($entity->get('entityType'));
     }
 
-    protected function afterUpdateEntity(Entity $entity, $data)
+    protected function afterUpdateEntity(Entity $entity, stdClass $data): void
     {
         $this->createFilterService()->rebuild($entity->get('entityType'));
     }
 
-    protected function afterDeleteEntity(Entity $entity)
+    protected function afterDeleteEntity(Entity $entity): void
     {
         $this->createFilterService()->rebuild($entity->get('entityType'));
     }

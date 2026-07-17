@@ -23,6 +23,7 @@ use Espo\Modules\Advanced\Entities\ReportPanel as ReportPanelEntity;
 use Espo\Modules\Advanced\Tools\ReportPanel\Service as PanelService;
 use Espo\ORM\Entity;
 use Espo\Services\Record;
+use stdClass;
 
 /**
  * @extends Record<ReportPanelEntity>
@@ -39,7 +40,7 @@ class ReportPanel extends Record
     /**
      * @throws Error
      */
-    protected function afterCreateEntity(Entity $entity, $data)
+    protected function afterCreateEntity(Entity $entity, stdClass $data): void
     {
         $this->rebuild($entity->get('entityType'));
     }
@@ -47,7 +48,7 @@ class ReportPanel extends Record
     /**
      * @throws Error
      */
-    protected function afterUpdateEntity(Entity $entity, $data)
+    protected function afterUpdateEntity(Entity $entity, stdClass $data): void
     {
         $this->rebuild($entity->get('entityType'));
     }
@@ -55,7 +56,7 @@ class ReportPanel extends Record
     /**
      * @throws Error
      */
-    protected function afterDeleteEntity(Entity $entity)
+    protected function afterDeleteEntity(Entity $entity): void
     {
         $this->rebuild($entity->get('entityType'));
     }

@@ -8,8 +8,10 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Record\CreateParams;
+use Espo\Core\Record\CreateResult;
 use Espo\Core\Record\FindParams;
 use Espo\Core\Record\ReadParams;
+use Espo\Core\Record\ReadResult;
 use Espo\Core\Record\Service as RecordService;
 use Espo\Core\Select\SearchParams;
 use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Services\ClinicaNasNuvensIntegrationProfileResolver;
@@ -69,7 +71,7 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
     private const PROCEDIMENTO_TIPO_CONVENIO_ENTITY_TYPE =
         'FeatureIntegrationClinicaNasNuvensProcedimentoConvenio';
 
-    public function read(string $id, ReadParams $params): Entity
+    public function read(string $id, ReadParams $params = new ReadParams()): ReadResult
     {
         return parent::read($id, $params);
     }
@@ -81,7 +83,7 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
         return parent::find($searchParams, $params);
     }
 
-    public function create(stdClass $data, CreateParams $params): Entity
+    public function create(stdClass $data, CreateParams $params = new CreateParams()): CreateResult
     {
         $settingsId = $this->normalizeNullableString($data->settingsId ?? null);
 
@@ -130,7 +132,7 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
                         $this->mergeTeamsIntoProcedimentoTipoAnchor($existing, $rawTeamIdList);
                         $this->enrichEntities([$existing], true);
 
-                        return $existing;
+                        return new CreateResult($existing);
                     }
                 }
             }
@@ -138,12 +140,12 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
             $this->assertProcedimentoTipoExistsBeforeCreate($rawProcedimentoTipoId, $preCreateCredential);
         }
 
-        $entity = parent::create($data, $params);
+        $entity = parent::create($data, $params)->getEntity();
 
         $this->enrichEntities([$entity], true);
         $entity = $this->persistProcedimentoTipoAfterCreate($entity);
 
-        return $entity;
+        return new CreateResult($entity);
     }
 
     public function hydrateAfterImport(string $id): void
@@ -483,7 +485,7 @@ class FeatureIntegrationClinicaNasNuvensProcedimentoTipo extends RecordService i
             'convenioTipoId' => $convenioTipoId,
             'teamsIds' => $teamIdList,
             'credentialId' => $apiCredential->getId(),
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
     }
 
     /**

@@ -4,6 +4,7 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedScheduledJobs",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootPlatform",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootAccount",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootUserEmailAddress",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillOpportunityVersionNumber",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootTenant",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChannelIdentities",

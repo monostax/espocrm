@@ -7,8 +7,10 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Record\CreateParams;
+use Espo\Core\Record\CreateResult;
 use Espo\Core\Record\FindParams;
 use Espo\Core\Record\ReadParams;
+use Espo\Core\Record\ReadResult;
 use Espo\Core\Record\Service as RecordService;
 use Espo\Core\Select\SearchParams;
 use Espo\Modules\FeatureIntegrationClinicaNasNuvens\Services\ClinicaNasNuvensIntegrationProfileResolver;
@@ -86,7 +88,7 @@ class FeatureIntegrationClinicaNasNuvensProfissional extends RecordService imple
         'especialidadesTexto',
     ];
 
-    public function read(string $id, ReadParams $params): Entity
+    public function read(string $id, ReadParams $params = new ReadParams()): ReadResult
     {
         return parent::read($id, $params);
     }
@@ -98,7 +100,7 @@ class FeatureIntegrationClinicaNasNuvensProfissional extends RecordService imple
         return parent::find($searchParams, $params);
     }
 
-    public function create(stdClass $data, CreateParams $params): Entity
+    public function create(stdClass $data, CreateParams $params = new CreateParams()): CreateResult
     {
         $settingsId = $this->normalizeNullableString($data->settingsId ?? null);
 
@@ -142,7 +144,7 @@ class FeatureIntegrationClinicaNasNuvensProfissional extends RecordService imple
                     $this->mergeTeamsIntoProfissionalAnchor($existingByPessoa, $rawTeamIdList);
                     $this->enrichEntities([$existingByPessoa], true);
 
-                    return $existingByPessoa;
+                    return new CreateResult($existingByPessoa);
                 }
             }
 
@@ -180,19 +182,19 @@ class FeatureIntegrationClinicaNasNuvensProfissional extends RecordService imple
                     $this->mergeTeamsIntoProfissionalAnchor($existing, $rawTeamIdList);
                     $this->enrichEntities([$existing], true);
 
-                    return $existing;
+                    return new CreateResult($existing);
                 }
             }
         }
 
         $this->assertProfissionalExistsBeforeCreate($rawProfissionalId, $rawPessoaId, $preCreateCredential);
 
-        $entity = parent::create($data, $params);
+        $entity = parent::create($data, $params)->getEntity();
 
         $this->enrichEntities([$entity], true);
         $entity = $this->persistProfissionalAfterCreate($entity);
 
-        return $entity;
+        return new CreateResult($entity);
     }
 
     public function hydrateAfterImport(string $id): void

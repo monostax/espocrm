@@ -13,6 +13,7 @@ namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
+use Espo\Core\Di;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
@@ -25,8 +26,10 @@ use stdClass;
  *
  * Provides custom actions for creating conversations from a contact inbox.
  */
-class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
+class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base implements Di\EntityManagerAware
 {
+    use Di\EntityManagerSetter;
+
     /**
      * POST ChatwootContactInbox/:id/createConversation
      *
@@ -47,7 +50,7 @@ class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
             throw new BadRequest("ID is required.");
         }
 
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         // Load the ChatwootContactInbox entity
         $contactInbox = $entityManager->getEntityById('ChatwootContactInbox', $id);
@@ -57,7 +60,7 @@ class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
         }
 
         // === Server-side account ownership validation (Decision #17) ===
-        $currentUserId = $this->getUser()->getId();
+        $currentUserId = $this->user->getId();
 
         $chatwootUser = $entityManager
             ->getRDBRepository('ChatwootUser')
@@ -226,7 +229,7 @@ class ChatwootContactInbox extends \Espo\Core\Templates\Controllers\Base
      */
     private function findOrCreateLocalConversation(array $data): \Espo\ORM\Entity
     {
-        $entityManager = $this->getEntityManager();
+        $entityManager = $this->entityManager;
 
         $where = [
             'chatwootConversationId' => $data['chatwootConversationId'],
