@@ -54,8 +54,10 @@ class CreateRelatedHelper {
      * @param {import('model').default} model
      * @param {string} link
      * @param {{
+     *     focusForCreate?: boolean,
      *     afterSave: function(import('model').default),
      * }} [options]
+     * @return {Promise<import('views/modals/edit').default>}
      */
     async process(model, link, options = {}) {
         const scope = model.defs['links'][link].entity;
@@ -73,8 +75,8 @@ class CreateRelatedHelper {
 
         if (handler) {
             const Handler = await Espo.loader.requirePromise(handler);
-            /** @type {import('handlers/create-related').default} */
-            const handlerObj = new Handler(this.view.getHelper());
+            /** @type {import('contracts/relation').CreateRelatedHandler} */
+            const handlerObj = new Handler(this.view.getHelper(), {link: link});
 
             const additionalAttributes = await handlerObj.getAttributes(model, link);
 
@@ -83,13 +85,14 @@ class CreateRelatedHelper {
 
         const helper = new RecordModal();
 
-        await helper.showCreate(this.view, {
+        return await helper.showCreate(this.view, {
             entityType: scope,
             relate: {
                 model: model,
                 link: foreignLink,
             },
             attributes: attributes,
+            focusForCreate: options.focusForCreate,
             afterSave: m => {
                 if (options.afterSave) {
                     options.afterSave(m);

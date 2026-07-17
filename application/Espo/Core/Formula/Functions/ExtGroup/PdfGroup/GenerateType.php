@@ -30,11 +30,11 @@
 namespace Espo\Core\Formula\Functions\ExtGroup\PdfGroup;
 
 use Espo\Core\Field\LinkParent;
+use Espo\Core\Formula\Exceptions\FunctionRuntimeError;
 use Espo\Core\Name\Field;
 use Espo\Entities\Attachment;
 use Espo\Entities\Template;
 use Espo\Core\Formula\ArgumentList;
-use Espo\Core\Formula\Exceptions\Error;
 use Espo\Core\Formula\Functions\BaseFunction;
 use Espo\Core\Utils\Util;
 use Espo\ORM\Entity;
@@ -67,7 +67,7 @@ class GenerateType extends BaseFunction implements
         $entityType = $args[0];
         $id = $args[1];
         $templateId = $args[2];
-        $fileName = $args[3];
+        $fileName = $args[3] ?? null;
 
         if (!$entityType || !is_string($entityType)) {
             $this->throwBadArgumentType(1, 'string');
@@ -87,26 +87,16 @@ class GenerateType extends BaseFunction implements
 
         $em = $this->entityManager;
 
-        try {
-            $entity = $em->getEntityById($entityType, $id);
-        } catch (Exception $e) {
-            $this->log("Message: " . $e->getMessage() . ".");
-
-            throw new Error();
-        }
+        $entity = $em->getEntityById($entityType, $id);
 
         if (!$entity) {
-            $this->log("Record $entityType $id does not exist.");
-
-            throw new Error();
+            throw new FunctionRuntimeError("Record $entityType $id does not exist.");
         }
 
         $template = $em->getRDBRepositoryByClass(Template::class)->getById($templateId);
 
         if (!$template) {
-            $this->log("Template $templateId does not exist.");
-
-            throw new Error();
+            throw new FunctionRuntimeError("Template $templateId does not exist.");
         }
 
         $params = Params::create()->withAcl(false);
@@ -121,9 +111,7 @@ class GenerateType extends BaseFunction implements
                 params: $params,
             );
         } catch (Exception $e) {
-            $this->log("Error while generating. Message: " . $e->getMessage() . ".", 'error');
-
-            throw new Error();
+            throw new FunctionRuntimeError("Error while generating PDF template. {$e->getMessage()}", previous: $e);
         }
 
         $fileName = $this->prepareFilename($fileName, $result, $entity);

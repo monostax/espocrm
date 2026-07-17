@@ -208,7 +208,7 @@ class PanelStreamView extends RelationshipPanelView {
         this.allowInternalNotes = false;
 
         if (!this.getUser().isPortal()) {
-            this.allowInternalNotes = this.getMetadata().get(['clientDefs', this.entityType, 'allowInternalNotes']);
+            this.allowInternalNotes = this.getMetadata().get(['streamDefs', this.entityType, 'allowInternalNotes']);
         }
 
         this.hasPinned = this.model.entityType !== 'User';
@@ -363,12 +363,14 @@ class PanelStreamView extends RelationshipPanelView {
     }
 
     setupTitle() {
-        this.title = this.translate('Stream');
+        this.title = this.getHelper().escapeString(this.translate('Stream'));
 
-        this.titleHtml = this.title;
+        this.titleHtml = this.title
 
         if (this.filter && this.filter !== 'all') {
-            this.titleHtml += ' &middot; ' + this.translate(this.filter, 'filters', 'Note');
+            const filterPart = this.getHelper().escapeString(this.translate(this.filter, 'filters', 'Note'));
+
+            this.titleHtml += ' &middot; ' + filterPart;
         }
     }
 
@@ -787,6 +789,7 @@ class PanelStreamView extends RelationshipPanelView {
             action: 'viewPostList',
             text: this.translate('View Posts', 'labels', 'Note'),
             onClick: () => this.actionViewPostList(),
+            iconClass: 'far fa-comments',
         });
 
         if (this.model.entityType !== 'User') {
@@ -794,6 +797,7 @@ class PanelStreamView extends RelationshipPanelView {
                 action: 'viewAttachmentList',
                 text: this.translate('View Attachments', 'labels', 'Note'),
                 onClick: () => this.actionViewAttachmentList(),
+                iconClass: 'fas fa-paperclip',
             });
         }
 
@@ -822,7 +826,7 @@ class PanelStreamView extends RelationshipPanelView {
                             $('<span>')
                                 .addClass('check-icon fas fa-check pull-right')
                                 .addClass(!selected ? ' hidden' : ''),
-                            $('<div>')
+                            $('<div class="item-text">')
                                 .text(this.translate(item, 'filters', 'Note')),
                         )
                         .get(0).innerHTML,

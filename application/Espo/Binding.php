@@ -242,6 +242,11 @@ class Binding implements BindingProcessor
             'Espo\\Core\\Utils\\Config\\ApplicationConfig',
             'applicationConfig'
         );
+
+        $binder->bindService(
+            'Espo\\Core\\Session\\Session',
+            'session'
+        );
     }
 
     private function bindCore(Binder $binder): void
@@ -264,6 +269,11 @@ class Binding implements BindingProcessor
 
     private function bindMisc(Binder $binder): void
     {
+        $binder->bindImplementation(
+            'Espo\\Core\\Utils\\DateTime\\Clock',
+            'Espo\\Core\\Utils\\DateTime\\SystemClock'
+        );
+
         $binder->bindImplementation(
             'Espo\\Core\\Utils\\Id\\RecordIdGenerator',
             'Espo\\Core\\Utils\\Id\\DefaultRecordIdGenerator'
@@ -292,6 +302,11 @@ class Binding implements BindingProcessor
                 'Espo\\Core\\Authentication\\Oidc\\UserProvider',
                 'Espo\\Core\\Authentication\\Oidc\\UserProvider\\DefaultUserProvider'
             );
+
+        $binder->bindImplementation(
+            'Espo\\Core\\Authentication\\Oidc\\UserProvider\\UserInfoPopulator',
+            'Espo\\Core\\Authentication\\Oidc\\UserProvider\\DefaultUserInfoPopulator'
+        );
 
         $binder->bindImplementation(
             'Espo\\Core\\Mail\\Importer\\ParentFinder',

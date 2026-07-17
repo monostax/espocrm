@@ -41,6 +41,16 @@ class Contact extends Person
     public const ENTITY_TYPE = 'Contact';
 
     /** @since v9.3.0. */
+    public const string ATTR_ACCOUNT_ID = 'accountId';
+    /** @since v9.3.0. */
+    public const string FIELD_ACCOUNTS = 'accounts';
+    /** @since v9.3.0. */
+    public const string FIELD_ACCOUNT = 'account';
+
+    /** @since v9.3.0. */
+    public const string RELATIONSHIP_ACCOUNT_CONTACT = 'AccountContact';
+
+    /** @since v9.3.0. */
     public const string COLUMN_ACCOUNTS_ROLE = 'role';
 
     /**
@@ -59,6 +69,27 @@ class Contact extends Person
     {
         /** @var ?Account */
         return $this->relations->getOne('account');
+    }
+
+    /**
+     * Get accounts as link-multiple.
+     *
+     * @since 10.0.0
+     */
+    public function getAccountsLinkMultiple(): LinkMultiple
+    {
+        /** @var LinkMultiple */
+        return $this->getValueObject('accounts');
+    }
+
+    /**
+     * Set accounts.
+     *
+     * @since 10.0.0
+     */
+    public function setAccounts(LinkMultiple $accounts): self
+    {
+        return $this->setValueObject(self::FIELD_ACCOUNTS, $accounts);
     }
 
     /**

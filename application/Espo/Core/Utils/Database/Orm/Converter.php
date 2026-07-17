@@ -252,9 +252,6 @@ class Converter
     private function afterFieldsProcess(array $ormMetadata): array
     {
         foreach ($ormMetadata as /*$entityType =>*/ &$entityParams) {
-            if (empty($entityParams[EntityParam::ATTRIBUTES])) {
-                print_r($entityParams);
-            }
             foreach ($entityParams[EntityParam::ATTRIBUTES] as $attribute => &$attributeParams) {
 
                 // Remove fields without type.
@@ -549,6 +546,7 @@ class Converter
                 AttributeParam::TYPE => Entity::INT,
                 AttributeParam::DB_TYPE => Types::BIGINT,
                 CoreAttributeParam::NOT_EXPORTABLE => true,
+                AttributeParam::DEFAULT => 0,
             ];
         }
 
@@ -861,10 +859,14 @@ class Converter
         }
 
         // For backward compatibility. Actual as of v8.0.
-        // @todo Remove in v10.0.
-        // @todo Add deprecation warning in v9.0. If 'fields' is set.
+        // @todo Remove in v11.0.
+        // @todo Add deprecation warning in v10.0. If 'fields' is set.
         foreach ($additionalDefs as &$entityDefs) {
             if (!isset($entityDefs['attributes'])) {
+                $message = "Parameter name 'fields' in 'additionalTables' is deprecated. Use 'attributes'.";
+
+                trigger_error($message, E_USER_DEPRECATED);
+
                 $entityDefs['attributes'] = $entityDefs['fields'] ?? [];
 
                 unset($entityDefs['fields']);

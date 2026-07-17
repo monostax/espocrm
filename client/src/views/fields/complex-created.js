@@ -107,6 +107,7 @@ class ComplexCreatedFieldView extends BaseFieldView {
             readOnly: true,
             readOnlyLocked: true,
             selector: '[data-name="' + field + '"]',
+            isInComplexField: true,
         });
     }
 

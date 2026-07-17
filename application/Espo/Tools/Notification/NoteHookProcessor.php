@@ -82,31 +82,27 @@ class NoteHookProcessor
             return;
         }
 
-        $userList = $this->getSubscriberList($parentType, $parentId, $note->isInternal());
+        $users = $this->getSubscriberList($parentType, $parentId, $note->isInternal());
 
-        $userIdMetList = [];
+        $regularUserIds = [];
 
-        foreach ($userList as $user) {
-            $userIdMetList[] = $user->getId();
+        foreach ($users as $user) {
+            $regularUserIds[] = $user->getId();
         }
 
+        $superUserIds = [];
+
         if ($superParentType && $superParentId) {
-            $additionalUserList = $this->getSubscriberList(
-                $superParentType,
-                $superParentId,
-                $note->isInternal()
-            );
+            $superUsers = $this->getSubscriberList($superParentType, $superParentId, $note->isInternal());
 
-            foreach ($additionalUserList as $user) {
-                if (
-                    $user->isPortal() ||
-                    in_array($user->getId(), $userIdMetList)
-                ) {
-                    continue;
-                }
+            $superUsers = $superUsers->filter(function (User $user) use ($regularUserIds) {
+                return !$user->isPortal() && !in_array($user->getId(), $regularUserIds);
+            });
 
-                $userIdMetList[] = $user->getId();
-                $userList[] = $user;
+            foreach ($superUsers as $user) {
+                $superUserIds[] = $user->getId();
+
+                $users[] = $user;
             }
         }
 
@@ -116,23 +112,23 @@ class NoteHookProcessor
         $skipAclCheck = !$note->isAclProcessed();
 
         $teamIdList = null;
-        $userIdList = null;
+        $regularUserIds = null;
 
         if (!$skipAclCheck) {
             $teamIdList = $note->getLinkMultipleIdList(Field::TEAMS);
-            $userIdList = $note->getLinkMultipleIdList('users');
+            $regularUserIds = $note->getLinkMultipleIdList('users');
         }
 
         $notifyUserIdList = [];
 
-        foreach ($userList as $user) {
+        foreach ($users as $user) {
             if ($skipAclCheck) {
                 $notifyUserIdList[] = $user->getId();
 
                 continue;
             }
 
-            /** @var string[] $userIdList */
+            /** @var string[] $regularUserIds */
             /** @var string[] $teamIdList */
 
             if ($user->isAdmin()) {
@@ -153,14 +149,18 @@ class NoteHookProcessor
 
             $level = $this->internalAclManager->getLevel($user, $targetType, Table::ACTION_READ);
 
-            if (!$this->checkUserAccess($user, $level, $teamIdList, $userIdList)) {
+            if (!$this->checkUserAccess($user, $level, $teamIdList, $regularUserIds)) {
                 continue;
             }
 
             $notifyUserIdList[] = $user->getId();
         }
 
-        $this->processNotify($note, array_unique($notifyUserIdList), $params);
+        $regularIds = array_unique(array_diff($notifyUserIdList, $superUserIds));
+        $superIds = array_unique(array_intersect($notifyUserIdList, $superUserIds));
+
+        $this->processNotify($note, $regularIds, $params);
+        $this->processNotify($note, $superIds, $params, true);
     }
 
     private function afterSaveNoParent(Note $note): void
@@ -193,7 +193,7 @@ class NoteHookProcessor
     /**
      * @param string[] $userIdList
      */
-    private function processNotify(Note $note, array $userIdList, ?Params $params = null): void
+    private function processNotify(Note $note, array $userIdList, ?Params $params = null, bool $isSuper = false): void
     {
         $filteredUserIdList = array_filter(
             $userIdList,
@@ -229,7 +229,14 @@ class NoteHookProcessor
             return;
         }
 
-        $this->service->notifyAboutNote($filteredUserIdList, $note, $params);
+        $notifyParams = new NoteNotifyParams(isSuper: $isSuper);
+
+        $this->service->notifyAboutNote(
+            userIdList: $filteredUserIdList,
+            note: $note,
+            params: $params,
+            notifyParams: $notifyParams,
+        );
     }
 
     private function afterSaveTargetUsers(Note $note): void

@@ -44,12 +44,8 @@ use tests\integration\Core\BaseTestCase;
 
 class ActionTest extends BaseTestCase
 {
-    /** @var Application */
-    private $app;
-
     /** @var EntityManager */
     private $entityManager;
-
 
     /** @var Merger */
     private $merger;
@@ -58,17 +54,14 @@ class ActionTest extends BaseTestCase
 
     private function init(): void
     {
-        $this->app = $this->createApplication();
-
-        $this->entityManager = $this->app
+        $this->entityManager = $this->getApplication()
             ->getContainer()
-            ->get('entityManager');
+            ->getByClass(EntityManager::class);
 
         $this->action = $this->getInjectableFactory()->create(PostProcess::class);
 
-        $this->merger = $this->app
-            ->getContainer()
-            ->get('injectableFactory')
+        $this->merger = $this->getApplication()
+            ->getInjectableFactory()
             ->create(Merger::class);
     }
 
@@ -109,7 +102,7 @@ class ActionTest extends BaseTestCase
             ],
         ]);
 
-        $this->auth('tester');
+        $this->authenticate('tester');
 
         $this->init();
 
@@ -129,8 +122,8 @@ class ActionTest extends BaseTestCase
         $contact1->setEmailAddressGroup($emailAddressGroup1);
 
         $phoneNumberGroup1 = $contact1->getPhoneNumberGroup()
-            ->withAdded(PhoneNumber::create('+1a'))
-            ->withAdded(PhoneNumber::create('+1b')->invalid());
+            ->withAdded(PhoneNumber::create('+11000000000'))
+            ->withAdded(PhoneNumber::create('+12000000000')->invalid());
 
         $contact1->setPhoneNumberGroup($phoneNumberGroup1);
 
@@ -148,8 +141,8 @@ class ActionTest extends BaseTestCase
         $contact2->setEmailAddressGroup($emailAddressGroup2);
 
         $phoneNumberGroup2 = $contact2->getPhoneNumberGroup()
-            ->withAdded(PhoneNumber::create('+2a'))
-            ->withAdded(PhoneNumber::create('+2b')->optedOut());
+            ->withAdded(PhoneNumber::create('+11100000000'))
+            ->withAdded(PhoneNumber::create('+12100000000')->optedOut());
 
         $contact2->setPhoneNumberGroup($phoneNumberGroup2);
 
@@ -226,7 +219,7 @@ class ActionTest extends BaseTestCase
         );
 
         $this->assertEquals(
-            '+1a',
+            '+11000000000',
             $phoneNumberGroup->getPrimary()->getNumber()
         );
 
@@ -239,11 +232,11 @@ class ActionTest extends BaseTestCase
         );
 
         $this->assertTrue(
-            $phoneNumberGroup->getByNumber('+2b')->isOptedOut()
+            $phoneNumberGroup->getByNumber('+12100000000')->isOptedOut()
         );
 
         $this->assertTrue(
-            $phoneNumberGroup->getByNumber('+1b')->isInvalid()
+            $phoneNumberGroup->getByNumber('+12000000000')->isInvalid()
         );
 
         $this->assertEquals(
@@ -330,7 +323,7 @@ class ActionTest extends BaseTestCase
             ],
         ]);
 
-        $this->auth('tester');
+        $this->authenticate('tester');
 
         $this->init();
 
@@ -358,7 +351,7 @@ class ActionTest extends BaseTestCase
             ],
         ]);
 
-        $this->auth('tester');
+        $this->authenticate('tester');
 
         $this->init();
 

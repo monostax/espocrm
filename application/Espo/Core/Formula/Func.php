@@ -33,6 +33,8 @@ use Espo\Core\Formula\Exceptions\Error;
 
 /**
  * A function.
+ *
+ * An entity passed to the constructor as of v10.0.0. But it is not an officially guaranteed contract.
  */
 interface Func
 {

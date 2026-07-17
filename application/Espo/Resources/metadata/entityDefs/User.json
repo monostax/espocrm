@@ -12,6 +12,7 @@
                 "inlineEditDisabled"
             ],
             "index": true,
+            "duplicateIgnore": true,
             "validatorClassNameList": [
                 "Espo\\Classes\\FieldValidators\\User\\UserName\\Valid"
             ]
@@ -39,7 +40,7 @@
             "index": true,
             "inlineEditDisabled": true,
             "layoutDetailDisabled": true,
-            "layoutMassUpdateDisabled": true,
+            "massUpdateDisabled": true,
             "fieldManagerParamList": [
                 "tooltipText"
             ]
@@ -49,10 +50,12 @@
             "maxLength": 150,
             "internal": true,
             "utility": true,
+            "massUpdateDisabled": true,
             "directAccessDisabled": true,
             "fieldManagerParamList": [
                 "tooltipText"
             ],
+            "duplicateIgnore": true,
             "orderDisabled": true
         },
         "passwordConfirm": {
@@ -63,7 +66,15 @@
             "notStorable": true,
             "orderDisabled": true,
             "directAccessDisabled": true,
+            "duplicateIgnore": true,
             "fieldManagerParamList": []
+        },
+        "passwordVersion": {
+            "type": "int",
+            "default": 0,
+            "notNull": true,
+            "readOnly": true,
+            "utility": true
         },
         "authMethod": {
             "type": "enum",
@@ -90,6 +101,7 @@
             ],
             "copyToClipboard": true,
             "dynamicLogicVisibleDisabled": true,
+            "duplicateIgnore": true,
             "orderDisabled": true
         },
         "secretKey": {
@@ -106,6 +118,7 @@
                 "tooltipText"
             ],
             "copyToClipboard": true,
+            "duplicateIgnore": true,
             "dynamicLogicVisibleDisabled": true
         },
         "salutationName": {
@@ -394,6 +407,7 @@
                 "tooltipText"
             ],
             "audited": true,
+            "duplicateIgnore": true,
             "dynamicLogicVisibleDisabled": true
         },
         "accounts": {
@@ -435,6 +449,7 @@
             "defaultAttributes": {
                 "avatarId": null
             },
+            "duplicateIgnore": true,
             "layoutAvailabilityList": []
         },
         "avatarColor": {
@@ -502,6 +517,7 @@
         "userData": {
             "type": "linkOne",
             "utility": true,
+            "duplicateIgnore": true,
             "customizationDisabled": true
         },
         "lastAccess": {

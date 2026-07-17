@@ -124,6 +124,7 @@ class EmailDetailRecordView extends DetailRecordView {
                 name: 'markAsImportant',
                 hidden: this.model.get('isImportant'),
                 groupIndex: 1,
+                iconClass: 'far fa-star',
             });
 
             this.addDropdownItem({
@@ -138,6 +139,7 @@ class EmailDetailRecordView extends DetailRecordView {
                 name: 'moveToTrash',
                 hidden: this.isInTrash(),
                 groupIndex: 2,
+                iconClass: 'far fa-trash-can',
             });
 
             this.addDropdownItem({
@@ -153,12 +155,14 @@ class EmailDetailRecordView extends DetailRecordView {
                 groupIndex: 2,
                 hidden: this.isInArchive(),
                 onClick: () => this.actionMoveToArchive(),
+                iconClass: 'far fa-caret-square-down',
             });
 
             this.addDropdownItem({
                 label: 'Move to Folder',
                 name: 'moveToFolder',
                 groupIndex: 2,
+                iconClass: 'far fa-folder',
             });
         } else if (this.model.attributes.groupFolderId) {
             this.addDropdownItem({
@@ -166,6 +170,7 @@ class EmailDetailRecordView extends DetailRecordView {
                 name: 'moveToTrash',
                 hidden: this.isInTrash(),
                 groupIndex: 2,
+                iconClass: 'far fa-trash-can',
             });
 
             this.addDropdownItem({
@@ -181,6 +186,7 @@ class EmailDetailRecordView extends DetailRecordView {
                 groupIndex: 2,
                 hidden: this.isInArchive() || this.isInTrash(),
                 onClick: () => this.actionMoveToArchive(),
+                iconClass: 'far fa-caret-square-down',
             });
 
             this.addDropdownItem({
@@ -188,12 +194,14 @@ class EmailDetailRecordView extends DetailRecordView {
                 name: 'moveToFolder',
                 groupIndex: 2,
                 hidden: this.isInTrash(),
+                iconClass: 'far fa-folder',
             });
         } else {
             this.addDropdownItem({
                 label: 'Move to Folder',
                 name: 'moveToFolder',
                 groupIndex: 2,
+                iconClass: 'far fa-folder',
             });
         }
 
@@ -237,9 +245,6 @@ class EmailDetailRecordView extends DetailRecordView {
                 this.showActionItem('moveToArchive');
             }
         });
-
-        this.handleTasksField();
-        this.listenTo(this.model, 'change:tasksIds', () => this.handleTasksField());
 
         if (this.getAcl().checkScope('User')) {
             this.addDropdownItem({
@@ -594,8 +599,8 @@ class EmailDetailRecordView extends DetailRecordView {
 
     // noinspection JSUnusedGlobalSymbols
     actionPrint() {
-        /** @type {module:views/fields/wysiwyg} */
-        const bodyView = this.getFieldView('body');
+        const bodyView = /** @type {import('views/fields/wysiwyg').default} */
+            this.getFieldView('body');
 
         if (!bodyView) {
             return;
@@ -649,16 +654,6 @@ class EmailDetailRecordView extends DetailRecordView {
 
         Espo.Ui.error(msg, true);
         console.error(msg);
-    }
-
-    handleTasksField() {
-        if ((this.model.get('tasksIds') || []).length === 0) {
-            this.hideField('tasks');
-
-            return;
-        }
-
-        this.showField('tasks');
     }
 
     /**

@@ -60,7 +60,7 @@ export default class ShortcutManager {
     /**
      * Add a view and keys.
      *
-     * @param {import('view').default} view
+     * @param {import('view').default<any>} view
      * @param {Record.<string, Key>} keys
      * @param {{stack: boolean}} [options]
      */
@@ -83,7 +83,7 @@ export default class ShortcutManager {
     /**
      * Remove a view.
      *
-     * @param {import('view').default} view
+     * @param {import('view').default<any>} view
      */
     remove(view) {
         const index = this.items.findIndex(it => it.view === view);

@@ -49,4 +49,20 @@ class Field
     public const EMAIL_ADDRESS = 'emailAddress';
     public const PHONE_NUMBER = 'phoneNumber';
     public const VERSION_NUMBER = 'versionNumber';
+    public const string IS_LOCKED = 'isLocked';
+
+    /**
+     * @since 10.0.0
+     */
+    public const string ACCOUNT = 'account';
+
+    /**
+     * @since 10.0.0
+     */
+    public const string PIPELINE = 'pipeline';
+
+    /**
+     * @since 10.0.0
+     */
+    public const string PIPELINE_STAGE = 'pipelineStage';
 }

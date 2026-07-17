@@ -56,12 +56,17 @@ class CollapsedModalView extends View {
     title
 
     /**
+     * @type {import('views/modal').default|import('views/popup-notification').default}
+     */
+    modalView
+
+    /**
      * @param {{
-     *     modalView: import('views/modal').default,
+     *     modalView: import('views/modal').default|import('views/popup-notification').default,
      *     onClose: function(),
      *     onExpand: function(),
      *     duplicateNumber?: number|null,
-     *     title?: string,
+     *     title?: string | null,
      * }} options
      */
     constructor(options) {

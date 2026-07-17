@@ -33,6 +33,7 @@ import ActionItemSetup from 'helpers/action-item-setup';
 import Backbone from 'backbone';
 import RecordModal from 'helpers/record-modal';
 import Utils from 'utils';
+import _ from 'underscore';
 
 /**
  * A quick view modal.
@@ -173,7 +174,7 @@ class DetailModalView extends ModalView {
                 html: '<span class="fas fa-chevron-left"></span>',
                 title: this.translate('Previous Entry'),
                 position: 'right',
-                className: 'btn-icon',
+                className: 'btn-icon margin-left',
                 style: 'text',
                 disabled: true,
             });
@@ -254,6 +255,7 @@ class DetailModalView extends ModalView {
                 name: 'duplicate',
                 label: 'Duplicate',
                 groupIndex: 0,
+                iconClass: 'far fa-copy',
             });
         }
     }
@@ -287,15 +289,15 @@ class DetailModalView extends ModalView {
     setupActionItems() {
         const actionItemSetup = new ActionItemSetup();
 
-        actionItemSetup.setup(
-            this,
-            'modalDetail',
-            promise => this.wait(promise),
-            item => this.addDropdownItem(item),
-            name => this.showActionItem(name),
-            name => this.hideActionItem(name),
-            {listenToViewModelSync: true}
-        );
+        actionItemSetup.setup({
+            view: this,
+            type: 'modalDetailActionList',
+            waitFunc: promise => this.wait(promise),
+            addFunc: item => this.addDropdownItem(item),
+            showFunc: name => this.showActionItem(name),
+            hideFunc: name => this.hideActionItem(name),
+            listenToViewModelSync: true,
+        });
     }
 
     /**
@@ -351,6 +353,7 @@ class DetailModalView extends ModalView {
             name: 'remove',
             label: 'Remove',
             groupIndex: 0,
+            iconClass: 'fas fa-times',
         });
     }
 
@@ -463,10 +466,10 @@ class DetailModalView extends ModalView {
     }
 
     /**
-     * @return {module:views/record/detail}
+     * @return {import('views/record/detail').default}
      */
     getRecordView() {
-        return this.getView('record');
+        return /** @type {import('views/record/detail').default} */this.getView('record');
     }
 
     afterRender() {
@@ -591,6 +594,9 @@ class DetailModalView extends ModalView {
 
             collection.fetch()
                 .then(() => {
+                    // Restore as it can be removed by fetch.
+                    this.model.collection = collection;
+
                     const indexOfRecord = collection.length - 1;
 
                     if (indexOfRecord < 0) {
@@ -708,7 +714,7 @@ class DetailModalView extends ModalView {
         const model = this.getRecordView().model;
 
         this.confirm(this.translate('removeRecordConfirmation', 'messages'), () => {
-            const $buttons = this.dialog.$el.find('.modal-footer button');
+            const $buttons = $(this.dialog.getElement()).find('.modal-footer button');
 
             $buttons.addClass('disabled').attr('disabled', 'disabled');
 

@@ -122,7 +122,7 @@ function (Dep, MultiCollection) {
                     rowActionsView: 'crm:views/target-list/record/row-actions/opted-out',
                     checkboxes: false,
                     collection: this.collection,
-                    listLayout: this.listLayout,
+                    multiListLayout: this.listLayout,
                 }, view => {
                     view.render();
                 });

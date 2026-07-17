@@ -97,6 +97,8 @@ class Database extends RDBRepository
         $this->recordIdGenerator = $recordIdGenerator;
 
         $this->hooksDisabled = $this->hooksDisabled || $metadata->get("entityDefs.$entityType.hooksDisabled");
+        $this->transactionalSave = $this->transactionalSave ||
+            $metadata->get("entityDefs.$entityType.transactionalSave");
 
         $hookMediator = null;
 
@@ -127,6 +129,17 @@ class Database extends RDBRepository
      */
     public function save(Entity $entity, array $options = []): void
     {
+        $this->prepareSaveInternal($entity, $options);
+
+        parent::save($entity, $options);
+    }
+
+    /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    private function prepareSaveInternal(Entity $entity, array $options = []): void
+    {
         if (
             $entity->isNew() &&
             !$entity->has(self::ATTR_ID) &&
@@ -140,8 +153,28 @@ class Database extends RDBRepository
         }
 
         $this->restoreData = [];
+    }
 
-        parent::save($entity, $options);
+    /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    final protected function lateAfterSave(Entity $entity, array $options): void
+    {
+        if (!$this->hooksDisabled && empty($options[SaveOption::SKIP_HOOKS])) {
+            $this->hookManager->process($this->entityType, 'lateAfterSave', $entity, $options);
+        }
+    }
+
+    /**
+     * @param TEntity $entity
+     * @param array<string, mixed> $options
+     */
+    final protected function lateAfterRemove(Entity $entity, array $options): void
+    {
+        if (!$this->hooksDisabled && empty($options[SaveOption::SKIP_HOOKS])) {
+            $this->hookManager->process($this->entityType, 'lateAfterRemove', $entity, $options);
+        }
     }
 
     /**

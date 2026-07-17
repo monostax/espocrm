@@ -32,7 +32,7 @@ class RecordListPagination extends View {
 
     template = 'record/list-pagination'
 
-    isComponent = true
+    isStandaloneComponent = true
 
     data() {
         const total = this.collection.total;

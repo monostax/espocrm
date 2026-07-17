@@ -32,20 +32,17 @@ namespace Espo\Classes\AppInfo;
 use Espo\Core\Console\Command\Params;
 use Espo\Core\Utils\ClassFinder;
 use Espo\Core\Job\MetadataProvider;
+use Espo\Tools\ConsoleAppInfo\InfoProvider;
 
-class Jobs
+class Jobs implements InfoProvider
 {
-    private $classFinder;
 
-    private $metadataProvider;
+    public function __construct(
+        private ClassFinder $classFinder,
+        private MetadataProvider $metadataProvider,
+    ) {}
 
-    public function __construct(ClassFinder $classFinder, MetadataProvider $metadataProvider)
-    {
-        $this->classFinder = $classFinder;
-        $this->metadataProvider = $metadataProvider;
-    }
-
-    public function process(Params $params): string
+    public function get(Params $params): string
     {
         $result = "Available jobs:\n\n";
 

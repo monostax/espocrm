@@ -36,4 +36,3 @@ export default class extends EnumFieldView {
         this.params.options = this.getMetadata().getScopeEntityList();
     }
 }
-

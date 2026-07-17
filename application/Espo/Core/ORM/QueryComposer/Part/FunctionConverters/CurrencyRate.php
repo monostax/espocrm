@@ -80,7 +80,10 @@ class CurrencyRate implements FunctionConverter
      */
     private function exchangeRates(string $baseCurrency, string $defaultCurrency, array $currencyRates): array
     {
-        $defaultCurrencyRate = round(1 / $currencyRates[$defaultCurrency], self::PRECISION);
+        // Not supposed to happen. If the default currency is not listed in the currency list.
+        $defaultNormalRate = $currencyRates[$defaultCurrency] ?? 1.0;
+
+        $defaultCurrencyRate = round(1 / $defaultNormalRate, self::PRECISION);
 
         $exchangedRates = [];
         $exchangedRates[$baseCurrency] = $defaultCurrencyRate;

@@ -50,8 +50,7 @@ class EntityDuplicatorTest extends BaseTestCase
             'type' => User::TYPE_ADMIN,
         ]);
 
-        $this->auth('test');
-        $this->reCreateApplication();
+        $this->authenticate('test');
 
         $em = $this->getEntityManager();
 
@@ -74,7 +73,7 @@ class EntityDuplicatorTest extends BaseTestCase
             'parentId' => $account->getId(),
             'parentType' => $account->getEntityType(),
             'assignedUserId' => $user->getId(),
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $this->assertEquals($email->getId(), $task->get('emailId'));
 

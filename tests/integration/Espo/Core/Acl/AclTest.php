@@ -42,8 +42,7 @@ class AclTest extends BaseTestCase
 {
     public function testGetReadOwnerUserField()
     {
-        /* @var $aclManager AclManager */
-        $aclManager = $this->getContainer()->get('aclManager');
+        $aclManager = $this->getContainer()->getByClass(AclManager::class);
 
         $this->assertEquals(
             'assignedUser',
@@ -94,8 +93,7 @@ class AclTest extends BaseTestCase
             ],
         ]);
 
-        $this->auth('tester');
-        $this->reCreateApplication();
+        $this->authenticate('tester');
 
         $acl = $this->getContainer()->getByClass(Acl::class);
 
@@ -128,8 +126,7 @@ class AclTest extends BaseTestCase
         /** @var User $user */
         $user = $this->getEntityManager()->getEntityById(User::ENTITY_TYPE, $user->getId());
 
-        /* @var $aclManager AclManager */
-        $aclManager = $this->getContainer()->get('aclManager');
+        $aclManager = $this->getContainer()->getByClass(AclManager::class);
 
         $this->assertFalse($aclManager->checkField($user, 'Call', 'direction'));
         $this->assertTrue($aclManager->checkField($user, 'Call', 'contacts'));
@@ -149,11 +146,31 @@ class AclTest extends BaseTestCase
         ]);
         $metadata->save();
 
-        $this->reCreateApplication();
+        $this->reCreateApplication(reuse: true);
 
         $acl = $this->getContainer()->getByClass(Acl::class);
 
         $this->assertFalse($acl->checkField(Account::ENTITY_TYPE, 'assignedUser'));
         $this->assertTrue($acl->checkField(Account::ENTITY_TYPE, 'name'));
+    }
+
+    public function testDisabledLink(): void
+    {
+        $metadata = $this->getMetadata();
+
+        $metadata->set('entityDefs', 'Account', [
+            'links' => [
+                'opportunities' => [
+                    'disabled' => true,
+                ]
+            ]
+        ]);
+        $metadata->save();
+
+        $this->reCreateApplication(reuse: true);
+
+        $acl = $this->getContainer()->getByClass(Acl::class);
+
+        $this->assertFalse($acl->checkLink('Account', 'opportunities'));
     }
 }

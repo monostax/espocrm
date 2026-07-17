@@ -34,6 +34,9 @@ import Language from 'language';
 
 /** @module helpers/action-item-setup */
 
+/**
+ * @internal
+ */
 class ActionItemSetupHelper {
 
     /**
@@ -65,16 +68,33 @@ class ActionItemSetupHelper {
     language
 
     /**
-     * @param {module:view} view
-     * @param {string} type
-     * @param {function(Promise): void} waitFunc
-     * @param {function(Object): void} addFunc
-     * @param {function(string): void} showFunc
-     * @param {function(string): void} hideFunc
-     * @param {{listenToViewModelSync?: boolean}} [options]
+     * @param {{
+     *     view: import('view').default<any>,
+     *     type: string,
+     *     waitFunc: (Promise) => void,
+     *     addFunc: (
+     *          item: import('views/record/detail').DropdownItem |
+     *              import('views/record/detail').Button
+ *         ) => void,
+     *     showFunc: (string) => void,
+     *     hideFunc: (string) => void,
+     *     enableFunc?: (string) => void,
+     *     disableFunc?: (string) => void,
+     *     listenToViewModelSync?: boolean,
+     *     syncEvent?: 'sync'|'change',
+     * }} options
      */
-    setup(view, type, waitFunc, addFunc, showFunc, hideFunc, options) {
-        options = options || {};
+    setup(options) {
+        const view = options.view;
+        const type = options.type;
+        const waitFunc = options.waitFunc;
+        const addFunc = options.addFunc;
+        const showFunc = options.showFunc;
+        const hideFunc = options.hideFunc;
+        const enableFunc = options.enableFunc ?? (() => {});
+        const disableFunc = options.disableFunc ?? (() => {});
+
+        /** @type {Record[]} */
         const actionList = [];
 
         // noinspection JSUnresolvedReference
@@ -84,22 +104,36 @@ class ActionItemSetupHelper {
             throw new Error();
         }
 
-        const actionDefsList = [
-            ...this.metadata.get(['clientDefs', 'Global', type + 'ActionList']) || [],
-            ...this.metadata.get(['clientDefs', scope, type + 'ActionList']) || [],
+        const path = type.split('.');
+
+        /** @type {({name?: string} & Record | string)[]} */
+        const actionDefsListOriginal = [
+            ...this.metadata.get(['clientDefs', 'Global', ...path], []),
+            ...this.metadata.get(['clientDefs', scope, ...path], []),
         ];
 
-        actionDefsList.forEach(item => {
+        /** @type {({name?: string} & Record<string, any>)[]} */
+        let actionDefsList = actionDefsListOriginal.map(item => {
             if (typeof item === 'string') {
-                item = {name: item};
+                return {name: item};
             }
 
-            item = Espo.Utils.cloneDeep(item);
+            return Espo.Utils.cloneDeep(item);
+        })
 
+        actionDefsList.reverse();
+
+        actionDefsList = actionDefsList.filter((it, i, self) => {
+            return self.findIndex(sIt => sIt.name === it.name) === i;
+        });
+
+        actionDefsList.reverse();
+
+        actionDefsList.forEach(item => {
             const name = item.name;
 
-            if (!item.label) {
-                item.html = this.language.translate(name, 'actions', scope);
+            if (!item.label && !item.labelTranslation && !item.iconClass) {
+                item.text = this.language.translate(name, 'actions', scope);
             }
 
             item.data = item.data || {};
@@ -110,11 +144,11 @@ class ActionItemSetupHelper {
                 item.data.handler = handlerName;
             }
 
-            addFunc(item);
-
             if (!Espo.Utils.checkActionAvailability(this.viewHelper, item)) {
                 return;
             }
+
+            addFunc(item);
 
             if (!Espo.Utils.checkActionAccess(this.acl, view.model, item, true)) {
                 item.hidden = true;
@@ -126,7 +160,7 @@ class ActionItemSetupHelper {
                 return;
             }
 
-            if (!item.initFunction && !item.checkVisibilityFunction) {
+            if (!item.initFunction && !item.checkVisibilityFunction && !item.checkAvailabilityFunction) {
                 return;
             }
 
@@ -146,6 +180,14 @@ class ActionItemSetupHelper {
                         }
                     }
 
+                    if (item?.checkAvailabilityFunction) {
+                        const isNotAvailable = !handler[item.checkAvailabilityFunction].call(handler);
+
+                        if (isNotAvailable) {
+                            disableFunc(item.name);
+                        }
+                    }
+
                     item.handlerInstance = handler;
 
                     resolve();
@@ -157,11 +199,27 @@ class ActionItemSetupHelper {
             return;
         }
 
+        const onChange = () => {
+            actionList.forEach(item => {
+                const handler = item.handlerInstance;
+
+                if (!handler || !item.checkAvailabilityFunction) {
+                    return;
+                }
+                const isAvailable = handler[item.checkAvailabilityFunction].call(handler);
+
+                isAvailable ?
+                    enableFunc(item.name) :
+                    disableFunc(item.name);
+            });
+        }
+
         const onSync = () => {
             actionList.forEach(item => {
-                if (item.handlerInstance && item.checkVisibilityFunction) {
-                    const isNotVisible = !item.handlerInstance[item.checkVisibilityFunction]
-                        .call(item.handlerInstance);
+                const handler = item.handlerInstance;
+
+                if (handler && item.checkVisibilityFunction) {
+                    const isNotVisible = !handler[item.checkVisibilityFunction].call(handler);
 
                     if (isNotVisible) {
                         hideFunc(item.name);
@@ -186,7 +244,8 @@ class ActionItemSetupHelper {
             return;
         }
 
-        view.listenTo(view.model, 'sync', () => onSync());
+        view.listenTo(view.model, 'change', () => onChange());
+        view.listenTo(view.model, options.syncEvent ?? 'sync', () => onSync());
     }
 }
 

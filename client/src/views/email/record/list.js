@@ -58,18 +58,19 @@ class EmailListRecordView extends ListRecordView {
         if (this.collection.url === this.entityType) {
             this.addMassAction({name: 'retrieveFromTrash', groupIndex: -6}, false);
 
-            this.addMassAction({name: 'moveToTrash', groupIndex: -5}, false);
-            this.addMassAction({name: 'moveToArchive', groupIndex: -5}, false);
-            this.addMassAction({name: 'moveToFolder', groupIndex: -5}, true);
+            this.addMassAction({name: 'moveToTrash', groupIndex: -5, iconClass: 'far fa-trash-can'}, false);
+            this.addMassAction({name: 'moveToArchive', groupIndex: -5, iconClass: 'far fa-caret-square-down'}, false);
+            this.addMassAction({name: 'moveToFolder', groupIndex: -5, iconClass: 'far fa-folder'}, true);
 
-            this.addMassAction({name: 'markAsImportant', groupIndex: -4}, false);
+            this.addMassAction({name: 'markAsImportant', groupIndex: -4, iconClass: 'far fa-star'}, false);
             this.addMassAction({name: 'markAsNotImportant', groupIndex: -4}, false);
-            this.addMassAction({name: 'markAsRead', groupIndex: -3}, false);
+            this.addMassAction({name: 'markAsRead', groupIndex: -3, iconClass: 'far far fa-envelope-open'}, false);
             this.addMassAction({name: 'markAsNotRead', groupIndex: -3}, false);
 
             this.dropdownItemList.push({
                 name: 'markAllAsRead',
                 label: 'Mark all as read',
+                iconClass: 'far fa-envelope-open',
             });
 
             this.controlEmailMassActionsVisibility();
@@ -249,7 +250,7 @@ class EmailListRecordView extends ListRecordView {
         ids.forEach(id => {
             this.collection.trigger('moving-to-trash', id);
 
-            this.uncheckRecord(id, null, true);
+            this.uncheckRecord(id, true);
         });
     }
 
@@ -274,7 +275,7 @@ class EmailListRecordView extends ListRecordView {
         ids.forEach(id => {
             this.collection.trigger('retrieving-from-trash', id);
 
-            this.uncheckRecord(id, null, true);
+            this.uncheckRecord(id, true);
         });
     }
 
@@ -321,7 +322,7 @@ class EmailListRecordView extends ListRecordView {
             [...this.checkedList].forEach(id => {
                 this.collection.trigger('moving-to-archive', id);
 
-                this.uncheckRecord(id, null, true);
+                this.uncheckRecord(id, true);
             });
 
             Espo.Ui.info(this.translate('Moved to Archive', 'labels', 'Email'));
@@ -609,7 +610,7 @@ class EmailListRecordView extends ListRecordView {
 
                     if (this.rootData.selectedFolderId === 'drafts') {
                         this.removeRecordFromList(id);
-                        this.uncheckRecord(id, null, true);
+                        this.uncheckRecord(id, true);
                         this.collection.trigger('draft-sent');
                     }
                 }

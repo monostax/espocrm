@@ -618,7 +618,7 @@ class Service
     {
         $scopeList = $fetchParams->getScopeList();
 
-        $brScopeList = $this->config->get('busyRangesEntityList') ?? [Meeting::ENTITY_TYPE, Call::ENTITY_TYPE];
+        $brScopeList = $this->getBusyRangesEntityList();
 
         if ($scopeList) {
             foreach ($scopeList as $s) {
@@ -848,10 +848,7 @@ class Service
             ->withTo($params->to);
 
         if ($fetchParams->getScopeList() === null) {
-            $fetchParams = $fetchParams->withScopeList(
-                $this->config->get('busyRangesEntityList') ??
-                [Meeting::ENTITY_TYPE, Call::ENTITY_TYPE]
-            );
+            $fetchParams = $fetchParams->withScopeList($this->getBusyRangesEntityList());
         }
 
         $eventList = $this->fetchInternal($user, $fetchParams->withSkipAcl(), !$params->accessCheck);
@@ -1020,7 +1017,7 @@ class Service
         ?string $ignoreId = null
     ): array {
 
-        $scopeList = $this->config->get('busyRangesEntityList') ?? [Meeting::ENTITY_TYPE, Call::ENTITY_TYPE];
+        $scopeList = $this->getBusyRangesEntityList();
 
         if ($entityType) {
             if (!$this->acl->check($entityType)) {
@@ -1127,5 +1124,13 @@ class Service
         }
 
         return $this->applicationConfig->getTimeZone();
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getBusyRangesEntityList(): array
+    {
+        return $this->config->get('busyRangesEntityList') ?? [Meeting::ENTITY_TYPE, Call::ENTITY_TYPE];
     }
 }

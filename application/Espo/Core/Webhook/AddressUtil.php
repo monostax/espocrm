@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Webhook;
 
+use Espo\Core\HttpClient\Util;
 use Espo\Core\Utils\Config;
 
 /**
@@ -48,32 +49,6 @@ class AddressUtil
         /** @var string[] $allowedAddressList */
         $allowedAddressList = $this->config->get('webhookAllowedAddressList') ?? [];
 
-        if (!$allowedAddressList) {
-            return false;
-        }
-
-        $host = parse_url($url, PHP_URL_HOST);
-        $port = parse_url($url, PHP_URL_PORT);
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-
-        if (!is_string($host)) {
-            return false;
-        }
-
-        if (!is_int($port)) {
-            if ($scheme === 'https') {
-                $port = 443;
-            } else if ($scheme === 'http') {
-                $port = 80;
-            }
-        }
-
-        if (!is_int($port)) {
-            return false;
-        }
-
-        $address = $host . ':' . $port;
-
-        return in_array($address, $allowedAddressList);
+        return Util::matchUrlToAddressList($url, $allowedAddressList);
     }
 }

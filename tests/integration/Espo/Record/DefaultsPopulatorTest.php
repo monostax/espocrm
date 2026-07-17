@@ -76,16 +76,16 @@ class DefaultsPopulatorTest extends BaseTestCase
             ],
         ], true);
 
-        $this->auth('tester', null, $portal->getId());
-        $this->reCreateApplication();
+        $this->auth(userName: 'tester', portalId: $portal->getId());
+        $this->reCreateApplication(reuse: true);
 
         $service = $this->getContainer()->getByClass(ServiceContainer::class)->getByClass(CaseObj::class);
 
-        $case = $service->create((object) [
+        $result = $service->create((object) [
             'name' => 'Test',
         ], CreateParams::create());
 
-        $this->assertEquals($contact->getId(), $case->getContact()?->getId());
-        $this->assertEquals($account->getId(), $case->getAccount()?->getId());
+        $this->assertEquals($contact->getId(), $result->getEntity()->getContact()?->getId());
+        $this->assertEquals($account->getId(), $result->getEntity()->getAccount()?->getId());
     }
 }

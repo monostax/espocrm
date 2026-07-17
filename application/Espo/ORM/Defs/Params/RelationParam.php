@@ -107,4 +107,23 @@ class RelationParam
      * @since 9.2.5
      */
     public const ORDER = 'order';
+
+    /**
+     * @since 10.0.0
+     */
+    public const READ_ONLY = 'readOnly';
+
+    /**
+     * Disabled.
+     *
+     * @since 10.0.0
+     */
+    public const DISABLED = 'disabled';
+
+    /**
+     * Cascade removal Only for one-to-many, one-to-one, and parent-to-children.
+     *
+     * @since 10.0.0
+     */
+    public const string CASCADE_REMOVAL = 'cascadeRemoval';
 }

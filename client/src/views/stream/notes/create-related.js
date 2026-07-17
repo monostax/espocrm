@@ -58,12 +58,17 @@ class CreateRelatedNoteStreamView extends NoteStreamView {
 
         this.messageData['relatedEntityType'] = this.translateEntityType(this.entityType);
 
-        this.messageData['relatedEntity'] =
-            $('<a>')
-                .attr('href', `#${this.entityType}/view/${this.entityId}`)
-                .text(this.entityName)
-                .attr('data-scope', this.entityType)
-                .attr('data-id', this.entityId);
+        if (this.model.attributes.relatedId) {
+            this.messageData['relatedEntity'] = 'field:related';
+        } else {
+            // bc
+            this.messageData['relatedEntity'] =
+                $('<a>')
+                    .attr('href', `#${this.entityType}/view/${this.entityId}`)
+                    .text(this.entityName)
+                    .attr('data-scope', this.entityType)
+                    .attr('data-id', this.entityId);
+        }
 
         this.createMessage();
     }

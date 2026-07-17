@@ -202,10 +202,12 @@ class EmailFromAddressVarchar extends BaseFieldView {
                 const size = this.mode === this.MODE_DETAIL ? 18 : 16;
 
                 avatarHtml = this.getHelper().getAvatarHtml(id, 'small', size, 'avatar-link');
+            } else if (entityType) {
+                avatarHtml = this.getHelper().getScopeColorIconHtml(entityType);
             }
 
             const title = this.mode === this.MODE_LIST ? name : null;
-            const className = this.mode === this.MODE_LIST ? 'text-default' : null;
+            const className = this.mode === this.MODE_LIST ? 'text-default' : 'text-record';
 
             const $item = $('<div class="email-address-detail-item">')
                 .append(
@@ -297,7 +299,21 @@ class EmailFromAddressVarchar extends BaseFieldView {
                             .attr('tabindex', '0')
                             .attr('data-action', 'createContact')
                             .attr('data-address', address)
-                            .text(this.translate('Create Contact', 'labels', 'Email'))
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-icon fas fa-plus';
+                                    return span;
+                                })()
+                            )
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-text';
+                                    span.textContent = this.translate('Create Contact', 'labels', 'Email');
+                                    return span;
+                                })()
+                            )
                     )
             );
         }
@@ -311,7 +327,22 @@ class EmailFromAddressVarchar extends BaseFieldView {
                             .attr('tabindex', '0')
                             .attr('data-action', 'createLead')
                             .attr('data-address', address)
-                            .text(this.translate('Create Lead', 'labels', 'Email'))
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-icon fas fa-plus';
+                                    return span;
+                                })()
+                            )
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-text';
+                                    span.textContent = this.translate('Create Lead', 'labels', 'Email');
+                                    return span;
+
+                                })()
+                            )
                     )
             );
         }
@@ -325,7 +356,21 @@ class EmailFromAddressVarchar extends BaseFieldView {
                             .attr('tabindex', '0')
                             .attr('data-action', 'addToContact')
                             .attr('data-address', address)
-                            .text(this.translate('Add to Contact', 'labels', 'Email'))
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-icon far fa-square-plus';
+                                    return span;
+                                })()
+                            )
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-text';
+                                    span.textContent = this.translate('Add to Contact', 'labels', 'Email');
+                                    return span;
+                                })()
+                            )
                     )
             );
         }
@@ -339,7 +384,21 @@ class EmailFromAddressVarchar extends BaseFieldView {
                             .attr('tabindex', '0')
                             .attr('data-action', 'addToLead')
                             .attr('data-address', address)
-                            .text(this.translate('Add to Lead', 'labels', 'Email'))
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-icon far fa-square-plus';
+                                    return span;
+                                })()
+                            )
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-text';
+                                    span.textContent = this.translate('Add to Lead', 'labels', 'Email');
+                                    return span;
+                                })()
+                            )
                     )
             );
         }
@@ -358,7 +417,21 @@ class EmailFromAddressVarchar extends BaseFieldView {
                         $('<a>')
                             .attr('tabindex', '0')
                             .attr('href', url)
-                            .text(this.translate('Create EmailFilter', 'labels', 'EmailFilter'))
+                            /*.append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-icon fas fa-plus';
+                                    return span;
+                                })()
+                            )*/
+                            .append(
+                                (() => {
+                                    const span = document.createElement('span');
+                                    span.className = 'item-text';
+                                    span.textContent = this.translate('Create EmailFilter', 'labels', 'EmailFilter');
+                                    return span;
+                                })()
+                            )
                     )
             );
         }
@@ -385,6 +458,8 @@ class EmailFromAddressVarchar extends BaseFieldView {
      */
     createPerson(scope, address) {
         const fromString = this.model.get('fromString') || this.model.get('fromName');
+
+        /** @type {string|null} */
         let name = this.nameHash[address] || null;
 
         if (!name && this.name === 'from' && fromString) {
@@ -394,7 +469,7 @@ class EmailFromAddressVarchar extends BaseFieldView {
         }
 
         if (name) {
-            name = this.getHelper().escapeString(name);
+            name = EmailFromAddressVarchar.stripQuotesFromName(name);
         }
 
         const attributes = {
@@ -465,7 +540,7 @@ class EmailFromAddressVarchar extends BaseFieldView {
         }
 
         if (name) {
-            name = this.getHelper().escapeString(name);
+            name = EmailFromAddressVarchar.stripQuotesFromName(name);
         }
 
         const attributes = {
@@ -556,6 +631,19 @@ class EmailFromAddressVarchar extends BaseFieldView {
         await view.render();
 
         Espo.Ui.notify();
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @return {string}
+     */
+    static stripQuotesFromName(name) {
+        if (name && /^(['"]).*\1$/.test(name)) {
+            name = name.substring(1, name.length - 1);
+        }
+
+        return name;
     }
 
     fetchSearch() {

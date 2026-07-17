@@ -47,11 +47,10 @@ class ZipArchive
     /**
      * Unzip archive.
      *
-     * @param string $file Path to .zip file.
-     * @param string $destinationPath Destination path.
-     * @return bool
+     * @param string $file A path to a zip file.
+     * @param string $destination A destination.
      */
-    public function unzip($file, $destinationPath)
+    public function unzip(string $file, string $destination): bool
     {
         if (!class_exists('\ZipArchive')) {
             throw new RuntimeException("php-zip extension is not installed. Cannot unzip the file.");
@@ -61,15 +60,33 @@ class ZipArchive
 
         $res = $zip->open($file);
 
-        if ($res === true) {
-            $this->fileManager->mkdir($destinationPath);
-
-            $zip->extractTo($destinationPath);
-            $zip->close();
-
-            return true;
+        if ($res !== true) {
+            return false;
         }
 
-        return false;
+        $this->fileManager->mkdir($destination);
+
+
+        for ($i = 0; $i < $zip->numFiles; $i ++) {
+            $filename = $zip->getNameIndex($i);
+
+            if ($filename === false) {
+                continue;
+            }
+
+            if (
+                str_contains($filename, '..') ||
+                str_starts_with($filename, '/') ||
+                str_starts_with($filename, '\\')
+            ) {
+                throw new RuntimeException("No allowed path '$filename'.");
+            }
+
+            $zip->extractTo($destination, $filename);
+        }
+
+        $zip->close();
+
+        return true;
     }
 }

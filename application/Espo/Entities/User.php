@@ -43,6 +43,15 @@ class User extends Person
     public const ATTR_TYPE = 'type';
     public const ATTR_IS_ACTIVE = 'isActive';
 
+    /** @since 10.0.0 */
+    public const string FIELD_USER_NAME = 'userName';
+    /** @since 10.0.0 */
+    public const string FIELD_PASSWORD = 'password';
+    /** @since 10.0.0 */
+    public const string FIELD_PASSWORD_VERSION = 'passwordVersion';
+    /** @since 10.0.0 */
+    public const string FIELD_TYPE = 'type';
+
     public const LINK_ACCOUNTS = 'accounts';
     public const LINK_CONTACT = 'contact';
     public const LINK_PORTALS = 'portals';
@@ -60,6 +69,8 @@ class User extends Person
 
     public const RELATIONSHIP_ENTITY_USER = 'EntityUser';
     public const RELATIONSHIP_ENTITY_COLLABORATOR = 'EntityCollaborator';
+
+
 
     public function get(string $attribute): mixed
     {
@@ -314,7 +325,7 @@ class User extends Person
      */
     public function getPassword(): string
     {
-        return $this->get('password') ?? '';
+        return $this->get(self::FIELD_PASSWORD) ?? '';
     }
 
     private function getNameInternal(): ?string
@@ -339,5 +350,14 @@ class User extends Person
         }
 
         return false;
+    }
+
+    /**
+     * @since 10.0.0
+     * @internal
+     */
+    public function getPasswordVersion(): ?int
+    {
+        return $this->get(self::FIELD_PASSWORD_VERSION);
     }
 }

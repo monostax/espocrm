@@ -6,7 +6,8 @@
 It provides a wide range of tools to store, organize, and manage leads, contacts, sales opportunities, marketing campaigns,
 support cases, and more – all business information in a simple and intuitive interface.
 
-![Screenshot](https://user-images.githubusercontent.com/1006792/226094559-995dfd2a-a18f-4619-a21b-79a4e671990a.png)
+![Screenshot](https://github.com/user-attachments/assets/d0806394-3691-43a1-83a5-16ad2e7314e2)
+
 
 ### Architecture
 
@@ -46,9 +47,9 @@ See the [documentation](https://docs.espocrm.com) for administrators, users and 
 
 ### Who is EspoCRM for?
 
-* Startups, small & medium-sized businesses. It's an affordable solution that is flexible and fully customizable.
+* From startups, small & medium-sized businesses to larger organizations. A flexible, fully customizable solution that scales with your needs.
 * Developers & tech enthusiasts. You can extend functionalities, build extensions, and create custom integrations.
-* Anyone seeking a free CRM. If you're looking for a user-friendly and secure CRM platform, it can be a good option.
+* Anyone seeking a free or on-premise CRM.
 
 ### Installing stable version
 
@@ -67,9 +68,11 @@ Create a [GitHub issue](https://github.com/espocrm/espocrm/issues/new/choose) or
 
 See the [developer documentation](https://docs.espocrm.com/development/).
 
-We highly recommend using an IDE for development. The backend codebase follows SOLID principles, utilizes interfaces, static typing and generics. We recommend to start learning EspoCRM from the Dependency Injection article in the documentation.
+We highly recommend using an IDE for development. The backend codebase adheres to SOLID principles, utilizes interfaces, static typing and generics. We recommend to start learning EspoCRM from the Dependency Injection article in the documentation.
 
 Metadata plays an integral role in the EspoCRM application. All possible parameters are described with a JSON Schema, meaning you will have autocompletion in the IDE. You can also find the full metadata reference in the documentation.
+
+The frontend is an SPA built on a custom framework. It utilizes nested views and service DI, with the core partially written in TypeScript. Developers primarily work with existing form and field view implementations.
 
 ### Community & Support
 

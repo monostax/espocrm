@@ -29,6 +29,8 @@
 
 namespace Espo\Tools\Import;
 
+use Espo\Core\Acl\SystemRestriction;
+use Espo\Core\Currency\ConfigDataProvider as CurrencyConfig;
 use Espo\Core\Name\Field;
 use Espo\Core\ORM\Type\FieldType;
 use Espo\Core\PhoneNumber\Sanitizer as PhoneNumberSanitizer;
@@ -54,7 +56,6 @@ use Espo\Core\FieldValidation\FieldValidationManager;
 use Espo\Core\FileStorage\Manager as FileStorageManager;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Record\ServiceContainer as RecordServiceContainer;
-use Espo\Core\Utils\Config;
 use Espo\Core\Utils\DateTime as DateTimeUtil;
 use Espo\Core\Utils\Json;
 use Espo\Core\Utils\Log;
@@ -74,15 +75,15 @@ use PDOException;
 
 class Import
 {
-    private const DEFAULT_DELIMITER = ',';
-    private const DEFAULT_TEXT_QUALIFIER = '"';
-    private const DEFAULT_ACTION = Params::ACTION_CREATE;
-    private const DEFAULT_DECIMAL_MARK = '.';
-    private const DEFAULT_DATE_FORMAT = 'YYYY-MM-DD';
-    private const DEFAULT_TIME_FORMAT = 'HH:mm';
+    private const string DEFAULT_DELIMITER = ',';
+    private const string DEFAULT_TEXT_QUALIFIER = '"';
+    private const string DEFAULT_ACTION = Params::ACTION_CREATE;
+    private const string DEFAULT_DECIMAL_MARK = '.';
+    private const string DEFAULT_DATE_FORMAT = 'YYYY-MM-DD';
+    private const string DEFAULT_TIME_FORMAT = 'HH:mm';
 
     /** @var string[] */
-    private $attributeList = [];
+    private array $attributeList = [];
     private Params $params;
 
     private ?string $id = null;
@@ -93,7 +94,6 @@ class Import
         private AclManager $aclManager,
         private EntityManager $entityManager,
         private Metadata $metadata,
-        private Config $config,
         private User $user,
         private FileStorageManager $fileStorageManager,
         private RecordServiceContainer $recordServiceContainer,
@@ -101,7 +101,9 @@ class Import
         private Log $log,
         private FieldValidationManager $fieldValidationManager,
         private PhoneNumberSanitizer $phoneNumberSanitizer,
-        private InjectableFactory $injectableFactory
+        private InjectableFactory $injectableFactory,
+        private CurrencyConfig $currencyConfig,
+        private SystemRestriction $systemRestriction,
 
     ) {
         $this->params = Params::create();
@@ -185,6 +187,7 @@ class Import
 
     /**
      * Run import.
+     *
      * @throws Error
      * @throws Forbidden
      */
@@ -196,53 +199,33 @@ class Import
 
         $attributeList = $this->attributeList;
 
-        $delimiter = str_replace(
-            '\t',
-            "\t",
-            $params->getDelimiter() ?? self::DEFAULT_DELIMITER
-        );
-
+        $delimiter = $this->prepareDelimiter($params);
         $enclosure = $params->getTextQualifier() ?? self::DEFAULT_TEXT_QUALIFIER;
+
+        $this->applyAcl($attributeList);
 
         assert(is_string($this->entityType));
         assert(is_string($this->attachmentId));
 
-        if (!$this->user->isAdmin()) {
-            $forbiddenAttributeList =
-                $this->aclManager->getScopeForbiddenAttributeList($this->user, $this->entityType, Table::ACTION_EDIT);
-
-            foreach ($attributeList as $i => $attribute) {
-                if (in_array($attribute, $forbiddenAttributeList)) {
-                    unset($attributeList[$i]);
-                }
-            }
-
-            if (!$this->aclManager->checkScope($this->user, $this->entityType, Table::ACTION_CREATE)) {
-                throw new Forbidden("Import: Create is forbidden for $this->entityType.");
-            }
-        }
-
-        /** @var ?Attachment $attachment */
-        $attachment = $this->entityManager->getEntityById(Attachment::ENTITY_TYPE, $this->attachmentId);
+        $attachment = $this->entityManager->getRepositoryByClass(Attachment::class)->getById($this->attachmentId);
 
         if (!$attachment) {
-            throw new Error('Import: Attachment not found.');
+            throw new Error('Attachment not found.');
         }
 
         $contents = $this->fileStorageManager->getContents($attachment);
 
-        if (empty($contents)) {
-            throw new Error('Import: Empty contents.');
+        if (!$contents) {
+            throw new Error('Empty contents.');
         }
 
         $startFromIndex = null;
 
         if ($this->id) {
-            /** @var ?ImportEntity $import */
-            $import = $this->entityManager->getEntityById(ImportEntity::ENTITY_TYPE, $this->id);
+            $import = $this->entityManager->getRepositoryByClass(ImportEntity::class)->getById($this->id);
 
             if (!$import) {
-                throw new Error('Import: Could not find import record.');
+                throw new Error('Could not find import record.');
             }
 
             if ($params->startFromLastIndex()) {
@@ -254,7 +237,7 @@ class Import
             /** @var ImportEntity $import */
             $import = $this->entityManager->getNewEntity(ImportEntity::ENTITY_TYPE);
 
-            $import->set([
+            $import->setMultiple([
                 'entityType' => $this->entityType,
                 'fileId' => $this->attachmentId,
             ]);
@@ -483,15 +466,14 @@ class Import
 
             if (
                 $entity &&
-                !$this->user->isAdmin() &&
                 !$this->aclManager->checkEntityEdit($this->user, $entity)
             ) {
                 $this->createError(
                     ImportError::TYPE_NO_ACCESS,
-                    $index,
-                    $row,
-                    $import,
-                    $errorIndex
+                    index: $index,
+                    row: $row,
+                    import: $import,
+                    errorIndex: $errorIndex,
                 );
 
                 return ['isError' => true];
@@ -499,11 +481,11 @@ class Import
 
             if (!$entity && $action === Params::ACTION_UPDATE) {
                 $this->createError(
-                    ImportError::TYPE_NOT_FOUND,
-                    $index,
-                    $row,
-                    $import,
-                    $errorIndex
+                    type: ImportError::TYPE_NOT_FOUND,
+                    index: $index,
+                    row: $row,
+                    import: $import,
+                    errorIndex: $errorIndex,
                 );
 
                 return ['isError' => true];
@@ -512,8 +494,8 @@ class Import
             if (!$entity) {
                 $entity = $this->entityManager->getNewEntity($this->entityType);
 
-                if (array_key_exists('id', $whereClause)) {
-                    $entity->set('id', $whereClause['id']);
+                if (array_key_exists(Attribute::ID, $whereClause)) {
+                    $entity->set(Attribute::ID, $whereClause[Attribute::ID]);
                 }
             }
         } else {
@@ -521,12 +503,12 @@ class Import
         }
 
         if (!$entity instanceof CoreEntity) {
-            throw new Error("Import: Only `Espo\Core\ORM\Entity` supported.");
+            throw new Error("Only `Espo\Core\ORM\Entity` supported.");
         }
 
         $isNew = $entity->isNew();
 
-        $entity->set($params->getDefaultValues());
+        $entity->setMultiple($params->getDefaultValues());
 
         // Values are not supposed to be sanitized with the field Sanitizer.
         $failureList = [];
@@ -542,20 +524,28 @@ class Import
             $value = $row[$i];
 
             try {
-                $this->processRowItem($entity, $attribute, $value, $valueMap);
+                $this->processRowItem($entity, $attribute, $value, $valueMap, $updateByAttributeList);
             } catch (ValidationError $e) {
                 $failureList[] = $e->getFailure();
             }
         }
 
-        $defaultCurrency = $params->getCurrency() ?? $this->config->get('defaultCurrency');
+        $this->processAdditionalAccessCheck(
+            entity: $entity,
+            import: $import,
+            row: $row,
+            index: $index,
+            errorIndex: $errorIndex,
+        );
+
+        $defaultCurrency = $params->getCurrency() ?? $this->currencyConfig->getDefaultCurrency();
 
         $fieldsDefs = $this->metadata->get(['entityDefs', $entity->getEntityType(), 'fields']) ?? [];
 
         foreach ($fieldsDefs as $field => $defs) {
             $fieldType = $defs['type'] ?? null;
 
-            if ($fieldType === 'currency') {
+            if ($fieldType === FieldType::CURRENCY) {
                 if ($entity->has($field) && !$entity->get($field . 'Currency')) {
                     $entity->set($field . 'Currency', $defaultCurrency);
                 }
@@ -573,12 +563,12 @@ class Import
 
             if ($failureList !== []) {
                 $this->createError(
-                    ImportError::TYPE_VALIDATION,
-                    $index,
-                    $row,
-                    $import,
-                    $errorIndex,
-                    $failureList
+                    type: ImportError::TYPE_VALIDATION,
+                    index: $index,
+                    row: $row,
+                    import: $import,
+                    errorIndex: $errorIndex,
+                    failureList: $failureList,
                 );
 
                 return ['isError' => true];
@@ -602,21 +592,19 @@ class Import
 
                 if (
                     $existingEntity &&
-                    !$this->user->isAdmin() &&
                     !$this->aclManager->checkEntityEdit($this->user, $existingEntity)
                 ) {
                     $this->createError(
-                        ImportError::TYPE_NO_ACCESS,
-                        $index,
-                        $row,
-                        $import,
-                        $errorIndex
+                        type: ImportError::TYPE_NO_ACCESS,
+                        index: $index,
+                        row: $row,
+                        import: $import,
+                        errorIndex: $errorIndex,
                     );
 
                     return ['isError' => true];
                 }
 
-                /** @noinspection PhpDeprecationInspection */
                 $this->entityManager
                     ->getRDBRepository($entity->getEntityType())
                     ->deleteFromDb($entity->getId(), true);
@@ -656,11 +644,11 @@ class Import
             $this->log->error($msg);
 
             $this->createError(
-                $errorType,
-                $index,
-                $row,
-                $import,
-                $errorIndex
+                type: $errorType,
+                index: $index,
+                row: $row,
+                import: $import,
+                errorIndex: $errorIndex,
             );
 
             return ['isError' => true];
@@ -782,13 +770,15 @@ class Import
     }
 
     /**
+     * @param string[] $updateByAttributeList
      * @throws ValidationError
      */
     private function processRowItem(
         CoreEntity $entity,
         string $attribute,
         string $value,
-        stdClass $valueMap
+        stdClass $valueMap,
+        array $updateByAttributeList,
     ): void {
 
         assert(is_string($this->entityType));
@@ -802,6 +792,14 @@ class Import
                 $entity->set(Attribute::ID, $value);
             }
 
+            return;
+        }
+
+        if (
+            in_array($action, [Params::ACTION_CREATE_AND_UPDATE, Params::ACTION_UPDATE]) &&
+            in_array($attribute, $updateByAttributeList) &&
+            !$entity->isNew()
+        ) {
             return;
         }
 
@@ -873,10 +871,6 @@ class Import
         if ($type !== Entity::BOOL && $value === '') {
             return null;
         }
-
-        /*if ($type !== Entity::BOOL && strtolower($value) === 'null') {
-            return null;
-        }*/
 
         $fieldDefs = $this->entityManager
             ->getDefs()
@@ -1077,6 +1071,7 @@ class Import
 
             case 'l f m':
                 $pos = strpos($value, ' ');
+
                 if ($pos) {
                     $lastName = trim(substr($value, 0, $pos));
                     $firstName = trim(substr($value, $pos + 1));
@@ -1112,8 +1107,9 @@ class Import
     private function readCsvString(
         string &$string,
         string $separator = ';',
-        string $enclosure = '"'
+        string $enclosure = '"',
     ): array {
+
         $o = [];
 
         $cnt = strlen($string);
@@ -1140,7 +1136,6 @@ class Import
                 } else {
                     $num++;
 
-                    //$esc = false;
                     $escEsc = false;
                 }
             } else if ($s == $enclosure) {
@@ -1202,8 +1197,9 @@ class Import
         array $row,
         ImportEntity $import,
         int &$errorIndex,
-        ?array $failureList = null
+        ?array $failureList = null,
     ): void {
+
         $validationFailures = null;
 
         if ($type === ImportError::TYPE_VALIDATION && $failureList !== null) {
@@ -1364,7 +1360,7 @@ class Import
         Params $params,
         CoreEntity $entity,
         string $attribute,
-        string $value
+        string $value,
     ): void {
 
         $firstNameAttribute = 'first' . ucfirst($attribute);
@@ -1413,7 +1409,7 @@ class Import
             $value = substr($value, 1);
         }
 
-        $o = (object)[
+        $o = (object) [
             'phoneNumber' => $this->formatPhoneNumber($value, $params),
             'primary' => true,
         ];
@@ -1427,7 +1423,7 @@ class Import
         $emailAddressData = $entity->get('emailAddressData');
         $emailAddressData = $emailAddressData ?? [];
 
-        $o = (object)[
+        $o = (object) [
             'emailAddress' => $value,
             'primary' => true,
         ];
@@ -1442,7 +1438,7 @@ class Import
         CoreEntity $entity,
         string $attribute,
         string $value,
-        stdClass $valueMap
+        stdClass $valueMap,
     ): bool {
 
         assert(is_string($this->entityType));
@@ -1480,7 +1476,7 @@ class Import
                 $value = substr($value, 1);
             }
 
-            $phoneNumberData[] = (object)[
+            $phoneNumberData[] = (object) [
                 'phoneNumber' => $this->formatPhoneNumber($value, $params),
                 'type' => $type,
                 'primary' => $isPrimary,
@@ -1498,7 +1494,7 @@ class Import
         CoreEntity $entity,
         string $attribute,
         string $value,
-        stdClass $valueMap
+        stdClass $valueMap,
     ): void {
 
         if (
@@ -1521,7 +1517,7 @@ class Import
                 }
             }
 
-            $o = (object)[
+            $o = (object) [
                 'emailAddress' => $value,
                 'primary' => $isPrimary,
             ];
@@ -1529,6 +1525,88 @@ class Import
             $emailAddressData[] = $o;
 
             $entity->set('emailAddressData', $emailAddressData);
+        }
+    }
+
+    /**
+     * @param string[] $row
+     */
+    private function processAdditionalAccessCheck(
+        CoreEntity $entity,
+        ImportEntity $import,
+        $row,
+        int $index,
+        int $errorIndex,
+    ): void {
+
+        $noAccess = false;
+
+        if (
+            $entity instanceof User &&
+            $entity->getType() === User::TYPE_SUPER_ADMIN
+        ) {
+            $noAccess = true;
+        }
+
+        if (!$noAccess) {
+            return;
+        }
+
+        $this->createError(
+            type: ImportError::TYPE_NO_ACCESS,
+            index: $index,
+            row: $row,
+            import: $import,
+            errorIndex: $errorIndex,
+        );
+    }
+
+    /**
+     * @param string[] $attributeList
+     * @throws Forbidden
+     */
+    private function applyAcl(array &$attributeList): void
+    {
+        $entityType = $this->entityType ?? throw new LogicException();
+
+        $forbiddenAttributeList =
+            $this->aclManager->getScopeForbiddenAttributeList($this->user, $entityType, Table::ACTION_EDIT);
+
+        foreach ($attributeList as $k => $attribute) {
+            if (in_array($attribute, $forbiddenAttributeList)) {
+                unset($attributeList[$k]);
+            }
+        }
+
+        if ($entityType === User::ENTITY_TYPE) {
+            $this->unsetUserAttributeList($attributeList);
+        }
+
+        if (!$this->systemRestriction->checkEntityTypeWrite($entityType)) {
+            throw new Forbidden("Import is restricted for '$entityType'.");
+        }
+
+        if (!$this->aclManager->checkScope($this->user, $entityType, Table::ACTION_CREATE)) {
+            throw new Forbidden("Create is forbidden for '$entityType'.");
+        }
+    }
+
+    private function prepareDelimiter(Params $params): string
+    {
+        return str_replace('\t', "\t", $params->getDelimiter() ?? self::DEFAULT_DELIMITER);
+    }
+
+    /**
+     * @param string[] $attributeList
+     */
+    private function unsetUserAttributeList(array &$attributeList): void
+    {
+        $restrictedAttributes = [
+            User::FIELD_PASSWORD,
+        ];
+
+        foreach ($restrictedAttributes as $attribute) {
+            unset($attributeList[$attribute]);
         }
     }
 }

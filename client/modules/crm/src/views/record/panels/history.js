@@ -78,6 +78,7 @@ class HistoryPanelView extends ActivitiesPanelView {
             label: 'Archive Email',
             acl: 'create',
             aclScope: 'Email',
+            iconClass: 'far fa-envelope',
         });
     }
 
@@ -176,11 +177,9 @@ class HistoryPanelView extends ActivitiesPanelView {
 
                 model.fetch()
                     .then(() => {
-                        const attributes = emailHelper.getReplyAttributes(
-                            model,
-                            data,
-                            this.getPreferences().get('emailReplyToAllByDefault')
-                        );
+                        const replyToAllByDefault = this.getPreferences().get('emailReplyToAllByDefault');
+
+                        const attributes = emailHelper.getReplyAttributes(model, replyToAllByDefault);
 
                         const viewName = this.getMetadata().get('clientDefs.Email.modalViews.compose') ||
                             'views/modals/compose-email';

@@ -3,13 +3,13 @@
 @white-color-value: #fefefe;
 
 @gray-base-value: #1f2223;
-@gray-dark-value: lighten(@gray-base-value, 20%);
+@gray-dark-value: lighten(@gray-base-value, 15%);
 @gray-value: lighten(@gray-base, 33.5%);
-@gray-light-value: lighten(@gray-base, 46.7%);
-@gray-lighter-value: lighten(@gray-base-value, 93.5%);
+@gray-light-value: lighten(@gray-base, 40%);
+@gray-lighter-value: lighten(@gray-base-value, 90%);
 
-@gray-soft-value: #7c7c7c;
-@gray-light-value: #999;
+@gray-soft-value: #777777;
+@gray-light-value: #969696;
 
 @body-bg-value: #f9f9f9;
 
@@ -17,11 +17,12 @@
 @text-white-color-value: @white-color-value;
 @text-muted-color-value: @gray-light-value;
 @text-gray-color-value: #6a6a6a;
+@text-solid-color-value: #535353;
 
 @brand-primary-value: #191919;
 @brand-danger-value: #d7657d;
-@brand-info-value: #a595c9;
-@brand-success-value: #6fc374;
+@brand-info-value: #9b86c9;
+@brand-success-value: #58c97a;
 @brand-warning-value: #e4a133;
 
 @brand-primary-text-value: #fff;
@@ -31,15 +32,15 @@
 @state-primary-border-value: darken(@state-primary-bg-value, 5%);
 
 @state-success-bg-value: lighten(spin(@brand-success-value, 5), 30%);
-@state-success-text-value: darken(spin(@brand-success-value, 7), 17%);
+@state-success-text-value: darken(spin(@brand-success-value, 7), 18%);
 @state-success-border-value: darken(@state-success-bg-value, 5%);
 
 @state-info-bg-value: #ece7f9;
-@state-info-text-value: #83779c;
+@state-info-text-value: #7f719e;
 @state-info-border-value: darken(@state-info-bg-value, 5%);
 
-@state-warning-bg-value: #fbf7e1;
-@state-warning-text-value: #9e7328;
+@state-warning-bg-value: #faf4d6;
+@state-warning-text-value: #9f7122;
 @state-warning-border-value: darken(@state-warning-bg-value, 10%);
 
 @state-danger-text-value: #ad4846;
@@ -47,7 +48,7 @@
 @state-danger-border-value: darken(@state-danger-bg-value, 10%);
 
 @state-default-text-value: @text-gray-color-value;
-@state-default-bg-value: @gray-lighter-value;
+@state-default-bg-value: #eaeaea;
 
 @warning-bg-value: #fffdf2;
 
@@ -59,7 +60,7 @@
 @navbar-border-width-value: var(--1px);
 
 @navbar-bg-value: rgb(247, 247, 247);
-@navbar-link-color-value: @gray-light-value;
+@navbar-link-color-value: @gray-soft-value;
 @navbar-link-hover-color-value: @gray-value;
 @navbar-link-hover-bg-value: @body-bg-value; // @todo Remove ?
 @navbar-link-icon-color-value: @gray-dark-value;
@@ -80,7 +81,7 @@
 
 @input-border-value: #d1d5d6;
 @input-border-focus-value: #66afe9;
-@input-color-value: @gray-value;
+@input-color-value: @text-color-value;
 @input-bg-value: @white-color-value;
 @input-bg-disabled-value: @gray-lighter-value;
 @input-color-disabled-value: @gray-light-value;
@@ -97,8 +98,14 @@
 @modal-border-color-value: @panel-default-border-value;
 @modal-border-width-value: 0;
 
-@link-color-value: @brand-primary-value;
-@link-hover-color-value: darken(@link-color-value, 15%);
+@link-color-value: #245b8c;
+@link-hover-color-value: darken(@link-color-value, 10%);
+
+@link-record-color-value: #33373b;
+@link-record-hover-color-value: darken(@link-record-color-value, 5%);
+
+@text-link-color-value: #0f64b0;
+@text-link-hover-color-value: darken(@text-link-color-value, 15%);
 
 // Should be in with unit to work in CSS math functions.
 @panel-border-width-value: var(--1px);

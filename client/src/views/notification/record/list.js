@@ -33,11 +33,22 @@ import ListExpandedRecordView from 'views/record/list-expanded';
 class NotificationListRecordView extends ListExpandedRecordView {
 
     /**
+     * @protected
+     * @type {boolean}
+     */
+    hasStars = true
+
+    /**
+     * @protected
+     * @type {string}
+     */
+    starredAttribute = 'isNotRead'
+
+    /**
      * @name collection
      * @type module:collections/note
      * @memberOf NotificationListRecordView#
      */
-
     setup() {
         super.setup();
 
@@ -108,7 +119,20 @@ class NotificationListRecordView extends ListExpandedRecordView {
      * @return {Promise}
      */
     showNewRecords() {
+        if (this.isGroupingEnabled()) {
+            return this.collection.fetch();
+        }
+
         return this.collection.fetchNew();
+    }
+
+    /**
+     * @todo Preferences?
+     * @private
+     * @return {boolean}
+     */
+    isGroupingEnabled() {
+        return true;
     }
 }
 

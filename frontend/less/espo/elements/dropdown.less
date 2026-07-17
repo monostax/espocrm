@@ -73,7 +73,11 @@ ul.dropdown-menu > li.checkbox {
     margin-left: 0;
     margin-top: 0;
     margin-bottom: 0;
-    padding: var(--4px) 0 var(--4px) var(--20px);
+    padding: var(--4px) 0 var(--4px) var(--14px);
+
+    .checkbox-text {
+        padding-left: var(--2px);
+    }
 
     user-select: none;
 
@@ -148,22 +152,42 @@ ul.dropdown-menu {
     }
 }
 
-ul.dropdown-menu-with-icons {
-    > li {
-        a {
-            padding-left: var(--10px);
-        }
+ul {
+    &.dropdown-menu-with-icons,
+    &:has(> li:not(.hidden) > a span.item-icon) {
+        > li {
+            &:not(:has(.item-icon-grid)) {
+                a {
+                    padding-left: var(--12px);
+                }
 
-        .fas, .far, .glyphicon, .empty-icon {
-            width: var(--16px);
-            text-align: center;
-            display: inline-block;
-            color: var(--gray-soft);
-        }
+                .fas,
+                .far,
+                .glyphicon,
+                .empty-icon {
+                    width: var(--16px);
+                    text-align: center;
+                    display: inline-block;
+                    color: var(--gray-soft);
+                }
 
-        .item-text {
-            padding-left: var(--8px);
-            position: static;
+                .item-icon {
+                    font-size: var(--12px);
+                }
+
+                .item-text {
+                    padding-left: var(--10px);
+                    position: static;
+                }
+            }
+        }
+    }
+
+    &:has(> li:not(.hidden) > a span.item-icon) {
+        > li {
+            > a:not(:has(span.item-icon)):not(:has(span.item-icon)) {
+                padding-left: var(--28px);
+            }
         }
     }
 }
@@ -172,7 +196,7 @@ ul.dropdown-menu {
     > li {
         a {
             .item-icon + .item-text {
-                padding-left: var(--8px);
+                padding-left: var(--10px);
             }
         }
     }
@@ -191,7 +215,17 @@ ul.dropdown-menu {
                 }
             }
         }
+    }
 
+    > li {
+        > a {
+            &,
+            > div {
+                > .reaction-icon {
+                    font-size: var(--16px) !important;
+                }
+            }
+        }
     }
 }
 

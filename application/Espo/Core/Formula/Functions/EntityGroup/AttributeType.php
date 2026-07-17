@@ -29,17 +29,22 @@
 
 namespace Espo\Core\Formula\Functions\EntityGroup;
 
-use Espo\Core\Exceptions\Error;
+use Espo\Core\Formula\Exceptions\BadArgumentType;
+use Espo\Core\Formula\Exceptions\TooFewArguments;
 
 class AttributeType extends \Espo\Core\Formula\Functions\AttributeType
 {
     public function process(\stdClass $item)
     {
         if (count($item->value) < 1) {
-            throw new Error("attribute function: Too few arguments.");
+            throw TooFewArguments::create(1);
         }
 
         $attribute = $this->evaluate($item->value[0]);
+
+        if (!is_string($attribute)) {
+            throw BadArgumentType::create(1, 'string');
+        }
 
         return $this->getAttributeValue($attribute);
     }

@@ -24,11 +24,15 @@
         "lastAccess": {
             "readOnly": true
         },
+        "passwordVersion": {
+            "forbidden": true
+        },
         "createdAt": {
             "readOnly": true
         },
         "modifiedAt": {
             "readOnly": true
         }
-    }
+    },
+    "systemWriteForbidden": true
 }

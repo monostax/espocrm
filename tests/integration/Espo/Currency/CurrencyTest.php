@@ -40,6 +40,7 @@ use Espo\Core\Currency\Rates;
 use Espo\Core\Field\Currency;
 use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Tools\Currency\SyncManager;
+use integration\Core\NoTransaction;
 use tests\integration\Core\BaseTestCase;
 
 class CurrencyTest extends BaseTestCase
@@ -78,6 +79,7 @@ class CurrencyTest extends BaseTestCase
     /**
      * @throws Error
      */
+    #[NoTransaction]
     public function testDecimal1(): void
     {
         $this->getMetadata()->set('entityDefs', 'Lead', [
@@ -155,7 +157,7 @@ class CurrencyTest extends BaseTestCase
         $configWriter->set('currencyList', ['USD', 'EUR']);
         $configWriter->set('defaultCurrency', 'USD');
         $configWriter->set('baseCurrency', 'USD');
-        $configWriter->save();;
+        $configWriter->save();
 
         $syncManager = $this->getInjectableFactory()->create(SyncManager::class);
 
@@ -167,7 +169,6 @@ class CurrencyTest extends BaseTestCase
         $rate->setRate('2.0');
 
         $em->saveEntity($rate);
-
 
         $syncManager->refreshCache();
 
@@ -200,8 +201,8 @@ class CurrencyTest extends BaseTestCase
             'USD' => 0.5,
         ], 'EUR'));
 
-        $this->getDataManager()->rebuild();
-        $this->reCreateApplication();
+        $this->getDataManager()->rebuild([]);
+        $this->reCreateApplication(reuse: true);
 
         $em = $this->getEntityManager();
 
@@ -242,8 +243,8 @@ class CurrencyTest extends BaseTestCase
             'USD' => 0.5,
         ], 'EUR'));
 
-        $this->getDataManager()->rebuild();
-        $this->reCreateApplication();
+        $this->getDataManager()->rebuild([]);
+        $this->reCreateApplication(reuse: true);
 
         $em = $this->getEntityManager();
 

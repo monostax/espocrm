@@ -26,9 +26,6 @@
     "number": {
         "loaderClassName": "Espo\\Core\\Loaders\\NumberUtil"
     },
-    "selectManagerFactory": {
-        "className": "Espo\\Core\\Select\\SelectManagerFactory"
-    },
     "serviceFactory": {
         "className": "Espo\\Core\\ServiceFactory"
     },
@@ -91,5 +88,8 @@
     },
     "applicationConfig": {
         "className": "Espo\\Core\\Utils\\Config\\ApplicationConfig"
+    },
+    "session": {
+        "className": "Espo\\Core\\Session\\DefaultSession"
     }
 }

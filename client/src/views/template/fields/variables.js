@@ -427,5 +427,7 @@ export default class extends BaseFieldView {
         }
     }
 
-    fetch() {}
+    fetch() {
+        return {};
+    }
 }

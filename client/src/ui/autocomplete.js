@@ -29,39 +29,39 @@
 import $ from 'jquery';
 import Handlebars from 'handlebars';
 
+/** @module ui/autocomplete */
+
+/**
+ * @typedef {Object} AutocompleteItem
+ * @property {string} value
+ */
+
+/**
+ * @typedef {{
+ *     name?: string,
+ *     forceHide?: boolean,
+ *     lookup?: string[],
+ *     lookupFunction?: function (string): Promise<Array<AutocompleteItem & Record>>,
+ *     minChars?: Number,
+ *     formatResult?: function (AutocompleteItem & Record<string, any>): string,
+ *     onSelect?: function (AutocompleteItem & Record<string, any>): void,
+ *     beforeRender?: function (HTMLElement): void,
+ *     triggerSelectOnValidInput?: boolean,
+ *     autoSelectFirst?: boolean,
+ *     handleFocusMode?: 1|2|3,
+ *     focusOnSelect?: boolean,
+ *     catchFastEnter?: boolean,
+ * }} AutocompleteOptions
+ */
+
 /**
  * An autocomplete.
  */
 class Autocomplete {
 
-    /** @module ui/autocomplete */
-
-    /**
-     * @typedef {Object} module:ui/autocomplete~item
-     * @property {string} value
-     */
-
-    /**
-     * @typedef {{
-     *     name?: string,
-     *     forceHide?: boolean,
-     *     lookup?: string[],
-     *     lookupFunction?: function (string): Promise<Array<module:ui/autocomplete~item & Record>>,
-     *     minChars?: Number,
-     *     formatResult?: function (module:ui/autocomplete~item & Record): string,
-     *     onSelect?: function (module:ui/autocomplete~item & Record): void,
-     *     beforeRender?: function (HTMLElement): void,
-     *     triggerSelectOnValidInput?: boolean,
-     *     autoSelectFirst?: boolean,
-     *     handleFocusMode?: 1|2|3,
-     *     focusOnSelect?: boolean,
-     *     catchFastEnter?: boolean,
-     * }} module:ui/autocomplete~options
-     */
-
     /**
      * @param {HTMLInputElement} element
-     * @param {module:ui/autocomplete~options} options
+     * @param {AutocompleteOptions} options
      */
     constructor(element, options) {
         /** @private */
@@ -106,7 +106,7 @@ class Autocomplete {
             options.lookup;
 
         const lookupFilter = !options.lookupFunction ?
-            (/** (module:ui/autocomplete~item */suggestion, /** string */query, /** string */queryLowerCase) => {
+            (/** AutocompleteItem */suggestion, /** string */query, /** string */queryLowerCase) => {
                 if (suggestion.value.toLowerCase().indexOf(queryLowerCase) === 0) {
                     return suggestion.value.length !== queryLowerCase.length;
                 }
@@ -201,7 +201,7 @@ class Autocomplete {
 
     /**
      * @private
-     * @param {module:ui/autocomplete~options} options
+     * @param {AutocompleteOptions} options
      */
     initHandleFocus(options) {
         this.$element.off('focus.autocomplete');

@@ -29,6 +29,7 @@
 
 namespace Espo\Modules\Crm\Tools\Lead;
 
+use Countable;
 use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
@@ -55,6 +56,7 @@ use Espo\Modules\Crm\Entities\Opportunity;
 use Espo\Modules\Crm\Tools\Lead\Convert\Params;
 use Espo\Modules\Crm\Tools\Lead\Convert\Values;
 use Espo\ORM\Collection;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Name\Attribute;
 use Espo\Repositories\Attachment as AttachmentRepository;
@@ -182,9 +184,9 @@ class ConvertService
                 $type = $this->metadata->get(['entityDefs', $entityType, 'fields', $field, 'type']);
 
                 if (in_array($type, [FieldType::FILE, FieldType::IMAGE])) {
-                    $attachment = $lead->get($leadField);
+                    $attachment = $this->getRelatedOne($lead, $leadField);
 
-                    if ($attachment) {
+                    if ($attachment instanceof Attachment) {
                         $attachment = $this->getAttachmentRepository()->getCopiedAttachment($attachment);
 
                         $idAttribute = $field . 'Id';
@@ -198,7 +200,10 @@ class ConvertService
                 }
 
                 if ($type === FieldType::ATTACHMENT_MULTIPLE) {
-                    $attachmentList = $lead->get($leadField);
+                    /** @var Collection<Attachment> & Countable $attachmentList */
+                    $attachmentList = $this->entityManager
+                        ->getRelation($lead, $leadField)
+                        ->find();
 
                     if (count($attachmentList)) {
                         $idList = [];
@@ -284,7 +289,7 @@ class ConvertService
 
         $service = $this->recordServiceContainer->getByClass(Account::class);
 
-        $account = $service->create($values, CreateParams::create()->withSkipDuplicateCheck());
+        $account = $service->create($values, CreateParams::create()->withSkipDuplicateCheck())->getEntity();
 
         $lead->setCreatedAccount($account);
 
@@ -326,7 +331,7 @@ class ConvertService
 
         $service = $this->recordServiceContainer->getByClass(Contact::class);
 
-        $contact = $service->create($values, CreateParams::create()->withSkipDuplicateCheck());
+        $contact = $service->create($values, CreateParams::create()->withSkipDuplicateCheck())->getEntity();
 
         $lead->set('createdContactId', $contact->getId());
 
@@ -373,7 +378,7 @@ class ConvertService
 
         $service = $this->recordServiceContainer->getByClass(Opportunity::class);
 
-        $opportunity = $service->create($values, CreateParams::create()->withSkipDuplicateCheck());
+        $opportunity = $service->create($values, CreateParams::create()->withSkipDuplicateCheck())->getEntity();
 
         if ($contact) {
             $this->entityManager
@@ -612,5 +617,13 @@ class ConvertService
         }
 
         throw ConflictSilent::createWithBody('duplicate', Json::encode($duplicateList));
+    }
+
+
+    private function getRelatedOne(Entity $entity, string $link): ?Entity
+    {
+        return $this->entityManager
+            ->getRelation($entity, $link)
+            ->findOne();
     }
 }

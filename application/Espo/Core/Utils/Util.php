@@ -205,17 +205,17 @@ class Util
 
                     $newValue = array_merge($currentArray[$newName], $newValue);
                 } else if (
-                    !static::isSingleArray($newValue) ||
-                    !static::isSingleArray($currentArray[$newName])
+                    !self::isSingleArray($newValue) ||
+                    !self::isSingleArray($currentArray[$newName])
                 ) {
-                    $newValue = static::merge($currentArray[$newName], $newValue);
+                    $newValue = self::merge($currentArray[$newName], $newValue);
                 }
 
             }
 
             // check if exists __APPEND__ identifier and remove its
             if (!isset($currentArray[$newName]) && is_array($newValue)) {
-                $newValue = static::unsetInArrayByValue($mergeIdentifier, $newValue);
+                $newValue = self::unsetInArrayByValue($mergeIdentifier, $newValue);
             }
 
             $currentArray[$newName] = $newValue;
@@ -409,40 +409,6 @@ class Util
 
         return null;
     }
-
-    /**
-     * Replace a search-string in an array recursively.
-     *
-     * @param string $search
-     * @param string $replace
-     * @param string[]|string $array
-     * @param bool $isKeys
-     * @return string|array<scalar, mixed>
-     *
-     * @todo Maybe to remove the method.
-     * @deprecated
-     */
-    public static function replaceInArray($search = '', $replace = '', $array = [], $isKeys = true)
-    {
-        if (!is_array($array)) {
-            return str_replace($search, $replace, $array);
-        }
-
-        $newArr = [];
-
-        foreach ($array as $key => $value) {
-            $addKey = $key;
-
-            if ($isKeys) {
-                $addKey = str_replace($search, $replace, $key);
-            }
-
-            $newArr[$addKey] = static::replaceInArray($search, $replace, $value, $isKeys);
-        }
-
-        return $newArr;
-    }
-
     /**
      * Unset content items defined in the unset.json.
      *
@@ -574,50 +540,9 @@ class Util
     }
 
     /**
-     * Check if two variables are equal.
-     *
-     * @param mixed $var1
-     * @param mixed $var2
-     */
-    public static function areEqual($var1, $var2): bool
-    {
-        if (is_array($var1)) {
-            static::ksortRecursive($var1);
-        }
-
-        if (is_array($var2)) {
-            static::ksortRecursive($var2);
-        }
-
-        return ($var1 === $var2);
-    }
-
-    /**
-     * Sort array recursively.
-     *
      * @param array<string|int, mixed> $array
      */
-    public static function ksortRecursive(&$array): bool
-    {
-        if (!is_array($array)) {
-            return false;
-        }
-
-        ksort($array);
-
-        foreach ($array as $key => $value) {
-            static::ksortRecursive($array[$key]);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param array<string|int, mixed> $array
-     * @deprecated
-     * @todo Make private.
-     */
-    public static function isSingleArray(array $array): bool
+    private static function isSingleArray(array $array): bool
     {
         foreach ($array as $key => $value) {
             if (!is_int($key)) {
@@ -708,33 +633,6 @@ class Util
     }
 
     /**
-     * Improved computing the difference of arrays.
-     *
-     * @deprecated As of v7.4.
-     * @param array<string|int, mixed> $array1
-     * @param array<string|int, mixed> $array2
-     * @return array<string|int, mixed>
-     */
-    public static function arrayDiff(array $array1, array $array2)
-    {
-        $diff = [];
-
-        foreach ($array1 as $key1 => $value1) {
-            if (array_key_exists($key1, $array2)) {
-                if ($value1 !== $array2[$key1]) {
-                    $diff[$key1] = $array2[$key1];
-                }
-
-                continue;
-            }
-
-            $diff[$key1] = $value1;
-        }
-
-        return array_merge($diff, array_diff_key($array2, $array1));
-    }
-
-    /**
      * Fill an array with specific keys.
      *
      * @param mixed[]|mixed $keys
@@ -786,9 +684,12 @@ class Util
 
     /**
      * Check whether values are equal.
+     * Not to be used for comparing user input values.
      *
      * @param mixed $v1
      * @param mixed $v2
+     *
+     * @internal
      */
     public static function areValuesEqual($v1, $v2, bool $isUnordered = false): bool
     {
@@ -1061,24 +962,16 @@ class Util
     }
 
     /**
-     * @deprecated Use `normalizeScopeName`.
-     *
-     * @param string $name
-     * @return string
+     * @internal
+     * @since 10.0.0
      */
-    public static function normilizeScopeName($name)
+    public static function toAbsolutePath(string $path): string
     {
-        return self::normalizeScopeName($name);
-    }
+        // Already absolute.
+        if (str_starts_with($path, '/') || substr($path, 1, 1) === ':' || str_starts_with($path, '\\\\')) {
+            return $path;
+        }
 
-    /**
-     * @deprecated Use `normalizeClassName`.
-     *
-     * @param string $name
-     * @return string
-     */
-    public static function normilizeClassName($name)
-    {
-        return self::normalizeClassName($name);
+        return getcwd() . '/' . $path;
     }
 }

@@ -30,15 +30,14 @@
 namespace Espo\Core\Log;
 
 use Espo\Core\Api\Request;
-use Espo\Core\Exceptions\HasBody;
 use Monolog\Formatter\LineFormatter;
 use Monolog\LogRecord;
 use Throwable;
 
 class DefaultFormatter extends LineFormatter
 {
-    private const LINE_FORMAT = "[%datetime%] %level_name%: %code% %message% %request% %exception%\n";
-    private const DATE_FORMAT = 'Y-m-d H:i:s';
+    private const string LINE_FORMAT = "[%datetime%] %level_name%: %code% %message% %request%\n";
+    private const string DATE_FORMAT = 'Y-m-d H:i:s';
 
     public function __construct(
         private bool $includeTraces = false,
@@ -84,18 +83,6 @@ class DefaultFormatter extends LineFormatter
             return str_replace('%exception%', '', $line);
         }
 
-        if (!$exception instanceof HasBody || !$exception->getBody()) {
-            $part = ":: {$exception->getFile()}({$exception->getLine()})";
-
-            $line = str_replace('%exception%', $part, $line);
-        } else {
-            $line = str_replace('%exception%', '', $line);
-        }
-
-        if (!$this->includeTraces) {
-            return $line;
-        }
-
         $line .= $this->normalizeException($exception);
 
         return $line;
@@ -106,7 +93,7 @@ class DefaultFormatter extends LineFormatter
         $request = $record->context['request'] ?? null;
 
         if (!$request instanceof Request) {
-            return str_replace('%request% ', '', $line);
+            return str_replace('%request%', '', $line);
         }
 
         $requestPart = ":: {$request->getMethod()} {$request->getResourcePath()}";
@@ -124,7 +111,6 @@ class DefaultFormatter extends LineFormatter
             }
         }
 
-        $line = strtr($line, $replace);
-        return $line;
+        return strtr($line, $replace);
     }
 }

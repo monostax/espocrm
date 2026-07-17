@@ -9,7 +9,8 @@
             "label": "Close",
             "handler": "crm:handlers/case/detail-actions",
             "actionFunction": "close",
-            "checkVisibilityFunction": "isCloseAvailable"
+            "checkVisibilityFunction": "isCloseAvailable",
+            "iconClass": "fas fa-check"
         },
         {
             "name": "reject",
@@ -103,7 +104,6 @@
     "selectDefaultFilters": {
         "filter": "open"
     },
-    "allowInternalNotes": true,
     "additionalLayouts": {
         "detailPortal": {
             "type": "detail"

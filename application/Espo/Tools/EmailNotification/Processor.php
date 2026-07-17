@@ -334,8 +334,8 @@ class Processor
 
         $subjectTpl = str_replace(["\n", "\r"], '', $subjectTpl);
 
-        $subject = $this->getHtmlizer()->render($note, $subjectTpl, 'mention-email-subject', $data, true);
-        $body = $this->getHtmlizer()->render($note, $bodyTpl, 'mention-email-body', $data, true);
+        $subject = $this->getHtmlizer()->render($note, $subjectTpl, $data, true);
+        $body = $this->getHtmlizer()->render($note, $bodyTpl, $data, true);
 
         $email = $this->entityManager->getRDBRepositoryByClass(Email::class)->getNew();
 
@@ -513,7 +513,6 @@ class Processor
             $subject = $this->getHtmlizer()->render(
                 $note,
                 $subjectTpl,
-                'note-post-email-subject-' . $parentType,
                 $data,
                 true
             );
@@ -521,7 +520,6 @@ class Processor
             $body = $this->getHtmlizer()->render(
                 $note,
                 $bodyTpl,
-                'note-post-email-body-' . $parentType,
                 $data,
                 true
             );
@@ -533,8 +531,8 @@ class Processor
 
             $subjectTpl = str_replace(["\n", "\r"], '', $subjectTpl);
 
-            $subject = $this->getHtmlizer()->render($note, $subjectTpl, 'note-post-email-subject', $data, true);
-            $body = $this->getHtmlizer()->render($note, $bodyTpl, 'note-post-email-body', $data, true);
+            $subject = $this->getHtmlizer()->render($note, $subjectTpl, $data, true);
+            $body = $this->getHtmlizer()->render($note, $bodyTpl, $data, true);
         }
 
         /** @var Email $email */
@@ -680,7 +678,6 @@ class Processor
         $subject = $this->getHtmlizer()->render(
             entity: $note,
             template: $subjectTpl,
-            cacheId: 'note-status-email-subject',
             additionalData: $data,
             skipLinks: true,
         );
@@ -688,7 +685,6 @@ class Processor
         $body = $this->getHtmlizer()->render(
             entity: $note,
             template: $bodyTpl,
-            cacheId: 'note-status-email-body',
             additionalData: $data,
             skipLinks: true,
         );
@@ -784,7 +780,7 @@ class Processor
             $data['subject'] = $noteData->emailName;
         }
 
-        $data['post'] = nl2br($note->get('post'));
+        $data['post'] = Markdown::transform($note->getPost() ?? '');
 
         if (!$parentId || !$parentType) {
             return;
@@ -814,7 +810,6 @@ class Processor
         $subject = $this->getHtmlizer()->render(
             $note,
             $subjectTpl,
-            'note-email-received-email-subject-' . $parentType,
             $data,
             true
         );
@@ -822,7 +817,6 @@ class Processor
         $body = $this->getHtmlizer()->render(
             $note,
             $bodyTpl,
-            'note-email-received-email-body-' . $parentType,
             $data,
             true
         );

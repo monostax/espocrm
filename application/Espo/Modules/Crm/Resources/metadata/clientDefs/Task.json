@@ -8,9 +8,6 @@
         "list": "crm:views/task/list",
         "detail": "crm:views/task/detail"
     },
-    "modalViews": {
-        "detail": "crm:views/task/modals/detail"
-    },
     "viewSetupHandlers": {
         "record/detail": [
             "__APPEND__",
@@ -39,11 +36,12 @@
     "modalDetailActionList": [
         {
             "name": "complete",
-            "label": "Complete",
+            "labelTranslation": "Task.labels.Complete",
             "acl": "edit",
-            "handler": "crm:handlers/task/detail-actions",
+            "handler": "modules/crm/handlers/task/detail-actions",
             "actionFunction": "complete",
-            "checkVisibilityFunction": "isCompleteAvailable"
+            "checkVisibilityFunction": "isCompleteAvailable",
+            "iconClass": "fas fa-check"
         }
     ],
     "filterList": [

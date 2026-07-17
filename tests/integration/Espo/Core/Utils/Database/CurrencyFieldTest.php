@@ -29,8 +29,10 @@
 
 namespace tests\integration\Espo\Core\Utils\Database;
 
+use integration\Core\NoTransaction;
 use PHPUnit\Framework\Attributes\DataProvider;
 
+#[NoTransaction]
 class CurrencyFieldTest extends Base
 {
     static public function fieldList(): array

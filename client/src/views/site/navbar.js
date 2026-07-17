@@ -534,7 +534,7 @@ class NavbarSiteView extends View {
      * @return {{
      *     view: string,
      *     class: string,
-     *     accessDataList?: module:utils~AccessDefs[],
+     *     accessDataList?: import('utils').AccessDefs[],
      * }}
      */
     getItemDefs(name) {
@@ -1266,7 +1266,8 @@ class NavbarSiteView extends View {
      *     label: string,
      *     isGroup: boolean,
      *     aClassName: string,
-     *     iconClass: null
+     *     iconClass: null,
+     *     openInNewTab: boolean,
      * }}
      */
     prepareTabItemDefs(params, tab, i, vars) {
@@ -1279,6 +1280,7 @@ class NavbarSiteView extends View {
         let isUrl = false;
         let name = tab;
         let aClassName = 'nav-link';
+        let openInNewTab = false;
 
         const label = this.tabsHelper.getTranslatedTabLabel(tab);
 
@@ -1296,6 +1298,7 @@ class NavbarSiteView extends View {
             link = tab.url || '#';
             color = tab.color;
             iconClass = tab.iconClass;
+            openInNewTab = tab.openInNewTab ?? false;
 
             this.urlList.push({name: name, url: link});
         } else if (this.tabsHelper.isTabGroup(tab)) {
@@ -1342,6 +1345,7 @@ class NavbarSiteView extends View {
             aClassName: aClassName,
             isGroup: isGroup,
             isDivider: isDivider,
+            openInNewTab,
         };
 
         if (isGroup) {
@@ -1369,23 +1373,18 @@ class NavbarSiteView extends View {
      * @property {string} [handler]
      * @property {string} [actionFunction]
      * @property {true} [divider]
+     * @property {string} [iconClass]
      */
 
     /**
      * @private
      */
     setupMenu() {
-        let avatarHtml = this.getHelper().getAvatarHtml(this.getUser().id, 'small', 20, 'avatar-link');
-
-        if (avatarHtml) {
-            avatarHtml += ' ';
-        }
-
         /** @type {MenuDataItem[]} */
         this.menuDataList = [
             {
                 link: `#User/view/${this.getUser().id}`,
-                html: avatarHtml + this.getHelper().escapeString(this.getUser().get('name')),
+                html: this.composeUserMenuItemHtml(),
             },
             {divider: true}
         ];
@@ -1400,7 +1399,8 @@ class NavbarSiteView extends View {
          *     disabled:? boolean,
          *     handler?: string,
          *     actionFunction?: string,
-         *     accessDataList?: module:utils~AccessDefs[],
+         *     accessDataList?: import('utils').AccessDefs[],
+         *     iconClass?: string,
          * }>} items
          */
         const items = this.getMetadata().get('app.clientNavbar.menuItems') || {};
@@ -1454,8 +1454,21 @@ class NavbarSiteView extends View {
                 label: this.getLanguage().translatePath(item.labelTranslation),
                 handler: item.handler,
                 actionFunction: item.actionFunction,
+                iconClass: item.iconClass,
             });
         }
+    }
+
+    /**
+     * @private
+     * @return {string}
+     */
+    composeUserMenuItemHtml() {
+        const avatarHtml = this.getHelper().getAvatarHtml(this.getUser().id, 'small', 20, 'avatar-link');
+
+        const part = this.getHelper().escapeString(this.getUser().attributes.name);
+
+        return '<span class="item-user-profile text-medium">' + avatarHtml + part + '</span>';
     }
 
     showMoreTabs() {

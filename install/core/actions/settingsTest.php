@@ -34,7 +34,15 @@ $result = [
     'errors' => [],
 ];
 
-$phpRequiredList = $installer->getSystemRequirementList('php', true);
+$allPostData = $postData->getAll();
+
+$platform = $allPostData['dbPlatform'] ?? 'Mysql';
+
+$phpRequiredList = $installer->getSystemRequirementList('php', true, [
+    'databaseParams' => [
+        'platform' => $platform,
+    ]
+]);
 
 foreach ($phpRequiredList as $name => $details) {
     if (!$details['acceptable']) {
@@ -55,7 +63,7 @@ foreach ($phpRequiredList as $name => $details) {
     }
 }
 
-$allPostData = $postData->getAll();
+
 
 if (
     $result['success'] &&
@@ -79,8 +87,6 @@ if (
     if (!$port) {
         $port = null;
     }
-
-    $platform = $allPostData['dbPlatform'] ?? 'Mysql';
 
     $databaseParams = [
         'platform' => $platform,

@@ -29,23 +29,26 @@
 
 namespace Espo\Classes\FieldDuplicators;
 
+use Espo\Core\Acl;
 use Espo\Core\Record\Duplicator\FieldDuplicator;
+use Espo\Core\Utils\Metadata;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
-
 use Espo\Repositories\Attachment as AttachmentRepository;
 use Espo\Entities\Attachment;
 
 use stdClass;
 
+/**
+ * @noinspection PhpUnused
+ */
 class Wysiwyg implements FieldDuplicator
 {
-    private $entityManager;
-
-    public function __construct(EntityManager $entityManager)
-    {
-        $this->entityManager = $entityManager;
-    }
+    public function __construct(
+        private EntityManager $entityManager,
+        private Acl $acl,
+        private Metadata $metadata,
+    ) {}
 
     public function duplicate(Entity $entity, string $field): stdClass
     {
@@ -75,10 +78,17 @@ class Wysiwyg implements FieldDuplicator
         $attachmentList = [];
 
         foreach ($attachmentIdList as $id) {
-            /** @var Attachment|null $attachment */
-            $attachment = $this->entityManager->getEntityById(Attachment::ENTITY_TYPE, $id);
+            $attachment = $this->entityManager->getRDBRepositoryByClass(Attachment::class)->getById($id);
 
             if (!$attachment) {
+                continue;
+            }
+
+            if (!$this->acl->checkEntityRead($attachment)) {
+                continue;
+            }
+
+            if (!in_array($attachment->getType(), $this->getAllowedImageFileTypeList())) {
                 continue;
             }
 
@@ -95,10 +105,11 @@ class Wysiwyg implements FieldDuplicator
         foreach ($attachmentList as $attachment) {
             $copiedAttachment = $attachmentRepository->getCopiedAttachment($attachment);
 
-            $copiedAttachment->set([
+            $copiedAttachment->setTargetField($field);
+
+            $copiedAttachment->setMultiple([
                 'relatedId' => null,
                 'relatedType' => $entity->getEntityType(),
-                'field' => $field,
             ]);
 
             $this->entityManager->saveEntity($copiedAttachment);
@@ -113,5 +124,13 @@ class Wysiwyg implements FieldDuplicator
         $valueMap->$field = $contents;
 
         return $valueMap;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getAllowedImageFileTypeList(): array
+    {
+        return $this->metadata->get(['app', 'image', 'allowedFileTypeList']) ?? [];
     }
 }

@@ -38,26 +38,62 @@ class PopupNotificationView extends View {
 
     type = 'default'
     style = 'default'
+
+    /**
+     * @protected
+     * @type {boolean}
+     */
     closeButton = true
-    soundPath = 'client/sounds/pop_cork'
+
+
+    /**
+     * @protected
+     * @type {boolean}
+     * @since 10.0
+     */
+    collapseButton = true
+
+    /**
+     * @type {boolean}
+     * @internal
+     */
+    isCollapsed = false
+
+    soundPath = 'client/sounds/cloud.ogg'
+
+    /**
+     * @param {{
+     *     id: string,
+     *     notificationData: Record,
+     *     notificationId: string|null,
+     *     isFirstCheck: boolean,
+     *     onCollapse: function(),
+     *     onExpand: function(),
+     * }} options
+     */
+    constructor(options) {
+        super(options);
+
+        this.options = options;
+    }
 
     init() {
         super.init();
 
         const id = this.options.id;
-        const containerSelector = this.containerSelector = '#' + id;
+        const containerSelector = this.containerSelector = `#${id}`;
 
         this.setSelector(containerSelector);
-
-        this.notificationSoundsDisabled = this.getConfig().get('notificationSoundsDisabled');
 
         this.soundPath = this.getBasePath() +
             (this.getConfig().get('popupNotificationSound') || this.soundPath);
 
         this.on('render', () => {
-            this.element = undefined;
+            this.hide();
 
-            $(containerSelector).remove();
+            if (this.isCollapsed) {
+                return;
+            }
 
             const className = 'popup-notification-' + Espo.Utils.toDom(this.type);
 
@@ -88,6 +124,12 @@ class PopupNotificationView extends View {
         this.notificationData = this.options.notificationData;
         this.notificationId = this.options.notificationId;
         this.id = this.options.id;
+
+        if (!this.notificationId) {
+            this.collapseButton = false;
+        }
+
+        this.addActionHandler('collapse', () => this.collapse());
     }
 
     data() {
@@ -95,26 +137,29 @@ class PopupNotificationView extends View {
             closeButton: this.closeButton,
             notificationData: this.notificationData,
             notificationId: this.notificationId,
+            collapseButton: true,
         };
     }
 
+    /**
+     * @internal
+     * @since 10.0
+     */
+    hide() {
+        this.element = undefined;
+
+        $(this.containerSelector).remove();
+    }
+
     playSound() {
-        if (this.notificationSoundsDisabled) {
+        if (!this.getPreferences().get('notificationSound')) {
             return;
         }
 
-        const html =
-            '<audio autoplay="autoplay">' +
-            '<source src="' + this.soundPath + '.mp3" type="audio/mpeg" />' +
-            '<source src="' + this.soundPath + '.ogg" type="audio/ogg" />' +
-            '<embed hidden="true" autostart="true" loop="false" src="' + this.soundPath + '.mp3" />' +
-            '</audio>';
+        const audio = new Audio(this.soundPath);
+        audio.volume = 0.3;
 
-        const $audio = $(html);
-
-        $audio.get(0).volume = 0.3;
-        // noinspection JSUnresolvedReference
-        $audio.get(0).play();
+        audio.play();
     }
 
     /**
@@ -169,6 +214,68 @@ class PopupNotificationView extends View {
         console.warn(`Method 'cancel' in views/popup-notification is deprecated. Use 'resolveCancel' instead.`);
 
         this.resolveCancel();
+    }
+
+    /**
+     * Collapse.
+     *
+     * @since 10.0
+     * @private
+     */
+    collapse() {
+        this.isCollapsed = true;
+
+        this.options.onCollapse();
+
+        this.hide();
+    }
+
+    /**
+     * Expand.
+     *
+     * @since 10.0
+     * @internal
+     */
+    expand() {
+        this.isCollapsed = false;
+
+        this.options.onExpand();
+
+        this.reRender(true);
+    }
+
+    /**
+     * Collapse silently.
+     *
+     * @since 10.0
+     * @internal
+     */
+    makeCollapsed() {
+        this.isCollapsed = true;
+
+        this.hide();
+    }
+
+    /**
+     * Expand silently.
+     *
+     * @since 10.0
+     * @internal
+     */
+    makeExpanded() {
+        this.isCollapsed = false;
+
+        this.reRender(true);
+    }
+
+    /**
+     * Get title.
+     *
+     * @return string|null
+     * @since 10.0
+     */
+    getTitle() {
+        return null;
     }
 }
 

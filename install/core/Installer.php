@@ -296,8 +296,11 @@ class Installer
         return $this->getInstallerConfig()->getAllData();
     }
 
-    public function getSystemRequirementList($type, $requiredOnly = false, array $additionalData = null)
-    {
+    public function getSystemRequirementList(
+        string $type,
+        bool $requiredOnly = false,
+        ?array $additionalData = null
+    ): array {
         $platform = $additionalData['databaseParams']['platform'] ?? 'Mysql';
 
         $dbConfigDataProvider = new DatabaseConfigDataProvider($platform);
@@ -432,12 +435,20 @@ class Installer
     public function rebuild(): void
     {
         try {
-            $this->app->getContainer()->getByClass(DataManager::class)->rebuild();
+            $this->rebuildInternal();
         } catch (Exception) {
             $this->auth();
 
-            $this->app->getContainer()->getByClass(DataManager::class)->rebuild();
+            $this->rebuildInternal();
         }
+    }
+
+    /**
+     * @throws Error
+     */
+    private function rebuildInternal(): void
+    {
+        $this->app->getContainer()->getByClass(DataManager::class)->rebuild();
     }
 
     public function savePreferences(array $rawPreferences)
@@ -466,6 +477,9 @@ class Installer
                 $this->createRecord($entityName, $data);
             }
         }
+
+        /** @noinspection PhpInternalEntityUsedInspection */
+        $this->getInjectableFactory()->create(ScheduledJobUtil\Populator::class)->populate();
     }
 
     private function createRecord(string $entityType, array $data): void

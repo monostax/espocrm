@@ -106,10 +106,24 @@ class UrlCheck
 
         $output = [];
 
+        $hasIpV4 = false;
+
+        foreach ($ipAddresses as $ipAddress) {
+            if (filter_var($ipAddress, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $hasIpV4 = true;
+
+                break;
+            }
+        }
+
         foreach ($ipAddresses as $ipAddress) {
             $ipPart = $ipAddress;
 
             if (filter_var($ipAddress, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+                if ($hasIpV4) {
+                    continue;
+                }
+
                 $ipPart = "[$ipPart]";
             }
 
@@ -117,15 +131,6 @@ class UrlCheck
         }
 
         return $output;
-    }
-
-    /**
-     * @deprecated Since 9.3.4. Use `isUrlAndNotIternal`.
-     * @todo Remove in 9.5.0.
-     */
-    public function isNotInternalUrl(string $url): bool
-    {
-        return $this->isUrlAndNotIternal($url);
     }
 
     /**

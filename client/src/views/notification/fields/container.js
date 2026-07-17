@@ -28,6 +28,9 @@
 
 import BaseFieldView from 'views/fields/base';
 import NotificationListRecordView from 'views/notification/record/list';
+import NotificationPanelView from 'views/notification/panel';
+import Ajax from 'ajax';
+import Ui from 'ui';
 
 class NotificationContainerFieldView extends BaseFieldView {
 
@@ -58,30 +61,65 @@ class NotificationContainerFieldView extends BaseFieldView {
      */
     isGroupExpanded = false
 
+    /**
+     * @private
+     * @type {boolean}
+     */
+    groupingEnabled
+
     data() {
+        const count = this.model.attributes.groupedCount ?? 0;
+
         return {
-            hasGrouped: (this.model.attributes.groupedCount ?? 0) > 1,
+            hasGrouped: count > 1 || count < 0,
             isGroupExpanded: this.isGroupExpanded,
+            hasMarkGroupRead: this.groupingEnabled && !this.model.attributes.read,
         };
     }
 
     setup() {
-        switch (this.model.attributes.type) {
-            case 'Note':
-                this.processNote(this.model.attributes.noteData);
+        this.groupingEnabled = this.options.groupingEnabled ?? false;
 
-                break;
+        if (this.model.attributes.groupType) {
+            this.wait(this.processGroup());
+        } else {
+            switch (this.model.attributes.type) {
+                case 'Note':
+                    this.processNote(this.model.attributes.noteData);
 
-            case 'MentionInPost':
-                this.processMentionInPost(this.model.attributes.noteData);
+                    break;
 
-                break;
+                case 'MentionInPost':
+                    this.processMentionInPost(this.model.attributes.noteData);
 
-            default:
-                this.process();
+                    break;
+
+                default:
+                    this.process();
+            }
         }
 
         this.addActionHandler('showGrouped', () => this.showGrouped());
+        this.addActionHandler('markGroupRead', () => this.markGroupRead());
+
+        if (this.model.collection) {
+            this.listenTo(this.model.collection, 'all-read', () => {
+                this.removeMarkGroupRead();
+            });
+        }
+    }
+
+    /**
+     * @private
+     */
+    removeMarkGroupRead() {
+        if (!this.isRendered()) {
+            return;
+        }
+
+        const element = this.element?.querySelector('[data-action="markGroupRead"]');
+
+        element?.remove()
     }
 
     process() {
@@ -106,6 +144,32 @@ class NotificationContainerFieldView extends BaseFieldView {
         const parentSelector = this.options.containerSelector ?? this.getSelector();
 
         this.createView('notification', viewName, {
+            model: this.model,
+            fullSelector: `${parentSelector} li[data-id="${this.model.id}"]`,
+        });
+    }
+
+    /**
+     * @private
+     */
+    async processGroup() {
+        const groupType = this.model.attributes.groupType;
+
+        let viewName;
+
+        if (groupType === 'Record') {
+            viewName = 'views/notification/items/group-note';
+        } else if (groupType === 'EmailReceived') {
+            viewName = 'views/notification/items/group-email-received';
+        }
+
+        if (!viewName) {
+            return;
+        }
+
+        const parentSelector = this.options.containerSelector ?? this.getSelector();
+
+        await this.createView('notification', viewName, {
             model: this.model,
             fullSelector: `${parentSelector} li[data-id="${this.model.id}"]`,
         });
@@ -140,6 +204,7 @@ class NotificationContainerFieldView extends BaseFieldView {
                 fullSelector: `${parentSelector} li[data-id="${this.model.id}"] .cell[data-name="data"]`,
                 onlyContent: true,
                 isNotification: true,
+                isInGroup: this.options.isInGroup ?? false,
             });
 
             this.wait(false);
@@ -183,7 +248,14 @@ class NotificationContainerFieldView extends BaseFieldView {
     async showGrouped() {
         const collection = await this.getCollectionFactory().create('Notification');
 
-        collection.url = `Notification/${this.model.id}/group`;
+        if (this.model.attributes.groupType) {
+            collection.url = `Notification/group?type=${this.model.attributes.groupType}&id=` +
+                this.model.id;
+
+            collection.maxSize = this.getConfig().get('recordsPerPageSmall');
+        } else {
+            collection.url = `Notification/${this.model.id}/group`;
+        }
 
         const button = this.element.querySelector('a[data-action="showGrouped"]');
 
@@ -191,7 +263,7 @@ class NotificationContainerFieldView extends BaseFieldView {
             button.classList.add('disabled');
         }
 
-        Espo.Ui.notifyWait();
+        Ui.notifyWait();
 
         try {
             await collection.fetch();
@@ -201,15 +273,9 @@ class NotificationContainerFieldView extends BaseFieldView {
             return;
         }
 
-        Espo.Ui.notify();
+        Ui.notify();
 
         this.isGroupExpanded = true;
-
-        /*if (this.model.attributes.read === false) {
-            collection.models.forEach(model => {
-                model.set('read', false);
-            });
-        }*/
 
         const view = new NotificationListRecordView({
             collection: collection,
@@ -221,20 +287,60 @@ class NotificationContainerFieldView extends BaseFieldView {
                         {
                             name: 'data',
                             view: 'views/notification/fields/container',
+                            options: {
+                                isInGroup: true,
+                            },
                         },
                     ],
                 ],
-                right: {
-                    name: 'read',
-                    view: 'views/notification/fields/read',
-                    width: 'var(--10px)',
-                },
             },
         });
 
         await this.assignView('groupedList', view);
 
         await this.reRender();
+
+        this.triggerUpdateRead();
+
+        if (this.model.collection) {
+            view.listenTo(this.model.collection, 'all-read', () => {
+                collection.models.forEach(model => {
+                    model.set('read', true, {sync: true});
+                });
+            });
+        }
+    }
+
+    /**
+     * @private
+     */
+    async markGroupRead() {
+        await Ajax.postRequest(`Notification/group/${this.model.id}/markRead`);
+
+        this.model.set('read', true, {sync: true});
+
+        await this.reRender();
+
+        this.triggerUpdateRead();
+    }
+
+    /**
+     * @internal
+     */
+    triggerUpdateRead() {
+        let viewPointer = this;
+
+        while (true) {
+            viewPointer = viewPointer.getParentView();
+
+            if (!viewPointer || viewPointer instanceof NotificationPanelView) {
+                break;
+            }
+        }
+
+        if (viewPointer instanceof NotificationPanelView) {
+            viewPointer.trigger('collection-fetched');
+        }
     }
 }
 

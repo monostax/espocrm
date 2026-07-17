@@ -114,7 +114,7 @@ class Language {
      *
      * @param {string} name An item name.
      * @param {string|'messages'|'labels'|'fields'|'links'|'scopeNames'|'scopeNamesPlural'} [category='labels'] A category.
-     * @param {string} [scope='Global'] A scope.
+     * @param {string|null} [scope='Global'] A scope.
      * @returns {string}
      */
     translate(name, category, scope) {
@@ -135,17 +135,13 @@ class Language {
      *
      * @param {string} value An option value.
      * @param {string} field A field name.
-     * @param {string} [scope='Global'] A scope.
+     * @param {string|null} [scope='Global'] A scope.
      * @returns {string}
      */
     translateOption(value, field, scope) {
-        let translation = this.translate(field, 'options', scope);
+        const map = this.translate(field, 'options', scope) ?? {};
 
-        if (typeof translation !== 'object') {
-            translation = {};
-        }
-
-        return translation[value] || value;
+        return map[value] || value;
     }
 
     /**

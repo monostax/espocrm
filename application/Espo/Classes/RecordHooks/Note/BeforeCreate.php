@@ -33,6 +33,7 @@ use Espo\Core\Acl;
 use Espo\Core\Acl\Table as AclTable;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\Hook\SaveHook;
+use Espo\Core\Utils\Metadata;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
@@ -49,7 +50,8 @@ class BeforeCreate implements SaveHook
         private EntityManager $entityManager,
         private Acl $acl,
         private User $user,
-        private NoteUtil $noteUtil
+        private NoteUtil $noteUtil,
+        private Metadata $metadata,
     ) {}
 
     public function process(Entity $entity): void
@@ -61,7 +63,19 @@ class BeforeCreate implements SaveHook
         }
 
         if ($this->user->isPortal()) {
-            $entity->set('isInternal', false);
+            $entity->setIsInternal(false);
+        }
+
+        if (
+            !$entity->isPost() ||
+            !$entity->getParentType() ||
+            !$this->metadata->get("streamDefs.{$entity->getParentType()}.allowInternalNotes")
+        ) {
+            if ($entity->isInternal()) {
+                throw new Forbidden("Internal note is not allowed.");
+            }
+
+            $entity->setIsInternal(false);
         }
 
         if ($entity->isPost()) {
@@ -70,7 +84,7 @@ class BeforeCreate implements SaveHook
 
         $targetType = $entity->getTargetType();
 
-        $entity->clear('isPinned');
+        $entity->clear(Note::FIELD_IS_PINNED);
         $entity->clear('isGlobal');
 
         switch ($targetType) {

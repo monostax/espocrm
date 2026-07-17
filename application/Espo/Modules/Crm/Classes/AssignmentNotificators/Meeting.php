@@ -114,7 +114,9 @@ class Meeting implements AssignmentNotificator
         $notification
             ->setType(self::NOTIFICATION_TYPE_EVENT_ATTENDEE)
             ->setUserId($userId)
-            ->setRelated(LinkParent::createFromEntity($entity))
+            ->setRelated(LinkParent::fromEntity($entity))
+            // Needed for notification grouping.
+            ->setRelatedParent(LinkParent::fromEntity($entity))
             ->setData([
                 'entityType' => $entity->getEntityType(),
                 'entityId' => $entity->getId(),

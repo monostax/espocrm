@@ -27,6 +27,7 @@
                                     {{#if link}}href="{{link}}"{{else}}role="button"{{/if}}
                                     class="{{aClassName}}"
                                     {{#if color}}style="border-color: {{color}}"{{/if}}
+                                    {{#if openInNewTab}} target="_blank" {{/if}}
                                 {{#if isGroup}}
                                     id="nav-tab-group-{{name}}"
                                     data-toggle="dropdown"
@@ -69,6 +70,7 @@
                                                     id="nav-tab-group-{{name}}"
                                                     data-toggle="dropdown"
                                                 {{/if}}
+                                                {{#if openInNewTab}} target="_blank" {{/if}}
                                             >
                             <span class="short-label"{{#if color}} style="color: {{color}}"{{/if}}>
                                 {{#if iconClass}}
@@ -116,6 +118,7 @@
                                             id="nav-tab-group-{{name}}"
                                             data-toggle="dropdown"
                                         {{/if}}
+                                        {{#if openInNewTab}} target="_blank" {{/if}}
                                     >
                             <span class="short-label"{{#if color}} style="color: {{color}}"{{/if}}>
                                 {{#if iconClass}}
@@ -155,6 +158,7 @@
                                                             id="nav-tab-group-{{name}}"
                                                             data-toggle="dropdown"
                                                         {{/if}}
+                                                        {{#if openInNewTab}} target="_blank" {{/if}}
                                                     >
                                     <span class="short-label"{{#if color}} style="color: {{color}}"{{/if}}>
                                         {{#if iconClass}}
@@ -205,7 +209,17 @@
                                     {{#if link}}href="{{link}}"{{else}}role="button"{{/if}}
                                     tabindex="0"
                                     class="nav-link{{#if handler}} action{{/if}}"
-                                >{{#if html}}{{{html}}}{{else}}{{label}}{{/if}}</a></li>
+                                >
+                                        {{~#if html~}}
+                                            {{{html}}}
+                                        {{~else~}}
+                                            {{~#if iconClass~}}
+                                                <span class="item-icon {{iconClass}}"></span>
+                                            {{~/if~}}
+                                            <span class="item-text">{{label}}</span>
+                                        {{~/if~}}
+                                    </a>
+                                </li>
                             {{else}}
                                 <li class="divider"></li>
                             {{/unless}}

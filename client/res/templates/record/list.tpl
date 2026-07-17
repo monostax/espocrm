@@ -11,13 +11,21 @@
                 <ul class="dropdown-menu actions-menu">
                     {{#each massActionDataList}}
                         {{#if this}}
-                            <li {{#if hidden}}class="hidden"{{/if}}>
+                            <li {{#if hidden}} class="hidden" {{/if}}>
                                 <a
                                     role="button"
                                     tabindex="0"
                                     data-action="{{name}}"
                                     class="mass-action"
-                                >{{translate name category="massActions" scope=../scope}}</a>
+                                >
+                                    {{~#if iconClass~}}
+                                        <span class="item-icon {{iconClass}}"></span>
+                                    {{~/if~}}
+                                    <span
+                                        class="item-text"
+                                    >{{translate name category="massActions" scope=../scope}}</span>
+                                    {{~null~}}
+                                </a>
                             </li>
                         {{else}}
                             {{#unless @first}}
@@ -78,7 +86,19 @@
                                             class="action list-action-item"
                                             data-action="{{name}}"
                                             data-name="{{name}}"
-                                        >{{#if html}}{{{html}}}{{else}}{{translate label scope=../entityType}}{{/if}}</a></li>
+                                        >
+                                        {{~#if html~}}
+                                            {{{html}}}
+                                        {{~else~}}
+                                            {{~#if iconClass~}}
+                                                <span class="item-icon {{iconClass}}"></span>
+                                            {{~/if~}}
+                                            <span
+                                                class="item-text"
+                                            >{{translate label scope=../entityType}}</span>
+                                        {{~/if~}}
+                                        </a>
+                                    </li>
                                 {{else}}
                                     {{#unless @first}}
                                         {{#unless @last}}
@@ -101,7 +121,15 @@
                                         tabindex="0"
                                         data-action="{{name}}"
                                         class="mass-action"
-                                    >{{translate name category="massActions" scope=../scope}}</a></li>
+                                    >
+                                        {{~#if iconClass~}}
+                                            <span class="item-icon {{iconClass}}"></span>
+                                        {{~/if~}}
+                                        <span
+                                            class="item-text"
+                                        >{{translate name category="massActions" scope=../scope}}</span>
+                                        {{~null~}}
+                                    </a></li>
                             {{else}}
                                 {{#unless @first}}
                                     {{#unless @last}}
@@ -138,7 +166,7 @@
 
 {{#if collectionLength}}
     <div
-        class="list {{#if showMoreActive}} has-show-more {{/if}}"
+        class="list {{#if showMoreActive}} has-show-more {{/if}} {{#if selectable}} list-selectable {{/if}}"
         data-scope="{{scope}}"
         tabindex="-1"
     >
@@ -173,7 +201,13 @@
                                         role="button"
                                         tabindex="0"
                                         data-action="selectAllResult"
-                                    >{{translate 'Select All Results'}}</a>
+                                    >
+                                        {{~null~}}
+                                        <span class="item-icon far fa-square-check"></span>
+                                        {{~null~}}
+                                        <span class="item-text">{{translate 'Select All Results'}}</span>
+                                        {{~null~}}
+                                    </a>
                                 </li>
                             </ul>
                         </div>
@@ -228,13 +262,17 @@
         </table>
 
         {{#if showMoreEnabled}}
-            <div class="show-more{{#unless showMoreActive}} hidden{{/unless}}">
+            <div
+                class="show-more {{#unless showMoreActive}} hidden {{/unless}}"
+                data-owner-cid="{{viewObject.cid}}"
+            >
                 <a
                     type="button"
                     role="button"
                     tabindex="0"
                     class="btn btn-default btn-block"
                     data-action="showMore"
+                    data-owner-cid="{{viewObject.cid}}"
                     {{#if showCount}}title="{{translate 'Total'}}: {{totalCountFormatted}}"{{/if}}
                 >
                     {{#if showCount}}

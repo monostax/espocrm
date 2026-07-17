@@ -2,11 +2,13 @@
 
 ## Reporting a vulnerability
 
-If you believe you have discovered a vulnerability in EspoCRM, please contacts us via [this](https://www.espocrm.com/contacts/) or [this](https://www.espocrm.com/support/) forms. Or create a private vulnerability report on GitHub.
+If you believe you have discovered a vulnerability in EspoCRM, please contact us via [this](https://www.espocrm.com/contacts/) or [this](https://www.espocrm.com/support/) forms. Or create a private vulnerability report on GitHub.
 
-### LLM slop
+What reports we do not accept:
 
-Low-effort, LLM-generated reports are not allowed. In such cases, if it is evident that the author does not understand the subject they submitted, the account will be blocked.
+- Executing PHP code by an extension, during extension installation or upgrade process.
+- Exposing contacts through a target list, campaign or mass email, considering the user has access to them.
+- SSRF in IMAP/SMTP with TOCTOU.
 
 ## Supported versions
 

@@ -29,6 +29,7 @@
 import EditModalView from 'views/modals/edit';
 import MailtoHelper from 'helpers/misc/mailto';
 import EmailScheduleSendModalView from 'views/email/modals/schedule-send';
+import ActionItemSetup from 'helpers/action-item-setup';
 
 class ComposeEmailModalView extends EditModalView {
 
@@ -73,7 +74,7 @@ class ComposeEmailModalView extends EditModalView {
                 this.model.set(focusedFieldView.fetch());
             }
 
-            if (this.getRecordView().isChanged) {
+            if (this.getRecordView().hasChanged()) {
                 this.confirm(this.translate('confirmLeaveOutMessage', 'messages'))
                     .then(() => this.actionClose());
 
@@ -106,6 +107,7 @@ class ComposeEmailModalView extends EditModalView {
             name: 'scheduleSend',
             text: this.translate('Schedule Send', 'labels', 'Email'),
             onClick: () => this.actionScheduleSend(),
+            iconClass: 'far fa-clock',
         });
 
         this.$header = $('<a>')
@@ -120,7 +122,7 @@ class ComposeEmailModalView extends EditModalView {
             this.dialogIsHidden = false;
         });
 
-        const helper = new MailtoHelper(this.getConfig(), this.getPreferences(), this.getAcl());
+        const helper = new MailtoHelper();
 
         if (helper.toUse()) {
             this.once('after:render', () => this.actionClose());
@@ -227,7 +229,7 @@ class ComposeEmailModalView extends EditModalView {
     }
 
     /**
-     * @param {module:views/record/base~saveOptions} [options] Options.
+     * @param {import('views/record/base').SaveOptions} [options] Options.
      * @return {Promise}
      */
     actionSaveDraft(options) {
@@ -337,6 +339,38 @@ class ComposeEmailModalView extends EditModalView {
 
         await this.assignView('dialog', view);
         await view.render();
+    }
+
+    /**
+     * @protected
+     */
+    setupActionItems() {
+        const actionItemSetup = new ActionItemSetup();
+
+        actionItemSetup.setup({
+            view: this,
+            type: 'recordControls.compose.dropdown',
+            waitFunc: promise => this.wait(promise),
+            addFunc: item => this.addDropdownItem(item),
+            showFunc: name => this.showActionItem(name),
+            hideFunc: name => this.hideActionItem(name),
+        });
+
+        actionItemSetup.setup({
+            view: this,
+            type: 'recordControls.composeSide.buttons',
+            waitFunc: promise => this.wait(promise),
+            addFunc: item => {
+                this.addButton({
+                    ...item,
+                    position: 'right',
+                })
+            },
+            showFunc: name => this.showActionItem(name),
+            hideFunc: name => this.hideActionItem(name),
+            enableFunc: name => this.enableButton(name),
+            disableFunc: name => this.disableButton(name),
+        });
     }
 }
 

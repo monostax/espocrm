@@ -35,7 +35,7 @@ class MeetingDetailRecordView extends DetailRecordView {
     setupActionItems() {
         super.setupActionItems();
 
-        if (!this.getAcl().checkModel(this.model, 'edit')) {
+        if (!this.getAcl().checkScope(this.model.entityType)) {
             return;
         }
 
@@ -59,6 +59,7 @@ class MeetingDetailRecordView extends DetailRecordView {
             'label': 'Set Held',
             'name': 'setHeld',
             onClick: () => this.actionSetHeld(),
+            iconClass: 'fas fa-check',
         });
 
         this.dropdownItemList.push({
@@ -66,24 +67,32 @@ class MeetingDetailRecordView extends DetailRecordView {
             'name': 'setNotHeld',
             onClick: () => this.actionSetNotHeld(),
         });
-    }
 
-    manageAccessEdit(second) {
-        super.manageAccessEdit(second);
+        const control = () => {
+            if (
+                historyStatusList.includes(this.model.attributes.status) ||
+                !this.getAcl().checkModel(this.model, 'edit')
+            ) {
+                this.hideActionItem('setHeld');
+                this.hideActionItem('setNotHeld');
+            } else {
+                this.showActionItem('setHeld');
+                this.showActionItem('setNotHeld');
+            }
+        };
 
-        if (second && !this.getAcl().checkModel(this.model, 'edit', true)) {
-            this.hideActionItem('setHeld');
-            this.hideActionItem('setNotHeld');
-        }
+        control();
+
+        this.model.onSync({
+            owner: this,
+            callback: () => control(),
+        });
     }
 
     actionSetHeld() {
         this.model.save({status: 'Held'}, {patch: true})
             .then(() => {
                 Espo.Ui.success(this.translate('Saved'));
-
-                this.removeActionItem('setHeld');
-                this.removeActionItem('setNotHeld');
             });
     }
 
@@ -91,9 +100,6 @@ class MeetingDetailRecordView extends DetailRecordView {
         this.model.save({status: 'Not Held'}, {patch: true})
             .then(() => {
                 Espo.Ui.success(this.translate('Saved'));
-
-                this.removeActionItem('setHeld');
-                this.removeActionItem('setNotHeld');
             });
     }
 }

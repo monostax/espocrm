@@ -29,6 +29,7 @@
 
 namespace Espo\Entities;
 
+use Espo\Core\Field\Link;
 use Espo\Core\Field\LinkParent;
 use Espo\Core\Name\Field;
 use Espo\Core\ORM\Entity;
@@ -63,6 +64,26 @@ class Note extends Entity
     public const TYPE_ASSIGN = 'Assign';
     public const TYPE_EMAIL_RECEIVED = 'EmailReceived';
     public const TYPE_EMAIL_SENT = 'EmailSent';
+
+    public const string DATA_ATTR_ADDED_ASSIGNED_USERS = 'addedAssignedUsers';
+    public const string DATA_ATTR_REMOVED_ASSIGNED_USERS = 'removedAssignedUsers';
+    public const string DATA_ATTR_ASSIGNED_USERS = 'assignedUsers';
+    public const string DATA_ATTR_STATUS_VALUE = 'statusValue';
+    public const string DATA_ATTR_STATUS_FIELD = 'statusField';
+    public const string DATA_ATTR_ASSIGNED_USER_ID = 'assignedUserId';
+    public const string DATA_ATTR_ASSIGNED_USER_NAME = 'assignedUserName';
+    public const string DATA_ATTR_FIELDS = 'fields';
+    public const string DATA_ATTR_ATTRIBUTES = 'attributes';
+    public const string DATA_ATTR_PERSON_TYPE = 'personEntityType';
+    public const string DATA_ATTR_PERSON_NAME = 'personEntityName';
+    public const string DATA_ATTR_PERSON_ID = 'personEntityId';
+    public const string DATA_ATTR_FROM_STRING = 'fromString';
+
+    public const string FIELD_TYPE = 'type';
+    public const string FIELD_NUMBER = 'number';
+    public const string FIELD_POST = 'post';
+    public const string FIELD_IS_INTERNAL = 'isInternal';
+    public const string FIELD_IS_PINNED = 'isPinned';
 
     private bool $aclIsProcessed = false;
 
@@ -123,7 +144,7 @@ class Note extends Entity
 
     public function isInternal(): bool
     {
-        return (bool) $this->get('isInternal');
+        return (bool) $this->get(self::FIELD_IS_INTERNAL);
     }
 
     public function getPost(): ?string
@@ -341,6 +362,14 @@ class Note extends Entity
         return $this;
     }
 
+    /**
+     * @since 10.0.0
+     */
+    public function setIsInternal(bool $isInternal): self
+    {
+        return $this->set(self::FIELD_IS_INTERNAL, $isInternal);
+    }
+
     public function getParent(): ?OrmEntity
     {
         return $this->relations->getOne(Field::PARENT);
@@ -358,5 +387,11 @@ class Note extends Entity
     {
         /** @var EntityCollection<Attachment> */
         return $this->relations->getMany('attachments');
+    }
+
+    public function getCreatedBy(): ?Link
+    {
+        /** @var ?Link */
+        return $this->getValueObject('createdBy');
     }
 }

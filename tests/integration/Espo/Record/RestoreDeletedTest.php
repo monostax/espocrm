@@ -33,20 +33,19 @@ use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\ReadParams;
 use Espo\Core\Record\DeleteParams;
 use Espo\Core\Record\ServiceContainer;
+use tests\integration\Core\BaseTestCase;
 
-class RestoreDeletedTest extends \tests\integration\Core\BaseTestCase
+class RestoreDeletedTest extends BaseTestCase
 {
-    public function testDeleted()
+    public function testDeleted(): void
     {
-        $app = $this->createApplication();
-
-        $service = $app->getContainer()
+        $service = $this->getContainer()
             ->getByClass(ServiceContainer::class)
             ->get('Account');
 
         $account = $service->create((object) [
             'name' => 'Test'
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $service->delete($account->getId(), DeleteParams::create());
 
@@ -59,21 +58,19 @@ class RestoreDeletedTest extends \tests\integration\Core\BaseTestCase
 
     public function testRestoreDeleted()
     {
-        $app = $this->createApplication();
-
-        $service = $app->getContainer()
+        $service = $this->getContainer()
             ->getByClass(ServiceContainer::class)
             ->get('Account');
 
         $account = $service->create((object) [
             'name' => 'Test'
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $service->delete($account->getId(), DeleteParams::create());
 
         $service->restoreDeleted($account->getId());
 
-        $account = $service->read($account->getId(), ReadParams::create());
+        $account = $service->read($account->getId(), ReadParams::create())->getEntity();
 
         $this->assertNotNull($account);
 

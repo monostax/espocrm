@@ -140,7 +140,7 @@ class SelectRelatedHelper {
 
             Espo.loader.requirePromise(handler)
                 .then(Handler => new Handler(this.view.getHelper()))
-                .then(/** module:handlers/select-related */handler => {
+                .then(/** import('contracts/relation').SelectRelatedHandler */handler => {
                     handler.getFilters(model)
                         .then(filters => resolve(filters));
                 });

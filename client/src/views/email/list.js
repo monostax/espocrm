@@ -60,13 +60,16 @@ class EmailListView extends ListView {
         'drafts',
     ]
 
-    /** @inheritDoc */
-    createListRecordView(fetch) {
-        return super.createListRecordView(fetch)
-            .then(view => {
-                this.listenTo(view, 'after:render', () => this.initDraggable(null));
-                this.listenTo(view, 'after:show-more', fromIndex => this.initDraggable(fromIndex));
-            });
+    /**
+     * @inheritDoc
+     */
+    async createListRecordView(fetch) {
+        const view = await super.createListRecordView(fetch);
+
+        this.listenTo(view, 'after:render', () => this.initDraggable(null));
+        this.listenTo(view, 'after:show-more', fromIndex_1 => this.initDraggable(fromIndex_1));
+
+        return view;
     }
 
     /**
@@ -154,17 +157,17 @@ class EmailListView extends ListView {
 
                     if (
                         recordView.isIdChecked(m.id) &&
-                        !recordView.allResultIsChecked &&
-                        recordView.checkedList.length > 1
+                        !recordView.isAllResultChecked() &&
+                        recordView.getCheckedIds().length > 1
                     ) {
-                        text += ' · ' + recordView.checkedList.length;
+                        text += ' · ' + recordView.getCheckedIds().length;
                     }
 
                     let draggedId = m.id;
 
                     if (
                         recordView.isIdChecked(m.id) &&
-                        !recordView.allResultIsChecked
+                        !recordView.isAllResultChecked()
                     ) {
                         draggedId = '';
                     }
@@ -184,12 +187,12 @@ class EmailListView extends ListView {
                     left: 0,
                 },
                 drag: () => {
-                    if (recordView.allResultIsChecked) {
+                    if (recordView.isAllResultChecked()) {
                         return false;
                     }
                 },
                 start: (e) => {
-                    if (recordView.allResultIsChecked) {
+                    if (recordView.isAllResultChecked()) {
                         return;
                     }
 
@@ -317,7 +320,6 @@ class EmailListView extends ListView {
 
     /** @inheritDoc */
     createSearchView() {
-        /** @type {Promise<module:view>} */
         const promise = super.createSearchView();
 
         promise.then(view => {
@@ -403,12 +405,14 @@ class EmailListView extends ListView {
         };
     }
 
+    /**
+     * @private
+     * @return {boolean}
+     */
     hasSelectedRecords() {
         const recordView = this.getEmailRecordView();
 
-        return recordView.checkedList &&
-            recordView.checkedList.length &&
-            !recordView.allResultIsChecked;
+        return recordView.getCheckedIds().length > 0 && !recordView.isAllResultChecked();
     }
 
     /** @inheritDoc */
@@ -689,7 +693,7 @@ class EmailListView extends ListView {
         const bottomSpaceHeight = parseInt(window.getComputedStyle($('#content').get(0)).paddingBottom, 10);
 
         const getOffsetTop = (/** JQuery */$element) => {
-            let element = /** @type {HTMLElement} */$element.get(0);
+            let element = $element.get(0);
 
             let value = 0;
 

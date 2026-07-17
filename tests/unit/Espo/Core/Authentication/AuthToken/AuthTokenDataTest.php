@@ -30,20 +30,21 @@
 namespace tests\unit\Espo\Core\Authentication\AuthToken;
 
 use Espo\Core\Authentication\AuthToken\Data;
+use PHPUnit\Framework\TestCase;
 
-class AuthTokenDataTest extends \PHPUnit\Framework\TestCase
+class AuthTokenDataTest extends TestCase
 {
     public function testCreate()
     {
         $authTokenData = Data::create([
-            'hash' => 'hash',
+            'passwordVersion' => 1,
             'ipAddress' => 'ip-address',
             'userId' => 'user-id',
             'portalId' => 'portal-id',
             'createSecret' => true,
         ]);
 
-        $this->assertEquals('hash', $authTokenData->getHash());
+        $this->assertEquals(1, $authTokenData->getPasswordVersion());
         $this->assertEquals('ip-address', $authTokenData->getIpAddress());
         $this->assertEquals('user-id', $authTokenData->getUserId());
         $this->assertEquals('portal-id', $authTokenData->getPortalId());

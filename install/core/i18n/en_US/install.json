@@ -33,7 +33,7 @@
         "Re-check": "Re-check",
         "Version": "Version",
         "Test settings": "Test Connection",
-        "Database Settings Description": "Enter your MySQL database connection information (hostname, username and password). You can specify the server port for hostname like localhost:3306.",
+        "Database Settings Description": "Enter your database connection information. You can specify the server port for hostname, for example `localhost:3306`.",
         "Install": "Install",
         "SetupConfirmation page title": "System Requirements",
         "PHP Configuration": "PHP settings",

@@ -29,7 +29,6 @@
 import $ from 'jquery';
 import EditTableModalView from 'views/wysiwyg/modals/edit-table';
 import EditCellModalView from 'views/wysiwyg/modals/edit-cell';
-import Handlebars from 'handlebars';
 
 /**
  * @type {{
@@ -321,7 +320,7 @@ function init(langSets) {
             /** @type {JQuery} */
             const $editable = context.layoutInfo.editable;
 
-            const view = /** @type {module:view} */options.espoView;
+            const view = /** @type {import('view').default} */options.espoView;
 
             if (!view) {
                 return;
@@ -493,6 +492,40 @@ function init(langSets) {
                     const modeToRequired = options.handlebars ?
                         'ace/mode/handlebars' :
                         'ace/mode/html';
+
+                    if (options.handlebars) {
+                        aceEditor.completers ??= [];
+
+                        aceEditor.completers.push({
+                            getCompletions(editor, session, pos, prefix, callback) {
+                                const before = session.getLine(pos.row).substring(0, pos.column);
+
+                                const lastOpen = before.lastIndexOf('<');
+                                const lastClose = before.lastIndexOf('>');
+
+                                const insideTag = lastOpen > lastClose;
+
+                                if (!insideTag) {
+                                    return callback(null, []);
+                                }
+
+                                callback(null, [
+                                    {
+                                        caption: 'x-if',
+                                        snippet: 'x-if="\{\{${1}\}\}"',
+                                        value: 'x-if',
+                                        meta: 'attribute'
+                                    },
+                                    {
+                                        caption: 'iterate',
+                                        snippet: 'iterate="\{\{${1}\}\}"',
+                                        value: 'iterate',
+                                        meta: 'attribute'
+                                    },
+                                ]);
+                            }
+                        });
+                    }
 
                     const Mode = ace.require(modeToRequired).Mode;
                     aceEditor.session.setMode(new Mode());
@@ -766,8 +799,6 @@ function init(langSets) {
                     view.render();
 
                     self.listenToOnce(view, 'insert', (data) => {
-                        data.text = Handlebars.Utils.escapeExpression(data.text);
-
                         self.$summernote.summernote('createLink', data);
                     });
 
@@ -837,8 +868,6 @@ function init(langSets) {
                         const scrollY = ('scrollY' in container) ?
                             container.scrollY :
                             container.scrollTop;
-
-                        data.text = Handlebars.Utils.escapeExpression(data.text);
 
                         self.$summernote.summernote('createLink', data);
 

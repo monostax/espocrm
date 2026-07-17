@@ -35,6 +35,7 @@ use Espo\Core\Application;
 use Espo\Core\Binding\BindingProcessor;
 use Espo\Core\Container;
 use Espo\Core\DataManager;
+use Espo\Core\Exceptions\Error;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\File\Manager as FileManager;
@@ -42,8 +43,15 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 
+use Espo\ORM\TransactionManager;
+use Exception;
+use integration\Core\NoTransaction;
 use PHPUnit\Framework\TestCase;
 
+use ReflectionClass;
+use ReflectionException;
+use ReflectionMethod;
+use RuntimeException;
 use Slim\Psr7\Factory\RequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
 use Slim\Psr7\Factory\StreamFactory;
@@ -66,6 +74,8 @@ abstract class BaseTestCase extends TestCase
     /** Password used for authentication. */
     protected ?string $password = null;
 
+    private ?TransactionManager $transactionManager = null;
+
     /**
      * @var ?array{
      *     entities?: array<string, array<string, mixed>>,
@@ -80,13 +90,25 @@ abstract class BaseTestCase extends TestCase
         bool $clearCache = true,
         ?string $portalId = null,
         ?BindingProcessor $binding = null,
+        bool $reuse = false,
     ): Application {
+
+        if (!$this->isNotCleanTest() && !$reuse) {
+            if ($this->transactionManager?->isStarted()) {
+                try {
+                    $this->transactionManager->commit();
+                } catch (Exception) {}
+            }
+
+            Registry::$isCleanAndReady = false;
+        }
 
         return $this->espoTester->getApplication(
             reload: true,
             clearCache: $clearCache,
             portalId: $portalId,
             binding: $binding,
+            reuse: $reuse,
         );
     }
 
@@ -95,21 +117,28 @@ abstract class BaseTestCase extends TestCase
         $this->espoApplication = $application;
     }
 
+    /**
+     * Set authentication credentials. It does not authenticate.
+     */
     protected function auth(
         ?string $userName = null,
         ?string $password = null,
         ?string $portalId = null,
         ?string $authenticationMethod = null,
-        ?RequestWrapper $request = null
+        ?RequestWrapper $request = null,
     ): void {
 
         $this->userName = $userName;
         $this->password = $password;
         $this->authenticationMethod = $authenticationMethod;
 
-        if (isset($this->espoTester)) {
-            $this->espoTester->auth($userName, $password, $portalId, $authenticationMethod, $request);
-        }
+        $this->espoTester?->auth(
+            userName: $userName,
+            password: $password,
+            portalId: $portalId,
+            authenticationMethod: $authenticationMethod,
+            request: $request,
+        );
     }
 
     /**
@@ -176,27 +205,93 @@ abstract class BaseTestCase extends TestCase
 
         $this->beforeSetUp();
 
-        $this->espoTester->initialize();
+        try {
+            $this->espoTester->install();
+            $this->espoTester->loadData();
+        } catch (Error $e) {
+            throw new RuntimeException("Initialization error.", previous: $e);
+        }
+
         $this->auth($this->userName, $this->password, null, $this->authenticationMethod);
 
         $this->beforeStartApplication();
-        $this->espoApplication = $this->createApplication();
+
+        $this->espoApplication = $this->espoTester->getApplication(reload: true);
+
         $this->afterStartApplication();
+
+        $this->setUpTransaction();
+
+        $this->espoApplication = $this->espoTester->getApplication();
+    }
+
+    /**
+     * Authenticates. The user is supposed to be created by the test before.
+     *
+     * @param ?string $username A username. Null for the system user.
+     */
+    protected function authenticate(
+        ?string $username = null,
+        ?string $method = null,
+        ?RequestWrapper $request = null,
+    ): void {
+
+        $this->auth($username, authenticationMethod: $method, request: $request);
+
+        $this->getEntityManager()->getMetadata()->updateData();
+
+        $this->getContainer()->reset([
+            'entityManager',
+            'ormMetadataData',
+            'ormDefs',
+            'metadata',
+            'config',
+            'module',
+            'fileManager',
+            'applicationParams',
+        ]);
+
+        if ($username === null && $method === null) {
+            $this->espoApplication->setupSystemUser();
+
+            return;
+        }
+
+        $this->espoTester->login();
     }
 
     /**
      * Re-create an application.
      */
-    protected function reCreateApplication(): void
+    protected function reCreateApplication(bool $reuse = false): void
     {
-        $this->espoApplication = $this->createApplication();
+        $this->espoApplication = $this->createApplication(
+            reuse: $reuse,
+        );
     }
 
     protected function tearDown(): void
     {
+        $isNotClean = $this->isNotCleanTest();
+
+        if (
+            !$isNotClean &&
+            $this->transactionManager?->isStarted()
+        ) {
+            try {
+                $this->transactionManager->rollback();
+            } catch (Exception) {}
+        }
+
+        $this->transactionManager = null;
+
         $this->espoTester->terminate();
         $this->espoTester = null;
         $this->espoApplication = null;
+
+        if ($isNotClean) {
+            Registry::$isCleanAndReady = false;
+        }
     }
 
     /**
@@ -217,12 +312,15 @@ abstract class BaseTestCase extends TestCase
     protected function afterStartApplication(): void
     {}
 
+    /**
+     * @param array<string, mixed> $queryParams
+     */
     protected function createRequest(
         string $method,
         array $queryParams = [],
         array $headers = [],
         ?string $body = null,
-        array $routeParams = []
+        array $routeParams = [],
     ): RequestWrapper {
 
         $request = (new RequestFactory())
@@ -248,16 +346,36 @@ abstract class BaseTestCase extends TestCase
         );
     }
 
-    /*protected function setData(array $data): void
-    {
-        $this->espoTester->setData($data);
-    }*/
-
-    /**
-     * @todo Revise whether needed.
-     */
     protected function fullReset(): void
     {
         $this->espoTester->setParam('fullReset', true);
+    }
+
+    private function isNotCleanTest(): bool
+    {
+        if ($this->dataFile || $this->pathToFiles || $this->initData) {
+            return true;
+        }
+
+        try {
+            $reflectionMethod = new ReflectionMethod($this, $this->name());
+            $reflectionClass = new ReflectionClass($this);
+        } catch (ReflectionException $e) {
+            throw new RuntimeException(previous: $e);
+        }
+
+        return $reflectionMethod->getAttributes(NoTransaction::class) ||
+            $reflectionClass->getAttributes(NoTransaction::class);
+    }
+
+    private function setUpTransaction(): void
+    {
+        $this->transactionManager = null;
+
+        if (!$this->isNotCleanTest()) {
+            $this->transactionManager = $this->getEntityManager()->getTransactionManager();
+
+            $this->transactionManager->start();
+        }
     }
 }

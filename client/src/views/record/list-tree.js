@@ -40,7 +40,6 @@ class ListTreeRecordView extends ListRecordView {
     showCount = false
     checkboxes = false
     rowActionsView = false
-    presentationType = 'tree'
     header = false
     listContainerEl = ' > .list > ul'
     checkAllResultDisabled = true

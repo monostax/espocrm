@@ -356,6 +356,21 @@
         "actionClassName": "Espo\\Tools\\Notification\\Api\\GetGroup"
     },
     {
+        "route": "/Notification/group",
+        "method": "get",
+        "actionClassName": "Espo\\Tools\\Notification\\Api\\GetGroupAll"
+    },
+    {
+        "route": "/Notification/group/:id",
+        "method": "delete",
+        "actionClassName": "Espo\\Tools\\Notification\\Api\\DeleteGroup"
+    },
+    {
+        "route": "/Notification/group/:id/markRead",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\Notification\\Api\\MarkGroupRead"
+    },
+    {
         "route": "/EmailTemplate/:id/prepare",
         "method": "post",
         "actionClassName": "Espo\\Tools\\EmailTemplate\\Api\\PostPrepare"
@@ -476,6 +491,22 @@
         "route": "/Team/:id/userPosition",
         "method": "put",
         "actionClassName": "Espo\\Tools\\User\\Api\\PutTeamUserPosition"
+    },
+    {
+        "route": "EmailAccount/:id/resetFetchData",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\EmailAccount\\Api\\PostResetFetchData",
+        "params": {
+            "entityType": "EmailAccount"
+        }
+    },
+    {
+        "route": "InboundEmail/:id/resetFetchData",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\EmailAccount\\Api\\PostResetFetchData",
+        "params": {
+            "entityType": "InboundEmail"
+        }
     },
     {
         "route": "/Oidc/authorizationData",
@@ -631,12 +662,12 @@
         "actionClassName": "Espo\\Tools\\Stream\\Api\\GetStreamAttachments"
     },
     {
-        "route": "/:Note/:id/pin",
+        "route": "/Note/:id/pin",
         "method": "post",
         "actionClassName": "Espo\\Tools\\Stream\\Api\\PostNotePin"
     },
     {
-        "route": "/:Note/:id/pin",
+        "route": "/Note/:id/pin",
         "method": "delete",
         "actionClassName": "Espo\\Tools\\Stream\\Api\\DeleteNotePin"
     },
@@ -684,5 +715,15 @@
             "id": ":id",
             "link": ":link"
         }
+    },
+    {
+        "route": "Pipeline/:id/move/:type",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\Pipeline\\Api\\PostMove"
+    },
+    {
+        "route": "PipelineStage/:id/move/:type",
+        "method": "post",
+        "actionClassName": "Espo\\Tools\\Pipeline\\Api\\PostStageMove"
     }
 ]

@@ -86,7 +86,7 @@ class SelectRecordsModalView extends ModalView {
     /**
      * @typedef {Object} module:views/modals/select-records~Options
      * @property {string} entityType An entity type.
-     * @property {Object.<string, module:search-manager~advancedFilter>} [filters] Filters.
+     * @property {Object.<string, import('search-manager').AdvancedFilter>} [filters] Filters.
      * @property {string[]} [boolFilterList] Bool filters.
      * @property {string} [primaryFilterName] A primary filter.
      * @property {string[]} [filterList] A filter list.
@@ -101,7 +101,7 @@ class SelectRecordsModalView extends ModalView {
      * @property {function(): Promise<Record>} [createAttributesProvider] Create-attributes provider.
      * @property {Record} [createAttributes] Create-attributes.
      * @property {function(import('model').default[])} [onSelect] On record select. As of 9.0.0.
-     * @property {function({where: Record[], searchParams: module:collection~Data})} [onMassSelect]
+     * @property {function({where: Record[], searchParams: import('collection').SearchData})} [onMassSelect]
      *     On record select. As of 9.1.0.
      * @property {function()} [onCreate] On create click. As of 9.0.5.
      * @property {boolean} [searchPanelDisabled] Disable the search panel.
@@ -409,14 +409,6 @@ class SelectRecordsModalView extends ModalView {
     async create() {
         if (this.onCreate) {
             this.onCreate();
-
-            return;
-        }
-
-        // @todo Remove in v10.0. Kept bc.
-        // noinspection JSUnresolvedReference
-        if (this.options.triggerCreateEvent) {
-            this.trigger('create');
 
             return;
         }

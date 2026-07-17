@@ -46,6 +46,7 @@ use Exception;
 use Throwable;
 use stdClass;
 
+use UnexpectedValueException;
 use const CURLOPT_FILE;
 use const CURLOPT_RETURNTRANSFER;
 use const CURLOPT_SSL_VERIFYPEER;
@@ -108,7 +109,13 @@ class Upgrade implements Command
         $fromVersion = $this->config->get('version');
         $toVersion = $upgradeParams->toVersion ?? null;
 
-        $versionInfo = $this->getVersionInfo($toVersion);
+        try {
+            $versionInfo = $this->getVersionInfo($toVersion);
+        } catch (UnexpectedValueException) {
+            fwrite(STDOUT, "Current '$fromVersion' version is unknown.\n");
+
+            return;
+        }
 
         $nextVersion = $versionInfo->nextVersion ?? null;
         $lastVersion = $versionInfo->lastVersion ?? null;
@@ -444,7 +451,15 @@ class Upgrade implements Command
 
         $result = curl_exec($ch);
 
-        curl_close($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($httpCode === 422) {
+            throw new UnexpectedValueException();
+        }
+
+        if ($result === false) {
+            return null;
+        }
 
         try {
             $data = json_decode($result); /** @phpstan-ignore-line */
@@ -493,7 +508,6 @@ class Upgrade implements Command
 
             curl_setopt_array($ch, $options);
             curl_exec($ch);
-            curl_close($ch);
         }
 
         if (!$this->fileManager->isFile($localFilePath)) {

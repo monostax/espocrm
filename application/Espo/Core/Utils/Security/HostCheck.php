@@ -103,7 +103,7 @@ class HostCheck
      */
     public function getHostIpAddresses(string $host): array
     {
-        $records = dns_get_record($host, DNS_A);
+        $records = dns_get_record($host, DNS_A + DNS_AAAA);
 
         if (!$records) {
             return [];
@@ -112,8 +112,15 @@ class HostCheck
         $output = [];
 
         foreach ($records as $record) {
-            /** @var ?string $idAddress */
-            $idAddress = $record['ip'] ?? null;
+            $type = $record['type'] ?? null;
+
+            if ($type === 'AAAA') {
+                /** @var ?string $idAddress */
+                $idAddress = $record['ipv6'] ?? null;
+            } else {
+                /** @var ?string $idAddress */
+                $idAddress = $record['ip'] ?? null;
+            }
 
             if (!$idAddress) {
                 continue;
@@ -130,20 +137,15 @@ class HostCheck
      */
     public function ipAddressIsNotInternal(string $ipAddress): bool
     {
+        if (str_starts_with($ipAddress, '::ffff:')) {
+            $ipAddress = substr($ipAddress, 7);
+        }
+
         return (bool) filter_var(
             $ipAddress,
             FILTER_VALIDATE_IP,
             FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
         );
-    }
-
-    /**
-     * @deprecated Since 9.3.4. Use `isHostAndNotInternal`.
-     * @todo Remove in 9.4.0.
-     */
-    public function isNotInternalHost(string $host): bool
-    {
-        return $this->isHostAndNotInternal($host);
     }
 
     private function normalizeIpAddress(string $ip): string|false

@@ -63,7 +63,7 @@ import { container } from "di";
 /**
  * A main application class.
  *
- * @mixes Bull.Events
+ * @mixes Events
  */
 class App {
     /**
@@ -242,7 +242,7 @@ class App {
 
     /**
      * @private
-     * @type {module:router}
+     * @type {import('router').default}
      */
     router = null;
 
@@ -262,7 +262,7 @@ class App {
      * A view factory.
      *
      * @private
-     * @type {Factory}
+     * @type {BullFactory}
      */
     viewFactory = null;
 
@@ -1431,6 +1431,11 @@ class App {
 
                     case 400:
                         this._processErrorAlert(xhr, "Bad request");
+
+                        break;
+
+                    case 409:
+                        this._processErrorAlert(xhr, 'Conflict');
 
                         break;
 

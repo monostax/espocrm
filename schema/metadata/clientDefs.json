@@ -191,6 +191,10 @@
                         "type": "integer",
                         "minimum": -100,
                         "description": "A group index."
+                    },
+                    "iconClass": {
+                        "type": "string",
+                        "description": "An icon class. As of v10.0."
                     }
                 }
             }
@@ -482,15 +486,15 @@
                     },
                     "selectHandler": {
                         "type": "string",
-                        "description": "A select handler for providing filters when selecting related records. Should have a method *getFilters* returning a promise.  Optionally, extend from `handlers/select-related`. \n\nPromise value:\n```{bool?: string[], primary?: string, orderBy?: string, order?: 'asc'|'desc', advanced: Record}```"
+                        "description": "A select handler for providing filters when selecting related records. Should implement `contracts/relation.SelectRelatedHandler`  Optionally, extend from `handlers/select-related`."
                     },
                     "createHandler": {
                         "type": "string",
-                        "description": "A create handler. Provides attributes when creating a new related record. Should have a method *getAttributes* returning a promise. Optionally, extend from `handlers/create-related`."
+                        "description": "A create handler. Provides attributes when creating a new related record. Should implement `contracts/relation.CreateRelatedHandler`. Optionally, extend from `handlers/create-related`."
                     },
                     "selectFieldHandler": {
                         "type": "string",
-                        "description": "A handler called when change a link field. Only for belongs-to and has-one relations. Should have *getAttributes* and *getClearAttributes* methods."
+                        "description": "A handler called when change a link field. Only for belongs-to and has-one relations. Should implement `contracts/relation.SelectFieldHandler`."
                     },
                     "layout": {
                         "type": "string",
@@ -726,6 +730,18 @@
                 ]
             }
         },
+        "editActionList": {
+            "description": "Edit view actions (available from the dropdown next to the Save button). As of v10.0.",
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    {"const": "__APPEND__"},
+                    {
+                        "$ref": "#/definitions/actionDefs"
+                    }
+                ]
+            }
+        },
         "modalDetailActionList": {
             "description": "Modal detail view actions.",
             "type": "array",
@@ -736,6 +752,50 @@
                         "$ref": "#/definitions/actionDefs"
                     }
                 ]
+            }
+        },
+        "modalEditActionList": {
+            "description": "Modal edit view actions. As of v10.0.",
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    {"const": "__APPEND__"},
+                    {
+                        "$ref": "#/definitions/actionDefs"
+                    }
+                ]
+            }
+        },
+        "recordControls": {
+            "description": "Record controls. To be used for arbitrary action elements. As of v10.0.",
+            "type": "object",
+            "propertyNames": {
+                "anyOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "enum": [
+                            "editSide",
+                            "modalEditSide"
+                        ]
+                    }
+                ]
+            },
+            "additionalProperties": {
+                "type": "object",
+                "propertyNames": {
+                    "enum": ["buttons", "dropdown"]
+                },
+                "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {"enum": ["__APPEND__"]},
+                            {"$ref": "#/definitions/actionDefs"}
+                        ]
+                    }
+                }
             }
         },
         "iconClass": {
@@ -752,10 +812,6 @@
         },
         "kanbanViewMode": {
             "description": "Whether the scope has the kanban view mode on the list view.",
-            "type": "boolean"
-        },
-        "allowInternalNotes": {
-            "description": "If true, it will be possible to post internal posts in the stream. Internal posts are not visible in portals.",
             "type": "boolean"
         },
         "isExpandedByDefault": {
@@ -807,7 +863,8 @@
                         "success",
                         "warning",
                         "danger",
-                        "info"
+                        "info",
+                        "text"
                     ],
                     "description": "A style."
                 },
@@ -854,6 +911,10 @@
                 "hidden": {
                     "type": "boolean",
                     "description": "Hidden."
+                },
+                "index": {
+                    "type": "integer",
+                    "description": "A position index. As of v10.0."
                 }
             }
         },
@@ -867,6 +928,14 @@
                 "label": {
                     "type": "string",
                     "description": "A translatable label."
+                },
+                "labelTranslation": {
+                    "type": "string",
+                    "description": "A label translation path. As of v10.0."
+                },
+                "titleTranslation": {
+                    "type": "string",
+                    "description": "A title translation path. As of v10.0."
                 },
                 "handler": {
                     "type": "string",
@@ -882,7 +951,11 @@
                 },
                 "checkVisibilityFunction": {
                     "type": "string",
-                    "description": "A handler function that checks whether the action is available. Should return a boolean value. Called on model sync."
+                    "description": "A handler function that checks whether the action is visible. Should return a boolean value. Called on model sync."
+                },
+                "checkAvailabilityFunction": {
+                    "type": "string",
+                    "description": "A handler function that checks whether the action is available. Should return a boolean value. As of v10.0."
                 },
                 "configCheck": {
                     "description": "A config path (separated by the .) to check whether the action is enabled. The ! prefix reverts.",
@@ -907,6 +980,21 @@
                     "type": "integer",
                     "minimum": -100,
                     "description": "A group index"
+                },
+                "iconClass": {
+                    "type": "string",
+                    "description": "A CSS class for the icon. As of v10.0."
+                },
+                "style": {
+                    "enum": [
+                        "default",
+                        "success",
+                        "warning",
+                        "danger",
+                        "info",
+                        "text"
+                    ],
+                    "description": "A style. As of v10.0."
                 }
             }
         },

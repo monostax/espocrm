@@ -57,7 +57,7 @@ export default class ListColumnResizeHelper {
     static selector = 'table > thead > tr > th > .column-resizer';
 
     /**
-     * @param {import('views/record/list').default} view
+     * @param {import('views/record/list-base').default} view
      * @param {import('helpers/list/settings').default} helper
      */
     constructor(view, helper) {

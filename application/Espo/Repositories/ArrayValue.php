@@ -121,8 +121,8 @@ class ArrayValue extends Database
                 continue;
             }
 
-            if (strlen($value) > $itemMaxLength) {
-                $value = substr($value, 0, $itemMaxLength);
+            if (mb_strlen($value) > $itemMaxLength) {
+                $value = mb_substr($value, 0, $itemMaxLength);
             }
 
             $arrayValue = $this->getNew();

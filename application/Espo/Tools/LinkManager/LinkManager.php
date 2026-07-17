@@ -38,10 +38,13 @@ use Espo\Core\Utils\Language;
 use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\Route;
 use Espo\Core\Utils\Util;
+use Espo\Entities\Team;
+use Espo\Entities\User;
 use Espo\ORM\Defs\Params\EntityParam;
 use Espo\ORM\Defs\Params\FieldParam;
 use Espo\ORM\Defs\Params\RelationParam;
 use Espo\ORM\Entity;
+use Espo\ORM\Repository\Util as RepositoryUtil;
 use Espo\ORM\Type\RelationType;
 use Espo\Tools\LinkManager\Hook\HookProcessor as LinkHookProcessor;
 use Espo\Tools\LinkManager\Params as LinkParams;
@@ -278,6 +281,9 @@ class LinkManager
             throw new Conflict("Field $entityForeign::$linkForeign already exists.");
         }
 
+        $this->checkLinkNameNotForbidden($link);
+        $this->checkLinkNameNotForbidden($linkForeign);
+
         if ($entity === $entityForeign) {
             if (
                 $link === lcfirst($entity) ||
@@ -337,6 +343,7 @@ class LinkManager
                         'fields' => [
                             $linkForeign => [
                                 FieldParam::TYPE => FieldType::LINK,
+                                'duplicateIgnore' => true,
                             ],
                         ],
                         'links' => [
@@ -353,6 +360,7 @@ class LinkManager
                         'fields' => [
                             $link => [
                                 FieldParam::TYPE => FieldType::LINK,
+                                'duplicateIgnore' => true,
                             ],
                         ],
                         'links' => [
@@ -857,6 +865,7 @@ class LinkManager
 
             $this->metadata->delete('logicDefs', $entity, [
                 "fields.$link",
+                "cascadingFields.$link",
             ]);
 
             $this->metadata->save();
@@ -911,10 +920,12 @@ class LinkManager
 
         $this->metadata->delete('logicDefs', $entity, [
             "fields.$link",
+            "cascadingFields.$link",
         ]);
 
         $this->metadata->delete('logicDefs', $entityForeign, [
             "fields.$linkForeign",
+            "cascadingFields.$linkForeign",
         ]);
 
         $this->metadata->delete('entityDefs', $entity, [
@@ -1146,20 +1157,47 @@ class LinkManager
     }
 
     /**
-     * @param array{readOnly?: bool} $params
+     * @param array{readOnly?: bool, cascadeRemoval?: bool} $params
      * @throws Error
      */
     public function updateParams(string $entityType, string $link, array $params): void
     {
         $type = $this->metadata->get("entityDefs.$entityType.links.$link.type");
+        $foreignEntityType = $this->metadata->get("entityDefs.$entityType.links.$link.entity");
+        $foreign = $this->metadata->get("entityDefs.$entityType.links.$link.foreign");
+        $foreignType = null;
+        $isObject = false;
+        $isSystem = false;
+
+        if ($foreignEntityType && $foreign) {
+            $foreignType = $this->metadata->get("entityDefs.$foreignEntityType.links.$foreign.type");
+
+            $isObject = $this->metadata->get("scopes.$foreignEntityType.object");
+            $isSystem = in_array($foreignEntityType, [
+                User::ENTITY_TYPE,
+                Team::ENTITY_TYPE,
+            ]);
+        }
 
         $defs = [];
 
         if (
             in_array($type, [RelationType::HAS_MANY, RelationType::HAS_CHILDREN]) &&
-            array_key_exists('readOnly', $params)
+            array_key_exists(RelationParam::READ_ONLY, $params)
         ) {
-            $defs['readOnly'] = $params['readOnly'];
+            $defs[RelationParam::READ_ONLY] = $params[RelationParam::READ_ONLY];
+        }
+
+        if (
+            $foreignEntityType &&
+            $foreignType &&
+            RepositoryUtil::isRelationshipEligibleForCascadeRemoval($type, $foreignType) &&
+            array_key_exists(RelationParam::CASCADE_REMOVAL, $params) &&
+            $isObject &&
+            !$isSystem
+        ) {
+            // @todo Check non-system and object.
+            $defs[RelationParam::CASCADE_REMOVAL] = $params[RelationParam::CASCADE_REMOVAL];
         }
 
         $this->metadata->set('entityDefs', $entityType, [
@@ -1178,7 +1216,8 @@ class LinkManager
     public function resetToDefault(string $entityType, string $link): void
     {
         $this->metadata->delete('entityDefs', $entityType, [
-            "links.$link.readOnly",
+            "links.$link." . RelationParam::READ_ONLY,
+            "links.$link." . RelationParam::CASCADE_REMOVAL,
         ]);
 
         $this->metadata->save();
@@ -1202,5 +1241,24 @@ class LinkManager
         }
 
         $this->metadata->save();
+    }
+
+    /**
+     * @throws Conflict
+     */
+    private function checkLinkNameNotForbidden(string $link): void
+    {
+        if (
+            in_array($link, NameUtil::FIELD_FORBIDDEN_NAME_LIST)
+        ) {
+            throw Conflict::createWithBody(
+                "Field '$link' is not allowed.",
+                Error\Body::create()
+                    ->withMessageTranslation('fieldNameIsNotAllowed', 'FieldManager', [
+                        'field' => $link,
+                    ])
+                    ->encode()
+            );
+        }
     }
 }

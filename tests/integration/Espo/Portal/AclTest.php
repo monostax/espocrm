@@ -29,11 +29,12 @@
 
 namespace tests\integration\Espo\Portal;
 
+use Espo\Core\Acl;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\CreateParams;
-use Espo\Core\Record\Service;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Select\SearchParams;
+use Espo\Entities\User;
 use Espo\Modules\Crm\Entities\CaseObj;
 use tests\integration\Core\BaseTestCase;
 
@@ -41,9 +42,7 @@ class AclTest extends BaseTestCase
 {
     public function testAccessContact(): void
     {
-        $app = $this->createApplication();
-
-        $em = $app->getContainer()->get('entityManager');
+        $em = $this->getEntityManager();
 
         $contact = $em->createEntity('Contact', []);
         $portal = $em->createEntity('Portal', [
@@ -66,13 +65,21 @@ class AclTest extends BaseTestCase
             ],
         ], true);
 
-        $this->auth('tester', null, $portal->getId());
+        $this->auth(
+            userName: 'tester',
+            portalId: $portal->getId(),
+        );
 
-        $app = $this->createApplication(true, $portal->getId());
+        $app = $this->createApplication(
+            portalId: $portal->getId(),
+            reuse: true
+        );
 
-        $em = $app->getContainer()->get('entityManager');
+        $this->setApplication($app);
 
-        $acl = $app->getContainer()->get('acl');
+        $em = $this->getEntityManager();
+
+        $acl = $this->getContainer()->getByClass(Acl::class);
 
         $case1 = $em->createEntity('Case', [
             'contactId' => $contact->getId(),
@@ -96,7 +103,7 @@ class AclTest extends BaseTestCase
         $this->assertFalse($acl->check($case3, 'read'));
         $this->assertFalse($acl->check($case4, 'read'));
 
-        $service = $app->getContainer()->get('recordServiceContainer')->get('Case');
+        $service = $app->getContainer()->getByClass(ServiceContainer::class)->get('Case');
 
         $result = $service->find(SearchParams::create());
 
@@ -113,9 +120,7 @@ class AclTest extends BaseTestCase
 
     public function testAccessAccount(): void
     {
-        $app = $this->createApplication();
-
-        $em = $app->getContainer()->get('entityManager');
+        $em = $this->getEntityManager();
 
         $contact = $em->createEntity('Contact', []);
         $account = $em->createEntity('Account', []);
@@ -140,13 +145,21 @@ class AclTest extends BaseTestCase
             ],
         ], true);
 
-        $this->auth('tester', null, $portal->getId());
+        $this->auth(
+            userName: 'tester',
+            portalId: $portal->getId(),
+        );
 
-        $app = $this->createApplication(true, $portal->getId());
+        $app = $this->createApplication(
+            portalId: $portal->getId(),
+            reuse: true
+        );
 
-        $em = $app->getContainer()->get('entityManager');
+        $this->setApplication($app);
 
-        $acl = $app->getContainer()->get('acl');
+        $em = $this->getEntityManager();
+
+        $acl = $this->getContainer()->getByClass(Acl::class);
 
         $case1 = $em->createEntity('Case', [
             'contactId' => $contact->getId(),
@@ -174,7 +187,8 @@ class AclTest extends BaseTestCase
         $this->assertTrue($acl->check($case4, 'read'));
         $this->assertFalse($acl->check($case5, 'read'));
 
-        $service = $app->getContainer()->get('recordServiceContainer')->get('Case');
+        $service = $app->getContainer()->getByClass(ServiceContainer::class)->get('Case');
+
         $result = $service->find(SearchParams::create());
 
         $idList = [];
@@ -189,11 +203,12 @@ class AclTest extends BaseTestCase
         $this->assertFalse(in_array($case5->getId(), $idList));
     }
 
+    /**
+     * @noinspection PhpUnhandledExceptionInspection
+     */
     public function testAccessOwn(): void
     {
-        $app = $this->createApplication();
-
-        $em = $app->getContainer()->get('entityManager');
+        $em = $this->getEntityManager();
 
         $contact = $em->createEntity('Contact', []);
         $account = $em->createEntity('Account', []);
@@ -218,14 +233,22 @@ class AclTest extends BaseTestCase
             ],
         ], true);
 
-        $this->auth('tester', null, $portal->getId());
+        $this->auth(
+            userName: 'tester',
+            portalId: $portal->getId(),
+        );
 
-        $app = $this->createApplication(true, $portal->getId());
+        $app = $this->createApplication(
+            portalId: $portal->getId(),
+            reuse: true
+        );
 
-        $em = $app->getContainer()->get('entityManager');
+        $this->setApplication($app);
 
-        $acl = $app->getContainer()->get('acl');
-        $user = $app->getContainer()->get('user');
+        $em = $this->getEntityManager();
+
+        $acl = $this->getContainer()->getByClass(Acl::class);
+        $user = $this->getContainer()->getByClass(User::class);
 
         $case1 = $em->createEntity('Case', [
             'contactId' => $contact->getId(),
@@ -257,7 +280,7 @@ class AclTest extends BaseTestCase
         $this->assertTrue($acl->check($case5, 'read'));
         $this->assertFalse($acl->check($case6, 'read'));
 
-        $service = $app->getContainer()->get('recordServiceContainer')->get('Case');
+        $service = $this->getContainer()->getByClass(ServiceContainer::class)->get('Case');
 
         $result = $service->find(SearchParams::create());
 
@@ -306,12 +329,19 @@ class AclTest extends BaseTestCase
             ],
         ], true);
 
-        $this->auth('tester', null, $portal->getId());
+        $this->auth(
+            userName: 'tester',
+            portalId: $portal->getId(),
+        );
 
-        $app = $this->createApplication(true, $portal->getId());
+        $app = $this->createApplication(
+            portalId: $portal->getId(),
+            reuse: true,
+        );
 
-        /** @var Service<CaseObj> $caseService */
-        $caseService = $app->getContainer()
+        $this->setApplication($app);
+
+        $caseService = $this->getContainer()
             ->getByClass(ServiceContainer::class)
             ->getByClass(CaseObj::class);
 
@@ -327,7 +357,7 @@ class AclTest extends BaseTestCase
 
         try {
             /** @noinspection PhpUnhandledExceptionInspection */
-            $caseService->create((object)[
+            $caseService->create((object) [
                 'name' => 'Test 1',
                 'accountId' => $accountNotOwn->getId(),
                 'contactId' => $contactNotOwn->getId(),

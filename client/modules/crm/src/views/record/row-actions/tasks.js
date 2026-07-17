@@ -39,6 +39,7 @@ define('crm:views/record/row-actions/tasks', ['views/record/row-actions/relation
                 },
                 link: '#' + this.model.entityType + '/view/' + this.model.id,
                 groupIndex: 0,
+                iconClass: Dep.ICON_CLASS_VIEW,
             }];
 
             if (this.options.acl.edit) {
@@ -50,9 +51,11 @@ define('crm:views/record/row-actions/tasks', ['views/record/row-actions/relation
                     },
                     link: '#' + this.model.entityType + '/edit/' + this.model.id,
                     groupIndex: 0,
+                    iconClass: Dep.ICON_CLASS_EDIT,
                 });
 
-                if (!~['Completed', 'Canceled'].indexOf(this.model.get('status'))) {
+                // @todo Refactor.
+                if (!['Completed', 'Canceled'].includes(this.model.get('status'))) {
                     list.push({
                         action: 'Complete',
                         text: this.translate('Complete', 'labels', 'Task'),
@@ -60,22 +63,12 @@ define('crm:views/record/row-actions/tasks', ['views/record/row-actions/relation
                             id: this.model.id
                         },
                         groupIndex: 1,
+                        iconClass: 'fas fa-check',
                     });
                 }
             }
 
-            // Monostax: delete ('removeRelated') is intentionally not available
-            // in relationship panel row dropdowns.
-            // if (this.options.acl.delete) {
-            //     list.push({
-            //         action: 'removeRelated',
-            //         label: 'Remove',
-            //         data: {
-            //             id: this.model.id
-            //         },
-            //         groupIndex: 0,
-            //     });
-            // }
+            // Monostax: relationship-panel actions may unlink records, but never delete them.
 
             return list;
         },

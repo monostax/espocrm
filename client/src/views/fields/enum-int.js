@@ -32,12 +32,42 @@ class EnumIntFieldView extends EnumFieldView {
 
     type = 'enumInt'
 
-    listTemplate = 'fields/enum/detail'
+    listTemplate = 'fields/enum/list'
     detailTemplate = 'fields/enum/detail'
     editTemplate = 'fields/enum/edit'
     searchTemplate = 'fields/enum/search'
 
     validations = []
+
+    setup() {
+        super.setup();
+
+        this.setupNumericTranslatedOptionsFallback();
+    }
+
+    /**
+     * @private
+     */
+    setupNumericTranslatedOptionsFallback() {
+        if (this.translatedOptions !== null) {
+            return;
+        }
+
+        this.translatedOptions = {};
+
+        (this.params.options || []).forEach(value => {
+            if (
+                value == null ||
+                value === ''
+            ) {
+                return;
+            }
+
+            const valueStr = String(value);
+
+            this.translatedOptions[valueStr] = valueStr;
+        });
+    }
 
     fetch() {
         const raw = this.$element.val();

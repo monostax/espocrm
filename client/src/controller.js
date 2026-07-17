@@ -35,7 +35,7 @@ import ModalBarProvider from 'helpers/site/modal-bar-provider';
 
 /**
  * @callback module:controller~viewCallback
- * @param {module:view} view A view.
+ * @param {import('view')} view A view.
  */
 
 /**
@@ -47,7 +47,7 @@ import ModalBarProvider from 'helpers/site/modal-bar-provider';
 /**
  * A controller. To be extended.
  *
- * @mixes Bull.Events
+ * @mixes Events
  */
 class Controller {
 
@@ -61,11 +61,10 @@ class Controller {
 
         /** @type {module:controllers/base} */
         this.baseController = injections.baseController;
-        /** @type {Bull.Factory} */
         this.viewFactory = injections.viewFactory;
-        /** @type {module:model} */
+        /** @type {import('model-factory').default} */
         this.modelFactory = injections.modelFactory;
-        /** @type {module:collection-factory} */
+        /** @type {import('collection-factory').default} */
         this.collectionFactory = injections.collectionFactory;
 
         this._settings = injections.settings || null;
@@ -107,7 +106,7 @@ class Controller {
     /**
      * A view factory.
      *
-     * @type {Bull.Factory}
+     * @type {import('bullbone').Factory}
      * @protected
      */
     viewFactory = null
@@ -139,7 +138,7 @@ class Controller {
      * Set the router.
      *
      * @internal
-     * @param {module:router} router
+     * @param {import(router).default} router
      */
     setRouter(router) {
         this._router = router;
@@ -189,7 +188,7 @@ class Controller {
 
     /**
      * @protected
-     * @returns {module:router}
+     * @returns {import('router').default}
      */
     getRouter() {
         return this._router;
@@ -287,7 +286,7 @@ class Controller {
      * Get a stored main view.
      *
      * @param {string} key A key.
-     * @returns {module:view|null}
+     * @returns {import('view').default|null}
      */
     getStoredMainView(key) {
         return this.get(this._composeMainViewKey(key));
@@ -321,7 +320,7 @@ class Controller {
      * Store a main view.
      *
      * @param {string} key A key.
-     * @param {module:view} view A view.
+     * @param {import('view').default} view A view.
      */
     storeMainView(key, view) {
         this.set(this._composeMainViewKey(key), view);
@@ -478,7 +477,7 @@ class Controller {
 
     /**
      * @private
-     * @return {import('view').default|null}
+     * @return {import('views/site/master').default|null}
      */
     getMasterView() {
         return this.get('master');
@@ -486,7 +485,7 @@ class Controller {
 
     /**
      * @private
-     * @param {import('view').default|null} view
+     * @param {import('views/site/master').default|null} view
      */
     setMasterView(view) {
         if (!view) {
@@ -543,7 +542,7 @@ class Controller {
     /**
      * Create a main view in the master container and render it.
      *
-     * @param {string|module:view} [view] A view name or view instance.
+     * @param {string|import('view').default} [view] A view name or view instance.
      * @param {Object.<string, *>} [options] Options for a view.
      * @param {module:controller~viewCallback} [callback] A callback with a created view.
      * @param {module:controller~mainParams} [params] Parameters.
@@ -734,7 +733,7 @@ class Controller {
      * Create a view in the BODY element. Use for rendering separate pages without the default navbar and footer.
      * If a callback is not passed, the view will be automatically rendered.
      *
-     * @param {string|module:view} view A view name or view instance.
+     * @param {string|import('view').default} view A view name or view instance.
      * @param {Object.<string, *>} [options] Options for a view.
      * @param {module:controller~viewCallback} [callback] A callback with a created view.
      */

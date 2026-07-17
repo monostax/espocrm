@@ -30,13 +30,12 @@
 namespace Espo\Core\Utils\DateTime;
 
 use Espo\Core\Field\DateTime;
-use Psr\Clock\ClockInterface;
 use DateTimeImmutable;
 
 /**
  * @since 9.1.0
  */
-class SystemClock implements ClockInterface
+class SystemClock implements Clock
 {
     public function now(): DateTimeImmutable
     {

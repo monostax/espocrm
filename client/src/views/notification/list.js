@@ -27,15 +27,25 @@
  ************************************************************************/
 
 import View from 'view';
+import Ajax from 'ajax';
+import Ui from 'ui';
 
 class NotificationListView extends View {
 
     template = 'notification/list'
 
+    /**
+     * @private
+     * @type {boolean}
+     */
+    groupingEnabled
+
     setup() {
         this.addActionHandler('refresh', () => this.actionRefresh());
 
         this.addActionHandler('markAllNotificationsRead', () => this.actionMarkAllRead());
+
+        this.groupingEnabled = this.getPreferences().get('notificationGrouping') === true;
 
         const promise =
             this.getCollectionFactory().create('Notification')
@@ -48,7 +58,7 @@ class NotificationListView extends View {
     }
 
     actionRefresh() {
-        Espo.Ui.notifyWait();
+        Ui.notifyWait();
 
         const $btn = this.$el.find('[data-action="refresh"]');
         $btn.addClass('disabled').attr('disabled', 'disabled');
@@ -57,7 +67,7 @@ class NotificationListView extends View {
 
         this.getRecordView().showNewRecords()
             .then(() => {
-                Espo.Ui.notify(false);
+                Ui.notify(false);
             })
             .finally(() => $btn.removeClass('disabled').removeAttr('disabled'));
     }
@@ -80,6 +90,7 @@ class NotificationListView extends View {
             selector: '.notification-list',
             collection: this.collection,
             showCount: false,
+            rowActionsView: 'views/record/row-actions/remove-only',
             listLayout: {
                 rows: [
                     [
@@ -88,15 +99,11 @@ class NotificationListView extends View {
                             view: 'views/notification/fields/container',
                             options: {
                                 containerSelector: this.getSelector(),
+                                groupingEnabled: this.groupingEnabled,
                             },
                         },
                     ],
                 ],
-                right: {
-                    name: 'read',
-                    view: 'views/notification/fields/read-with-menu',
-                    width: 'var(--10px)',
-                },
             },
         };
 
@@ -110,19 +117,25 @@ class NotificationListView extends View {
     }
 
     actionMarkAllRead() {
-        Espo.Ui.notifyWait();
+        this.collection.trigger('all-read');
+
+        Ui.notifyWait();
 
         const $link = this.$el.find('[data-action="markAllNotificationsRead"]');
         $link.attr('disabled', 'disabled').addClass('disabled');
 
-        Espo.Ajax.postRequest('Notification/action/markAllRead')
+        Ajax.postRequest('Notification/action/markAllRead')
             .then(() => {
                 this.trigger('all-read');
-                Espo.Ui.notify(false);
+                Ui.notify(false);
 
                 this.$el.find('.badge-circle-warning').remove();
             })
             .finally(() => $link.removeAttr('disabled').removeClass('disabled'));
+
+        this.collection.models.forEach(model => {
+            model.set('read', true, {sync: true});
+        });
     }
 
     /**

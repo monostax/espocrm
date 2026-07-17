@@ -31,7 +31,7 @@ import DefaultRowActionsView from 'views/record/row-actions/default';
 class ViewAndRemoveRowActionsView extends DefaultRowActionsView {
 
     getActionList() {
-        /** @type module:views/record/list~rowAction[] */
+        /** @type {import('views/record/list').RowAction[]} */
         const actionList = [{
             action: 'quickView',
             label: 'View',
@@ -40,6 +40,7 @@ class ViewAndRemoveRowActionsView extends DefaultRowActionsView {
             },
             link: '#' + this.model.entityType + '/view/' + this.model.id,
             groupIndex: 0,
+            iconClass: 'fas fa-expand',
         }];
 
         if (this.options.acl.delete) {
@@ -50,6 +51,7 @@ class ViewAndRemoveRowActionsView extends DefaultRowActionsView {
                     id: this.model.id,
                 },
                 groupIndex: 0,
+                iconClass: 'fas fa-times',
             });
         }
 

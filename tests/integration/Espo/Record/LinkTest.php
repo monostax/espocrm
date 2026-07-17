@@ -60,7 +60,7 @@ class LinkTest extends BaseTestCase
         ]);
         $metadata->save();
 
-        $this->reCreateApplication();
+        $this->reCreateApplication(reuse: true);
 
         $em = $this->getContainer()->getByClass(EntityManager::class);
 
@@ -119,8 +119,7 @@ class LinkTest extends BaseTestCase
             'name' => '2',
         ]);
 
-        $this->auth('test');
-        $this->reCreateApplication();
+        $this->authenticate('test');
 
         $oppService = $this->getContainer()
             ->getByClass(ServiceContainer::class)
@@ -169,7 +168,7 @@ class LinkTest extends BaseTestCase
             'accountId' => $account1->getId(),
             'parentType' => $account1->getEntityType(),
             'assignedUserId' => $user->getId(),
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $isThrown = false;
 
@@ -197,7 +196,7 @@ class LinkTest extends BaseTestCase
             $taskService->update($task1->getId(), (object) [
                 'parentId' => $account2->getId(),
                 'parentType' => $account2->getEntityType(),
-            ], UpdateParams::create());
+            ], UpdateParams::create())->getEntity();
         }
         catch (Forbidden) {
             $isThrown = true;
@@ -218,6 +217,7 @@ class LinkTest extends BaseTestCase
                 ]
             ]
         ]);
+
         $metadata->save();
 
         $this->reCreateApplication();
@@ -286,8 +286,7 @@ class LinkTest extends BaseTestCase
             'parentType' => Lead::ENTITY_TYPE,
         ]);
 
-        $this->auth('test');
-        $this->reCreateApplication();
+        $this->authenticate('test');
 
         $caseService = $this->getContainer()
             ->getByClass(ServiceContainer::class)
@@ -441,7 +440,7 @@ class LinkTest extends BaseTestCase
             'name' => '1',
             'contactId' => $contact->getId(),
             'contactsIds' => [$contact->getId()],
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $this->assertEquals(
             (object) [
@@ -453,7 +452,7 @@ class LinkTest extends BaseTestCase
         /** @noinspection PhpUnhandledExceptionInspection */
         $case = $caseService->update($case->getId(), (object) [
             'contactsIds' => [$contact->getId(), $contact1->getId()],
-        ], UpdateParams::create());
+        ], UpdateParams::create())->getEntity();
 
         $this->assertEquals(
             (object) [

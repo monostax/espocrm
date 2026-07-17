@@ -30,13 +30,13 @@ import {inject} from 'di';
 import Storage from 'storage';
 import Utils from 'utils';
 
-class ListSettingsHelper {
+/**
+ * @typedef {Object} ColumnWidth
+ * @property {number} value A value.
+ * @property {'px'|'%'} unit A unit.
+ */
 
-    /**
-     * @typedef {Object} ListSettingsHelper~columnWidth
-     * @property {number} value A value.
-     * @property {'px'|'%'} unit A unit.
-     */
+class ListSettingsHelper {
 
     /**
      * @private
@@ -72,7 +72,7 @@ class ListSettingsHelper {
 
         /**
          * @private
-         * @type {Object.<string, ListSettingsHelper~columnWidth>}
+         * @type {Object.<string, ColumnWidth>}
          */
         this.columnWidthMapCache = undefined;
 
@@ -225,7 +225,7 @@ class ListSettingsHelper {
     /**
      * Get a stored column width map.
      *
-     * @return {Object.<string, ListSettingsHelper~columnWidth>}
+     * @return {Object.<string, ColumnWidth>}
      */
     getColumnWidthMap() {
         if (this.columnWidthMapCache) {
@@ -241,7 +241,7 @@ class ListSettingsHelper {
     /**
      * Store a column width map.
      *
-     * @param {Object.<string, ListSettingsHelper~columnWidth>} map
+     * @param {Object.<string, ColumnWidth>} map
      */
     storeColumnWidthMap(map) {
         this.columnWidthMapCache = Utils.cloneDeep(map);
@@ -262,7 +262,7 @@ class ListSettingsHelper {
      * Set a column width.
      *
      * @param {string} name A column name.
-     * @param {ListSettingsHelper~columnWidth} width Width data.
+     * @param {ColumnWidth} width Width data.
      */
     storeColumnWidth(name, width) {
         if (!this.columnWidthMapCache) {

@@ -29,12 +29,14 @@
 
 namespace tests\unit\Espo\Core\Formula;
 
+use Espo\Core\Acl\SystemRestriction;
 use Espo\Core\Binding\BindingContainerBuilder;
 use Espo\Core\FieldProcessing\SpecificFieldLoader;
 use Espo\Core\Formula\Evaluator;
 use Espo\Core\Formula\Exceptions\Error;
 use Espo\Core\Formula\Exceptions\UndefinedKey;
 use Espo\Core\Formula\Exceptions\UnsafeFunction;
+use Espo\Core\Formula\Utils\EntityUtil;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Formula\Exceptions\SyntaxError;
 use Espo\Core\Utils\FieldUtil;
@@ -64,8 +66,17 @@ class EvaluatorTest extends TestCase
             'fieldUtil' => $this->createMock(FieldUtil::class),
         ]);
 
+        $restriction = $this->createMock(SystemRestriction::class);
+        $restriction
+            ->method('checkAttributeRead')
+            ->willReturn(true);
+
+        $entityUtil = $this->createMock(EntityUtil::class);
+
         $bindingContainer = BindingContainerBuilder::create()
             ->bindInstance(SpecificFieldLoader::class, $this->createMock(SpecificFieldLoader::class))
+            ->bindInstance(SystemRestriction::class, $restriction)
+            ->bindInstance(EntityUtil::class, $entityUtil)
             ->build();
 
         $injectableFactory = new InjectableFactory($container, $bindingContainer);
@@ -2105,5 +2116,26 @@ class EvaluatorTest extends TestCase
 
         /** @noinspection PhpUnhandledExceptionInspection */
         $this->evaluator->process($expression);
+    }
+
+    public function testFunctionArguments(): void
+    {
+        $expression = "
+            \$a = list(0, 1);
+            \$b = list(0, 1,);
+            \$c = list(
+                0,
+                1,
+            );
+        ";
+
+        $vars = (object) [];
+
+        /** @noinspection PhpUnhandledExceptionInspection */
+        $this->evaluator->process($expression, null, $vars);
+
+        $this->assertEquals([0, 1], $vars->a);
+        $this->assertEquals([0, 1], $vars->b);
+        $this->assertEquals([0, 1], $vars->c);
     }
 }

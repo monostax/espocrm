@@ -33,7 +33,7 @@ import Collection from 'collection';
 class TreeCollection extends Collection {
 
     /**
-     * @type {string}
+     * @type {string | null}
      */
     parentId
 
@@ -53,6 +53,18 @@ class TreeCollection extends Collection {
     openPath
 
     /**
+     * @internal
+     * @type {string | null}
+     */
+    currentCategoryId
+
+    /**
+     * @internal
+     * @type {string | null}
+     */
+    currentCategoryName
+
+    /**
      * @return {TreeCollection}
      */
     createSeed() {
@@ -68,6 +80,10 @@ class TreeCollection extends Collection {
     }
 
     prepareAttributes(response, options) {
+        if (Array.isArray(response)) {
+            throw new Error("Bad response.");
+        }
+
         const list = super.prepareAttributes(response, options);
 
         const seed = this.clone();

@@ -53,12 +53,20 @@ b, strong {
     color: @gray-soft;
 }
 
+.text-solid {
+    color: var(--text-solid-color);
+}
+
 .text-smaller {
     font-size: calc(var(--font-size-small) + var(--1px));
 }
 
 .text-italic {
     font-style: italic;
+}
+
+.text-medium {
+    font-weight: 500;
 }
 
 .text-bold {
@@ -258,6 +266,24 @@ a.text-soft {
     }
 }
 
+a.text-solid {
+    &:hover,
+    &:focus {
+        color: var(--text-solid-color);
+    }
+
+    &:hover {
+        > .fas,
+        > .far {
+            color: var(--text-gray-color);
+        }
+    }
+}
+
+a.text-record {
+    .link-content-color();
+}
+
 a.text-default {
     color: var(--btn-text-color);
 
@@ -294,7 +320,8 @@ a.no-underline {
 .text-info {
     .text-emphasis-variant-espo(var(--state-info-text), var(--state-info-text-10));
 }
-.text-warning {
+.text-warning,
+a.text-warning {
     .text-emphasis-variant-espo(var(--state-warning-text); var(--state-warning-text-10));
 }
 .text-danger {

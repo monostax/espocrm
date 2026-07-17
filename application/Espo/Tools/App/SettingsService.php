@@ -96,7 +96,6 @@ class SettingsService
         $this->filterData($data);
         $this->loadAdditionalParams($data);
 
-        /** @noinspection PhpDeprecationInspection */
         $metadataData = $this->getMetadataConfigData();
 
         foreach (get_object_vars($metadataData) as $key => $value) {
@@ -109,11 +108,9 @@ class SettingsService
     /**
      * Get metadata to be used in config.
      *
-     * @todo Make private in v9.4.0.
      * @todo Move away from settings. Use some different approach.
-     * @deprecated Since v9.3.2.
      */
-    public function getMetadataConfigData(): stdClass
+    private function getMetadataConfigData(): stdClass
     {
         $data = (object) [];
 
@@ -256,7 +253,12 @@ class SettingsService
         $this->configWriter->setMultiple(get_object_vars($data));
         $this->configWriter->save();
 
-        if (isset($data->personNameFormat)) {
+        if (
+            isset($data->personNameFormat) ||
+            isset($data->baseCurrency) ||
+            isset($data->currencyList) ||
+            isset($data->defaultCurrency)
+        ) {
             $this->dataManager->clearCache();
         }
 

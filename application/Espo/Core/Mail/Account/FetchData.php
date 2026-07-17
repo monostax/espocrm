@@ -39,14 +39,19 @@ class FetchData
 {
     private stdClass $data;
 
-    public function __construct(stdClass $data)
-    {
-        $this->data = ObjectUtil::clone($data);
+    /**
+     * @internal
+     */
+    public function __construct(
+        ?stdClass $data = null,
+        private int $validityNumber = 0,
+    ) {
+        $this->data = ObjectUtil::clone($data ?? (object) []);
     }
 
-    public static function fromRaw(stdClass $data): self
+    public static function fromRaw(stdClass $data, int $fetchNumber): self
     {
-        return new self($data);
+        return new self($data, $fetchNumber);
     }
 
     public function getRaw(): stdClass
@@ -64,6 +69,26 @@ class FetchData
 
         // To int for bc. It used to be string.
         return (int) $id;
+    }
+
+    public function getUidValidity(string $folder): ?int
+    {
+        $id = $this->data->uidValidity->$folder ?? null;
+
+        if (!is_int($id)) {
+            return null;
+        }
+
+        return $id;
+    }
+
+    public function setUidValidity(string $folder, ?int $uid): void
+    {
+        if (!property_exists($this->data, 'uidValidity')) {
+            $this->data->uidValidity = (object) [];
+        }
+
+        $this->data->uidValidity->$folder = $uid;
     }
 
     public function getLastDate(string $folder): ?DateTime
@@ -122,5 +147,13 @@ class FetchData
         }
 
         $this->data->byDate->$folder = $forceByDate;
+    }
+
+    /**
+     * @since 10.0.0
+     */
+    public function getValidityNumber(): int
+    {
+        return $this->validityNumber;
     }
 }

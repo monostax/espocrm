@@ -39,6 +39,7 @@ class RelationshipRowActionsView extends DefaultRowActionsView {
             },
             link: '#' + this.model.entityType + '/view/' + this.model.id,
             groupIndex: 0,
+            iconClass: DefaultRowActionsView.ICON_CLASS_VIEW,
         }];
 
         if (this.options.acl.edit && !this.options.editDisabled) {
@@ -50,6 +51,7 @@ class RelationshipRowActionsView extends DefaultRowActionsView {
                 },
                 link: '#' + this.model.entityType + '/edit/' + this.model.id,
                 groupIndex: 0,
+                iconClass: DefaultRowActionsView.ICON_CLASS_EDIT,
             });
         }
 
@@ -60,25 +62,13 @@ class RelationshipRowActionsView extends DefaultRowActionsView {
                 data: {
                     id: this.model.id,
                 },
-                groupIndex: 0,
+                groupIndex: 1,
             });
         }
 
         this.getAdditionalActionList().forEach(item => list.push(item));
 
-        // Monostax: delete ('removeRelated') is intentionally not available
-        // in relationship panel row dropdowns. Records must be unlinked
-        // ('Desatribuir'), never deleted from here.
-        // if (this.options.acl.delete && !this.options.removeDisabled) {
-        //     list.push({
-        //         action: 'removeRelated',
-        //         label: 'Remove',
-        //         data: {
-        //             id: this.model.id,
-        //         },
-        //         groupIndex: 0,
-        //     });
-        // }
+        // Monostax: relationship-panel actions may unlink records, but never delete them.
 
         return list;
     }

@@ -40,7 +40,12 @@ li .preset .pull-right {
 }
 
 ul.dropdown-menu > li.checkbox {
-    padding: 3px 20px 3px 0;
+    padding: 3px var(--14px) 3px 0;
+
+    .checkbox-text {
+        padding-left: 0;
+        padding-right: var(--2px);
+    }
 }
 
 .remove-filter.pull-right {
@@ -194,7 +199,8 @@ td.cell[data-name="buttons"] > .btn-group {
     margin-right: 14px;
 }
 
-#global-search-panel {
+#global-search-panel,
+#last-viewed-panel {
     left: 35px;
     right: auto;
 }
@@ -242,9 +248,12 @@ td.cell[data-name="buttons"] > .btn-group {
     left: -10px;
 }
 
-.dropdown-menu-with-icons li .item-text {
-    padding-left: 0;
-    padding-right: 8px;
+ul {
+    &.dropdown-menu-with-icons,
+    &:has( > li > a > .icon-item) {
+        padding-left: 0;
+        padding-right: var(--8px);
+    }
 }
 
 .panel {

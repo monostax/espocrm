@@ -47,7 +47,7 @@ class IcsTest extends TestCase
             'description' => 'Test.',
             'stamp' => strtotime('2025-01-01 09:00:00'),
             'attendees' => [
-                ['att1@test.com', 'Att 1'],
+                ['att1@test.com', 'Att 1', 'TENTATIVE'],
                 ['att2@test.com', 'Att 2'],
             ],
         ]);
@@ -61,14 +61,13 @@ class IcsTest extends TestCase
             "DTSTART:20250101T100000Z\r\n".
             "DTEND:20250101T110000Z\r\n".
             "SUMMARY:Test\r\n".
-            "LOCATION:\r\n".
             "ORGANIZER;CN=Hello Test:MAILTO:hello@test.com\r\n".
             "DESCRIPTION:Test.\r\n".
             "UID:test-id\r\n".
             "SEQUENCE:0\r\n".
             "DTSTAMP:20250101T090000Z\r\n".
             "STATUS:CONFIRMED\r\n".
-            "ATTENDEE;CN=Att 1:MAILTO:att1@test.com\r\n".
+            "ATTENDEE;PARTSTAT=TENTATIVE;CN=Att 1:MAILTO:att1@test.com\r\n".
             "ATTENDEE;CN=Att 2:MAILTO:att2@test.com\r\n".
             "END:VEVENT\r\n".
             "END:VCALENDAR";

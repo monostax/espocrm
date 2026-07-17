@@ -91,7 +91,7 @@ class Processor
                 }
 
                 if ($handlebarsInBody) {
-                    $body = $htmlizer->render($parent, $body, null, null, false, true);
+                    $body = $htmlizer->render($parent, $body, null, false, true);
                 }
             }
         }
@@ -370,6 +370,14 @@ class Processor
                     User::ENTITY_TYPE,
                 ]
             );
+
+            if (
+                $foundByAddressEntity &&
+                $params->applyAcl() &&
+                !$this->aclManager->checkEntityRead($this->user, $foundByAddressEntity)
+            ) {
+                $foundByAddressEntity = null;
+            }
         }
 
         if ($foundByAddressEntity) {

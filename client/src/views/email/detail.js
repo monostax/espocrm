@@ -31,6 +31,7 @@ import EmailHelper from 'email-helper';
 import RecordModal from 'helpers/record-modal';
 import SelectOneAttachmentModalView from 'views/attachment/modals/select-one';
 import Utils from 'utils';
+import Ui from 'ui';
 
 class EmailDetailView extends DetailView {
 
@@ -64,6 +65,7 @@ class EmailDetailView extends DetailView {
                         action: 'createLead',
                         acl: 'create',
                         aclScope: 'Lead',
+                        iconClass: 'fas fa-plus',
                     });
 
                     this.addMenuItem('dropdown', {
@@ -71,6 +73,7 @@ class EmailDetailView extends DetailView {
                         action: 'createContact',
                         acl: 'create',
                         aclScope: 'Contact',
+                        iconClass: 'fas fa-plus',
                     });
                 }
             }
@@ -79,7 +82,8 @@ class EmailDetailView extends DetailView {
                 label: 'Create Task',
                 action: 'createTask',
                 acl: 'create',
-                aclScope: 'Task'
+                aclScope: 'Task',
+                iconClass: 'fas fa-plus',
             });
 
             if (this.model.get('parentType') !== 'Case' || !this.model.get('parentId')) {
@@ -87,7 +91,8 @@ class EmailDetailView extends DetailView {
                     label: 'Create Case',
                     action: 'createCase',
                     acl: 'create',
-                    aclScope: 'Case'
+                    aclScope: 'Case',
+                    iconClass: 'fas fa-plus',
                 });
             }
 
@@ -102,6 +107,7 @@ class EmailDetailView extends DetailView {
                         acl: 'create',
                         aclScope: 'Document',
                         hidden: this.model.get('attachmentsIds') === undefined,
+                        iconClass: 'fas fa-plus',
                     });
 
                     if (this.model.get('attachmentsIds') === undefined) {
@@ -255,7 +261,9 @@ class EmailDetailView extends DetailView {
         })
 
         this.listenTo(modalView, 'before:save', () => {
-            this.getRecordView().blockUpdateWebSocket(true);
+            if (this.getRecordView().blockUpdateWebSocket) {
+                this.getRecordView().blockUpdateWebSocket(true);
+            }
         });
     }
 
@@ -428,33 +436,42 @@ class EmailDetailView extends DetailView {
         });
     }
 
-    actionReply(data, e, cc) {
+    /**
+     * @private
+     * @param {boolean} cc
+     */
+    async actionInternalReply(cc = false) {
         const emailHelper = new EmailHelper();
 
-        const attributes = emailHelper.getReplyAttributes(this.model, data, cc);
+        const attributes = emailHelper.getReplyAttributes(this.model, cc);
 
-        Espo.Ui.notifyWait();
+        Ui.notifyWait();
 
         const viewName = this.getMetadata().get('clientDefs.Email.modalViews.compose') ||
             'views/modals/compose-email';
 
-        this.createView('quickCreate', viewName, {
+        const view = await this.createView('quickCreate', viewName, {
             attributes: attributes,
             focusForCreate: true,
-        }, view => {
-            view.render();
-
-            view.notify(false);
-
-            this.listenTo(view, 'after:save', () => {
-                this.model.fetch();
-            });
         });
+
+        this.listenTo(view, 'after:save', () => {
+            this.model.fetch();
+        });
+
+        await view.render();
+
+        Ui.notify();
     }
 
     // noinspection JSUnusedGlobalSymbols
-    actionReplyToAll(data, e) {
-        this.actionReply(data, e, true);
+    actionReply() {
+        this.actionInternalReply();
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    actionReplyToAll() {
+        this.actionInternalReply(true);
     }
 
     // noinspection JSUnusedGlobalSymbols

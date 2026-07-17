@@ -30,8 +30,9 @@ div.list-kanban > div > table {
             .create-button {
                 float: right;
                 position: relative;
-                right: var(--10px);
+                right: var(--6px);
                 color: var(--text-white-color);
+                padding: 0 var(--4px);
                 &:hover,
                 &:active {
                     color: var(--text-white-color);
@@ -101,6 +102,7 @@ div.list-kanban > div > table {
 
         .group-column-list {
             min-height: var(--100px);
+            margin-bottom: var(--padding-base-horizontal);
         }
 
         .group-column-list.drop-active {
@@ -141,6 +143,10 @@ div.list-kanban > div > table {
                             color: var(--text-muted-color);
                         }
 
+                    }
+
+                    a.link {
+                        .link-content-color();
                     }
                 }
             }

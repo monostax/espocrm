@@ -53,7 +53,7 @@ class ReadOnlyTest extends BaseTestCase
         ]);
         $metadata->save();
 
-        $this->reCreateApplication();
+        $this->reCreateApplication(reuse: true);
 
         $service = $this->getContainer()
             ->getByClass(ServiceContainer::class)
@@ -62,7 +62,7 @@ class ReadOnlyTest extends BaseTestCase
         $account = $service->create((object) [
             'name' => 'Test',
             'type' => 'Customer',
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $this->assertEquals('Test', $account->get('name'));
         $this->assertNull($account->get('type'));
@@ -70,7 +70,7 @@ class ReadOnlyTest extends BaseTestCase
         $account = $service->update($account->getId(), (object) [
             'name' => 'Test 1',
             'billingAddressCity' => 'Hello',
-        ], UpdateParams::create());
+        ], UpdateParams::create())->getEntity();
 
         $this->assertEquals('Test', $account->get('name'));
         $this->assertEquals('Hello', $account->get('billingAddressCity'));
@@ -101,14 +101,14 @@ class ReadOnlyTest extends BaseTestCase
 
         $metadata->save();
 
-        $this->reCreateApplication();
+        $this->reCreateApplication(reuse: true);
 
         $service = $this->getContainer()->getByClass(ServiceContainer::class)->getByClass(Account::class);
 
         $account = $service->create((object) [
             'name' => 'Test',
             'description' => '1',
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $service->update($account->getId(), (object) [
             'type' => 'Customer',

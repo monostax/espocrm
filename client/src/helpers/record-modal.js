@@ -77,11 +77,11 @@ class RecordModalHelper {
     /**
      * Show the 'detail' modal.
      *
-     * @param {import('view').default} view
+     * @param {import('view').default<any>} view
      * @param {{
      *   id: string,
      *   entityType: string,
-     *   model?: import('model').default,
+     *   model?: import('model').default | null,
      *   editDisabled?: boolean,
      *   removeDisabled?: boolean,
      *   fullFormDisabled?: boolean,
@@ -183,7 +183,7 @@ class RecordModalHelper {
      * @param {{
      *   entityType: string,
      *   id?: string,
-     *   model?: import('model').default,
+     *   model?: import('model').default | null,
      *   rootUrl?: string,
      *   fullFormDisabled?: boolean,
      *   fullFormUrl?: string,
@@ -283,14 +283,14 @@ class RecordModalHelper {
     /**
      * Show the 'create' modal.
      *
-     * @param {import('view').default} view
+     * @param {import('view').default<any>} view
      * @param {{
      *   entityType: string,
      *   rootUrl?: string,
      *   fullFormDisabled?: boolean,
      *   fullFormUrl?: string,
      *   returnUrl?: string,
-     *   relate?: model:model~setRelateItem | model:model~setRelateItem[],
+     *   relate?: import('model').SetRelateItem | import('model').SetRelateItem[],
      *   attributes?: Record.<string, *>,
      *   afterSave?: function(import('model').default, {bypassClose: boolean} & Record),
      *   beforeRender?: function(import('views/modals/edit').default),

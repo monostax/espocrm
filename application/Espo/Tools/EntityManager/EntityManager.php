@@ -103,11 +103,13 @@ class EntityManager
         /** @var array<string, mixed> $templateDefs */
         $templateDefs = $this->metadata->get(['app', 'entityTemplates', $type], []);
 
-        if (!empty($templateDefs['isNotCreatable']) && !$createParams->forceCreate()) {
+        if (!empty($templateDefs['isNotCreatable']) && !$createParams->forceCreate) {
             throw new Error("Type '$type' is not creatable.");
         }
 
-        $name = $this->nameUtil->addCustomPrefix($name, true);
+        if (!$createParams->skipCustomPrefix) {
+            $name = $this->nameUtil->addCustomPrefix($name, true);
+        }
 
         if ($this->nameUtil->nameIsBad($name)) {
             throw new Error("Entity name should contain only letters and numbers, " .
@@ -206,7 +208,7 @@ class EntityManager
             }
 
             $languageContents = $this->fileManager->getContents($filePath);
-            $languageContents = $this->replace($languageContents, $name, $createParams->getReplaceData());
+            $languageContents = $this->replace($languageContents, $name, $createParams->replaceData);
             $languageContents = str_replace('{entityTypeTranslated}', $labelSingular, $languageContents);
 
             $destinationFilePath = 'custom/Espo/Custom/Resources/i18n/' . $language . '/' . $name . '.json';
@@ -217,7 +219,7 @@ class EntityManager
         $filePath = $templatePath . "/Metadata/$type/scopes.json";
 
         $scopesDataContents = $this->fileManager->getContents($filePath);
-        $scopesDataContents = $this->replace($scopesDataContents, $name, $createParams->getReplaceData());
+        $scopesDataContents = $this->replace($scopesDataContents, $name, $createParams->replaceData);
 
         $scopesData = Json::decode($scopesDataContents, true);
 
@@ -228,7 +230,7 @@ class EntityManager
         $scopesData['object'] = true;
         $scopesData['isCustom'] = true;
 
-        if (!empty($templateDefs['isNotRemovable']) || !empty($params['isNotRemovable'])) {
+        if ($createParams->isNotRemovable) {
             $scopesData['isNotRemovable'] = true;
         }
 
@@ -241,7 +243,7 @@ class EntityManager
         $filePath = $templatePath . "/Metadata/$type/entityDefs.json";
 
         $entityDefsDataContents = $this->fileManager->getContents($filePath);
-        $entityDefsDataContents = $this->replace($entityDefsDataContents, $name, $createParams->getReplaceData());
+        $entityDefsDataContents = $this->replace($entityDefsDataContents, $name, $createParams->replaceData);
 
         $entityDefsData = Json::decode($entityDefsDataContents, true);
 
@@ -250,7 +252,7 @@ class EntityManager
         $filePath = $templatePath . "/Metadata/$type/clientDefs.json";
 
         $clientDefsContents = $this->fileManager->getContents($filePath);
-        $clientDefsContents = $this->replace($clientDefsContents, $name, $createParams->getReplaceData());
+        $clientDefsContents = $this->replace($clientDefsContents, $name, $createParams->replaceData);
 
         $clientDefsData = Json::decode($clientDefsContents, true);
 
@@ -270,6 +272,7 @@ class EntityManager
 
         $this->processMetadataCreateSelectDefs($templatePath, $name, $type);
         $this->processMetadataCreateRecordDefs($templatePath, $name, $type);
+        $this->processMetadataCreateLogicDefs($templatePath, $name, $type);
 
         $this->baseLanguage->set('Global', 'scopeNames', $name, $labelSingular);
         $this->baseLanguage->set('Global', 'scopeNamesPlural', $name, $labelPlural);
@@ -287,13 +290,15 @@ class EntityManager
 
         $this->processCreateHook($entityTypeParams);
 
-        $tabList = $this->config->get('tabList', []);
+        if ($createParams->addTab) {
+            $tabList = $this->config->get('tabList', []);
 
-        if (!in_array($name, $tabList)) {
-            $tabList[] = $name;
+            if (!in_array($name, $tabList)) {
+                $tabList[] = $name;
 
-            $this->configWriter->set('tabList', $tabList);
-            $this->configWriter->save();
+                $this->configWriter->set('tabList', $tabList);
+                $this->configWriter->save();
+            }
         }
 
         $this->dataManager->rebuild();
@@ -350,6 +355,21 @@ class EntityManager
         $this->metadata->set('recordDefs', $name, $data);
     }
 
+    private function processMetadataCreateLogicDefs(string $templatePath, string $name, string $type): void
+    {
+        $path = $templatePath . "/Metadata/$type/logicDefs.json";
+
+        if (!$this->fileManager->isFile($path)) {
+            return;
+        }
+
+        $contents = $this->fileManager->getContents($path);
+
+        $data = Json::decode($contents, true);
+
+        $this->metadata->set('logicDefs', $name, $data);
+    }
+
     /**
      * @param array{
      *     stream?: bool,
@@ -396,6 +416,8 @@ class EntityManager
 
         $entityTypeParams = new Params($name, $type, array_merge($this->getCurrentParams($name), $params));
         $previousEntityTypeParams = new Params($name, $type, $this->getCurrentParams($name));
+
+        $this->processBeforeUpdateHook($entityTypeParams, $previousEntityTypeParams);
 
         if (array_key_exists('stream', $params)) {
             $this->metadata->set('scopes', $name, ['stream' => (bool) $params['stream']]);
@@ -522,7 +544,7 @@ class EntityManager
             throw new Forbidden;
         }
 
-        if (!$this->isScopeCustomizable($name)) {
+        if (!$this->isScopeCustomizable($name) && !$deleteParams->forceRemove()) {
             throw new Error("Entity type $name is not customizable.");
         }
 
@@ -559,16 +581,13 @@ class EntityManager
         $this->fileManager->removeFile("custom/Espo/Custom/Resources/metadata/clientDefs/$name.json");
         $this->fileManager->removeFile("custom/Espo/Custom/Resources/metadata/recordDefs/$name.json");
         $this->fileManager->removeFile("custom/Espo/Custom/Resources/metadata/selectDefs/$name.json");
+        $this->fileManager->removeFile("custom/Espo/Custom/Resources/metadata/logicDefs/$name.json");
         $this->fileManager->removeFile("custom/Espo/Custom/Resources/metadata/scopes/$name.json");
 
         $this->fileManager->removeFile("custom/Espo/Custom/Entities/$normalizedName.php");
         $this->fileManager->removeFile("custom/Espo/Custom/Services/$normalizedName.php");
         $this->fileManager->removeFile("custom/Espo/Custom/Controllers/$normalizedName.php");
         $this->fileManager->removeFile("custom/Espo/Custom/Repositories/$normalizedName.php");
-
-        if (file_exists("custom/Espo/Custom/SelectManagers/$normalizedName.php")) {
-            $this->fileManager->removeFile("custom/Espo/Custom/SelectManagers/$normalizedName.php");
-        }
 
         $this->fileManager->removeInDir("custom/Espo/Custom/Resources/layouts/$normalizedName");
         $this->fileManager->removeDir("custom/Espo/Custom/Resources/layouts/$normalizedName");
@@ -654,6 +673,18 @@ class EntityManager
         $this->dataManager->clearCache();
     }
 
+    private function processBeforeUpdateHook(Params $params, Params $previousParams): void
+    {
+        /** @var class-string<UpdateHook>[] $classNameList */
+        $classNameList = $this->metadata->get(['app', 'entityManager', 'beforeUpdateHookClassNameList']) ?? [];
+
+        foreach ($classNameList as $className) {
+            $hook = $this->injectableFactory->create($className);
+
+            $hook->process($params, $previousParams);
+        }
+    }
+
     private function processUpdateHook(Params $params, Params $previousParams): void
     {
         /** @var class-string<UpdateHook>[] $classNameList */
@@ -737,6 +768,7 @@ class EntityManager
 
         $this->language->delete('Global', 'scopeNames', $name);
         $this->language->delete('Global', 'scopeNamesPlural', $name);
+        $this->language->delete($name, 'labels', 'Create ' . $name);
         $this->language->save();
 
         $entityTypeParams = new Params($name, $type, $this->getCurrentParams($name));

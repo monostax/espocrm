@@ -36,9 +36,9 @@ class StickyBarHelper {
 
     /**
      * @param {import('views/record/detail').default} view
-     * @param {boolean} stickButtonsFormBottomSelector
+     * @param {string} stickButtonsFormBottomSelector
      * @param {boolean} stickButtonsContainerAllTheWay
-     * @param {number} numId
+     * @param {string} numId
      */
     constructor(view, stickButtonsFormBottomSelector, stickButtonsContainerAllTheWay, numId) {
         this.view = view;

@@ -30,15 +30,18 @@
 namespace tests\integration\Espo\Record;
 
 use Espo\Core\Acl\Table;
-use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Entities\Team;
+use Espo\Entities\User;
 use Espo\Modules\Crm\Entities\Lead;
 use tests\integration\Core\BaseTestCase;
 
 class AssignmentTest extends BaseTestCase
 {
-    public function testAssignment1(): void
+    /**
+     * @noinspection PhpUnhandledExceptionInspection
+     */
+    public function testAssignmentSelf(): void
     {
         $team1 = $this->getEntityManager()->createEntity(Team::ENTITY_TYPE);
 
@@ -58,21 +61,70 @@ class AssignmentTest extends BaseTestCase
             'assignmentPermission' => Table::LEVEL_NO,
         ]);
 
-        $this->auth('test1');
-        $this->reCreateApplication();
+        $this->authenticate('test1');
 
-        /**
-         * @noinspection PhpUnhandledExceptionInspection
-         * @var Lead $lead1
-         */
         $lead1 = $this->getContainer()
             ->getByClass(ServiceContainer::class)
             ->getByClass(Lead::class)
             ->create((object) [
                 'lastName' => 'Test 1',
-            ], CreateParams::create());
+            ])->getEntity();
 
         $this->assertEquals($user1->getId(), $lead1->getAssignedUser()?->getId());
         $this->assertEquals([$team1->getId()], $lead1->getLinkMultipleIdList('teams'));
+    }
+
+    /**
+     * @noinspection PhpUnhandledExceptionInspection
+     */
+    public function testAssignment1(): void
+    {
+        $team = $this->getEntityManager()->createEntity(Team::ENTITY_TYPE);
+
+        $this->createUser([
+            'userName' => 'test1',
+            'defaultTeamId' => $team->getId(),
+            'teamsIds' => [$team->getId()],
+        ], [
+            'data' => [
+                Lead::ENTITY_TYPE => [
+                    'create' => Table::LEVEL_YES,
+                    'read' => Table::LEVEL_OWN,
+                    'edit' => Table::LEVEL_OWN,
+                    'delete' => Table::LEVEL_OWN,
+                ],
+                User::ENTITY_TYPE => [
+                    'read' => Table::LEVEL_TEAM,
+                ],
+            ],
+            'assignmentPermission' => Table::LEVEL_TEAM,
+        ]);
+
+        $user2 = $this->createUser([
+            'userName' => 'test2',
+            'defaultTeamId' => $team->getId(),
+            'teamsIds' => [$team->getId()],
+        ], [
+            'data' => [
+                Lead::ENTITY_TYPE => [
+                    'create' => Table::LEVEL_YES,
+                    'read' => Table::LEVEL_OWN,
+                    'edit' => Table::LEVEL_OWN,
+                    'delete' => Table::LEVEL_OWN,
+                ],
+            ],
+        ]);
+
+        $this->authenticate('test1');
+
+        $lead = $this->getContainer()
+            ->getByClass(ServiceContainer::class)
+            ->getByClass(Lead::class)
+            ->create((object) [
+                'lastName' => 'Test 1',
+                'assignedUserId' => $user2->getId(),
+            ])->getEntity();
+
+        $this->assertEquals($user2->getId(), $lead->getAssignedUser()?->getId());
     }
 }

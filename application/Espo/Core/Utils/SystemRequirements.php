@@ -30,6 +30,7 @@
 namespace Espo\Core\Utils;
 
 use Espo\Core\ORM\DatabaseParamsFactory;
+use Espo\Core\Utils\Database\ConfigDataProvider;
 use Espo\Core\Utils\Database\Helper as DatabaseHelper;
 use Espo\Core\Utils\File\Manager as FileManager;
 
@@ -49,7 +50,8 @@ class SystemRequirements
         private FileManager $fileManager,
         private System $systemHelper,
         private DatabaseHelper $databaseHelper,
-        private DatabaseParamsFactory $databaseParamsFactory
+        private DatabaseParamsFactory $databaseParamsFactory,
+        private ConfigDataProvider $databaseConfig,
     ) {}
 
     /**
@@ -137,7 +139,9 @@ class SystemRequirements
 
     private function getPdoExtension(): ?string
     {
-        $platform = $this->config->get('database.platform') ?? self::PLATFORM_MYSQL;
+        $platform = $this->databaseConfig->getPlatform() ?:
+            $this->config->get('database.platform') ?:
+                self::PLATFORM_MYSQL;
 
         return $this->pdoExtensionMap[$platform] ?? null;
     }

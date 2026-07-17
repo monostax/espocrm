@@ -162,6 +162,8 @@ class LinkMultipleWithColumnsFieldView extends LinkMultipleFieldView {
 
         if (this.mode === this.MODE_LIST) {
             $a.addClass('text-default');
+        } else {
+            $a.addClass(this.linkClass ?? 'text-record');
         }
 
         const $el = $('<div>').append($a);
@@ -392,7 +394,8 @@ class LinkMultipleWithColumnsFieldView extends LinkMultipleFieldView {
         const $el = $('<div>')
             .addClass('form-inline clearfix')
             .addClass('list-group-item link-with-role link-group-item-with-columns')
-            .addClass('link-' + id);
+            .addClass('link-' + id)
+            .attr('data-id', id)
 
         const $remove = $('<a>')
             .attr('role', 'button')

@@ -29,6 +29,10 @@
 
 namespace Espo\Core\Record\Duplicator;
 
+use Espo\Core\Acl;
+use Espo\Core\Binding\BindingContainer;
+use Espo\Core\Binding\BindingContainerBuilder;
+use Espo\Entities\User;
 use Espo\ORM\Defs;
 use Espo\Core\Utils\Metadata;
 use Espo\Core\InjectableFactory;
@@ -40,7 +44,9 @@ class FieldDuplicatorFactory
     public function __construct(
         private Defs $defs,
         private Metadata $metadata,
-        private InjectableFactory $injectableFactory
+        private InjectableFactory $injectableFactory,
+        private Acl $acl,
+        private User $user,
     ) {}
 
     public function create(string $entityType, string $field): FieldDuplicator
@@ -51,7 +57,7 @@ class FieldDuplicatorFactory
             throw new RuntimeException("No field duplicator for the field.");
         }
 
-        return $this->injectableFactory->create($className);
+        return $this->injectableFactory->createWithBinding($className, $this->createBinding());
     }
 
     public function has(string $entityType, string $field): bool
@@ -85,5 +91,13 @@ class FieldDuplicatorFactory
         }
 
         return null;
+    }
+
+    private function createBinding(): BindingContainer
+    {
+        return BindingContainerBuilder::create()
+            ->bindInstance(User::class, $this->user)
+            ->bindInstance(Acl::class, $this->acl)
+            ->build();
     }
 }

@@ -1,67 +1,68 @@
 {
-    "labels": {
-        "Converted To": "Convertido Para",
-        "Create Lead": "Cadastrar Lead",
-        "Convert": "Converter",
-        "convert": "converter"
+  "labels": {
+    "Converted To": "Convertido Para",
+    "Create Lead": "Cadastrar Lead",
+    "Convert": "Converter",
+    "convert": "converter"
+  },
+  "fields": {
+    "name": "Nome",
+    "emailAddress": "E-mail",
+    "title": "Cargo",
+    "phoneNumber": "Telefone",
+    "accountName": "Empresa",
+    "doNotCall": "Não Ligar",
+    "address": "Endereço",
+    "source": "Origem",
+    "opportunityAmount": "Valor da Oportunidade",
+    "opportunityAmountConverted": "Valor da Oportunidade (convertido)",
+    "description": "Descrição",
+    "createdAccount": "Empresa",
+    "createdContact": "Contato",
+    "createdOpportunity": "Oportunidade",
+    "campaign": "Campanha",
+    "targetLists": "Audiências",
+    "targetList": "Audiência",
+    "industry": "Ramo de Atividade",
+    "acceptanceStatus": "Status de Aceitação",
+    "opportunityAmountCurrency": "Moeda do Valor da Oportunidade",
+    "acceptanceStatusMeetings": "Status de Aceitação (Reuniões)",
+    "acceptanceStatusCalls": "Status de Aceitação (Ligações)",
+    "convertedAt": "Convertido Em",
+    "originalEmail": "Email Original"
+  },
+  "links": {
+    "targetLists": "Audiências",
+    "campaignLogRecords": "Logs das Campanhas",
+    "campaign": "Campanha",
+    "createdAccount": "Empresa",
+    "createdContact": "Contato",
+    "createdOpportunity": "Oportunidade",
+    "cases": "Casos",
+    "documents": "Documentos"
+  },
+  "options": {
+    "status": {
+      "New": "Novo",
+      "Assigned": "Atribuído",
+      "In Process": "Em Processo",
+      "Converted": "Convertido",
+      "Recycled": "Reciclado",
+      "Dead": "Morto"
     },
-    "fields": {
-        "name": "Nome",
-        "emailAddress": "E-mail",
-        "title": "Cargo",
-        "phoneNumber": "Telefone",
-        "accountName": "Empresa",
-        "doNotCall": "Não Ligar",
-        "address": "Endereço",
-        "source": "Origem",
-        "opportunityAmount": "Valor da Oportunidade",
-        "opportunityAmountConverted": "Valor da Oportunidade (convertido)",
-        "description": "Descrição",
-        "createdAccount": "Empresa",
-        "createdContact": "Contato",
-        "createdOpportunity": "Oportunidade",
-        "campaign": "Campanha",
-        "targetLists": "Audiências",
-        "targetList": "Audiência",
-        "industry": "Ramo de Atividade",
-        "acceptanceStatus": "Status de Aceitação",
-        "opportunityAmountCurrency": "Moeda do Valor da Oportunidade",
-        "acceptanceStatusCalls": "Status de Aceitação (Ligações)",
-        "convertedAt": "Convertido Em"
-    },
-    "links": {
-        "targetLists": "Audiências",
-        "campaignLogRecords": "Logs das Campanhas",
-        "campaign": "Campanha",
-        "createdAccount": "Empresa",
-        "createdContact": "Contato",
-        "createdOpportunity": "Oportunidade",
-        "cases": "Casos",
-        "documents": "Documentos"
-    },
-    "options": {
-        "status": {
-            "New": "Novo",
-            "Assigned": "Atribuído",
-            "In Process": "Em Processo",
-            "Converted": "Convertido",
-            "Recycled": "Reciclado",
-            "Dead": "Morto"
-        },
-        "source": {
-            "Call": "Ligação",
-            "Email": "E-mail",
-            "Existing Customer": "Cliente Existente",
-            "Partner": "Parceiro",
-            "Public Relations": "Relacionamento",
-            "Web Site": "Website",
-            "Campaign": "Campanha",
-            "Other": "Outro"
-        }
-    },
-    "presetFilters": {
-        "active": "Ativo",
-        "actual": "Atual",
-        "converted": "Convertido"
+    "source": {
+      "Call": "Ligação",
+      "Email": "E-mail",
+      "Existing Customer": "Cliente Existente",
+      "Partner": "Parceiro",
+      "Public Relations": "Relacionamento",
+      "Web Site": "Website",
+      "Campaign": "Campanha",
+      "Other": "Outro"
     }
+  },
+  "presetFilters": {
+    "active": "Ativo",
+    "converted": "Convertido"
+  }
 }

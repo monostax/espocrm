@@ -31,7 +31,6 @@ namespace Espo\Tools\MassUpdate;
 
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\FieldProcessing\LinkMultiple\ListLoader as LinkMultipleLoader;
-use Espo\Core\FieldProcessing\Loader\Params as LoaderParams;
 use Espo\Core\MassAction\QueryBuilder;
 use Espo\Core\MassAction\Params;
 use Espo\Core\MassAction\Result;
@@ -167,7 +166,7 @@ class Processor
         Data $data,
         int $i,
         array $fieldToCopyList,
-        Service $service
+        Service $service,
     ): bool {
 
         $service->loadAdditionalFields($entity);
@@ -176,7 +175,16 @@ class Processor
             return false;
         }
 
-        $values = $this->prepareItemValueMap($entity, $data, $i, $fieldToCopyList);
+        try {
+            $values = $this->prepareItemValueMap($entity, $data, $i, $fieldToCopyList);
+        } catch (Forbidden $e) {
+            $this->log->notice("Mass update forbidden. Record: {id}.", [
+                'exception' => $e,
+                'id' => $entity->getId(),
+            ]);
+
+            return false;
+        }
 
         $service->filterInputReadOnlySaved($entity, $values);
 
@@ -224,6 +232,7 @@ class Processor
 
     /**
      * @param string[] $copyFieldList
+     * @throws Forbidden
      */
     private function prepareItemValueMap(Entity $entity, Data $data, int $i, array $copyFieldList): stdClass
     {
@@ -236,6 +245,7 @@ class Processor
 
     /**
      * @param string[] $copyFieldList
+     * @throws Forbidden
      */
     private function copy(string $entityType, Data $data, int $i, array $copyFieldList): Data
     {
@@ -266,6 +276,9 @@ class Processor
         return $data;
     }
 
+    /**
+     * @throws Forbidden
+     */
     private function copyFileField(string $field, Data $data): Data
     {
         $attribute = $field . 'Id';
@@ -282,6 +295,10 @@ class Processor
             return $data->with($attribute, null);
         }
 
+        if (!$this->acl->checkEntityRead($attachment)) {
+            throw new Forbidden("No access to attachment $id.");
+        }
+
         /** @var AttachmentRepository $attachmentRepository */
         $attachmentRepository = $this->entityManager->getRepository(Attachment::ENTITY_TYPE);
 
@@ -290,6 +307,9 @@ class Processor
         return $data->with($attribute, $copiedAttachment->getId());
     }
 
+    /**
+     * @throws Forbidden
+     */
     private function copyAttachmentMultipleField(string $field, Data $data): Data
     {
         $attribute = $field . 'Ids';
@@ -314,6 +334,10 @@ class Processor
 
             if (!$attachment) {
                 continue;
+            }
+
+            if (!$this->acl->checkEntityRead($attachment)) {
+                throw new Forbidden("No access to attachment $id.");
             }
 
             $copiedIds[] = $attachmentRepository

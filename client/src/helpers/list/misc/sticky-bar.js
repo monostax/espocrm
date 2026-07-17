@@ -31,8 +31,6 @@ import {Events} from 'bullbone';
 
 /**
  * @internal
- *
- * @mixes Bull.Events
  */
 class StickyBarHelper {
 
@@ -50,7 +48,7 @@ class StickyBarHelper {
     _isReady = false
 
     /**
-     * @param {import('views/record/list').default} view
+     * @param {import('views/record/list-base').default} view
      * @param {{force?: boolean}} options
      */
     constructor(view, options = {}) {

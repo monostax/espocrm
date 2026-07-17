@@ -91,7 +91,10 @@ class RelationshipPanelView extends BottomPanelView {
     noCreateScopeList = ['User', 'Team', 'Role', 'Portal']
 
     /**
-     * @private
+     * Records per page. If not set, the value from config is used.
+     *
+     * @protected
+     * @type {number|null}
      */
     recordsPerPage = null
 
@@ -262,6 +265,7 @@ class RelationshipPanelView extends BottomPanelView {
                 action: this.defs.selectAction || 'selectRelated',
                 data: data,
                 acl: this.defs.selectRequiredAccess || 'edit',
+                iconClass: 'fas fa-angle-up',
             });
         }
 
@@ -269,6 +273,7 @@ class RelationshipPanelView extends BottomPanelView {
             this.actionList.unshift({
                 label: 'View List',
                 action: this.defs.viewAction || 'viewRelatedList',
+                iconClass: 'fas fa-align-justify',
             });
         }
 
@@ -440,16 +445,26 @@ class RelationshipPanelView extends BottomPanelView {
             iconHtml = this.getHelper().getScopeColorIconHtml(this.entityType);
         }
 
-        this.titleHtml = this.title;
+        let titlePart;
 
         if (this.defs.label) {
-            this.titleHtml = iconHtml + this.translate(this.defs.label, 'labels', this.entityType);
+            titlePart = this.translate(this.defs.label, 'labels', this.entityType);
+
+            const parentEntityType = this.model?.entityType;
+
+            if (parentEntityType && this.getLanguage().has(this.defs.label, 'labels', parentEntityType)) {
+                titlePart = this.translate(this.defs.label, 'labels', parentEntityType);
+            }
         } else {
-            this.titleHtml = iconHtml + this.title;
+            titlePart = this.title;
         }
 
+        this.titleHtml = iconHtml + this.getHelper().escapeString(titlePart);
+
         if (this.filter && this.filter !== 'all') {
-            this.titleHtml += ' &middot; ' + this.translateFilter(this.filter);
+            const filterPart = this.getHelper().escapeString(this.translateFilter(this.filter));
+
+            this.titleHtml += ' &middot; ' + filterPart;
         }
     }
 
@@ -522,7 +537,7 @@ class RelationshipPanelView extends BottomPanelView {
                             .addClass(!selected ? 'hidden' : '')
                     )
                     .append(
-                        $('<div>').text(label)
+                        $('<div class="item-text">').text(label)
                     );
 
             this.actionList.push({
@@ -549,7 +564,7 @@ class RelationshipPanelView extends BottomPanelView {
      * @protected
      */
     getStoredFilter() {
-        const key = 'panelFilter' + this.model.entityType + '-' + (this.panelName || this.name);
+        const key = 'panelFilter' + this.model.entityType + '-' + (this.panelName || this.link);
 
         return this.getStorage().get('state', key) || null;
     }
@@ -558,7 +573,7 @@ class RelationshipPanelView extends BottomPanelView {
      * @private
      */
     storeFilter(filter) {
-        const key = 'panelFilter' + this.model.entityType + '-' + (this.panelName || this.name);
+        const key = 'panelFilter' + this.model.entityType + '-' + (this.panelName || this.link);
 
         if (filter) {
             this.getStorage().set('state', key, filter);
@@ -667,7 +682,7 @@ class RelationshipPanelView extends BottomPanelView {
 
         const viewName =
             this.getMetadata()
-                .get(`clientDefs.${this.model.entityType}.relationshipPanels.${this.name}.viewModalView`) ||
+                .get(`clientDefs.${this.model.entityType}.relationshipPanels.${this.link}.viewModalView`) ||
             this.getMetadata().get(`clientDefs.${entityType}.modalViews.relatedList`) ||
             this.viewModalView ||
             'views/modals/related-list';
@@ -768,14 +783,15 @@ class RelationshipPanelView extends BottomPanelView {
                 entityType: scope,
                 id: id,
                 model: model,
-            })
-            .then(view => {
-                // @todo Move to afterSave?
-                this.listenTo(view, 'after:save', () => {
+                afterSave: model => {
+                    if (!model) {
+                        return;
+                    }
+
                     this.collection.fetch();
 
                     this.processSyncBack();
-                });
+                },
             });
     }
 
@@ -954,7 +970,6 @@ class RelationshipPanelView extends BottomPanelView {
             return;
         }
 
-        /** @type {module:model} */
         const model = this.model;
 
         const entityType = model.getLinkParam(this.link, 'entity');

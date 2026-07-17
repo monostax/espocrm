@@ -30,13 +30,11 @@
 namespace Espo\Core\Job;
 
 use Espo\Core\ORM\EntityManager;
-use Espo\Core\ServiceFactory;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\System;
 use Espo\Core\Job\Job\Data;
 use Espo\Core\Job\Job\Status;
 use Espo\Entities\Job as JobEntity;
-
 use Espo\ORM\Name\Attribute;
 use LogicException;
 use RuntimeException;
@@ -48,7 +46,6 @@ class JobRunner
         private JobFactory $jobFactory,
         private ScheduleUtil $scheduleUtil,
         private EntityManager $entityManager,
-        private ServiceFactory $serviceFactory,
         private Log $log,
     ) {}
 
@@ -84,8 +81,7 @@ class JobRunner
             throw new RuntimeException("Empty job ID.");
         }
 
-        /** @var ?JobEntity $jobEntity */
-        $jobEntity = $this->entityManager->getEntityById(JobEntity::ENTITY_TYPE, $id);
+        $jobEntity = $this->entityManager->getRDBRepositoryByClass(JobEntity::class)->getById($id);
 
         if (!$jobEntity) {
             throw new RuntimeException("Job '$id' not found.");
@@ -96,7 +92,6 @@ class JobRunner
         }
 
         $this->setJobRunning($jobEntity);
-
         $this->run($jobEntity);
     }
 
@@ -119,8 +114,6 @@ class JobRunner
                 $this->runJobNamed($jobEntity);
             } else if ($jobEntity->getClassName()) {
                 $this->runJobWithClassName($jobEntity);
-            } else if ($jobEntity->getServiceName()) {
-                $this->runService($jobEntity);
             } else {
                 $id = $jobEntity->getId();
 
@@ -131,9 +124,8 @@ class JobRunner
 
             $jobId = $jobEntity->hasId() ? $jobEntity->getId() : null;
 
-            $this->log->critical("Failed job {id}. {message}", [
+            $this->log->critical("Failed job {id}.", [
                 'exception' => $e,
-                'message' => $e->getMessage(),
                 Attribute::ID => $jobId,
             ]);
 
@@ -158,11 +150,10 @@ class JobRunner
 
         if ($jobEntity->getScheduledJobId()) {
             $this->scheduleUtil->addLogRecord(
-                $jobEntity->getScheduledJobId(),
-                $status,
-                null,
-                $jobEntity->getTargetId(),
-                $jobEntity->getTargetType()
+                scheduledJobId: $jobEntity->getScheduledJobId(),
+                status: $status,
+                targetId: $jobEntity->getTargetId(),
+                targetType: $jobEntity->getTargetType(),
             );
         }
     }
@@ -206,11 +197,7 @@ class JobRunner
         $this->runJob($job, $jobEntity);
     }
 
-    /**
-     * @param Job|JobDataLess $job
-     * @internal Native type is not used for bc.
-     */
-    private function runJob($job, JobEntity $jobEntity): void
+    private function runJob(Job|JobDataLess $job, JobEntity $jobEntity): void
     {
         if ($job instanceof JobDataLess) {
             $job->run();
@@ -223,37 +210,6 @@ class JobRunner
             ->withTargetType($jobEntity->getTargetType());
 
         $job->run($data);
-    }
-
-    private function runService(JobEntity $jobEntity): void
-    {
-        $serviceName = $jobEntity->getServiceName();
-
-        if (!$serviceName) {
-            throw new RuntimeException("Job with empty serviceName.");
-        }
-
-        if (!$this->serviceFactory->checkExists($serviceName)) {
-            throw new RuntimeException("No service $serviceName.");
-        }
-
-        $service = $this->serviceFactory->create($serviceName);
-
-        $methodName = $jobEntity->getMethodName();
-
-        if (!$methodName) {
-            throw new RuntimeException('Job with empty methodName.');
-        }
-
-        if (!method_exists($service, $methodName)) {
-            throw new RuntimeException("No method '$methodName' in service '$serviceName'.");
-        }
-
-        $service->$methodName(
-            $jobEntity->getData(),
-            $jobEntity->getTargetId(),
-            $jobEntity->getTargetType()
-        );
     }
 
     private function setJobRunning(JobEntity $jobEntity): void
