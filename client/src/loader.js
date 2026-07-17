@@ -78,7 +78,7 @@
     class Loader {
 
         /**
-         * @param {int|null} [_cacheTimestamp=null]
+         * @param {string|Number|null} [_cacheTimestamp=null]
          */
         constructor(_cacheTimestamp) {
             this._cacheTimestamp = _cacheTimestamp || null;
@@ -158,7 +158,7 @@
         }
 
         /**
-         * @param {Number} cacheTimestamp
+         * @param {string|Number} cacheTimestamp
          */
         setCacheTimestamp(cacheTimestamp) {
             this._cacheTimestamp = cacheTimestamp;
@@ -1088,7 +1088,7 @@
         },
 
         /**
-         * @param {Number} cacheTimestamp
+         * @param {string|Number} cacheTimestamp
          * @internal
          */
         setCacheTimestamp: function (cacheTimestamp) {
@@ -1247,7 +1247,7 @@
 
         /**
          * @type {{
-         *     cacheTimestamp?: int,
+         *     cacheTimestamp?: string|Number,
          *     basePath?: string,
          *     internalModuleList?: [],
          *     transpiledModuleList?: [],

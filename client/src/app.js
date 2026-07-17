@@ -128,6 +128,7 @@ class App {
         this.bundledModuleList = options.bundledModuleList || [];
 
         this.appTimestamp = options.appTimestamp;
+        this.assetVersion = options.assetVersion || this.appTimestamp;
 
         const urlParams = new URLSearchParams(window.location.search);
         const chatRedirect = urlParams.get('chat_redirect');
@@ -337,6 +338,14 @@ class App {
      * @type {Number|null}
      */
     appTimestamp = null;
+
+    /**
+     * An immutable frontend asset version.
+     *
+     * @private
+     * @type {string|Number|null}
+     */
+    assetVersion = null;
 
     /** @private */
     started = false;
@@ -1165,8 +1174,9 @@ class App {
      * @private
      * @param {string} chatRedirect
      * @param {function} fallback
+     * @param {boolean} [replace]
      */
-    redirectToChatwoot(chatRedirect, fallback) {
+    redirectToChatwoot(chatRedirect, fallback, replace = false) {
         Ajax.getRequest('ChatwootSso/freshUrl')
             .then(response => {
                 const ssoUrl = response?.ssoUrl;
@@ -1175,7 +1185,12 @@ class App {
                     const url = new URL(ssoUrl);
 
                     url.searchParams.set('redirect_to', chatRedirect);
-                    window.location.href = url.toString();
+
+                    if (replace) {
+                        window.location.replace(url.toString());
+                    } else {
+                        window.location.href = url.toString();
+                    }
 
                     return;
                 }
@@ -1183,6 +1198,37 @@ class App {
                 fallback();
             })
             .catch(() => fallback());
+    }
+
+    /**
+     * Redirect a top-level CRM route into the account-scoped Chatwoot shell.
+     *
+     * @private
+     * @param {function} fallback
+     * @return {boolean}
+     */
+    redirectLegacyCrmRoute(fallback) {
+        if (window.self !== window.top) {
+            return false;
+        }
+
+        const crmRoute = window.location.hash.replace(/^#/, '');
+        const crmEntity = crmRoute.split(/[/?]/)[0];
+        const accountId = this.appParams.get('chatwootAccountId');
+
+        if (!crmEntity || !accountId) {
+            return false;
+        }
+
+        const navbar = crmEntity.charAt(0).toLowerCase() + crmEntity.slice(1);
+        const chatRedirect =
+            `/app/accounts/${encodeURIComponent(accountId)}` +
+            `/crm/${encodeURIComponent(crmEntity)}` +
+            `?navbar=${encodeURIComponent(navbar)}#${crmRoute}`;
+
+        this.redirectToChatwoot(chatRedirect, fallback, true);
+
+        return true;
     }
 
     /**
@@ -1266,6 +1312,10 @@ class App {
                 const arr = Base64.decode(this.auth).split(":");
 
                 this.setCookieAuth(arr[0], arr[1]);
+
+                if (this.redirectLegacyCrmRoute(callback)) {
+                    return;
+                }
 
                 callback();
             }
@@ -1681,11 +1731,9 @@ class App {
         });
 
         const baseUrl = Utils.obtainBaseUrl();
-        const timestamp = this.loader.getCacheTimestamp();
-
         const promiseList = files.map((file) => {
             const url = new URL(baseUrl + this.basePath + file);
-            url.searchParams.append("t", this.appTimestamp);
+            url.searchParams.append("t", this.assetVersion);
 
             return new Promise((resolve) => {
                 fetch(url).then((response) => {
@@ -1764,6 +1812,7 @@ class App {
  * @property {string} [bundledModuleList] A list of bundled modules.
  * @property {Number|null} [cacheTimestamp] A cache timestamp.
  * @property {Number|null} [appTimestamp] An application timestamp.
+ * @property {string|null} [assetVersion] An immutable frontend asset version.
  * @property {string|null} [theme] A theme name.
  */
 

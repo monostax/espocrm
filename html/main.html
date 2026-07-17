@@ -9,7 +9,7 @@
         {{scriptsHtml}}
         <link
             rel="stylesheet"
-            href="{{basePath}}{{stylesheet}}?r={{cacheTimestamp}}"
+            href="{{basePath}}{{stylesheet}}?r={{assetVersion}}"
             id="main-stylesheet"
         />
         {{additionalStyleSheetsHtml}}{{linksHtml}}
@@ -44,15 +44,16 @@
                     new App({
                         id: '{{applicationId}}',
                         useCache: {{useCache}},
-                    cacheTimestamp: {{cacheTimestamp}},
-                    appTimestamp: {{appTimestamp}},
-                    basePath: '{{basePath}}',
-                    apiUrl: '{{apiUrl}}',
-                    ajaxTimeout: {{ajaxTimeout}},
-                    internalModuleList: {{internalModuleList}},
-                    bundledModuleList: {{bundledModuleList}},
-                    theme: {{theme}},
-                }, app => {
+                        cacheTimestamp: {{cacheTimestamp}},
+                        appTimestamp: {{appTimestamp}},
+                        assetVersion: {{assetVersionJson}},
+                        basePath: '{{basePath}}',
+                        apiUrl: '{{apiUrl}}',
+                        ajaxTimeout: {{ajaxTimeout}},
+                        internalModuleList: {{internalModuleList}},
+                        bundledModuleList: {{bundledModuleList}},
+                        theme: {{theme}},
+                    }, app => {
                         loadedApp = app;
 
                         run(app);

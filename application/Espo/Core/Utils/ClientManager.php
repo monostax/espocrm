@@ -95,6 +95,8 @@ class ClientManager
      */
     public function writeHeaders(Response $response, ?SecurityParams $params = null): void
     {
+        $response->setHeader('Cache-Control', 'no-store');
+
         if ($this->config->get('clientSecurityHeadersDisabled')) {
             return;
         }
@@ -201,13 +203,14 @@ class ClientManager
         $cacheTimestamp = $this->getCacheTimestamp();
         $jsFileList = $this->getJsFileList();
         $appTimestamp = $this->getAppTimestamp();
+        $assetVersion = $this->getAssetVersion($appTimestamp);
 
         if ($this->isDeveloperMode()) {
             $useCache = $this->useCacheInDeveloperMode();
             $loaderCacheTimestamp = null;
         } else {
             $useCache = $this->useCache();
-            $loaderCacheTimestamp = $appTimestamp;
+            $loaderCacheTimestamp = $assetVersion;
         }
 
         $cssFileList = $this->metadata->get(['app', 'client', 'cssList'], []);
@@ -216,13 +219,13 @@ class ClientManager
         [$favicon, $faviconType] = $this->getFaviconData();
 
         $scriptsHtml = implode('',
-            array_map(fn ($file) => $this->getScriptItemHtml($file, $appTimestamp), $jsFileList)
+            array_map(fn ($file) => $this->getScriptItemHtml($file, $assetVersion), $jsFileList)
         );
 
         foreach ($additionalScripts as $it) {
             $scriptsHtml .= $this->getScriptItemHtml(
                 file: null,
-                appTimestamp: $appTimestamp,
+                assetVersion: $assetVersion,
                 withNonce: true,
                 cache: $it->cacheBusting,
                 source: $it->source,
@@ -232,11 +235,11 @@ class ClientManager
         }
 
         $additionalStyleSheetsHtml = implode('',
-            array_map(fn ($file) => $this->getCssItemHtml($file, $appTimestamp), $cssFileList)
+            array_map(fn ($file) => $this->getCssItemHtml($file, $assetVersion), $cssFileList)
         );
 
         $linksHtml = implode('',
-            array_map(fn ($item) => $this->getLinkItemHtml($item, $appTimestamp), $linkList)
+            array_map(fn ($item) => $this->getLinkItemHtml($item, $assetVersion), $linkList)
         );
 
         $internalModuleList = array_map(
@@ -254,6 +257,8 @@ class ClientManager
             'applicationName' => $this->escapeValue($pageTitle ?? $this->config->get('applicationName', 'EspoCRM')),
             'cacheTimestamp' => $cacheTimestamp,
             'appTimestamp' => $appTimestamp,
+            'assetVersion' => $assetVersion,
+            'assetVersionJson' => Json::encode($assetVersion),
             'loaderCacheTimestamp' => Json::encode($loaderCacheTimestamp),
             'stylesheet' => $stylesheet,
             'theme' => Json::encode($theme),
@@ -357,9 +362,24 @@ class ClientManager
         return $this->config->get('appTimestamp', 0);
     }
 
+    private function getAssetVersion(int $appTimestamp): string
+    {
+        $assetVersion = getenv('CRM_FRONTEND_ASSET_VERSION');
+
+        if ($assetVersion === false) {
+            return (string) $appTimestamp;
+        }
+
+        if (!preg_match('/^[0-9a-f]{64}$/', $assetVersion)) {
+            throw new \RuntimeException('Invalid CRM_FRONTEND_ASSET_VERSION.');
+        }
+
+        return $assetVersion;
+    }
+
     private function getScriptItemHtml(
         ?string $file,
-        int $appTimestamp,
+        string $assetVersion,
         bool $withNonce = false,
         bool $cache = true,
         ?string $source = null,
@@ -370,7 +390,7 @@ class ClientManager
         $src = $source ?? $this->basePath . $file;
 
         if ($cache) {
-            $src .= '?r=' . $appTimestamp;
+            $src .= '?r=' . $assetVersion;
         }
 
         $noncePart = '';
@@ -393,9 +413,9 @@ class ClientManager
             "<script src=\"$src\" data-base-path=\"$this->basePath\"$noncePart$paramsPart></script>";
     }
 
-    private function getCssItemHtml(string $file, int $appTimestamp): string
+    private function getCssItemHtml(string $file, string $assetVersion): string
     {
-        $src = $this->basePath . $file . '?r=' . $appTimestamp;
+        $src = $this->basePath . $file . '?r=' . $assetVersion;
 
         return $this->getTabHtml() . "<link rel=\"stylesheet\" href=\"$src\">";
     }
@@ -410,12 +430,12 @@ class ClientManager
      *     crossorigin?: bool,
      * } $item
      */
-    private function getLinkItemHtml(array $item, int $appTimestamp): string
+    private function getLinkItemHtml(array $item, string $assetVersion): string
     {
         $href = $this->basePath . $item['href'];
 
         if (empty($item['noTimestamp'])) {
-            $href .= '?r=' . $appTimestamp;
+            $href .= '?r=' . $assetVersion;
         }
 
         $as = $item['as'] ?? '';
