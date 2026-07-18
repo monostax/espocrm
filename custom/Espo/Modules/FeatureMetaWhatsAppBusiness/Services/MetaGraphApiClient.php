@@ -99,6 +99,32 @@ class MetaGraphApiClient
     }
 
     /**
+     * Discover WABAs assigned to the token (Tech Provider / Embedded Signup /
+     * System User path).
+     *
+     * Human user tokens resolve WABAs via GET /me/businesses →
+     * owned_whatsapp_business_accounts. Embedded Signup and System User
+     * tokens often have empty /me/businesses but expose the shared WABAs
+     * on GET /me/assigned_whatsapp_business_accounts.
+     *
+     * @param string $accessToken Meta access token
+     * @param string $apiVersion API version (e.g. v22.0)
+     * @return array<int, array<string, mixed>> List of WABA objects
+     * @throws Error
+     */
+    public function discoverAssignedWabas(
+        string $accessToken,
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): array {
+        $url = self::GRAPH_API_BASE . "/{$apiVersion}/me/assigned_whatsapp_business_accounts"
+            . '?fields=id,name,timezone_id,message_template_namespace,currency';
+
+        $response = $this->request($url, $accessToken);
+
+        return $response['data'] ?? [];
+    }
+
+    /**
      * Fetch WhatsApp Business Account details.
      *
      * @param string $accessToken Meta access token

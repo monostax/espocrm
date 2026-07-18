@@ -24,13 +24,30 @@ use stdClass;
  * endpoints, scopes, and authorization params for Meta (WhatsApp Business)
  * OAuth.
  *
- * Does NOT overwrite client_id/client_secret if the provider already
- * exists (those are environment-specific secrets set via the admin UI).
+ * Seeds the public Monostax Meta App clientId + Embedded Signup
+ * configurationId when empty (or still a known-stale default). Does NOT
+ * overwrite clientSecret (environment-specific, set via Admin UI / brokered
+ * remotely for Coexistence in local environments).
  */
 class SeedOAuthProviderMetaWhatsApp implements RebuildAction
 {
     private const PROVIDER_ID = 'msx_meta_wa_01';
     private const PROVIDER_NAME = 'Meta (WhatsApp)';
+
+    /** Public Meta App ID (not a secret). */
+    private const DEFAULT_CLIENT_ID = '1914611219187440';
+
+    /**
+     * Facebook Login for Business configuration ID (config_id) used by the
+     * FB JS SDK Embedded Signup launcher. Same Monostax-shared Meta App
+     * config as production msx_wa_coex_01.
+     */
+    private const DEFAULT_CONFIGURATION_ID = '25911734595153620';
+
+    /** @var string[] */
+    private const STALE_CONFIGURATION_IDS = [
+        '1238481398208023',
+    ];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -63,6 +80,20 @@ class SeedOAuthProviderMetaWhatsApp implements RebuildAction
         $provider->set('tokenEndpoint', 'https://graph.facebook.com/v22.0/oauth/access_token');
         $provider->set('scopes', $this->getScopes());
         $provider->set('authorizationParams', $this->getAuthorizationParams());
+        $provider->set('embeddedSignupVersion', 'v4');
+
+        if (!$provider->get('clientId')) {
+            $provider->set('clientId', self::DEFAULT_CLIENT_ID);
+        }
+
+        $configurationId = (string) ($provider->get('configurationId') ?? '');
+
+        if (
+            $configurationId === '' ||
+            in_array($configurationId, self::STALE_CONFIGURATION_IDS, true)
+        ) {
+            $provider->set('configurationId', self::DEFAULT_CONFIGURATION_ID);
+        }
 
         $this->entityManager->saveEntity($provider);
     }
@@ -80,6 +111,9 @@ class SeedOAuthProviderMetaWhatsApp implements RebuildAction
         $provider->set('tokenEndpoint', 'https://graph.facebook.com/v22.0/oauth/access_token');
         $provider->set('scopes', $this->getScopes());
         $provider->set('authorizationParams', $this->getAuthorizationParams());
+        $provider->set('embeddedSignupVersion', 'v4');
+        $provider->set('clientId', self::DEFAULT_CLIENT_ID);
+        $provider->set('configurationId', self::DEFAULT_CONFIGURATION_ID);
 
         $this->entityManager->saveEntity($provider);
     }

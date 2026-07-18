@@ -8,6 +8,32 @@
         ]
     },
     {
+        "label": "WhatsApp Embedded Signup",
+        "name": "metaWhatsAppEmbeddedSignup",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "or",
+                    "value": [
+                        {
+                            "type": "equals",
+                            "attribute": "provider",
+                            "value": "meta-whatsapp"
+                        },
+                        {
+                            "type": "equals",
+                            "attribute": "provider",
+                            "value": "meta-whatsapp-coexistence"
+                        }
+                    ]
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "configurationId" }, { "name": "embeddedSignupVersion" }]
+        ]
+    },
+    {
         "rows": [
             [{ "name": "authorizationEndpoint" }, { "name": "tokenEndpoint" }]
         ]
@@ -24,6 +50,38 @@
     },
     {
         "rows": [[{ "name": "description" }]]
+    },
+    {
+        "label": "Instagram Webhook",
+        "name": "metaInstagramWebhook",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "equals",
+                    "attribute": "provider",
+                    "value": "meta-instagram"
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "webhookVerifyToken" }, false]
+        ]
+    },
+    {
+        "label": "Lead Ads Webhook",
+        "name": "metaLeadAdsWebhook",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "equals",
+                    "attribute": "provider",
+                    "value": "meta-leadads"
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "webhookVerifyToken" }, false]
+        ]
     },
     {
         "tabBreak": true,

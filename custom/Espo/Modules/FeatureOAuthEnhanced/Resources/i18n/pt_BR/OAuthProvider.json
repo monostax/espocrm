@@ -3,11 +3,14 @@
         "provider": "Provedor",
         "teams": "Times",
         "assignedUsers": "Usuários Responsáveis",
-        "isGloballyShared": "É Compartilhado Globalmente"
+        "isGloballyShared": "É Compartilhado Globalmente",
+        "configurationId": "ID de Config. Embedded Signup",
+        "embeddedSignupVersion": "Versão do Embedded Signup"
     },
     "options": {
         "provider": {
             "meta-whatsapp": "Meta (WhatsApp)",
+            "meta-whatsapp-coexistence": "Meta (WhatsApp Coexistência)",
             "meta-leadads": "Meta (Lead Ads)",
             "meta-system-user": "Meta (Usuário do Sistema)",
             "google-calendar": "Google (Calendar)",
@@ -20,5 +23,10 @@
         "teams": "Times",
         "assignedUsers": "Usuários Responsáveis",
         "credentialTypes": "Tipos de Credencial"
+    },
+    "labels": {
+        "WhatsApp Embedded Signup": "WhatsApp Embedded Signup",
+        "Instagram Webhook": "Webhook do Instagram",
+        "Lead Ads Webhook": "Webhook do Lead Ads"
     }
 }

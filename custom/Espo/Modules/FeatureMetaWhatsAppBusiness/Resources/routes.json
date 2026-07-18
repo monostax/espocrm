@@ -14,5 +14,13 @@
             "controller": "WhatsAppEmbeddedSignup",
             "action": "finish"
         }
+    },
+    {
+        "route": "/WhatsAppEmbeddedSignup/hydrate",
+        "method": "post",
+        "params": {
+            "controller": "WhatsAppEmbeddedSignup",
+            "action": "hydrate"
+        }
     }
 ]

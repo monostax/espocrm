@@ -13,6 +13,7 @@ namespace Espo\Modules\FeatureOAuthEnhanced\Tools\OAuth;
 
 use Espo\Core\Utils\Crypt;
 use Espo\Entities\OAuthProvider;
+use Espo\Modules\FeatureOAuthEnhanced\Services\MetaWhatsAppOAuthBrokerService;
 use Espo\Tools\OAuth\ConfigDataProvider;
 use Espo\Tools\OAuth\GenericProviderFactory as BaseGenericProviderFactory;
 use League\OAuth2\Client\Provider\GenericProvider;
@@ -36,6 +37,11 @@ use League\OAuth2\Client\Provider\GenericProvider;
  * null-valued parameters (http_build_query), so leaving redirectUri unset
  * omits redirect_uri from the token request entirely.
  *
+ * Local k3d/dev can additionally route **only** msx_wa_coex_01 through the
+ * production Meta WhatsApp OAuth broker (see MetaWhatsAppOAuthBrokerConfig)
+ * so the Meta App clientSecret never leaves production. Production keeps
+ * META_WHATSAPP_OAUTH_BROKER_URL unset and exchanges directly with Meta.
+ *
  * All other providers keep the standard behavior (redirect_uri included),
  * since their codes come from the regular authorization-code popup flow.
  */
@@ -53,11 +59,26 @@ class GenericProviderFactory extends BaseGenericProviderFactory
     public function __construct(
         private ConfigDataProvider $configDataProvider,
         private Crypt $crypt,
+        private MetaWhatsAppOAuthBrokerConfig $brokerConfig,
     ) {
         parent::__construct($configDataProvider, $crypt);
     }
 
     public function create(OAuthProvider $provider): GenericProvider
+    {
+        if ($this->shouldUseBroker($provider)) {
+            return $this->createBroker($provider);
+        }
+
+        return $this->createDirect($provider);
+    }
+
+    /**
+     * Always talk to the provider's real token endpoint (Meta), never the
+     * broker. Used by the production broker endpoint itself so a mis-set
+     * META_WHATSAPP_OAUTH_BROKER_URL cannot recurse.
+     */
+    public function createDirect(OAuthProvider $provider): GenericProvider
     {
         $secret = $this->crypt->decrypt($provider->getClientSecret());
 
@@ -75,6 +96,35 @@ class GenericProviderFactory extends BaseGenericProviderFactory
         }
 
         return new GenericProvider($options);
+    }
+
+    private function createBroker(OAuthProvider $provider): GenericProvider
+    {
+        [$url, $token] = $this->brokerConfig->requireClientCredentials();
+
+        $clientId = $provider->get('clientId');
+
+        return new GenericProvider(
+            [
+                'clientId' => is_string($clientId) && $clientId !== '' ? $clientId : 'broker',
+                'clientSecret' => 'broker',
+                'urlAccessToken' => $url,
+                'urlAuthorize' => 'dummy',
+                'urlResourceOwnerDetails' => 'dummy',
+            ],
+            [
+                'optionProvider' => new BrokerAccessTokenOptionProvider($token),
+            ]
+        );
+    }
+
+    private function shouldUseBroker(OAuthProvider $provider): bool
+    {
+        if ($provider->getId() !== MetaWhatsAppOAuthBrokerService::PROVIDER_ID) {
+            return false;
+        }
+
+        return $this->brokerConfig->isClientEnabled();
     }
 
     private function isEmbeddedSignup(OAuthProvider $provider): bool

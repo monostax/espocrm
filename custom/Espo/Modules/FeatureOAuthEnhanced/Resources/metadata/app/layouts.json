@@ -2,6 +2,9 @@
     "OAuthProvider": {
         "detail": {
             "module": "FeatureOAuthEnhanced"
+        },
+        "edit": {
+            "module": "FeatureOAuthEnhanced"
         }
     }
 }

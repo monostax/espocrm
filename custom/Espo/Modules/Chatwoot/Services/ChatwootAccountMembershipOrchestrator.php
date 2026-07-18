@@ -131,19 +131,36 @@ class ChatwootAccountMembershipOrchestrator
                     'email' => $email,
                     'password' => $generatedPassword,
                     'custom_attributes' => [],
-                ]);
+                ], true);
 
                 if (!isset($userResponse['id'])) {
                     throw new Error('Chatwoot API response missing user ID.');
                 }
 
                 $remoteUserId = (int) $userResponse['id'];
+                $existingRemoteUser = ($userResponse['existing'] ?? false) === true;
 
-                if (($userResponse['created'] ?? null) !== true) {
+                if (!$existingRemoteUser && ($userResponse['created'] ?? null) !== true) {
                     throw new Error('Chatwoot did not confirm creation of a new user.');
                 }
 
-                $createdRemoteUserId = $remoteUserId;
+                if (!$existingRemoteUser) {
+                    $createdRemoteUserId = $remoteUserId;
+                }
+
+                $userAccessToken = $userResponse['access_token'] ?? null;
+
+                if ($existingRemoteUser) {
+                    $this->log->info(
+                        "Reusing existing Chatwoot user {$remoteUserId} for CRM user {$userId}."
+                    );
+
+                    $userAccessToken = $this->apiClient->fetchUserAccessToken(
+                        $platformUrl,
+                        $accessToken,
+                        $remoteUserId
+                    );
+                }
 
                 $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
                     'name' => $name,
@@ -154,6 +171,14 @@ class ChatwootAccountMembershipOrchestrator
                     'chatwootUserId' => $remoteUserId,
                     'teamsIds' => $teamsIds,
                 ], ['silent' => true]);
+
+                if (is_string($userAccessToken) && $userAccessToken !== '') {
+                    $chatwootUser->set('userAccessToken', $userAccessToken);
+                    $this->entityManager->saveEntity($chatwootUser, [
+                        'silent' => true,
+                        'skipHooks' => true,
+                    ]);
+                }
             }
 
             if ($chatwootUser->get('emailAddress') !== $email) {

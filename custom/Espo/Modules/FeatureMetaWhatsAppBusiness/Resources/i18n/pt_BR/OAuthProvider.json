@@ -1,12 +1,28 @@
 {
+    "fields": {
+        "configurationId": "ID de Config. Embedded Signup",
+        "embeddedSignupVersion": "Versão do Embedded Signup"
+    },
     "labels": {
         "configureMetaWhatsAppWebhook": "Configurar App Secret do WhatsApp",
-        "Configuring WhatsApp webhook...": "Configurando webhook do WhatsApp..."
+        "Configuring WhatsApp webhook...": "Configurando webhook do WhatsApp...",
+        "connectWithEmbeddedSignup": "Conectar com a Meta (Embedded Signup)",
+        "connectWithEmbeddedSignupCoexistence": "Conectar app WhatsApp Business (Coexistência)",
+        "WhatsApp Embedded Signup": "WhatsApp Embedded Signup"
+    },
+    "tooltips": {
+        "configurationId": "ID da configuração do Facebook Login for Business (config_id). Crie em Meta Business Suite → Apps → <seu app> → Facebook Login for Business → Configurations e cole o ID aqui.",
+        "embeddedSignupVersion": "Versão do Embedded Signup. v4 é obrigatória para o fluxo de Coexistência (onboarding do app WhatsApp Business). v2 é descontinuada em 15/10/2026."
     },
     "messages": {
         "confirmConfigureMetaWhatsAppWebhook": "Isto irá enviar o clientSecret deste App Meta para todas as ChatwootPlatforms, permitindo ao Chatwoot validar assinaturas HMAC em eventos de webhook do WhatsApp. Continuar?",
         "whatsappWebhookConfigured": "App secret do WhatsApp sincronizado com o Chatwoot. Eventos de webhook deste App Meta agora serão verificados por assinatura.",
         "whatsappWebhookConfiguredChatwootFailed": "Algumas ChatwootPlatforms falharam ao aceitar o app secret:",
-        "whatsappWebhookConfigFailed": "Falha na configuração do webhook do WhatsApp."
+        "whatsappWebhookConfigFailed": "Falha na configuração do webhook do WhatsApp.",
+        "embeddedSignupMissingClientId": "Este OAuth Provider não tem Client ID. Abra Admin → OAuth Providers, cole o Meta App ID em Client ID e tente novamente.",
+        "embeddedSignupMissingConfigId": "Este OAuth Provider não tem ID de Config. Embedded Signup. Abra Admin → OAuth Providers e cole o ID da configuração do Facebook Login for Business do Meta Business Suite.",
+        "embeddedSignupNoSessionInfo": "Conectado, mas a Meta não retornou waba_id / phone_number_id. O sync Coexistência/Cloud API foi ignorado — você pode refazer o Embedded Signup para tentar de novo.",
+        "embeddedSignupFinishFailed": "Conectado, mas a etapa seguinte que registra o WABA e o telefone no Monostax falhou. Uma nova tentativa em segundo plano foi enfileirada.",
+        "coexistencePendingInAppStep": "Autenticação ok, mas o cliente ainda não colou o código de verificação no app WhatsApp Business. Os webhooks começam a fluir quando isso for feito. O sync tentará de novo em segundo plano."
     }
 }

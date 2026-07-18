@@ -67,6 +67,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/business-account', ['vi
         isLoading: false,
         loadError: null,
         currentRequest: null,
+        fetchedForOAuthAccountId: null,
 
         data: function () {
             const data = Dep.prototype.data.call(this);
@@ -90,6 +91,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/business-account', ['vi
             this.wabaOptions = [];
             this.isLoading = false;
             this.loadError = null;
+            this.fetchedForOAuthAccountId = null;
 
             this.listenTo(this.model, 'change:oAuthAccountId', () => {
                 if (this.isEditMode() && META_CHANNEL_TYPES.indexOf(this.model.get('channelType')) !== -1) {
@@ -98,6 +100,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/business-account', ['vi
                     // Clear dependent phone number fields.
                     this.model.set('phoneNumber', null);
                     this.model.set('phoneNumberId', null);
+                    this.fetchedForOAuthAccountId = null;
                     this.fetchBusinessAccounts();
                 }
             });
@@ -119,7 +122,13 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/business-account', ['vi
 
                 const oAuthAccountId = this.model.get('oAuthAccountId');
 
-                if (oAuthAccountId && this.wabaOptions.length === 0 && !this.isLoading) {
+                // Fetch once per oAuthAccountId. Empty results must NOT re-trigger
+                // (that caused a Meta Graph rate-limit storm + infinite spinner).
+                if (
+                    oAuthAccountId &&
+                    this.fetchedForOAuthAccountId !== oAuthAccountId &&
+                    !this.isLoading
+                ) {
                     this.fetchBusinessAccounts();
                 }
             }
@@ -144,6 +153,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/business-account', ['vi
                 this.wabaOptions = [];
                 this.isLoading = false;
                 this.loadError = null;
+                this.fetchedForOAuthAccountId = null;
                 this.reRender();
                 return;
             }
@@ -151,6 +161,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/business-account', ['vi
             this.isLoading = true;
             this.loadError = null;
             this.wabaOptions = [];
+            this.fetchedForOAuthAccountId = oAuthAccountId;
             this.reRender();
 
             if (this.currentRequest) {

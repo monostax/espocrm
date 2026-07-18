@@ -8,6 +8,32 @@
         ]
     },
     {
+        "label": "WhatsApp Embedded Signup",
+        "name": "metaWhatsAppEmbeddedSignup",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "or",
+                    "value": [
+                        {
+                            "type": "equals",
+                            "attribute": "provider",
+                            "value": "meta-whatsapp"
+                        },
+                        {
+                            "type": "equals",
+                            "attribute": "provider",
+                            "value": "meta-whatsapp-coexistence"
+                        }
+                    ]
+                }
+            ]
+        },
+        "rows": [
+            [{ "name": "configurationId" }, { "name": "embeddedSignupVersion" }]
+        ]
+    },
+    {
         "rows": [
             [{ "name": "authorizationEndpoint" }, { "name": "tokenEndpoint" }]
         ]

@@ -47,8 +47,11 @@ class WhatsAppBusinessAccount
     /**
      * Find WhatsApp Business Accounts from one, many, or all OAuthAccounts.
      *
-     * Discovers businesses via GET /me/businesses, then fetches WABAs
-     * for each business via GET /{businessId}/owned_whatsapp_business_accounts.
+     * Discovery path (order matters; results are de-duped by WABA id):
+     *   1. System User → owned WABAs for stored metaBusinessId
+     *   2. Human user → GET /me/businesses → owned_whatsapp_business_accounts
+     *   3. Tech Provider / Embedded Signup → GET /me/assigned_whatsapp_business_accounts
+     *      (tokens often have empty /me/businesses but still see shared WABAs here)
      *
      * @param string|null $oAuthAccountId If provided, fetches from this OAuthAccount only.
      * @param string[]|null $oAuthAccountIds If provided, fetches from these OAuthAccounts.
@@ -115,47 +118,99 @@ class WhatsAppBusinessAccount
                 continue;
             }
 
+            $seenWabaIds = [];
+
+            // Prefer assigned WABAs first — Embedded Signup / Tech Provider /
+            // System User tokens surface assets here, and it is a single Graph
+            // call. Avoid burning rate limit on empty /me/businesses first.
             try {
-                // System User tokens belong to exactly one Business and do not
-                // resolve via GET /me/businesses (that endpoint is for human
-                // users' business memberships). For these we use the Business
-                // ID captured when the token was set and query its owned WABAs
-                // directly — this also avoids an extra Graph call.
-                $systemUserBusinessId = $this->getSystemUserBusinessId($oAuthAccount);
+                $assigned = $this->apiClient->discoverAssignedWabas(
+                    $accessToken,
+                    self::DEFAULT_API_VERSION
+                );
 
-                if ($systemUserBusinessId !== null) {
-                    $businesses = [['id' => $systemUserBusinessId]];
-                } else {
-                    // Discover businesses accessible to the token.
-                    $businesses = $this->apiClient->discoverBusinesses($accessToken, self::DEFAULT_API_VERSION);
-                }
+                foreach ($assigned as $wabaData) {
+                    $wabaId = (string) ($wabaData['id'] ?? '');
 
-                foreach ($businesses as $business) {
-                    $businessId = $business['id'] ?? null;
-
-                    if (!$businessId) {
+                    if ($wabaId === '' || isset($seenWabaIds[$wabaId])) {
                         continue;
                     }
 
-                    try {
-                        // Discover WABAs owned by each business.
-                        $wabas = $this->apiClient->discoverWabas($accessToken, $businessId, self::DEFAULT_API_VERSION);
-
-                        foreach ($wabas as $wabaData) {
-                            $entity = $this->mapAccountToEntity($wabaData, $accountId, $accountName);
-                            $collection->append($entity);
-                            $totalCount++;
-                        }
-                    } catch (Error $e) {
-                        $this->log->warning(
-                            "WhatsAppBusinessAccount: Failed to discover WABAs for business {$businessId}: " . $e->getMessage()
-                        );
-                    }
+                    $seenWabaIds[$wabaId] = true;
+                    $entity = $this->mapAccountToEntity($wabaData, $accountId, $accountName);
+                    $collection->append($entity);
+                    $totalCount++;
                 }
             } catch (Error $e) {
-                $this->log->error(
-                    "WhatsAppBusinessAccount: Failed to discover businesses for OAuthAccount {$accountId}: " . $e->getMessage()
+                $this->log->warning(
+                    "WhatsAppBusinessAccount: assigned WABA discovery failed for " .
+                    "OAuthAccount {$accountId}: " . $e->getMessage()
                 );
+            }
+
+            // Owned-business path (human user tokens / System User with
+            // stored Business ID). Skip when assigned already returned assets
+            // so inbox selectors stay fast under Meta rate limits.
+            if (count($seenWabaIds) === 0) {
+                try {
+                    $systemUserBusinessId = $this->getSystemUserBusinessId($oAuthAccount);
+
+                    if ($systemUserBusinessId !== null) {
+                        $businesses = [['id' => $systemUserBusinessId]];
+                    } else {
+                        try {
+                            $businesses = $this->apiClient->discoverBusinesses(
+                                $accessToken,
+                                self::DEFAULT_API_VERSION
+                            );
+                        } catch (Error $e) {
+                            $this->log->warning(
+                                "WhatsAppBusinessAccount: /me/businesses failed for " .
+                                "OAuthAccount {$accountId}: " . $e->getMessage()
+                            );
+                            $businesses = [];
+                        }
+                    }
+
+                    foreach ($businesses as $business) {
+                        $businessId = $business['id'] ?? null;
+
+                        if (!$businessId) {
+                            continue;
+                        }
+
+                        try {
+                            $wabas = $this->apiClient->discoverWabas(
+                                $accessToken,
+                                $businessId,
+                                self::DEFAULT_API_VERSION
+                            );
+
+                            foreach ($wabas as $wabaData) {
+                                $wabaId = (string) ($wabaData['id'] ?? '');
+
+                                if ($wabaId === '' || isset($seenWabaIds[$wabaId])) {
+                                    continue;
+                                }
+
+                                $seenWabaIds[$wabaId] = true;
+                                $entity = $this->mapAccountToEntity($wabaData, $accountId, $accountName);
+                                $collection->append($entity);
+                                $totalCount++;
+                            }
+                        } catch (Error $e) {
+                            $this->log->warning(
+                                "WhatsAppBusinessAccount: Failed to discover WABAs for business {$businessId}: " .
+                                $e->getMessage()
+                            );
+                        }
+                    }
+                } catch (Error $e) {
+                    $this->log->error(
+                        "WhatsAppBusinessAccount: Failed owned-WABA discovery for OAuthAccount {$accountId}: " .
+                        $e->getMessage()
+                    );
+                }
             }
         }
 

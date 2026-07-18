@@ -21,8 +21,11 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Jobs\SyncWhatsAppCoexistenceData;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\MetaGraphApiClient;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppCoexistenceSyncService;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\Tools\OAuth\TokensProvider;
 use stdClass;
 
 /**
@@ -113,7 +116,138 @@ class WhatsAppEmbeddedSignup
             throw new BadRequest('phoneNumberId is required.');
         }
 
-        $account = $this->entityManager->getEntityById('OAuthAccount', (string) $oAuthAccountId);
+        $account = $this->getEditableOAuthAccount((string) $oAuthAccountId);
+
+        return $this->finishOnboarding(
+            $account,
+            (string) $oAuthAccountId,
+            (string) $onboardingType,
+            (string) $wabaId,
+            (string) $phoneNumberId,
+            $sessionInfo,
+        );
+    }
+
+    /**
+     * POST WhatsAppEmbeddedSignup/hydrate
+     *
+     * Body: { oAuthAccountId: string, onboardingType?: 'cloud_api'|'coexistence' }
+     *
+     * Recovery path when Embedded Signup session_info postMessage was missed
+     * (common race after FB.login resolves). Discovers the single assigned
+     * WABA + phone via Graph and reuses the same finish path.
+     *
+     * @throws BadRequest
+     * @throws Forbidden
+     * @throws NotFound
+     * @throws Error
+     */
+    public function postActionHydrate(Request $request): stdClass
+    {
+        $body = $request->getParsedBody();
+        $oAuthAccountId = $body->oAuthAccountId ?? null;
+        $onboardingType = $body->onboardingType ?? null;
+
+        if (!$oAuthAccountId || !is_string($oAuthAccountId)) {
+            throw new BadRequest('oAuthAccountId is required.');
+        }
+
+        $account = $this->getEditableOAuthAccount($oAuthAccountId);
+
+        if (!$onboardingType || !in_array($onboardingType, self::VALID_ONBOARDING_TYPES, true)) {
+            $onboardingType = $account->get('providerType') === 'meta-whatsapp-coexistence'
+                ? 'coexistence'
+                : 'cloud_api';
+        }
+
+        $tokensProvider = $this->injectableFactory->create(TokensProvider::class);
+        $apiClient = $this->injectableFactory->create(MetaGraphApiClient::class);
+
+        $tokens = $tokensProvider->get($oAuthAccountId);
+        $accessToken = $tokens->getAccessToken();
+
+        if (!$accessToken) {
+            throw new Error('OAuthAccount has no access token — connect Embedded Signup first.');
+        }
+
+        $wabaId = (string) ($account->get('whatsappBusinessAccountId') ?? '');
+        $phoneNumberId = (string) ($account->get('whatsappPhoneNumberId') ?? '');
+
+        if ($wabaId === '') {
+            $assigned = $apiClient->discoverAssignedWabas($accessToken);
+
+            if (count($assigned) === 0) {
+                throw new Error(
+                    'No WhatsApp Business Accounts assigned to this token. ' .
+                    'Re-run Embedded Signup and complete the flow until FINISH.'
+                );
+            }
+
+            if (count($assigned) > 1) {
+                throw new Error(
+                    'Multiple WhatsApp Business Accounts are assigned to this token. ' .
+                    'Re-run Embedded Signup so Meta returns the selected waba_id / phone_number_id.'
+                );
+            }
+
+            $wabaId = (string) ($assigned[0]['id'] ?? '');
+        }
+
+        if ($wabaId === '') {
+            throw new Error('Could not resolve WhatsApp Business Account id from Graph.');
+        }
+
+        if ($phoneNumberId === '') {
+            $phones = $apiClient->getPhoneNumbers($accessToken, $wabaId);
+
+            if (count($phones) === 0) {
+                throw new Error("WABA {$wabaId} has no phone numbers.");
+            }
+
+            if (count($phones) > 1) {
+                throw new Error(
+                    "WABA {$wabaId} has multiple phone numbers. " .
+                    'Re-run Embedded Signup so Meta returns phone_number_id in session_info.'
+                );
+            }
+
+            $phoneNumberId = (string) ($phones[0]['id'] ?? '');
+        }
+
+        if ($phoneNumberId === '') {
+            throw new Error('Could not resolve phone_number_id from Graph.');
+        }
+
+        $this->log->info(
+            "WhatsAppEmbeddedSignup: hydrate resolved oAuthAccount={$oAuthAccountId} " .
+            "waba={$wabaId} phone={$phoneNumberId} type={$onboardingType}."
+        );
+
+        $result = $this->finishOnboarding(
+            $account,
+            $oAuthAccountId,
+            (string) $onboardingType,
+            $wabaId,
+            $phoneNumberId,
+            (object) [
+                'source' => 'hydrate',
+                'waba_id' => $wabaId,
+                'phone_number_id' => $phoneNumberId,
+            ],
+        );
+
+        $result->hydrated = true;
+
+        return $result;
+    }
+
+    /**
+     * @throws Forbidden
+     * @throws NotFound
+     */
+    private function getEditableOAuthAccount(string $oAuthAccountId): Entity
+    {
+        $account = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
 
         if (!$account) {
             throw new NotFound('OAuthAccount not found.');
@@ -123,12 +257,28 @@ class WhatsAppEmbeddedSignup
             throw new Forbidden("You don't have edit access to this OAuth Account.");
         }
 
+        return $account;
+    }
+
+    /**
+     * Persist WABA/phone/onboarding metadata and (for coexistence) run sync.
+     *
+     * @param string|stdClass|array<string, mixed>|null $sessionInfo
+     */
+    private function finishOnboarding(
+        Entity $account,
+        string $oAuthAccountId,
+        string $onboardingType,
+        string $wabaId,
+        string $phoneNumberId,
+        string|stdClass|array|null $sessionInfo,
+    ): stdClass {
         // Persist session_info on the OAuthAccount. We do this BEFORE running
         // the Coexistence sync so a job retry can read the fields back from
         // the entity if the controller-side sync attempt crashes.
-        $account->set('whatsappBusinessAccountId', (string) $wabaId);
-        $account->set('whatsappPhoneNumberId', (string) $phoneNumberId);
-        $account->set('whatsappOnboardingType', (string) $onboardingType);
+        $account->set('whatsappBusinessAccountId', $wabaId);
+        $account->set('whatsappPhoneNumberId', $phoneNumberId);
+        $account->set('whatsappOnboardingType', $onboardingType);
 
         if ($sessionInfo !== null) {
             $account->set('whatsappSessionInfo', $sessionInfo);
@@ -150,7 +300,7 @@ class WhatsAppEmbeddedSignup
             // shows ACTIVE immediately.
             try {
                 $syncService = $this->injectableFactory->create(WhatsAppCoexistenceSyncService::class);
-                $syncResult = $syncService->sync((string) $oAuthAccountId);
+                $syncResult = $syncService->sync($oAuthAccountId);
             } catch (\Throwable $e) {
                 $this->log->warning(
                     "WhatsAppEmbeddedSignup: inline sync threw for OAuthAccount {$oAuthAccountId} " .
@@ -169,7 +319,7 @@ class WhatsAppEmbeddedSignup
             if (!isset($syncResult['status']) || $syncResult['status'] !== 'synced') {
                 $this->jobSchedulerFactory->create()
                     ->setClassName(SyncWhatsAppCoexistenceData::class)
-                    ->setData(['oAuthAccountId' => (string) $oAuthAccountId])
+                    ->setData(['oAuthAccountId' => $oAuthAccountId])
                     ->schedule();
 
                 $this->log->info(
@@ -180,7 +330,7 @@ class WhatsAppEmbeddedSignup
         }
 
         return (object) [
-            'oAuthAccountId' => (string) $oAuthAccountId,
+            'oAuthAccountId' => $oAuthAccountId,
             'onboardingType' => $onboardingType,
             'wabaId' => $wabaId,
             'phoneNumberId' => $phoneNumberId,

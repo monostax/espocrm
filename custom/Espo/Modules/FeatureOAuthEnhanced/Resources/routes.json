@@ -14,5 +14,14 @@
             "controller": "MetaSystemUserToken",
             "action": "generate"
         }
+    },
+    {
+        "route": "/MetaWhatsAppOAuthBroker/exchange",
+        "method": "post",
+        "params": {
+            "controller": "MetaWhatsAppOAuthBroker",
+            "action": "exchange"
+        },
+        "noAuth": true
     }
 ]

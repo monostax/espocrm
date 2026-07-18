@@ -38,6 +38,9 @@
  *      session_info so the backend can persist `whatsappBusinessAccountId`,
  *      `whatsappPhoneNumberId`, and (for Coexistence) kick off the
  *      `smb_app_data` sync inside Meta's 24h deadline.
+ *   9. If session_info never arrived (postMessage race after FB.login),
+ *      we wait briefly then POST `WhatsAppEmbeddedSignup/hydrate` so Graph
+ *      can resolve a single assigned WABA + phone.
  *
  * We keep the standard "Disconnect" button identical to the parent.
  */
@@ -50,6 +53,9 @@ define(
     const SYSTEM_USER_PROVIDER = 'meta-system-user';
     const FB_SDK_URL = 'https://connect.facebook.net/en_US/sdk.js';
     const FB_API_VERSION = 'v22.0';
+    /** Max wait for WA_EMBEDDED_SIGNUP postMessage after FB.login resolves. */
+    const SESSION_INFO_WAIT_MS = 2500;
+    const SESSION_INFO_POLL_MS = 100;
 
     return Dep.extend({
 
@@ -480,11 +486,6 @@ define(
                     });
                 });
 
-                if (removeListener) {
-                    removeListener();
-                    removeListener = null;
-                }
-
                 const code = loginResult && loginResult.authResponse && loginResult.authResponse.code;
 
                 if (!code) {
@@ -496,6 +497,10 @@ define(
                     return;
                 }
 
+                // Keep the postMessage listener alive until finish/hydrate:
+                // session_info often arrives slightly after FB.login resolves.
+                await this._waitForSessionInfo(SESSION_INFO_WAIT_MS);
+
                 // Step 1: standard EspoCRM authorization-code exchange.
                 try {
                     await Espo.Ajax.postRequest(`OAuth/${this.model.id}/connection`, { code });
@@ -506,41 +511,8 @@ define(
                     return;
                 }
 
-                // Step 2: persist session_info + run Coexistence sync (if applicable).
-                if (this.sessionInfo && this.sessionInfo.waba_id && this.sessionInfo.phone_number_id) {
-                    const onboardingType =
-                        this.finishEvent === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
-                            ? 'coexistence'
-                            : 'cloud_api';
-
-                    try {
-                        const finishResult = await Espo.Ajax.postRequest('WhatsAppEmbeddedSignup/finish', {
-                            oAuthAccountId: this.model.id,
-                            onboardingType,
-                            wabaId: this.sessionInfo.waba_id,
-                            phoneNumberId: this.sessionInfo.phone_number_id,
-                            sessionInfo: this.sessionInfo,
-                        });
-
-                        if (onboardingType === 'coexistence' &&
-                            finishResult && finishResult.sync &&
-                            finishResult.sync.status === 'pending') {
-                            Espo.Ui.warning(
-                                this.translate('coexistencePendingInAppStep', 'messages', 'OAuthProvider')
-                            );
-                        }
-                    } catch (e) {
-                        // Token exchange succeeded; this is a soft failure.
-                        // The job we queued server-side will retry.
-                        Espo.Ui.warning(
-                            this.translate('embeddedSignupFinishFailed', 'messages', 'OAuthProvider')
-                        );
-                    }
-                } else {
-                    Espo.Ui.warning(
-                        this.translate('embeddedSignupNoSessionInfo', 'messages', 'OAuthProvider')
-                    );
-                }
+                // Step 2: finish with session_info, or hydrate from Graph if missed.
+                await this._finishOrHydrateEmbeddedSignup(isCoexistence);
 
                 await this.model.fetch();
                 Espo.Ui.notify();
@@ -553,6 +525,118 @@ define(
 
                 this.inProcess = false;
                 await this.reRender();
+            }
+        },
+
+        /**
+         * Poll until session_info is captured or timeout elapses.
+         *
+         * @private
+         * @param {number} timeoutMs
+         * @return {Promise<void>}
+         */
+        _waitForSessionInfo: function (timeoutMs) {
+            if (this.sessionInfo && this.sessionInfo.waba_id && this.sessionInfo.phone_number_id) {
+                return Promise.resolve();
+            }
+
+            const started = Date.now();
+
+            return new Promise((resolve) => {
+                const tick = () => {
+                    if (
+                        this.sessionInfo &&
+                        this.sessionInfo.waba_id &&
+                        this.sessionInfo.phone_number_id
+                    ) {
+                        resolve();
+                        return;
+                    }
+
+                    if (Date.now() - started >= timeoutMs) {
+                        resolve();
+                        return;
+                    }
+
+                    setTimeout(tick, SESSION_INFO_POLL_MS);
+                };
+
+                tick();
+            });
+        },
+
+        /**
+         * Persist Embedded Signup metadata via finish, or Graph hydrate fallback.
+         *
+         * @private
+         * @param {boolean} isCoexistence
+         * @return {Promise<void>}
+         */
+        _finishOrHydrateEmbeddedSignup: async function (isCoexistence) {
+            const hasSessionInfo =
+                this.sessionInfo &&
+                this.sessionInfo.waba_id &&
+                this.sessionInfo.phone_number_id;
+
+            if (hasSessionInfo) {
+                const onboardingType =
+                    this.finishEvent === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
+                        ? 'coexistence'
+                        : (isCoexistence ? 'coexistence' : 'cloud_api');
+
+                try {
+                    const finishResult = await Espo.Ajax.postRequest('WhatsAppEmbeddedSignup/finish', {
+                        oAuthAccountId: this.model.id,
+                        onboardingType,
+                        wabaId: this.sessionInfo.waba_id,
+                        phoneNumberId: this.sessionInfo.phone_number_id,
+                        sessionInfo: this.sessionInfo,
+                    });
+
+                    this._notifyCoexistencePending(onboardingType, finishResult);
+                } catch (e) {
+                    // Token exchange succeeded; this is a soft failure.
+                    Espo.Ui.warning(
+                        this.translate('embeddedSignupFinishFailed', 'messages', 'OAuthProvider')
+                    );
+                }
+
+                return;
+            }
+
+            // Missed postMessage — recover WABA/phone from Graph when unique.
+            try {
+                const hydrateResult = await Espo.Ajax.postRequest('WhatsAppEmbeddedSignup/hydrate', {
+                    oAuthAccountId: this.model.id,
+                    onboardingType: isCoexistence ? 'coexistence' : 'cloud_api',
+                });
+
+                this._notifyCoexistencePending(
+                    hydrateResult && hydrateResult.onboardingType,
+                    hydrateResult
+                );
+            } catch (e) {
+                Espo.Ui.warning(
+                    this.translate('embeddedSignupNoSessionInfo', 'messages', 'OAuthProvider')
+                );
+            }
+        },
+
+        /**
+         * @private
+         * @param {?string} onboardingType
+         * @param {?Object} result
+         */
+        _notifyCoexistencePending: function (onboardingType, result) {
+            if (
+                onboardingType === 'coexistence' &&
+                result &&
+                result.sync &&
+                result.sync.status === 'pending'
+            ) {
+                Espo.Ui.warning(
+                    this.translate('coexistencePendingInAppStep', 'messages', 'OAuthProvider')
+                );
             }
         },
     });

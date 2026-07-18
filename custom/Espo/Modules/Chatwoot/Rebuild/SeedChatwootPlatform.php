@@ -47,20 +47,26 @@ class SeedChatwootPlatform implements RebuildAction
     {
         $frontendUrl = getenv('CHATWOOT_PLATFORM_FRONTEND_URL');
         $backendUrl = getenv('CHATWOOT_PLATFORM_BACKEND_URL');
+        $accessToken = getenv('CHATWOOT_PLATFORM_API_TOKEN');
 
         // Skip if environment variables are not configured
-        if (!$frontendUrl || !$backendUrl) {
+        if (!$frontendUrl || !$backendUrl || !$accessToken) {
             $this->log->debug(
                 'SeedChatwootPlatform: Skipping - environment variables not configured ' .
-                '(CHATWOOT_PLATFORM_FRONTEND_URL, CHATWOOT_PLATFORM_BACKEND_URL)'
+                '(CHATWOOT_PLATFORM_FRONTEND_URL, CHATWOOT_PLATFORM_BACKEND_URL, ' .
+                'CHATWOOT_PLATFORM_API_TOKEN)'
             );
             return;
         }
 
-        $this->upsertPlatform($frontendUrl, $backendUrl);
+        $this->upsertPlatform($frontendUrl, $backendUrl, $accessToken);
     }
 
-    private function upsertPlatform(string $frontendUrl, string $backendUrl): void
+    private function upsertPlatform(
+        string $frontendUrl,
+        string $backendUrl,
+        string $accessToken
+    ): void
     {
         $existing = $this->entityManager
             ->getRDBRepository(self::ENTITY_TYPE)
@@ -70,6 +76,7 @@ class SeedChatwootPlatform implements RebuildAction
         if ($existing) {
             $existing->set('frontendUrl', $frontendUrl);
             $existing->set('backendUrl', $backendUrl);
+            $existing->set('accessToken', $accessToken);
             $existing->set('isDefault', true);
 
             $this->entityManager->saveEntity($existing, [SaveOption::SKIP_ALL => true]);
@@ -83,7 +90,7 @@ class SeedChatwootPlatform implements RebuildAction
             'name' => self::DEFAULT_NAME,
             'frontendUrl' => $frontendUrl,
             'backendUrl' => $backendUrl,
-            'accessToken' => '',
+            'accessToken' => $accessToken,
             'isDefault' => true,
         ], [SaveOption::SKIP_ALL => true]);
 

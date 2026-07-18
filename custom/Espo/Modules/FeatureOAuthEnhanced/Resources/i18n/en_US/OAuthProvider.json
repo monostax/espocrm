@@ -23,5 +23,10 @@
         "teams": "Teams",
         "assignedUsers": "Assigned Users",
         "credentialTypes": "Credential Types"
+    },
+    "labels": {
+        "WhatsApp Embedded Signup": "WhatsApp Embedded Signup",
+        "Instagram Webhook": "Instagram Webhook",
+        "Lead Ads Webhook": "Lead Ads Webhook"
     }
 }

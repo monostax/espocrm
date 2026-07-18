@@ -125,14 +125,14 @@ class ChatwootInboxIntegration
         $channelId = $channel->getId();
 
         try {
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
             }
 
             // Auto-select default WahaPlatform if not set
-            $wahaPlatform = $channel->get('wahaPlatform');
+            $wahaPlatform = $this->loadWahaPlatform($channel);
             if (!$wahaPlatform) {
                 $wahaPlatform = $this->entityManager
                     ->getRDBRepository('WahaPlatform')
@@ -148,7 +148,7 @@ class ChatwootInboxIntegration
 
             $wahaUrl = $wahaPlatform->get('backendUrl');
             $wahaApiKey = $wahaPlatform->get('apiKey');
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -375,7 +375,7 @@ class ChatwootInboxIntegration
         $channelId = $channel->getId();
 
         try {
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
@@ -418,7 +418,7 @@ class ChatwootInboxIntegration
             }
 
             // Get Chatwoot connection details
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -494,7 +494,7 @@ class ChatwootInboxIntegration
             throw new NotFound("ChatwootInboxIntegration not found.");
         }
 
-        $wahaPlatform = $channel->get('wahaPlatform');
+        $wahaPlatform = $this->loadWahaPlatform($channel);
 
         $wahaUrl = $wahaPlatform->get('backendUrl');
         $wahaApiKey = $wahaPlatform->get('apiKey');
@@ -549,7 +549,7 @@ class ChatwootInboxIntegration
 
         // Only stop WAHA session for QR code channels
         if ($channelType === 'whatsappQrcode') {
-            $wahaPlatform = $channel->get('wahaPlatform');
+            $wahaPlatform = $this->loadWahaPlatform($channel);
             $sessionName = $channel->get('wahaSessionName');
 
             if ($wahaPlatform && $sessionName) {
@@ -579,7 +579,7 @@ class ChatwootInboxIntegration
         // stop the companion session and remove `linked_waha` so Chatwoot stops
         // routing free-form replies through a now-stopped transport.
         if ($channelType === 'whatsappCoexistence') {
-            $wahaPlatform = $channel->get('wahaPlatform');
+            $wahaPlatform = $this->loadWahaPlatform($channel);
             $sessionName = $channel->get('wahaSessionName');
 
             if ($wahaPlatform && $sessionName) {
@@ -659,7 +659,7 @@ class ChatwootInboxIntegration
     private function reconnectWhatsappQrcode(Entity $channel): Entity
     {
         $channelId = $channel->getId();
-        $wahaPlatform = $channel->get('wahaPlatform');
+        $wahaPlatform = $this->loadWahaPlatform($channel);
         $sessionName = $channel->get('wahaSessionName');
 
         if (!$wahaPlatform || !$sessionName) {
@@ -724,13 +724,13 @@ class ChatwootInboxIntegration
 
         try {
             // Verify the Chatwoot inbox still exists by listing inboxes
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
             }
 
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -798,7 +798,7 @@ class ChatwootInboxIntegration
             throw new NotFound("ChatwootInboxIntegration not found.");
         }
 
-        $wahaPlatform = $channel->get('wahaPlatform');
+        $wahaPlatform = $this->loadWahaPlatform($channel);
         $sessionName = $channel->get('wahaSessionName');
 
         if (!$wahaPlatform || !$sessionName) {
@@ -980,7 +980,7 @@ class ChatwootInboxIntegration
         $channelId = $channel->getId();
 
         // Auto-select default WahaPlatform if not set (mirrors activateWhatsappQrcode).
-        $wahaPlatform = $channel->get('wahaPlatform');
+        $wahaPlatform = $this->loadWahaPlatform($channel);
         if (!$wahaPlatform) {
             $wahaPlatform = $this->entityManager
                 ->getRDBRepository('WahaPlatform')
@@ -1109,12 +1109,12 @@ class ChatwootInboxIntegration
             throw new Error("Cannot sync WAHA link: coexistence channel has no Chatwoot inbox.");
         }
 
-        $chatwootAccount = $channel->get('chatwootAccount');
+        $chatwootAccount = $this->loadChatwootAccount($channel);
         if (!$chatwootAccount) {
             throw new Error("Chatwoot Account not set.");
         }
 
-        $chatwootPlatform = $chatwootAccount->get('platform');
+        $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
         if (!$chatwootPlatform) {
             throw new Error("Chatwoot Platform not found for account.");
         }
@@ -1206,12 +1206,12 @@ class ChatwootInboxIntegration
             return false;
         }
 
-        $chatwootAccount = $channel->get('chatwootAccount');
+        $chatwootAccount = $this->loadChatwootAccount($channel);
         if (!$chatwootAccount) {
             return false;
         }
 
-        $chatwootPlatform = $chatwootAccount->get('platform');
+        $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
         if (!$chatwootPlatform) {
             return false;
         }
@@ -1341,7 +1341,7 @@ class ChatwootInboxIntegration
 
         // Coexistence: delete the WAHA send companion session to avoid orphans.
         if ($channel->get('channelType') === 'whatsappCoexistence') {
-            $wahaPlatform = $channel->get('wahaPlatform');
+            $wahaPlatform = $this->loadWahaPlatform($channel);
             $sessionName = $channel->get('wahaSessionName');
 
             if ($wahaPlatform && $sessionName) {
@@ -1405,7 +1405,7 @@ class ChatwootInboxIntegration
     private function checkStatusWhatsappQrcode(Entity $channel): Entity
     {
         $channelId = $channel->getId();
-        $wahaPlatform = $channel->get('wahaPlatform');
+        $wahaPlatform = $this->loadWahaPlatform($channel);
         $sessionName = $channel->get('wahaSessionName');
 
         if (!$wahaPlatform || !$sessionName) {
@@ -1723,7 +1723,7 @@ class ChatwootInboxIntegration
             throw new Error("Chatwoot inbox response did not include an inbox ID.");
         }
 
-        $chatwootAccount = $channel->get('chatwootAccount');
+        $chatwootAccount = $this->loadChatwootAccount($channel);
 
         if (!$chatwootAccount) {
             throw new Error("Chatwoot Account not set.");
@@ -1770,7 +1770,7 @@ class ChatwootInboxIntegration
     }
 
     /**
-     * Grant department/AI access to a freshly provisioned inbox.
+     * Grant department/AI/creator access to a freshly provisioned inbox.
      *
      * - Links the integration's ChatwootTeams to the local ChatwootInbox. The
      *   SyncInboxTeams hook pushes the list to Chatwoot (inbox_teams), where
@@ -1779,6 +1779,8 @@ class ChatwootInboxIntegration
      * - Links every AI account-user membership of the account to the inbox.
      *   The SyncInboxMembership hook pushes the member list to Chatwoot so AI
      *   agents can read/reply on the inbox regardless of team configuration.
+     * - Links the creating user's account membership so they can see the
+     *   inbox in Chatwoot immediately (otherwise empty due to inbox privacy).
      *
      * Best-effort: failures are logged and never abort provisioning; the
      * links can be fixed manually on the ChatwootInbox record afterwards.
@@ -1811,12 +1813,66 @@ class ChatwootInboxIntegration
                     $membershipsRelation->relateById($membership->getId());
                 }
             }
+
+            $this->linkCreatorMembershipToInbox($channel, $inbox, $membershipsRelation);
         } catch (\Throwable $e) {
             $this->log->warning(
                 'ChatwootInboxIntegration: failed to link provisioned inbox access for inbox ' .
                 $inbox->getId() . ': ' . $e->getMessage()
             );
         }
+    }
+
+    /**
+     * Attach the provisioner's ChatwootAccountUserMembership to the inbox.
+     * SyncInboxMembership pushes the full member list to Chatwoot.
+     */
+    private function linkCreatorMembershipToInbox(
+        Entity $channel,
+        Entity $inbox,
+        mixed $membershipsRelation
+    ): void {
+        $creatorUserId = $channel->get('createdById');
+
+        if (!$creatorUserId || $creatorUserId === 'system') {
+            return;
+        }
+
+        $accountId = $inbox->get('chatwootAccountId');
+
+        if (!$accountId) {
+            return;
+        }
+
+        $membership = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->leftJoin('chatwootUser')
+            ->where([
+                'chatwootAccountId' => $accountId,
+                'chatwootUser.assignedUserId' => $creatorUserId,
+            ])
+            ->findOne();
+
+        if (!$membership) {
+            $this->log->warning(
+                'ChatwootInboxIntegration: creator user ' . $creatorUserId .
+                ' has no ChatwootAccountUserMembership on account ' . $accountId .
+                '; skipping inbox agent link for inbox ' . $inbox->getId()
+            );
+
+            return;
+        }
+
+        if ($membershipsRelation->isRelatedById($membership->getId())) {
+            return;
+        }
+
+        $membershipsRelation->relateById($membership->getId());
+
+        $this->log->info(
+            'ChatwootInboxIntegration: linked creator membership ' . $membership->getId() .
+            ' to inbox ' . $inbox->getId()
+        );
     }
 
     /**
@@ -1906,7 +1962,7 @@ class ChatwootInboxIntegration
         $channelId = $channel->getId();
 
         try {
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
@@ -2046,7 +2102,7 @@ class ChatwootInboxIntegration
             }
 
             // Get Chatwoot connection details.
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -2142,13 +2198,13 @@ class ChatwootInboxIntegration
                 );
             }
 
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
             }
 
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -2413,7 +2469,7 @@ class ChatwootInboxIntegration
         $channelId = $channel->getId();
 
         try {
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
@@ -2473,7 +2529,7 @@ class ChatwootInboxIntegration
             $normalizedPhoneNumber = '+' . preg_replace('/[^0-9]/', '', $phoneNumber);
 
             // Chatwoot connection details.
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -2589,13 +2645,13 @@ class ChatwootInboxIntegration
 
         try {
             // Verify the Chatwoot inbox still exists; if not, re-activate.
-            $chatwootAccount = $channel->get('chatwootAccount');
+            $chatwootAccount = $this->loadChatwootAccount($channel);
 
             if (!$chatwootAccount) {
                 throw new Error("Chatwoot Account not set.");
             }
 
-            $chatwootPlatform = $chatwootAccount->get('platform');
+            $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
             if (!$chatwootPlatform) {
                 throw new Error("Chatwoot Platform not found for account.");
@@ -2636,7 +2692,7 @@ class ChatwootInboxIntegration
             // If a WAHA send companion was previously provisioned, restart it
             // and re-enter the link flow so free-form routing is restored. The
             // session may need a fresh QR scan if the link was lost.
-            $wahaPlatform = $channel->get('wahaPlatform');
+            $wahaPlatform = $this->loadWahaPlatform($channel);
             $sessionName = $channel->get('wahaSessionName');
 
             if ($wahaPlatform && $sessionName) {
@@ -2672,7 +2728,7 @@ class ChatwootInboxIntegration
      */
     private function resolveWahaCompanionLink(Entity $channel): bool
     {
-        $wahaPlatform = $channel->get('wahaPlatform');
+        $wahaPlatform = $this->loadWahaPlatform($channel);
         $sessionName = $channel->get('wahaSessionName');
 
         if (!$wahaPlatform || !$sessionName) {
@@ -2823,5 +2879,35 @@ class ChatwootInboxIntegration
         }
 
         return $channel;
+    }
+
+    /**
+     * Load a belongs-to link by "{link}Id". Espo Entity::get(linkName) does not
+     * hydrate relations after getEntityById — only the *Id attribute is present.
+     */
+    private function loadLinkedEntity(Entity $entity, string $link, string $foreignEntityType): ?Entity
+    {
+        $id = $entity->get($link . 'Id');
+
+        if (!$id) {
+            return null;
+        }
+
+        return $this->entityManager->getEntityById($foreignEntityType, (string) $id);
+    }
+
+    private function loadChatwootAccount(Entity $channel): ?Entity
+    {
+        return $this->loadLinkedEntity($channel, 'chatwootAccount', 'ChatwootAccount');
+    }
+
+    private function loadChatwootPlatform(Entity $chatwootAccount): ?Entity
+    {
+        return $this->loadLinkedEntity($chatwootAccount, 'platform', 'ChatwootPlatform');
+    }
+
+    private function loadWahaPlatform(Entity $channel): ?Entity
+    {
+        return $this->loadLinkedEntity($channel, 'wahaPlatform', 'WahaPlatform');
     }
 }

@@ -56,6 +56,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
         isLoading: false,
         loadError: null,
         currentRequest: null,
+        fetchedForKey: null,
 
         data: function () {
             const data = Dep.prototype.data.call(this);
@@ -78,12 +79,14 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
             this.phoneOptions = [];
             this.isLoading = false;
             this.loadError = null;
+            this.fetchedForKey = null;
 
             // Reload phone numbers when the WABA selection changes.
             this.listenTo(this.model, 'change:businessAccountId', () => {
                 if (this.isEditMode() && META_CHANNEL_TYPES.indexOf(this.model.get('channelType')) !== -1) {
                     this.model.set('phoneNumber', null);
                     this.model.set('phoneNumberId', null);
+                    this.fetchedForKey = null;
                     this.fetchPhoneNumbers();
                 }
             });
@@ -105,8 +108,11 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
 
                 const oAuthAccountId = this.model.get('oAuthAccountId');
                 const businessAccountId = this.model.get('businessAccountId');
+                const key = oAuthAccountId && businessAccountId
+                    ? oAuthAccountId + ':' + businessAccountId
+                    : null;
 
-                if (oAuthAccountId && businessAccountId && this.phoneOptions.length === 0 && !this.isLoading) {
+                if (key && this.fetchedForKey !== key && !this.isLoading) {
                     this.fetchPhoneNumbers();
                 }
             }
@@ -129,6 +135,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
                 this.phoneOptions = [];
                 this.isLoading = false;
                 this.loadError = null;
+                this.fetchedForKey = null;
                 this.reRender();
                 return;
             }
@@ -136,6 +143,7 @@ define('chatwoot:views/chatwoot-inbox-integration/fields/phone-number', ['views/
             this.isLoading = true;
             this.loadError = null;
             this.phoneOptions = [];
+            this.fetchedForKey = oAuthAccountId + ':' + businessAccountId;
             this.reRender();
 
             if (this.currentRequest) {

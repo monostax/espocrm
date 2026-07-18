@@ -292,10 +292,16 @@ class ChatwootApiClient
      * @param string $platformUrl The base URL of the Chatwoot platform
      * @param string $accessToken The platform access token
      * @param array<string, mixed> $userData User data to send
+     * @param bool $allowExisting Return an existing user's ID for a duplicate-email response
      * @return array<string, mixed> Response data from Chatwoot API
      * @throws Error
      */
-    public function createUser(string $platformUrl, string $accessToken, array $userData): array
+    public function createUser(
+        string $platformUrl,
+        string $accessToken,
+        array $userData,
+        bool $allowExisting = false
+    ): array
     {
         $url = rtrim($platformUrl, '/') . '/platform/api/v1/users';
         
@@ -314,6 +320,21 @@ class ChatwootApiClient
         $response = $this->executeRequest($url, 'POST', $payload, $headers);
 
         if ($response['code'] < 200 || $response['code'] >= 300) {
+            if ($allowExisting && $response['code'] === 409) {
+                $existingUserId = filter_var(
+                    $response['body']['id'] ?? null,
+                    FILTER_VALIDATE_INT
+                );
+
+                if ($existingUserId !== false && $existingUserId > 0) {
+                    return [
+                        'id' => (int) $existingUserId,
+                        'created' => false,
+                        'existing' => true,
+                    ];
+                }
+            }
+
             $errorMsg = 'Chatwoot API error: HTTP ' . $response['code'];
             
             // Check for detailed error message in both 'message' and 'error' fields
