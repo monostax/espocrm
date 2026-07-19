@@ -597,6 +597,7 @@ define(
                 } catch (e) {
                     // Token exchange succeeded; this is a soft failure.
                     Espo.Ui.warning(
+                        this._ajaxErrorMessage(e) ||
                         this.translate('embeddedSignupFinishFailed', 'messages', 'OAuthProvider')
                     );
                 }
@@ -604,12 +605,24 @@ define(
                 return;
             }
 
-            // Missed postMessage — recover WABA/phone from Graph when unique.
+            // Missed postMessage — recover WABA/phone from Graph (or UI selection).
+            const onboardingType = isCoexistence ? 'coexistence' : 'cloud_api';
+            const payload = {
+                oAuthAccountId: this.model.id,
+                onboardingType,
+            };
+
+            // Partial session_info still useful (e.g. FINISH_ONLY_WABA).
+            if (this.sessionInfo && this.sessionInfo.waba_id) {
+                payload.wabaId = this.sessionInfo.waba_id;
+            }
+
+            if (this.sessionInfo && this.sessionInfo.phone_number_id) {
+                payload.phoneNumberId = this.sessionInfo.phone_number_id;
+            }
+
             try {
-                const hydrateResult = await Espo.Ajax.postRequest('WhatsAppEmbeddedSignup/hydrate', {
-                    oAuthAccountId: this.model.id,
-                    onboardingType: isCoexistence ? 'coexistence' : 'cloud_api',
-                });
+                const hydrateResult = await this._hydrateWithSelection(payload);
 
                 this._notifyCoexistencePending(
                     hydrateResult && hydrateResult.onboardingType,
@@ -617,9 +630,134 @@ define(
                 );
             } catch (e) {
                 Espo.Ui.warning(
+                    this._ajaxErrorMessage(e) ||
                     this.translate('embeddedSignupNoSessionInfo', 'messages', 'OAuthProvider')
                 );
             }
+        },
+
+        /**
+         * Call hydrate; if the token has multiple WABAs/phones, prompt the
+         * user and retry with their selection.
+         *
+         * @private
+         * @param {Object} payload
+         * @param {number} [depth]
+         * @return {Promise<Object>}
+         */
+        _hydrateWithSelection: async function (payload, depth) {
+            depth = depth || 0;
+
+            if (depth > 3) {
+                throw new Error(this.translate('embeddedSignupNoSessionInfo', 'messages', 'OAuthProvider'));
+            }
+
+            const result = await Espo.Ajax.postRequest('WhatsAppEmbeddedSignup/hydrate', payload);
+
+            if (!result || !result.needsSelection) {
+                return result;
+            }
+
+            if (result.code === 'MULTIPLE_WABAS' && Array.isArray(result.wabas) && result.wabas.length) {
+                const wabaId = await this._pickOption(
+                    this.translate('embeddedSignupSelectWaba', 'messages', 'OAuthProvider'),
+                    result.wabas.map((w) => ({
+                        id: w.id,
+                        label: w.name ? `${w.name} (${w.id})` : w.id,
+                    }))
+                );
+
+                if (!wabaId) {
+                    throw new Error(this.translate('embeddedSignupSelectionCancelled', 'messages', 'OAuthProvider'));
+                }
+
+                return this._hydrateWithSelection(
+                    Object.assign({}, payload, {wabaId: wabaId, phoneNumberId: null}),
+                    depth + 1
+                );
+            }
+
+            if (result.code === 'MULTIPLE_PHONES' && Array.isArray(result.phones) && result.phones.length) {
+                const phoneNumberId = await this._pickOption(
+                    this.translate('embeddedSignupSelectPhone', 'messages', 'OAuthProvider'),
+                    result.phones.map((p) => ({
+                        id: p.id,
+                        label: [p.verifiedName, p.displayPhoneNumber, p.id]
+                            .filter(Boolean)
+                            .join(' · '),
+                    }))
+                );
+
+                if (!phoneNumberId) {
+                    throw new Error(this.translate('embeddedSignupSelectionCancelled', 'messages', 'OAuthProvider'));
+                }
+
+                return this._hydrateWithSelection(
+                    Object.assign({}, payload, {
+                        wabaId: result.wabaId || payload.wabaId,
+                        phoneNumberId: phoneNumberId,
+                    }),
+                    depth + 1
+                );
+            }
+
+            throw new Error(this.translate('embeddedSignupNoSessionInfo', 'messages', 'OAuthProvider'));
+        },
+
+        /**
+         * Prompt the user to pick one option (numbered list via window.prompt).
+         *
+         * @private
+         * @param {string} title
+         * @param {{id: string, label: string}[]} options
+         * @return {Promise<?string>}
+         */
+        _pickOption: function (title, options) {
+            const lines = options.map((o, i) => `${i + 1}. ${o.label}`);
+            const raw = window.prompt(`${title}\n\n${lines.join('\n')}\n\n#`);
+
+            if (raw === null || String(raw).trim() === '') {
+                return Promise.resolve(null);
+            }
+
+            const n = parseInt(String(raw).trim(), 10);
+
+            if (!Number.isFinite(n) || n < 1 || n > options.length) {
+                return Promise.resolve(null);
+            }
+
+            return Promise.resolve(options[n - 1].id);
+        },
+
+        /**
+         * @private
+         * @param {*} e
+         * @return {?string}
+         */
+        _ajaxErrorMessage: function (e) {
+            if (!e) {
+                return null;
+            }
+
+            if (typeof e.message === 'string' && e.message && e.message !== 'Error') {
+                return e.message;
+            }
+
+            try {
+                const text = e.responseText || (e.xhr && e.xhr.responseText);
+
+                if (!text) {
+                    return null;
+                }
+
+                const body = JSON.parse(text);
+
+                if (body && typeof body.message === 'string' && body.message) {
+                    return body.message;
+                }
+            } catch (ignore) {}
+
+            return null;
         },
 
         /**

@@ -1899,9 +1899,25 @@ class ChatwootInboxIntegration
         string $phoneNumber,
         string $accessToken,
         string $phoneNumberId,
-        string $businessAccountId
+        string $businessAccountId,
+        bool $isCoexistence = false,
     ): array {
         $url = rtrim($chatwootUrl, '/') . "/api/v1/accounts/{$accountId}/inboxes";
+
+        $providerConfig = [
+            'api_key' => $accessToken,
+            'phone_number_id' => $phoneNumberId,
+            'business_account_id' => $businessAccountId,
+            'is_coexistence' => $isCoexistence,
+        ];
+
+        // embedded_signup skips Chatwoot's create-time webhook auto-setup
+        // (Channel::Whatsapp#should_auto_setup_webhooks?). Coexistence paths
+        // top up subscribed_apps via MetaGraphApiClient themselves; cloud API
+        // keeps auto-setup by omitting source.
+        if ($isCoexistence) {
+            $providerConfig['source'] = 'embedded_signup';
+        }
 
         $payload = json_encode([
             'name' => $inboxName,
@@ -1910,11 +1926,7 @@ class ChatwootInboxIntegration
                 'type' => 'whatsapp',
                 'phone_number' => $phoneNumber,
                 'provider' => 'whatsapp_cloud',
-                'provider_config' => [
-                    'api_key' => $accessToken,
-                    'phone_number_id' => $phoneNumberId,
-                    'business_account_id' => $businessAccountId,
-                ],
+                'provider_config' => $providerConfig,
             ],
         ]);
 
@@ -2543,7 +2555,8 @@ class ChatwootInboxIntegration
                 throw new Error("ChatwootAccount is missing API key. Please generate a User Access Token in Chatwoot (Settings > Account Settings > API Access Tokens) and add it to the ChatwootAccount.");
             }
 
-            // Create the Chatwoot WhatsApp Cloud inbox (identical to Cloud API).
+            // Create the Chatwoot WhatsApp Cloud inbox with is_coexistence so
+            // Chatwoot enables coexistence composer / WAHA outbound paths.
             $inboxName = 'WhatsApp - ' . $channel->get('name');
             $inboxResult = $this->createChatwootWhatsappCloudInbox(
                 $chatwootUrl,
@@ -2553,7 +2566,8 @@ class ChatwootInboxIntegration
                 $normalizedPhoneNumber,
                 $accessToken,
                 $phoneNumberId,
-                $businessAccountId
+                $businessAccountId,
+                true,
             );
 
             $channel->set('chatwootInboxId', $inboxResult['id']);
@@ -2583,12 +2597,15 @@ class ChatwootInboxIntegration
 
             // Probe phone state. Webhooks only flow when platform_type=CLOUD_API
             // AND is_on_biz_app=true.
+            $coexistenceReady = false;
+
             try {
                 $phoneData = $this->metaGraphApiClient->getPhoneNumber($accessToken, $phoneNumberId);
                 $platformType = $phoneData['platform_type'] ?? null;
                 $isOnBizApp = (bool) ($phoneData['is_on_biz_app'] ?? false);
 
                 if ($platformType === 'CLOUD_API' && $isOnBizApp) {
+                    $coexistenceReady = true;
                     $channel->set('status', 'ACTIVE');
                     $channel->set('connectedAt', date('Y-m-d H:i:s'));
                     $channel->set('errorMessage', null);
@@ -2611,6 +2628,24 @@ class ChatwootInboxIntegration
             }
 
             $this->entityManager->saveEntity($channel);
+
+            // When the number is already coexistence-ready, run SMB history/contacts
+            // sync here too (finish/hydrate may have been skipped or timed out).
+            // Still inside Meta's 24h window after in-app confirmation.
+            if ($coexistenceReady && !$oAuthAccount->get('whatsappCoexistenceSyncedAt')) {
+                try {
+                    $syncResult = $this->whatsAppCoexistenceSyncService->sync($oAuthAccountId);
+                    $this->log->info(
+                        "ChatwootInboxIntegration: triggered Coexistence sync from activation for {$oAuthAccountId}: " .
+                        json_encode($syncResult)
+                    );
+                } catch (\Exception $e) {
+                    $this->log->warning(
+                        "ChatwootInboxIntegration: Coexistence sync from activation failed for {$oAuthAccountId}: " .
+                        $e->getMessage()
+                    );
+                }
+            }
 
             $this->log->info("ChatwootInboxIntegration: WhatsApp Coexistence channel {$channelId} activated (status=" . $channel->get('status') . ").");
 

@@ -354,7 +354,10 @@ class MetaGraphApiClient
     ): array {
         $url = self::GRAPH_API_BASE . "/{$apiVersion}/{$phoneNumberId}/smb_app_data";
 
-        return $this->requestPost($url, $accessToken, [
+        // Meta requires JSON here (form-urlencoded returns code 100 "Failed to
+        // parse the request body"). `messaging_product` is a required field.
+        return $this->requestPostJson($url, $accessToken, [
+            'messaging_product' => 'whatsapp',
             'sync_type' => $syncType,
         ]);
     }
@@ -410,6 +413,43 @@ class MetaGraphApiClient
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Authorization: Bearer ' . $accessToken,
             'Content-Type: application/x-www-form-urlencoded',
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        return $this->handleResponse($response, $httpCode, $curlError);
+    }
+
+    /**
+     * Authenticated JSON POST (used by smb_app_data which rejects form bodies).
+     *
+     * @param string $url Full URL
+     * @param string $accessToken Bearer token
+     * @param array<string, mixed> $body JSON body
+     * @return array<string, mixed> Decoded JSON response
+     * @throws Error
+     */
+    private function requestPostJson(string $url, string $accessToken, array $body): array
+    {
+        $payload = json_encode($body);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode Meta Graph API JSON body.');
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT_SECONDS);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::TIMEOUT_SECONDS);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json',
         ]);
 
         $response = curl_exec($ch);

@@ -18,6 +18,9 @@
         "embeddedSignupMissingConfigId": "This OAuth Provider has no Embedded Signup Config ID set. Open Admin → OAuth Providers and paste the Facebook Login for Business configuration ID from Meta Business Suite.",
         "embeddedSignupNoSessionInfo": "Connected, but Meta didn't return waba_id / phone_number_id. Coexistence/Cloud API sync was skipped — you can re-run the Embedded Signup flow to retry.",
         "embeddedSignupFinishFailed": "Connected, but the follow-up step that registers the WABA and phone with Monostax failed. A background retry has been queued.",
+        "embeddedSignupSelectWaba": "Multiple WhatsApp Business Accounts are on this token. Enter the number of the WABA to use:",
+        "embeddedSignupSelectPhone": "This WABA has multiple phone numbers. Enter the number of the phone to use:",
+        "embeddedSignupSelectionCancelled": "WABA / phone selection was cancelled. Re-run Embedded Signup or connect again to finish setup.",
         "coexistencePendingInAppStep": "Authentication succeeded, but the customer hasn't finished pasting the verification code inside the WhatsApp Business app yet. Webhooks will start flowing once they do. The sync will retry in the background."
     }
 }
