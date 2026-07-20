@@ -52,8 +52,8 @@ define(
 
                 const currentChannelType = this.model.get("channelType");
 
-                if (this.isQrCodeIntegration(currentChannelType)) {
-                    this.redirectToChannelConnectionTabForQrCode();
+                if (this.shouldOpenChannelConnectionTab(currentChannelType)) {
+                    this.redirectToChannelConnectionTab();
 
                     return;
                 }
@@ -69,20 +69,20 @@ define(
                 }
 
                 Espo.Ajax.getRequest(`ChatwootInboxIntegration/${integrationId}`, {
-                    select: "channelType",
+                    select: "channelType,status",
                 })
                     .then((data) => {
                         const integrationChannelType = data && data.channelType;
 
-                        if (this.isQrCodeIntegration(integrationChannelType)) {
-                            this.redirectToChannelConnectionTabForQrCode();
+                        if (this.shouldOpenChannelConnectionTab(integrationChannelType, data && data.status)) {
+                            this.redirectToChannelConnectionTab();
                         }
                     })
                     .catch(() => {});
             },
 
             getForcedChannelConnectionTabIndex: function (layout) {
-                if (!this.isQrCodeIntegration(this.model.get("channelType"))) {
+                if (!this.shouldOpenChannelConnectionTab(this.model.get("channelType"))) {
                     return null;
                 }
 
@@ -93,6 +93,35 @@ define(
                 const channelType = (channelTypeValue || "").toLowerCase();
 
                 return channelType.includes("whatsapp") && channelType.includes("qrcode");
+            },
+
+            isCoexistenceIntegration: function (channelTypeValue) {
+                const channelType = (channelTypeValue || "").toLowerCase();
+
+                return channelType === "whatsappcoexistence";
+            },
+
+            shouldOpenChannelConnectionTab: function (channelTypeValue, statusValue) {
+                if (this.isQrCodeIntegration(channelTypeValue)) {
+                    return true;
+                }
+
+                if (!this.isCoexistenceIntegration(channelTypeValue)) {
+                    return false;
+                }
+
+                // Only jump while Meta handshake or companion QR is in flight.
+                // ACTIVE coexistence keeps Overview as default; button still links.
+                const status = statusValue || this.model.get("status");
+
+                return [
+                    "PENDING_COEXISTENCE_CONFIRMATION",
+                    "PENDING_WAHA_LINK",
+                ].includes(status);
+            },
+
+            redirectToChannelConnectionTabForQrCode: function () {
+                this.redirectToChannelConnectionTab();
             },
 
             getTabIndexByPanelName: function (layout, panelName) {
@@ -117,7 +146,7 @@ define(
                 return null;
             },
 
-            redirectToChannelConnectionTabForQrCode: function () {
+            redirectToChannelConnectionTab: function () {
                 if (!this.hasTabs()) {
                     return;
                 }

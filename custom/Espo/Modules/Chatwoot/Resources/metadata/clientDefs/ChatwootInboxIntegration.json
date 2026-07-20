@@ -13,7 +13,11 @@
     "modalViews": {
         "edit": "chatwoot:views/chatwoot-inbox-integration/modals/edit"
     },
-    "defaultSidePanelFieldList": ["chatwootAccount", "chatwootInbox", "teams"],
+    "defaultSidePanelFieldList": [
+        "chatwootAccount",
+        "chatwootInbox",
+        "teams"
+    ],
     "dynamicLogic": {
         "fields": {
             "status": {
@@ -388,7 +392,7 @@
             "handler": "chatwoot:handlers/chatwoot-inbox-integration/detail-actions",
             "actionFunction": "linkWahaCompanion",
             "checkVisibilityFunction": "isLinkWahaCompanionAvailable",
-            "groupIndex": 1
+            "groupIndex": 0
         }
     ],
     "bottomPanels": {

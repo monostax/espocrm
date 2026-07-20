@@ -18,7 +18,8 @@
         "tabAgents": "Agents",
         "tabInboxAgents": "Agents",
         "tabContacts": "Contacts",
-        "tabConversations": "Conversations"
+        "tabConversations": "Conversations",
+        "Link WhatsApp Companion": "Link WhatsApp Companion"
     },
     "presetFilters": {
         "whatsappCloudApi": "WhatsApp Cloud API"
@@ -26,7 +27,9 @@
     "messages": {
         "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",
         "accountMembershipMustBelongToSameAccount": "Only account memberships from the same Chat Account can be linked to this Inbox.",
-        "chatwootTeamMustBelongToSameAccount": "Only Chatwoot teams from the same Chat Account can be linked to this Inbox."
+        "chatwootTeamMustBelongToSameAccount": "Only Chatwoot teams from the same Chat Account can be linked to this Inbox.",
+        "noChannelConnection": "No channel connection linked to this inbox.",
+        "companionLinkStarted": "Scan the QR code in the Channel Connection tab to link the WhatsApp companion."
     },
     "tooltips": {
         "chatwootTeams": "Chatwoot teams linked to this inbox. Members of linked teams automatically become inbox collaborators in Chatwoot (department-scoped inbox access)."

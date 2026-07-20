@@ -1058,7 +1058,7 @@ class ChatwootInboxIntegration
         $channel->set('wahaWebhookSecret', $webhookSecret);
 
         // Record which Chatwoot inbox this companion sends on (the Cloud inbox).
-        $channel->set('wahaChatwootInboxId', $channel->get('chatwootInboxId'));
+        $channel->set('wahaChatwootInboxId', $this->getNumericChatwootInboxId($channel));
 
         // Configure ignore rules + label webhook (no Chatwoot inbound App).
         $ignoreConfig = [
@@ -1092,6 +1092,38 @@ class ChatwootInboxIntegration
     }
 
     /**
+     * Resolve the numeric Chatwoot inbox id for REST calls.
+     *
+     * The integration's `chatwootInboxId` attribute is the LOCAL ChatwootInbox
+     * entity id (string hash) via the hasOne link — not the numeric Chatwoot
+     * API id. Same pattern as patchInboxAccessToken / resolveChatwootInboxForQr.
+     */
+    private function getNumericChatwootInboxId(Entity $channel): ?int
+    {
+        $chatwootInbox = $channel->get('chatwootInbox');
+        if ($chatwootInbox && $chatwootInbox->get('chatwootInboxId')) {
+            return (int) $chatwootInbox->get('chatwootInboxId');
+        }
+
+        $localInboxId = $channel->get('chatwootInboxId');
+        if (!$localInboxId) {
+            return null;
+        }
+
+        // Numeric already (legacy), or local entity id.
+        if (is_numeric($localInboxId)) {
+            return (int) $localInboxId;
+        }
+
+        $localInbox = $this->entityManager->getEntityById('ChatwootInbox', (string) $localInboxId);
+        if ($localInbox && $localInbox->get('chatwootInboxId')) {
+            return (int) $localInbox->get('chatwootInboxId');
+        }
+
+        return null;
+    }
+
+    /**
      * Patch the coexistence Cloud inbox's provider_config to add (or remove)
      * the `linked_waha` block consumed by Chatwoot's
      * Channel::Whatsapp#waha_outbound_enabled?.
@@ -1104,7 +1136,7 @@ class ChatwootInboxIntegration
      */
     private function syncCoexistenceWahaLink(Entity $channel, ?array $link): void
     {
-        $chatwootInboxId = $channel->get('chatwootInboxId');
+        $chatwootInboxId = $this->getNumericChatwootInboxId($channel);
         if (!$chatwootInboxId) {
             throw new Error("Cannot sync WAHA link: coexistence channel has no Chatwoot inbox.");
         }
@@ -1128,7 +1160,7 @@ class ChatwootInboxIntegration
             $chatwootUrl,
             $chatwootAccountApiKey,
             $chatwootAccountId,
-            (int) $chatwootInboxId
+            $chatwootInboxId
         );
 
         if ($inbox === null) {
@@ -1150,7 +1182,7 @@ class ChatwootInboxIntegration
             $chatwootUrl,
             $chatwootAccountApiKey,
             $chatwootAccountId,
-            (int) $chatwootInboxId,
+            $chatwootInboxId,
             ['channel' => ['provider_config' => $providerConfig]]
         );
     }
@@ -2796,7 +2828,7 @@ class ChatwootInboxIntegration
         // Shape consumed by Chatwoot Channel::Whatsapp#coexistence_waha_link:
         //   { inbox_id, session, base_url }
         $this->syncCoexistenceWahaLink($channel, [
-            'inbox_id' => (int) $channel->get('chatwootInboxId'),
+            'inbox_id' => $this->getNumericChatwootInboxId($channel),
             'session' => $sessionName,
             'base_url' => rtrim($wahaUrl, '/'),
         ]);

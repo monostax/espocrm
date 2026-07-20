@@ -58,5 +58,15 @@
             "quickRemove": true,
             "massRemove": true
         }
-    }
+    },
+    "detailActionList": [
+        {
+            "name": "linkWahaCompanion",
+            "label": "Link WhatsApp Companion",
+            "handler": "chatwoot:handlers/chatwoot-inbox/detail-actions",
+            "actionFunction": "linkWahaCompanion",
+            "checkVisibilityFunction": "isLinkWahaCompanionAvailable",
+            "groupIndex": 0
+        }
+    ]
 }
