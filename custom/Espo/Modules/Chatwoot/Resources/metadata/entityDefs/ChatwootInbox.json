@@ -87,6 +87,34 @@
         "chatwootInboxIntegration": {
             "type": "link"
         },
+        "remoteChannelType": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "inboundEmail": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "emailAccount": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "emailFetchOwner": {
+            "type": "enum",
+            "options": ["", "chatwoot", "crm"],
+            "default": "",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "emailOAuthAccount": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
         "autoPendingEnabled": {
             "type": "foreign",
             "link": "chatwootInboxIntegration",
@@ -145,6 +173,21 @@
             "type": "belongsTo",
             "entity": "ChatwootInboxIntegration",
             "foreign": "chatwootInbox"
+        },
+        "inboundEmail": {
+            "type": "belongsTo",
+            "entity": "InboundEmail",
+            "foreign": "chatwootInbox"
+        },
+        "emailAccount": {
+            "type": "belongsTo",
+            "entity": "EmailAccount",
+            "foreign": "chatwootInbox"
+        },
+        "emailOAuthAccount": {
+            "type": "hasOne",
+            "entity": "OAuthAccount",
+            "foreign": "chatwootEmailInbox"
         },
         "accountUserMemberships": {
             "type": "hasMany",

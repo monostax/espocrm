@@ -15,6 +15,7 @@
             "meta-system-user": "Meta (Usuário do Sistema)",
             "google-calendar": "Google (Calendar)",
             "google-meet": "Google (Meet)",
+            "google-gmail": "Google (Gmail)",
             "meta-instagram": "Meta (Instagram)",
             "other": "Outro"
         }

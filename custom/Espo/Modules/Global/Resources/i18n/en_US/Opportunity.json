@@ -12,7 +12,8 @@
         "stageName": "Stage Name",
         "stageProbability": "Stage Probability",
         "sourceChannel": "Source Channel",
-        "sourceTargetList": "Source Target List"
+        "sourceTargetList": "Source Target List",
+        "customFields": "Custom Fields"
     },
     "links": {
         "funnel": "Funnel",
@@ -66,7 +67,8 @@
         "funnel": "The sales funnel this opportunity belongs to. Stages will be filtered based on the selected funnel.",
         "opportunityStage": "The current stage of this opportunity. Stages are filtered by the selected funnel.",
         "sourceChannel": "The acquisition channel that originated this opportunity. Set once at creation (first touch) and never overwritten.",
-        "sourceTargetList": "The outreach batch (Target List) that originated this opportunity. Only set for Outbound opportunities, at creation time."
+        "sourceTargetList": "The outreach batch (Target List) that originated this opportunity. Only set for Outbound opportunities, at creation time.",
+        "customFields": "Tenant-defined custom attributes. Values follow this record's ACL."
     },
     "messages": {
         "stageDeprecated": "The enum 'Stage' field has been replaced with a link to OpportunityStage. This allows custom stages with different probabilities and styles.",

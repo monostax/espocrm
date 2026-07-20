@@ -1,0 +1,8 @@
+{
+    "primaryFilterClassNameMap": {
+        "active": "Espo\\Modules\\Global\\Classes\\Select\\CustomFieldGroup\\PrimaryFilters\\Active"
+    },
+    "boolFilterClassNameMap": {
+        "onlyActive": "Espo\\Modules\\Global\\Classes\\Select\\CustomFieldGroup\\BoolFilters\\OnlyActive"
+    }
+}

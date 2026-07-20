@@ -1,0 +1,12 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "label"}, {"name": "name"}],
+            [{"name": "entityType"}, {"name": "sortOrder"}],
+            [{"name": "isActive"}, {"name": "iconClass"}],
+            [{"name": "teams"}, {"name": "tenant"}],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    }
+]

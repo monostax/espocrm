@@ -50,7 +50,9 @@ class ChatwootInboxIntegration
         private Crypt $crypt,
         private Log $log,
         private Acl $acl,
-        private Config $config
+        private Config $config,
+        private EmailChannelBridge $emailChannelBridge,
+        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials
     ) {}
 
     /**
@@ -109,7 +111,67 @@ class ChatwootInboxIntegration
             return $this->activateInstagram($channel);
         }
 
+        if ($channelType === 'email') {
+            return $this->activateEmail($channel);
+        }
+
         return $this->activateWhatsappQrcode($channel);
+    }
+
+    /**
+     * Activate a Channel::Email inbox from a CRM InboundEmail or EmailAccount.
+     * Chatwoot owns IMAP thereafter (CRM useImap=false) to avoid dual-fetch.
+     */
+    private function activateEmail(Entity $channel): Entity
+    {
+        $channelId = $channel->getId();
+
+        try {
+            if ($channel->get('inboundEmailId') && $channel->get('emailAccountId')) {
+                throw new BadRequest('Select either an Inbound Email or Email Account, not both.');
+            }
+
+            if (!$channel->get('inboundEmailId') && !$channel->get('emailAccountId')) {
+                throw new BadRequest(
+                    'Select an Inbound Email (group) or Email Account (personal) before activating.'
+                );
+            }
+
+            if (!$channel->get('chatwootAccountId')) {
+                throw new BadRequest('Chatwoot Account is required.');
+            }
+
+            $this->emailChannelBridge->pushFromIntegration($channel);
+
+            $channel = $this->entityManager->getEntityById(self::ENTITY_TYPE, $channelId);
+
+            if (!$channel) {
+                throw new Error("Channel {$channelId} disappeared during email activation.");
+            }
+
+            $this->log->info(
+                "ChatwootInboxIntegration: Email channel {$channelId} activated successfully."
+            );
+
+            return $channel;
+        } catch (\Throwable $e) {
+            $channel = $this->entityManager->getEntityById(self::ENTITY_TYPE, $channelId);
+
+            if ($channel) {
+                $channel->set('status', 'FAILED');
+                $channel->set('errorMessage', $e->getMessage());
+                $this->entityManager->saveEntity($channel);
+            }
+
+            $this->log->error(
+                "ChatwootInboxIntegration: Email activation failed for {$channelId}: " .
+                $e->getMessage()
+            );
+
+            throw $e instanceof Error || $e instanceof BadRequest || $e instanceof Forbidden
+                ? $e
+                : new Error($e->getMessage(), 0, $e);
+        }
     }
 
     /**
@@ -1359,6 +1421,7 @@ class ChatwootInboxIntegration
                 ->find();
 
             foreach ($inboxList as $inbox) {
+                $this->syncEmailOAuthCredentials->revokeForInbox($inbox);
                 $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
             }
         } catch (\Exception $e) {

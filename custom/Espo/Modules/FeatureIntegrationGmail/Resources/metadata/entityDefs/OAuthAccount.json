@@ -1,0 +1,14 @@
+{
+    "links": {
+        "emailAccounts": {
+            "type": "hasMany",
+            "entity": "EmailAccount",
+            "foreign": "oAuthAccount"
+        },
+        "inboundEmails": {
+            "type": "hasMany",
+            "entity": "InboundEmail",
+            "foreign": "oAuthAccount"
+        }
+    }
+}

@@ -1,0 +1,27 @@
+{
+    "fields": {
+        "oAuthAccount": "Gmail OAuth Account"
+    },
+    "links": {
+        "oAuthAccount": "Gmail OAuth Account"
+    },
+    "labels": {
+        "Gmail": "Gmail",
+        "Connect Gmail": "Connect Gmail",
+        "Reconnect": "Reconnect"
+    },
+    "tooltips": {
+        "oAuthAccount": "Link a Google Gmail OAuth Account. Prefer the side-panel Connect Gmail button — it creates the OAuthAccount and runs consent for you. IMAP/SMTP then use XOAUTH2 (no app password)."
+    },
+    "messages": {
+        "gmailOAuthConnected": "Gmail connected. Hosts were set to Gmail defaults. Use Test Connection / Send Test Email to verify.",
+        "gmailOAuthDisconnected": "Gmail disconnected from this Email Account.",
+        "gmailDefaultsApplied": "Gmail IMAP/SMTP defaults applied.",
+        "gmailConnectHelp": "Connect this mailbox with Google. Creates an OAuth account in the background and opens Google sign-in — no app password needed.",
+        "gmailLinkedButDisconnected": "An OAuth account is linked but has no access token. Click Reconnect to authorize Google again.",
+        "gmailSaveBeforeConnect": "Save the Email Account first, then connect Gmail.",
+        "gmailProviderMissing": "Google Gmail OAuth provider was not found. Run rebuild and configure Client ID/Secret under Administration → OAuth Providers.",
+        "gmailProviderNotConfigured": "Google Gmail OAuth provider is not configured (missing Client ID / secret). Ask an admin to set it under OAuth Providers.",
+        "gmailPopupBlocked": "Could not open the Google sign-in window. Allow popups for this site and try again."
+    }
+}

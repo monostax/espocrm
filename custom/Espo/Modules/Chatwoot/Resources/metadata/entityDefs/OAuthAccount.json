@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "chatwootEmailInbox": {
+            "type": "link",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutEditDisabled": true
+        },
+        "chatwootEmailOAuthRevision": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutEditDisabled": true
+        }
+    },
+    "links": {
+        "chatwootEmailInbox": {
+            "type": "belongsTo",
+            "entity": "ChatwootInbox",
+            "foreign": "emailOAuthAccount"
+        }
+    }
+}

@@ -255,18 +255,42 @@ class AdminForUserIndexView extends View {
     }
 
     /**
-     * Extract entity type from URL like "#Configurations/ChatwootInboxIntegration"
-     * @param {string} url - The URL to parse
-     * @returns {string|null} - The entity type or null if not found
+     * Extract entity type from admin-for-user item URLs.
+     *
+     * Supported shapes:
+     *   #Configurations/ChatwootInboxIntegration  → ChatwootInboxIntegration
+     *   #CustomFieldGroup                          → CustomFieldGroup
+     *   #CustomFieldDef                            → CustomFieldDef
+     *   #Funnel                                    → Funnel
+     *
+     * Hash-only links that are not entity scopes (e.g. #Import) return null
+     * so the ACL filter keeps them visible via the fallback.
+     *
+     * @param {string} url
+     * @returns {string|null}
      */
     getEntityTypeFromUrl(url) {
         if (!url) {
             return null;
         }
 
-        const match = url.match(/^#Configurations\/(.+)$/);
-        if (match) {
-            return match[1];
+        const configurationsMatch = url.match(/^#Configurations\/([A-Za-z][A-Za-z0-9_]*)$/);
+
+        if (configurationsMatch) {
+            return configurationsMatch[1];
+        }
+
+        // Plain entity hash: #EntityType (must look like an Espo scope name).
+        const plainMatch = url.match(/^#([A-Z][A-Za-z0-9_]*)$/);
+
+        if (plainMatch) {
+            const entityType = plainMatch[1];
+
+            // Only treat as entity when the scope actually exists — keeps
+            // non-entity admin links (if any start with uppercase) safe.
+            if (this.getMetadata().get(['scopes', entityType])) {
+                return entityType;
+            }
         }
 
         return null;

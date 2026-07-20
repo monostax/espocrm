@@ -84,17 +84,17 @@ class Import
 
     /** @var string[] */
     private array $attributeList = [];
-    private Params $params;
+    protected Params $params;
 
     private ?string $id = null;
     private ?string $attachmentId = null;
-    private ?string $entityType = null;
+    protected ?string $entityType = null;
 
     public function __construct(
-        private AclManager $aclManager,
+        protected AclManager $aclManager,
         private EntityManager $entityManager,
         private Metadata $metadata,
-        private User $user,
+        protected User $user,
         private FileStorageManager $fileStorageManager,
         private RecordServiceContainer $recordServiceContainer,
         private JobSchedulerFactory $jobSchedulerFactory,
@@ -773,7 +773,7 @@ class Import
      * @param string[] $updateByAttributeList
      * @throws ValidationError
      */
-    private function processRowItem(
+    protected function processRowItem(
         CoreEntity $entity,
         string $attribute,
         string $value,
@@ -1565,7 +1565,7 @@ class Import
      * @param string[] $attributeList
      * @throws Forbidden
      */
-    private function applyAcl(array &$attributeList): void
+    protected function applyAcl(array &$attributeList): void
     {
         $entityType = $this->entityType ?? throw new LogicException();
 

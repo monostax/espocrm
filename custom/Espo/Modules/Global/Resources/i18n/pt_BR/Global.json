@@ -19,7 +19,8 @@
     },
     "messages": {
         "validUnit": "A unidade deve ser válida",
-        "dashboardDescription": "Visão geral do seu desempenho e atividades"
+        "dashboardDescription": "Visão geral do seu desempenho e atividades",
+        "noCustomFieldsDefined": "Nenhum campo personalizado definido para este tenant."
     },
     "boolFilters": {
         "onlyMy": "Atribuído a Mim ou Participando",
@@ -39,7 +40,9 @@
         "OpportunityStage": "Estágio da Oportunidade",
         "Appointment": "Agendamento",
         "SidenavConfig": "Menu Lateral",
-        "UserApiKey": "Chave de API (Usuário)"
+        "UserApiKey": "Chave de API (Usuário)",
+        "CustomFieldGroup": "Grupo de Campos Personalizados",
+        "CustomFieldDef": "Campo Personalizado"
     },
     "scopeNamesPlural": {
         "Activities": "Atividades",
@@ -55,7 +58,9 @@
         "Appointment": "Agendamentos",
         "OpportunityStage": "Etapas do Funil",
         "SidenavConfig": "Menu Lateral",
-        "UserApiKey": "Chaves de API (Usuário)"
+        "UserApiKey": "Chaves de API (Usuário)",
+        "CustomFieldGroup": "Grupos de Campos Personalizados",
+        "CustomFieldDef": "Campos Personalizados"
     },
     "labels": {
         "Home": "Dashboard",

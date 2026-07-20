@@ -1,0 +1,34 @@
+{
+    "fields": {
+        "password": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "isEmpty",
+                        "attribute": "oAuthAccountId"
+                    }
+                ]
+            }
+        },
+        "smtpPassword": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "isEmpty",
+                        "attribute": "oAuthAccountId"
+                    }
+                ]
+            }
+        },
+        "smtpAuthMechanism": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "isEmpty",
+                        "attribute": "oAuthAccountId"
+                    }
+                ]
+            }
+        }
+    }
+}

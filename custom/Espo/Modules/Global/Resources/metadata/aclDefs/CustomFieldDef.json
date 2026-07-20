@@ -1,0 +1,4 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\CustomFieldDef\\AccessChecker",
+    "ownershipCheckerClassName": "Espo\\Modules\\Global\\Classes\\Acl\\CustomFieldDef\\OwnershipChecker"
+}

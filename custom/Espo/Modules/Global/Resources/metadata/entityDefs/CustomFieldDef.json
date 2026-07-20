@@ -1,0 +1,176 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 60,
+            "trim": true,
+            "pattern": "^[a-z][a-zA-Z0-9_]*$",
+            "tooltip": true
+        },
+        "label": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true
+        },
+        "entityType": {
+            "type": "enum",
+            "required": true,
+            "options": ["Contact", "Lead", "Account", "Opportunity"],
+            "default": "Contact"
+        },
+        "type": {
+            "type": "enum",
+            "required": true,
+            "options": [
+                "varchar",
+                "text",
+                "int",
+                "float",
+                "bool",
+                "date",
+                "datetime",
+                "enum",
+                "multiEnum"
+            ],
+            "default": "varchar"
+        },
+        "valueKey": {
+            "type": "varchar",
+            "maxLength": 130,
+            "trim": true,
+            "readOnlyAfterCreate": true,
+            "tooltip": true,
+            "pattern": "^[a-z][a-zA-Z0-9_]*(\\.[a-z][a-zA-Z0-9_]*)?$"
+        },
+        "options": {
+            "type": "array",
+            "view": "views/fields/array",
+            "tooltip": true
+        },
+        "isRequired": {
+            "type": "bool",
+            "default": false
+        },
+        "defaultValue": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": true
+        },
+        "maxLength": {
+            "type": "int",
+            "min": 1,
+            "tooltip": true
+        },
+        "min": {
+            "type": "float",
+            "tooltip": true
+        },
+        "max": {
+            "type": "float",
+            "tooltip": true
+        },
+        "sortOrder": {
+            "type": "int",
+            "default": 10,
+            "min": 0
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "isTemplateEnabled": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "group": {
+            "type": "link",
+            "view": "views/fields/link"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "required": true,
+            "view": "views/fields/teams"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "group": {
+            "type": "belongsTo",
+            "entity": "CustomFieldGroup",
+            "foreign": "fields"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "customFieldDefs"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "sortOrder",
+        "order": "asc"
+    },
+    "indexes": {
+        "nameTenantEntity": {
+            "unique": true,
+            "columns": ["name", "tenantId", "entityType", "deleted"]
+        },
+        "valueKeyTenantEntity": {
+            "unique": true,
+            "columns": ["valueKey", "tenantId", "entityType", "deleted"]
+        },
+        "tenantEntity": {
+            "columns": ["tenantId", "entityType"]
+        },
+        "groupId": {
+            "columns": ["groupId"]
+        },
+        "isActive": {
+            "columns": ["isActive"]
+        },
+        "sortOrder": {
+            "columns": ["sortOrder"]
+        }
+    }
+}

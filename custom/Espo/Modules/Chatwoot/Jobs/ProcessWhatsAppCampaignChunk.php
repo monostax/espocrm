@@ -19,6 +19,7 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\WhatsAppCampaignOpportunityService;
 use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
+use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -53,6 +54,7 @@ class ProcessWhatsAppCampaignChunk implements Job
         private TemplateRendererFactory $templateRendererFactory,
         private WhatsAppOptOutService $optOutService,
         private WhatsAppCampaignOpportunityService $opportunityService,
+        private TemplateBridge $templateBridge,
         private Log $log,
     ) {}
 
@@ -810,6 +812,15 @@ class ProcessWhatsAppCampaignChunk implements Job
 
         $renderer = $this->templateRendererFactory->create();
         $renderer->setEntity($contact);
+
+        // Nest dotted customFields keys so {{customFields.address.city}} resolves.
+        $nestedCustomFields = $this->templateBridge->getNestedBag($contact);
+
+        if ($nestedCustomFields !== []) {
+            $renderer->setData([
+                $this->templateBridge->getAttributeName() => $nestedCustomFields,
+            ]);
+        }
 
         $resolvedParams = [];
 

@@ -1,0 +1,27 @@
+{
+    "viewSetupHandlers": {
+        "record/detail": [
+            "feature-integration-gmail:handlers/email-account/detail-setup"
+        ],
+        "record/edit": [
+            "feature-integration-gmail:handlers/email-account/detail-setup"
+        ]
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "gmailConnection",
+                "label": "Gmail",
+                "view": "feature-integration-gmail:views/email-account/panels/gmail-connection",
+                "acl": "edit",
+                "notRefreshable": true,
+                "sticked": true
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "oAuthAccount": {
+            "selectPrimaryFilterName": "gmail"
+        }
+    }
+}

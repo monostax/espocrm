@@ -1,0 +1,49 @@
+{
+    "fields": {
+        "name": "Name",
+        "label": "Label",
+        "entityType": "Entity Type",
+        "iconClass": "Icon Class",
+        "sortOrder": "Sort Order",
+        "isActive": "Active",
+        "description": "Description",
+        "tenant": "Tenant",
+        "teams": "Teams",
+        "fields": "Fields",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "links": {
+        "tenant": "Tenant",
+        "teams": "Teams",
+        "fields": "Fields",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "labels": {
+        "Create CustomFieldGroup": "Create Field Group"
+    },
+    "tooltips": {
+        "name": "Machine name used as the valueKey prefix (e.g. address → address.city). Lowercase letter first, letters/digits/underscore only. No dots. Do not rename casually once fields exist.",
+        "iconClass": "Optional Font Awesome / Tabler class for the panel header (e.g. fas fa-map-marker-alt).",
+        "tenant": "Derived automatically from the selected team(s)."
+    },
+    "boolFilters": {
+        "onlyMy": "Only My",
+        "onlyActive": "Active Only"
+    },
+    "presetFilters": {
+        "active": "Active",
+        "all": "All"
+    },
+    "options": {
+        "entityType": {
+            "Contact": "Contact",
+            "Lead": "Lead",
+            "Account": "Account",
+            "Opportunity": "Opportunity"
+        }
+    }
+}

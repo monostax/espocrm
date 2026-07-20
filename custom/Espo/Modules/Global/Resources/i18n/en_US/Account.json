@@ -1,6 +1,7 @@
 {
     "fields": {
-        "tenant": "Tenant"
+        "tenant": "Tenant",
+        "customFields": "Custom Fields"
     },
     "links": {
         "tenant": "Tenant"
@@ -10,11 +11,8 @@
         "Opportunities": "Opportunities",
         "Cases": "Cases",
         "Documents": "Documents"
+    },
+    "tooltips": {
+        "customFields": "Tenant-defined custom attributes. Values follow this record's ACL."
     }
 }
-
-
-
-
-
-

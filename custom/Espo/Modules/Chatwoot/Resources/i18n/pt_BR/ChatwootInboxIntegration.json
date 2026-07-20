@@ -33,14 +33,18 @@
         "oAuthAccount": "Conta Meta",
         "businessAccountId": "Conta Business",
         "businessAccountName": "Nome da Conta Business",
-        "credential": "Credencial"
+        "credential": "Credencial",
+        "inboundEmail": "Conta de E-mail em Grupo",
+        "emailAccount": "Conta de E-mail Pessoal"
     },
     "links": {
         "wahaPlatform": "Plataforma WAHA",
         "chatwootAccount": "Chat / Conta",
         "chatwootInbox": "Chat / Conta / Caixa de Entrada",
         "oAuthAccount": "Conta Meta",
-        "team": "Equipe"
+        "team": "Equipe",
+        "inboundEmail": "Conta de E-mail em Grupo",
+        "emailAccount": "Conta de E-mail Pessoal"
     },
     "labels": {
         "Create ChatwootInboxIntegration": "Cadastrar Caixa de Entrada (Conexão)",
@@ -84,7 +88,8 @@
             "whatsappQrcode": "WhatsApp Lite (QR Code)",
             "whatsappCloudApi": "WhatsApp Business (Cloud API)",
             "whatsappCoexistence": "WhatsApp Business (Coexistência)",
-            "instagram": "Instagram"
+            "instagram": "Instagram",
+            "email": "E-mail"
         }
     },
     "tooltips": {
@@ -104,7 +109,9 @@
         "wahaIgnoreGroups": "Ignorar conversas em Grupo. Sem webhooks ou mensagens armazenadas para grupos.",
         "wahaIgnoreChannels": "Ignorar mensagens de Canais. Sem webhooks ou mensagens armazenadas para canais.",
         "wahaIgnoreBroadcast": "Ignorar listas de Broadcast (*@broadcast), exceto status@broadcast. Use 'Ignorar Status' para Status.",
-        "autoPendingEnabled": "Quando habilitado, as conversas nesta caixa de entrada serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente."
+        "autoPendingEnabled": "Quando habilitado, as conversas nesta caixa de entrada serão automaticamente movidas para o status 'Pendente' após um agente enviar uma mensagem. Isso ajuda a rastrear conversas aguardando resposta do cliente.",
+        "inboundEmail": "Caixa groupal (Inbound Email) usada para criar/atualizar Channel::Email no Chatwoot. Após ativar, o Chatwoot faz o IMAP.",
+        "emailAccount": "Caixa pessoal usada para criar/atualizar Channel::Email. Prefira Inbound Email para suporte compartilhado."
     },
     "messages": {
         "channelCreated": "Canal criado. Clique em Ativar para iniciar a conexão.",

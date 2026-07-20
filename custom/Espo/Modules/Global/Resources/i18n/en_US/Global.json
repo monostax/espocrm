@@ -40,7 +40,7 @@
     "fieldTypes": {
         "weight": "Weight"
     },
-"options": {
+    "options": {
         "weightUnit": {
             "kg": "Kilogram (kg)",
             "g": "Gram (g)",
@@ -62,12 +62,13 @@
     "tooltips": {
         "weightDecimal": "Weight decimal storage. Uses VARCHAR type for database storage to maintain precise values."
     },
-"messages": {
+    "messages": {
         "validUnit": "Unit must be valid",
         "errorSavingPreference": "Error saving preference.",
         "relationshipLinkRequired": "Relationship is required when Open Mode is Relationship View",
         "relationshipLinkInvalid": "The configured relationship is no longer available. Opening record view instead.",
-        "dashboardDescription": "Overview of your performance and activities"
+        "dashboardDescription": "Overview of your performance and activities",
+        "noCustomFieldsDefined": "No custom fields defined for this tenant."
     },
     "boolFilters": {
         "onlyMy": "Participating",
@@ -85,7 +86,9 @@
         "Funnel": "Funnel",
         "OpportunityStage": "Opportunity Stage",
         "SidenavConfig": "Custom Sidenav",
-        "UserApiKey": "User API Key"
+        "UserApiKey": "User API Key",
+        "CustomFieldGroup": "Custom Field Group",
+        "CustomFieldDef": "Custom Field"
     },
     "scopeNamesPlural": {
         "Activities": "Activities",
@@ -99,7 +102,9 @@
         "Funnel": "Funnels",
         "OpportunityStage": "Opportunity Stages",
         "SidenavConfig": "Custom Sidenav",
-        "UserApiKey": "User API Keys"
+        "UserApiKey": "User API Keys",
+        "CustomFieldGroup": "Custom Field Groups",
+        "CustomFieldDef": "Custom Fields"
     },
     "navbarTabs": {
         "Lists": "Lists",

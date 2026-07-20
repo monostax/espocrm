@@ -1,0 +1,5 @@
+[
+    {"name": "label", "width": 40, "link": true},
+    {"name": "entityType", "width": 25},
+    {"name": "isActive", "width": 15}
+]

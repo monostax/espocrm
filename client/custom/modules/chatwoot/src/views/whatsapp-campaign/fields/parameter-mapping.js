@@ -12,7 +12,7 @@
  * Structured key-value view for the parameterMapping field on WhatsAppCampaign.
  *
  * Detail mode:  table with "Parameter #" and "Contact Field" columns.
- * Edit mode:    editable rows with add/remove controls.
+ * Edit mode:    editable rows with add/remove + Contact / custom-field suggestions.
  * List mode:    compact summary like "3 params".
  */
 define('chatwoot:views/whatsapp-campaign/fields/parameter-mapping', ['views/fields/base'], function (Dep) {
@@ -53,15 +53,30 @@ define('chatwoot:views/whatsapp-campaign/fields/parameter-mapping', ['views/fiel
         // language=Handlebars
         editTemplateContent:
             '<div class="parameter-mapping-edit">' +
+                '{{#if suggestionList.length}}' +
+                '<div class="text-muted small" style="margin-bottom: 8px;">' +
+                    'Click a field to fill the focused expression, or type Handlebars manually.' +
+                '</div>' +
+                '<div class="param-suggestions" style="margin-bottom: 10px; max-height: 120px; overflow-y: auto;">' +
+                    '{{#each suggestionList}}' +
+                    '<a role="button" class="label label-default param-suggestion-btn" ' +
+                        'style="display: inline-block; margin: 0 4px 4px 0; cursor: pointer;" ' +
+                        'data-expression="{{expression}}" title="{{expression}}">' +
+                        '{{label}}' +
+                    '</a>' +
+                    '{{/each}}' +
+                '</div>' +
+                '{{/if}}' +
                 '{{#each rows}}' +
                 '<div class="row param-edit-row" data-index="{{@index}}" style="margin-bottom: 6px;">' +
                     '<div class="col-xs-3 col-sm-2">' +
                         '<input type="text" class="form-control input-sm param-key-input"' +
                             ' value="{{paramNum}}" placeholder="#">' +
                     '</div>' +
-                    '<div class="col-xs-7 col-sm-8">' +
+                    '<div class="col-sm-8 col-xs-7">' +
                         '<input type="text" class="form-control input-sm param-value-input"' +
-                            ' value="{{expression}}" placeholder="e.g. {{curlyOpen}}{{curlyOpen}}firstName{{curlyClose}}{{curlyClose}}">' +
+                            ' value="{{expression}}" ' +
+                            'placeholder="e.g. {{curlyOpen}}{{curlyOpen}}firstName{{curlyClose}}{{curlyClose}} or {{curlyOpen}}{{curlyOpen}}customFields.plan{{curlyClose}}{{curlyClose}}">' +
                     '</div>' +
                     '<div class="col-xs-2 col-sm-2">' +
                         '<a role="button" class="btn btn-link btn-sm param-remove-btn" data-index="{{@index}}"' +
@@ -92,6 +107,80 @@ define('chatwoot:views/whatsapp-campaign/fields/parameter-mapping', ['views/fiel
             'change .param-value-input': function () {
                 this.trigger('change', {ui: true});
             },
+            'focus .param-value-input': function (e) {
+                this._focusedValueInput = $(e.currentTarget);
+            },
+            'click .param-suggestion-btn': function (e) {
+                e.preventDefault();
+                var expression = $(e.currentTarget).attr('data-expression');
+                this.applySuggestion(expression);
+            },
+        },
+
+        setup: function () {
+            Dep.prototype.setup.call(this);
+
+            this.suggestionList = [];
+
+            if (this.mode === 'edit' || this.mode === 'detail') {
+                this.wait(this.loadSuggestions());
+            }
+        },
+
+        loadSuggestions: function () {
+            var native = [
+                {label: 'First Name', expression: '{{firstName}}'},
+                {label: 'Last Name', expression: '{{lastName}}'},
+                {label: 'Name', expression: '{{name}}'},
+                {label: 'Email', expression: '{{emailAddress}}'},
+                {label: 'Phone', expression: '{{phoneNumber}}'},
+                {label: 'Account Name', expression: '{{account.name}}'},
+            ];
+
+            this.suggestionList = native.slice();
+
+            var url = 'CustomField/action/templateVariables?entityType=Contact';
+
+            return Espo.Ajax.getRequest(url)
+                .then(function (response) {
+                    var list = (response && response.list) || [];
+
+                    list.forEach(function (item) {
+                        var group = item.groupLabel ? item.groupLabel + ' · ' : '';
+                        this.suggestionList.push({
+                            label: 'CF · ' + group + (item.label || item.valueKey),
+                            expression: item.expression ||
+                                ('{{customFields.' + item.valueKey + '}}'),
+                        });
+                    }.bind(this));
+                }.bind(this))
+                .catch(function () {
+                    // Soft-fail: keep native suggestions only.
+                });
+        },
+
+        applySuggestion: function (expression) {
+            if (!expression) {
+                return;
+            }
+
+            var $input = this._focusedValueInput;
+
+            if (!$input || !$input.length) {
+                $input = this.$el.find('.param-value-input').last();
+            }
+
+            if (!$input || !$input.length) {
+                this.addRow();
+                $input = this.$el.find('.param-value-input').last();
+            }
+
+            if (!$input || !$input.length) {
+                return;
+            }
+
+            $input.val(expression);
+            this.trigger('change', {ui: true});
         },
 
         data: function () {
@@ -105,6 +194,7 @@ define('chatwoot:views/whatsapp-campaign/fields/parameter-mapping', ['views/fiel
             data.summary = keys.length + ' param' + (keys.length !== 1 ? 's' : '');
             data.curlyOpen = '{{';
             data.curlyClose = '}}';
+            data.suggestionList = this.suggestionList || [];
 
             data.rows = keys.map(function (key) {
                 return {

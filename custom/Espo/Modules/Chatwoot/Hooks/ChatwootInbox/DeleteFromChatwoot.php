@@ -28,6 +28,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\SyncEmailOAuthCredentials;
 
 /**
  * Hook to delete ChatwootInbox from Chatwoot Account API.
@@ -44,6 +45,7 @@ class DeleteFromChatwoot
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
+        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials,
         private Log $log
     ) {}
 
@@ -59,6 +61,8 @@ class DeleteFromChatwoot
         // Skip if this is a cascade delete from parent (remote cleanup already handled by parent)
         // When ChatwootInboxIntegration is deleted, its CleanupOnRemove hook handles the API call
         if (!empty($options['cascadeParent'])) {
+            $this->revokeSourceOAuth($entity);
+
             return;
         }
 
@@ -70,6 +74,8 @@ class DeleteFromChatwoot
         // Allow deletion from EspoCRM
         if (!$chatwootInboxId) {
             $this->log->info('ChatwootInbox ' . $entity->getId() . ' has no chatwootInboxId, skipping Chatwoot deletion');
+            $this->revokeSourceOAuth($entity);
+
             return;
         }
         
@@ -79,6 +85,8 @@ class DeleteFromChatwoot
         if (!$accountId) {
             $this->log->warning('ChatwootInbox ' . $entity->getId() . ' has no chatwootAccountId, cannot delete from Chatwoot');
             // Allow deletion from EspoCRM anyway - we can't sync
+            $this->revokeSourceOAuth($entity);
+
             return;
         }
 
@@ -88,24 +96,32 @@ class DeleteFromChatwoot
             
             if (!$account) {
                 $this->log->warning('ChatwootAccount not found: ' . $accountId . '. Allowing local deletion.');
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
 
             $chatwootAccountId = $account->get('chatwootAccountId');
             if (!$chatwootAccountId) {
                 $this->log->warning('ChatwootAccount has no chatwootAccountId. Allowing local deletion.');
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
 
             $apiKey = $account->get('apiKey');
             if (!$apiKey) {
                 $this->log->warning('ChatwootAccount has no API key. Allowing local deletion.');
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
 
             $platformId = $account->get('platformId');
             if (!$platformId) {
                 $this->log->warning('ChatwootAccount has no platformId. Allowing local deletion.');
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
 
@@ -113,6 +129,8 @@ class DeleteFromChatwoot
             
             if (!$platform) {
                 $this->log->warning('ChatwootPlatform not found: ' . $platformId . '. Allowing local deletion.');
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
 
@@ -120,6 +138,8 @@ class DeleteFromChatwoot
 
             if (!$platformUrl) {
                 $this->log->warning('ChatwootPlatform missing URL. Allowing local deletion.');
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
 
@@ -134,6 +154,7 @@ class DeleteFromChatwoot
             );
             
             $this->log->info('Successfully deleted Chatwoot inbox: ' . $chatwootInboxId);
+            $this->revokeSourceOAuth($entity);
 
         } catch (\Exception $e) {
             // If the resource doesn't exist (404), allow deletion from EspoCRM
@@ -143,6 +164,8 @@ class DeleteFromChatwoot
                     'Chatwoot inbox ' . $chatwootInboxId . ' not found in Chatwoot (already deleted?). ' .
                     'Allowing deletion from EspoCRM.'
                 );
+                $this->revokeSourceOAuth($entity);
+
                 return;
             }
             
@@ -156,6 +179,20 @@ class DeleteFromChatwoot
                 '. The inbox was not deleted from EspoCRM to maintain synchronization. ' .
                 'Please check if the inbox still exists in Chatwoot or try again.'
             );
+        }
+    }
+
+    private function revokeSourceOAuth(Entity $entity): void
+    {
+        try {
+            $this->syncEmailOAuthCredentials->revokeForInbox($entity);
+        } catch (\Throwable $e) {
+            $this->log->error(
+                'Failed to revoke source-owned OAuth credentials for ChatwootInbox ' .
+                $entity->getId() . ': ' . $e->getMessage()
+            );
+
+            throw new Error('Failed to remove source-owned OAuth credentials.', 0, $e);
         }
     }
 

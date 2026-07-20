@@ -98,7 +98,8 @@ class ChatwootApiClient
         string $url,
         string $method,
         ?string $payload = null,
-        array $headers = []
+        array $headers = [],
+        bool $followLocation = true
     ): array {
         $ch = curl_init($url);
 
@@ -110,7 +111,7 @@ class ChatwootApiClient
         $connectTimeout = $this->config->get('chatwootApiConnectTimeout', self::CONNECT_TIMEOUT);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $followLocation);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
@@ -1915,6 +1916,82 @@ public function getInboxVoipCredentialConfig(
 }
 
 /**
+ * Get non-redacted Google OAuth credentials for an email inbox.
+ *
+ * Hits the privileged Chatwoot endpoint
+ *   GET /api/v1/accounts/{account_id}/inboxes/{inbox_id}/email_oauth_credentials
+ * which returns only the Google OAuth grant omitted from normal inbox JSON,
+ * plus the non-secret OAuth client ID needed to validate refresh compatibility.
+ * Requires an account API key belonging to a user who can update the inbox.
+ *
+ * A Google inbox without a grant returns `{ provider: google, active: false }`
+ * so callers can revoke its source-managed CRM mirror. Returns null on HTTP
+ * 404 when the inbox is not Google OAuth or the endpoint is not deployed yet.
+ *
+ * @param string $platformUrl The Chatwoot platform URL
+ * @param string $accountApiKey The account API key
+ * @param int $accountId The Chatwoot account ID
+ * @param int $inboxId The Chatwoot inbox ID
+ * @return array<string, mixed>|null OAuth credential config, or null if unavailable
+ * @throws Error
+ */
+public function getInboxEmailOAuthCredentials(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): ?array {
+    $this->assertSecureCredentialEndpoint($platformUrl);
+
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+        . '/inboxes/' . $inboxId . '/email_oauth_credentials';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    // A redirect could forward the account API key and OAuth grant to another
+    // origin, so credential requests intentionally do not follow redirects.
+    $response = $this->executeRequest($url, 'GET', null, $headers, false);
+
+    if ($response['code'] === 404) {
+        return null;
+    }
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        // Never log this endpoint's body because it carries OAuth secrets on success.
+        $this->log->warning(
+            'Chatwoot API Error (getInboxEmailOAuthCredentials): HTTP ' . $response['code'] .
+            ' for inbox ' . $inboxId
+        );
+        throw new Error('Failed to get inbox email OAuth credentials from Chatwoot: HTTP ' . $response['code']);
+    }
+
+    return $response['body'];
+}
+
+/**
+ * OAuth refresh tokens must never be transported over plaintext HTTP. Local
+ * development can opt in explicitly where TLS is intentionally unavailable.
+ *
+ * @throws Error
+ */
+private function assertSecureCredentialEndpoint(string $platformUrl): void
+{
+    $scheme = strtolower((string) parse_url($platformUrl, PHP_URL_SCHEME));
+
+    if ($scheme === 'https' || $this->config->get('chatwootAllowInsecureCredentialSync', false)) {
+        return;
+    }
+
+    throw new Error(
+        'Refusing to synchronize Chatwoot OAuth credentials over a non-HTTPS endpoint. ' .
+        'Set chatwootAllowInsecureCredentialSync only for local development.'
+    );
+}
+
+/**
  * Update (PATCH) an inbox in a Chatwoot account.
  *
  * Used to patch channel-level settings such as `provider_config` (e.g. to
@@ -1959,6 +2036,52 @@ public function updateInbox(
         }
 
         $this->log->error('Chatwoot API Error (updateInbox): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body'];
+}
+
+/**
+ * Create an email inbox (Channel::Email) on a Chatwoot account.
+ *
+ * Payload shape matches Chatwoot InboxesController#create:
+ *   { name, channel: { type: 'email', email, imap_*, smtp_* } }
+ *
+ * @param array<string, mixed> $payload
+ * @return array<string, mixed> Created inbox
+ */
+public function createEmailInbox(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    array $payload
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inboxes';
+
+    if (!isset($payload['channel']) || !is_array($payload['channel'])) {
+        throw new Error('createEmailInbox requires payload.channel');
+    }
+
+    $payload['channel']['type'] = 'email';
+
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+
+    $response = $this->executeRequest($url, 'POST', json_encode($payload), $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to create email inbox in Chatwoot: HTTP ' . $response['code'];
+
+        if (isset($response['body']['message'])) {
+            $errorMsg .= ' - ' . $response['body']['message'];
+        } elseif (isset($response['body']['error'])) {
+            $errorMsg .= ' - ' . $response['body']['error'];
+        }
+
+        $this->log->error('Chatwoot API Error (createEmailInbox): ' . json_encode($response));
         throw new Error($errorMsg);
     }
 

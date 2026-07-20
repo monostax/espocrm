@@ -1,6 +1,7 @@
 {
     "fields": {
-        "tenant": "Ambiente"
+        "tenant": "Ambiente",
+        "customFields": "Campos Personalizados"
     },
     "links": {
         "tenant": "Ambiente"
@@ -10,11 +11,8 @@
         "Opportunities": "Oportunidades",
         "Cases": "Casos",
         "Documents": "Documentos"
+    },
+    "tooltips": {
+        "customFields": "Atributos personalizados do tenant. Os valores seguem o ACL do registro."
     }
 }
-
-
-
-
-
-

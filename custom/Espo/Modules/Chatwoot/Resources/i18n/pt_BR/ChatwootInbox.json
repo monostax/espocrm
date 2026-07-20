@@ -1,20 +1,26 @@
 {
     "fields": {
         "accountUserMemberships": "Chat / Conta / Caixa de Entrada / Agentes",
-        "chatwootInboxIntegration": "Caixa de Entrada (Conex\u00e3o)",
+        "chatwootInboxIntegration": "Caixa de Entrada (Conexão)",
         "status": "Status",
         "channelType": "Tipo de Canal",
-        "autoPendingEnabled": "Auto-Pendente Habilitado"
+        "autoPendingEnabled": "Auto-Pendente Habilitado",
+        "remoteChannelType": "Tipo de Canal Remoto",
+        "inboundEmail": "Conta de E-mail em Grupo",
+        "emailAccount": "Conta de E-mail Pessoal",
+        "emailFetchOwner": "Dono do Fetch de E-mail"
     },
     "links": {
         "accountUserMemberships": "Chat / Conta / Caixa de Entrada / Agentes",
-        "chatwootInboxIntegration": "Caixa de Entrada (Conex\u00e3o)",
-        "conversations": "Conversas"
+        "chatwootInboxIntegration": "Caixa de Entrada (Conexão)",
+        "conversations": "Conversas",
+        "inboundEmail": "Conta de E-mail em Grupo",
+        "emailAccount": "Conta de E-mail Pessoal"
     },
     "labels": {
         "metadata": "Metadados",
         "tabInboxes": "Caixas de Entrada",
-        "tabChannelConnection": "Conex\u00e3o",
+        "tabChannelConnection": "Conexão",
         "tabAgents": "Agentes",
         "tabInboxAgents": "Agentes",
         "tabConversations": "Conversas",
@@ -27,7 +33,20 @@
     "messages": {
         "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",
         "accountMembershipMustBelongToSameAccount": "Apenas membros da conta do mesmo Chat Account podem ser vinculados a esta Inbox.",
-        "noChannelConnection": "Nenhuma conex\u00e3o de canal vinculada a esta caixa de entrada.",
-        "companionLinkStarted": "Escaneie o QR Code na aba Conex\u00e3o para vincular o companheiro WhatsApp."
+        "noChannelConnection": "Nenhuma conexão de canal vinculada a esta caixa de entrada.",
+        "companionLinkStarted": "Escaneie o QR Code na aba Conexão para vincular o companheiro WhatsApp."
+    },
+    "options": {
+        "emailFetchOwner": {
+            "": "—",
+            "chatwoot": "Chatwoot",
+            "crm": "CRM"
+        }
+    },
+    "tooltips": {
+        "remoteChannelType": "channel_type bruto do Chatwoot (ex.: Channel::Email).",
+        "inboundEmail": "Caixa groupal espelhada no CRM para este Channel::Email.",
+        "emailAccount": "Caixa pessoal espelhada no CRM para este Channel::Email.",
+        "emailFetchOwner": "Qual lado faz poll IMAP. Dual-fetch é evitado; Chatwoot é o dono padrão."
     }
 }

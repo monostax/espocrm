@@ -1,0 +1,6 @@
+[
+    {"name": "label", "width": 35, "link": true},
+    {"name": "type", "width": 20},
+    {"name": "valueKey", "width": 25},
+    {"name": "isActive", "width": 15}
+]

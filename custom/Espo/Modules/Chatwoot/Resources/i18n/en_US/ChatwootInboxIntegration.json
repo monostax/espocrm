@@ -34,7 +34,9 @@
         "wahaIgnoreBroadcast": "Ignore Broadcast",
         "autoPendingEnabled": "Auto-Pending Enabled",
         "team": "Team",
-        "chatwootTeams": "Chatwoot Teams"
+        "chatwootTeams": "Chatwoot Teams",
+        "inboundEmail": "Group Email Account",
+        "emailAccount": "Personal Email Account"
     },
     "links": {
         "wahaPlatform": "WAHA Platform",
@@ -42,7 +44,9 @@
         "chatwootInbox": "Chat / Account / Channel",
         "oAuthAccount": "Meta Account",
         "team": "Team",
-        "chatwootTeams": "Chatwoot Teams"
+        "chatwootTeams": "Chatwoot Teams",
+        "inboundEmail": "Group Email Account",
+        "emailAccount": "Personal Email Account"
     },
     "labels": {
         "Create ChatwootInboxIntegration": "Create Chat / Connection",
@@ -86,7 +90,8 @@
             "whatsappQrcode": "WhatsApp Lite (QR Code)",
             "whatsappCloudApi": "WhatsApp Business (Cloud API)",
             "whatsappCoexistence": "WhatsApp Business (Coexistence)",
-            "instagram": "Instagram"
+            "instagram": "Instagram",
+            "email": "Email"
         }
     },
     "tooltips": {
@@ -107,7 +112,9 @@
         "wahaIgnoreChannels": "Ignore Channel messages. No webhooks or stored messages for channels.",
         "wahaIgnoreBroadcast": "Ignore Broadcast lists (*@broadcast), excluding status@broadcast. Use 'Ignore Status' for Status.",
         "autoPendingEnabled": "When enabled, conversations in this inbox will automatically move to 'Pending' status after an agent sends a message. This helps track conversations waiting for customer response.",
-        "chatwootTeams": "Chatwoot teams to link to the inbox when it is provisioned. Members of linked teams automatically get access to the inbox in Chatwoot."
+        "chatwootTeams": "Chatwoot teams to link to the inbox when it is provisioned. Members of linked teams automatically get access to the inbox in Chatwoot.",
+        "inboundEmail": "Group mailbox (Inbound Email) used to create/update Chatwoot Channel::Email. Chatwoot will own IMAP fetch after activate.",
+        "emailAccount": "Personal mailbox used to create/update Chatwoot Channel::Email. Prefer group Inbound Email for shared support inboxes."
     },
     "messages": {
         "channelCreated": "Channel created. Click Activate to start the connection.",

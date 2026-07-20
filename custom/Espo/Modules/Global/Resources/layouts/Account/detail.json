@@ -2,16 +2,62 @@
     {
         "label": "Overview",
         "rows": [
-            [{ "name": "name" }, { "name": "website" }],
-            [{ "name": "emailAddress" }, { "name": "phoneNumber" }],
-            [{ "name": "billingAddress" }, { "name": "shippingAddress" }]
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "website"
+                }
+            ],
+            [
+                {
+                    "name": "emailAddress"
+                },
+                {
+                    "name": "phoneNumber"
+                }
+            ],
+            [
+                {
+                    "name": "billingAddress"
+                },
+                {
+                    "name": "shippingAddress"
+                }
+            ]
         ]
     },
     {
         "label": "Details",
         "rows": [
-            [{ "name": "type" }, { "name": "industry" }],
-            [{ "name": "description", "fullWidth": true }]
+            [
+                {
+                    "name": "type"
+                },
+                {
+                    "name": "industry"
+                }
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Custom Fields",
+        "name": "customFieldsPanel",
+        "rows": [
+            [
+                {
+                    "name": "customFields",
+                    "fullWidth": true,
+                    "noLabel": true
+                }
+            ]
         ]
     },
     {
@@ -95,4 +141,3 @@
         ]
     }
 ]
-

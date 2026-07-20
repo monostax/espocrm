@@ -342,6 +342,28 @@
                         }
                     ]
                 }
+            },
+            "inboundEmail": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "email"
+                        }
+                    ]
+                }
+            },
+            "emailAccount": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "channelType",
+                            "value": "email"
+                        }
+                    ]
+                }
             }
         }
     },

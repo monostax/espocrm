@@ -135,6 +135,16 @@
             "entity": "Account",
             "foreign": "tenant"
         },
+        "customFieldGroups": {
+            "type": "hasMany",
+            "entity": "CustomFieldGroup",
+            "foreign": "tenant"
+        },
+        "customFieldDefs": {
+            "type": "hasMany",
+            "entity": "CustomFieldDef",
+            "foreign": "tenant"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

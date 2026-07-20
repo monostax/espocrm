@@ -2,11 +2,18 @@
     "labels": {
         "Tenant Management": "Tenant Management",
         "Tenants": "Tenants",
-        "User API Keys": "User API Keys"
+        "User API Keys": "User API Keys",
+        "Custom Field Groups": "Custom Field Groups",
+        "Custom Fields": "Custom Fields"
     },
     "descriptions": {
         "manageTenants": "Manage tenant records, base teams, and memberships",
-        "userApiKeys": "Manage per-user API keys. Each user can hold multiple keys for distinct integrations (e.g. Chat AI agents, automations), independent of the legacy single-key \"API User\" type."
+        "userApiKeys": "Manage per-user API keys. Each user can hold multiple keys for distinct integrations (e.g. Chat AI agents, automations), independent of the legacy single-key \"API User\" type.",
+        "customFieldGroups": "Define per-tenant field groups (panels like Address) for Contact, Lead, Account, Opportunity",
+        "customFieldDefs": "Define typed custom fields whose values are stored on each record without schema DDL"
+    },
+    "keywords": {
+        "customFieldGroups": "custom,field,group,panel,address,tenant",
+        "customFieldDefs": "custom,field,attribute,tenant,template"
     }
 }
-

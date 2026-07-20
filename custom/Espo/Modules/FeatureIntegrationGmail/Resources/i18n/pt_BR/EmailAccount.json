@@ -1,0 +1,27 @@
+{
+    "fields": {
+        "oAuthAccount": "Conta OAuth do Gmail"
+    },
+    "links": {
+        "oAuthAccount": "Conta OAuth do Gmail"
+    },
+    "labels": {
+        "Gmail": "Gmail",
+        "Connect Gmail": "Conectar Gmail",
+        "Reconnect": "Reconectar"
+    },
+    "tooltips": {
+        "oAuthAccount": "Vincule uma Conta OAuth do Google Gmail. Prefira o botão Conectar Gmail no painel lateral — ele cria a Conta OAuth e abre o consentimento. IMAP/SMTP usam XOAUTH2 (sem senha de app)."
+    },
+    "messages": {
+        "gmailOAuthConnected": "Gmail conectado. Hosts definidos para o padrão do Gmail. Use Testar Conexão / Enviar e-mail de teste para validar.",
+        "gmailOAuthDisconnected": "Gmail desconectado desta Conta de E-mail.",
+        "gmailDefaultsApplied": "Padrões IMAP/SMTP do Gmail aplicados.",
+        "gmailConnectHelp": "Conecte esta caixa com o Google. Cria uma conta OAuth em segundo plano e abre o login do Google — sem senha de app.",
+        "gmailLinkedButDisconnected": "Há uma conta OAuth vinculada, mas sem token de acesso. Clique em Reconectar para autorizar o Google novamente.",
+        "gmailSaveBeforeConnect": "Salve a Conta de E-mail primeiro e depois conecte o Gmail.",
+        "gmailProviderMissing": "Provedor OAuth Google Gmail não encontrado. Execute o rebuild e configure Client ID/Secret em Administração → Provedores OAuth.",
+        "gmailProviderNotConfigured": "Provedor OAuth Google Gmail não configurado (faltam Client ID / secret). Peça a um admin para configurar em Provedores OAuth.",
+        "gmailPopupBlocked": "Não foi possível abrir a janela de login do Google. Permita pop-ups neste site e tente de novo."
+    }
+}

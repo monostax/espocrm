@@ -1,0 +1,9 @@
+[
+    {"name": "label", "width": 22, "link": true},
+    {"name": "name", "width": 12},
+    {"name": "valueKey", "width": 16},
+    {"name": "type", "width": 10},
+    {"name": "entityType", "width": 12},
+    {"name": "group", "width": 14},
+    {"name": "isActive", "width": 8}
+]

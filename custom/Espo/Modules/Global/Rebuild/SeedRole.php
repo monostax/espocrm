@@ -84,6 +84,8 @@ class SeedRole implements RebuildAction
             'userPermission' => 'team',
             'messagePermission' => 'team',
             'portalPermission' => 'not-set',
+            // Lets users send via Group SMTP accounts shared with their team.
+            // (InboundEmail CRUD itself stays admin-only in core controller.)
             'groupEmailAccountPermission' => 'team',
             'exportPermission' => 'not-set',
             'massUpdatePermission' => 'yes',
@@ -96,6 +98,25 @@ class SeedRole implements RebuildAction
                 'Import' => true,
                 'ExternalAccount' => true,
                 'Activities' => true,
+                // Personal mailbox settings (IMAP/SMTP + Gmail OAuth connect).
+                // Scope is boolean (scopes/EmailAccountScope.json); entity EmailAccount
+                // has acl:false and is gated only through this flag + ownership.
+                'EmailAccountScope' => true,
+                // CRM Email entity (compose/read/archive). Required for the Email
+                // tab and for sending once a personal/group account is linked.
+                'Email' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'own',
+                    'stream' => 'team',
+                ],
+                'EmailTemplate' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
                 'Appointment' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -375,6 +396,20 @@ class SeedRole implements RebuildAction
                     'stream' => 'team',
                 ],
                 'Funnel' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                // Tenant-scoped custom field schema (admin panel: Custom Field Groups / Fields).
+                // Values on Contact/Account live in customFields jsonObject and follow host ACL.
+                'CustomFieldGroup' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'CustomFieldDef' => [
                     'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',
@@ -755,6 +790,7 @@ class SeedRole implements RebuildAction
             ],
             'fieldData' => [
                 'Email' => (object)[],
+                'EmailTemplate' => (object)[],
                 'IncomingWebhook' => (object)[],
                 'Team' => (object)[],
                 'Credential' => (object)[],
@@ -802,6 +838,8 @@ class SeedRole implements RebuildAction
                 'Task' => (object)[],
                 'Activities' => (object)[],
                 'Funnel' => (object)[],
+                'CustomFieldGroup' => (object)[],
+                'CustomFieldDef' => (object)[],
                 'Tenant' => (object)[],
                 'OpportunityStage' => (object)[],
 
@@ -1275,6 +1313,25 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                     ],
                     'TrackingLink' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+
+                    // Custom Fields — tenant-admin manages schema (groups +
+                    // typed defs) via the Configurations / admin-for-user
+                    // panel. Values on Contact/Lead/Account/Opportunity ride
+                    // host-entity ACL and need no separate grant here. Base
+                    // tenant role gets no CustomField* access so agents do
+                    // not see schema admin links.
+                    'CustomFieldGroup' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'CustomFieldDef' => [
                         'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',

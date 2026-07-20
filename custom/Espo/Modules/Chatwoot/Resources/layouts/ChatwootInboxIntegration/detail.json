@@ -38,6 +38,16 @@
             ],
             [
                 {
+                    "name": "inboundEmail",
+                    "span": 4
+                },
+                {
+                    "name": "emailAccount",
+                    "span": 4
+                }
+            ],
+            [
+                {
                     "name": "chatwootTeams",
                     "span": 8
                 }

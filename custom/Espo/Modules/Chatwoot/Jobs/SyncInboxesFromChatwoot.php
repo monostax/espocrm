@@ -7,6 +7,8 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\EmailChannelBridge;
+use Espo\Modules\Chatwoot\Services\SyncEmailOAuthCredentials;
 use Espo\Modules\Chatwoot\Services\SyncTwilioCredentials;
 
 /**
@@ -20,7 +22,9 @@ class SyncInboxesFromChatwoot implements JobDataLess
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private Log $log,
-        private SyncTwilioCredentials $syncTwilioCredentials
+        private SyncTwilioCredentials $syncTwilioCredentials,
+        private EmailChannelBridge $emailChannelBridge,
+        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials
     ) {}
 
     public function run(): void
@@ -141,7 +145,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
         
         foreach ($inboxes as $chatwootInbox) {
             try {
-                $this->syncSingleInbox($chatwootInbox, $espoAccountId, $teamsIds);
+                $localInbox = $this->syncSingleInbox($chatwootInbox, $espoAccountId, $teamsIds);
                 $stats['synced']++;
                 $chatwootInboxIds[] = $chatwootInbox['id'];
 
@@ -155,6 +159,26 @@ class SyncInboxesFromChatwoot implements JobDataLess
                     $chatwootInbox,
                     $teamsIds
                 );
+
+                // Channel::Email → mirror its linked mailbox + ChatwootInbox.
+                if ($localInbox) {
+                    $mailbox = $this->emailChannelBridge->pullFromChatwoot(
+                        $localInbox,
+                        $chatwootInbox,
+                        $espoAccountId,
+                        $teamsIds
+                    );
+
+                    $this->syncEmailOAuthCredentials->syncForInbox(
+                        $platformUrl,
+                        $apiKey,
+                        $chatwootAccountId,
+                        $chatwootInbox,
+                        $localInbox,
+                        $mailbox,
+                        $teamsIds
+                    );
+                }
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $inboxId = $chatwootInbox['id'] ?? 'unknown';
@@ -276,6 +300,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
             );
 
             try {
+                $this->syncEmailOAuthCredentials->revokeForInbox($inbox);
                 $this->entityManager->removeEntity($inbox, ['cascadeParent' => true]);
                 $deleted++;
             } catch (\Exception $e) {
@@ -300,7 +325,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
      *
      * @param array<string> $teamsIds Team IDs to assign to synced entities
      */
-    private function syncSingleInbox(array $chatwootInbox, string $espoAccountId, array $teamsIds = []): void
+    private function syncSingleInbox(array $chatwootInbox, string $espoAccountId, array $teamsIds = []): ?Entity
     {
         $chatwootInboxId = $chatwootInbox['id'];
 
@@ -315,7 +340,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
         if ($existingInbox) {
             $this->updateExistingInbox($existingInbox, $chatwootInbox, $teamsIds);
-            return;
+            return $existingInbox;
         }
 
         // Fall back to soft-deleted lookup and self-heal.
@@ -336,11 +361,11 @@ class SyncInboxesFromChatwoot implements JobDataLess
 
             if ($restored) {
                 $this->updateExistingInbox($restored, $chatwootInbox, $teamsIds);
-                return;
+                return $restored;
             }
         }
 
-        $this->createNewInbox($chatwootInbox, $espoAccountId, $teamsIds);
+        return $this->createNewInbox($chatwootInbox, $espoAccountId, $teamsIds);
     }
 
     /**
@@ -375,6 +400,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
     {
         $inbox->set('name', $chatwootInbox['name'] ?? 'Inbox #' . $chatwootInbox['id']);
         $inbox->set('channelType', $chatwootInbox['channel_type'] ?? null);
+        $inbox->set('remoteChannelType', $chatwootInbox['channel_type'] ?? null);
         $inbox->set('websiteUrl', $chatwootInbox['website_url'] ?? null);
         $inbox->set('phoneNumber', $chatwootInbox['phone_number'] ?? null);
         $inbox->set('provider', $chatwootInbox['provider'] ?? null);
@@ -406,13 +432,14 @@ class SyncInboxesFromChatwoot implements JobDataLess
      *
      * @param array<string> $teamsIds Team IDs to assign to synced entities
      */
-    private function createNewInbox(array $chatwootInbox, string $espoAccountId, array $teamsIds = []): void
+    private function createNewInbox(array $chatwootInbox, string $espoAccountId, array $teamsIds = []): Entity
     {
         $data = [
             'name' => $chatwootInbox['name'] ?? 'Inbox #' . $chatwootInbox['id'],
             'chatwootInboxId' => $chatwootInbox['id'],
             'chatwootAccountId' => $espoAccountId,
             'channelType' => $chatwootInbox['channel_type'] ?? null,
+            'remoteChannelType' => $chatwootInbox['channel_type'] ?? null,
             'websiteUrl' => $chatwootInbox['website_url'] ?? null,
             'phoneNumber' => $chatwootInbox['phone_number'] ?? null,
             'provider' => $chatwootInbox['provider'] ?? null,
@@ -436,7 +463,8 @@ class SyncInboxesFromChatwoot implements JobDataLess
             $data['teamsIds'] = $teamsIds;
         }
 
-        $this->entityManager->createEntity('ChatwootInbox', $data, ['silent' => true]);
+        /** @var Entity */
+        return $this->entityManager->createEntity('ChatwootInbox', $data, ['silent' => true]);
     }
 
     /**

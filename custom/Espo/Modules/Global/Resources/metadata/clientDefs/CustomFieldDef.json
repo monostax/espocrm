@@ -1,0 +1,68 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-puzzle-piece",
+    "boolFilterList": ["onlyMy", "onlyActive"],
+    "filterList": ["active", "all"],
+    "defaultFilterData": {
+        "active": {
+            "isActive": true
+        }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "options": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["enum", "multiEnum"]
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["enum", "multiEnum"]
+                        }
+                    ]
+                }
+            },
+            "maxLength": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["varchar", "text"]
+                        }
+                    ]
+                }
+            },
+            "min": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["int", "float"]
+                        }
+                    ]
+                }
+            },
+            "max": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["int", "float"]
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

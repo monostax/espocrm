@@ -3,5 +3,13 @@
         "route": "/Activities/action/list",
         "method": "get",
         "actionClassName": "Espo\\Modules\\Global\\Tools\\Activities\\Api\\GetList"
+    },
+    {
+        "route": "/CustomField/action/meta",
+        "method": "get",
+        "params": {
+            "controller": "CustomField",
+            "action": "meta"
+        }
     }
 ]

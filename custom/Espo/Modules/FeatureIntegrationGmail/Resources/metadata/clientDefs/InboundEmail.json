@@ -1,0 +1,27 @@
+{
+    "viewSetupHandlers": {
+        "record/detail": [
+            "feature-integration-gmail:handlers/inbound-email/detail-setup"
+        ],
+        "record/edit": [
+            "feature-integration-gmail:handlers/inbound-email/detail-setup"
+        ]
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "gmailConnection",
+                "label": "Gmail",
+                "view": "feature-integration-gmail:views/inbound-email/panels/gmail-connection",
+                "acl": "edit",
+                "notRefreshable": true,
+                "sticked": true
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "oAuthAccount": {
+            "selectPrimaryFilterName": "gmail"
+        }
+    }
+}

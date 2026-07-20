@@ -3,16 +3,23 @@
         "Integrations": "Integrations",
         "OAuth Providers": "OAuth Providers",
         "OAuth Accounts": "OAuth Accounts",
-        "Sidenav": "Navigation"
+        "Sidenav": "Navigation",
+        "Custom Field Groups": "Custom Field Groups",
+        "Custom Fields": "Custom Fields",
+        "Data": "Data"
     },
     "descriptions": {
         "oauthProviders": "Manage OAuth provider connections for third-party services",
         "oauthAccounts": "Manage linked OAuth accounts and authorizations",
-        "sidenavConfigs": "Configure team-specific navigation sidebars"
+        "sidenavConfigs": "Configure team-specific navigation sidebars",
+        "customFieldGroups": "Define per-tenant field groups (panels like Address) for Contact, Lead, Account, Opportunity",
+        "customFieldDefs": "Define typed custom fields whose values are stored on each record without schema DDL"
     },
     "keywords": {
         "oauthProviders": "oauth,provider,integration,api,connect",
         "oauthAccounts": "oauth,account,authorization,token,linked",
-        "sidenavConfigs": "navigation,sidebar,menu,tabs"
+        "sidenavConfigs": "navigation,sidebar,menu,tabs",
+        "customFieldGroups": "custom,field,group,panel,address,tenant,schema",
+        "customFieldDefs": "custom,field,attribute,tenant,template,variable"
     }
 }

@@ -10,6 +10,14 @@
             "type": "linkMultiple",
             "required": true,
             "view": "views/fields/teams"
+        },
+        "customFields": {
+            "type": "jsonObject",
+            "view": "global:views/fields/custom-fields",
+            "tooltip": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
         }
     },
     "links": {
@@ -21,4 +29,3 @@
         }
     }
 }
-

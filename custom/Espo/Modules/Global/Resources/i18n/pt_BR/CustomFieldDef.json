@@ -1,0 +1,71 @@
+{
+    "fields": {
+        "name": "Nome",
+        "label": "Rótulo",
+        "entityType": "Tipo de Entidade",
+        "type": "Tipo",
+        "valueKey": "Chave de Valor",
+        "options": "Opções",
+        "isRequired": "Obrigatório",
+        "defaultValue": "Valor Padrão",
+        "maxLength": "Tamanho Máximo",
+        "min": "Mínimo",
+        "max": "Máximo",
+        "sortOrder": "Ordem",
+        "isActive": "Ativo",
+        "isTemplateEnabled": "Disponível em Templates",
+        "description": "Descrição",
+        "group": "Grupo",
+        "tenant": "Tenant",
+        "teams": "Times",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "links": {
+        "group": "Grupo",
+        "tenant": "Tenant",
+        "teams": "Times",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "labels": {
+        "Create CustomFieldDef": "Criar Campo Personalizado"
+    },
+    "tooltips": {
+        "name": "Nome técnico (sem pontos). Combinado com o grupo na criação para formar o valueKey (ex.: city → address.city).",
+        "valueKey": "Chave imutável de armazenamento/template. E-mail/WhatsApp usam {{customFields.<valueKey>}}. Não pode ser alterada após a criação.",
+        "isTemplateEnabled": "Quando ativo, aparece nos seletores de Email Template e campanhas WhatsApp.",
+        "options": "Valores permitidos para enum / multiEnum.",
+        "defaultValue": "Aplicado quando o registro ainda não tem valor.",
+        "tenant": "Derivado automaticamente dos times ou do grupo pai."
+    },
+    "boolFilters": {
+        "onlyMy": "Apenas Meus",
+        "onlyActive": "Apenas Ativos"
+    },
+    "presetFilters": {
+        "active": "Ativos",
+        "all": "Todos"
+    },
+    "options": {
+        "entityType": {
+            "Contact": "Contato",
+            "Lead": "Lead",
+            "Account": "Conta",
+            "Opportunity": "Oportunidade"
+        },
+        "type": {
+            "varchar": "Texto (uma linha)",
+            "text": "Texto (múltiplas linhas)",
+            "int": "Inteiro",
+            "float": "Número",
+            "bool": "Caixa de seleção",
+            "date": "Data",
+            "datetime": "Data e Hora",
+            "enum": "Lista",
+            "multiEnum": "Múltipla escolha"
+        }
+    }
+}

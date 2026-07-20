@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "chatwootInbox": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        }
+    },
+    "links": {
+        "chatwootInbox": {
+            "type": "hasOne",
+            "entity": "ChatwootInbox",
+            "foreign": "inboundEmail"
+        },
+        "chatwootInboxIntegrations": {
+            "type": "hasMany",
+            "entity": "ChatwootInboxIntegration",
+            "foreign": "inboundEmail"
+        }
+    }
+}

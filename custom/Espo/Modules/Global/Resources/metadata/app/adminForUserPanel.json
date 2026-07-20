@@ -34,6 +34,20 @@
                 "label": "Import",
                 "iconClass": "fas fa-file-import",
                 "description": "import"
+            },
+            {
+                "url": "#CustomFieldGroup",
+                "label": "Custom Field Groups",
+                "iconClass": "fas fa-layer-group",
+                "description": "customFieldGroups",
+                "tabQuickSearch": true
+            },
+            {
+                "url": "#CustomFieldDef",
+                "label": "Custom Fields",
+                "iconClass": "fas fa-puzzle-piece",
+                "description": "customFieldDefs",
+                "tabQuickSearch": true
             }
         ]
     },

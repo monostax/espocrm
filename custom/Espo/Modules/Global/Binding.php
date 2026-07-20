@@ -13,6 +13,7 @@ namespace Espo\Modules\Global;
 
 use Espo\Core\Binding\Binder;
 use Espo\Core\Binding\BindingProcessor;
+use Espo\Modules\Global\Tools\EmailTemplate\Processor as EmailTemplateProcessor;
 use Espo\Modules\Global\Tools\Kanban\CustomOrderer;
 use Espo\Modules\Global\Tools\Kanban\KanbanService;
 use Espo\Modules\Global\Tools\Report\Service as ReportService;
@@ -55,6 +56,18 @@ class Binding implements BindingProcessor
         $binder->bindImplementation(
             \Espo\Modules\Advanced\Tools\Report\TargetListSyncService::class,
             ReportTargetListSyncService::class
+        );
+
+        // Nest / classic-flatten tenant customFields for Email templates.
+        $binder->bindImplementation(
+            \Espo\Tools\EmailTemplate\Processor::class,
+            EmailTemplateProcessor::class
+        );
+
+        // customFields.<valueKey> leaf columns + bag merge on CSV import.
+        $binder->bindImplementation(
+            \Espo\Tools\Import\Import::class,
+            \Espo\Modules\Global\Tools\Import\Import::class
         );
     }
 }

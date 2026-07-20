@@ -1,0 +1,71 @@
+{
+    "fields": {
+        "name": "Name",
+        "label": "Label",
+        "entityType": "Entity Type",
+        "type": "Type",
+        "valueKey": "Value Key",
+        "options": "Options",
+        "isRequired": "Required",
+        "defaultValue": "Default Value",
+        "maxLength": "Max Length",
+        "min": "Min",
+        "max": "Max",
+        "sortOrder": "Sort Order",
+        "isActive": "Active",
+        "isTemplateEnabled": "Available in Templates",
+        "description": "Description",
+        "group": "Group",
+        "tenant": "Tenant",
+        "teams": "Teams",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "links": {
+        "group": "Group",
+        "tenant": "Tenant",
+        "teams": "Teams",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "labels": {
+        "Create CustomFieldDef": "Create Custom Field"
+    },
+    "tooltips": {
+        "name": "Machine name (no dots). Combined with the group name on create to form valueKey (e.g. city → address.city).",
+        "valueKey": "Immutable storage/template key. Email/WhatsApp use {{customFields.<valueKey>}} with dots nested for handlebars (address.city → customFields.address.city). Changing this after create is forbidden.",
+        "isTemplateEnabled": "When enabled, this field appears in Email Template and WhatsApp Campaign parameter pickers.",
+        "options": "Allowed values for enum / multiEnum types.",
+        "defaultValue": "Applied as a string default when the record has no value yet (type coercion happens in the UI).",
+        "tenant": "Derived automatically from teams or the parent group."
+    },
+    "boolFilters": {
+        "onlyMy": "Only My",
+        "onlyActive": "Active Only"
+    },
+    "presetFilters": {
+        "active": "Active",
+        "all": "All"
+    },
+    "options": {
+        "entityType": {
+            "Contact": "Contact",
+            "Lead": "Lead",
+            "Account": "Account",
+            "Opportunity": "Opportunity"
+        },
+        "type": {
+            "varchar": "Text (single line)",
+            "text": "Text (multi line)",
+            "int": "Integer",
+            "float": "Number",
+            "bool": "Checkbox",
+            "date": "Date",
+            "datetime": "Date & Time",
+            "enum": "Dropdown",
+            "multiEnum": "Multi-select"
+        }
+    }
+}

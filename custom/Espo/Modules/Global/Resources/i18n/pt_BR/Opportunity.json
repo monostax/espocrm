@@ -12,7 +12,8 @@
         "stageName": "Nome do Estágio",
         "stageProbability": "Probabilidade do Estágio",
         "sourceChannel": "Canal de Origem",
-        "sourceTargetList": "Lista de Prospecção de Origem"
+        "sourceTargetList": "Lista de Prospecção de Origem",
+        "customFields": "Campos Personalizados"
     },
     "links": {
         "funnel": "Funil",
@@ -66,7 +67,8 @@
         "funnel": "O funil de vendas ao qual esta oportunidade pertence. Os estágios serão filtrados com base no funil selecionado.",
         "opportunityStage": "O estágio atual desta oportunidade. Os estágios são filtrados pelo funil selecionado.",
         "sourceChannel": "O canal de aquisição que originou esta oportunidade. Definido uma única vez na criação (primeiro toque) e nunca sobrescrito.",
-        "sourceTargetList": "O lote de prospecção (Lista de Alvos) que originou esta oportunidade. Definido apenas para oportunidades Outbound, no momento da criação."
+        "sourceTargetList": "O lote de prospecção (Lista de Alvos) que originou esta oportunidade. Definido apenas para oportunidades Outbound, no momento da criação.",
+        "customFields": "Atributos personalizados do tenant. Os valores seguem o ACL do registro."
     },
     "messages": {
         "stageDeprecated": "O campo enum 'Estágio' foi substituído por um link para OpportunityStage. Isso permite estágios personalizados com diferentes probabilidades e estilos.",
@@ -82,6 +84,3 @@
         "followupActive": "Follow-up: Ativo"
     }
 }
-
-
-

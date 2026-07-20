@@ -2,11 +2,18 @@
     "labels": {
         "Tenant Management": "Gestão de Ambientes",
         "Tenants": "Ambientes",
-        "User API Keys": "Chaves de API (Usuário)"
+        "User API Keys": "Chaves de API (Usuário)",
+        "Custom Field Groups": "Grupos de Campos Personalizados",
+        "Custom Fields": "Campos Personalizados"
     },
     "descriptions": {
         "manageTenants": "Gerenciar registros de ambientes, time base e associações",
-        "userApiKeys": "Gerenciar chaves de API por usuário. Cada usuário pode possuir múltiplas chaves para integrações distintas (ex.: agentes IA do Chat, automações), independentes da chave legada do tipo \"API User\"."
+        "userApiKeys": "Gerenciar chaves de API por usuário. Cada usuário pode possuir múltiplas chaves para integrações distintas (ex.: agentes IA do Chat, automações), independentes da chave legada do tipo \"API User\".",
+        "customFieldGroups": "Defina grupos de campos por tenant (painéis como Endereço) para Contato, Lead, Conta, Oportunidade",
+        "customFieldDefs": "Defina campos tipados cujos valores ficam no registro sem alterar o schema do banco"
+    },
+    "keywords": {
+        "customFieldGroups": "personalizado,campo,grupo,painel,tenant",
+        "customFieldDefs": "personalizado,campo,atributo,tenant,template"
     }
 }
-

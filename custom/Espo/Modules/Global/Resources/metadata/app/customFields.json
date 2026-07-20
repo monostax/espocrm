@@ -1,0 +1,20 @@
+{
+    "entityTypeList": [
+        "Contact",
+        "Lead",
+        "Account",
+        "Opportunity"
+    ],
+    "attributeName": "customFields",
+    "allowedTypes": [
+        "varchar",
+        "text",
+        "int",
+        "float",
+        "bool",
+        "date",
+        "datetime",
+        "enum",
+        "multiEnum"
+    ]
+}

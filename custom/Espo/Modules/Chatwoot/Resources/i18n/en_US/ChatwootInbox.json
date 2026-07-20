@@ -5,12 +5,25 @@
         "status": "Status",
         "channelType": "Channel Type",
         "autoPendingEnabled": "Auto-Pending Enabled",
-        "chatwootTeams": "Chatwoot Teams"
+        "chatwootTeams": "Chatwoot Teams",
+        "remoteChannelType": "Remote Channel Type",
+        "inboundEmail": "Group Email Account",
+        "emailAccount": "Personal Email Account",
+        "emailFetchOwner": "Email Fetch Owner"
     },
     "links": {
         "accountUserMemberships": "Chat / Inbox / Agents",
         "chatwootInboxIntegration": "Channel Connection",
-        "chatwootTeams": "Chatwoot Teams"
+        "chatwootTeams": "Chatwoot Teams",
+        "inboundEmail": "Group Email Account",
+        "emailAccount": "Personal Email Account"
+    },
+    "options": {
+        "emailFetchOwner": {
+            "": "—",
+            "chatwoot": "Chatwoot",
+            "crm": "CRM"
+        }
     },
     "labels": {
         "metadata": "Metadata",
@@ -32,6 +45,10 @@
         "companionLinkStarted": "Scan the QR code in the Channel Connection tab to link the WhatsApp companion."
     },
     "tooltips": {
-        "chatwootTeams": "Chatwoot teams linked to this inbox. Members of linked teams automatically become inbox collaborators in Chatwoot (department-scoped inbox access)."
+        "chatwootTeams": "Chatwoot teams linked to this inbox. Members of linked teams automatically become inbox collaborators in Chatwoot (department-scoped inbox access).",
+        "remoteChannelType": "Raw channel_type from Chatwoot (e.g. Channel::Email).",
+        "inboundEmail": "Mirrored CRM group mailbox for this Channel::Email inbox.",
+        "emailAccount": "Mirrored CRM personal mailbox for this Channel::Email inbox.",
+        "emailFetchOwner": "Which side polls IMAP. Dual-fetch is always avoided; Chatwoot is the default owner."
     }
 }

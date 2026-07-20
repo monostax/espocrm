@@ -113,6 +113,19 @@
         ]
     },
     {
+        "label": "Custom Fields",
+        "name": "customFieldsPanel",
+        "rows": [
+            [
+                {
+                    "name": "customFields",
+                    "fullWidth": true,
+                    "noLabel": true
+                }
+            ]
+        ]
+    },
+    {
         "tabBreak": true,
         "tabLabel": "$Documents",
         "name": "documentsTab",
@@ -166,4 +179,3 @@
         ]
     }
 ]
-

@@ -44,8 +44,11 @@ class ChatwootAccountMembershipOrchestrator
     ) {}
 
     /**
+     * UI path: add an agent/admin under ACL for the current user.
+     *
      * @throws BadRequest
      * @throws Error
+     * @throws Forbidden
      * @throws NotFound
      */
     public function addUserMembership(string $accountId, string $userId, string $role): Entity
@@ -78,7 +81,27 @@ class ChatwootAccountMembershipOrchestrator
             throw new Forbidden('noUserAccess');
         }
 
+        return $this->ensureUserMembership($account, $user, $role);
+    }
+
+    /**
+     * System path (jobs / email bridge): ensure CRM user is an account agent.
+     * Skips ACL; still requires account team membership when the account has teams.
+     *
+     * @throws BadRequest
+     * @throws Error
+     * @throws Forbidden
+     * @throws NotFound
+     */
+    public function ensureUserMembership(
+        Entity $account,
+        Entity $user,
+        string $role = 'agent'
+    ): Entity {
         $this->assertUserBelongsToAccountTeam($account, $user);
+
+        $accountId = $account->getId();
+        $userId = $user->getId();
 
         $platformId = $account->get('platformId');
         if (!$platformId) {

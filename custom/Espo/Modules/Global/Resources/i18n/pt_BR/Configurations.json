@@ -6,7 +6,10 @@
         "Funnels": "Funis de Oportunidade",
         "Integrations": "Integrações",
         "OAuth Providers": "Provedores OAuth",
-        "OAuth Accounts": "Contas OAuth"
+        "OAuth Accounts": "Contas OAuth",
+        "Custom Field Groups": "Grupos de Campos Personalizados",
+        "Custom Fields": "Campos Personalizados",
+        "Data": "Dados"
     },
     "descriptions": {
         "users": "Gerenciar usuários da plataforma",
@@ -14,14 +17,18 @@
         "teams": "Gerenciar times de usuários",
         "funnels": "Gerenciar Funis de vendas",
         "oauthProviders": "Gerenciar conexões de provedores OAuth para serviços de terceiros",
-        "oauthAccounts": "Gerenciar contas OAuth vinculadas e autorizações"
+        "oauthAccounts": "Gerenciar contas OAuth vinculadas e autorizações",
+        "customFieldGroups": "Defina grupos de campos por tenant (painéis como Endereço) para Contato, Lead, Conta, Oportunidade",
+        "customFieldDefs": "Defina campos tipados cujos valores ficam no registro sem alterar o schema do banco"
     },
     "keywords": {
         "users": "usuários,usuario,usuarios",
         "data": "importar,csv",
         "sales": "funis,funil,vendas",
         "oauthProviders": "oauth,provedor,integração,api,conectar",
-        "oauthAccounts": "oauth,conta,autorização,token,vinculada"
+        "oauthAccounts": "oauth,conta,autorização,token,vinculada",
+        "customFieldGroups": "personalizado,campo,grupo,painel,endereco,tenant,schema",
+        "customFieldDefs": "personalizado,campo,atributo,tenant,template,variavel"
     }
 }
 

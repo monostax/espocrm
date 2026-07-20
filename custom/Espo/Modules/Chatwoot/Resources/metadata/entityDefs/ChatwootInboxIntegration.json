@@ -47,16 +47,25 @@
         },
         "channelType": {
             "type": "enum",
-            "options": ["whatsappQrcode", "whatsappCloudApi", "whatsappCoexistence", "instagram"],
+            "options": ["whatsappQrcode", "whatsappCloudApi", "whatsappCoexistence", "instagram", "email"],
             "default": "whatsappQrcode",
             "view": "global:views/fields/svg-icon-enum",
             "svgIconByValue": {
                 "whatsappQrcode": "whatsapp",
                 "whatsappCloudApi": "whatsapp",
                 "whatsappCoexistence": "whatsapp",
-                "instagram": "instagram"
+                "instagram": "instagram",
+                "email": "mail"
             },
             "readOnlyAfterCreate": true
+        },
+        "inboundEmail": {
+            "type": "link",
+            "tooltip": true
+        },
+        "emailAccount": {
+            "type": "link",
+            "tooltip": true
         },
         "wahaPlatform": {
             "type": "link",
@@ -273,6 +282,16 @@
         "oAuthAccount": {
             "type": "belongsTo",
             "entity": "OAuthAccount"
+        },
+        "inboundEmail": {
+            "type": "belongsTo",
+            "entity": "InboundEmail",
+            "foreign": "chatwootInboxIntegrations"
+        },
+        "emailAccount": {
+            "type": "belongsTo",
+            "entity": "EmailAccount",
+            "foreign": "chatwootInboxIntegrations"
         },
         "createdBy": {
             "type": "belongsTo",

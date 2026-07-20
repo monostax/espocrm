@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "oAuthAccount": {
+            "type": "link",
+            "view": "feature-integration-gmail:views/inbound-email/fields/o-auth-account",
+            "tooltip": true
+        }
+    },
+    "links": {
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount",
+            "foreign": "inboundEmails"
+        }
+    }
+}

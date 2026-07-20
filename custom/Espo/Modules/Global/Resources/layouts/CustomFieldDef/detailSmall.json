@@ -1,0 +1,13 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "label"}],
+            [{"name": "name"}],
+            [{"name": "type"}],
+            [{"name": "valueKey"}],
+            [{"name": "isRequired"}],
+            [{"name": "isActive"}]
+        ]
+    }
+]

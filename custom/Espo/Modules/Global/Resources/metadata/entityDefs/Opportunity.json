@@ -61,7 +61,11 @@
         },
         "status": {
             "type": "enum",
-            "options": ["Open", "Won", "Lost"],
+            "options": [
+                "Open",
+                "Won",
+                "Lost"
+            ],
             "default": "Open",
             "readOnly": true,
             "displayAsLabel": true,
@@ -74,7 +78,11 @@
         },
         "followupStatus": {
             "type": "enum",
-            "options": ["ActionNeeded", "FollowupActive", "Ended"],
+            "options": [
+                "ActionNeeded",
+                "FollowupActive",
+                "Ended"
+            ],
             "default": "ActionNeeded",
             "required": true,
             "audited": true,
@@ -139,7 +147,14 @@
         },
         "sourceChannel": {
             "type": "enum",
-            "options": ["", "Outbound", "MetaLeadAds", "CTWA", "TrackingLink", "InboundOrganic"],
+            "options": [
+                "",
+                "Outbound",
+                "MetaLeadAds",
+                "CTWA",
+                "TrackingLink",
+                "InboundOrganic"
+            ],
             "default": "",
             "audited": true,
             "readOnlyAfterCreate": true,
@@ -151,6 +166,14 @@
             "audited": true,
             "readOnlyAfterCreate": true,
             "tooltip": true
+        },
+        "customFields": {
+            "type": "jsonObject",
+            "view": "global:views/fields/custom-fields",
+            "tooltip": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
         }
     },
     "links": {
@@ -182,10 +205,15 @@
     },
     "indexes": {
         "funnelId": {
-            "columns": ["funnelId"]
+            "columns": [
+                "funnelId"
+            ]
         },
         "followupTimer": {
-            "columns": ["followupTimer", "deleted"]
+            "columns": [
+                "followupTimer",
+                "deleted"
+            ]
         }
     },
     "dynamicLogic": {
@@ -213,4 +241,3 @@
         }
     }
 }
-

@@ -1,0 +1,12 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "label"}],
+            [{"name": "name"}],
+            [{"name": "entityType"}],
+            [{"name": "isActive"}],
+            [{"name": "teams"}]
+        ]
+    }
+]

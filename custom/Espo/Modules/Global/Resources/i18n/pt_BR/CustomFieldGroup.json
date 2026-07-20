@@ -1,0 +1,49 @@
+{
+    "fields": {
+        "name": "Nome",
+        "label": "Rótulo",
+        "entityType": "Tipo de Entidade",
+        "iconClass": "Classe do Ícone",
+        "sortOrder": "Ordem",
+        "isActive": "Ativo",
+        "description": "Descrição",
+        "tenant": "Tenant",
+        "teams": "Times",
+        "fields": "Campos",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "links": {
+        "tenant": "Tenant",
+        "teams": "Times",
+        "fields": "Campos",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "labels": {
+        "Create CustomFieldGroup": "Criar Grupo de Campos"
+    },
+    "tooltips": {
+        "name": "Nome técnico usado como prefixo do valueKey (ex.: address → address.city). Começa com letra minúscula; letras/números/underscore. Sem pontos.",
+        "iconClass": "Classe opcional de ícone (ex.: fas fa-map-marker-alt).",
+        "tenant": "Derivado automaticamente dos times selecionados."
+    },
+    "boolFilters": {
+        "onlyMy": "Apenas Meus",
+        "onlyActive": "Apenas Ativos"
+    },
+    "presetFilters": {
+        "active": "Ativos",
+        "all": "Todos"
+    },
+    "options": {
+        "entityType": {
+            "Contact": "Contato",
+            "Lead": "Lead",
+            "Account": "Conta",
+            "Opportunity": "Oportunidade"
+        }
+    }
+}

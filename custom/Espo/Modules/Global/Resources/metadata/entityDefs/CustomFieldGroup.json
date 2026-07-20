@@ -1,0 +1,126 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 60,
+            "trim": true,
+            "pattern": "^[a-z][a-zA-Z0-9_]*$",
+            "tooltip": true
+        },
+        "label": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true
+        },
+        "entityType": {
+            "type": "enum",
+            "required": true,
+            "options": ["Contact", "Lead", "Account", "Opportunity"],
+            "default": "Contact",
+            "view": "views/fields/enum"
+        },
+        "iconClass": {
+            "type": "varchar",
+            "maxLength": 80,
+            "trim": true,
+            "tooltip": true
+        },
+        "sortOrder": {
+            "type": "int",
+            "default": 10,
+            "min": 0
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "required": true,
+            "view": "views/fields/teams"
+        },
+        "fields": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "customFieldGroups"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "fields": {
+            "type": "hasMany",
+            "entity": "CustomFieldDef",
+            "foreign": "group"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "sortOrder",
+        "order": "asc"
+    },
+    "indexes": {
+        "nameTenantEntity": {
+            "unique": true,
+            "columns": ["name", "tenantId", "entityType", "deleted"]
+        },
+        "tenantEntity": {
+            "columns": ["tenantId", "entityType"]
+        },
+        "isActive": {
+            "columns": ["isActive"]
+        },
+        "sortOrder": {
+            "columns": ["sortOrder"]
+        }
+    }
+}

@@ -6,7 +6,11 @@
   "source": "Source",
   "tags": "Tags",
   "tenant": "Tenant",
-  "whatsAppOptedOut": "WhatsApp Opted Out"
+  "whatsAppOptedOut": "WhatsApp Opted Out",
+  "customFields": "Custom Fields"
+ },
+ "tooltips": {
+  "customFields": "Tenant-defined custom attributes for this contact. Values follow Contact access control."
  },
     "links": {
         "tenant": "Tenant"

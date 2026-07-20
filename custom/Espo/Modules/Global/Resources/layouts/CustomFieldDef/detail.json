@@ -1,0 +1,17 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "label"}, {"name": "name"}],
+            [{"name": "valueKey"}, {"name": "type"}],
+            [{"name": "entityType"}, {"name": "group"}],
+            [{"name": "isRequired"}, {"name": "isTemplateEnabled"}],
+            [{"name": "isActive"}, {"name": "sortOrder"}],
+            [{"name": "defaultValue"}, {"name": "maxLength"}],
+            [{"name": "min"}, {"name": "max"}],
+            [{"name": "options", "fullWidth": true}],
+            [{"name": "teams"}, {"name": "tenant"}],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    }
+]
