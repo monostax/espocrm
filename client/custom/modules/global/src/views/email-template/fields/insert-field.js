@@ -11,180 +11,287 @@
 /**
  * Adds tenant custom-field placeholders to the Email Template Insert Field picker.
  *
- * - Host:    {Contact.customFields.address.city}
- * - Related: {Contact.account.customFields.address.city} (belongsTo one-hop)
+ * For every entity in app.customFields.entityTypeList (Contact, Lead, Account,
+ * Opportunity, …) that the user can read:
+ *   - Host:    {Contact.customFields.campaign__fast_victory.nomeClinica}
+ *   - Person:  {Person.customFields....}  (mirrored from Contact/Lead)
+ *   - Related: {Contact.account.customFields....}  (belongsTo one-hop)
+ *
+ * Loads `CustomField/action/templateVariables` per enabled entity. The API
+ * unions schema across the user's accessible tenants when no single tenant
+ * is in context (Email Template has no host record).
  */
-define('global:views/email-template/fields/insert-field', [
-    'views/email-template/fields/insert-field',
-], function (Dep) {
+define("global:views/email-template/fields/insert-field", [
+	"views/email-template/fields/insert-field",
+], (Dep) =>
+	class extends Dep {
+		/**
+		 * @type {Record<string, Array>}
+		 */
+		customFieldPlaceholders = {};
 
-    return class extends Dep {
+		setup() {
+			super.setup();
 
-        /**
-         * @type {Record<string, Array>}
-         */
-        customFieldPlaceholders = {};
+			if (this.mode === this.MODE_LIST) {
+				return;
+			}
 
-        setup() {
-            super.setup();
+			// Core setup builds entityFields from metadata attributes only.
+			// Wait until CF defs are injected before the field <select> is useful.
+			this.wait(this.loadCustomFieldPlaceholders());
+		}
 
-            if (this.mode === this.MODE_LIST) {
-                return;
-            }
+		/**
+		 * @return {Promise}
+		 */
+		loadCustomFieldPlaceholders() {
+			const enabled =
+				this.getMetadata().get(["app", "customFields", "entityTypeList"]) || [];
+			const scopes = Array.isArray(enabled) ? enabled.slice() : [];
 
-            this.wait(this.loadCustomFieldPlaceholders());
-        }
+			if (!scopes.length) {
+				return Promise.resolve();
+			}
 
-        /**
-         * @return {Promise}
-         */
-        loadCustomFieldPlaceholders() {
-            const enabled =
-                this.getMetadata().get(['app', 'customFields', 'entityTypeList']) || [];
-            const scopes = Array.isArray(enabled) ? enabled : [];
+			const attrName =
+				this.getMetadata().get(["app", "customFields", "attributeName"]) ||
+				"customFields";
 
-            if (!scopes.length) {
-                return Promise.resolve();
-            }
+			this.customFieldPlaceholders = {};
 
-            const attrName =
-                this.getMetadata().get(['app', 'customFields', 'attributeName']) ||
-                'customFields';
+			const promises = scopes.map((entityType) => {
+				if (!this.getAcl().checkScope(entityType)) {
+					return Promise.resolve();
+				}
 
-            const promises = scopes.map(entityType => {
-                if (!this.getAcl().checkScope(entityType)) {
-                    return Promise.resolve();
-                }
+				// Ensure a bucket exists even if core filtered the scope out
+				// (ACL race / exotic scope flags). Insertion still needs a home.
+				this.ensureEntityBucket(entityType);
 
-                const url =
-                    'CustomField/action/templateVariables?entityType=' +
-                    encodeURIComponent(entityType);
+				const url =
+					"CustomField/action/templateVariables?entityType=" +
+					encodeURIComponent(entityType);
 
-                return Espo.Ajax.getRequest(url)
-                    .then(response => {
-                        const list = (response && response.list) || [];
+				return Espo.Ajax.getRequest(url)
+					.then((response) => {
+						const list = (response && response.list) || [];
 
-                        if (!list.length) {
-                            return;
-                        }
+						this.customFieldPlaceholders[entityType] = list;
 
-                        this.customFieldPlaceholders[entityType] = list;
+						if (!list.length) {
+							return;
+						}
 
-                        this.injectHostCustomFields(entityType, list, attrName);
-                    })
-                    .catch(() => {});
-            });
+						this.injectHostCustomFields(entityType, list, attrName);
 
-            return Promise.all(promises).then(() => {
-                this.injectRelatedCustomFields(scopes, attrName);
-            });
-        }
+						// Person is Espo's catch-all for Contact/Lead person-name
+						// targets. Mirror CF leaves so {Person.customFields.*} can
+						// be inserted the same way native person fields are.
+						if (entityType === "Contact" || entityType === "Lead") {
+							this.injectHostCustomFields("Person", list, attrName);
+						}
+					})
+					.catch((err) => {
+						console.warn(
+							"email-template insert-field: failed templateVariables for " +
+								entityType,
+							err,
+						);
+					});
+			});
 
-        /**
-         * @param {string} entityType
-         * @param {Array} list
-         * @param {string} attrName
-         */
-        injectHostCustomFields(entityType, list, attrName) {
-            if (!this.entityFields || !this.entityFields[entityType]) {
-                return;
-            }
+			return Promise.all(promises).then(() => {
+				this.injectRelatedCustomFields(scopes, attrName);
+				this.refreshFieldSelect();
+			});
+		}
 
-            if (!this.translatedOptions[entityType]) {
-                this.translatedOptions[entityType] = {};
-            }
+		/**
+		 * Guarantee entityFields / translatedOptions blobs for a scope.
+		 *
+		 * @param {string} entityType
+		 */
+		ensureEntityBucket(entityType) {
+			if (!this.entityFields) {
+				this.entityFields = {};
+			}
 
-            list.forEach(item => {
-                const field = attrName + '.' + item.valueKey;
-                const group = item.groupLabel ? item.groupLabel + ' · ' : '';
-                const label =
-                    'Custom Fields · ' + group + (item.label || item.valueKey);
+			if (!this.translatedOptions) {
+				this.translatedOptions = {};
+			}
 
-                if (!this.entityFields[entityType].includes(field)) {
-                    this.entityFields[entityType].push(field);
-                }
+			if (!this.entityFields[entityType]) {
+				this.entityFields[entityType] = [];
+			}
 
-                this.translatedOptions[entityType][field] = label;
-            });
-        }
+			if (!this.translatedOptions[entityType]) {
+				this.translatedOptions[entityType] = {};
+			}
 
-        /**
-         * One-hop belongsTo: Contact + account → Account CF defs.
-         *
-         * @param {string[]} enabledScopes
-         * @param {string} attrName
-         */
-        injectRelatedCustomFields(enabledScopes, attrName) {
-            if (!this.entityFields) {
-                return;
-            }
+			// Keep the entity <select> in sync if core did not include the scope.
+			if (
+				entityType !== "Person" &&
+				Array.isArray(this.entityList) &&
+				!this.entityList.includes(entityType)
+			) {
+				this.entityList.push(entityType);
+			}
+		}
 
-            Object.keys(this.entityFields).forEach(scope => {
-                if (scope === 'Person') {
-                    return;
-                }
+		/**
+		 * @param {string} entityType
+		 * @param {Array} list
+		 * @param {string} attrName
+		 */
+		injectHostCustomFields(entityType, list, attrName) {
+			this.ensureEntityBucket(entityType);
 
-                /** @type {Record<string, Record>} */
-                const links = this.getMetadata().get(`entityDefs.${scope}.links`) || {};
+			list.forEach((item) => {
+				if (!item || !item.valueKey) {
+					return;
+				}
 
-                Object.keys(links).forEach(link => {
-                    const linkDefs = links[link] || {};
+				const field = attrName + "." + item.valueKey;
+				const group = item.groupLabel ? item.groupLabel + " · " : "";
+				const label =
+					"Custom Fields · " + group + (item.label || item.valueKey);
 
-                    if (linkDefs.type !== 'belongsTo') {
-                        return;
-                    }
+				if (!this.entityFields[entityType].includes(field)) {
+					this.entityFields[entityType].push(field);
+				}
 
-                    const foreignScope = linkDefs.entity;
+				this.translatedOptions[entityType][field] = label;
+			});
+		}
 
-                    if (!foreignScope || !enabledScopes.includes(foreignScope)) {
-                        return;
-                    }
+		/**
+		 * One-hop belongsTo: Contact + account → Account CF defs.
+		 *
+		 * @param {string[]} enabledScopes
+		 * @param {string} attrName
+		 */
+		injectRelatedCustomFields(enabledScopes, attrName) {
+			if (!this.entityFields) {
+				return;
+			}
 
-                    if (linkDefs.disabled || linkDefs.utility) {
-                        return;
-                    }
+			// Walk every scope already in the picker (plus enabled CF hosts).
+			const scopes = new Set([
+				...Object.keys(this.entityFields),
+				...enabledScopes,
+			]);
 
-                    if (
-                        this.getMetadata().get(['entityAcl', scope, 'links', link, 'onlyAdmin']) ||
-                        this.getMetadata().get(['entityAcl', scope, 'links', link, 'forbidden']) ||
-                        this.getMetadata().get(['entityAcl', scope, 'links', link, 'internal'])
-                    ) {
-                        return;
-                    }
+			scopes.forEach((scope) => {
+				if (scope === "Person") {
+					return;
+				}
 
-                    if (!this.getAcl().checkScope(foreignScope)) {
-                        return;
-                    }
+				this.ensureEntityBucket(scope);
 
-                    const list = this.customFieldPlaceholders[foreignScope];
+				/** @type {Record<string, Record>} */
+				const links = this.getMetadata().get(`entityDefs.${scope}.links`) || {};
 
-                    if (!list || !list.length) {
-                        return;
-                    }
+				Object.keys(links).forEach((link) => {
+					const linkDefs = links[link] || {};
 
-                    if (!this.translatedOptions[scope]) {
-                        this.translatedOptions[scope] = {};
-                    }
+					if (linkDefs.type !== "belongsTo") {
+						return;
+					}
 
-                    const linkLabel = this.translate(link, 'links', scope);
+					const foreignScope = linkDefs.entity;
 
-                    list.forEach(item => {
-                        const field = link + '.' + attrName + '.' + item.valueKey;
-                        const group = item.groupLabel ? item.groupLabel + ' · ' : '';
-                        const label =
-                            linkLabel +
-                            ' · Custom Fields · ' +
-                            group +
-                            (item.label || item.valueKey);
+					if (!foreignScope || !enabledScopes.includes(foreignScope)) {
+						return;
+					}
 
-                        if (!this.entityFields[scope].includes(field)) {
-                            this.entityFields[scope].push(field);
-                        }
+					if (linkDefs.disabled || linkDefs.utility) {
+						return;
+					}
 
-                        this.translatedOptions[scope][field] = label;
-                    });
-                });
-            });
-        }
-    };
-});
+					if (
+						this.getMetadata().get([
+							"entityAcl",
+							scope,
+							"links",
+							link,
+							"onlyAdmin",
+						]) ||
+						this.getMetadata().get([
+							"entityAcl",
+							scope,
+							"links",
+							link,
+							"forbidden",
+						]) ||
+						this.getMetadata().get([
+							"entityAcl",
+							scope,
+							"links",
+							link,
+							"internal",
+						])
+					) {
+						return;
+					}
+
+					if (!this.getAcl().checkScope(foreignScope)) {
+						return;
+					}
+
+					const list = this.customFieldPlaceholders[foreignScope];
+
+					if (!list || !list.length) {
+						return;
+					}
+
+					const linkLabel = this.translate(link, "links", scope);
+
+					list.forEach((item) => {
+						if (!item || !item.valueKey) {
+							return;
+						}
+
+						const field = link + "." + attrName + "." + item.valueKey;
+						const group = item.groupLabel ? item.groupLabel + " · " : "";
+						const label =
+							linkLabel +
+							" · Custom Fields · " +
+							group +
+							(item.label || item.valueKey);
+
+						if (!this.entityFields[scope].includes(field)) {
+							this.entityFields[scope].push(field);
+						}
+
+						this.translatedOptions[scope][field] = label;
+					});
+				});
+			});
+		}
+
+		/**
+		 * Re-render the field <select> after async CF injection so the user
+		 * sees Custom Fields immediately on the currently selected entity.
+		 */
+		refreshFieldSelect() {
+			if (!this.$field || !this.$entityType) {
+				return;
+			}
+
+			if (typeof this.changeEntityType === "function") {
+				this.changeEntityType();
+			}
+		}
+
+		afterRender() {
+			super.afterRender();
+
+			// Core afterRender builds the entity/field selects. If CF loaded
+			// before render, inject again is a no-op on duplicates; if CF is
+			// already on entityFields, refresh so options include them.
+			if (this.mode === this.MODE_EDIT) {
+				this.refreshFieldSelect();
+			}
+		}
+	});

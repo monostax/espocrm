@@ -813,31 +813,125 @@ class ProcessWhatsAppCampaignChunk implements Job
         $renderer = $this->templateRendererFactory->create();
         $renderer->setEntity($contact);
 
-        // Nest dotted customFields keys so {{customFields.address.city}} resolves.
-        $nestedCustomFields = $this->templateBridge->getNestedBag($contact);
+        // Nest customFields on the Contact (and any referenced belongsTo hosts)
+        // before Handlebars runs. Htmlizer applyOneLinks loads FRESH related
+        // entities and would wipe setData link overlays — so when a mapping
+        // references {{account.*}} we skip relations and inject link maps with
+        // nested CF bags ourselves.
+        $joinedExpressions = implode(' ', array_map(
+            static fn($v): string => is_string($v) ? $v : '',
+            array_values($parameterMapping)
+        ));
 
-        if ($nestedCustomFields !== []) {
-            $renderer->setData([
-                $this->templateBridge->getAttributeName() => $nestedCustomFields,
-            ]);
-        }
+        try {
+            $this->templateBridge->expandInPlace($contact);
 
-        $resolvedParams = [];
+            $extraData = [];
+            $attr = $this->templateBridge->getAttributeName();
+            $hostBag = $contact->get($attr);
 
-        foreach ($parameterMapping as $paramNum => $expression) {
-            try {
-                $resolved = $renderer->renderTemplate($expression);
-                $resolvedParams[(string) $paramNum] = trim($resolved);
-            } catch (\Throwable $e) {
-                $this->log->warning(
-                    "ProcessWhatsAppCampaignChunk: Failed to resolve param {$paramNum} " .
-                    "('{$expression}') for contact {$contactId}: {$e->getMessage()}"
-                );
-                $resolvedParams[(string) $paramNum] = '';
+            if (is_array($hostBag) && $hostBag !== []) {
+                $extraData[$attr] = $hostBag;
             }
+
+            $needsSkipRelations = false;
+
+            if ($contact->hasId() && $joinedExpressions !== '') {
+                foreach ($contact->getRelationList() as $relation) {
+                    $type = $contact->getRelationType($relation);
+
+                    if (
+                        $type !== Entity::BELONGS_TO &&
+                        $type !== Entity::BELONGS_TO_PARENT &&
+                        $type !== Entity::HAS_ONE
+                    ) {
+                        continue;
+                    }
+
+                    $needle = '{{' . $relation . '.';
+
+                    if (!str_contains($joinedExpressions, $needle)) {
+                        continue;
+                    }
+
+                    $needsSkipRelations = true;
+
+                    try {
+                        $related = $this->entityManager
+                            ->getRelation($contact, $relation)
+                            ->findOne();
+                    } catch (\Throwable $e) {
+                        $this->log->debug(
+                            'ProcessWhatsAppCampaignChunk: skip related ' .
+                            $relation . ': ' . $e->getMessage()
+                        );
+
+                        continue;
+                    }
+
+                    if (!$related) {
+                        continue;
+                    }
+
+                    $this->templateBridge->expandInPlace($related);
+                    $extraData[$relation] = $this->entityToTemplateArray($related);
+                }
+            }
+
+            if ($needsSkipRelations) {
+                $renderer->setSkipRelations(true);
+            }
+
+            if ($extraData !== []) {
+                $renderer->setData($extraData);
+            }
+
+            $resolvedParams = [];
+
+            foreach ($parameterMapping as $paramNum => $expression) {
+                try {
+                    $resolved = $renderer->renderTemplate(is_string($expression) ? $expression : '');
+                    $resolvedParams[(string) $paramNum] = trim($resolved);
+                } catch (\Throwable $e) {
+                    $this->log->warning(
+                        "ProcessWhatsAppCampaignChunk: Failed to resolve param {$paramNum} " .
+                        "('{$expression}') for contact {$contactId}: {$e->getMessage()}"
+                    );
+                    $resolvedParams[(string) $paramNum] = '';
+                }
+            }
+
+            return $resolvedParams;
+        } finally {
+            $this->templateBridge->restoreExpanded();
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function entityToTemplateArray(Entity $entity): array
+    {
+        $map = $entity->getValueMap();
+
+        if (is_object($map)) {
+            $map = get_object_vars($map);
         }
 
-        return $resolvedParams;
+        if (!is_array($map)) {
+            return [];
+        }
+
+        // Normalize stdClass nests to arrays for Handlebars path walks.
+        $encoded = json_encode($map);
+
+        if (!is_string($encoded)) {
+            return $map;
+        }
+
+        $decoded = json_decode($encoded, true);
+
+        return is_array($decoded) ? $decoded : $map;
     }
 
     /**

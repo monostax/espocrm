@@ -160,9 +160,75 @@ class MetaProvider
     /**
      * Flat list of template-enabled fields (for Email / WhatsApp pickers).
      *
-     * @return list<array{valueKey: string, label: string, type: string, groupLabel: ?string}>
+     * @return list<array{
+     *     valueKey: string,
+     *     label: string,
+     *     type: string,
+     *     groupLabel: ?string,
+     *     expression: string,
+     *     classicExpression: string
+     * }>
      */
     public function getTemplateVariables(string $entityType, ?string $tenantId): array
+    {
+        if ($tenantId === null || $tenantId === '') {
+            return [];
+        }
+
+        return $this->buildTemplateVariables($entityType, $tenantId);
+    }
+
+    /**
+     * Union of template-enabled fields across many tenants (Email Template builder).
+     *
+     * Dedupes by valueKey (first wins). Use when the composer has no single host
+     * record tenant — e.g. admin writing a campaign template usable for any of
+     * their accessible tenants.
+     *
+     * @param list<string> $tenantIds
+     * @return list<array{
+     *     valueKey: string,
+     *     label: string,
+     *     type: string,
+     *     groupLabel: ?string,
+     *     expression: string,
+     *     classicExpression: string
+     * }>
+     */
+    public function getTemplateVariablesForTenants(string $entityType, array $tenantIds): array
+    {
+        $byKey = [];
+
+        foreach ($tenantIds as $tenantId) {
+            if (!is_string($tenantId) || trim($tenantId) === '') {
+                continue;
+            }
+
+            foreach ($this->buildTemplateVariables($entityType, trim($tenantId)) as $item) {
+                $key = $item['valueKey'];
+
+                if ($key === '' || isset($byKey[$key])) {
+                    continue;
+                }
+
+                $byKey[$key] = $item;
+            }
+        }
+
+        return array_values($byKey);
+    }
+
+    /**
+     * @return list<array{
+     *     valueKey: string,
+     *     label: string,
+     *     type: string,
+     *     groupLabel: ?string,
+     *     expression: string,
+     *     classicExpression: string
+     * }>
+     */
+    private function buildTemplateVariables(string $entityType, string $tenantId): array
     {
         $meta = $this->getGroupedMeta($entityType, $tenantId);
         $out = [];
@@ -174,12 +240,12 @@ class MetaProvider
                 }
 
                 $attr = $this->getAttributeName();
-                $path = $this->toHandlebarsPath($field['valueKey']);
+                $path = $this->toHandlebarsPath((string) $field['valueKey']);
 
                 $out[] = [
-                    'valueKey' => $field['valueKey'],
-                    'label' => $field['label'],
-                    'type' => $field['type'],
+                    'valueKey' => (string) $field['valueKey'],
+                    'label' => (string) $field['label'],
+                    'type' => (string) $field['type'],
                     'groupLabel' => $group['name'] === '_general' ? null : $group['label'],
                     'expression' => '{{' . $attr . '.' . $path . '}}',
                     'classicExpression' => '{' . $entityType . '.' . $attr . '.' . $path . '}',

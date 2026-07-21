@@ -141,16 +141,25 @@ class BeforeSave implements SaveHook
 
         if ($entity->isNew()) {
             $valueKey = $entity->get('valueKey');
+            $valueKey = is_string($valueKey) ? trim($valueKey) : '';
 
-            if (!is_string($valueKey) || trim($valueKey) === '') {
-                $valueKey = $groupName
+            // Default identity = group.name + field.name when grouped.
+            // Also rewrite the common client footgun of submitting valueKey === name
+            // (mirrors the machine name into the storage key and drops the group prefix).
+            // Explicit dotted keys (e.g. address.city) and non-name bare keys are kept.
+            $shouldDefault =
+                $valueKey === '' ||
+                ($groupName !== null && $groupName !== '' && $valueKey === $name);
+
+            if ($shouldDefault) {
+                $valueKey = ($groupName !== null && $groupName !== '')
                     ? $groupName . '.' . $name
                     : $name;
 
                 $entity->set('valueKey', $valueKey);
+            } else {
+                $entity->set('valueKey', $valueKey);
             }
-
-            $valueKey = (string) $entity->get('valueKey');
 
             if (!preg_match(self::VALUE_KEY_PATTERN, $valueKey)) {
                 throw new BadRequest(

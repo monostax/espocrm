@@ -11,6 +11,7 @@ Entity.customFields jsonObject                         → values (ACL = host re
 - **No per-tenant DDL.** Values are a JSON bag on the host record.
 - **Groups are presentation.** Moving a field between groups does not change `valueKey`.
 - **`valueKey` is immutable** after create. Default: `group.name + '.' + field.name`, or bare `field.name` if ungrouped.
+- **Create guard:** if the client submits `valueKey === name` while a group is set, the server rewrites it to `group.name + '.' + name` (drops the bare-name footgun that stripped the group prefix).
 - **Names ban dots** (`^[a-z][a-zA-Z0-9_]*$`) so dotted keys stay unambiguous.
 - **Uniqueness:** `(tenantId, entityType, name)` and `(tenantId, entityType, valueKey)`.
 
@@ -80,10 +81,18 @@ Tenant for def lookup: entity `tenantId` → `teamsIds` → user teams (same ide
 
 ### Author UX
 
-- **Email Template → Insert Field:** host CF → `{Entity.customFields.valueKey}`; related belongsTo CF → `{Entity.link.customFields.valueKey}`.
+- **Email Template → Insert Field:** `global:views/email-template/fields/insert-field` (layout override) loads `GET CustomField/action/templateVariables` for **every** entry in `app.customFields.entityTypeList` the user can read.
+  - Host CF → `{Entity.customFields.valueKey}` (e.g. Contact, Lead, Account, Opportunity).
+  - Person mirror → `{Person.customFields.valueKey}` (copied from Contact/Lead so person-target templates work).
+  - Related belongsTo CF → `{Entity.link.customFields.valueKey}` (one-hop).
+  - Labels: `Custom Fields · {groupLabel} · {label}`.
+  - Tenant: Email Template has no host record. API falls back to **union across accessible tenants** (admin = all tenants; others = tenants reachable from their teams) when `tenantId` cannot be resolved.
 - **CSV Import → column map:** `customFields.<valueKey>` leaves + optional whole JSON bag.
-- **WhatsApp Campaign → Parameter mapping:** Suggestion chips for native Contact fields + CF expressions `{{customFields.*}}`.
-
+- **WhatsApp Campaign → Parameter mapping:** `chatwoot:views/whatsapp-campaign/fields/parameter-mapping` chips cover:
+  - native Contact fields (`{{firstName}}`, `{{account.name}}`, …)
+  - Contact CF → `{{customFields.<valueKey>}}` (same multi-tenant `templateVariables` API as Email)
+  - one-hop belongsTo CF on CF-enabled entities → `{{account.customFields.<valueKey>}}` when Account (etc.) has defs
+  - Send-time resolve: `ProcessWhatsAppCampaignChunk` expands host (+ related) bags via `TemplateBridge` before Handlebars. WA host is always **Contact** — Lead/Opportunity are not suggestion hosts here.
 
 ## Enable entities
 

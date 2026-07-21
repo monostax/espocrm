@@ -67,7 +67,18 @@ class CustomField
     /**
      * Flat template-enabled fields for Email / WhatsApp pickers.
      *
-     * @return array{entityType: string, tenantId: ?string, list: list<array<string, mixed>>}
+     * When a single tenant resolves (explicit tenantId / host teams / user team),
+     * returns that tenant's fields. When none resolves, unions fields across all
+     * mon tenants the current user can see (admin = every tenant; others = tenants
+     * reachable from their teams). Email Template builder has no host record, so
+     * this is what populates Insert Field for every enabled entity.
+     *
+     * @return array{
+     *     entityType: string,
+     *     tenantId: ?string,
+     *     tenantIds: list<string>,
+     *     list: list<array<string, mixed>>
+     * }
      */
     public function getActionTemplateVariables(Request $request, Response $response): array
     {
@@ -75,10 +86,22 @@ class CustomField
 
         $tenantId = $this->resolveTenantId($request, $entityType);
 
+        if ($tenantId !== null && $tenantId !== '') {
+            return [
+                'entityType' => $entityType,
+                'tenantId' => $tenantId,
+                'tenantIds' => [$tenantId],
+                'list' => $this->metaProvider->getTemplateVariables($entityType, $tenantId),
+            ];
+        }
+
+        $tenantIds = $this->resolveAccessibleTenantIds();
+
         return [
             'entityType' => $entityType,
-            'tenantId' => $tenantId,
-            'list' => $this->metaProvider->getTemplateVariables($entityType, $tenantId),
+            'tenantId' => null,
+            'tenantIds' => $tenantIds,
+            'list' => $this->metaProvider->getTemplateVariablesForTenants($entityType, $tenantIds),
         ];
     }
 
@@ -269,6 +292,55 @@ class CustomField
                         $ids[] = $id;
                     }
                 }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Tenants whose CF schema the current user may surface in template pickers.
+     *
+     * - Admin / system: every active Tenant.
+     * - Others: unique tenants reachable from the user's teams
+     *   (baseUserTeam / otherUserTeams), same Rules as single resolve.
+     *
+     * @return list<string>
+     */
+    private function resolveAccessibleTenantIds(): array
+    {
+        if ($this->user->isAdmin()) {
+            $collection = $this->entityManager
+                ->getRDBRepository('Tenant')
+                ->select(['id'])
+                ->find();
+
+            $ids = [];
+
+            foreach ($collection as $tenant) {
+                $id = $tenant->getId();
+
+                if (is_string($id) && $id !== '') {
+                    $ids[] = $id;
+                }
+            }
+
+            return array_values(array_unique($ids));
+        }
+
+        $teamIds = $this->getUserTeamIds();
+
+        if ($teamIds === []) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach ($teamIds as $teamId) {
+            $tenantId = $this->tenantResolver->resolveFromTeamId($teamId);
+
+            if ($tenantId) {
+                $ids[] = $tenantId;
             }
         }
 
