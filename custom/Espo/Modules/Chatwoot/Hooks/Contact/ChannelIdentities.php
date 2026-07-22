@@ -36,9 +36,12 @@ use Espo\ORM\EntityManager;
  * ContactChannelIdentity rows — creates (via ContactReconciler::upsertIdentity,
  * which restores soft-deleted rows in place), updates, and soft-deletes.
  *
- * Additionally supports the write-only helper fields `whatsappNumber` and
- * `instagramHandle` (used by CSV import and API integrations). These are
- * additive: they upsert a single identity and never delete other rows.
+ * Additionally supports the write-only helper fields `whatsappNumber`
+ * (`whatsappNumber2`..`whatsappNumber4`) and `instagramHandle` (used by CSV
+ * import and API integrations). These are additive: they upsert one identity
+ * per non-empty helper value and never delete other rows. Multiple WhatsApp
+ * numbers on the same Contact row are accepted the same way Espo handles
+ * `emailAddress2`..`emailAddress4`.
  *
  * Tenant / ACL:
  * - All lookups and uniqueness checks are scoped by the contact's tenantId.
@@ -55,9 +58,16 @@ class ChannelIdentities
 {
     private const FIELD = 'channelIdentitiesData';
 
-    /** Write-only single-value helper fields (CSV import / API). */
+    /**
+     * Write-only helper fields (CSV import / API).
+     * Multiple WhatsApp helpers map to the same channel so a Contact row can
+     * carry several numbers (mirrors `emailAddress` / `emailAddress2`..4).
+     */
     private const ADDITIVE_FIELD_MAP = [
         'whatsappNumber' => 'whatsapp',
+        'whatsappNumber2' => 'whatsapp',
+        'whatsappNumber3' => 'whatsapp',
+        'whatsappNumber4' => 'whatsapp',
         'instagramHandle' => 'instagram',
     ];
 
@@ -121,12 +131,16 @@ class ChannelIdentities
         }
 
         if ($toProcessAdditive) {
-            foreach ($this->getAdditiveItems($entity) as $field => $item) {
+            foreach ($this->getAdditiveItems($entity) as $item) {
                 $this->checkConflict($entity, $tenantId, $item);
                 $this->checkAdditiveAcl($entity, $item);
 
-                // Store the normalized value back.
-                $entity->set($field, $item->sourceId);
+                // Store the normalized sourceId back on the originating field.
+                $field = $item->_field ?? null;
+
+                if (is_string($field) && $field !== '') {
+                    $entity->set($field, $item->sourceId);
+                }
             }
         }
     }
@@ -306,15 +320,17 @@ class ChannelIdentities
     }
 
     /**
-     * Normalized items from the write-only helper fields, keyed by
-     * field name.
+     * Normalized items from the write-only helper fields.
+     * One item per non-empty helper value; duplicates (same channel+sourceId)
+     * are collapsed so multi-column CSV rows can safely repeat a number.
      *
-     * @return array<string, \stdClass>
+     * @return list<\stdClass>
      * @throws BadRequest
      */
     private function getAdditiveItems(Entity $entity): array
     {
         $items = [];
+        $seen = [];
 
         foreach (self::ADDITIVE_FIELD_MAP as $field => $channelType) {
             if (!$entity->has($field) || !$entity->isAttributeChanged($field)) {
@@ -329,13 +345,23 @@ class ChannelIdentities
 
             [$sourceId, $label, $handle] = $this->normalizeValue($channelType, $value);
 
-            $items[$field] = (object) [
+            $dedupeKey = $channelType . "\0" . $sourceId;
+
+            if (isset($seen[$dedupeKey])) {
+                continue;
+            }
+
+            $seen[$dedupeKey] = true;
+
+            $items[] = (object) [
                 'id' => null,
                 'channelType' => $channelType,
                 'sourceId' => $sourceId,
                 'label' => $label,
                 'handle' => $handle,
                 'isPrimary' => false,
+                // Internal: which helper field produced this item (for write-back).
+                '_field' => $field,
             ];
         }
 

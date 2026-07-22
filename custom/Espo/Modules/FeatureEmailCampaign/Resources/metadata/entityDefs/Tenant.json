@@ -1,0 +1,10 @@
+{
+    "links": {
+        "emailCampaigns": {
+            "type": "hasMany",
+            "entity": "EmailCampaign",
+            "foreign": "tenant",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

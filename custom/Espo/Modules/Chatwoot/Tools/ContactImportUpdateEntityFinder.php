@@ -25,8 +25,16 @@ use stdClass;
  */
 class ContactImportUpdateEntityFinder implements UpdateEntityFinder
 {
+    /**
+     * Import update-by helpers backed by ContactChannelIdentity.
+     * Multiple WhatsApp columns map to the same channel and are OR-matched
+     * (a contact matching any provided number is a candidate).
+     */
     private const FIELD_CHANNEL_MAP = [
         'whatsappNumber' => 'whatsapp',
+        'whatsappNumber2' => 'whatsapp',
+        'whatsappNumber3' => 'whatsapp',
+        'whatsappNumber4' => 'whatsapp',
         'instagramHandle' => 'instagram',
     ];
 
@@ -40,6 +48,7 @@ class ContactImportUpdateEntityFinder implements UpdateEntityFinder
      */
     public function find(array $whereClause, User $user, stdClass $values): ?CoreEntity
     {
+        /** @var array<string, string[]> $identityValues */
         $identityValues = [];
 
         foreach (self::FIELD_CHANNEL_MAP as $field => $channelType) {
@@ -47,8 +56,15 @@ class ContactImportUpdateEntityFinder implements UpdateEntityFinder
                 continue;
             }
 
-            $identityValues[$channelType] = (string) $whereClause[$field];
+            $raw = trim((string) $whereClause[$field]);
             unset($whereClause[$field]);
+
+            if ($raw === '') {
+                continue;
+            }
+
+            $identityValues[$channelType] ??= [];
+            $identityValues[$channelType][] = $raw;
         }
 
         if ($identityValues === []) {
@@ -64,8 +80,19 @@ class ContactImportUpdateEntityFinder implements UpdateEntityFinder
 
         $contactIds = null;
 
-        foreach ($identityValues as $channelType => $value) {
-            $matchedIds = $this->findContactIds($tenantId, $channelType, $value);
+        // Across channels: AND (e.g. whatsapp + instagram must all match).
+        // Within a channel's multi columns: OR (any listed number matches).
+        foreach ($identityValues as $channelType => $valuesForChannel) {
+            $matchedIds = [];
+
+            foreach (array_values(array_unique($valuesForChannel)) as $value) {
+                foreach ($this->findContactIds($tenantId, $channelType, $value) as $id) {
+                    $matchedIds[$id] = true;
+                }
+            }
+
+            $matchedIds = array_keys($matchedIds);
+
             $contactIds = $contactIds === null
                 ? $matchedIds
                 : array_values(array_intersect($contactIds, $matchedIds));

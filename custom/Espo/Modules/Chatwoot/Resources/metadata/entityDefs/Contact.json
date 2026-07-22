@@ -29,7 +29,43 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true,
             "dynamicLogicDisabled": true,
-            "tooltip": "Write-only helper for CSV import and API. Creates/updates a WhatsApp channel identity for the contact. Normalized to E.164."
+            "tooltip": "Write-only helper for CSV import and API. Creates/updates a WhatsApp channel identity for the contact. Normalized to E.164. Use whatsappNumber2..4 for additional numbers on the same row."
+        },
+        "whatsappNumber2": {
+            "type": "varchar",
+            "maxLength": 36,
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "dynamicLogicDisabled": true,
+            "tooltip": "Write-only helper for CSV import and API. Additional WhatsApp number (2nd) on the same Contact. Normalized to E.164."
+        },
+        "whatsappNumber3": {
+            "type": "varchar",
+            "maxLength": 36,
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "dynamicLogicDisabled": true,
+            "tooltip": "Write-only helper for CSV import and API. Additional WhatsApp number (3rd) on the same Contact. Normalized to E.164."
+        },
+        "whatsappNumber4": {
+            "type": "varchar",
+            "maxLength": 36,
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "dynamicLogicDisabled": true,
+            "tooltip": "Write-only helper for CSV import and API. Additional WhatsApp number (4th) on the same Contact. Normalized to E.164."
         },
         "instagramHandle": {
             "type": "varchar",

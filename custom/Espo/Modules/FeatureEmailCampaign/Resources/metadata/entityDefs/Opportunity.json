@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "emailCampaigns": { "type": "linkMultiple", "readOnly": true },
+        "emailCampaignTargetLists": { "type": "linkMultiple", "readOnly": true }
+    },
+    "links": {
+        "emailCampaigns": {
+            "type": "hasMany",
+            "entity": "EmailCampaign",
+            "foreign": "opportunities",
+            "relationName": "emailCampaignOpportunity"
+        },
+        "emailCampaignTargetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "emailCampaignOpportunities",
+            "relationName": "emailCampaignOpportunityTargetList"
+        },
+        "emailCampaignContacts": {
+            "type": "hasMany",
+            "entity": "EmailCampaignContact",
+            "foreign": "opportunity",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

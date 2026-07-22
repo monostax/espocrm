@@ -1,0 +1,10 @@
+{
+    "scopeNames": {
+        "EmailCampaign": "Email Campaign",
+        "EmailCampaignContact": "Email Campaign Contact"
+    },
+    "scopeNamesPlural": {
+        "EmailCampaign": "Email Campaigns",
+        "EmailCampaignContact": "Email Campaign Contacts"
+    }
+}

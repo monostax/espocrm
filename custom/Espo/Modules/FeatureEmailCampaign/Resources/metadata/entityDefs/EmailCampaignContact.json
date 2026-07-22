@@ -1,6 +1,6 @@
 {
     "fields": {
-        "whatsAppCampaign": {
+        "emailCampaign": {
             "type": "link",
             "required": true
         },
@@ -8,26 +8,9 @@
             "type": "link",
             "required": true
         },
-        "chatwootContact": {
-            "type": "link"
-        },
-        "chatwootAccount": {
-            "type": "link",
-            "required": true
-        },
-        "chatwootMessageId": {
+        "emailAddress": {
             "type": "varchar",
-            "maxLength": 64,
-            "tooltip": true
-        },
-        "chatwootConversationId": {
-            "type": "varchar",
-            "maxLength": 64,
-            "tooltip": true
-        },
-        "phoneNumber": {
-            "type": "varchar",
-            "maxLength": 50,
+            "maxLength": 255,
             "required": true
         },
         "contactName": {
@@ -41,27 +24,19 @@
                 "Processing",
                 "Retry",
                 "Sent",
-                "Delivered",
-                "Read",
-                "Replied",
                 "Failed",
                 "OptedOut",
-                "Bounced",
-                "Blocked"
+                "Bounced"
             ],
             "default": "Pending",
             "style": {
                 "Pending": null,
                 "Processing": "primary",
                 "Retry": "warning",
-                "Sent": "primary",
-                "Delivered": "success",
-                "Read": "success",
-                "Replied": "info",
+                "Sent": "success",
                 "Failed": "danger",
                 "OptedOut": "default",
-                "Bounced": "warning",
-                "Blocked": "danger"
+                "Bounced": "warning"
             }
         },
         "claimedAt": {
@@ -69,22 +44,7 @@
             "readOnly": true,
             "tooltip": true
         },
-        "processedParams": {
-            "type": "jsonObject"
-        },
         "sentAt": {
-            "type": "datetime",
-            "readOnly": true
-        },
-        "deliveredAt": {
-            "type": "datetime",
-            "readOnly": true
-        },
-        "readAt": {
-            "type": "datetime",
-            "readOnly": true
-        },
-        "repliedAt": {
             "type": "datetime",
             "readOnly": true
         },
@@ -99,6 +59,11 @@
         "retryCount": {
             "type": "int",
             "default": 0,
+            "readOnly": true
+        },
+        "emailId": {
+            "type": "varchar",
+            "maxLength": 17,
             "readOnly": true
         },
         "targetLists": {
@@ -146,35 +111,25 @@
         }
     },
     "links": {
-        "whatsAppCampaign": {
+        "emailCampaign": {
             "type": "belongsTo",
-            "entity": "WhatsAppCampaign",
+            "entity": "EmailCampaign",
             "foreign": "campaignContacts"
         },
         "contact": {
             "type": "belongsTo",
             "entity": "Contact"
         },
-        "chatwootContact": {
-            "type": "belongsTo",
-            "entity": "ChatwootContact",
-            "foreign": "whatsAppCampaignContacts"
-        },
-        "chatwootAccount": {
-            "type": "belongsTo",
-            "entity": "ChatwootAccount",
-            "foreign": "whatsAppCampaignContacts"
-        },
         "targetLists": {
             "type": "hasMany",
             "entity": "TargetList",
-            "foreign": "whatsAppCampaignContacts",
-            "relationName": "whatsAppCampaignContactTargetList"
+            "foreign": "emailCampaignContacts",
+            "relationName": "emailCampaignContactTargetList"
         },
         "opportunity": {
             "type": "belongsTo",
             "entity": "Opportunity",
-            "foreign": "whatsAppCampaignContacts"
+            "foreign": "emailCampaignContacts"
         },
         "opportunityAttributionStage": {
             "type": "belongsTo",
@@ -182,26 +137,17 @@
         }
     },
     "indexes": {
-        "chatwootMessageId": {
-            "columns": ["chatwootMessageId"]
-        },
-        "chatwootConversationId": {
-            "columns": ["chatwootConversationId"]
-        },
-        "accountConversation": {
-            "columns": ["chatwootAccountId", "chatwootConversationId"]
-        },
         "campaignStatus": {
-            "columns": ["whatsAppCampaignId", "status"]
+            "columns": ["emailCampaignId", "status"]
         },
         "statusClaimedAt": {
             "columns": ["status", "claimedAt"]
         },
         "contactCampaign": {
-            "columns": ["contactId", "whatsAppCampaignId"]
+            "columns": ["contactId", "emailCampaignId"]
         },
-        "campaignPhone": {
-            "columns": ["whatsAppCampaignId", "phoneNumber"],
+        "emailCampaignAddress": {
+            "columns": ["emailCampaignId", "emailAddress"],
             "unique": true
         },
         "opportunityId": {
@@ -216,4 +162,3 @@
         "order": "desc"
     }
 }
-

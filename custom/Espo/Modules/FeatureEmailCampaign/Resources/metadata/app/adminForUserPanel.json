@@ -1,0 +1,15 @@
+{
+    "emailCampaign": {
+        "label": "Email Campaigns",
+        "itemList": [
+            {
+                "url": "#EmailCampaign",
+                "label": "Email Campaigns",
+                "iconClass": "ti ti-mail",
+                "description": "emailCampaigns",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ],
+        "order": 31
+    }
+}

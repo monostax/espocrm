@@ -2,6 +2,9 @@
     "fields": {
         "channelIdentitiesData": "Identidades de Canal",
         "whatsappNumber": "Número de WhatsApp",
+        "whatsappNumber2": "Número de WhatsApp 2",
+        "whatsappNumber3": "Número de WhatsApp 3",
+        "whatsappNumber4": "Número de WhatsApp 4",
         "instagramHandle": "Usuário do Instagram"
     },
     "messages": {

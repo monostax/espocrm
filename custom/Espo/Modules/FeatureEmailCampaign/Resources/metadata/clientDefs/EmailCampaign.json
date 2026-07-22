@@ -1,0 +1,302 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-mail",
+    "dynamicLogic": {
+        "fields": {
+            "emailTemplate": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "inboundEmail": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "fromAddress": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "fromName": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "targetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        },
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Sending"
+                                },
+                                {
+                                    "type": "isFalse",
+                                    "attribute": "continuousEnrollment"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "manualContacts": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        },
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Sending"
+                                },
+                                {
+                                    "type": "isFalse",
+                                    "attribute": "continuousEnrollment"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "continuousEnrollment": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "createOpportunity": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "funnel": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "opportunityStage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "opportunityAssignedUser": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "excludeCampaigns": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "excludingTargetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            }
+        },
+        "panels": {
+            "exclusions": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "statistics": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "campaignContacts",
+                "label": "Recipients",
+                "view": "views/record/panels/relationship",
+                "link": "campaignContacts",
+                "select": false,
+                "create": false,
+                "rowActionsView": false,
+                "layout": "listSmall",
+                "order": 10
+            },
+            {
+                "name": "opportunities",
+                "label": "Opportunities",
+                "view": "views/record/panels/relationship",
+                "link": "opportunities",
+                "select": false,
+                "create": false,
+                "rowActionsView": false,
+                "order": 20
+            }
+        ]
+    },
+    "detailActionList": [
+        {
+            "name": "sendCampaign",
+            "label": "Send Campaign",
+            "handler": "feature-email-campaign:handlers/email-campaign/detail-actions",
+            "actionFunction": "sendCampaign",
+            "checkVisibilityFunction": "isSendAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "abortCampaign",
+            "label": "Abort Campaign",
+            "handler": "feature-email-campaign:handlers/email-campaign/detail-actions",
+            "actionFunction": "abortCampaign",
+            "checkVisibilityFunction": "isAbortAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "stopEnrollment",
+            "label": "Stop Enrollment",
+            "handler": "feature-email-campaign:handlers/email-campaign/detail-actions",
+            "actionFunction": "stopEnrollment",
+            "checkVisibilityFunction": "isStopEnrollmentAvailable",
+            "groupIndex": 1
+        }
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "links": {
+        "emailCampaignsManual": {
+            "type": "hasMany",
+            "entity": "EmailCampaign",
+            "foreign": "manualContacts",
+            "relationName": "emailCampaignManualContact",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

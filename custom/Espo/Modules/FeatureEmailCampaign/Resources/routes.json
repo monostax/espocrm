@@ -1,0 +1,29 @@
+[
+    {
+        "route": "/EmailCampaign/:id/send",
+        "method": "post",
+        "params": {
+            "controller": "EmailCampaign",
+            "action": "send",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/EmailCampaign/:id/abort",
+        "method": "post",
+        "params": {
+            "controller": "EmailCampaign",
+            "action": "abort",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/EmailCampaign/:id/stopEnrollment",
+        "method": "post",
+        "params": {
+            "controller": "EmailCampaign",
+            "action": "stopEnrollment",
+            "id": ":id"
+        }
+    }
+]

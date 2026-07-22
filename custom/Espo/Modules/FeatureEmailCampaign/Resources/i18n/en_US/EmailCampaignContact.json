@@ -1,0 +1,51 @@
+{
+    "fields": {
+        "emailCampaign": "Email Campaign",
+        "contact": "Contact",
+        "emailAddress": "Email Address",
+        "contactName": "Contact Name",
+        "status": "Status",
+        "claimedAt": "Claimed At",
+        "sentAt": "Sent At",
+        "failedAt": "Failed At",
+        "failedReason": "Failed Reason",
+        "retryCount": "Retry Count",
+        "emailId": "Email ID",
+        "targetLists": "Target Lists",
+        "opportunity": "Opportunity",
+        "opportunityAttributionStatus": "Opportunity Attribution",
+        "opportunityAttributionAction": "Attribution Action",
+        "opportunityAttributionError": "Attribution Error",
+        "opportunityAttributionStage": "Stage at Attribution"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Processing": "Processing",
+            "Retry": "Retry",
+            "Sent": "Sent",
+            "Failed": "Failed",
+            "OptedOut": "Opted Out",
+            "Bounced": "Bounced"
+        },
+        "opportunityAttributionStatus": {
+            "NotRequested": "Not Requested",
+            "Pending": "Pending",
+            "Linked": "Linked",
+            "Failed": "Failed"
+        },
+        "opportunityAttributionAction": {
+            "": "",
+            "Created": "Created",
+            "Reused": "Reused"
+        }
+    },
+    "labels": {
+        "Create EmailCampaignContact": "Create Campaign Contact"
+    },
+    "tooltips": {
+        "claimedAt": "When a worker claimed this recipient for sending.",
+        "targetLists": "Target Lists that contributed this recipient at enrollment.",
+        "opportunityAttributionStage": "Opportunity stage snapshot at attribution time."
+    }
+}

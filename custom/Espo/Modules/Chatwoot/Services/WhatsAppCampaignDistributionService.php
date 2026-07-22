@@ -154,9 +154,9 @@ class WhatsAppCampaignDistributionService
      * deterministic weighted bucket. Used by the sweep job and after
      * activation.
      *
-     * Idempotent: contacts already enrolled in ANY campaign of the
-     * distribution are skipped (by contactId and phoneNumber), and the
-     * per-campaign unique index guards against races.
+     * Idempotent: phone numbers already enrolled in ANY campaign of the
+     * distribution are skipped; multiple numbers on the same Contact can
+     * enroll independently. Per-campaign unique index guards against races.
      *
      * @param string $distributionId Distribution entity ID
      * @return int Number of newly enrolled contacts
@@ -186,17 +186,14 @@ class WhatsAppCampaignDistributionService
             return 0;
         }
 
-        // Skip contacts already enrolled in ANY campaign of this distribution,
-        // so weight changes never re-enroll a contact into a sibling campaign.
-        [$enrolledContactIds, $enrolledPhones] = $this->getEnrolledSets($campaignIds);
+        // Skip phones already enrolled in ANY campaign of this distribution,
+        // so weight changes never re-enroll a number into a sibling campaign.
+        $enrolledPhones = $this->getEnrolledPhones($campaignIds);
 
         $byCampaign = [];
 
         foreach ($audience as $item) {
-            if (
-                isset($enrolledContactIds[$item['contactId']]) ||
-                isset($enrolledPhones[$item['phoneNumber']])
-            ) {
+            if (isset($enrolledPhones[$item['phoneNumber']])) {
                 continue;
             }
 
@@ -687,36 +684,32 @@ class WhatsAppCampaignDistributionService
     }
 
     /**
-     * Contact IDs and phone numbers already enrolled in any of the given campaigns.
+     * Phone numbers already enrolled in any of the given campaigns.
      *
      * @param string[] $campaignIds
-     * @return array{0: array<string, bool>, 1: array<string, bool>}
+     * @return array<string, bool>
      */
-    private function getEnrolledSets(array $campaignIds): array
+    private function getEnrolledPhones(array $campaignIds): array
     {
-        $enrolledContactIds = [];
         $enrolledPhones = [];
 
         if (empty($campaignIds)) {
-            return [$enrolledContactIds, $enrolledPhones];
+            return $enrolledPhones;
         }
 
         $rows = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where(['whatsAppCampaignId' => $campaignIds])
-            ->select(['id', 'contactId', 'phoneNumber'])
+            ->select(['id', 'phoneNumber'])
             ->find();
 
         foreach ($rows as $row) {
-            if ($row->get('contactId')) {
-                $enrolledContactIds[$row->get('contactId')] = true;
-            }
             if ($row->get('phoneNumber')) {
                 $enrolledPhones[$row->get('phoneNumber')] = true;
             }
         }
 
-        return [$enrolledContactIds, $enrolledPhones];
+        return $enrolledPhones;
     }
 
     /**

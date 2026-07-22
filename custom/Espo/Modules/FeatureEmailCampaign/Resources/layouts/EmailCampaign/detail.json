@@ -1,0 +1,51 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "status"}],
+            [{"name": "scheduledAt"}, {"name": "continuousEnrollment"}]
+        ]
+    },
+    {
+        "label": "Email",
+        "rows": [
+            [{"name": "emailTemplate", "fullWidth": true}],
+            [{"name": "emailAccount"}, {"name": "inboundEmail"}],
+            [{"name": "storeSentEmails"}, false],
+            [{"name": "fromAddress"}, {"name": "fromName"}],
+            [{"name": "replyToAddress"}, {"name": "replyToName"}]
+        ]
+    },
+    {
+        "label": "Audience",
+        "rows": [
+            [{"name": "targetLists"}, {"name": "manualContacts"}]
+        ]
+    },
+    {
+        "label": "Exclusions",
+        "name": "exclusions",
+        "rows": [
+            [{"name": "excludeCampaigns"}, {"name": "excludingTargetLists"}]
+        ]
+    },
+    {
+        "label": "Opportunity Creation",
+        "name": "opportunityCreation",
+        "rows": [
+            [{"name": "createOpportunity"}, false],
+            [{"name": "funnel"}, {"name": "opportunityStage"}],
+            [{"name": "opportunityAssignedUser"}, false]
+        ]
+    },
+    {
+        "label": "Statistics",
+        "name": "statistics",
+        "rows": [
+            [{"name": "totalRecipients"}, {"name": "sentCount"}],
+            [{"name": "failedCount"}, {"name": "bouncedCount"}],
+            [{"name": "optedOutCount"}, false],
+            [{"name": "startedAt"}, {"name": "completedAt"}]
+        ]
+    }
+]

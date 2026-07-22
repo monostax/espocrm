@@ -28,8 +28,10 @@ use stdClass;
  *
  * Extends Record for standard CRUD and adds send, abort, and template validation actions.
  */
-class WhatsAppCampaign extends Record
+class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAware
 {
+    use \Espo\Core\Di\EntityManagerSetter;
+
     /**
      * Launch a WhatsApp campaign.
      *

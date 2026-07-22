@@ -25,8 +25,10 @@ use stdClass;
  *
  * Extends Record for standard CRUD and adds activate and stop lifecycle actions.
  */
-class WhatsAppCampaignDistribution extends Record
+class WhatsAppCampaignDistribution extends Record implements \Espo\Core\Di\EntityManagerAware
 {
+    use \Espo\Core\Di\EntityManagerSetter;
+
     /**
      * Activate a campaign distribution.
      *

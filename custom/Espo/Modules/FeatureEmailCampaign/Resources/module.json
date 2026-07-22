@@ -1,0 +1,7 @@
+{
+    "order": 29,
+    "version": "1.0.0",
+    "name": "FeatureEmailCampaign",
+    "description": "Continuous-enrollment email campaigns with Target Lists, exclusions, metrics, and Opportunity attribution (WhatsAppCampaign pattern).",
+    "jsTranspiled": true
+}

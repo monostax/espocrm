@@ -1,0 +1,14 @@
+{
+    "EnrollEmailCampaignContacts": {
+        "name": "Enroll New Email Campaign Contacts",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureEmailCampaign\\Jobs\\EnrollEmailCampaignContacts"
+    },
+    "RepairEmailCampaignRecipients": {
+        "name": "Repair Email Campaign Recipients",
+        "isSystem": false,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureEmailCampaign\\Jobs\\RepairEmailCampaignRecipients"
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "links": {
+        "emailCampaigns": {
+            "type": "hasMany",
+            "entity": "EmailCampaign",
+            "foreign": "targetLists",
+            "layoutRelationshipsDisabled": true
+        },
+        "emailCampaignsExcluding": {
+            "type": "hasMany",
+            "entity": "EmailCampaign",
+            "foreign": "excludingTargetLists",
+            "layoutRelationshipsDisabled": true
+        },
+        "emailCampaignContacts": {
+            "type": "hasMany",
+            "entity": "EmailCampaignContact",
+            "foreign": "targetLists",
+            "relationName": "emailCampaignContactTargetList",
+            "layoutRelationshipsDisabled": true
+        },
+        "emailCampaignOpportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "emailCampaignTargetLists",
+            "relationName": "emailCampaignOpportunityTargetList",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

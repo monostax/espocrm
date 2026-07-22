@@ -1,0 +1,9 @@
+[
+    {"name": "name", "width": 22},
+    {"name": "status", "width": 10},
+    {"name": "emailTemplate", "width": 18},
+    {"name": "totalRecipients", "width": 10},
+    {"name": "sentCount", "width": 10},
+    {"name": "failedCount", "width": 10},
+    {"name": "createdAt", "width": 12}
+]
