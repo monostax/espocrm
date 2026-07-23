@@ -543,6 +543,33 @@ define("feature-integration-gmail:helpers/gmail-oauth-connect", [], () => {
 		}
 	}
 
+	/**
+	 * Whether an OAuthAccount model belongs to the Gmail provider.
+	 * Shared EmailAccount.oAuthAccount can also hold Microsoft 365 tokens.
+	 *
+	 * @param {module:model|null} oAuthAccount
+	 * @return {boolean}
+	 */
+	function isGmailAccount(oAuthAccount) {
+		if (!oAuthAccount) {
+			return false;
+		}
+
+		if (oAuthAccount.get("providerId") === PROVIDER_ID) {
+			return true;
+		}
+
+		if (oAuthAccount.get("providerName") === "Google Gmail") {
+			return true;
+		}
+
+		const data = oAuthAccount.get("data") || {};
+		const endpoint =
+			typeof data.endpoint === "string" ? data.endpoint : "";
+
+		return endpoint.indexOf(GOOGLE_AUTH_URL_PREFIX) === 0;
+	}
+
 	return {
 		PROVIDER_ID,
 		PROVIDER_DISCRIMINATOR,
@@ -550,5 +577,6 @@ define("feature-integration-gmail:helpers/gmail-oauth-connect", [], () => {
 		connect,
 		disconnect,
 		resolveProviderId,
+		isGmailAccount,
 	};
 });

@@ -140,6 +140,12 @@
             "readOnly": true,
             "default": 0
         },
+        "skippedCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0,
+            "tooltip": true
+        },
         "totalRecipients": {
             "type": "int",
             "readOnly": true,

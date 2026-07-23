@@ -68,7 +68,7 @@ define("feature-integration-gmail:views/inbound-email/panels/gmail-connection", 
 		oAuthAccount: null,
 
 		data() {
-			const hasLink = !!this.model.get("oAuthAccountId");
+			const hasLink = this.isOurLink();
 			const hasToken = !!(
 				this.oAuthAccount && this.oAuthAccount.get("hasAccessToken")
 			);
@@ -99,7 +99,15 @@ define("feature-integration-gmail:views/inbound-email/panels/gmail-connection", 
 			this.addActionHandler("connect", () => this.actionConnect());
 			this.addActionHandler("disconnect", () => this.actionDisconnect());
 
-			this.loadOAuthAccount();
+			this.wait(this.loadOAuthAccount());
+		},
+
+		isOurLink() {
+			if (!this.model.get("oAuthAccountId") || !this.oAuthAccount) {
+				return false;
+			}
+
+			return GmailOAuthConnect.isGmailAccount(this.oAuthAccount);
 		},
 
 		async loadOAuthAccount() {
@@ -152,10 +160,14 @@ define("feature-integration-gmail:views/inbound-email/panels/gmail-connection", 
 			await this.reRender();
 
 			try {
+				const existingId = this.isOurLink()
+					? this.model.get("oAuthAccountId")
+					: null;
+
 				const result = await GmailOAuthConnect.connect(this, {
 					emailAddress: this.model.get("emailAddress"),
 					accountName: this.model.get("emailAddress") || this.model.get("name"),
-					existingOAuthAccountId: this.model.get("oAuthAccountId") || null,
+					existingOAuthAccountId: existingId,
 					proxyWindow,
 				});
 
@@ -190,7 +202,7 @@ define("feature-integration-gmail:views/inbound-email/panels/gmail-connection", 
 		async actionDisconnect() {
 			const id = this.model.get("oAuthAccountId");
 
-			if (!id || this.inProcess) {
+			if (!id || this.inProcess || !this.isOurLink()) {
 				return;
 			}
 

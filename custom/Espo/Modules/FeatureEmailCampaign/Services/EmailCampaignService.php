@@ -17,6 +17,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Log;
 use Espo\Entities\EmailAddress;
+use Espo\Modules\FeatureEmailCampaign\Tools\EmailDomainMxValidator;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Repositories\EmailAddress as EmailAddressRepository;
@@ -27,6 +28,16 @@ use Espo\Repositories\EmailAddress as EmailAddressRepository;
 class EmailCampaignService
 {
     private const CHUNK_SIZE = 50;
+
+    public const SKIP_REASON_NO_MX =
+        'Domain has no valid MX/A record; skipped to avoid bounce.';
+
+    /**
+     * Addresses skipped on the last resolveAudience / resolveAudienceFromSources call.
+     *
+     * @var array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[], skipReason: string}>
+     */
+    private array $lastSkippedAudience = [];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -80,6 +91,14 @@ class EmailCampaignService
     }
 
     /**
+     * @return array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[], skipReason: string}>
+     */
+    public function getLastSkippedAudience(): array
+    {
+        return $this->lastSkippedAudience;
+    }
+
+    /**
      * @param iterable<Entity> $targetLists
      * @param iterable<Entity> $manualContacts
      * @param string[] $excludeCampaignIds
@@ -93,7 +112,9 @@ class EmailCampaignService
         iterable $excludingTargetLists
     ): array {
         $audience = [];
+        $skipped = [];
         $indexByEmail = [];
+        $skippedIndexByEmail = [];
         $ambiguousEmails = [];
         $emailsByContactId = [];
 
@@ -110,7 +131,9 @@ class EmailCampaignService
                     $contact,
                     $targetListId,
                     $audience,
+                    $skipped,
                     $indexByEmail,
+                    $skippedIndexByEmail,
                     $ambiguousEmails,
                     $emailsByContactId
                 );
@@ -122,7 +145,9 @@ class EmailCampaignService
                 $contact,
                 null,
                 $audience,
+                $skipped,
                 $indexByEmail,
+                $skippedIndexByEmail,
                 $ambiguousEmails,
                 $emailsByContactId
             );
@@ -131,6 +156,10 @@ class EmailCampaignService
         if ($ambiguousEmails !== []) {
             $audience = array_values(array_filter(
                 $audience,
+                static fn (array $item): bool => !isset($ambiguousEmails[$item['emailAddress']])
+            ));
+            $skipped = array_values(array_filter(
+                $skipped,
                 static fn (array $item): bool => !isset($ambiguousEmails[$item['emailAddress']])
             ));
         }
@@ -142,60 +171,140 @@ class EmailCampaignService
                 $audience,
                 static fn (array $item): bool => !isset($excludeEmails[$item['emailAddress']])
             ));
+            $skipped = array_values(array_filter(
+                $skipped,
+                static fn (array $item): bool => !isset($excludeEmails[$item['emailAddress']])
+            ));
         }
+
+        // Never treat the same address as both sendable and skipped.
+        if ($audience !== []) {
+            $sendableSet = [];
+            foreach ($audience as $item) {
+                $sendableSet[$item['emailAddress']] = true;
+            }
+            $skipped = array_values(array_filter(
+                $skipped,
+                static fn (array $item): bool => !isset($sendableSet[$item['emailAddress']])
+            ));
+        }
+
+        $this->lastSkippedAudience = $skipped;
 
         return $audience;
     }
 
     /**
      * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[]}> $audience
+     * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[], skipReason: string}> $skipped
      * @param array<string, int> $indexByEmail
+     * @param array<string, int> $skippedIndexByEmail
      * @param array<string, true> $ambiguousEmails
-     * @param array<string, string[]> $emailsByContactId
+     * @param array<string, array{sendable: string[], skipped: array<int, array{emailAddress: string, reason: string}>}> $emailsByContactId
      */
     private function accumulateContact(
         Entity $contact,
         ?string $targetListId,
         array &$audience,
+        array &$skipped,
         array &$indexByEmail,
+        array &$skippedIndexByEmail,
         array &$ambiguousEmails,
         array &$emailsByContactId
     ): void {
-        foreach ($this->getSendableEmailsForContact($contact, $emailsByContactId) as $email) {
-            if (isset($indexByEmail[$email])) {
-                $index = $indexByEmail[$email];
+        $classified = $this->classifyEmailsForContact($contact, $emailsByContactId);
+        $contactName = (string) ($contact->get('name') ?? '');
+        $contactId = $contact->getId();
 
-                if ($audience[$index]['contactId'] !== $contact->getId()) {
+        foreach ($classified['sendable'] as $email) {
+            $this->addAudienceItem(
+                $audience,
+                $indexByEmail,
+                $ambiguousEmails,
+                $contactId,
+                $email,
+                $contactName,
+                $targetListId
+            );
+        }
+
+        foreach ($classified['skipped'] as $row) {
+            $email = $row['emailAddress'];
+
+            if (isset($skippedIndexByEmail[$email])) {
+                $index = $skippedIndexByEmail[$email];
+
+                if ($skipped[$index]['contactId'] !== $contactId) {
                     $ambiguousEmails[$email] = true;
 
                     continue;
                 }
 
                 if ($targetListId !== null) {
-                    $audience[$index]['targetListIds'][] = $targetListId;
+                    $skipped[$index]['targetListIds'][] = $targetListId;
                 }
 
                 continue;
             }
 
-            $indexByEmail[$email] = count($audience);
-            $audience[] = [
-                'contactId' => $contact->getId(),
+            $skippedIndexByEmail[$email] = count($skipped);
+            $skipped[] = [
+                'contactId' => $contactId,
                 'emailAddress' => $email,
-                'contactName' => (string) ($contact->get('name') ?? ''),
+                'contactName' => $contactName,
                 'targetListIds' => $targetListId !== null ? [$targetListId] : [],
+                'skipReason' => $row['reason'],
             ];
         }
     }
 
     /**
-     * All sendable addresses on the Contact (primary + secondary), skipping
-     * opted-out / invalid / erased. One recipient row is enrolled per address.
-     *
-     * @param array<string, string[]> $emailsByContactId
-     * @return string[]
+     * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[]}> $audience
+     * @param array<string, int> $indexByEmail
+     * @param array<string, true> $ambiguousEmails
      */
-    private function getSendableEmailsForContact(Entity $contact, array &$emailsByContactId): array
+    private function addAudienceItem(
+        array &$audience,
+        array &$indexByEmail,
+        array &$ambiguousEmails,
+        string $contactId,
+        string $email,
+        string $contactName,
+        ?string $targetListId
+    ): void {
+        if (isset($indexByEmail[$email])) {
+            $index = $indexByEmail[$email];
+
+            if ($audience[$index]['contactId'] !== $contactId) {
+                $ambiguousEmails[$email] = true;
+
+                return;
+            }
+
+            if ($targetListId !== null) {
+                $audience[$index]['targetListIds'][] = $targetListId;
+            }
+
+            return;
+        }
+
+        $indexByEmail[$email] = count($audience);
+        $audience[] = [
+            'contactId' => $contactId,
+            'emailAddress' => $email,
+            'contactName' => $contactName,
+            'targetListIds' => $targetListId !== null ? [$targetListId] : [],
+        ];
+    }
+
+    /**
+     * Classify contact addresses into sendable vs skipped (no MX).
+     * Opted-out / invalid / erased are excluded from both lists.
+     *
+     * @param array<string, array{sendable: string[], skipped: array<int, array{emailAddress: string, reason: string}>}> $emailsByContactId
+     * @return array{sendable: string[], skipped: array<int, array{emailAddress: string, reason: string}>}
+     */
+    private function classifyEmailsForContact(Entity $contact, array &$emailsByContactId): array
     {
         $contactId = (string) $contact->getId();
 
@@ -203,7 +312,8 @@ class EmailCampaignService
             return $emailsByContactId[$contactId];
         }
 
-        $emails = [];
+        $sendable = [];
+        $skipped = [];
         $seen = [];
 
         /** @var EmailAddressRepository $repo */
@@ -221,18 +331,36 @@ class EmailCampaignService
             }
 
             $seen[$email] = true;
-            $emails[] = $email;
-        }
 
-        if ($emails === []) {
-            $primary = $this->normalizeEmail($contact->get('emailAddress'));
-
-            if ($primary !== null && $this->isEmailAddressSendable($primary)) {
-                $emails[] = $primary;
+            if ($this->hasValidMx($email)) {
+                $sendable[] = $email;
+            } else {
+                $skipped[] = [
+                    'emailAddress' => $email,
+                    'reason' => self::SKIP_REASON_NO_MX,
+                ];
             }
         }
 
-        return $emailsByContactId[$contactId] = $emails;
+        if ($sendable === [] && $skipped === []) {
+            $primary = $this->normalizeEmail($contact->get('emailAddress'));
+
+            if ($primary !== null && $this->isEmailAddressSendable($primary) && !isset($seen[$primary])) {
+                if ($this->hasValidMx($primary)) {
+                    $sendable[] = $primary;
+                } else {
+                    $skipped[] = [
+                        'emailAddress' => $primary,
+                        'reason' => self::SKIP_REASON_NO_MX,
+                    ];
+                }
+            }
+        }
+
+        return $emailsByContactId[$contactId] = [
+            'sendable' => $sendable,
+            'skipped' => $skipped,
+        ];
     }
 
     /**
@@ -347,25 +475,43 @@ class EmailCampaignService
         $this->opportunityService->assertConfiguration($campaign);
 
         $audience = $this->resolveAudience($campaignId);
+        $skipped = $this->getLastSkippedAudience();
 
-        if ($audience === [] && !$campaign->get('continuousEnrollment')) {
+        if ($audience === [] && $skipped === [] && !$campaign->get('continuousEnrollment')) {
             throw new Error('Campaign has no valid recipients. Check Target Lists and manual contacts.');
         }
 
         $createdIds = $this->createCampaignContacts($campaign, $audience);
+        $skippedIds = $this->createCampaignContacts(
+            $campaign,
+            $skipped,
+            'Skipped',
+            'NotRequested',
+            static fn (array $item): ?string => $item['skipReason'] ?? self::SKIP_REASON_NO_MX
+        );
 
-        $campaign->set([
+        $payload = [
             'status' => 'Sending',
-            'totalRecipients' => count($createdIds),
+            'totalRecipients' => count($createdIds) + count($skippedIds),
+            'skippedCount' => count($skippedIds),
             'startedAt' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        // Nothing to send and no continuous enrollment → finish immediately.
+        if ($createdIds === [] && !$campaign->get('continuousEnrollment')) {
+            $payload['status'] = 'Completed';
+            $payload['completedAt'] = date('Y-m-d H:i:s');
+        }
+
+        $campaign->set($payload);
         $this->entityManager->saveEntity($campaign);
 
         $totalChunks = $this->scheduleChunkJobs($campaignId, $createdIds);
 
         $this->log->info(
             "EmailCampaignService: Launched campaign {$campaignId} with " .
-            count($createdIds) . " recipients in {$totalChunks} chunks."
+            count($createdIds) . " recipients and " . count($skippedIds) .
+            " skipped in {$totalChunks} chunks."
         );
 
         return $campaign;
@@ -384,18 +530,20 @@ class EmailCampaignService
         }
 
         $audience = $this->resolveAudience($campaignId);
+        $skipped = $this->getLastSkippedAudience();
 
-        if ($audience === []) {
+        if ($audience === [] && $skipped === []) {
             return 0;
         }
 
-        return $this->enrollAudience($campaignId, $audience);
+        return $this->enrollAudience($campaignId, $audience, $skipped);
     }
 
     /**
      * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[]}> $audience
+     * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[], skipReason?: string}> $skipped
      */
-    public function enrollAudience(string $campaignId, array $audience): int
+    public function enrollAudience(string $campaignId, array $audience, array $skipped = []): int
     {
         $campaign = $this->entityManager->getEntityById('EmailCampaign', $campaignId);
 
@@ -407,7 +555,7 @@ class EmailCampaignService
             return 0;
         }
 
-        if ($audience === []) {
+        if ($audience === [] && $skipped === []) {
             return 0;
         }
 
@@ -453,13 +601,31 @@ class EmailCampaignService
             }
         }
 
-        if ($newAudience === []) {
+        $newSkipped = [];
+
+        foreach ($skipped as $item) {
+            if (isset($enrolledEmails[$item['emailAddress']])) {
+                continue;
+            }
+
+            $newSkipped[] = $item;
+            $enrolledEmails[$item['emailAddress']] = true;
+        }
+
+        if ($newAudience === [] && $newSkipped === []) {
             return 0;
         }
 
         $createdIds = $this->createCampaignContacts($campaign, $newAudience);
+        $skippedIds = $this->createCampaignContacts(
+            $campaign,
+            $newSkipped,
+            'Skipped',
+            'NotRequested',
+            static fn (array $item): ?string => $item['skipReason'] ?? self::SKIP_REASON_NO_MX
+        );
 
-        if ($createdIds === []) {
+        if ($createdIds === [] && $skippedIds === []) {
             return 0;
         }
 
@@ -468,12 +634,22 @@ class EmailCampaignService
             ->where(['emailCampaignId' => $campaignId])
             ->count();
 
-        $campaign->set(['totalRecipients' => $totalRows]);
+        $skippedCount = $this->entityManager
+            ->getRDBRepository('EmailCampaignContact')
+            ->where(['emailCampaignId' => $campaignId, 'status' => 'Skipped'])
+            ->count();
+
+        $campaign->set([
+            'totalRecipients' => $totalRows,
+            'skippedCount' => $skippedCount,
+        ]);
         $this->entityManager->saveEntity($campaign);
 
-        $this->scheduleChunkJobs($campaignId, $createdIds);
+        if ($createdIds !== []) {
+            $this->scheduleChunkJobs($campaignId, $createdIds);
+        }
 
-        return count($createdIds);
+        return count($createdIds) + count($skippedIds);
     }
 
     /**
@@ -560,28 +736,49 @@ class EmailCampaignService
     }
 
     /**
-     * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[]}> $audience
+     * @param array<int, array{contactId: string, emailAddress: string, contactName: string, targetListIds: string[], skipReason?: string}> $audience
+     * @param (callable(array): (?string))|null $failedReasonResolver
      * @return string[]
      */
-    private function createCampaignContacts(Entity $campaign, array $audience): array
-    {
+    private function createCampaignContacts(
+        Entity $campaign,
+        array $audience,
+        string $status = 'Pending',
+        string $opportunityAttributionStatus = 'auto',
+        ?callable $failedReasonResolver = null
+    ): array {
         $createdIds = [];
+
+        if ($opportunityAttributionStatus === 'auto') {
+            $opportunityAttributionStatus = $campaign->get('createOpportunity') && $status === 'Pending'
+                ? 'Pending'
+                : 'NotRequested';
+        }
 
         foreach ($audience as $item) {
             $transactionManager = $this->entityManager->getTransactionManager();
             $transactionManager->start();
 
             try {
-                $entity = $this->entityManager->createEntity('EmailCampaignContact', [
+                $payload = [
                     'emailCampaignId' => $campaign->getId(),
                     'contactId' => $item['contactId'],
                     'emailAddress' => $item['emailAddress'],
                     'contactName' => $item['contactName'],
-                    'status' => 'Pending',
-                    'opportunityAttributionStatus' => $campaign->get('createOpportunity')
-                        ? 'Pending'
-                        : 'NotRequested',
-                ]);
+                    'status' => $status,
+                    'opportunityAttributionStatus' => $opportunityAttributionStatus,
+                ];
+
+                if ($failedReasonResolver !== null) {
+                    $reason = $failedReasonResolver($item);
+
+                    if ($reason !== null) {
+                        $payload['failedReason'] = substr($reason, 0, 5000);
+                        $payload['failedAt'] = date('Y-m-d H:i:s');
+                    }
+                }
+
+                $entity = $this->entityManager->createEntity('EmailCampaignContact', $payload);
 
                 foreach ($item['targetListIds'] ?? [] as $targetListId) {
                     $this->entityManager
@@ -699,5 +896,21 @@ class EmailCampaignService
         }
 
         return true;
+    }
+
+    /**
+     * Skip domains with no MX (or A/AAAA fallback) to avoid hard bounces.
+     */
+    private function hasValidMx(string $email): bool
+    {
+        if (EmailDomainMxValidator::emailDomainHasValidMx($email)) {
+            return true;
+        }
+
+        $this->log->info(
+            "EmailCampaignService: Skipping {$email} — domain has no valid MX/A record."
+        );
+
+        return false;
     }
 }

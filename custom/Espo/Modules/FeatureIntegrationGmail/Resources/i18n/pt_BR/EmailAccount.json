@@ -1,9 +1,9 @@
 {
     "fields": {
-        "oAuthAccount": "Conta OAuth do Gmail"
+        "oAuthAccount": "Conta OAuth"
     },
     "links": {
-        "oAuthAccount": "Conta OAuth do Gmail"
+        "oAuthAccount": "Conta OAuth"
     },
     "labels": {
         "Gmail": "Gmail",
@@ -11,7 +11,7 @@
         "Reconnect": "Reconectar"
     },
     "tooltips": {
-        "oAuthAccount": "Vincule uma Conta OAuth do Google Gmail. Prefira o botão Conectar Gmail no painel lateral — ele cria a Conta OAuth e abre o consentimento. IMAP/SMTP usam XOAUTH2 (sem senha de app)."
+        "oAuthAccount": "Opcional. Vincule uma Conta OAuth do Gmail ou Microsoft 365 para XOAUTH2 (sem senha de app), ou use os botões Conectar no painel lateral. Deixe vazio para usar usuário/senha."
     },
     "messages": {
         "gmailOAuthConnected": "Gmail conectado. Hosts definidos para o padrão do Gmail. Use Testar Conexão / Enviar e-mail de teste para validar.",

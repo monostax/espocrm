@@ -43,8 +43,8 @@
         "name": "statistics",
         "rows": [
             [{"name": "totalRecipients"}, {"name": "sentCount"}],
-            [{"name": "failedCount"}, {"name": "bouncedCount"}],
-            [{"name": "optedOutCount"}, false],
+            [{"name": "failedCount"}, {"name": "skippedCount"}],
+            [{"name": "bouncedCount"}, {"name": "optedOutCount"}],
             [{"name": "startedAt"}, {"name": "completedAt"}]
         ]
     }

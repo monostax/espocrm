@@ -28,6 +28,7 @@
         "failedCount": "Failed",
         "bouncedCount": "Bounced",
         "optedOutCount": "Opted Out",
+        "skippedCount": "Skipped (Not Sent)",
         "totalRecipients": "Total Recipients",
         "createdAt": "Created At",
         "modifiedAt": "Modified At",
@@ -95,6 +96,7 @@
         "opportunityAssignedUser": "Assigned user for newly created Opportunities. Must belong to a funnel team.",
         "excludeCampaigns": "Contacts already reached (Sent) by these email campaigns are excluded from enrollment.",
         "excludingTargetLists": "Contacts that are members of these lists are excluded from enrollment.",
-        "tenant": "Optional denormalized tenant for reporting."
+        "tenant": "Optional denormalized tenant for reporting.",
+        "skippedCount": "Addresses not sent because the domain has no valid MX/A record (would bounce)."
     }
 }

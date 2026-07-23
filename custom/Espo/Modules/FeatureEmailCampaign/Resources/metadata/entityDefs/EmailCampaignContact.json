@@ -26,7 +26,8 @@
                 "Sent",
                 "Failed",
                 "OptedOut",
-                "Bounced"
+                "Bounced",
+                "Skipped"
             ],
             "default": "Pending",
             "style": {
@@ -36,7 +37,8 @@
                 "Sent": "success",
                 "Failed": "danger",
                 "OptedOut": "default",
-                "Bounced": "warning"
+                "Bounced": "warning",
+                "Skipped": "default"
             }
         },
         "claimedAt": {

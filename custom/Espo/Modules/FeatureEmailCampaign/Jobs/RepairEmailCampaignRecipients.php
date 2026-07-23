@@ -119,6 +119,11 @@ class RepairEmailCampaignRecipients implements JobDataLess
                 ->where(['emailCampaignId' => $campaignId, 'status' => 'OptedOut'])
                 ->count();
 
+            $skipped = $this->entityManager
+                ->getRDBRepository('EmailCampaignContact')
+                ->where(['emailCampaignId' => $campaignId, 'status' => 'Skipped'])
+                ->count();
+
             $total = $this->entityManager
                 ->getRDBRepository('EmailCampaignContact')
                 ->where(['emailCampaignId' => $campaignId])
@@ -129,6 +134,7 @@ class RepairEmailCampaignRecipients implements JobDataLess
                 'failedCount' => $failed,
                 'bouncedCount' => $bounced,
                 'optedOutCount' => $optedOut,
+                'skippedCount' => $skipped,
                 'totalRecipients' => $total,
             ]);
             $this->entityManager->saveEntity($campaign);

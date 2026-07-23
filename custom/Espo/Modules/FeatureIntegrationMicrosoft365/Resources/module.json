@@ -1,0 +1,7 @@
+{
+    "name": "FeatureIntegrationMicrosoft365",
+    "description": "Microsoft 365 email integration via OAuthAccount + IMAP/SMTP XOAUTH2 handlers for EmailAccount and InboundEmail",
+    "version": "1.0.0",
+    "order": 27,
+    "jsTranspiled": true
+}

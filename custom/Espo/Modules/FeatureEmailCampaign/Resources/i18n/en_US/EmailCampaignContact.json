@@ -26,7 +26,8 @@
             "Sent": "Sent",
             "Failed": "Failed",
             "OptedOut": "Opted Out",
-            "Bounced": "Bounced"
+            "Bounced": "Bounced",
+            "Skipped": "Skipped"
         },
         "opportunityAttributionStatus": {
             "NotRequested": "Not Requested",

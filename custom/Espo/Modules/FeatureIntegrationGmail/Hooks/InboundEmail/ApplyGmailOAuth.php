@@ -107,14 +107,27 @@ class ApplyGmailOAuth implements BeforeSave
     private function applyGmailDefaults(InboundEmail $entity): void
     {
         $emailAddress = $entity->get('emailAddress');
+        $forceHosts = $entity->isNew() || $entity->isAttributeChanged('oAuthAccountId');
 
-        if (!$entity->get('host') || $entity->get('host') === self::IMAP_HOST) {
+        $host = $entity->get('host');
+        if (
+            $forceHosts ||
+            !$host ||
+            $host === self::IMAP_HOST ||
+            $host === 'outlook.office365.com'
+        ) {
             $entity->set('host', self::IMAP_HOST);
             $entity->set('port', self::IMAP_PORT);
             $entity->set('security', self::IMAP_SECURITY);
         }
 
-        if (!$entity->get('smtpHost') || $entity->get('smtpHost') === self::SMTP_HOST) {
+        $smtpHost = $entity->get('smtpHost');
+        if (
+            $forceHosts ||
+            !$smtpHost ||
+            $smtpHost === self::SMTP_HOST ||
+            $smtpHost === 'smtp.office365.com'
+        ) {
             $entity->set('smtpHost', self::SMTP_HOST);
             $entity->set('smtpPort', self::SMTP_PORT);
             $entity->set('smtpSecurity', self::SMTP_SECURITY);

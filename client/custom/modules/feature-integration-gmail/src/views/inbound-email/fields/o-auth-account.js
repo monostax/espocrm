@@ -9,14 +9,12 @@
  ************************************************************************/
 
 /**
- * Gmail OAuthAccount picker for InboundEmail (group mailbox).
- * Restricts selection to OAuthAccounts whose provider discriminator is google-gmail.
+ * Shared OAuthAccount picker for InboundEmail (Gmail, Microsoft 365, …).
+ * No provider filter — side-panel Connect buttons create the right account type.
  */
 define("feature-integration-gmail:views/inbound-email/fields/o-auth-account", [
 	"views/fields/link",
 ], (Dep) =>
 	Dep.extend({
-		selectPrimaryFilterName: "gmail",
-
 		createDisabled: false,
 	}));

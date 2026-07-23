@@ -16,6 +16,7 @@
             "google-calendar": "Google (Calendar)",
             "google-meet": "Google (Meet)",
             "google-gmail": "Google (Gmail)",
+            "microsoft-365": "Microsoft 365",
             "meta-instagram": "Meta (Instagram)",
             "other": "Outro"
         }

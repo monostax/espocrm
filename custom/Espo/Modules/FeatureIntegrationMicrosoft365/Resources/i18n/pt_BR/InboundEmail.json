@@ -1,0 +1,17 @@
+{
+    "labels": {
+        "Microsoft 365": "Microsoft 365",
+        "Connect Microsoft 365": "Conectar Microsoft 365",
+        "Reconnect": "Reconectar"
+    },
+    "messages": {
+        "m365OAuthConnected": "Microsoft 365 conectado. Hosts definidos para o padrão do Office 365. Use Testar Conexão / Enviar e-mail de teste para validar.",
+        "m365OAuthDisconnected": "Microsoft 365 desconectado desta Conta de E-mail em Grupo.",
+        "m365ConnectHelp": "Conecte esta caixa em grupo com o Microsoft 365. Cria uma conta OAuth em segundo plano e abre o login da Microsoft — sem senha de app.",
+        "m365LinkedButDisconnected": "Há uma conta OAuth vinculada, mas sem token de acesso. Clique em Reconectar para autorizar a Microsoft novamente.",
+        "m365SaveBeforeConnect": "Salve a Conta de E-mail em Grupo primeiro e depois conecte o Microsoft 365.",
+        "m365ProviderMissing": "Provedor OAuth Microsoft 365 não encontrado. Execute o rebuild e configure Client ID/Secret em Administração → Provedores OAuth.",
+        "m365ProviderNotConfigured": "Provedor OAuth Microsoft 365 não configurado (faltam Client ID / secret). Peça a um admin para configurar em Provedores OAuth.",
+        "m365PopupBlocked": "Não foi possível abrir a janela de login da Microsoft. Permita pop-ups neste site e tente de novo."
+    }
+}

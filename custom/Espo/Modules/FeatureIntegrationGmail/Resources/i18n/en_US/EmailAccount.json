@@ -1,9 +1,9 @@
 {
     "fields": {
-        "oAuthAccount": "Gmail OAuth Account"
+        "oAuthAccount": "OAuth Account"
     },
     "links": {
-        "oAuthAccount": "Gmail OAuth Account"
+        "oAuthAccount": "OAuth Account"
     },
     "labels": {
         "Gmail": "Gmail",
@@ -11,7 +11,7 @@
         "Reconnect": "Reconnect"
     },
     "tooltips": {
-        "oAuthAccount": "Link a Google Gmail OAuth Account. Prefer the side-panel Connect Gmail button — it creates the OAuthAccount and runs consent for you. IMAP/SMTP then use XOAUTH2 (no app password)."
+        "oAuthAccount": "Optional. Link a Gmail or Microsoft 365 OAuth account for XOAUTH2 (no app password), or use the side-panel Connect buttons. Leave empty to use username/password."
     },
     "messages": {
         "gmailOAuthConnected": "Gmail connected. Hosts were set to Gmail defaults. Use Test Connection / Send Test Email to verify.",

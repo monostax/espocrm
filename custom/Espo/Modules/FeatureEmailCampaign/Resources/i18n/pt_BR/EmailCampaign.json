@@ -28,6 +28,7 @@
         "failedCount": "Falhas",
         "bouncedCount": "Bounces",
         "optedOutCount": "Opt-out",
+        "skippedCount": "Ignorados (Não Enviados)",
         "totalRecipients": "Total de Destinatários",
         "createdAt": "Criado em",
         "modifiedAt": "Modificado em",
@@ -62,6 +63,7 @@
         "inboundEmail": "Conta de email do grupo (SMTP). Precisa ter SMTP e \"Usar para Mass Email\" ativos. Exclusivo com Conta Pessoal.",
         "emailAccount": "Conta de email pessoal (SMTP). Precisa estar Ativa com SMTP. Exclusivo com Conta do Grupo.",
         "continuousEnrollment": "Quando habilitado, contatos adicionados às Listas Alvo ou Contatos Manuais após o início são inscritos e recebem o email automaticamente.",
-        "createOpportunity": "Quando habilitado, um envio bem-sucedido cria ou reutiliza uma Oportunidade aberta no funil configurado. A mesma chave contato+funil é compartilhada com campanhas WhatsApp."
+        "createOpportunity": "Quando habilitado, um envio bem-sucedido cria ou reutiliza uma Oportunidade aberta no funil configurado. A mesma chave contato+funil é compartilhada com campanhas WhatsApp.",
+        "skippedCount": "Endereços não enviados porque o domínio não tem registro MX/A válido (evita bounce)."
     }
 }

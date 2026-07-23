@@ -1,0 +1,22 @@
+{
+    "viewSetupHandlers": {
+        "record/detail": [
+            "feature-integration-microsoft-365:handlers/inbound-email/detail-setup"
+        ],
+        "record/edit": [
+            "feature-integration-microsoft-365:handlers/inbound-email/detail-setup"
+        ]
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "microsoft365Connection",
+                "label": "Microsoft 365",
+                "view": "feature-integration-microsoft-365:views/inbound-email/panels/microsoft-365-connection",
+                "acl": "edit",
+                "notRefreshable": true,
+                "sticked": true
+            }
+        ]
+    }
+}

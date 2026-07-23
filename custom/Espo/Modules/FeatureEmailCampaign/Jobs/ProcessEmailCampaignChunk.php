@@ -25,6 +25,7 @@ use Espo\Core\Utils\Log;
 use Espo\Entities\Email;
 use Espo\Entities\EmailTemplate;
 use Espo\Modules\FeatureEmailCampaign\Services\EmailCampaignOpportunityService;
+use Espo\Modules\FeatureEmailCampaign\Tools\EmailDomainMxValidator;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Tools\EmailTemplate\Data as TemplateData;
@@ -209,6 +210,23 @@ class ProcessEmailCampaignChunk implements Job
 
         if (!$contactId || !$emailAddress) {
             throw new Error('Recipient missing contact or email address.');
+        }
+
+        if (!EmailDomainMxValidator::emailDomainHasValidMx((string) $emailAddress)) {
+            $campaignContact->set([
+                'status' => 'Skipped',
+                'failedAt' => date('Y-m-d H:i:s'),
+                'failedReason' => substr(
+                    "Domain has no valid MX/A record for {$emailAddress}; skipped to avoid bounce.",
+                    0,
+                    5000
+                ),
+                'opportunityAttributionStatus' => 'NotRequested',
+            ]);
+            $this->entityManager->saveEntity($campaignContact);
+            $this->incrementCampaignCounter((string) $ctx['campaignId'], 'skippedCount');
+
+            return;
         }
 
         $contact = $this->entityManager->getEntityById('Contact', $contactId);
@@ -534,6 +552,13 @@ class ProcessEmailCampaignChunk implements Job
 
     private function isTransientFailure(string $message): bool
     {
+        $lower = strtolower($message);
+
+        // MX/A absence is permanent for this send cycle — never burn retries.
+        if (str_contains($lower, 'no valid mx')) {
+            return false;
+        }
+
         $needles = [
             'temporarily',
             'try again',
@@ -545,8 +570,6 @@ class ProcessEmailCampaignChunk implements Job
             'rate limit',
             'too many',
         ];
-
-        $lower = strtolower($message);
 
         foreach ($needles as $needle) {
             if (str_contains($lower, $needle)) {

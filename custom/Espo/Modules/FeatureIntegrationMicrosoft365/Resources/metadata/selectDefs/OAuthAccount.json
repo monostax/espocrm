@@ -1,0 +1,5 @@
+{
+    "primaryFilterClassNameMap": {
+        "microsoft365": "Espo\\Modules\\FeatureIntegrationMicrosoft365\\Classes\\Select\\OAuthAccount\\PrimaryFilters\\Microsoft365"
+    }
+}

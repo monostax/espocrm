@@ -18,10 +18,5 @@
                 "sticked": true
             }
         ]
-    },
-    "relationshipPanels": {
-        "oAuthAccount": {
-            "selectPrimaryFilterName": "gmail"
-        }
     }
 }

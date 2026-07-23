@@ -1,0 +1,17 @@
+{
+    "labels": {
+        "Microsoft 365": "Microsoft 365",
+        "Connect Microsoft 365": "Connect Microsoft 365",
+        "Reconnect": "Reconnect"
+    },
+    "messages": {
+        "m365OAuthConnected": "Microsoft 365 connected. Hosts were set to Office 365 defaults. Use Test Connection / Send Test Email to verify.",
+        "m365OAuthDisconnected": "Microsoft 365 disconnected from this Group Email Account.",
+        "m365ConnectHelp": "Connect this group mailbox with Microsoft 365. Creates an OAuth account in the background and opens Microsoft sign-in — no app password needed.",
+        "m365LinkedButDisconnected": "An OAuth account is linked but has no access token. Click Reconnect to authorize Microsoft again.",
+        "m365SaveBeforeConnect": "Save the Group Email Account first, then connect Microsoft 365.",
+        "m365ProviderMissing": "Microsoft 365 OAuth provider was not found. Run rebuild and configure Client ID/Secret under Administration → OAuth Providers.",
+        "m365ProviderNotConfigured": "Microsoft 365 OAuth provider is not configured (missing Client ID / secret). Ask an admin to set it under OAuth Providers.",
+        "m365PopupBlocked": "Could not open the Microsoft sign-in window. Allow popups for this site and try again."
+    }
+}
