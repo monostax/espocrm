@@ -150,17 +150,19 @@
             ],
             [
                 {
+                    "name": "timeZone"
+                },
+                {
+                    "name": "followupsEnabled"
+                }
+            ],
+            [
+                {
                     "name": "ignoreGroups"
                 },
                 {
                     "name": "ignoreStatusBroadcast"
                 }
-            ],
-            [
-                {
-                    "name": "followupsEnabled"
-                },
-                false
             ]
         ]
     }

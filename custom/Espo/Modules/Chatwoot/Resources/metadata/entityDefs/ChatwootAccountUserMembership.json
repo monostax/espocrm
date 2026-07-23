@@ -77,6 +77,13 @@
             "tooltip": true,
             "audited": true
         },
+        "timeZone": {
+            "type": "enum",
+            "view": "views/preferences/fields/time-zone",
+            "tooltip": true,
+            "audited": true,
+            "comment": "IANA timezone of this AI agent. Used so prompts show Current Date/Time in the agent's local zone (empty = UTC)."
+        },
         "ignoreGroups": {
             "type": "bool",
             "default": false

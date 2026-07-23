@@ -48,7 +48,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
  *
  * Key invariants:
  *   - Never explicitly sets isAI = false. The entity default handles that for new records.
- *   - Preserves all user-configured fields (isAI, aiPrompt, ignoreGroups,
+ *   - Preserves all user-configured fields (isAI, aiPrompt, timeZone, ignoreGroups,
  *     transferScenarios, knowledgeBaseCategories, calendarsToManage, etc.)
  *     during both create and update paths.
  *   - Agents are added to the "seen" set from the authoritative Platform API response,
@@ -359,7 +359,7 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
      * Enrich a membership with detailed agent profile data from the Account API.
      *
      * IMPORTANT: Never overwrites user-configured fields (isAI, aiPrompt,
-     * ignoreGroups, transferScenarios, knowledgeBaseCategories, calendarsToManage).
+     * timeZone, ignoreGroups, transferScenarios, knowledgeBaseCategories, calendarsToManage).
      *
      * @param Entity $membership ChatwootAccountUserMembership entity
      * @param array<string, mixed> $agentData Agent data from Account API

@@ -57,6 +57,16 @@
                     ]
                 }
             },
+            "timeZone": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
             "knowledgeBaseCategories": {
                 "visible": {
                     "conditionGroup": [

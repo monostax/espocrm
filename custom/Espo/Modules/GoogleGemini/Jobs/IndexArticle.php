@@ -41,6 +41,16 @@ class IndexArticle implements Job
     /** Maximum number of retry attempts for delete operations. */
     private const MAX_DELETE_ATTEMPTS = 10;
 
+    /**
+     * Gemini white-space chunking defaults. Price tables need tight row-sized
+     * chunks (~1-3 procedure rows) so multi-exam agentic search hits exactly
+     * the right price line without stuffing large table blobs into tool_use.
+     * Override with GOOGLE_GEMINI_CHUNK_MAX_TOKENS / GOOGLE_GEMINI_CHUNK_OVERLAP.
+     * Set max tokens <= 0 to leave chunkingConfig unset (API default).
+     */
+    private const DEFAULT_CHUNK_MAX_TOKENS = 100;
+    private const DEFAULT_CHUNK_OVERLAP_TOKENS = 15;
+
     public function __construct(
         private EntityManager $entityManager,
         private GeminiFileSearchService $geminiService,
@@ -153,7 +163,7 @@ class IndexArticle implements Job
                 $displayName,
                 $metadata,
                 'text/plain',
-                null,
+                $this->getChunkingConfig(),
                 $storeName
             );
 
@@ -706,12 +716,29 @@ class IndexArticle implements Job
 
     /**
      * Build the content string for indexing.
+     *
+     * Prefer the HTML body so tables (Google Sheets paste, etc.) can be
+     * converted to one markdown row per <tr>. Falling back to bodyPlain or
+     * strip_tags collapses table cells into glued tokens
+     * (PROFISSIONALESPECIALIDADE...) which destroys embedding/chunk quality.
      */
     private function buildArticleContent(Entity $article): string
     {
         $name = $article->get('name') ?? '';
         $description = $article->get('description') ?? '';
-        $bodyPlain = $article->get('bodyPlain') ?: strip_tags($article->get('body') ?? '');
+        $bodyHtml = (string) ($article->get('body') ?? '');
+        $bodyPlain = (string) ($article->get('bodyPlain') ?? '');
+
+        $body = $bodyHtml !== ''
+            ? $this->htmlToIndexableText($bodyHtml)
+            : trim($bodyPlain);
+
+        // If conversion failed / produced glued-looking output and plain exists
+        // but is itself glued, still prefer the converted HTML attempt only when
+        // it introduced structure (newlines / pipes).
+        if ($body === '' && $bodyPlain !== '') {
+            $body = trim($bodyPlain);
+        }
 
         $content = "# {$name}\n\n";
 
@@ -719,9 +746,255 @@ class IndexArticle implements Job
             $content .= "{$description}\n\n";
         }
 
-        $content .= $bodyPlain;
+        $content .= $body;
 
         return $content;
+    }
+
+    /**
+     * Convert HTML (esp. tables) into newline-delimited plain text suitable
+     * for Gemini File Search whitespace chunking.
+     *
+     * Tables → markdown pipes, one row per line:
+     *   | PROFISSIONAL | ESPECIALIDADE | PROCEDIMENTOS | PARTICULAR | ECO |
+     *   | GUSTAVO ...  | CARDIOLOGISTA | CONSULTA ...  | R$ 350.00  | R$ 300.00 |
+     *
+     * Non-table block elements get bordering newlines so bullet lists and
+     * prose stay contraposable for embeddings.
+     */
+    private function htmlToIndexableText(string $html): string
+    {
+        if (trim($html) === '') {
+            return '';
+        }
+
+        // Normalize common wrappers so DOM can parse fragments reliably.
+        $wrapped = '<!DOCTYPE html><html><body>' . $html . '</body></html>';
+
+        $prev = libxml_use_internal_errors(true);
+        $dom = new \DOMDocument();
+        // mb-safeguard: load as UTF-8
+        $loaded = $dom->loadHTML(
+            '<?xml encoding="UTF-8">' . $wrapped,
+            LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NONET
+        );
+        libxml_clear_errors();
+        libxml_use_internal_errors($prev);
+
+        if (!$loaded || !$dom->documentElement) {
+            return trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        }
+
+        $parts = [];
+        $body = $dom->getElementsByTagName('body')->item(0);
+        if ($body) {
+            $this->walkHtmlNode($body, $parts);
+        }
+
+        $text = implode('', $parts);
+        // Collapse runs of blank lines; keep single blank between blocks.
+        $text = preg_replace("/[ \t]+\n/", "\n", $text) ?? $text;
+        $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Normalize NBSP etc.
+        $text = str_replace("\xC2\xA0", ' ', $text);
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text) ?? $text;
+
+        return trim($text);
+    }
+
+    /**
+     * @param list<string> $parts
+     */
+    private function walkHtmlNode(\DOMNode $node, array &$parts): void
+    {
+        if ($node instanceof \DOMText) {
+            $t = $node->wholeText;
+            if (trim($t) !== '') {
+                $parts[] = preg_replace('/\s+/u', ' ', $t) ?? $t;
+            } elseif ($t !== '') {
+                $parts[] = ' ';
+            }
+            return;
+        }
+
+        if (!$node instanceof \DOMElement) {
+            return;
+        }
+
+        $tag = strtolower($node->tagName);
+
+        if (in_array($tag, ['script', 'style', 'noscript', 'head', 'meta', 'link'], true)) {
+            return;
+        }
+
+        if ($tag === 'br') {
+            $parts[] = "\n";
+            return;
+        }
+
+        if ($tag === 'table') {
+            $parts[] = "\n" . $this->tableToMarkdown($node) . "\n";
+            return;
+        }
+
+        // Flatten list items so bullets stay on one line with their content.
+        if ($tag === 'li') {
+            $parts[] = "\n- ";
+            foreach (iterator_to_array($node->childNodes) as $child) {
+                $this->walkHtmlNodeInline($child, $parts);
+            }
+            $parts[] = "\n";
+            return;
+        }
+
+        $isBlock = in_array($tag, [
+            'p', 'div', 'section', 'article', 'header', 'footer', 'aside',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'ul', 'ol', 'blockquote', 'pre', 'hr', 'tr',
+        ], true);
+
+        if ($isBlock) {
+            $parts[] = "\n";
+        }
+
+        foreach (iterator_to_array($node->childNodes) as $child) {
+            $this->walkHtmlNode($child, $parts);
+        }
+
+        if ($isBlock) {
+            $parts[] = "\n";
+        }
+    }
+
+    /**
+     * Inline walk (no block newlines) — used inside table cells / list items.
+     *
+     * @param list<string> $parts
+     */
+    private function walkHtmlNodeInline(\DOMNode $node, array &$parts): void
+    {
+        if ($node instanceof \DOMText) {
+            $t = $node->wholeText;
+            if (trim($t) !== '') {
+                $parts[] = preg_replace('/\s+/u', ' ', $t) ?? $t;
+            } elseif ($t !== '') {
+                $parts[] = ' ';
+            }
+            return;
+        }
+
+        if (!$node instanceof \DOMElement) {
+            return;
+        }
+
+        $tag = strtolower($node->tagName);
+        if (in_array($tag, ['script', 'style', 'noscript'], true)) {
+            return;
+        }
+        if ($tag === 'br') {
+            $parts[] = ' ';
+            return;
+        }
+        if ($tag === 'table') {
+            $parts[] = ' ' . preg_replace('/\s+/u', ' ', $this->tableToMarkdown($node)) . ' ';
+            return;
+        }
+
+        foreach (iterator_to_array($node->childNodes) as $child) {
+            $this->walkHtmlNodeInline($child, $parts);
+        }
+    }
+
+    /**
+     * Convert a <table> DOM element into pipe-markdown rows.
+     */
+    private function tableToMarkdown(\DOMElement $table): string
+    {
+        $rows = [];
+        foreach ($table->getElementsByTagName('tr') as $tr) {
+            /** @var \DOMElement $tr */
+            $cells = [];
+            foreach ($tr->childNodes as $cell) {
+                if (!$cell instanceof \DOMElement) {
+                    continue;
+                }
+                $ct = strtolower($cell->tagName);
+                if ($ct !== 'td' && $ct !== 'th') {
+                    continue;
+                }
+                $cellText = $this->elementTextContent($cell);
+                $cellText = str_replace('|', '\\|', $cellText);
+                $cells[] = $cellText;
+            }
+            if (empty($cells)) {
+                continue;
+            }
+            $joined = implode('', $cells);
+            if (trim($joined) === '') {
+                continue;
+            }
+            $rows[] = '| ' . implode(' | ', $cells) . ' |';
+        }
+
+        if (empty($rows)) {
+            return trim($table->textContent ?? '');
+        }
+
+        if (count($rows) >= 2) {
+            $colCount = max(1, substr_count($rows[0], '|') - 1);
+            $sep = '| ' . implode(' | ', array_fill(0, $colCount, '---')) . ' |';
+            array_splice($rows, 1, 0, [$sep]);
+        }
+
+        return implode("\n", $rows);
+    }
+
+    private function elementTextContent(\DOMElement $el): string
+    {
+        $parts = [];
+        foreach (iterator_to_array($el->childNodes) as $child) {
+            $this->walkHtmlNodeInline($child, $parts);
+        }
+        $t = implode('', $parts);
+        $t = preg_replace('/\s+/u', ' ', $t) ?? $t;
+        return trim($t);
+    }
+
+    /**
+     * Gemini whiteSpaceConfig for File Search uploads.
+     * Returns null when disabled via env (max tokens <= 0).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function getChunkingConfig(): ?array
+    {
+        $maxTokens = (int) (getenv('GOOGLE_GEMINI_CHUNK_MAX_TOKENS') !== false
+            ? getenv('GOOGLE_GEMINI_CHUNK_MAX_TOKENS')
+            : self::DEFAULT_CHUNK_MAX_TOKENS);
+
+        if ($maxTokens <= 0) {
+            return null;
+        }
+
+        $overlap = (int) (getenv('GOOGLE_GEMINI_CHUNK_OVERLAP') !== false
+            ? getenv('GOOGLE_GEMINI_CHUNK_OVERLAP')
+            : self::DEFAULT_CHUNK_OVERLAP_TOKENS);
+
+        if ($overlap < 0) {
+            $overlap = 0;
+        }
+        // API requires overlap < max tokens.
+        if ($overlap >= $maxTokens) {
+            $overlap = max(0, $maxTokens - 1);
+        }
+
+        return [
+            'whiteSpaceConfig' => [
+                'maxTokensPerChunk' => $maxTokens,
+                'maxOverlapTokens' => $overlap,
+            ],
+        ];
     }
 
     /**
