@@ -1,4 +1,55 @@
 {
+    "fields": {
+        "aiBillingCurrency": {
+            "type": "enum",
+            "view": "views/fields/currency-list",
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period. Edit rate history, not this snapshot."
+        },
+        "aiBillingPackUnitPrice": {
+            "type": "float",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period."
+        },
+        "aiBillingExtraBasePrice": {
+            "type": "float",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period."
+        },
+        "aiBillingExtraUnitPrice": {
+            "type": "float",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period."
+        },
+        "aiBillingPackSize": {
+            "type": "int",
+            "min": 1,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period."
+        },
+        "aiBillingExtraIncludedTurns": {
+            "type": "int",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period."
+        },
+        "aiBillingPlanIncludedUsage": {
+            "type": "int",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period. Monthly free packs/bases."
+        }
+    },
     "links": {
         "chatwootAccounts": {
             "type": "hasMany",
@@ -23,6 +74,11 @@
         "whatsAppCampaigns": {
             "type": "hasMany",
             "entity": "WhatsAppCampaign",
+            "foreign": "tenant"
+        },
+        "aiBillingRates": {
+            "type": "hasMany",
+            "entity": "TenantAiBillingRate",
             "foreign": "tenant"
         }
     }

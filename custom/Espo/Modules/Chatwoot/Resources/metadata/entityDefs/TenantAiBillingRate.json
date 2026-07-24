@@ -1,0 +1,111 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": true
+        },
+        "tenant": {
+            "type": "link",
+            "required": true
+        },
+        "effectiveFrom": {
+            "type": "date",
+            "required": true,
+            "tooltip": true
+        },
+        "effectiveTo": {
+            "type": "date",
+            "tooltip": true
+        },
+        "currency": {
+            "type": "enum",
+            "view": "views/fields/currency-list",
+            "tooltip": true
+        },
+        "packUnitPrice": {
+            "type": "float",
+            "min": 0,
+            "tooltip": true
+        },
+        "packSize": {
+            "type": "int",
+            "min": 1,
+            "tooltip": true
+        },
+        "extraBasePrice": {
+            "type": "float",
+            "min": 0,
+            "tooltip": true
+        },
+        "extraUnitPrice": {
+            "type": "float",
+            "min": 0,
+            "tooltip": true
+        },
+        "extraIncludedTurns": {
+            "type": "int",
+            "min": 0,
+            "tooltip": true
+        },
+        "planIncludedUsage": {
+            "type": "int",
+            "min": 0,
+            "tooltip": true,
+            "comment": "Monthly franchise of billable units (packs or bases). 0 = pay-as-you-go."
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "aiBillingRates"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "effectiveFrom",
+        "order": "desc",
+        "textFilterFields": ["name"]
+    },
+    "indexes": {
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        },
+        "tenantEffectiveFrom": {
+            "columns": ["tenantId", "effectiveFrom", "deleted"]
+        },
+        "createdAt": {
+            "columns": ["createdAt"]
+        },
+        "createdAtId": {
+            "unique": true,
+            "columns": ["createdAt", "id"]
+        }
+    }
+}

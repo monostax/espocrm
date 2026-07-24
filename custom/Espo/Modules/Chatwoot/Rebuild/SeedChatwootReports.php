@@ -326,6 +326,115 @@ class SeedChatwootReports implements RebuildAction
                 'isGloballyShared' => true,
                 'applyAcl' => true,
             ],
+            // ------------------------------------------------------------------
+            // Billing — Pack model (simplified commercial offer).
+            // packs = ceil(all-kind turns / packSize) × packUnitPrice
+            // per conversation-day. Rates from Tenant AI Billing
+            // (platform defaults when unset).
+            // ------------------------------------------------------------------
+            [
+                'staticId' => 'chwRptBillPkDay',
+                'name' => 'IA Faturamento · Pacotes / Por Dia',
+                'description' =>
+                    'Modelo pacote: preço por bloco de N turnos de IA por ' .
+                    'conversa e por dia civil (fuso do sistema). Todo tipo ' .
+                    'de execução conta como turno (mensagem do cliente, ' .
+                    'menção, follow-up, agendada). Valores e tamanho do ' .
+                    'bloco vêm do Faturamento IA de cada Ambiente (Tenant); ' .
+                    'sem override usa o padrão da plataforma. Colunas: ' .
+                    'Valor, Pacotes, Turnos, Conversas-dia. ACL-strict em ' .
+                    'ChatwootAiAgentRun. Drill-down lista as conversas do balde.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt'],
+                'runtimeFilters' => ['runAt'],
+                'orderBy' => [],
+                'depth' => 1,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:BillingPacksPerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptBillPkTnD',
+                'name' => 'IA Faturamento · Pacotes / Ambiente / Por Dia',
+                'description' =>
+                    'Modelo pacote agrupado por Ambiente e dia civil. Preço ' .
+                    'do pacote e turnos por bloco são por Ambiente (Tenant → ' .
+                    'Faturamento IA); label do Ambiente inclui a moeda do ' .
+                    'acordo. Use para faturar multi-tenant ou comparar ' .
+                    'receita estimada entre ambientes. ACL-strict.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt', 'tenant'],
+                'runtimeFilters' => ['runAt', 'tenant'],
+                'orderBy' => [],
+                'depth' => 2,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:BillingPacksByTenantPerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            // ------------------------------------------------------------------
+            // Billing — Extra model (negotiation flavour).
+            // base once per conversation-day + unit × (customer overages
+            // + non-customer runs). Rates from Tenant AI Billing.
+            // ------------------------------------------------------------------
+            [
+                'staticId' => 'chwRptBillE49Day',
+                'name' => 'IA Faturamento · Base + Extra / Por Dia',
+                'description' =>
+                    'Modelo de negociação: base por conversa engajada no dia ' .
+                    'civil (inclui até N turnos de mensagem do cliente) + ' .
+                    'preço unitário por engajamento extra (turnos de cliente ' .
+                    'além do incluído e cada execução que não seja mensagem ' .
+                    'do cliente: menção, follow-up, agendada, etc.). Valores ' .
+                    'e N vêm do Faturamento IA de cada Ambiente; sem override ' .
+                    'usa o padrão da plataforma. Colunas: Valor, Bases, ' .
+                    'Extras de turno, Extras de tipo, Extras totais. ' .
+                    'ACL-strict. Para comparar side-by-side com o modelo pacote.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt'],
+                'runtimeFilters' => ['runAt'],
+                'orderBy' => [],
+                'depth' => 1,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:BillingExtra049PerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptBillE49TnD',
+                'name' => 'IA Faturamento · Base + Extra / Ambiente / Por Dia',
+                'description' =>
+                    'Modelo de negociação (base + extra) por Ambiente e dia ' .
+                    'civil. Tarifas por Ambiente (Tenant → Faturamento IA). ' .
+                    'Ideal para propostas comerciais e comparativo de fatura ' .
+                    'estimada com o modelo pacote. ACL-strict.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt', 'tenant'],
+                'runtimeFilters' => ['runAt', 'tenant'],
+                'orderBy' => [],
+                'depth' => 2,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:BillingExtra049ByTenantPerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
             [
                 // Counts every "transition into open" per day across all
                 // ChatwootConversations: synthetic conversation_created

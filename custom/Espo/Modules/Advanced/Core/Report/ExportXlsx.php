@@ -120,7 +120,15 @@ class ExportXlsx
 
             $sheetName = str_replace($this->badCharList, ' ', $sheetName);
             $sheetName = str_replace('\'', '', $sheetName);
+            $sheetName = trim(preg_replace('/\s+/u', ' ', $sheetName) ?? $sheetName);
             $sheetName = mb_substr($sheetName, 0, 30, 'utf-8');
+
+            // PhpSpreadsheet rejects empty sheet titles ("Invalid parameters passed").
+            if ($sheetName === '') {
+                $sheetName = is_string($currentColumn) && $currentColumn !== ''
+                    ? mb_substr($currentColumn, 0, 30, 'utf-8')
+                    : ('Sheet' . ($sheetIndex + 1));
+            }
 
             if ($sheetIndex > 0) {
                 $sheet = $phpExcel->createSheet();

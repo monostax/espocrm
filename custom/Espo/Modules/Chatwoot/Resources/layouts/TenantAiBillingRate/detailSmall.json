@@ -1,0 +1,44 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "effectiveFrom"
+                },
+                {
+                    "name": "effectiveTo"
+                }
+            ],
+            [
+                {
+                    "name": "currency"
+                },
+                {
+                    "name": "packUnitPrice"
+                }
+            ],
+            [
+                {
+                    "name": "packSize"
+                },
+                {
+                    "name": "extraBasePrice"
+                }
+            ],
+            [
+                {
+                    "name": "extraUnitPrice"
+                },
+                {
+                    "name": "extraIncludedTurns"
+                }
+            ],
+            [
+                {
+                    "name": "planIncludedUsage"
+                },
+                false
+            ]
+        ]
+    }
+]

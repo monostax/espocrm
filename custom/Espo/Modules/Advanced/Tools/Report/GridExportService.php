@@ -125,21 +125,24 @@ class GridExportService
         $columnList = $report->getColumns();
         $groupByList = $report->getGroupBy();
 
-        $reportResult = null;
+        $reportResult = $this->service->runGrid($id, $where, $user);
 
-        if (
-            $report->getType() === Report::TYPE_JOINT_GRID ||
-            !$report->getGroupBy()
-        ) {
-            $reportResult = $this->service->runGrid($id, $where, $user);
+        // Prefer columns / group-by from the live Result. Internal GridReport
+        // engines (and joint grids) define their own metrics; the Report entity
+        // often only stores a seed placeholder like COUNT:id for UI plumbing.
+        // Using the seed list for export leaves sheet titles empty → PhpSpreadsheet
+        // "Invalid parameters passed" and undefined column-key warnings.
+        $resultColumns = $reportResult->getColumnList();
 
-            $columnList = $reportResult->getColumnList();
-            $groupByList = $reportResult->getGroupByList();
-            $groupCount = count($groupByList);
+        if ($resultColumns !== []) {
+            $columnList = $resultColumns;
         }
 
-        if (!$reportResult) {
-            $reportResult = $this->service->runGrid($id, $where, $user);
+        $resultGroupBy = $reportResult->getGroupByList();
+
+        if ($resultGroupBy !== []) {
+            $groupByList = $resultGroupBy;
+            $groupCount = count($groupByList);
         }
 
         $result = [];
@@ -152,9 +155,16 @@ class GridExportService
             $result[] = $this->getGridReportResultForExport($id, $where, null, $user, $reportResult);
         }
 
+        $resultTypeMap = $reportResult->getColumnTypeMap() ?? [];
         $columnTypes = [];
 
         foreach ($columnList as $item) {
+            if (isset($resultTypeMap[$item]) && is_string($resultTypeMap[$item])) {
+                $columnTypes[$item] = $resultTypeMap[$item];
+
+                continue;
+            }
+
             $columnData = $this->gridHelper->getDataFromColumnName($entityType, $item, $reportResult);
 
             $type = $this->metadata
@@ -171,7 +181,7 @@ class GridExportService
                 $type = 'int';
             }
 
-            $columnTypes[$item] = $type;
+            $columnTypes[$item] = $type ?? 'float';
         }
 
         $columnLabels = [];
@@ -180,7 +190,7 @@ class GridExportService
             $columnNameMap = $reportResult->getColumnNameMap() ?? [];
 
             foreach ($columnList as $column) {
-                $columnLabels[$column] = $columnNameMap[$column];
+                $columnLabels[$column] = $columnNameMap[$column] ?? $column;
             }
         }
 

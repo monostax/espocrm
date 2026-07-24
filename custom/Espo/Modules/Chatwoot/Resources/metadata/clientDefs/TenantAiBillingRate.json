@@ -1,0 +1,6 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-coin",
+    "createDisabled": false,
+    "kanbanViewMode": false
+}

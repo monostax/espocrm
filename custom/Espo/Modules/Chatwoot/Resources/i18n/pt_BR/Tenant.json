@@ -1,6 +1,29 @@
 {
+    "fields": {
+        "aiBillingCurrency": "Moeda Faturamento IA (atual)",
+        "aiBillingPackUnitPrice": "Preço Pacote IA (atual)",
+        "aiBillingExtraBasePrice": "Preço Base Extra IA (atual)",
+        "aiBillingExtraUnitPrice": "Preço Unitário Extra IA (atual)",
+        "aiBillingPackSize": "Tamanho Pacote IA (atual)",
+        "aiBillingExtraIncludedTurns": "Turnos Incluídos Extra IA (atual)",
+        "aiBillingPlanIncludedUsage": "Uso Incluído Plano IA / Mês (atual)"
+    },
+    "tooltips": {
+        "aiBillingCurrency": "Snapshot somente-leitura do período de tarifa IA aberto. Gerencie o histórico no painel Tarifas Faturamento IA — cada período tem Vigência Início/Fim para que faturas passadas não mudem quando o preço atual muda.",
+        "aiBillingPackUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
+        "aiBillingExtraBasePrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
+        "aiBillingExtraUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
+        "aiBillingPackSize": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
+        "aiBillingExtraIncludedTurns": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
+        "aiBillingPlanIncludedUsage": "Snapshot somente-leitura do período aberto. Franquia mensal de pacotes (modelo pack) ou bases (extra). Edite em Tarifas Faturamento IA."
+    },
     "links": {
         "chatwootAccounts": "Contas de Chat",
-        "chatwootAiAgentRuns": "Execuções de Agente IA"
+        "chatwootAiAgentRuns": "Execuções de Agente IA",
+        "aiBillingRates": "Tarifas Faturamento IA"
+    },
+    "labels": {
+        "AI Billing": "Faturamento IA",
+        "AI Billing (current snapshot)": "Faturamento IA (snapshot atual)"
     }
 }

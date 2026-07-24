@@ -237,9 +237,10 @@ class SeedRole implements RebuildAction
                 ],
                 // Read-only telemetry the platform writes. Tenant users
                 // need scope read access so the seeded reports built on
-                // these entities (Chatwoot:ConversationsEngagedByTenantPerDay,
-                // Chatwoot:ConversationsEngagedPerDay, chwRptOpensDay) pass
-                // the Advanced/Report AccessChecker's target-entity gate.
+                // these entities (Chatwoot:ConversationsEngaged*,
+                // Chatwoot:BillingPacks*, Chatwoot:BillingExtra049*,
+                // chwRptOpensDay) pass the Advanced/Report AccessChecker's
+                // target-entity gate.
                 // Row-level ACL is `team`, so the per-tenant trimming
                 // inside the report's withStrictAccessControl() still
                 // applies — each user only counts runs/events on their

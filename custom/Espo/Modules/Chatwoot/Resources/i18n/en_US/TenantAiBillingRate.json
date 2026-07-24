@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "name": "Name",
+        "tenant": "Tenant",
+        "effectiveFrom": "Effective From",
+        "effectiveTo": "Effective To",
+        "currency": "Currency",
+        "packUnitPrice": "Pack Unit Price",
+        "packSize": "Pack Size (turns)",
+        "extraBasePrice": "Extra Base Price",
+        "extraUnitPrice": "Extra Unit Price",
+        "extraIncludedTurns": "Extra Included Customer Turns",
+        "planIncludedUsage": "Plan Included Usage / Month"
+    },
+    "links": {
+        "tenant": "Tenant",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By"
+    },
+    "labels": {
+        "Create TenantAiBillingRate": "Create AI Billing Rate",
+        "Plan franchise": "Plan franchise",
+        "Pack model": "Pack model",
+        "Extra model": "Extra model"
+    },
+    "tooltips": {
+        "name": "Optional label. Left empty = auto \"YYYY-MM-DD → YYYY-MM-DD|∞\".",
+        "effectiveFrom": "First calendar day (app timezone) this rate card applies to conversation-days.",
+        "effectiveTo": "Last calendar day inclusive. Leave empty for the open-ended current agreement. Creating a new open period auto-closes the previous open one the day before.",
+        "currency": "Deal currency for unit prices below (Administration → Currency). Empty = system default.",
+        "packUnitPrice": "Pack model: price per pack of N turns. Empty = platform default (1.99).",
+        "packSize": "Pack model: turns per pack. Empty = 4.",
+        "extraBasePrice": "Extra model: fixed charge once per conversation-day. Empty = 0.99.",
+        "extraUnitPrice": "Extra model: price per overage engagement. Empty = 0.49.",
+        "extraIncludedTurns": "Extra model: customer-message turns included in the base. Empty = 4.",
+        "planIncludedUsage": "Monthly free billable units from the plan (packs for pack model, conversation-day bases for extra). Matches Pricing.html plans — Lite 200 / Essential 600 / Pro 1000. 0 = pay-as-you-go (all usage billed). Apply full-month report filters so FIFO franchise consumption is correct."
+    }
+}

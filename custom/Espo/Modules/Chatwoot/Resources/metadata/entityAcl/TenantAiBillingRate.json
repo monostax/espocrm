@@ -1,0 +1,34 @@
+{
+    "fields": {
+        "name": {
+            "onlyAdmin": true
+        },
+        "tenant": {
+            "onlyAdmin": true
+        },
+        "effectiveFrom": {
+            "onlyAdmin": true
+        },
+        "effectiveTo": {
+            "onlyAdmin": true
+        },
+        "currency": {
+            "onlyAdmin": true
+        },
+        "packUnitPrice": {
+            "onlyAdmin": true
+        },
+        "packSize": {
+            "onlyAdmin": true
+        },
+        "extraBasePrice": {
+            "onlyAdmin": true
+        },
+        "extraUnitPrice": {
+            "onlyAdmin": true
+        },
+        "extraIncludedTurns": {
+            "onlyAdmin": true
+        }
+    }
+}

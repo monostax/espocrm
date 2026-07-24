@@ -1,0 +1,42 @@
+[
+    {
+        "name": "name",
+        "width": 18
+    },
+    {
+        "name": "tenant",
+        "width": 16
+    },
+    {
+        "name": "effectiveFrom",
+        "width": 12
+    },
+    {
+        "name": "effectiveTo",
+        "width": 12
+    },
+    {
+        "name": "currency",
+        "width": 8
+    },
+    {
+        "name": "packUnitPrice",
+        "width": 10
+    },
+    {
+        "name": "packSize",
+        "width": 8
+    },
+    {
+        "name": "planIncludedUsage",
+        "width": 8
+    },
+    {
+        "name": "extraBasePrice",
+        "width": 10
+    },
+    {
+        "name": "extraUnitPrice",
+        "width": 10
+    }
+]

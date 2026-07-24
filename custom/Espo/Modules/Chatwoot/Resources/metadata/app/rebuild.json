@@ -12,9 +12,9 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillContactFieldsFromIdentities",
         "Espo\\Modules\\Chatwoot\\Rebuild\\MergeRotatedDuplicateContacts",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootReports",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\MigrateTenantAiBillingRates",
         "Espo\\Modules\\Chatwoot\\Rebuild\\RotateAutomationToConcierge",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedWahaPlatform",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillMembershipGlobalAdmin"
     ]
 }
-

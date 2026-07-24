@@ -5,7 +5,19 @@
         "restricted": "(Restricted)"
     },
     "columnLabels": {
-        "conversationsEngaged": "Conversations Engaged"
+        "conversationsEngaged": "Conversations Engaged",
+        "amount": "Amount ({currency})",
+        "amountDeal": "Amount (deal currency)",
+        "packs": "Packs",
+        "planIncludedUsed": "Plan included used",
+        "billableUsage": "Billable usage",
+        "turns": "Turns",
+        "conversationDays": "Conversation-days",
+        "bases": "Base units",
+        "turnOverages": "Turn overages (>included customer)",
+        "kindExtras": "Kind extras (non-customer runs)",
+        "extras": "Extra units",
+        "customerTurns": "Customer-message turns"
     },
     "scopeNames": {
         "ChatwootAiAgentRun": "AI Agent Run",

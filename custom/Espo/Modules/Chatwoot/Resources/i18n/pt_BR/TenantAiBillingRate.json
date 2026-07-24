@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "name": "Nome",
+        "tenant": "Ambiente",
+        "effectiveFrom": "Vigência Início",
+        "effectiveTo": "Vigência Fim",
+        "currency": "Moeda",
+        "packUnitPrice": "Preço Unitário do Pacote",
+        "packSize": "Tamanho do Pacote (turnos)",
+        "extraBasePrice": "Preço Base Extra",
+        "extraUnitPrice": "Preço Unitário Extra",
+        "extraIncludedTurns": "Turnos de Cliente Incluídos na Base",
+        "planIncludedUsage": "Uso Incluído no Plano / Mês"
+    },
+    "links": {
+        "tenant": "Ambiente",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por"
+    },
+    "labels": {
+        "Create TenantAiBillingRate": "Criar Tarifa Faturamento IA",
+        "Plan franchise": "Franquia do plano",
+        "Pack model": "Modelo pacote",
+        "Extra model": "Modelo extra"
+    },
+    "tooltips": {
+        "name": "Rótulo opcional. Vazio = auto \"AAAA-MM-DD → AAAA-MM-DD|∞\".",
+        "effectiveFrom": "Primeiro dia de calendário (fuso do app) em que esta tarifa vale para conversa-dia.",
+        "effectiveTo": "Último dia inclusive. Vazio = acordo atual aberto. Criar um novo período aberto encerra o anterior no dia anterior ao início.",
+        "currency": "Moeda do acordo para os preços unitários (Administração → Moeda). Vazio = padrão do sistema.",
+        "packUnitPrice": "Modelo pacote: preço por bloco de N turnos. Vazio = padrão (1,99).",
+        "packSize": "Modelo pacote: turnos por pacote. Vazio = 4.",
+        "extraBasePrice": "Modelo extra: cobrança fixa por conversa-dia. Vazio = 0,99.",
+        "extraUnitPrice": "Modelo extra: preço por engajamento adicional. Vazio = 0,49.",
+        "extraIncludedTurns": "Modelo extra: turnos de mensagem do cliente na base. Vazio = 4.",
+        "planIncludedUsage": "Unidades gratuitas mensais do plano (pacotes no modelo pack, bases/conversas-dia no modelo extra). Alinhado ao Pricing.html — Lite 200 / Essential 600 / Pro 1000. 0 = paga-tudo (sem franquia). Use filtros de mês cheio no relatório para consumo FIFO correto."
+    }
+}

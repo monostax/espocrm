@@ -1,0 +1,14 @@
+[
+    {
+        "name": "createdAt"
+    },
+    {
+        "name": "createdBy"
+    },
+    {
+        "name": "modifiedAt"
+    },
+    {
+        "name": "modifiedBy"
+    }
+]

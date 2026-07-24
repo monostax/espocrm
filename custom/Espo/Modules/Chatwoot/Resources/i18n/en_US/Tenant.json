@@ -1,6 +1,29 @@
 {
+    "fields": {
+        "aiBillingCurrency": "AI Billing Currency (current)",
+        "aiBillingPackUnitPrice": "AI Pack Unit Price (current)",
+        "aiBillingExtraBasePrice": "AI Extra Base Price (current)",
+        "aiBillingExtraUnitPrice": "AI Extra Unit Price (current)",
+        "aiBillingPackSize": "AI Pack Size (current)",
+        "aiBillingExtraIncludedTurns": "AI Extra Included Turns (current)",
+        "aiBillingPlanIncludedUsage": "AI Plan Included Usage / Month (current)"
+    },
+    "tooltips": {
+        "aiBillingCurrency": "Read-only snapshot of the open-ended AI billing rate period. Manage history under the AI Billing Rates panel — each period has Effective From / Effective To so past invoices stay stable when prices change.",
+        "aiBillingPackUnitPrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
+        "aiBillingExtraBasePrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
+        "aiBillingExtraUnitPrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
+        "aiBillingPackSize": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
+        "aiBillingExtraIncludedTurns": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
+        "aiBillingPlanIncludedUsage": "Read-only snapshot from the current open rate period. Monthly free packs (pack model) or bases (extra). Edit under AI Billing Rates."
+    },
     "links": {
         "chatwootAccounts": "Chatwoot Accounts",
-        "chatwootAiAgentRuns": "AI Agent Runs"
+        "chatwootAiAgentRuns": "AI Agent Runs",
+        "aiBillingRates": "AI Billing Rates"
+    },
+    "labels": {
+        "AI Billing": "AI Billing",
+        "AI Billing (current snapshot)": "AI Billing (current snapshot)"
     }
 }

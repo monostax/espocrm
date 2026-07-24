@@ -7,57 +7,65 @@
                     "name": "name"
                 },
                 {
-                    "name": "slug"
+                    "name": "tenant"
                 }
             ],
             [
                 {
-                    "name": "language"
+                    "name": "effectiveFrom"
                 },
                 {
-                    "name": "timeZone"
+                    "name": "effectiveTo"
                 }
             ],
             [
                 {
-                    "name": "description",
-                    "fullWidth": true
+                    "name": "currency"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Plan franchise",
+        "rows": [
+            [
+                {
+                    "name": "planIncludedUsage"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Pack model",
+        "rows": [
+            [
+                {
+                    "name": "packUnitPrice"
+                },
+                {
+                    "name": "packSize"
                 }
             ]
         ]
     },
     {
-        "label": "AI Billing (current snapshot)",
+        "label": "Extra model",
         "rows": [
             [
                 {
-                    "name": "aiBillingCurrency"
+                    "name": "extraBasePrice"
+                },
+                {
+                    "name": "extraUnitPrice"
+                }
+            ],
+            [
+                {
+                    "name": "extraIncludedTurns"
                 },
                 false
-            ],
-            [
-                {
-                    "name": "aiBillingPackUnitPrice"
-                },
-                {
-                    "name": "aiBillingPackSize"
-                }
-            ],
-            [
-                {
-                    "name": "aiBillingExtraBasePrice"
-                },
-                {
-                    "name": "aiBillingExtraUnitPrice"
-                }
-            ],
-            [
-                {
-                    "name": "aiBillingExtraIncludedTurns"
-                },
-                {
-                    "name": "aiBillingPlanIncludedUsage"
-                }
             ]
         ]
     }

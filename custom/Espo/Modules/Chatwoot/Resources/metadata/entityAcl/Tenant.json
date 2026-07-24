@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "aiBillingCurrency": {
+            "onlyAdmin": true
+        },
+        "aiBillingPackUnitPrice": {
+            "onlyAdmin": true
+        },
+        "aiBillingExtraBasePrice": {
+            "onlyAdmin": true
+        },
+        "aiBillingExtraUnitPrice": {
+            "onlyAdmin": true
+        },
+        "aiBillingPackSize": {
+            "onlyAdmin": true
+        },
+        "aiBillingExtraIncludedTurns": {
+            "onlyAdmin": true
+        },
+        "aiBillingPlanIncludedUsage": {
+            "onlyAdmin": true
+        }
+    },
+    "links": {
+        "aiBillingRates": {
+            "onlyAdmin": true
+        }
+    }
+}
