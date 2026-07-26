@@ -126,7 +126,11 @@ class RestrictedFormulaRunner
         $ast = $parser->parse($script);
         $this->assertAllowed($ast, $mode);
 
-        return $this->formulaManager->run($script, $entity, $variables);
+        return $this->formulaManager->run(
+            $script,
+            $entity,
+            is_array($variables) ? (object) $variables : $variables,
+        );
     }
 
     /**
