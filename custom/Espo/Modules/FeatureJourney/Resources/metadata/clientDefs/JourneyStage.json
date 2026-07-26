@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-stack-2",
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "actions",
+                "label": "Actions",
+                "view": "views/record/panels/relationship",
+                "link": "actions",
+                "order": 5
+            }
+        ]
+    }
+}

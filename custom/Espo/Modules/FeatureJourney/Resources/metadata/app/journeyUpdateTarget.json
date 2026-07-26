@@ -1,0 +1,47 @@
+{
+    "allowCustomFieldPrefix": true,
+    "allowCustomFieldsBag": true,
+    "fieldsByEntityType": {
+        "Contact": [
+            "description",
+            "title",
+            "firstName",
+            "lastName",
+            "middleName",
+            "salutationName",
+            "addressStreet",
+            "addressCity",
+            "addressState",
+            "addressCountry",
+            "addressPostalCode",
+            "doNotCall"
+        ],
+        "Lead": [
+            "status",
+            "description",
+            "title",
+            "source",
+            "opportunityAmount",
+            "opportunityAmountCurrency"
+        ],
+        "Account": [
+            "description",
+            "industry",
+            "type",
+            "website",
+            "billingAddressStreet",
+            "billingAddressCity",
+            "billingAddressState",
+            "billingAddressCountry",
+            "billingAddressPostalCode"
+        ],
+        "Opportunity": [
+            "stage",
+            "probability",
+            "description",
+            "amount",
+            "amountCurrency",
+            "closeDate"
+        ]
+    }
+}

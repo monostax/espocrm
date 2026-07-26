@@ -1,0 +1,19 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-player-play",
+    "dynamicLogic": {
+        "fields": {
+            "formula": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "type",
+                            "value": "executeFormula"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

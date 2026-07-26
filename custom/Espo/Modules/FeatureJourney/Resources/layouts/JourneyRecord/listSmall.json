@@ -1,0 +1,19 @@
+[
+    {
+        "name": "target",
+        "link": true,
+        "width": 40
+    },
+    {
+        "name": "currentStage",
+        "width": 22
+    },
+    {
+        "name": "status",
+        "width": 18
+    },
+    {
+        "name": "enteredStageAt",
+        "width": 20
+    }
+]

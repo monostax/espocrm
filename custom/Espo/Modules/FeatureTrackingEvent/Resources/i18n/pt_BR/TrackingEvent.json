@@ -72,6 +72,7 @@
         "opportunity_stage_changed": "Mudança de Etapa da Oportunidade",
         "opportunity_created": "Oportunidade Criada",
         "opportunity_won": "Oportunidade Ganha",
-        "opportunity_lost": "Oportunidade Perdida"
+        "opportunity_lost": "Oportunidade Perdida",
+        "email_replied": "E-mail Respondido"
     }
 }

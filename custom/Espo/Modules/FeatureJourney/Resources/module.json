@@ -1,0 +1,7 @@
+{
+    "order": 29,
+    "version": "1.0.0",
+    "name": "FeatureJourney",
+    "description": "Multi-tenant customer-engagement journeys and business-process control. Enrolls audiences into staged journeys with signal/timer/entityChange transitions and OnEnter/OnExit actions.",
+    "jsTranspiled": true
+}

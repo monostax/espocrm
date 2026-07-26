@@ -1,0 +1,40 @@
+{
+    "labels": {
+        "Exit": "Sair da jornada"
+    },
+    "fields": {
+        "journey": "Jornada",
+        "target": "Pessoa",
+        "currentStage": "Etapa atual",
+        "status": "Status",
+        "enteredStageAt": "Entrou na etapa em",
+        "claimedAt": "Último processamento em",
+        "retryCount": "Tentativas",
+        "cycleCount": "Execução nº",
+        "exitReason": "Saiu porque",
+        "tenant": "Workspace",
+        "teams": "Equipes",
+        "logs": "Histórico"
+    },
+    "options": {
+        "status": {
+            "Active": "Em andamento",
+            "Processing": "Processando",
+            "Completed": "Concluído",
+            "Exited": "Saiu cedo",
+            "Failed": "Falhou",
+            "Paused": "Pausado"
+        }
+    },
+    "messages": {
+        "confirmExit": "Remover esta pessoa da jornada? Ela para de avançar. O histórico fica (status → Saiu cedo). Isso não apaga o contato.",
+        "exiting": "Saindo da jornada…",
+        "exited": "Pessoa saiu da jornada",
+        "failedToExit": "Não foi possível sair da jornada"
+    },
+    "presetFilters": {
+        "active": "Em andamento",
+        "completed": "Concluídos",
+        "failed": "Falhos"
+    }
+}

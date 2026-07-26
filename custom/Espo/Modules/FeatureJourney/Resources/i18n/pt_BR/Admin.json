@@ -1,0 +1,19 @@
+{
+    "labels": {
+        "Journeys": "Jornadas",
+        "People in journeys": "Pessoas nas jornadas",
+        "Journey history": "Histórico da jornada",
+        "Journey Records": "Pessoas nas jornadas",
+        "Journey Record Logs": "Histórico da jornada"
+    },
+    "descriptions": {
+        "journeys": "Monte automações em etapas — quem entra, etapas, conexões e ações (estilo Zapier / Make).",
+        "journeyRecords": "Quem está em cada jornada agora, em qual etapa e com qual status.",
+        "journeyRecordLogs": "Histórico de avanços entre etapas e o que disparou cada um."
+    },
+    "keywords": {
+        "journeys": "jornada,funil,automacao,zapier,make,n8n,engajamento,ciclo,etapa,fluxo",
+        "journeyRecords": "jornada,inscricao,pessoas,etapa,publico,status",
+        "journeyRecordLogs": "jornada,historico,log,transicao,auditoria,evento"
+    }
+}

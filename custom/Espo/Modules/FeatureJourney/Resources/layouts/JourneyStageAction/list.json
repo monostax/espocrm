@@ -1,0 +1,18 @@
+[
+    {
+        "name": "type",
+        "link": true
+    },
+    {
+        "name": "trigger"
+    },
+    {
+        "name": "order"
+    },
+    {
+        "name": "isActive"
+    },
+    {
+        "name": "stage"
+    }
+]

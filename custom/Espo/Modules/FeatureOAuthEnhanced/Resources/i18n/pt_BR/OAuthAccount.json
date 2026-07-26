@@ -4,12 +4,27 @@
         "assignedUsers": "Usuários Responsáveis",
         "metaSystemUserId": "ID do Usuário do Sistema Meta",
         "metaBusinessId": "ID do Business Meta",
-        "metaTokenInfo": "Informações do Token Meta"
+        "metaTokenInfo": "Informações do Token Meta",
+        "agentEgress": "Egress do Agentbox"
     },
     "labels": {
         "Set System User Token": "Definir Token de Usuário do Sistema",
         "Meta — System User Token": "Meta — Token de Usuário do Sistema",
-        "Save Token": "Salvar Token"
+        "Save Token": "Salvar Token",
+        "panelAgentEgress": "Egress Seguro do Agentbox",
+        "agentEgressEnabled": "Injetar segredos no agentbox",
+        "agentEgressDisabled": "Desativado",
+        "agentEgressPlaceholderMode": "Estilo do placeholder",
+        "agentEgressModeShared": "Marcador compartilhado (marcador.ENV_NAME)",
+        "agentEgressModeUnique": "Aleatório completo por segredo",
+        "agentEgressSecrets": "Segredos expostos ao agente (uma linha por env)",
+        "agentEgressAddSecret": "Adicionar variável",
+        "agentEgressEnvName": "Nome da variável de ambiente",
+        "agentEgressConfigPath": "Caminho do campo de valor",
+        "agentEgressHosts": "Hosts permitidos",
+        "agentEgressReplaceInQuery": "Também substituir na query string da URL",
+        "agentEgressNoSecrets": "Nenhum segredo configurado",
+        "agentEgressSecretUnit": "segredo(s)"
     },
     "messages": {
         "confirmSetSystemUserToken": "Cole o token de acesso do Usuário do Sistema Meta. Ele será validado na Graph API e armazenado criptografado.",
@@ -18,7 +33,22 @@
         "systemUserTokenFailed": "Não foi possível validar ou armazenar o token do Usuário do Sistema.",
         "systemUserTokenEmpty": "Por favor, cole um token.",
         "systemUserMissingClientId": "Defina o Client ID (App ID) e o Client Secret no provedor Meta (Usuário do Sistema) antes de definir um token.",
-        "systemUserTokenMissingScopes": "Token salvo, mas está faltando escopos: {scopes}. Recursos do WhatsApp/Business podem não funcionar até você gerar o token novamente com esses escopos."
+        "systemUserTokenMissingScopes": "Token salvo, mas está faltando escopos: {scopes}. Recursos do WhatsApp/Business podem não funcionar até você gerar o token novamente com esses escopos.",
+        "agentEgressHelp": "Agentes convidados nunca veem tokens reais. Adicione uma linha por variável de ambiente (ex.: ACCESS_TOKEN). O proxy de egress troca os placeholders só nos hosts permitidos.",
+        "agentEgressPlaceholderModeHelp": "Marcador compartilhado facilita reconhecer placeholders em logs. O modo único usa uma string totalmente aleatória por segredo.",
+        "agentEgressConfigPathHelp": "Caminho com pontos nesta conta OAuth (ex.: accessToken, refreshToken, data.algumaChave). Só essas raízes são permitidas. Tokens são resolvidos ao vivo no save e no spawn do agentbox — não retornam no GET normal.",
+        "agentEgressHostsHelp": "Hosts separados por vírgula. Suporta curingas * (ex.: graph.microsoft.com, *.googleapis.com).",
+        "agentEgressReplaceInQueryHelp": "Desligado por padrão. Ative só se a API exigir o segredo na query string (prefira headers).",
+        "agentEgressRequiresSecret": "Adicione ao menos um segredo quando a injeção estiver ativada",
+        "agentEgressInvalidEnvName": "Use um nome de env em maiúsculas (A–Z, 0–9, _). ex.: ACCESS_TOKEN",
+        "agentEgressDuplicateEnvName": "O nome da variável de ambiente deve ser único",
+        "agentEgressConfigPathRequired": "O caminho do campo de valor é obrigatório",
+        "agentEgressInvalidConfigPath": "Formato de caminho inválido. Use segmentos com pontos, ex.: accessToken ou data.algumaChave.",
+        "agentEgressInvalidOAuthConfigPath": "O caminho deve ser accessToken, access_token, refreshToken, refresh_token ou data.<chave>.",
+        "agentEgressHostsRequired": "É necessário ao menos um host permitido"
+    },
+    "tooltips": {
+        "agentEgress": "Quando ativado, o agentbox recebe placeholders de alta entropia em vez dos tokens OAuth reais. O proxy de egress só substitui o valor real nos hosts permitidos."
     },
     "links": {
         "teams": "Times",
@@ -26,4 +56,3 @@
         "credentials": "Credenciais"
     }
 }
-

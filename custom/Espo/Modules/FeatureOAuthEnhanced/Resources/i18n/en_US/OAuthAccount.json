@@ -8,7 +8,8 @@
         "whatsappBusinessAccountId": "WABA ID",
         "whatsappPhoneNumberId": "Phone Number ID",
         "whatsappOnboardingType": "Onboarding Type",
-        "whatsappCoexistenceSyncedAt": "Coexistence Synced At"
+        "whatsappCoexistenceSyncedAt": "Coexistence Synced At",
+        "agentEgress": "Agentbox Egress"
     },
     "options": {
         "whatsappOnboardingType": {
@@ -24,12 +25,27 @@
         "whatsappBusinessAccountId": "WABA ID captured from the Embedded Signup popup. Read-only.",
         "whatsappPhoneNumberId": "Phone Number ID captured from the Embedded Signup popup. Read-only.",
         "whatsappOnboardingType": "Type of WhatsApp onboarding completed in the Embedded Signup popup.",
-        "whatsappCoexistenceSyncedAt": "When the contacts + history sync (POST /smb_app_data) completed. Empty for non-Coexistence accounts. The sync has a 24-hour deadline after onboarding."
+        "whatsappCoexistenceSyncedAt": "When the contacts + history sync (POST /smb_app_data) completed. Empty for non-Coexistence accounts. The sync has a 24-hour deadline after onboarding.",
+        "agentEgress": "When enabled, agentbox receives high-entropy placeholders instead of real OAuth tokens. The egress proxy substitutes the real value only for allowlisted hosts."
     },
     "labels": {
         "Set System User Token": "Set System User Token",
         "Meta — System User Token": "Meta — System User Token",
-        "Save Token": "Save Token"
+        "Save Token": "Save Token",
+        "panelAgentEgress": "Agentbox Secret Egress",
+        "agentEgressEnabled": "Inject secrets into agentbox",
+        "agentEgressDisabled": "Disabled",
+        "agentEgressPlaceholderMode": "Placeholder style",
+        "agentEgressModeShared": "Shared marker (marker.ENV_NAME)",
+        "agentEgressModeUnique": "Fully random per secret",
+        "agentEgressSecrets": "Secrets exposed to the agent (one row per env var)",
+        "agentEgressAddSecret": "Add env var",
+        "agentEgressEnvName": "Env variable name",
+        "agentEgressConfigPath": "Value field path",
+        "agentEgressHosts": "Allowed hosts",
+        "agentEgressReplaceInQuery": "Also replace in URL query string",
+        "agentEgressNoSecrets": "No secrets configured",
+        "agentEgressSecretUnit": "secret(s)"
     },
     "messages": {
         "confirmSetSystemUserToken": "Paste the Meta System User access token. It will be validated against the Graph API and stored encrypted.",
@@ -38,7 +54,19 @@
         "systemUserTokenFailed": "Could not validate or store the System User token.",
         "systemUserTokenEmpty": "Please paste a token.",
         "systemUserMissingClientId": "Set the Client ID (App ID) and Client Secret on the Meta (System User) provider before setting a token.",
-        "systemUserTokenMissingScopes": "Token saved, but it is missing scopes: {scopes}. WhatsApp/Business features may not work until you regenerate the token with these scopes."
+        "systemUserTokenMissingScopes": "Token saved, but it is missing scopes: {scopes}. WhatsApp/Business features may not work until you regenerate the token with these scopes.",
+        "agentEgressHelp": "Guest agents never see real tokens. Add one row per env var (e.g. ACCESS_TOKEN). Placeholders are swapped by the egress proxy only for allowed hosts.",
+        "agentEgressPlaceholderModeHelp": "Shared marker is easiest to recognize in logs as placeholders. Unique mode uses a fully random string per secret.",
+        "agentEgressConfigPathHelp": "Dot path into this OAuth account (e.g. accessToken, refreshToken, data.someKey). Only those roots are allowed. Tokens are resolved live on save and at agent spawn — never returned on normal GET.",
+        "agentEgressHostsHelp": "Comma-separated host patterns. Supports * wildcards (e.g. graph.microsoft.com, *.googleapis.com).",
+        "agentEgressReplaceInQueryHelp": "Off by default. Only enable if the target API requires the secret in the query string (prefer headers).",
+        "agentEgressRequiresSecret": "Add at least one secret when injection is enabled",
+        "agentEgressInvalidEnvName": "Use an uppercase env name (A–Z, 0–9, _). e.g. ACCESS_TOKEN",
+        "agentEgressDuplicateEnvName": "Env variable name must be unique",
+        "agentEgressConfigPathRequired": "Value field path is required",
+        "agentEgressInvalidConfigPath": "Invalid path format. Use dot segments like accessToken or data.someKey.",
+        "agentEgressInvalidOAuthConfigPath": "Path must be accessToken, access_token, refreshToken, refresh_token, or data.<key>.",
+        "agentEgressHostsRequired": "At least one allowed host is required"
     },
     "links": {
         "teams": "Teams",

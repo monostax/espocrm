@@ -1,0 +1,48 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "journey"
+                }
+            ],
+            [
+                {
+                    "name": "fromStage"
+                },
+                {
+                    "name": "toStage"
+                }
+            ],
+            [
+                {
+                    "name": "priority"
+                },
+                {
+                    "name": "isActive"
+                }
+            ],
+            [
+                {
+                    "name": "conditionsGroup",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "conditionsFormula",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "evaluatorClassName",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

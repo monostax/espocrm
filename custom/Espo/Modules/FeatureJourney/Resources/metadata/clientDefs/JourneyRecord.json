@@ -1,0 +1,32 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-user-check",
+    "kanbanStatusField": "currentStageId",
+    "kanbanViewMode": true,
+    "recordViews": {
+        "kanban": "feature-journey:views/journey-record/record/kanban"
+    },
+    "filterList": [
+        {
+            "name": "active"
+        },
+        {
+            "name": "completed",
+            "style": "success"
+        },
+        {
+            "name": "failed",
+            "style": "danger"
+        }
+    ],
+    "detailActionList": [
+        {
+            "name": "exit",
+            "label": "Exit",
+            "handler": "feature-journey:handlers/journey-record/detail-actions",
+            "actionFunction": "exit",
+            "checkVisibilityFunction": "isExitAvailable",
+            "groupIndex": 0
+        }
+    ]
+}

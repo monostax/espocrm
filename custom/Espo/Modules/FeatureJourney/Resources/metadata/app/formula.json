@@ -1,0 +1,35 @@
+{
+    "functionClassNameMap": {
+        "journey\\enroll": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\EnrollType",
+        "journey\\moveToStage": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\MoveToStageType",
+        "journey\\signal": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\SignalType",
+        "journey\\updateTarget": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\UpdateTargetType"
+    },
+    "functionList": [
+        "__APPEND__",
+        {
+            "name": "journey\\enroll",
+            "insertText": "journey\\enroll(JOURNEY_ID, TARGET_TYPE, TARGET_ID)",
+            "returnType": "string",
+            "unsafe": true
+        },
+        {
+            "name": "journey\\moveToStage",
+            "insertText": "journey\\moveToStage(RECORD_ID, STAGE_ID)",
+            "returnType": "bool",
+            "unsafe": true
+        },
+        {
+            "name": "journey\\signal",
+            "insertText": "journey\\signal(CODE, TARGET_TYPE, TARGET_ID, PAYLOAD)",
+            "returnType": "bool",
+            "unsafe": true
+        },
+        {
+            "name": "journey\\updateTarget",
+            "insertText": "journey\\updateTarget(FIELD, VALUE)",
+            "returnType": "bool",
+            "unsafe": true
+        }
+    ]
+}

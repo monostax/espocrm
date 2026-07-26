@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "record": "Person in journey",
+        "journey": "Journey",
+        "fromStage": "From step",
+        "toStage": "To step",
+        "transition": "Connection",
+        "firedBy": "Triggered by",
+        "eventPayload": "Event data",
+        "actor": "Who",
+        "createdAt": "When",
+        "tenant": "Workspace",
+        "teams": "Teams"
+    },
+    "options": {
+        "firedBy": {
+            "signal": "Event received",
+            "timer": "Wait finished",
+            "manual": "Manual click",
+            "formula": "Formula",
+            "user": "User",
+            "system": "System",
+            "entityChange": "Record changed"
+        }
+    }
+}

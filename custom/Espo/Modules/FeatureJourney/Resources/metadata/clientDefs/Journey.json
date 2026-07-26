@@ -1,0 +1,234 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-route",
+    "dynamicLogic": {
+        "fields": {
+            "targetEntityType": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "targetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "or",
+                                    "value": [
+                                        {
+                                            "type": "notEquals",
+                                            "attribute": "status",
+                                            "value": "Active"
+                                        },
+                                        {
+                                            "type": "isFalse",
+                                            "attribute": "continuousEnrollment"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "manualContacts": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "or",
+                                    "value": [
+                                        {
+                                            "type": "notEquals",
+                                            "attribute": "status",
+                                            "value": "Active"
+                                        },
+                                        {
+                                            "type": "isFalse",
+                                            "attribute": "continuousEnrollment"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "excludeTargetLists": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "continuousEnrollment": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Paused"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "allowReEnrollment": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "goalEventCodes": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Paused"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "goalEntityFilter": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Paused"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "flow",
+                "label": "Flow",
+                "title": "Flow",
+                "view": "feature-journey:views/journey/record/panels/flow",
+                "order": 1,
+                "sticked": true
+            },
+            {
+                "name": "stages",
+                "label": "Stages",
+                "view": "views/record/panels/relationship",
+                "link": "stages",
+                "order": 5
+            },
+            {
+                "name": "transitions",
+                "label": "Transitions",
+                "view": "views/record/panels/relationship",
+                "link": "transitions",
+                "order": 10
+            },
+            {
+                "name": "records",
+                "label": "Records",
+                "view": "views/record/panels/relationship",
+                "link": "records",
+                "select": false,
+                "create": false,
+                "unlink": false,
+                "order": 15
+            }
+        ]
+    },
+    "detailActionList": [
+        {
+            "name": "activate",
+            "label": "Activate",
+            "handler": "feature-journey:handlers/journey/detail-actions",
+            "actionFunction": "activate",
+            "checkVisibilityFunction": "isActivateAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "pause",
+            "label": "Pause",
+            "handler": "feature-journey:handlers/journey/detail-actions",
+            "actionFunction": "pause",
+            "checkVisibilityFunction": "isPauseAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "stopEnrollment",
+            "label": "Stop Enrollment",
+            "handler": "feature-journey:handlers/journey/detail-actions",
+            "actionFunction": "stopEnrollment",
+            "checkVisibilityFunction": "isStopEnrollmentAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "archive",
+            "label": "Archive",
+            "handler": "feature-journey:handlers/journey/detail-actions",
+            "actionFunction": "archive",
+            "checkVisibilityFunction": "isArchiveAvailable",
+            "groupIndex": 1
+        }
+    ]
+}

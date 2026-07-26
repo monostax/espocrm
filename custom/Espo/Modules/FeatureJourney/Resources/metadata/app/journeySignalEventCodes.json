@@ -1,0 +1,128 @@
+{
+    "codeList": [
+        "email_replied",
+        "link_clicked",
+        "opportunity_created",
+        "opportunity_stage_changed",
+        "opportunity_won",
+        "opportunity_lost",
+        "journey_enrolled",
+        "journey_stage_entered",
+        "journey_completed",
+        "journey_goal_reached",
+        "journey_exited"
+    ],
+    "payloadFields": {
+        "email_replied": [
+            "subject",
+            "fromAddress",
+            "emailId",
+            "repliedEmailId",
+            "journeyId",
+            "journeyRecordId",
+            "targetType",
+            "targetId"
+        ],
+        "link_clicked": [
+            "slug",
+            "linkName",
+            "isWhatsApp",
+            "waPhone",
+            "isLikelyBot"
+        ],
+        "opportunity_created": [
+            "opportunityName",
+            "fromStageId",
+            "fromStageName",
+            "toStageId",
+            "toStageName",
+            "funnelId",
+            "funnelName",
+            "status",
+            "amount",
+            "amountCurrency",
+            "assignedUserId",
+            "sourceChannel",
+            "sourceTargetListId",
+            "sourceTargetListName",
+            "isNew"
+        ],
+        "opportunity_stage_changed": [
+            "opportunityName",
+            "fromStageId",
+            "fromStageName",
+            "toStageId",
+            "toStageName",
+            "funnelId",
+            "funnelName",
+            "status",
+            "amount",
+            "amountCurrency",
+            "assignedUserId",
+            "sourceChannel",
+            "sourceTargetListId",
+            "sourceTargetListName",
+            "isNew"
+        ],
+        "opportunity_won": [
+            "opportunityName",
+            "fromStageId",
+            "fromStageName",
+            "toStageId",
+            "toStageName",
+            "funnelId",
+            "funnelName",
+            "status",
+            "amount",
+            "amountCurrency",
+            "assignedUserId",
+            "sourceChannel",
+            "sourceTargetListId",
+            "sourceTargetListName",
+            "isNew"
+        ],
+        "opportunity_lost": [
+            "opportunityName",
+            "fromStageId",
+            "fromStageName",
+            "toStageId",
+            "toStageName",
+            "funnelId",
+            "funnelName",
+            "status",
+            "amount",
+            "amountCurrency",
+            "assignedUserId",
+            "sourceChannel",
+            "sourceTargetListId",
+            "sourceTargetListName",
+            "isNew"
+        ],
+        "journey_enrolled": [
+            "journeyId",
+            "recordId",
+            "stageId",
+            "cycleCount"
+        ],
+        "journey_stage_entered": [
+            "journeyId",
+            "recordId",
+            "stageId",
+            "fromStageId"
+        ],
+        "journey_completed": [
+            "journeyId",
+            "recordId"
+        ],
+        "journey_goal_reached": [
+            "journeyId",
+            "recordId",
+            "goalCode"
+        ],
+        "journey_exited": [
+            "journeyId",
+            "recordId",
+            "exitReason"
+        ]
+    }
+}

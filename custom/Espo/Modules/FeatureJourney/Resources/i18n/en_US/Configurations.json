@@ -1,0 +1,19 @@
+{
+    "labels": {
+        "Journeys": "Journeys",
+        "People in journeys": "People in journeys",
+        "Journey history": "Journey history",
+        "Journey Records": "People in journeys",
+        "Journey Record Logs": "Journey history"
+    },
+    "descriptions": {
+        "journeys": "Build multi-step automations — who joins, steps, connections, and actions (Zapier / Make style).",
+        "journeyRecords": "Who is in each journey right now, which step they are on, and status.",
+        "journeyRecordLogs": "History of moves between steps and what triggered them."
+    },
+    "keywords": {
+        "journeys": "journey,funnel,automation,zapier,make,n8n,engagement,lifecycle,stage,step,flow",
+        "journeyRecords": "journey,enrollment,people,step,audience,status",
+        "journeyRecordLogs": "journey,history,log,transition,audit,event"
+    }
+}

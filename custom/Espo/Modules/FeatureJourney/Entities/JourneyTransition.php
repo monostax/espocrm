@@ -1,0 +1,140 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Espo\Modules\FeatureJourney\Entities;
+
+use Espo\Core\ORM\Entity;
+
+class JourneyTransition extends Entity
+{
+    public const ENTITY_TYPE = 'JourneyTransition';
+
+    public const TRIGGER_SIGNAL = 'signal';
+    public const TRIGGER_TIMER = 'timer';
+    public const TRIGGER_ENTITY_CHANGE = 'entityChange';
+    public const TRIGGER_MANUAL = 'manual';
+    public const TRIGGER_FORMULA = 'formula';
+
+    /** @var list<string> */
+    public const WAKE_SOURCES = [
+        self::TRIGGER_SIGNAL,
+        self::TRIGGER_TIMER,
+        self::TRIGGER_ENTITY_CHANGE,
+        self::TRIGGER_MANUAL,
+    ];
+
+    /**
+     * Wake sources that can queue this transition (OR).
+     * BC: empty wakeSources → fall back to single triggerType (except formula).
+     *
+     * @return list<string>
+     */
+    public function getWakeSources(): array
+    {
+        $raw = $this->get('wakeSources');
+
+        if (is_array($raw) && $raw !== []) {
+            $out = [];
+
+            foreach ($raw as $item) {
+                if (!is_string($item) || $item === '') {
+                    continue;
+                }
+
+                if (!in_array($item, self::WAKE_SOURCES, true)) {
+                    continue;
+                }
+
+                if (!in_array($item, $out, true)) {
+                    $out[] = $item;
+                }
+            }
+
+            if ($out !== []) {
+                return $out;
+            }
+        }
+
+        $trigger = $this->get('triggerType');
+
+        if (is_string($trigger) && in_array($trigger, self::WAKE_SOURCES, true)) {
+            return [$trigger];
+        }
+
+        return [];
+    }
+
+    public function wakesOn(string $source): bool
+    {
+        return in_array($source, $this->getWakeSources(), true);
+    }
+
+    /**
+     * Preferential primary for list/BC triggerType column.
+     */
+    public static function primaryTriggerFromWakes(array $wakes, ?string $fallback = null): string
+    {
+        $order = self::WAKE_SOURCES;
+
+        foreach ($order as $source) {
+            if (in_array($source, $wakes, true)) {
+                return $source;
+            }
+        }
+
+        if (is_string($fallback) && $fallback !== '') {
+            return $fallback;
+        }
+
+        return self::TRIGGER_SIGNAL;
+    }
+
+    /**
+     * Wake resolution for any ORM entity row (typed or plain).
+     *
+     * @return list<string>
+     */
+    public static function resolveWakeSources(Entity $entity): array
+    {
+        if ($entity instanceof self) {
+            return $entity->getWakeSources();
+        }
+
+        $raw = $entity->get('wakeSources');
+        $out = [];
+
+        if (is_array($raw)) {
+            foreach ($raw as $item) {
+                if (!is_string($item) || $item === '') {
+                    continue;
+                }
+
+                if (!in_array($item, self::WAKE_SOURCES, true)) {
+                    continue;
+                }
+
+                if (!in_array($item, $out, true)) {
+                    $out[] = $item;
+                }
+            }
+        }
+
+        if ($out !== []) {
+            return $out;
+        }
+
+        $trigger = $entity->get('triggerType');
+
+        if (is_string($trigger) && in_array($trigger, self::WAKE_SOURCES, true)) {
+            return [$trigger];
+        }
+
+        return [];
+    }
+
+    public static function entityWakesOn(Entity $entity, string $source): bool
+    {
+        return in_array($source, self::resolveWakeSources($entity), true);
+    }
+}

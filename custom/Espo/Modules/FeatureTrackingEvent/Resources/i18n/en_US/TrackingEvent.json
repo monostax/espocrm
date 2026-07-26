@@ -65,6 +65,7 @@
         "opportunity_stage_changed": "Opportunity Stage Changed",
         "opportunity_created": "Opportunity Created",
         "opportunity_won": "Opportunity Won",
-        "opportunity_lost": "Opportunity Lost"
+        "opportunity_lost": "Opportunity Lost",
+        "email_replied": "Email Replied"
     }
 }

@@ -1,0 +1,29 @@
+{
+    "journeys": {
+        "label": "Journeys",
+        "order": 28,
+        "itemList": [
+            {
+                "url": "#Journey",
+                "label": "Journeys",
+                "iconClass": "ti ti-route",
+                "description": "journeys",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#JourneyRecord",
+                "label": "People in journeys",
+                "iconClass": "ti ti-user-check",
+                "description": "journeyRecords",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#JourneyRecordLog",
+                "label": "Journey history",
+                "iconClass": "ti ti-list-details",
+                "description": "journeyRecordLogs",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ]
+    }
+}

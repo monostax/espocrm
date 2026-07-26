@@ -1,6 +1,7 @@
 {
     "primaryFilterClassNameMap": {
-        "whatsappCloudApi": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\PrimaryFilters\\WhatsappCloudApi"
+        "whatsappCloudApi": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\PrimaryFilters\\WhatsappCloudApi",
+        "whatsappAll": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\PrimaryFilters\\WhatsappAll"
     },
     "accessControlFilterClassNameMap": {
         "all": "Espo\\Modules\\Chatwoot\\Classes\\Select\\ChatwootInbox\\AccessControlFilters\\ByMembershipInbox",

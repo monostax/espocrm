@@ -1,0 +1,24 @@
+[
+    {
+        "name": "target",
+        "link": true
+    },
+    {
+        "name": "journey"
+    },
+    {
+        "name": "currentStage"
+    },
+    {
+        "name": "status"
+    },
+    {
+        "name": "cycleCount"
+    },
+    {
+        "name": "enteredStageAt"
+    },
+    {
+        "name": "createdAt"
+    }
+]

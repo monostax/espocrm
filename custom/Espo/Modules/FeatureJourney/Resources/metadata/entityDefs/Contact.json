@@ -1,0 +1,16 @@
+{
+    "links": {
+        "journeysManual": {
+            "type": "hasMany",
+            "entity": "Journey",
+            "foreign": "manualContacts",
+            "layoutRelationshipsDisabled": true
+        },
+        "journeyRecords": {
+            "type": "hasChildren",
+            "entity": "JourneyRecord",
+            "foreign": "target",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

@@ -1,0 +1,182 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 150
+        },
+        "journey": {
+            "type": "link",
+            "required": true
+        },
+        "fromStage": {
+            "type": "link",
+            "view": "feature-journey:views/journey-transition/fields/stage-link"
+        },
+        "toStage": {
+            "type": "link",
+            "required": true,
+            "view": "feature-journey:views/journey-transition/fields/stage-link"
+        },
+        "priority": {
+            "type": "int",
+            "default": 10
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "triggerType": {
+            "type": "enum",
+            "required": true,
+            "optionsPath": "app.journeyTransitionTriggers.typeList",
+            "default": "signal",
+            "tooltip": true,
+            "comment": "BC primary wake (synced from wakeSources on save)."
+        },
+        "wakeSources": {
+            "type": "multiEnum",
+            "allowCustomOptions": false,
+            "optionsPath": "app.journeyTransitionTriggers.wakeSourceList",
+            "translation": "JourneyTransition.options.wakeSources",
+            "tooltip": true,
+            "comment": "OR wake sources. Empty at read time falls back to triggerType."
+        },
+        "eventCodes": {
+            "type": "multiEnum",
+            "allowCustomOptions": false,
+            "optionsPath": "app.journeySignalEventCodes.codeList",
+            "view": "feature-journey:views/journey-transition/fields/event-codes",
+            "translation": "JourneyTransition.options.eventCodes",
+            "tooltip": true,
+            "comment": "Signal wake gate (OR). Multi allowed; stateful AND via eventHistory conditions."
+        },
+        "waitPeriod": {
+            "type": "varchar",
+            "maxLength": 32,
+            "view": "feature-journey:views/fields/period",
+            "tooltip": true
+        },
+        "conditionsGroup": {
+            "type": "jsonObject",
+            "view": "feature-journey:views/journey-transition/fields/conditions-group"
+        },
+        "conditionsFormula": {
+            "type": "text",
+            "view": "views/fields/formula",
+            "tooltip": true,
+            "height": 160,
+            "allowedFunctionList": [
+                "ifThen",
+                "ifThenElse",
+                "string\\",
+                "number\\",
+                "datetime\\",
+                "logical\\",
+                "comparison\\",
+                "entity\\attribute",
+                "entity\\isAttributeChanged",
+                "entity\\isNew",
+                "entity\\attributeFetched",
+                "util\\empty",
+                "json\\retrieve",
+                "object\\get",
+                "object\\create",
+                "object\\cloneDeep",
+                "array\\includes",
+                "array\\length",
+                "array\\at",
+                "array\\push",
+                "array\\join",
+                "list",
+                "bundle",
+                "assign"
+            ]
+        },
+        "evaluatorClassName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "tooltip": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "journey": {
+            "type": "belongsTo",
+            "entity": "Journey",
+            "foreign": "transitions"
+        },
+        "fromStage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage",
+            "foreign": "fromTransitions"
+        },
+        "toStage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage",
+            "foreign": "toTransitions"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "priority",
+        "order": "asc"
+    },
+    "indexes": {
+        "journeyId": {
+            "columns": [
+                "journeyId",
+                "deleted"
+            ]
+        },
+        "fromStageActive": {
+            "columns": [
+                "fromStageId",
+                "isActive",
+                "deleted"
+            ]
+        }
+    }
+}

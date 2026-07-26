@@ -1,0 +1,6 @@
+{
+    "accessControlFilterClassNameMap": {
+        "onlyTeam": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecordLog\\AccessControlFilters\\OnlyAccessibleJourney",
+        "onlyOwn": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecordLog\\AccessControlFilters\\OnlyAccessibleJourney"
+    }
+}

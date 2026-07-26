@@ -1,0 +1,151 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true
+        },
+        "journey": {
+            "type": "link",
+            "required": true
+        },
+        "order": {
+            "type": "int",
+            "default": 10,
+            "min": 1
+        },
+        "style": {
+            "type": "enum",
+            "options": [
+                "",
+                "default",
+                "success",
+                "danger",
+                "warning",
+                "info",
+                "primary"
+            ],
+            "default": "default"
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "stageType": {
+            "type": "enum",
+            "options": [
+                "Entry",
+                "Normal",
+                "Success",
+                "Exit"
+            ],
+            "default": "Normal",
+            "style": {
+                "Entry": "primary",
+                "Normal": null,
+                "Success": "success",
+                "Exit": "danger"
+            }
+        },
+        "maxDuration": {
+            "type": "varchar",
+            "maxLength": 32,
+            "view": "feature-journey:views/fields/period",
+            "tooltip": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        },
+        "actions": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true
+        }
+    },
+    "links": {
+        "journey": {
+            "type": "belongsTo",
+            "entity": "Journey",
+            "foreign": "stages"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "actions": {
+            "type": "hasMany",
+            "entity": "JourneyStageAction",
+            "foreign": "stage"
+        },
+        "fromTransitions": {
+            "type": "hasMany",
+            "entity": "JourneyTransition",
+            "foreign": "fromStage",
+            "layoutRelationshipsDisabled": true
+        },
+        "toTransitions": {
+            "type": "hasMany",
+            "entity": "JourneyTransition",
+            "foreign": "toStage",
+            "layoutRelationshipsDisabled": true
+        },
+        "records": {
+            "type": "hasMany",
+            "entity": "JourneyRecord",
+            "foreign": "currentStage",
+            "layoutRelationshipsDisabled": true
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "order",
+        "order": "asc"
+    },
+    "indexes": {
+        "journeyId": {
+            "columns": [
+                "journeyId",
+                "deleted"
+            ]
+        }
+    }
+}

@@ -1,0 +1,50 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "isActive"
+                }
+            ],
+            [
+                {
+                    "name": "stage"
+                },
+                {
+                    "name": "trigger"
+                }
+            ],
+            [
+                {
+                    "name": "type"
+                },
+                {
+                    "name": "order"
+                }
+            ],
+            [
+                {
+                    "name": "maxRetries"
+                },
+                {
+                    "name": "continueOnError"
+                }
+            ],
+            [
+                {
+                    "name": "formula",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "params",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

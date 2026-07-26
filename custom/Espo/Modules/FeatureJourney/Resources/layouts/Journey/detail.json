@@ -1,0 +1,109 @@
+[
+    {
+        "tabLabel": "$Overview",
+        "name": "overviewPanel",
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "targetEntityType"
+                },
+                {
+                    "name": "continuousEnrollment"
+                }
+            ],
+            [
+                {
+                    "name": "allowReEnrollment"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "name": "audiencePanel",
+        "label": "Audience",
+        "rows": [
+            [
+                {
+                    "name": "targetLists",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "manualContacts",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "excludeTargetLists",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "name": "goalPanel",
+        "label": "Goal",
+        "rows": [
+            [
+                {
+                    "name": "goalEventCodes",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "goalEntityFilter",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "name": "statisticsPanel",
+        "label": "Statistics",
+        "rows": [
+            [
+                {
+                    "name": "activeCount"
+                },
+                {
+                    "name": "completedCount"
+                }
+            ],
+            [
+                {
+                    "name": "exitedCount"
+                },
+                {
+                    "name": "goalCount"
+                }
+            ],
+            [
+                {
+                    "name": "activatedAt"
+                },
+                {
+                    "name": "completedAt"
+                }
+            ]
+        ]
+    }
+]

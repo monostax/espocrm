@@ -45,6 +45,11 @@
         "assignedUsersNames": {
             "type": "jsonObject",
             "notStorable": true
+        },
+        "agentEgress": {
+            "type": "jsonObject",
+            "tooltip": true,
+            "view": "feature-credential:views/credential/fields/agent-egress"
         }
     },
     "links": {

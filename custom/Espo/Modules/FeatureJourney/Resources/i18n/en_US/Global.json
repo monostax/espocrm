@@ -1,0 +1,22 @@
+{
+    "labels": {
+        "Journeys": "Journeys",
+        "Select Journey": "Select journey"
+    },
+    "scopeNames": {
+        "Journey": "Journey",
+        "JourneyStage": "Journey step",
+        "JourneyStageAction": "Journey action",
+        "JourneyTransition": "Journey connection",
+        "JourneyRecord": "Person in journey",
+        "JourneyRecordLog": "Journey history entry"
+    },
+    "scopeNamesPlural": {
+        "Journey": "Journeys",
+        "JourneyStage": "Journey steps",
+        "JourneyStageAction": "Journey actions",
+        "JourneyTransition": "Journey connections",
+        "JourneyRecord": "People in journeys",
+        "JourneyRecordLog": "Journey history"
+    }
+}

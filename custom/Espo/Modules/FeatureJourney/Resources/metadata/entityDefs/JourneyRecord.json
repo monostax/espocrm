@@ -1,0 +1,196 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "default": "0",
+            "readOnly": true
+        },
+        "name": {
+            "type": "varchar",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true
+        },
+        "journey": {
+            "type": "link",
+            "required": true
+        },
+        "target": {
+            "type": "linkParent",
+            "required": true,
+            "entityList": [
+                "Contact",
+                "Account",
+                "Lead"
+            ]
+        },
+        "currentStage": {
+            "type": "link"
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Active",
+                "Processing",
+                "Completed",
+                "Exited",
+                "Failed",
+                "Paused"
+            ],
+            "default": "Active",
+            "style": {
+                "Active": "success",
+                "Processing": "primary",
+                "Completed": "primary",
+                "Exited": "default",
+                "Failed": "danger",
+                "Paused": "warning"
+            }
+        },
+        "enteredStageAt": {
+            "type": "datetime"
+        },
+        "claimedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "retryCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "cycleCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "exitReason": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        },
+        "logs": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true
+        }
+    },
+    "links": {
+        "journey": {
+            "type": "belongsTo",
+            "entity": "Journey",
+            "foreign": "records"
+        },
+        "target": {
+            "type": "belongsToParent",
+            "entityList": [
+                "Contact",
+                "Account",
+                "Lead"
+            ]
+        },
+        "currentStage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage",
+            "foreign": "records"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "journeyRecords"
+        },
+        "logs": {
+            "type": "hasMany",
+            "entity": "JourneyRecordLog",
+            "foreign": "record"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "uniqueTargetCycle": {
+            "unique": true,
+            "columns": [
+                "journeyId",
+                "targetType",
+                "targetId",
+                "cycleCount",
+                "deleteId"
+            ]
+        },
+        "statusClaimedAt": {
+            "columns": [
+                "status",
+                "claimedAt"
+            ]
+        },
+        "journeyStatus": {
+            "columns": [
+                "journeyId",
+                "status",
+                "deleted"
+            ]
+        },
+        "stageStatus": {
+            "columns": [
+                "currentStageId",
+                "status",
+                "deleted"
+            ]
+        },
+        "tenantTarget": {
+            "columns": [
+                "tenantId",
+                "targetType",
+                "targetId",
+                "deleted"
+            ]
+        }
+    }
+}

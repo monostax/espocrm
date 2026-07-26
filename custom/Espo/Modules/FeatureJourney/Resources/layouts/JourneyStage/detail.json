@@ -1,0 +1,36 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "journey"
+                }
+            ],
+            [
+                {
+                    "name": "stageType"
+                },
+                {
+                    "name": "order"
+                }
+            ],
+            [
+                {
+                    "name": "style"
+                },
+                {
+                    "name": "isActive"
+                }
+            ],
+            [
+                {
+                    "name": "maxDuration"
+                },
+                false
+            ]
+        ]
+    }
+]

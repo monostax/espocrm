@@ -1,0 +1,16 @@
+{
+    "links": {
+        "journeys": {
+            "type": "hasMany",
+            "entity": "Journey",
+            "foreign": "targetLists",
+            "layoutRelationshipsDisabled": true
+        },
+        "journeysExcluding": {
+            "type": "hasMany",
+            "entity": "Journey",
+            "foreign": "excludeTargetLists",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

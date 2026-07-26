@@ -1,0 +1,47 @@
+[
+    {
+        "route": "/Journey/:id/review",
+        "method": "get",
+        "params": {
+            "controller": "Journey",
+            "action": "review",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Journey/:id/activate",
+        "method": "post",
+        "params": {
+            "controller": "Journey",
+            "action": "activate",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Journey/:id/pause",
+        "method": "post",
+        "params": {
+            "controller": "Journey",
+            "action": "pause",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Journey/:id/stopEnrollment",
+        "method": "post",
+        "params": {
+            "controller": "Journey",
+            "action": "stopEnrollment",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Journey/:id/archive",
+        "method": "post",
+        "params": {
+            "controller": "Journey",
+            "action": "archive",
+            "id": ":id"
+        }
+    }
+]

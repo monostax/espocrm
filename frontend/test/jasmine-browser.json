@@ -20,7 +20,8 @@
         "client/lib/transpiled/src/models/settings.js",
         "client/lib/transpiled/src/models/preferences.js",
         "client/lib/transpiled/src/metadata.js",
-        "client/lib/transpiled/src/theme-manager.js"
+        "client/lib/transpiled/src/theme-manager.js",
+        "client/custom/modules/feature-journey/src/helpers/expression-input.js"
     ],
     "specDir": "frontend/test/spec",
     "specFiles": [

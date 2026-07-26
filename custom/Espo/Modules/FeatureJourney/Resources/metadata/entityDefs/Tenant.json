@@ -1,0 +1,14 @@
+{
+    "links": {
+        "journeys": {
+            "type": "hasMany",
+            "entity": "Journey",
+            "foreign": "tenant"
+        },
+        "journeyRecords": {
+            "type": "hasMany",
+            "entity": "JourneyRecord",
+            "foreign": "tenant"
+        }
+    }
+}

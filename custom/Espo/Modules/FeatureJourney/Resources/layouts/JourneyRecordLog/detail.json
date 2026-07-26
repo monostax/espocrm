@@ -1,0 +1,44 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "record"
+                },
+                {
+                    "name": "journey"
+                }
+            ],
+            [
+                {
+                    "name": "fromStage"
+                },
+                {
+                    "name": "toStage"
+                }
+            ],
+            [
+                {
+                    "name": "transition"
+                },
+                {
+                    "name": "firedBy"
+                }
+            ],
+            [
+                {
+                    "name": "actor"
+                },
+                {
+                    "name": "createdAt"
+                }
+            ],
+            [
+                {
+                    "name": "eventPayload",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

@@ -16,5 +16,17 @@
             [{ "name": "metaSystemUserId" }, { "name": "metaBusinessId" }],
             [{ "name": "metaTokenInfo" }, false]
         ]
+    },
+    {
+        "label": "$label:panelAgentEgress",
+        "name": "agentEgressPanel",
+        "rows": [
+            [
+                {
+                    "name": "agentEgress",
+                    "fullWidth": true
+                }
+            ]
+        ]
     }
 ]

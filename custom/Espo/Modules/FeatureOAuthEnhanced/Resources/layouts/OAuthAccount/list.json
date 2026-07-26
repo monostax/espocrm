@@ -1,1 +1,27 @@
-["name", "provider", "connectionStatus", "teams", "assignedUsers", "hasAccessToken"]
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 28
+    },
+    {
+        "name": "provider",
+        "width": 20
+    },
+    {
+        "name": "connectionStatus",
+        "width": 14
+    },
+    {
+        "name": "teams",
+        "width": 14
+    },
+    {
+        "name": "assignedUsers",
+        "width": 14
+    },
+    {
+        "name": "hasAccessToken",
+        "width": 10
+    }
+]

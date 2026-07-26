@@ -1,0 +1,27 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "status"
+    },
+    {
+        "name": "targetEntityType"
+    },
+    {
+        "name": "activeCount"
+    },
+    {
+        "name": "completedCount"
+    },
+    {
+        "name": "goalCount"
+    },
+    {
+        "name": "tenant"
+    },
+    {
+        "name": "createdAt"
+    }
+]

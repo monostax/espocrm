@@ -1,0 +1,21 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "stageType"
+    },
+    {
+        "name": "order"
+    },
+    {
+        "name": "style"
+    },
+    {
+        "name": "isActive"
+    },
+    {
+        "name": "journey"
+    }
+]

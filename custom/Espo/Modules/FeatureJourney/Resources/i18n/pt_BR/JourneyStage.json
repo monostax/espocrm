@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "name": "Nome",
+        "journey": "Jornada",
+        "order": "Ordem",
+        "style": "Cor",
+        "isActive": "Ligado",
+        "stageType": "Tipo de etapa",
+        "maxDuration": "Tempo máx. na etapa",
+        "tenant": "Workspace",
+        "teams": "Equipes",
+        "actions": "Ações"
+    },
+    "options": {
+        "stageType": {
+            "Entry": "Entrada",
+            "Normal": "Etapa",
+            "Success": "Sucesso",
+            "Exit": "Saída"
+        }
+    },
+    "tooltips": {
+        "stageType": "Entrada = onde as pessoas começam. Sucesso / Saída = fim do fluxo. Etapa = o meio do caminho.",
+        "maxDuration": "Limite opcional de tempo nesta etapa antes do tratamento de tempo esgotado.",
+        "order": "Ordem de exibição no fluxo. Números menores aparecem primeiro.",
+        "style": "Cor desta etapa no quadro do fluxo."
+    }
+}

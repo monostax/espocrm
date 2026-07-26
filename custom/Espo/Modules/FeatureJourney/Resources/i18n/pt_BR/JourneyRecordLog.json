@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "record": "Pessoa na jornada",
+        "journey": "Jornada",
+        "fromStage": "Da etapa",
+        "toStage": "Para a etapa",
+        "transition": "Conexão",
+        "firedBy": "Disparado por",
+        "eventPayload": "Dados do evento",
+        "actor": "Quem",
+        "createdAt": "Quando",
+        "tenant": "Workspace",
+        "teams": "Equipes"
+    },
+    "options": {
+        "firedBy": {
+            "signal": "Evento recebido",
+            "timer": "Espera concluída",
+            "manual": "Clique manual",
+            "formula": "Fórmula",
+            "user": "Usuário",
+            "system": "Sistema",
+            "entityChange": "Registro alterado"
+        }
+    }
+}

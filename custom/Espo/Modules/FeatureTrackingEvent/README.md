@@ -249,6 +249,7 @@ hidden for this kind (not applicable).
 | `opportunity_created` | Opportunity created (alongside the initial `opportunity_stage_changed`) | Distinct code so creations are filterable and mutable per-code |
 | `opportunity_won` | Derived `status` transitions to `Won` | `value`/`currency` from the opportunity amount |
 | `opportunity_lost` | Derived `status` transitions to `Lost` | — |
+| `email_replied` | Inbound Email threaded (`repliedId`) to a journey outbound whose Message-ID carries `jrn.{token}@journey.monostax` (FeatureJourney `TrackJourneyReply`) | `journeyToken`, `journeyId`, `journeyRecordId`, `emailId` — clients do **not** return custom X-headers; correlation is Message-ID only |
 
 All carry `parentType=Opportunity` + `parentId`, `contactId` (the
 opportunity's primary contact, if set) and a `payload` with

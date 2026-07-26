@@ -3063,6 +3063,77 @@ public function deleteConversation(
     }
 
     /**
+     * Send a free-text outgoing message via Chatwoot (no template_params).
+     *
+     * Creates a conversation then posts content. Channel routing (WAHA QR,
+     * Cloud session window, Coexistence companion) is handled by Chatwoot.
+     *
+     * @return array{message_id: int|null, conversation_id: int|string}
+     * @throws Error
+     */
+    public function sendOutgoingMessage(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId,
+        int $inboxId,
+        string $content
+    ): array {
+        $conversation = $this->createConversation($platformUrl, $accountApiKey, $accountId, $contactId, $inboxId);
+        $conversationId = $conversation['id'] ?? $conversation['display_id'] ?? null;
+
+        if (!$conversationId) {
+            throw new Error('Failed to get conversation ID after creation.');
+        }
+
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/conversations/' . $conversationId . '/messages';
+
+        $messageData = [
+            'content' => $content,
+            'message_type' => 'outgoing',
+        ];
+
+        $payload = json_encode($messageData);
+
+        if ($payload === false) {
+            throw new Error('Failed to encode outgoing message data to JSON.');
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload),
+        ];
+
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to send outgoing message via Chatwoot: HTTP ' . $response['code'];
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error('Chatwoot API Error (sendOutgoingMessage): ' . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        $messageId = $response['body']['id'] ?? null;
+
+        $this->log->info(
+            "Chatwoot: Sent outgoing message to contact {$contactId} in conversation {$conversationId}, account {$accountId}"
+        );
+
+        return [
+            'message_id' => $messageId,
+            'conversation_id' => $conversationId,
+        ];
+    }
+
+    /**
      * Sync WhatsApp message templates for a Chatwoot inbox.
      *
      * Triggers an on-demand template sync from Meta so that Chatwoot's

@@ -297,6 +297,45 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // FeatureJourney — agents can view journeys/records; authoring
+                // is tenant-admin (override below). Record/Log ACL delegates
+                // to parent Journey via AccessChecker.
+                'Journey' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'JourneyStage' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'JourneyStageAction' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'JourneyTransition' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'JourneyRecord' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'JourneyRecordLog' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'ChatwootUser' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -903,6 +942,12 @@ class SeedRole implements RebuildAction
                 'TrackingEventType' => (object)[],
                 'TrackingSource' => (object)[],
                 'TrackingLink' => (object)[],
+                'Journey' => (object)[],
+                'JourneyStage' => (object)[],
+                'JourneyStageAction' => (object)[],
+                'JourneyTransition' => (object)[],
+                'JourneyRecord' => (object)[],
+                'JourneyRecordLog' => (object)[],
 
                 'Unidade' => (object)[],
                 'Profissional' => (object)[],
@@ -1318,6 +1363,46 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
+                    ],
+
+                    // FeatureJourney — tenant-admin authors journeys/stages/
+                    // transitions/actions; can edit active records (pause);
+                    // logs remain read-only (append-only ledger).
+                    'Journey' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'JourneyStage' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'JourneyStageAction' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'JourneyTransition' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'JourneyRecord' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'no',
+                    ],
+                    'JourneyRecordLog' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'no',
+                        'delete' => 'no',
                     ],
 
                     // Custom Fields — tenant-admin manages schema (groups +

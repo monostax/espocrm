@@ -1,0 +1,27 @@
+{
+    "journeys": {
+        "label": "Journeys",
+        "order": 28,
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#Journey",
+                "label": "Journeys",
+                "iconClass": "ti ti-route",
+                "description": "journeys"
+            },
+            {
+                "url": "#JourneyRecord",
+                "label": "People in journeys",
+                "iconClass": "ti ti-user-check",
+                "description": "journeyRecords"
+            },
+            {
+                "url": "#JourneyRecordLog",
+                "label": "Journey history",
+                "iconClass": "ti ti-list-details",
+                "description": "journeyRecordLogs"
+            }
+        ]
+    }
+}

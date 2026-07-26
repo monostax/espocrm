@@ -1,0 +1,11 @@
+{
+    "primaryFilterClassNameMap": {
+        "active": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecord\\PrimaryFilters\\Active",
+        "completed": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecord\\PrimaryFilters\\Completed",
+        "failed": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecord\\PrimaryFilters\\Failed"
+    },
+    "accessControlFilterClassNameMap": {
+        "onlyTeam": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecord\\AccessControlFilters\\OnlyAccessibleJourney",
+        "onlyOwn": "Espo\\Modules\\FeatureJourney\\Classes\\Select\\JourneyRecord\\AccessControlFilters\\OnlyAccessibleJourney"
+    }
+}

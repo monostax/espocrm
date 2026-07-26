@@ -1,0 +1,22 @@
+{
+    "labels": {
+        "Journeys": "Jornadas",
+        "Select Journey": "Selecionar jornada"
+    },
+    "scopeNames": {
+        "Journey": "Jornada",
+        "JourneyStage": "Etapa da jornada",
+        "JourneyStageAction": "Ação da jornada",
+        "JourneyTransition": "Conexão da jornada",
+        "JourneyRecord": "Pessoa na jornada",
+        "JourneyRecordLog": "Entrada do histórico"
+    },
+    "scopeNamesPlural": {
+        "Journey": "Jornadas",
+        "JourneyStage": "Etapas da jornada",
+        "JourneyStageAction": "Ações da jornada",
+        "JourneyTransition": "Conexões da jornada",
+        "JourneyRecord": "Pessoas nas jornadas",
+        "JourneyRecordLog": "Histórico da jornada"
+    }
+}

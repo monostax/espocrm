@@ -1,0 +1,40 @@
+{
+    "labels": {
+        "Exit": "Exit journey"
+    },
+    "fields": {
+        "journey": "Journey",
+        "target": "Person",
+        "currentStage": "Current step",
+        "status": "Status",
+        "enteredStageAt": "Entered step at",
+        "claimedAt": "Last claimed at",
+        "retryCount": "Retries",
+        "cycleCount": "Run #",
+        "exitReason": "Left because",
+        "tenant": "Workspace",
+        "teams": "Teams",
+        "logs": "History"
+    },
+    "options": {
+        "status": {
+            "Active": "In progress",
+            "Processing": "Processing",
+            "Completed": "Finished",
+            "Exited": "Left early",
+            "Failed": "Failed",
+            "Paused": "Paused"
+        }
+    },
+    "messages": {
+        "confirmExit": "Remove this person from the journey? They stop moving forward. History is kept (status → Left early). This does not delete the contact.",
+        "exiting": "Exiting journey…",
+        "exited": "Person left the journey",
+        "failedToExit": "Could not exit journey"
+    },
+    "presetFilters": {
+        "active": "In progress",
+        "completed": "Finished",
+        "failed": "Failed"
+    }
+}

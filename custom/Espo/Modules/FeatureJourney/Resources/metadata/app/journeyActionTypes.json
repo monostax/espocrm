@@ -1,0 +1,342 @@
+{
+    "typeList": [
+        "createTask",
+        "sendEmail",
+        "sendWhatsAppMessage",
+        "sendWhatsAppTemplate",
+        "notifyUser",
+        "executeFormula",
+        "updateTarget",
+        "runScript",
+        "recordTrackingEvent",
+        "triggerWorkflow",
+        "startBpmnProcess"
+    ],
+    "types": {
+        "createTask": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateTask",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "name",
+                    "type": "varchar",
+                    "label": "Task Name",
+                    "placeholder": "Follow up with contact"
+                },
+                {
+                    "name": "assignedUserId",
+                    "type": "link",
+                    "entity": "User",
+                    "label": "Assigned User",
+                    "nameKey": "assignedUserName"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "label": "Description"
+                },
+                {
+                    "name": "status",
+                    "type": "enum",
+                    "label": "Status",
+                    "options": ["Not Started", "Started", "Completed", "Canceled", "Deferred"],
+                    "default": "Not Started"
+                },
+                {
+                    "name": "priority",
+                    "type": "enum",
+                    "label": "Priority",
+                    "options": ["Low", "Normal", "High", "Urgent"],
+                    "default": "Normal"
+                },
+                {
+                    "name": "dateEnd",
+                    "type": "varchar",
+                    "label": "Due (YYYY-MM-DD or datetime)",
+                    "placeholder": "2026-08-01"
+                }
+            ]
+        },
+        "sendEmail": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendEmail",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "inboundEmailId",
+                    "type": "link",
+                    "entity": "InboundEmail",
+                    "label": "Group Email Account",
+                    "nameKey": "inboundEmailName"
+                },
+                {
+                    "name": "emailAccountId",
+                    "type": "link",
+                    "entity": "EmailAccount",
+                    "label": "Personal Email Account",
+                    "nameKey": "emailAccountName"
+                },
+                {
+                    "name": "emailTemplateId",
+                    "type": "link",
+                    "entity": "EmailTemplate",
+                    "label": "Email Template",
+                    "nameKey": "emailTemplateName"
+                },
+                {
+                    "name": "to",
+                    "type": "varchar",
+                    "label": "To (optional)",
+                    "placeholder": "Leave empty to use target email"
+                },
+                {
+                    "name": "subject",
+                    "type": "varchar",
+                    "label": "Subject override"
+                },
+                {
+                    "name": "body",
+                    "type": "text",
+                    "label": "Body override"
+                },
+                {
+                    "name": "isHtml",
+                    "type": "bool",
+                    "label": "HTML body",
+                    "default": true
+                }
+            ]
+        },
+        "sendWhatsAppMessage": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendWhatsAppMessage",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "WhatsApp Inbox",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "whatsappAll",
+                    "required": true
+                },
+                {
+                    "name": "body",
+                    "type": "text",
+                    "label": "Message body",
+                    "required": true
+                },
+                {
+                    "name": "phone",
+                    "type": "varchar",
+                    "label": "Phone override (optional)",
+                    "placeholder": "Leave empty to use target phone"
+                },
+                {
+                    "name": "fallbackTemplateName",
+                    "type": "varchar",
+                    "label": "Fallback Meta template (Cloud, if 24h closed)",
+                    "placeholder": "hello_world"
+                },
+                {
+                    "name": "fallbackTemplateLanguage",
+                    "type": "varchar",
+                    "label": "Fallback template language",
+                    "placeholder": "pt_BR",
+                    "default": "pt_BR"
+                },
+                {
+                    "name": "fallbackTemplateCategory",
+                    "type": "enum",
+                    "label": "Fallback template category",
+                    "options": ["UTILITY", "MARKETING", "AUTHENTICATION"],
+                    "default": "UTILITY"
+                },
+                {
+                    "name": "fallbackParameterMapping",
+                    "type": "json",
+                    "label": "Fallback parameter mapping (JSON)",
+                    "placeholder": "{\"1\": \"{{firstName}}\"}"
+                },
+                {
+                    "name": "fallbackHeaderMediaUrl",
+                    "type": "varchar",
+                    "label": "Fallback header media URL"
+                },
+                {
+                    "name": "fallbackHeaderMediaType",
+                    "type": "enum",
+                    "label": "Fallback header media type",
+                    "options": ["", "image", "video", "document"],
+                    "default": ""
+                }
+            ]
+        },
+        "sendWhatsAppTemplate": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendWhatsAppTemplate",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "WhatsApp Inbox (Cloud API)",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "whatsappCloudApi",
+                    "required": true
+                },
+                {
+                    "name": "templateName",
+                    "type": "varchar",
+                    "label": "Template name",
+                    "required": true,
+                    "placeholder": "hello_world"
+                },
+                {
+                    "name": "templateLanguage",
+                    "type": "varchar",
+                    "label": "Template language",
+                    "required": true,
+                    "placeholder": "pt_BR",
+                    "default": "pt_BR"
+                },
+                {
+                    "name": "templateCategory",
+                    "type": "enum",
+                    "label": "Template category",
+                    "options": ["UTILITY", "MARKETING", "AUTHENTICATION"],
+                    "default": "UTILITY"
+                },
+                {
+                    "name": "parameterMapping",
+                    "type": "json",
+                    "label": "Parameter mapping (JSON)",
+                    "placeholder": "{\"1\": \"{{firstName}}\", \"2\": \"{{account.name}}\"}"
+                },
+                {
+                    "name": "templateBody",
+                    "type": "text",
+                    "label": "Template body preview (optional)"
+                },
+                {
+                    "name": "headerMediaUrl",
+                    "type": "varchar",
+                    "label": "Header media URL"
+                },
+                {
+                    "name": "headerMediaType",
+                    "type": "enum",
+                    "label": "Header media type",
+                    "options": ["", "image", "video", "document"],
+                    "default": ""
+                },
+                {
+                    "name": "phone",
+                    "type": "varchar",
+                    "label": "Phone override (optional)",
+                    "placeholder": "Leave empty to use target phone"
+                }
+            ]
+        },
+        "notifyUser": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\NotifyUser",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "userId",
+                    "type": "link",
+                    "entity": "User",
+                    "label": "User",
+                    "nameKey": "userName"
+                },
+                {
+                    "name": "message",
+                    "type": "text",
+                    "label": "Message",
+                    "required": true
+                }
+            ]
+        },
+        "executeFormula": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ExecuteFormula",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "hasFormulaField": true,
+            "paramDefs": []
+        },
+        "updateTarget": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UpdateTarget",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "fields",
+                    "type": "fieldMap",
+                    "label": "Fields to update"
+                }
+            ]
+        },
+        "runScript": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\RunScript",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "platform",
+            "paramDefs": [
+                {
+                    "name": "className",
+                    "type": "varchar",
+                    "label": "Script class",
+                    "required": true
+                }
+            ]
+        },
+        "recordTrackingEvent": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\RecordTrackingEvent",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "code",
+                    "type": "varchar",
+                    "label": "Event code",
+                    "required": true,
+                    "placeholder": "pricing_viewed"
+                },
+                {
+                    "name": "properties",
+                    "type": "json",
+                    "label": "Properties (optional JSON)"
+                }
+            ]
+        },
+        "triggerWorkflow": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\TriggerWorkflow",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "platform",
+            "paramDefs": [
+                {
+                    "name": "workflowId",
+                    "type": "varchar",
+                    "label": "Workflow ID",
+                    "required": true
+                }
+            ]
+        },
+        "startBpmnProcess": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\StartBpmnProcess",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "platform",
+            "paramDefs": [
+                {
+                    "name": "flowchartId",
+                    "type": "varchar",
+                    "label": "Flowchart ID",
+                    "required": true
+                }
+            ]
+        }
+    }
+}

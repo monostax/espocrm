@@ -66,18 +66,12 @@ class KanbanService extends BaseKanbanService
 
             $maxOrderNumber = $this->config->get('kanbanMaxOrderNumber');
 
-            /** @var OpportunityKanban $kanban */
+            /** @var object $kanban */
             $kanban = $this->injectableFactory->create($customClassName);
 
-            // Extract funnelId from search params (passed via where clause or custom param)
+            // Extract funnelId / journeyId from search where (entity-specific boards)
             $funnelId = $this->extractFunnelId($searchParams);
-
-            // Debug logging - using warning level to ensure visibility
-            $whereRaw = $searchParams->getWhere()?->getRaw();
-            $GLOBALS['log']->warning(
-                "[KanbanService] getData() entityType={$entityType} extractedFunnelId=" . ($funnelId ?? 'NULL') .
-                " whereClause=" . json_encode($whereRaw)
-            );
+            $journeyId = $this->extractAttributeId($searchParams, ['journeyId', 'journey']);
 
             $kanban
                 ->setEntityType($entityType)
@@ -87,14 +81,13 @@ class KanbanService extends BaseKanbanService
                 ->setUserId($this->user->getId())
                 ->setMaxOrderNumber($maxOrderNumber);
 
-            if ($funnelId) {
-                $kanban->setFunnelId($funnelId);
+            if ($funnelId && is_callable([$kanban, 'setFunnelId'])) {
+                $kanban->{'setFunnelId'}($funnelId);
             }
 
-            $GLOBALS['log']->warning(
-                "[KanbanService] getData() funnelIdExtracted=" . ($funnelId ?? 'NULL') .
-                " funnelIdOnKanban=" . ($kanban->getFunnelId() ?? 'NULL')
-            );
+            if ($journeyId && is_callable([$kanban, 'setJourneyId'])) {
+                $kanban->{'setJourneyId'}($journeyId);
+            }
 
             return $kanban->getResult();
         }
@@ -104,73 +97,72 @@ class KanbanService extends BaseKanbanService
     }
 
     /**
-     * Extract funnelId from search params.
-     * Looks for funnelId in:
-     * 1. Where clause with attribute 'funnelId' or 'funnel'
-     * 2. Custom 'funnelId' parameter in search params
+     * Extract funnelId from search params where clause.
      */
     private function extractFunnelId(SearchParams $searchParams): ?string
     {
-        // Check where clause for funnelId filter
-        $whereClause = $searchParams->getWhere();
-
-        if ($whereClause) {
-            $funnelId = $this->findFunnelIdInWhere($whereClause->getRaw());
-
-            if ($funnelId) {
-                return $funnelId;
-            }
-        }
-
-        return null;
+        return $this->extractAttributeId($searchParams, ['funnelId', 'funnel']);
     }
 
     /**
-     * Recursively search for funnelId in where clause.
-     *
-     * @param array<string, mixed> $whereRaw
+     * @param list<string> $names attribute/field names to match
      */
-    private function findFunnelIdInWhere(array $whereRaw): ?string
+    private function extractAttributeId(SearchParams $searchParams, array $names): ?string
     {
-        // Handle root-level where clause structure: {"type": "and", "value": [...]}
+        $whereClause = $searchParams->getWhere();
+
+        if (!$whereClause) {
+            return null;
+        }
+
+        return $this->findAttributeIdInWhere($whereClause->getRaw(), $names);
+    }
+
+    /**
+     * @param array<string, mixed> $whereRaw
+     * @param list<string> $names
+     */
+    private function findAttributeIdInWhere(array $whereRaw, array $names): ?string
+    {
         if (isset($whereRaw['type']) && isset($whereRaw['value']) && is_array($whereRaw['value'])) {
-            // Check if this IS the funnelId condition itself
             $attribute = $whereRaw['attribute'] ?? null;
             $field = $whereRaw['field'] ?? null;
 
-            if ($attribute === 'funnelId' || $attribute === 'funnel' || $field === 'funnelId' || $field === 'funnel') {
+            if (
+                (is_string($attribute) && in_array($attribute, $names, true)) ||
+                (is_string($field) && in_array($field, $names, true))
+            ) {
                 $value = $whereRaw['value'] ?? null;
 
-                if ($value && is_string($value)) {
+                if (is_string($value) && $value !== '') {
                     return $value;
                 }
             }
 
-            // Otherwise, recurse into the value array (for AND/OR wrappers)
-            return $this->findFunnelIdInWhere($whereRaw['value']);
+            return $this->findAttributeIdInWhere($whereRaw['value'], $names);
         }
 
-        // Handle array of conditions
         foreach ($whereRaw as $item) {
             if (!is_array($item)) {
                 continue;
             }
 
-            // Check for direct funnelId condition
             $attribute = $item['attribute'] ?? null;
             $field = $item['field'] ?? null;
 
-            if ($attribute === 'funnelId' || $attribute === 'funnel' || $field === 'funnelId' || $field === 'funnel') {
+            if (
+                (is_string($attribute) && in_array($attribute, $names, true)) ||
+                (is_string($field) && in_array($field, $names, true))
+            ) {
                 $value = $item['value'] ?? null;
 
-                if ($value && is_string($value)) {
+                if (is_string($value) && $value !== '') {
                     return $value;
                 }
             }
 
-            // Check nested 'value' array (for OR/AND conditions)
             if (isset($item['value']) && is_array($item['value'])) {
-                $nested = $this->findFunnelIdInWhere($item['value']);
+                $nested = $this->findAttributeIdInWhere($item['value'], $names);
 
                 if ($nested) {
                     return $nested;

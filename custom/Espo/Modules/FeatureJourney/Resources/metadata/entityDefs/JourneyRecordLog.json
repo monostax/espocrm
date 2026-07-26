@@ -1,0 +1,128 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true
+        },
+        "record": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "journey": {
+            "type": "link",
+            "readOnly": true
+        },
+        "fromStage": {
+            "type": "link",
+            "readOnly": true
+        },
+        "toStage": {
+            "type": "link",
+            "readOnly": true
+        },
+        "transition": {
+            "type": "link",
+            "readOnly": true
+        },
+        "firedBy": {
+            "type": "enum",
+            "options": [
+                "signal",
+                "timer",
+                "manual",
+                "formula",
+                "user",
+                "system",
+                "entityChange"
+            ],
+            "readOnly": true
+        },
+        "eventPayload": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "view": "views/fields/json-object"
+        },
+        "actor": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "record": {
+            "type": "belongsTo",
+            "entity": "JourneyRecord",
+            "foreign": "logs"
+        },
+        "journey": {
+            "type": "belongsTo",
+            "entity": "Journey"
+        },
+        "fromStage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage"
+        },
+        "toStage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage"
+        },
+        "transition": {
+            "type": "belongsTo",
+            "entity": "JourneyTransition"
+        },
+        "actor": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "recordCreatedAt": {
+            "columns": [
+                "recordId",
+                "createdAt"
+            ]
+        },
+        "journeyCreatedAt": {
+            "columns": [
+                "journeyId",
+                "createdAt"
+            ]
+        },
+        "toStage": {
+            "columns": [
+                "toStageId",
+                "deleted"
+            ]
+        }
+    }
+}

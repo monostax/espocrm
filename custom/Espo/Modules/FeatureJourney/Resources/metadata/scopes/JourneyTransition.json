@@ -1,0 +1,11 @@
+{
+    "entity": "JourneyTransition",
+    "isCustom": false,
+    "module": "FeatureJourney",
+    "tab": false,
+    "object": true,
+    "acl": "team",
+    "aclLevel": "team",
+    "stream": false,
+    "languageCategory": "Journeys"
+}

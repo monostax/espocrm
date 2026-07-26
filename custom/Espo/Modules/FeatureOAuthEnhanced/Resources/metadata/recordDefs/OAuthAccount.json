@@ -1,0 +1,10 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureOAuthEnhanced\\Classes\\RecordHooks\\OAuthAccount\\ValidateAgentEgress"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureOAuthEnhanced\\Classes\\RecordHooks\\OAuthAccount\\ValidateAgentEgress"
+    ]
+}

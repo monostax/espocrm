@@ -1,0 +1,20 @@
+{
+    "EnrollJourneyRecords": {
+        "name": "Enroll Journey Records",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureJourney\\Jobs\\EnrollJourneyRecords"
+    },
+    "ProcessJourneyTimers": {
+        "name": "Process Journey Timers",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureJourney\\Jobs\\ProcessJourneyTimers"
+    },
+    "ReconcileJourneyCounters": {
+        "name": "Reconcile Journey Counters",
+        "isSystem": false,
+        "scheduling": "0 3 * * *",
+        "jobClassName": "Espo\\Modules\\FeatureJourney\\Jobs\\ReconcileJourneyCounters"
+    }
+}

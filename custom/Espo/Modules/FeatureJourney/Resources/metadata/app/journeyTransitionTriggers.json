@@ -1,0 +1,22 @@
+{
+    "typeList": [
+        "signal",
+        "timer",
+        "entityChange",
+        "manual",
+        "formula"
+    ],
+    "wakeSourceList": [
+        "signal",
+        "timer",
+        "entityChange",
+        "manual"
+    ],
+    "types": {
+        "signal": {},
+        "timer": {},
+        "entityChange": {},
+        "manual": {},
+        "formula": {}
+    }
+}

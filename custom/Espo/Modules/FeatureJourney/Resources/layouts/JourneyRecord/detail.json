@@ -1,0 +1,44 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "journey"
+                },
+                {
+                    "name": "target"
+                }
+            ],
+            [
+                {
+                    "name": "currentStage"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "cycleCount"
+                },
+                {
+                    "name": "enteredStageAt"
+                }
+            ],
+            [
+                {
+                    "name": "retryCount"
+                },
+                {
+                    "name": "exitReason"
+                }
+            ],
+            [
+                {
+                    "name": "claimedAt"
+                },
+                false
+            ]
+        ]
+    }
+]

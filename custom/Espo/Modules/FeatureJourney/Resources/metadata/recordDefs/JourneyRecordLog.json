@@ -1,0 +1,14 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureJourney\\Classes\\RecordHooks\\JourneyRecordLog\\BlockWrite"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureJourney\\Classes\\RecordHooks\\JourneyRecordLog\\BlockWrite"
+    ],
+    "beforeDeleteHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureJourney\\Classes\\RecordHooks\\JourneyRecordLog\\BlockDelete"
+    ]
+}

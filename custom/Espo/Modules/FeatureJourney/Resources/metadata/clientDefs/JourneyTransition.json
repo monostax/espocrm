@@ -1,0 +1,37 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-arrow-right",
+    "dynamicLogic": {
+        "fields": {
+            "conditionsFormula": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "isNotEmpty",
+                                    "attribute": "conditionsFormula"
+                                },
+                                {
+                                    "type": "isTrue",
+                                    "attribute": "$user.isAdmin"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "evaluatorClassName": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "$user.isAdmin"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

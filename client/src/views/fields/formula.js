@@ -66,7 +66,11 @@ class FormulaFieldView extends TextFieldView {
     setup() {
         super.setup();
 
-        this.height = this.options.height || this.params.height || this.height;
+        this.height =
+            this.options.height ||
+            this.params.height ||
+            this.model.getFieldParam(this.name, 'height') ||
+            this.height;
         this.smallFont = this.options.smallFont || this.params.smallFont || this.smallFont;
 
         this.maxLineDetailCount =
@@ -84,8 +88,18 @@ class FormulaFieldView extends TextFieldView {
             this.params.targetEntityType ||
             this.targetEntityType;
 
-        this.insertDisabled = this.insertDisabled || this.options.insertDisabled;
-        this.checkSyntaxDisabled = this.checkSyntaxDisabled || this.options.checkSyntaxDisabled;
+        this.allowedFunctionList =
+            this.options.allowedFunctionList ||
+            this.params.allowedFunctionList ||
+            this.model.getFieldParam(this.name, 'allowedFunctionList');
+
+        this.insertDisabled =
+            this.insertDisabled || this.options.insertDisabled || this.params.insertDisabled;
+        this.checkSyntaxDisabled =
+            this.checkSyntaxDisabled ||
+            this.options.checkSyntaxDisabled ||
+            this.params.checkSyntaxDisabled ||
+            !this.getUser().isAdmin();
 
         this.containerId = 'editor-' + Math.floor((Math.random() * 10000) + 1).toString();
 
@@ -272,7 +286,7 @@ class FormulaFieldView extends TextFieldView {
             list = list.concat(this.options.additionalFunctionDataList);
         }
 
-        const allowedFunctionList = /** @type string[] */this.options.allowedFunctionList;
+        const allowedFunctionList = /** @type string[] */this.allowedFunctionList;
 
         if (allowedFunctionList) {
             list = list.filter(/** {name: string} */item => {

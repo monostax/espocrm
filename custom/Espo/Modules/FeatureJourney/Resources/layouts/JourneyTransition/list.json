@@ -1,0 +1,21 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "wakeSources"
+    },
+    {
+        "name": "fromStage"
+    },
+    {
+        "name": "toStage"
+    },
+    {
+        "name": "priority"
+    },
+    {
+        "name": "isActive"
+    }
+]

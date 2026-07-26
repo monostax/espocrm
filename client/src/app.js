@@ -1771,7 +1771,11 @@ class App {
                                 baseUrl + this.basePath + "client/" + file;
 
                             const urlObj = new URL(url);
-                            urlObj.searchParams.append("r", timestamp);
+                            // Bust keyed by app asset version (Espo bug used bare `timestamp`).
+                            urlObj.searchParams.append(
+                                "r",
+                                String(this.assetVersion ?? "")
+                            );
 
                             promiseList.push(
                                 this.responseCache.put(
@@ -1780,9 +1784,9 @@ class App {
                                 )
                             );
                         });
-                    });
 
-                    Promise.all(promiseList).then(() => resolve());
+                        Promise.all(promiseList).then(() => resolve());
+                    });
                 });
             });
         });

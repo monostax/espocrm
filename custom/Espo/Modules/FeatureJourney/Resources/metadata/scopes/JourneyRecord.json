@@ -1,0 +1,13 @@
+{
+    "entity": "JourneyRecord",
+    "isCustom": false,
+    "module": "FeatureJourney",
+    "tab": true,
+    "object": true,
+    "acl": "team",
+    "aclLevel": "team",
+    "stream": false,
+    "languageCategory": "Journeys",
+    "kanbanStatusField": "currentStageId",
+    "kanbanOrderDisabled": true
+}

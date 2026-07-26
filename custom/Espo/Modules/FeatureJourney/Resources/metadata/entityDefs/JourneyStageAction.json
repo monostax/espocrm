@@ -1,0 +1,151 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 150
+        },
+        "stage": {
+            "type": "link",
+            "required": true
+        },
+        "trigger": {
+            "type": "enum",
+            "options": [
+                "OnEnter",
+                "OnExit"
+            ],
+            "default": "OnEnter"
+        },
+        "type": {
+            "type": "enum",
+            "required": true,
+            "optionsPath": "app.journeyActionTypes.typeList",
+            "view": "feature-journey:views/journey-stage-action/fields/type"
+        },
+        "params": {
+            "type": "jsonObject",
+            "view": "feature-journey:views/journey-stage-action/fields/params",
+            "tooltip": true
+        },
+        "formula": {
+            "type": "text",
+            "view": "views/fields/formula",
+            "tooltip": true,
+            "height": 200,
+            "allowedFunctionList": [
+                "ifThen",
+                "ifThenElse",
+                "string\\",
+                "number\\",
+                "datetime\\",
+                "logical\\",
+                "comparison\\",
+                "entity\\attribute",
+                "entity\\isAttributeChanged",
+                "entity\\isNew",
+                "entity\\attributeFetched",
+                "util\\empty",
+                "json\\retrieve",
+                "object\\get",
+                "object\\create",
+                "object\\cloneDeep",
+                "array\\includes",
+                "array\\length",
+                "array\\at",
+                "array\\push",
+                "array\\join",
+                "list",
+                "bundle",
+                "assign",
+                "journey\\enroll",
+                "journey\\moveToStage",
+                "journey\\signal",
+                "journey\\updateTarget"
+            ]
+        },
+        "maxRetries": {
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "max": 5,
+            "tooltip": true
+        },
+        "continueOnError": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
+        "order": {
+            "type": "int",
+            "default": 10
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "stage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage",
+            "foreign": "actions"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "order",
+        "order": "asc"
+    },
+    "indexes": {
+        "stageId": {
+            "columns": [
+                "stageId",
+                "deleted"
+            ]
+        }
+    }
+}

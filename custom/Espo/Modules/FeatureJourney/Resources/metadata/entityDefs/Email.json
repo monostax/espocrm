@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "journeyToken": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
+        "journeyRecordId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
+        "journeyId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        }
+    },
+    "indexes": {
+        "journeyToken": {
+            "columns": ["journeyToken", "deleted"]
+        },
+        "journeyRecordId": {
+            "columns": ["journeyRecordId", "deleted"]
+        }
+    }
+}
