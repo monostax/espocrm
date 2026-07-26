@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "bodyFormat": "Body Format",
+        "bodyEditorState": "Body Editor State"
+    },
+    "options": {
+        "bodyFormat": {
+            "Html": "HTML (WYSIWYG)",
+            "Markdown": "Markdown"
+        }
+    },
+    "tooltips": {
+        "bodyFormat": "HTML projects body as HTML for email/portal; Markdown projects Markdown. Existing articles default to HTML. Lexical editor state is always stored separately for lossless re-edit (mentions later).",
+        "bodyEditorState": "Internal Lexical JSON document. Source of truth for the editor; do not edit manually."
+    },
+    "messages": {
+        "bodyFormatSwitchConfirm": "Switching format converts the body. Rich HTML (tables, custom styles) may not round-trip cleanly. Continue?",
+        "bodyFormatSwitchEmpty": "Body is empty — format will only apply on next edit."
+    },
+    "labels": {
+        "Body Editor": "Body editor"
+    }
+}

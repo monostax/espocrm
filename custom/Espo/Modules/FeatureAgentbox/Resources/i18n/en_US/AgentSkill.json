@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "name": "Name",
+        "description": "Description",
+        "body": "Body",
+        "content": "Full Content",
+        "path": "Workspace Path",
+        "modifiedAt": "Modified At",
+        "tenant": "Tenant",
+        "tenantId": "Tenant ID",
+        "tenantName": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
+    },
+    "labels": {
+        "Create AgentSkill": "Create Skill"
+    },
+    "tooltips": {
+        "name": "OpenCode skill directory name (lowercase, hyphens). Maps to .config/opencode/skills/{name}/SKILL.md",
+        "description": "Shown to the agent when choosing which skill to load (max 1024 chars)",
+        "body": "Markdown instructions (after YAML frontmatter). Frontmatter is edited via Name + Description — Lexical only receives the body. Pasting a full SKILL.md will strip --- yaml --- automatically."
+    }
+}

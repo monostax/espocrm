@@ -84,6 +84,8 @@ class IndexInGemini implements AfterSave, AfterRemove
             $hasContentChange = $entity->isAttributeChanged('name') ||
                               $entity->isAttributeChanged('body') ||
                               $entity->isAttributeChanged('bodyPlain') ||
+                              $entity->isAttributeChanged('bodyFormat') ||
+                              $entity->isAttributeChanged('bodyEditorState') ||
                               $entity->isAttributeChanged('description') ||
                               $entity->isAttributeChanged('language') ||
                               $entity->isAttributeChanged('status') ||

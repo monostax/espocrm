@@ -1,0 +1,8 @@
+{
+    "scopeNames": {
+        "AgentSkill": "Skill do Agente"
+    },
+    "scopeNamesPlural": {
+        "AgentSkill": "Skills do Agente"
+    }
+}

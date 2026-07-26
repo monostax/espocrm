@@ -1,0 +1,7 @@
+{
+    "name": "FeatureAgentbox",
+    "description": "Agentbox workspace features — virtual AgentSkill entity backed by OpenCode skills FS. Lexical markdown editor for AgentSkill.body (frontmatter kept on name/description fields).",
+    "version": "1.0.0",
+    "order": 35,
+    "jsTranspiled": true
+}

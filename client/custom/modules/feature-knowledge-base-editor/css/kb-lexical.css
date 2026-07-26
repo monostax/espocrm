@@ -1,0 +1,88 @@
+/* Lexical Knowledge Base editor */
+.kb-lexical-field {
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    background: var(--panel-bg, #fff);
+}
+
+.kb-lexical-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-color, #ddd);
+    background: var(--gray-lighter, #f7f7f7);
+}
+
+.kb-lexical-toolbar .btn-group-divider {
+    display: inline-block;
+    width: 1px;
+    margin: 0 4px;
+    background: var(--border-color, #ddd);
+    align-self: stretch;
+}
+
+.kb-lexical-editor-wrap {
+    padding: 0;
+}
+
+.kb-lexical-editor {
+    min-height: 220px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 10px 12px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none;
+    line-height: 1.5;
+}
+
+.kb-lexical-editor:focus {
+    outline: none;
+}
+
+.kb-lexical-source {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    min-height: 220px;
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    font-size: 13px;
+}
+
+.kb-lexical-format-hint {
+    padding: 4px 10px 6px;
+    border-top: 1px solid var(--border-color, #eee);
+}
+
+.kb-lex-bold { font-weight: 700; }
+.kb-lex-italic { font-style: italic; }
+.kb-lex-underline { text-decoration: underline; }
+.kb-lex-strike { text-decoration: line-through; }
+.kb-lex-code {
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0 3px;
+    border-radius: 3px;
+}
+.kb-lex-h1 { font-size: 1.6em; font-weight: 700; margin: 0.4em 0; }
+.kb-lex-h2 { font-size: 1.35em; font-weight: 700; margin: 0.4em 0; }
+.kb-lex-h3 { font-size: 1.15em; font-weight: 700; margin: 0.4em 0; }
+.kb-lex-quote {
+    border-left: 3px solid var(--border-color, #ccc);
+    margin: 0.5em 0;
+    padding-left: 0.8em;
+    color: #666;
+}
+.kb-lex-link { color: var(--link-color, #337ab7); text-decoration: underline; }
+.kb-lex-ul, .kb-lex-ol { margin: 0.4em 0; padding-left: 1.5em; }
+.kb-lex-codeblock {
+    font-family: Menlo, Monaco, Consolas, monospace;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 8px 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+.kb-lex-table { width: 100%; margin: 0.5em 0; }

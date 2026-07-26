@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "name": "Nome",
+        "description": "Descrição",
+        "body": "Corpo",
+        "content": "Conteúdo completo",
+        "path": "Caminho no workspace",
+        "modifiedAt": "Modificado em",
+        "tenant": "Tenant",
+        "tenantId": "ID do Tenant",
+        "tenantName": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
+    },
+    "labels": {
+        "Create AgentSkill": "Criar Skill"
+    },
+    "tooltips": {
+        "name": "Nome do diretório da skill no OpenCode (minúsculas, hífens). Mapeia para .config/opencode/skills/{name}/SKILL.md",
+        "description": "Texto que o agente vê ao escolher a skill (máx. 1024 caracteres)",
+        "body": "Instruções em Markdown (após o frontmatter YAML). O frontmatter é Name + Description — o Lexical só edita o corpo. Colar um SKILL.md completo remove o bloco --- yaml --- automaticamente."
+    }
+}

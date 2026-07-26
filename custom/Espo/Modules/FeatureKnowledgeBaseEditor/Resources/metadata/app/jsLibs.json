@@ -1,0 +1,8 @@
+{
+    "lexical-kb": {
+        "path": "client/custom/modules/feature-knowledge-base-editor/lib/lexical-kb-bundle.js",
+        "devPath": "client/custom/modules/feature-knowledge-base-editor/lib/original/lexical-kb-bundle.js",
+        "exportsTo": "window",
+        "exportsAs": "EspoLexical"
+    }
+}

@@ -726,12 +726,18 @@ class IndexArticle implements Job
     {
         $name = $article->get('name') ?? '';
         $description = $article->get('description') ?? '';
-        $bodyHtml = (string) ($article->get('body') ?? '');
+        $bodyRaw = (string) ($article->get('body') ?? '');
         $bodyPlain = (string) ($article->get('bodyPlain') ?? '');
+        $bodyFormat = (string) ($article->get('bodyFormat') ?? 'Html');
 
-        $body = $bodyHtml !== ''
-            ? $this->htmlToIndexableText($bodyHtml)
-            : trim($bodyPlain);
+        // Markdown articles: body is already MD-ish plain; Html uses table-aware walker.
+        if ($bodyFormat === 'Markdown') {
+            $body = trim($bodyRaw) !== '' ? trim($bodyRaw) : trim($bodyPlain);
+        } else {
+            $body = $bodyRaw !== ''
+                ? $this->htmlToIndexableText($bodyRaw)
+                : trim($bodyPlain);
+        }
 
         // If conversion failed / produced glued-looking output and plain exists
         // but is itself glued, still prefer the converted HTML attempt only when

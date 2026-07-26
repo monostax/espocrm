@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "bodyFormat": {
+            "type": "enum",
+            "options": ["Html", "Markdown"],
+            "default": "Html",
+            "audited": true,
+            "tooltip": true
+        },
+        "bodyEditorState": {
+            "type": "text",
+            "readOnly": false,
+            "layoutDetailDisabled": true,
+            "layoutDetailSmallDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "utility": true,
+            "tooltip": true,
+            "directUpdateDisabled": true,
+            "textFilterDisabled": true,
+            "viewFieldListDisabled": true
+        },
+        "body": {
+            "type": "wysiwyg",
+            "view": "feature-knowledge-base-editor:views/knowledge-base-article/fields/body",
+            "attachmentField": "attachments"
+        }
+    }
+}

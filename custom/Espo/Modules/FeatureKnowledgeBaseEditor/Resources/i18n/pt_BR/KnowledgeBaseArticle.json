@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "bodyFormat": "Formato do corpo",
+        "bodyEditorState": "Estado do editor"
+    },
+    "options": {
+        "bodyFormat": {
+            "Html": "HTML (WYSIWYG)",
+            "Markdown": "Markdown"
+        }
+    },
+    "tooltips": {
+        "bodyFormat": "HTML projeta o corpo em HTML (email/portal); Markdown projeta Markdown. Artigos existentes ficam em HTML. O estado Lexical é sempre salvo à parte para reabrir sem perda (menções depois).",
+        "bodyEditorState": "Documento JSON interno do Lexical. Fonte da verdade do editor; não editar manualmente."
+    },
+    "messages": {
+        "bodyFormatSwitchConfirm": "Trocar o formato converte o corpo. HTML rico (tabelas, estilos) pode não sobreviver à conversão. Continuar?",
+        "bodyFormatSwitchEmpty": "Corpo vazio — o formato só se aplica na próxima edição."
+    },
+    "labels": {
+        "Body Editor": "Editor do corpo"
+    }
+}

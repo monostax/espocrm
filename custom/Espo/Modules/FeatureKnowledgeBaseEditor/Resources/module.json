@@ -1,0 +1,8 @@
+{
+    "order": 25,
+    "version": "1.0.0",
+    "name": "FeatureKnowledgeBaseEditor",
+    "description": "Lexical dual-mode (Html + Markdown) editor for KnowledgeBaseArticle.body. Existing Html articles keep content (bodyFormat defaults to Html).",
+    "author": "Monostax",
+    "jsTranspiled": true
+}

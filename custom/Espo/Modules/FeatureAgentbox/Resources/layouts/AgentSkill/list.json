@@ -1,0 +1,19 @@
+[
+    {
+        "name": "name",
+        "width": 20,
+        "link": true
+    },
+    {
+        "name": "description",
+        "width": 35
+    },
+    {
+        "name": "tenantName",
+        "width": 20
+    },
+    {
+        "name": "modifiedAt",
+        "width": 20
+    }
+]
