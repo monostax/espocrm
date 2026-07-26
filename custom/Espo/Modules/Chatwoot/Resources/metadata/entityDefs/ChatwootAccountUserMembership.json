@@ -101,6 +101,11 @@
             "default": true,
             "tooltip": true
         },
+        "delegateEnabled": {
+            "type": "bool",
+            "default": false,
+            "tooltip": true
+        },
         "transferScenarios": {
             "type": "text",
             "rowsMin": 10

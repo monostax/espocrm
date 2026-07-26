@@ -1,6 +1,6 @@
 {
     "fields": {
-        "record": "Pessoa na jornada",
+        "record": "Jornada / Inscrição",
         "journey": "Jornada",
         "fromStage": "Da etapa",
         "toStage": "Para a etapa",

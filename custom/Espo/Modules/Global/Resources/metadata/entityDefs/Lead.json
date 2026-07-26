@@ -6,6 +6,11 @@
         "modifiedBy": {
             "view": "views/fields/user-with-avatar"
         },
+        "tenant": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/link"
+        },
         "teams": {
             "type": "linkMultiple",
             "required": true,
@@ -21,11 +26,21 @@
         }
     },
     "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "leads"
+        },
         "teams": {
             "type": "hasMany",
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        }
+    },
+    "indexes": {
+        "tenantId": {
+            "columns": ["tenantId"]
         }
     }
 }

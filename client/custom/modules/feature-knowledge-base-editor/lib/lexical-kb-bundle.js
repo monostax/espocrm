@@ -4134,7 +4134,7 @@ var EspoLexical = (function () {
 	                }
 
 	                Jr(nodes);
-	            });
+	            }, {discrete: true});
 	        },
 	        getHtml() {
 	            let html = '';
@@ -4154,7 +4154,7 @@ var EspoLexical = (function () {
 	            const body = stripFrontmatter(markdown || '');
 	            editor.update(() => {
 	                Ce(body, Kt);
-	            });
+	            }, {discrete: true});
 	        },
 	        getMarkdown() {
 	            let md = '';

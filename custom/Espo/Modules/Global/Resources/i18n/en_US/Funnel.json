@@ -3,6 +3,7 @@
         "name": "Name",
         "description": "Description",
         "team": "Team",
+        "tenant": "Tenant",
         "isActive": "Is Active",
         "isDefault": "Is Default",
         "followupsEnabled": "Automatic Follow-up Enabled",
@@ -15,6 +16,7 @@
     },
     "links": {
         "team": "Team",
+        "tenant": "Tenant",
         "opportunityStages": "Opportunity Stages",
         "opportunities": "Opportunities",
         "accountUserMembershipsWithFunnelAccess": "AI Agent with Access",

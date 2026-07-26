@@ -67,6 +67,26 @@
                     ]
                 }
             },
+            "followupsEnabled": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
+            "delegateEnabled": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
             "knowledgeBaseCategories": {
                 "visible": {
                     "conditionGroup": [

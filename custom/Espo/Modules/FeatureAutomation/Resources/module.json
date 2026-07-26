@@ -1,0 +1,7 @@
+{
+    "order": 30,
+    "version": "0.3.0",
+    "name": "FeatureAutomation",
+    "description": "Tenant-safe Batch and Machine automations: map/batch, statechart wait+join, groupBy/timeBucket, action idempotency, dry-run simulate. FeatureJourney security spine.",
+    "jsTranspiled": true
+}

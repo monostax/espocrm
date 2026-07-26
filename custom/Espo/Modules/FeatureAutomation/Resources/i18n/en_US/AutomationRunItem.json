@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "run": "Run",
+        "automation": "Automation",
+        "target": "Target",
+        "status": "Status",
+        "tenant": "Workspace",
+        "payload": "Payload",
+        "actionLog": "Action log",
+        "claimedAt": "Claimed",
+        "wakeAt": "Wake at",
+        "finishedAt": "Finished",
+        "errorMessage": "Error",
+        "retryCount": "Retries",
+        "teams": "Teams"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Processing": "Processing",
+            "Waiting": "Waiting",
+            "Retry": "Retry",
+            "Done": "Done",
+            "Failed": "Failed",
+            "Skipped": "Skipped"
+        }
+    }
+}

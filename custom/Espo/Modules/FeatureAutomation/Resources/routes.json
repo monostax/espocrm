@@ -1,0 +1,47 @@
+[
+    {
+        "route": "/Automation/:id/activate",
+        "method": "post",
+        "params": {
+            "controller": "Automation",
+            "action": "activate",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Automation/:id/pause",
+        "method": "post",
+        "params": {
+            "controller": "Automation",
+            "action": "pause",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Automation/:id/archive",
+        "method": "post",
+        "params": {
+            "controller": "Automation",
+            "action": "archive",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Automation/:id/runNow",
+        "method": "post",
+        "params": {
+            "controller": "Automation",
+            "action": "runNow",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Automation/:id/simulate",
+        "method": "post",
+        "params": {
+            "controller": "Automation",
+            "action": "simulate",
+            "id": ":id"
+        }
+    }
+]

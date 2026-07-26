@@ -1,0 +1,9 @@
+[
+    {"name": "name", "width": 18},
+    {"name": "automation", "width": 18},
+    {"name": "scope", "width": 10},
+    {"name": "actionType", "width": 14},
+    {"name": "lastAt", "width": 14},
+    {"name": "expiresAt", "width": 14},
+    {"name": "tenant", "width": 12}
+]

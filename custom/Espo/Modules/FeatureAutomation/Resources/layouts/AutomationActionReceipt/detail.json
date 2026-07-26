@@ -1,0 +1,13 @@
+[
+    {
+        "name": "overviewPanel",
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "scope"}],
+            [{"name": "automation"}, {"name": "actionType"}],
+            [{"name": "keyHash"}, {"name": "runItemId"}],
+            [{"name": "lastAt"}, {"name": "expiresAt"}],
+            [{"name": "tenant"}, false]
+        ]
+    }
+]

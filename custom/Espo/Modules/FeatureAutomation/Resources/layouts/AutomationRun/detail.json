@@ -1,0 +1,16 @@
+[
+    {
+        "name": "overviewPanel",
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "status"}],
+            [{"name": "automation"}, {"name": "triggeredBy"}],
+            [{"name": "parentRun"}, {"name": "parentRunItemId"}],
+            [{"name": "itemCount"}, {"name": "doneCount"}],
+            [{"name": "failedCount"}, {"name": "skippedCount"}],
+            [{"name": "startedAt"}, {"name": "completedAt"}],
+            [{"name": "errorSummary", "fullWidth": true}],
+            [{"name": "triggerPayload", "fullWidth": true}]
+        ]
+    }
+]

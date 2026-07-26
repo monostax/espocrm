@@ -50,7 +50,7 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
                 </div>
                 <span class="btn-group-divider"></span>
                 <div class="kb-lexical-format-select btn-group btn-group-sm">
-                    <select class="form-control input-sm" data-name="bodyFormatInline" title="{{translate 'bodyFormat' 'fields' 'KnowledgeBaseArticle'}}">
+                    <select class="form-control input-sm" data-name="bodyFormatInline" title="{{bodyFormatFieldLabel}}">
                         <option value="Html"{{#if isHtmlFormat}} selected{{/if}}>HTML</option>
                         <option value="Markdown"{{#if isMarkdownFormat}} selected{{/if}}>Markdown</option>
                     </select>
@@ -139,6 +139,7 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
         data.formatLabel = this.translate(format, 'options', 'KnowledgeBaseArticle') ||
             this.translate(format, 'labels') ||
             format;
+        data.bodyFormatFieldLabel = this.translate('bodyFormat', 'fields', 'KnowledgeBaseArticle');
 
         if (this.isDetailMode() || this.isListMode()) {
             if (format === 'Html') {

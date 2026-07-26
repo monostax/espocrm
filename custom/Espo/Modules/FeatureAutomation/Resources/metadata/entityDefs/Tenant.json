@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "automations": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true
+        }
+    },
+    "links": {
+        "automations": {
+            "type": "hasMany",
+            "entity": "Automation",
+            "foreign": "tenant"
+        }
+    }
+}

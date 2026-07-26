@@ -9,7 +9,27 @@
                 "view": "views/record/panels/relationship",
                 "link": "actions",
                 "order": 5
+            },
+            {
+                "name": "fromTransitions",
+                "label": "Transitions",
+                "view": "views/record/panels/relationship",
+                "link": "fromTransitions",
+                "order": 10
             }
         ]
+    },
+    "relationshipPanels": {
+        "fromTransitions": {
+            "create": true,
+            "select": false,
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "layout": "listSmall",
+            "createAttributeMap": {
+                "journeyId": "journeyId",
+                "journeyName": "journeyName"
+            }
+        }
     }
 }

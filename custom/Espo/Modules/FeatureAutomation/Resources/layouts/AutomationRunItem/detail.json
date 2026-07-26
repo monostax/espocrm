@@ -1,0 +1,16 @@
+[
+    {
+        "name": "overviewPanel",
+        "label": "Overview",
+        "rows": [
+            [{"name": "run"}, {"name": "status"}],
+            [{"name": "target"}, {"name": "tenant"}],
+            [{"name": "automation"}, {"name": "retryCount"}],
+            [{"name": "claimedAt"}, {"name": "wakeAt"}],
+            [{"name": "finishedAt"}, false],
+            [{"name": "errorMessage", "fullWidth": true}],
+            [{"name": "payload", "fullWidth": true}],
+            [{"name": "actionLog", "fullWidth": true}]
+        ]
+    }
+]

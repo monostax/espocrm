@@ -1,0 +1,7 @@
+[
+    {"name": "status"},
+    {"name": "kind"},
+    {"name": "triggerType"},
+    {"name": "tenant"},
+    {"name": "teams"}
+]

@@ -1,0 +1,29 @@
+{
+    "automations": {
+        "label": "Automations",
+        "order": 29,
+        "itemList": [
+            {
+                "url": "#Automation",
+                "label": "Automations",
+                "iconClass": "ti ti-bolt",
+                "description": "automations",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#AutomationRun",
+                "label": "Automation runs",
+                "iconClass": "ti ti-player-play",
+                "description": "automationRuns",
+                "roles": ["tenant", "tenant-admin"]
+            },
+            {
+                "url": "#AutomationRunItem",
+                "label": "Automation run items",
+                "iconClass": "ti ti-list-check",
+                "description": "automationRunItems",
+                "roles": ["tenant", "tenant-admin"]
+            }
+        ]
+    }
+}

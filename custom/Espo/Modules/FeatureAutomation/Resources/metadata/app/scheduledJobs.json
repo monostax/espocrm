@@ -1,0 +1,8 @@
+{
+    "ProcessDueAutomations": {
+        "name": "Process Due Automations",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureAutomation\\Jobs\\ProcessDueAutomations"
+    }
+}

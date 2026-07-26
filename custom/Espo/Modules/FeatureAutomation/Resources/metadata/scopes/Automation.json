@@ -1,0 +1,17 @@
+{
+    "entity": true,
+    "layouts": true,
+    "tab": true,
+    "acl": true,
+    "aclActionList": ["create", "read", "edit", "delete", "stream"],
+    "aclLevelList": ["all", "team", "own", "no"],
+    "aclFieldLevelList": ["yes", "no"],
+    "customizable": false,
+    "importable": false,
+    "notifications": false,
+    "stream": false,
+    "disabled": false,
+    "type": "Base",
+    "module": "FeatureAutomation",
+    "object": true
+}

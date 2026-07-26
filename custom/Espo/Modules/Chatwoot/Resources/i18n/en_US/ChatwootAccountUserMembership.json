@@ -19,6 +19,7 @@
         "ignoreStatusBroadcast": "Ignore WAHA Status Broadcasts",
         "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",
         "followupsEnabled": "Automatic Follow-up Enabled",
+        "delegateEnabled": "OpenCode Delegate Enabled",
         "transferScenarios": "Transfer Scenarios",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
@@ -91,6 +92,7 @@
     },
     "tooltips": {
         "followupsEnabled": "When disabled, this AI agent never runs automated follow-ups: new opportunities it creates are NOT armed with a follow-up loop, scheduled follow-ups for opportunities it drives stop firing, and any opportunities currently in 'Follow-up Active' driven by this agent are reset to 'Action Needed' the moment you disable it. The agent can still create and update opportunities normally.",
+        "delegateEnabled": "When enabled, this AI agent may call the OpenCode `delegate` tool for multi-step research in each customer's isolated contact workspace (AI-profile skills/modes are copied as a baseline; contact overrides are preserved). Leave OFF unless you want untrusted conversation content to trigger nested agent runs in contact sandboxes. Requires the AI membership's assigned CRM user (for baseline skills/modes) and a linked CRM Contact on the conversation.",
         "chatwootAccountUserId": "The account-user membership ID in Chat. This field is automatically populated after sync.",
         "chatwootInboxes": "The inboxes this account member has access to. Managed automatically by the inbox member sync.",
         "isAI": "Enable to configure this member as an AI-powered agent.",

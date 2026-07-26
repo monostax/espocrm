@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
 use Espo\Modules\FeatureAgentbox\Services\AgentMode as AgentModeService;
+use Espo\Modules\FeatureAgentbox\Services\CatalogScope;
 use stdClass;
 
 /**
@@ -31,7 +32,7 @@ class AgentMode
     ) {}
 
     /**
-     * GET AgentMode[?tenantId=]
+     * GET AgentMode[?tenantId=&workspaceKind=&targetUserId=&membershipId=…]
      *
      * @throws BadRequest
      * @throws Forbidden
@@ -41,8 +42,9 @@ class AgentMode
     {
         [$authToken, $authTokenSecret] = $this->requireAuthCookies($request);
         $tenantId = $this->optionalTenantId($request);
+        $scopeOpts = $this->scopeOptsFromRequest($request);
 
-        $result = $this->getService()->find($tenantId, $authToken, $authTokenSecret);
+        $result = $this->getService()->find($tenantId, $authToken, $authTokenSecret, $scopeOpts);
 
         return (object) [
             'total' => $result->getTotal(),
@@ -66,9 +68,15 @@ class AgentMode
             throw new BadRequest('ID is required.');
         }
 
-        [$tenantId, $modeName] = $this->getService()->parseId($id);
+        [$tenantId, $modeName, $scopeOpts] = $this->getService()->parseId($id);
 
-        return $this->getService()->read($tenantId, $modeName, $authToken, $authTokenSecret);
+        return $this->getService()->read(
+            $tenantId,
+            $modeName,
+            $authToken,
+            $authTokenSecret,
+            $scopeOpts
+        );
     }
 
     /**
@@ -102,7 +110,7 @@ class AgentMode
             throw new BadRequest('ID is required.');
         }
 
-        [$tenantId, $modeName] = $this->getService()->parseId($id);
+        [$tenantId, $modeName, $scopeOpts] = $this->getService()->parseId($id);
         $data = $request->getParsedBody();
 
         return $this->getService()->update(
@@ -110,7 +118,8 @@ class AgentMode
             $modeName,
             $data,
             $authToken,
-            $authTokenSecret
+            $authTokenSecret,
+            $scopeOpts
         );
     }
 
@@ -130,12 +139,21 @@ class AgentMode
             throw new BadRequest('ID is required.');
         }
 
-        [$tenantId, $modeName] = $this->getService()->parseId($id);
-        $this->getService()->delete($tenantId, $modeName, $authToken, $authTokenSecret);
+        [$tenantId, $modeName, $scopeOpts] = $this->getService()->parseId($id);
+        $this->getService()->delete(
+            $tenantId,
+            $modeName,
+            $authToken,
+            $authTokenSecret,
+            $scopeOpts
+        );
 
         return true;
     }
 
+    /**
+     * No-op link stubs so the main UI does not 500 on virtual relations.
+     */
     public function postActionCreateLink(Request $request, Response $response): bool
     {
         return true;
@@ -169,6 +187,9 @@ class AgentMode
         return [$authToken, $authTokenSecret];
     }
 
+    /**
+     * Optional list filter. Empty / missing → all accessible tenants.
+     */
     private function optionalTenantId(Request $request): ?string
     {
         $tenantId = $request->getQueryParam('tenantId')
@@ -180,5 +201,32 @@ class AgentMode
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function scopeOptsFromRequest(Request $request): array
+    {
+        $kind = $request->getQueryParam('workspaceKind')
+            ?? $request->getQueryParam('scope')
+            ?? CatalogScope::KIND_USER;
+
+        $opts = [
+            'workspaceKind' => is_string($kind) ? $kind : CatalogScope::KIND_USER,
+        ];
+
+        foreach (['targetUserId', 'userId', 'membershipId', 'contactId', 'chatwootAccountCrmId'] as $key) {
+            $v = $request->getQueryParam($key);
+            if (is_string($v) && trim($v) !== '') {
+                if ($key === 'userId') {
+                    $opts['targetUserId'] = trim($v);
+                } else {
+                    $opts[$key] = trim($v);
+                }
+            }
+        }
+
+        return $opts;
     }
 }

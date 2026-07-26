@@ -14,7 +14,10 @@
         "clinicaNasNuvensSettings": "Perfis Clínica Nas Nuvens",
         "users": "Usuários",
         "contacts": "Contatos",
-        "accounts": "Contas"
+        "accounts": "Contas",
+        "leads": "Leads",
+        "opportunities": "Oportunidades",
+        "funnels": "Funis"
     },
     "fields": {
         "name": "Nome",

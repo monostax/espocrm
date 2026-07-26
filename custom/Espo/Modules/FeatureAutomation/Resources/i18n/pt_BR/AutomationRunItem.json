@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "run": "Execução",
+        "automation": "Automação",
+        "target": "Alvo",
+        "status": "Status",
+        "tenant": "Workspace",
+        "payload": "Payload",
+        "actionLog": "Log de ações",
+        "claimedAt": "Reservado em",
+        "wakeAt": "Acordar em",
+        "finishedAt": "Finalizado",
+        "errorMessage": "Erro",
+        "retryCount": "Tentativas",
+        "teams": "Equipes"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pendente",
+            "Processing": "Processando",
+            "Waiting": "Aguardando",
+            "Retry": "Retentar",
+            "Done": "Concluído",
+            "Failed": "Falhou",
+            "Skipped": "Ignorado"
+        }
+    },
+    "labels": {
+        "Create AutomationRunItem": "Criar item de execução"
+    }
+}

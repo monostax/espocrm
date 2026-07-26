@@ -6,9 +6,24 @@
         "content": "Full Content",
         "path": "Workspace Path",
         "modifiedAt": "Modified At",
+        "workspaceKind": "Catalog Scope",
+        "entityRef": "Scope Ref",
+        "targetUserId": "Target User Id",
+        "membershipId": "Membership Id",
+        "contactId": "Contact Id",
+        "chatwootAccountCrmId": "Chatwoot Account CRM Id",
         "tenant": "Tenant",
         "tenantId": "Tenant ID",
         "tenantName": "Tenant"
+    },
+    "options": {
+        "workspaceKind": {
+            "user": "User",
+            "tenant-shared": "Tenant Shared",
+            "membership": "AI Membership",
+            "contact": "Contact",
+            "crm-global": "CRM Global"
+        }
     },
     "links": {
         "tenant": "Tenant"
@@ -19,6 +34,10 @@
     "tooltips": {
         "name": "OpenCode skill directory name (lowercase, hyphens). Maps to .config/opencode/skills/{name}/SKILL.md",
         "description": "Shown to the agent when choosing which skill to load (max 1024 chars)",
-        "body": "Markdown instructions (after YAML frontmatter). Frontmatter is edited via Name + Description — Lexical only receives the body. Pasting a full SKILL.md will strip --- yaml --- automatically."
+        "body": "Markdown instructions (after YAML frontmatter). Frontmatter is edited via Name + Description — Lexical only receives the body. Pasting a full SKILL.md will strip --- yaml --- automatically.",
+        "workspaceKind": "Where this skill lives: CRM Global (admin), Tenant Shared (one edit for all), Membership (AI agent pack), User, or Contact override.",
+        "targetUserId": "Admin-only: CRM User.id when Catalog Scope is User and editing another operator workspace.",
+        "membershipId": "ChatwootAccountUserMembership.id when Catalog Scope is Membership.",
+        "entityRef": "Resolved scope key (user id, membership id, account~contact, or -)."
     }
 }

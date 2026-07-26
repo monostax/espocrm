@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
 use Espo\Modules\FeatureAgentbox\Services\AgentSkill as AgentSkillService;
+use Espo\Modules\FeatureAgentbox\Services\CatalogScope;
 use stdClass;
 
 /**
@@ -31,10 +32,7 @@ class AgentSkill
     ) {}
 
     /**
-     * GET AgentSkill[?tenantId=]
-     *
-     * Without tenantId: skills for every Tenant the logged-in user belongs to
-     * (User.tenants). With tenantId: that tenant only (must be accessible).
+     * GET AgentSkill[?tenantId=&workspaceKind=&targetUserId=&membershipId=…]
      *
      * @throws BadRequest
      * @throws Forbidden
@@ -44,8 +42,9 @@ class AgentSkill
     {
         [$authToken, $authTokenSecret] = $this->requireAuthCookies($request);
         $tenantId = $this->optionalTenantId($request);
+        $scopeOpts = $this->scopeOptsFromRequest($request);
 
-        $result = $this->getService()->find($tenantId, $authToken, $authTokenSecret);
+        $result = $this->getService()->find($tenantId, $authToken, $authTokenSecret, $scopeOpts);
 
         return (object) [
             'total' => $result->getTotal(),
@@ -69,9 +68,15 @@ class AgentSkill
             throw new BadRequest('ID is required.');
         }
 
-        [$tenantId, $skillName] = $this->getService()->parseId($id);
+        [$tenantId, $skillName, $scopeOpts] = $this->getService()->parseId($id);
 
-        return $this->getService()->read($tenantId, $skillName, $authToken, $authTokenSecret);
+        return $this->getService()->read(
+            $tenantId,
+            $skillName,
+            $authToken,
+            $authTokenSecret,
+            $scopeOpts
+        );
     }
 
     /**
@@ -105,7 +110,7 @@ class AgentSkill
             throw new BadRequest('ID is required.');
         }
 
-        [$tenantId, $skillName] = $this->getService()->parseId($id);
+        [$tenantId, $skillName, $scopeOpts] = $this->getService()->parseId($id);
         $data = $request->getParsedBody();
 
         return $this->getService()->update(
@@ -113,7 +118,8 @@ class AgentSkill
             $skillName,
             $data,
             $authToken,
-            $authTokenSecret
+            $authTokenSecret,
+            $scopeOpts
         );
     }
 
@@ -133,8 +139,14 @@ class AgentSkill
             throw new BadRequest('ID is required.');
         }
 
-        [$tenantId, $skillName] = $this->getService()->parseId($id);
-        $this->getService()->delete($tenantId, $skillName, $authToken, $authTokenSecret);
+        [$tenantId, $skillName, $scopeOpts] = $this->getService()->parseId($id);
+        $this->getService()->delete(
+            $tenantId,
+            $skillName,
+            $authToken,
+            $authTokenSecret,
+            $scopeOpts
+        );
 
         return true;
     }
@@ -189,5 +201,32 @@ class AgentSkill
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function scopeOptsFromRequest(Request $request): array
+    {
+        $kind = $request->getQueryParam('workspaceKind')
+            ?? $request->getQueryParam('scope')
+            ?? CatalogScope::KIND_USER;
+
+        $opts = [
+            'workspaceKind' => is_string($kind) ? $kind : CatalogScope::KIND_USER,
+        ];
+
+        foreach (['targetUserId', 'userId', 'membershipId', 'contactId', 'chatwootAccountCrmId'] as $key) {
+            $v = $request->getQueryParam($key);
+            if (is_string($v) && trim($v) !== '') {
+                if ($key === 'userId') {
+                    $opts['targetUserId'] = trim($v);
+                } else {
+                    $opts[$key] = trim($v);
+                }
+            }
+        }
+
+        return $opts;
     }
 }

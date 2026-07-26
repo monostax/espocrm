@@ -13,13 +13,15 @@
         "stageProbability": "Probabilidade do Estágio",
         "sourceChannel": "Canal de Origem",
         "sourceTargetList": "Lista de Prospecção de Origem",
+        "tenant": "Ambiente",
         "customFields": "Campos Personalizados"
     },
     "links": {
         "funnel": "Funil",
         "opportunityStage": "Estágio",
         "metaLeadgenAnswers": "Respostas de Lead Meta",
-        "sourceTargetList": "Lista de Prospecção de Origem"
+        "sourceTargetList": "Lista de Prospecção de Origem",
+        "tenant": "Ambiente"
     },
     "tabs": {
         "Documents": "Documentos"

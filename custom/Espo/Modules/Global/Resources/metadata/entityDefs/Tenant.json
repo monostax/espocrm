@@ -135,6 +135,21 @@
             "entity": "Account",
             "foreign": "tenant"
         },
+        "leads": {
+            "type": "hasMany",
+            "entity": "Lead",
+            "foreign": "tenant"
+        },
+        "opportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "tenant"
+        },
+        "funnels": {
+            "type": "hasMany",
+            "entity": "Funnel",
+            "foreign": "tenant"
+        },
         "customFieldGroups": {
             "type": "hasMany",
             "entity": "CustomFieldGroup",

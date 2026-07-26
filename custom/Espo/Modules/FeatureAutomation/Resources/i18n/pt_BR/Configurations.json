@@ -1,0 +1,20 @@
+{
+    "labels": {
+        "Automations": "Automações",
+        "Automation runs": "Execuções de automação",
+        "Automation run items": "Itens de execução",
+        "Action receipts": "Recibos de ação"
+    },
+    "descriptions": {
+        "automations": "Jobs do sistema: agendamentos, gatilhos de entidade/sinal, mapa Batch, Machine com esperas/join (estilo n8n / Make nos dados do CRM).",
+        "automationRuns": "Cada disparo de uma automação — contagens, status, vínculo pai/filho.",
+        "automationRunItems": "Unidades de trabalho por alvo dentro de uma execução (Processando, Aguardando, join, Concluído).",
+        "automationActionReceipts": "Recibos de idempotência e debounce (chaves de ação e gatilho)."
+    },
+    "keywords": {
+        "automations": "automacao,lote,batch,machine,agendamento,cron,mapa,join,fan-in,n8n,make,zapier,fluxo",
+        "automationRuns": "automacao,execucao,job,status,pai,filho",
+        "automationRunItems": "automacao,item,alvo,aguardando,retry,join",
+        "automationActionReceipts": "idempotencia,debounce,recibo,duplicata,cooldown"
+    }
+}

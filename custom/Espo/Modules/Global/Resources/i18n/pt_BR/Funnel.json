@@ -8,12 +8,14 @@
     },
     "links": {
         "opportunityStages": "Estágios da Oportunidade",
-        "accountUserMembershipsWithFunnelAccess": "Agente de IA com Acesso"
+        "accountUserMembershipsWithFunnelAccess": "Agente de IA com Acesso",
+        "tenant": "Ambiente"
     },
     "fields": {
         "name": "Nome",
         "description": "Descrição",
         "team": "Permissão / Times",
+        "tenant": "Ambiente",
         "isActive": "Ativo",
         "isDefault": "É Padrão",
         "followupsEnabled": "Follow-up Automático Ativado",

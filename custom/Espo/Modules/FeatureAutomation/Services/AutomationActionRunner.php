@@ -1,0 +1,636 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Espo\Modules\FeatureAutomation\Services;
+
+use Espo\Core\InjectableFactory;
+use Espo\Core\ORM\Repository\Option\SaveOption;
+use Espo\Core\Utils\Log;
+use Espo\Core\Utils\Metadata;
+use Espo\Modules\FeatureJourney\Classes\JourneyActions\Action as JourneyAction;
+use Espo\Modules\FeatureJourney\Services\ActionContext as JourneyActionContext;
+use Espo\Modules\FeatureJourney\Services\PeriodParser;
+use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
+use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
+use stdClass;
+use Throwable;
+
+/**
+ * Runs action lists for one AutomationRunItem.
+ * Supports dry-run planning, waitJoin fan-in, and action idempotency/debounce.
+ */
+class AutomationActionRunner
+{
+    public function __construct(
+        private EntityManager $entityManager,
+        private Metadata $metadata,
+        private InjectableFactory $injectableFactory,
+        private TenantGuard $tenantGuard,
+        private RestrictedFormulaRunner $formulaRunner,
+        private ActionReceiptStore $receiptStore,
+        private JoinCoordinator $joinCoordinator,
+        private PeriodParser $periodParser,
+        private Log $log,
+    ) {}
+
+    /**
+     * @param list<array<string, mixed>> $actions
+     * @param array<string, mixed> $payload
+     * @return array{
+     *   ok: bool,
+     *   log: list<array<string, mixed>>,
+     *   error?: string,
+     *   waiting?: bool,
+     *   wakeAt?: ?string,
+     *   payload?: array<string, mixed>
+     * }
+     */
+    public function runActions(
+        array $actions,
+        Entity $automation,
+        Entity $run,
+        Entity $item,
+        Entity $target,
+        string $tenantId,
+        array $payload,
+        string $itemMode = 'allMatching',
+        bool $dryRun = false,
+    ): array {
+        $log = [];
+        $matchedOnce = false;
+
+        foreach ($actions as $index => $action) {
+            $type = (string) ($action['type'] ?? '');
+            $when = $action['when'] ?? null;
+
+            if (is_string($when) && trim($when) !== '') {
+                try {
+                    $pass = $this->evalWhen($when, $target, $item, $automation, $tenantId, $payload);
+                } catch (Throwable $e) {
+                    $log[] = [
+                        'index' => $index,
+                        'type' => $type,
+                        'status' => 'error',
+                        'error' => 'when: ' . $e->getMessage(),
+                    ];
+
+                    if (!(bool) ($action['continueOnError'] ?? false)) {
+                        return ['ok' => false, 'log' => $log, 'error' => $e->getMessage(), 'payload' => $payload];
+                    }
+
+                    continue;
+                }
+
+                if (!$pass) {
+                    $log[] = [
+                        'index' => $index,
+                        'type' => $type,
+                        'status' => 'skipped_when',
+                    ];
+                    continue;
+                }
+            }
+
+            if ($itemMode === 'firstMatch' && $matchedOnce) {
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => 'skipped_first_match',
+                ];
+                continue;
+            }
+
+            $matchedOnce = true;
+
+            $params = $action['params'] ?? [];
+            if ($params instanceof stdClass) {
+                $params = (array) $params;
+            }
+            if (!is_array($params)) {
+                $params = [];
+            }
+            unset($params['tenantId']);
+
+            $paramFormulas = $action['paramFormulas'] ?? [];
+            if ($paramFormulas instanceof stdClass) {
+                $paramFormulas = (array) $paramFormulas;
+            }
+            if (!is_array($paramFormulas)) {
+                $paramFormulas = [];
+            }
+
+            try {
+                $params = $this->resolveParamFormulas(
+                    $params,
+                    $paramFormulas,
+                    $target,
+                    $item,
+                    $automation,
+                    $tenantId,
+                    $payload,
+                );
+            } catch (Throwable $e) {
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => 'error',
+                    'error' => 'paramFormulas: ' . $e->getMessage(),
+                ];
+
+                if (!(bool) ($action['continueOnError'] ?? false)) {
+                    return ['ok' => false, 'log' => $log, 'error' => $e->getMessage(), 'payload' => $payload];
+                }
+
+                continue;
+            }
+
+            // —— waitJoin special path ——
+            if ($type === 'waitJoin') {
+                if ($dryRun) {
+                    $log[] = [
+                        'index' => $index,
+                        'type' => $type,
+                        'status' => 'would_wait_join',
+                        'params' => $params,
+                    ];
+                    continue;
+                }
+
+                $joinResult = $this->handleWaitJoin($params, $payload, $item);
+                $payload = $joinResult['payload'];
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => $joinResult['satisfied'] ? 'join_ok' : 'waiting_join',
+                    'mode' => $joinResult['mode'],
+                    'stats' => $payload['_joinStats'] ?? null,
+                ];
+
+                if (!$joinResult['satisfied']) {
+                    return [
+                        'ok' => true,
+                        'log' => $log,
+                        'waiting' => true,
+                        'wakeAt' => $joinResult['wakeAt'],
+                        'payload' => $payload,
+                    ];
+                }
+
+                continue;
+            }
+
+            // —— dry-run: plan only ——
+            if ($dryRun) {
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => 'would_run',
+                    'params' => $params,
+                ];
+                continue;
+            }
+
+            // —— idempotency / debounce ——
+            $idempKey = $this->resolveIdempotencyKey(
+                $action,
+                $type,
+                $params,
+                $target,
+                $item,
+                $automation,
+                $tenantId,
+                $payload,
+            );
+            $debounce = isset($action['debounce']) && is_string($action['debounce'])
+                ? trim($action['debounce'])
+                : '';
+
+            if ($idempKey !== null) {
+                $claimed = $this->receiptStore->tryClaim(
+                    (string) $automation->getId(),
+                    $idempKey,
+                    'action',
+                    $debounce !== '' ? $debounce : null,
+                    $tenantId,
+                    $item->getId() ? (string) $item->getId() : null,
+                    $type,
+                );
+
+                if (!$claimed) {
+                    $log[] = [
+                        'index' => $index,
+                        'type' => $type,
+                        'status' => 'skipped_idempotent',
+                        'key' => $idempKey,
+                    ];
+                    continue;
+                }
+            }
+
+            $maxRetries = max(0, min(5, (int) ($action['maxRetries'] ?? 0)));
+            $lastError = null;
+            $ok = false;
+
+            for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+                try {
+                    $this->runOne($type, $params, $automation, $run, $item, $target, $tenantId);
+                    // Refresh payload after side effects that mutate item (e.g. startChild)
+                    $payload = $this->readItemPayload($item, $payload);
+                    $ok = true;
+                    break;
+                } catch (Throwable $e) {
+                    $lastError = $e->getMessage();
+                    $this->log->error(
+                        "AutomationActionRunner: {$type} attempt " . ($attempt + 1) .
+                        " failed: {$lastError}"
+                    );
+                }
+            }
+
+            if ($ok) {
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => 'ok',
+                ];
+                continue;
+            }
+
+            if ($idempKey !== null) {
+                $this->receiptStore->release((string) $automation->getId(), $idempKey, 'action');
+            }
+
+            $log[] = [
+                'index' => $index,
+                'type' => $type,
+                'status' => 'error',
+                'error' => $lastError,
+            ];
+
+            if (!(bool) ($action['continueOnError'] ?? false)) {
+                return [
+                    'ok' => false,
+                    'log' => $log,
+                    'error' => $lastError ?? 'action_failed',
+                    'payload' => $payload,
+                ];
+            }
+        }
+
+        return ['ok' => true, 'log' => $log, 'payload' => $payload];
+    }
+
+    /**
+     * Plan actions without side effects (simulate).
+     *
+     * @param list<array<string, mixed>> $actions
+     * @param array<string, mixed> $payload
+     * @return array{ok: bool, log: list<array<string, mixed>>, payload: array<string, mixed>}
+     */
+    public function planActions(
+        array $actions,
+        Entity $automation,
+        Entity $target,
+        string $tenantId,
+        array $payload,
+        string $itemMode = 'allMatching',
+    ): array {
+        $run = $this->entityManager->getNewEntity('AutomationRun');
+        $item = $this->entityManager->getNewEntity('AutomationRunItem');
+        $item->set('id', 'sim_' . substr(md5((string) microtime(true)), 0, 14));
+
+        $result = $this->runActions(
+            $actions,
+            $automation,
+            $run,
+            $item,
+            $target,
+            $tenantId,
+            $payload,
+            $itemMode,
+            true,
+        );
+
+        return [
+            'ok' => $result['ok'],
+            'log' => $result['log'],
+            'payload' => $result['payload'] ?? $payload,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $payload
+     * @return array{satisfied: bool, wakeAt: ?string, mode: string, payload: array<string, mixed>}
+     */
+    private function handleWaitJoin(array $params, array $payload, Entity $item): array
+    {
+        $mode = (string) ($params['mode'] ?? 'waitAll');
+        if (!in_array($mode, ['waitAll', 'waitAny'], true)) {
+            $mode = 'waitAll';
+        }
+
+        $eval = $this->joinCoordinator->evaluate($payload, $mode);
+        $payload = $eval['payload'];
+        $payload['_joinMode'] = $mode;
+
+        // Persist join snapshot on item for coordinator refreshes
+        if ($item->hasId()) {
+            $item->set('payload', $payload);
+            try {
+                $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
+            } catch (Throwable) {
+            }
+        }
+
+        if ($eval['satisfied']) {
+            return [
+                'satisfied' => true,
+                'wakeAt' => null,
+                'mode' => $mode,
+                'payload' => $payload,
+            ];
+        }
+
+        $timeout = trim((string) ($params['timeoutPeriod'] ?? '2 hours'));
+        $wakeAt = null;
+        try {
+            $wakeAt = $this->periodParser->addToNow($timeout !== '' ? $timeout : '2 hours');
+        } catch (Throwable) {
+            $wakeAt = date('Y-m-d H:i:s', time() + 7200);
+        }
+
+        $payload['_wakeAt'] = $wakeAt;
+        $payload['_joinWaiting'] = true;
+
+        if ($item->hasId()) {
+            $item->set('payload', $payload);
+            try {
+                $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
+            } catch (Throwable) {
+            }
+        }
+
+        return [
+            'satisfied' => false,
+            'wakeAt' => $wakeAt,
+            'mode' => $mode,
+            'payload' => $payload,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $action
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $payload
+     */
+    private function resolveIdempotencyKey(
+        array $action,
+        string $type,
+        array $params,
+        Entity $target,
+        Entity $item,
+        Entity $automation,
+        string $tenantId,
+        array $payload,
+    ): ?string {
+        $raw = $action['idempotencyKey'] ?? null;
+        if ($raw === null || $raw === false || $raw === '') {
+            return null;
+        }
+
+        if ($raw === true) {
+            // Default key from type + target + stable params subset
+            $stable = $params;
+            unset($stable['body'], $stable['message'], $stable['description']);
+            ksort($stable);
+
+            return implode('|', [
+                $type,
+                $target->getEntityType(),
+                $target->getId(),
+                substr(hash('sha256', json_encode($stable) ?: ''), 0, 16),
+            ]);
+        }
+
+        if (!is_string($raw)) {
+            return null;
+        }
+
+        $raw = trim($raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        // Formula when starts with =
+        if (str_starts_with($raw, '=')) {
+            try {
+                $variables = (object) [
+                    'automationId' => $automation->getId(),
+                    'runItemId' => $item->getId(),
+                    'tenantId' => $tenantId,
+                    'payload' => json_decode(json_encode($payload) ?: '{}'),
+                    'actionType' => $type,
+                ];
+                $value = $this->formulaRunner->run(
+                    substr($raw, 1),
+                    $target,
+                    $variables,
+                    RestrictedFormulaRunner::MODE_CONDITION,
+                );
+
+                return $value === null || $value === '' ? null : (string) $value;
+            } catch (Throwable $e) {
+                $this->log->warning('idempotencyKey formula: ' . $e->getMessage());
+
+                return null;
+            }
+        }
+
+        // Placeholder template
+        $map = [
+            '{type}' => $type,
+            '{targetType}' => $target->getEntityType(),
+            '{targetId}' => $target->getId(),
+            '{automationId}' => (string) $automation->getId(),
+            '{tenantId}' => $tenantId,
+            '{runItemId}' => (string) ($item->getId() ?? ''),
+        ];
+
+        return strtr($raw, $map);
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function runOne(
+        string $type,
+        array $params,
+        Entity $automation,
+        Entity $run,
+        Entity $item,
+        Entity $target,
+        string $tenantId,
+    ): void {
+        if ($target->getEntityType() === 'User') {
+            $this->tenantGuard->assertUserInTenant($target->getId(), $tenantId, 'automation-target');
+        } elseif ($target->getEntityType() !== 'Tenant') {
+            $this->tenantGuard->assertEntityTenant($target, $tenantId, 'automation-target');
+        }
+
+        $className = $this->metadata->get(
+            ['app', 'automationActionTypes', 'types', $type, 'implementationClassName']
+        );
+
+        if (!$className) {
+            $className = $this->metadata->get(
+                ['app', 'journeyActionTypes', 'types', $type, 'implementationClassName']
+            );
+        }
+
+        if (!is_string($className) || $className === '' || !class_exists($className)) {
+            throw new \Espo\Core\Exceptions\Error("Unknown automation action type: {$type}");
+        }
+
+        $ctx = new JourneyActionContext(
+            target: $target,
+            record: $item,
+            stage: $automation,
+            journey: $automation,
+            trigger: 'automation',
+            params: $params,
+            tenantId: $tenantId,
+        );
+
+        /** @var JourneyAction $impl */
+        $impl = $this->injectableFactory->create($className);
+        $impl->run($ctx);
+    }
+
+    /**
+     * @param array<string, mixed> $fallback
+     * @return array<string, mixed>
+     */
+    private function readItemPayload(Entity $item, array $fallback): array
+    {
+        if (!$item->hasId()) {
+            return $fallback;
+        }
+
+        $fresh = $this->entityManager->getEntityById($item->getEntityType(), (string) $item->getId());
+        if (!$fresh) {
+            return $fallback;
+        }
+
+        $raw = $fresh->get('payload');
+        if ($raw instanceof stdClass) {
+            $raw = json_decode(json_encode($raw) ?: '{}', true) ?: [];
+        }
+
+        if (is_array($raw)) {
+            $item->set('payload', $raw);
+
+            return $raw;
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $formulas
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function resolveParamFormulas(
+        array $params,
+        array $formulas,
+        Entity $target,
+        Entity $item,
+        Entity $automation,
+        string $tenantId,
+        array $payload,
+    ): array {
+        if ($formulas === []) {
+            return $params;
+        }
+
+        $variables = (object) [
+            'automationId' => $automation->getId(),
+            'runItemId' => $item->getId(),
+            'tenantId' => $tenantId,
+            'payload' => json_decode(json_encode($payload) ?: '{}'),
+        ];
+
+        foreach ($formulas as $key => $script) {
+            if (!is_string($key) || $key === '' || $key === 'tenantId' || str_ends_with($key, '.tenantId')) {
+                continue;
+            }
+
+            if (!is_string($script) || trim($script) === '') {
+                continue;
+            }
+
+            $value = $this->formulaRunner->run(
+                $script,
+                $target,
+                $variables,
+                RestrictedFormulaRunner::MODE_CONDITION,
+            );
+
+            if (!str_contains($key, '.')) {
+                $params[$key] = $value;
+                continue;
+            }
+
+            if (str_starts_with($key, 'fields.')) {
+                $fieldKey = substr($key, strlen('fields.'));
+                if ($fieldKey === '' || $fieldKey === 'tenantId') {
+                    continue;
+                }
+
+                if (!isset($params['fields']) || !is_array($params['fields'])) {
+                    $params['fields'] = [];
+                }
+
+                $params['fields'][$fieldKey] = $value;
+                continue;
+            }
+
+            $params[$key] = $value;
+        }
+
+        return $params;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function evalWhen(
+        string $script,
+        Entity $target,
+        Entity $item,
+        Entity $automation,
+        string $tenantId,
+        array $payload,
+    ): bool {
+        $variables = (object) [
+            'automationId' => $automation->getId(),
+            'runItemId' => $item->getId(),
+            'tenantId' => $tenantId,
+            'payload' => json_decode(json_encode($payload) ?: '{}'),
+        ];
+
+        $result = $this->formulaRunner->run(
+            $script,
+            $target,
+            $variables,
+            RestrictedFormulaRunner::MODE_CONDITION,
+        );
+
+        return (bool) $result;
+    }
+}

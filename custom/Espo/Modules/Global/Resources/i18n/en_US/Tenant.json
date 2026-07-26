@@ -26,6 +26,9 @@
         "users": "Users",
         "contacts": "Contacts",
         "accounts": "Accounts",
+        "leads": "Leads",
+        "opportunities": "Opportunities",
+        "funnels": "Funnels",
         "createdBy": "Created By",
         "modifiedBy": "Modified By"
     },

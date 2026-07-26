@@ -1,0 +1,38 @@
+{
+    "fields": {
+        "name": "Name",
+        "automation": "Automation",
+        "status": "Status",
+        "triggeredBy": "Triggered by",
+        "triggerPayload": "Trigger payload",
+        "parentRun": "Parent run",
+        "parentRunItemId": "Parent run item",
+        "tenant": "Workspace",
+        "itemCount": "Items",
+        "doneCount": "Done",
+        "failedCount": "Failed",
+        "skippedCount": "Skipped",
+        "errorSummary": "Error summary",
+        "startedAt": "Started",
+        "completedAt": "Completed",
+        "items": "Items",
+        "teams": "Teams"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Running": "Running",
+            "Completed": "Completed",
+            "Failed": "Failed",
+            "Cancelled": "Cancelled"
+        },
+        "triggeredBy": {
+            "manual": "Manual",
+            "schedule": "Schedule",
+            "entityChange": "Entity change",
+            "signal": "Signal",
+            "api": "API",
+            "child": "Child"
+        }
+    }
+}

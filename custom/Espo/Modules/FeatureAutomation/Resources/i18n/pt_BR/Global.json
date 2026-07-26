@@ -1,0 +1,17 @@
+{
+    "scopeNames": {
+        "Automation": "Automação",
+        "AutomationRun": "Execução de Automação",
+        "AutomationRunItem": "Item de Execução",
+        "AutomationActionReceipt": "Recibo de Ação"
+    },
+    "scopeNamesPlural": {
+        "Automation": "Automações",
+        "AutomationRun": "Execuções de Automação",
+        "AutomationRunItem": "Itens de Execução",
+        "AutomationActionReceipt": "Recibos de Ação"
+    },
+    "labels": {
+        "Automations": "Automações"
+    }
+}

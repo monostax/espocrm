@@ -1,10 +1,10 @@
 {
     "labels": {
         "Journeys": "Jornadas",
-        "People in journeys": "Pessoas nas jornadas",
-        "Journey history": "Histórico da jornada",
-        "Journey Records": "Pessoas nas jornadas",
-        "Journey Record Logs": "Histórico da jornada"
+        "People in journeys": "Jornadas / Inscrições",
+        "Journey history": "Jornadas / Histórico",
+        "Journey Records": "Jornadas / Inscrições",
+        "Journey Record Logs": "Jornadas / Histórico"
     },
     "descriptions": {
         "journeys": "Monte automações em etapas — quem entra, etapas, conexões e ações (estilo Zapier / Make).",

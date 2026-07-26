@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "name": "Name",
+        "automation": "Automation",
+        "keyHash": "Key hash",
+        "scope": "Scope",
+        "tenant": "Workspace",
+        "runItemId": "Run item",
+        "actionType": "Action type",
+        "lastAt": "Last at",
+        "expiresAt": "Expires at",
+        "createdAt": "Created at",
+        "modifiedAt": "Modified at"
+    },
+    "options": {
+        "scope": {
+            "action": "Action",
+            "trigger": "Trigger"
+        }
+    }
+}

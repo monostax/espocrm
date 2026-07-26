@@ -1,0 +1,10 @@
+[
+    {"name": "name", "width": 22},
+    {"name": "automation", "width": 18},
+    {"name": "status", "width": 10},
+    {"name": "triggeredBy", "width": 10},
+    {"name": "itemCount", "width": 8},
+    {"name": "doneCount", "width": 8},
+    {"name": "failedCount", "width": 8},
+    {"name": "startedAt", "width": 14}
+]

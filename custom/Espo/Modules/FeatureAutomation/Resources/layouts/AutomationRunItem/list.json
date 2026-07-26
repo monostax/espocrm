@@ -1,0 +1,10 @@
+[
+    {"name": "run", "width": 14},
+    {"name": "target", "width": 16},
+    {"name": "status", "width": 10},
+    {"name": "tenant", "width": 12},
+    {"name": "wakeAt", "width": 12},
+    {"name": "retryCount", "width": 8},
+    {"name": "finishedAt", "width": 12},
+    {"name": "errorMessage", "width": 16}
+]

@@ -179,13 +179,6 @@
                 "order": 5
             },
             {
-                "name": "transitions",
-                "label": "Transitions",
-                "view": "views/record/panels/relationship",
-                "link": "transitions",
-                "order": 10
-            },
-            {
                 "name": "records",
                 "label": "Records",
                 "view": "views/record/panels/relationship",

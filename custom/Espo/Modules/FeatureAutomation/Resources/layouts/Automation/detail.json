@@ -1,0 +1,31 @@
+[
+    {
+        "name": "overviewPanel",
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "status"}],
+            [{"name": "kind"}, {"name": "triggerType"}],
+            [{"name": "scheduling"}, {"name": "timezone"}],
+            [{"name": "subjectEntityType"}, {"name": "entityTypeFilter"}],
+            [{"name": "signalCodes", "fullWidth": true}],
+            [{"name": "triggerDebouncePeriod"}, false],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    },
+    {
+        "name": "definitionPanel",
+        "label": "Definition",
+        "rows": [
+            [{"name": "definition", "fullWidth": true}]
+        ]
+    },
+    {
+        "name": "statisticsPanel",
+        "label": "Statistics",
+        "rows": [
+            [{"name": "runCount"}, {"name": "lastRunStatus"}],
+            [{"name": "lastRunAt"}, {"name": "nextRunAt"}],
+            [{"name": "activatedAt"}, false]
+        ]
+    }
+]

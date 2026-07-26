@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "name": "Nome",
+        "automation": "Automação",
+        "status": "Status",
+        "triggeredBy": "Disparado por",
+        "triggerPayload": "Payload do gatilho",
+        "parentRun": "Execução pai",
+        "parentRunItemId": "Item pai",
+        "tenant": "Workspace",
+        "itemCount": "Itens",
+        "doneCount": "Concluídos",
+        "failedCount": "Falhas",
+        "skippedCount": "Ignorados",
+        "errorSummary": "Resumo de erro",
+        "startedAt": "Início",
+        "completedAt": "Fim",
+        "items": "Itens",
+        "teams": "Equipes"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pendente",
+            "Running": "Em execução",
+            "Completed": "Concluída",
+            "Failed": "Falhou",
+            "Cancelled": "Cancelada"
+        },
+        "triggeredBy": {
+            "manual": "Manual",
+            "schedule": "Agendamento",
+            "entityChange": "Mudança de entidade",
+            "signal": "Sinal",
+            "api": "API",
+            "child": "Filha"
+        }
+    },
+    "labels": {
+        "Create AutomationRun": "Criar execução"
+    }
+}

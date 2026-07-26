@@ -1,4 +1,5 @@
 {
+    "view": "views/fields/json-array",
     "notCreatable": true,
     "notMergeable": true,
     "notSortable": true,

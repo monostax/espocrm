@@ -13,13 +13,15 @@
         "stageProbability": "Stage Probability",
         "sourceChannel": "Source Channel",
         "sourceTargetList": "Source Target List",
+        "tenant": "Tenant",
         "customFields": "Custom Fields"
     },
     "links": {
         "funnel": "Funnel",
         "opportunityStage": "Stage",
         "metaLeadgenAnswers": "Meta Lead Answers",
-        "sourceTargetList": "Source Target List"
+        "sourceTargetList": "Source Target List",
+        "tenant": "Tenant"
     },
     "tabs": {
         "Documents": "Documents"

@@ -1,0 +1,6 @@
+{
+    "actionClassNameList": [
+        "Espo\\Modules\\FeatureAutomation\\Rebuild\\SeedScheduledJobs",
+        "Espo\\Modules\\FeatureAutomation\\Rebuild\\ConfigureNavbar"
+    ]
+}

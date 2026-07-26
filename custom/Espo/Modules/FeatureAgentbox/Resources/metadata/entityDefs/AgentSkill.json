@@ -37,6 +37,43 @@
             "readOnly": true,
             "notStorable": true
         },
+        "workspaceKind": {
+            "type": "enum",
+            "options": ["user", "tenant-shared", "membership", "contact", "crm-global"],
+            "default": "user",
+            "required": true,
+            "readOnlyAfterCreate": true,
+            "tooltip": true
+        },
+        "entityRef": {
+            "type": "varchar",
+            "maxLength": 128,
+            "readOnly": true,
+            "notStorable": true,
+            "tooltip": true
+        },
+        "targetUserId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "notStorable": true,
+            "tooltip": true
+        },
+        "membershipId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "notStorable": true,
+            "tooltip": true
+        },
+        "contactId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "notStorable": true
+        },
+      "chatwootAccountCrmId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "notStorable": true
+        },
         "tenant": {
             "type": "link",
             "required": true,

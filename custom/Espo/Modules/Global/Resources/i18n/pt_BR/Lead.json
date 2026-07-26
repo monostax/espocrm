@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "tenant": "Ambiente",
+        "customFields": "Campos Personalizados"
+    },
+    "links": {
+        "tenant": "Ambiente"
+    },
+    "tooltips": {
+        "customFields": "Atributos personalizados definidos pelo ambiente para este lead. Valores seguem o controle de acesso do Lead."
+    }
+}

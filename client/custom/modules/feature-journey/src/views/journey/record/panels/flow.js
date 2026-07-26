@@ -128,8 +128,8 @@ define("feature-journey:views/journey/record/panels/flow", [
                             '{{/if}}' +
                         '</div>' +
                     '</div>' +
-                    '{{#if hasOutTransitions}}' +
                     '<div class="journey-flow-edges" style="padding:6px 0 14px 24px;border-left:2px solid #e0e0e0;margin:0 0 0 18px">' +
+                        '{{#if hasOutTransitions}}' +
                         '{{#each outTransitions}}' +
                         '<div class="journey-flow-edge" ' +
                             'style="padding:6px 10px;margin-bottom:4px;border-radius:6px;background:#f7f7fb;cursor:pointer;border:1px solid #e8e8f0" ' +
@@ -146,10 +146,14 @@ define("feature-journey:views/journey/record/panels/flow", [
                             '{{/if}}' +
                         '</div>' +
                         '{{/each}}' +
+                        '{{/if}}' +
+                        '{{#if ../canEdit}}' +
+                        '<button type="button" class="btn btn-default btn-xs" ' +
+                            'data-action="createTransitionFromStage" data-stage-id="{{id}}">' +
+                            '<span class="fas fa-arrow-right"></span> {{translate "createTransition" category="labels" scope="Journey"}}' +
+                        '</button>' +
+                        '{{/if}}' +
                     '</div>' +
-                    '{{else}}' +
-                    '<div style="height:12px"></div>' +
-                    '{{/if}}' +
                     '{{/each}}' +
                 '</div>' +
                 '{{/unless}}' +
@@ -172,6 +176,10 @@ define("feature-journey:views/journey/record/panels/flow", [
             this.addActionHandler("refreshFlow", () => this.actionRefreshFlow());
             this.addActionHandler("createStage", () => this.actionCreateStage());
             this.addActionHandler("createTransition", () => this.actionCreateTransition());
+            this.addActionHandler("createTransitionFromStage", (e, el) => {
+                const stageId = el && el.getAttribute("data-stage-id");
+                this.actionCreateTransitionFromStage({ stageId: stageId });
+            });
             this.addActionHandler("createAction", (e, el) => {
                 const stageId = el && el.getAttribute("data-stage-id");
                 this.actionCreateAction({ stageId: stageId });
@@ -469,6 +477,20 @@ define("feature-journey:views/journey/record/panels/flow", [
             this.createRelated("JourneyTransition", {
                 journeyId: this.model.id,
                 journeyName: this.model.get("name"),
+            });
+        },
+
+        actionCreateTransitionFromStage: function (data) {
+            const stageId = data.stageId;
+            if (!stageId) {
+                return;
+            }
+            const stage = (this.stages || []).find((s) => s.id === stageId);
+            this.createRelated("JourneyTransition", {
+                journeyId: this.model.id,
+                journeyName: this.model.get("name"),
+                fromStageId: stageId,
+                fromStageName: stage ? stage.name : null,
             });
         },
 

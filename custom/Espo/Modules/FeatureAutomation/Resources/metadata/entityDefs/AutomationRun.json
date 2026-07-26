@@ -1,0 +1,164 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "automation": {
+            "type": "link",
+            "required": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pending", "Running", "Completed", "Failed", "Cancelled"],
+            "default": "Pending",
+            "style": {
+                "Pending": null,
+                "Running": "primary",
+                "Completed": "success",
+                "Failed": "danger",
+                "Cancelled": "default"
+            }
+        },
+        "triggeredBy": {
+            "type": "enum",
+            "options": ["manual", "schedule", "entityChange", "signal", "api", "child"],
+            "default": "manual"
+        },
+        "triggerPayload": {
+            "type": "jsonObject",
+            "readOnly": true
+        },
+        "parentRun": {
+            "type": "link",
+            "readOnly": true
+        },
+        "parentRunItemId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "itemCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "doneCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "failedCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "skippedCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "errorSummary": {
+            "type": "text",
+            "readOnly": true
+        },
+        "startedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "completedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        },
+        "items": {
+            "type": "linkMultiple",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "automation": {
+            "type": "belongsTo",
+            "entity": "Automation",
+            "foreign": "runs"
+        },
+        "parentRun": {
+            "type": "belongsTo",
+            "entity": "AutomationRun",
+            "foreign": "childRuns"
+        },
+        "childRuns": {
+            "type": "hasMany",
+            "entity": "AutomationRun",
+            "foreign": "parentRun"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "items": {
+            "type": "hasMany",
+            "entity": "AutomationRunItem",
+            "foreign": "run"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "automationStatus": {
+            "columns": ["automationId", "status", "deleted"]
+        },
+        "status": {
+            "columns": ["status", "deleted"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        },
+        "parentRunItemId": {
+            "columns": ["parentRunItemId", "status"]
+        }
+    }
+}

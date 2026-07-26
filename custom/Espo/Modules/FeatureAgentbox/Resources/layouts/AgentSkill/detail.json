@@ -7,6 +7,14 @@
                 {"name": "tenant"}
             ],
             [
+                {"name": "workspaceKind"},
+                {"name": "entityRef"}
+            ],
+            [
+                {"name": "targetUserId"},
+                {"name": "membershipId"}
+            ],
+            [
                 {"name": "description", "fullWidth": true}
             ],
             [

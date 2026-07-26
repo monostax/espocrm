@@ -1,0 +1,80 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true
+        },
+        "automation": {
+            "type": "link",
+            "required": true
+        },
+        "keyHash": {
+            "type": "varchar",
+            "maxLength": 64,
+            "required": true,
+            "readOnly": true
+        },
+        "scope": {
+            "type": "enum",
+            "options": ["action", "trigger"],
+            "default": "action"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "runItemId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true
+        },
+        "actionType": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "lastAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "expiresAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "automation": {
+            "type": "belongsTo",
+            "entity": "Automation"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        }
+    },
+    "collection": {
+        "orderBy": "lastAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "automationKey": {
+            "columns": ["automationId", "keyHash"],
+            "unique": true
+        },
+        "expiresAt": {
+            "columns": ["expiresAt"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        }
+    }
+}

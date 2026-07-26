@@ -1,0 +1,10 @@
+[
+    {"name": "name", "width": 24},
+    {"name": "status", "width": 10},
+    {"name": "kind", "width": 10},
+    {"name": "triggerType", "width": 12},
+    {"name": "scheduling", "width": 12},
+    {"name": "lastRunAt", "width": 14},
+    {"name": "runCount", "width": 8},
+    {"name": "createdAt", "width": 12}
+]

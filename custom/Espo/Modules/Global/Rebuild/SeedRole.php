@@ -827,6 +827,24 @@ class SeedRole implements RebuildAction
                     'stream' => 'team',
                 ],
 
+                // FeatureAgentbox — virtual catalogs (FS-backed). Scope ACL is
+                // open for tenant users so the CRM UI can load; workspaceKind
+                // write gates live in CatalogAuth + backend middleware:
+                // regular tenant → own user pack only; tenant-admin → also
+                // tenant-shared + membership; Espo admin → contact / crm-global.
+                'AgentSkill' => [
+                    'create' => 'yes',
+                    'read' => 'yes',
+                    'edit' => 'yes',
+                    'delete' => 'yes',
+                ],
+                'AgentMode' => [
+                    'create' => 'yes',
+                    'read' => 'yes',
+                    'edit' => 'yes',
+                    'delete' => 'yes',
+                ],
+
             ],
             'fieldData' => [
                 'Email' => (object)[],
@@ -983,6 +1001,9 @@ class SeedRole implements RebuildAction
                 'Orcamento' => (object)[],
                 'OrcamentoItem' => (object)[],
                 'LancamentoFinanceiro' => (object)[],
+
+                'AgentSkill' => (object)[],
+                'AgentMode' => (object)[],
 
             ],
         ];

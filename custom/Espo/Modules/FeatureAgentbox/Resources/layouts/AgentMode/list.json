@@ -1,16 +1,12 @@
 [
     {
         "name": "name",
-        "width": 18,
+        "width": 20,
         "link": true
     },
     {
-        "name": "model",
-        "width": 22
-    },
-    {
-        "name": "temperature",
-        "width": 12
+        "name": "description",
+        "width": 35
     },
     {
         "name": "tenantName",

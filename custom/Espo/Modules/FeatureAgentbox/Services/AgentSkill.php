@@ -40,9 +40,18 @@ class AgentSkill
     ) {}
 
     /**
-     * List skills for one tenant, or (when $tenantId is null) every Tenant the
-     * logged-in user is a member of (User.tenants — same membership as backend
-     * listAccessibleCrmTenants).
+     * List skills for one catalog scope.
+     *
+     * Default workspaceKind=user (caller's user workspace). Pass workspaceKind +
+     * entity selectors to list tenant-shared / membership / contact / crm-global.
+     *
+     * @param array{
+     *   workspaceKind?: string|null,
+     *   targetUserId?: string|null,
+     *   membershipId?: string|null,
+     *   contactId?: string|null,
+     *   chatwootAccountCrmId?: string|null
+     * } $scopeOpts
      *
      * @throws Forbidden
      * @throws BadRequest
@@ -51,13 +60,23 @@ class AgentSkill
     public function find(
         ?string $tenantId,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): RecordCollection {
         $this->assertScope('read');
 
-        $tenants = $tenantId !== null && $tenantId !== ''
-            ? [$this->requireTenant($tenantId)]
-            : $this->resolveAccessibleTenants();
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+
+        if ($kind === CatalogScope::KIND_CRM_GLOBAL) {
+            $tenantPlaceholder = $this->entityManager->getNewEntity('Tenant');
+            $tenantPlaceholder->set('id', 'crm-global');
+            $tenantPlaceholder->set('name', 'CRM Global');
+            $tenants = [$tenantPlaceholder];
+        } else {
+            $tenants = $tenantId !== null && $tenantId !== ''
+                ? [$this->requireTenant($tenantId)]
+                : $this->resolveAccessibleTenants();
+        }
 
         $collection = $this->entityManager->getCollectionFactory()->create(self::ENTITY_TYPE);
         $total = 0;
@@ -69,12 +88,16 @@ class AgentSkill
             }
 
             try {
+                $query = CatalogScope::toBackendQuery($tid, array_merge($scopeOpts, [
+                    'workspaceKind' => $kind,
+                ]), $this->user);
+
                 $response = $this->backendApiClient->request(
                     'GET',
                     '/agentbox/skills',
                     $authToken,
                     $authTokenSecret,
-                    ['crmTenantId' => $tid]
+                    $query
                 );
             } catch (Throwable $e) {
                 // One workspace offline must not blank the whole multi-tenant list.
@@ -96,11 +119,13 @@ class AgentSkill
                 continue;
             }
 
+            $entityRef = $this->entityRefFromOpts($kind, $scopeOpts);
+
             foreach ($list as $item) {
                 if (!is_array($item)) {
                     continue;
                 }
-                $collection->append($this->mapToEntity($item, $tenant));
+                $collection->append($this->mapToEntity($item, $tenant, $kind, $entityRef));
                 $total++;
             }
         }
@@ -183,11 +208,19 @@ class AgentSkill
         string $tenantId,
         string $skillName,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): stdClass {
         $this->assertScope('read');
-        $tenant = $this->requireTenant($tenantId);
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+        $tenant = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? $this->syntheticGlobalTenant()
+            : $this->requireTenant($tenantId);
         $skillName = $this->assertSkillName($skillName);
+
+        $query = CatalogScope::toBackendQuery($tenantId, array_merge($scopeOpts, [
+            'workspaceKind' => $kind,
+        ]), $this->user);
 
         try {
             $response = $this->backendApiClient->request(
@@ -195,7 +228,7 @@ class AgentSkill
                 '/agentbox/skills/' . rawurlencode($skillName),
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId]
+                $query
             );
         } catch (Error $e) {
             if ($e->getCode() === 404) {
@@ -209,7 +242,9 @@ class AgentSkill
             throw new Error('Invalid skill payload from backend.');
         }
 
-        return $this->mapToEntity($body, $tenant)->getValueMap();
+        $entityRef = $this->entityRefFromOpts($kind, $scopeOpts);
+
+        return $this->mapToEntity($body, $tenant, $kind, $entityRef)->getValueMap();
     }
 
     /**
@@ -224,8 +259,18 @@ class AgentSkill
     ): stdClass {
         $this->assertScope('create');
 
-        $tenantId = $this->extractTenantId($data);
-        $tenant = $this->requireTenant($tenantId);
+        $scope = CatalogScope::fromRequestData($data, $this->user);
+        $kind = $scope['workspaceKind'];
+        CatalogAuth::assertCanWriteCatalog(
+            $this->user,
+            $this->entityManager,
+            $kind,
+            $scope['targetUserId']
+        );
+        $tenantId = $scope['tenantId'] ?? 'crm-global';
+        $tenant = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? $this->syntheticGlobalTenant()
+            : $this->requireTenant((string) $scope['tenantId']);
 
         $name = isset($data->name) ? (string) $data->name : '';
         $name = $this->assertSkillName($name);
@@ -236,13 +281,21 @@ class AgentSkill
             throw new BadRequest('description is required.');
         }
 
+        $query = CatalogScope::toBackendQuery($tenantId, [
+            'workspaceKind' => $kind,
+            'targetUserId' => $scope['targetUserId'],
+            'membershipId' => $scope['membershipId'],
+            'contactId' => $scope['contactId'],
+            'chatwootAccountCrmId' => $scope['chatwootAccountCrmId'],
+        ], $this->user);
+
         try {
             $response = $this->backendApiClient->request(
                 'POST',
                 '/agentbox/skills',
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId],
+                $query,
                 [
                     'name' => $name,
                     'description' => $description,
@@ -261,7 +314,12 @@ class AgentSkill
             throw new Error('Invalid skill payload from backend.');
         }
 
-        return $this->mapToEntity($payload, $tenant)->getValueMap();
+        return $this->mapToEntity(
+            $payload,
+            $tenant,
+            $kind,
+            $scope['entityRef']
+        )->getValueMap();
     }
 
     /**
@@ -275,10 +333,20 @@ class AgentSkill
         string $skillName,
         stdClass $data,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): stdClass {
         $this->assertScope('edit');
-        $tenant = $this->requireTenant($tenantId);
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+        CatalogAuth::assertCanWriteCatalog(
+            $this->user,
+            $this->entityManager,
+            $kind,
+            is_string($scopeOpts['targetUserId'] ?? null) ? (string) $scopeOpts['targetUserId'] : null
+        );
+        $tenant = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? $this->syntheticGlobalTenant()
+            : $this->requireTenant($tenantId);
         $skillName = $this->assertSkillName($skillName);
 
         $description = isset($data->description) ? trim((string) $data->description) : '';
@@ -288,13 +356,17 @@ class AgentSkill
             throw new BadRequest('description is required.');
         }
 
+        $query = CatalogScope::toBackendQuery($tenantId, array_merge($scopeOpts, [
+            'workspaceKind' => $kind,
+        ]), $this->user);
+
         try {
             $response = $this->backendApiClient->request(
                 'PUT',
                 '/agentbox/skills/' . rawurlencode($skillName),
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId],
+                $query,
                 [
                     'description' => $description,
                     'body' => $body,
@@ -312,7 +384,9 @@ class AgentSkill
             throw new Error('Invalid skill payload from backend.');
         }
 
-        return $this->mapToEntity($payload, $tenant)->getValueMap();
+        $entityRef = $this->entityRefFromOpts($kind, $scopeOpts);
+
+        return $this->mapToEntity($payload, $tenant, $kind, $entityRef)->getValueMap();
     }
 
     /**
@@ -325,11 +399,25 @@ class AgentSkill
         string $tenantId,
         string $skillName,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): void {
         $this->assertScope('delete');
-        $this->requireTenant($tenantId);
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+        CatalogAuth::assertCanWriteCatalog(
+            $this->user,
+            $this->entityManager,
+            $kind,
+            is_string($scopeOpts['targetUserId'] ?? null) ? (string) $scopeOpts['targetUserId'] : null
+        );
+        if ($kind !== CatalogScope::KIND_CRM_GLOBAL) {
+            $this->requireTenant($tenantId);
+        }
         $skillName = $this->assertSkillName($skillName);
+
+        $query = CatalogScope::toBackendQuery($tenantId, array_merge($scopeOpts, [
+            'workspaceKind' => $kind,
+        ]), $this->user);
 
         try {
             $this->backendApiClient->request(
@@ -337,7 +425,7 @@ class AgentSkill
                 '/agentbox/skills/' . rawurlencode($skillName),
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId]
+                $query
             );
         } catch (Error $e) {
             if ($e->getCode() === 404) {
@@ -348,44 +436,55 @@ class AgentSkill
     }
 
     /**
-     * Composite id: {tenantId}_{skillName}
+     * Parse composite id → [tenantId, skillName, scopeOpts]
      *
-     * @return array{0: string, 1: string}
+     * @return array{0: string, 1: string, 2: array<string, mixed>}
      * @throws BadRequest
      */
     public function parseId(string $id): array
     {
-        $pos = strpos($id, '_');
-        if ($pos === false || $pos === 0 || $pos === strlen($id) - 1) {
-            throw new BadRequest("Invalid AgentSkill id. Expected '{tenantId}_{skillName}'.");
-        }
+        $parsed = CatalogScope::parseCompositeId($id);
+        $this->assertSkillName($parsed['name']);
 
-        $tenantId = substr($id, 0, $pos);
-        $skillName = substr($id, $pos + 1);
-
-        if ($tenantId === '' || $skillName === '') {
-            throw new BadRequest("Invalid AgentSkill id. Expected '{tenantId}_{skillName}'.");
-        }
-
-        $this->assertSkillName($skillName);
-
-        return [$tenantId, $skillName];
+        return [
+            $parsed['tenantId'],
+            $parsed['name'],
+            [
+                'workspaceKind' => $parsed['workspaceKind'],
+                'targetUserId' => $parsed['targetUserId'],
+                'membershipId' => $parsed['membershipId'],
+                'contactId' => $parsed['contactId'],
+                'chatwootAccountCrmId' => $parsed['chatwootAccountCrmId'],
+            ],
+        ];
     }
 
-    public function buildId(string $tenantId, string $skillName): string
-    {
-        return $tenantId . '_' . $skillName;
+    public function buildId(
+        string $tenantId,
+        string $skillName,
+        string $workspaceKind = CatalogScope::KIND_USER,
+        string $entityRef = '-'
+    ): string {
+        return CatalogScope::buildCompositeId($tenantId, $workspaceKind, $entityRef, $skillName);
     }
 
     /**
      * @param array<string, mixed> $data
+     * @param array<string, mixed> $scopeOpts
      */
-    private function mapToEntity(array $data, Entity $tenant): Entity
-    {
+    private function mapToEntity(
+        array $data,
+        Entity $tenant,
+        string $workspaceKind = CatalogScope::KIND_USER,
+        string $entityRef = '-'
+    ): Entity {
         $name = isset($data['name']) ? (string) $data['name'] : '';
         $entity = $this->entityManager->getNewEntity(self::ENTITY_TYPE);
 
-        $entity->set('id', $this->buildId($tenant->getId(), $name));
+        $entity->set(
+            'id',
+            $this->buildId((string) $tenant->getId(), $name, $workspaceKind, $entityRef)
+        );
         $entity->set('name', $name);
         $entity->set('description', (string) ($data['description'] ?? ''));
         $entity->set('body', (string) ($data['body'] ?? ''));
@@ -394,23 +493,49 @@ class AgentSkill
         $entity->set('modifiedAt', $data['modifiedAt'] ?? null);
         $entity->set('tenantId', $tenant->getId());
         $entity->set('tenantName', (string) $tenant->get('name'));
+        $entity->set('workspaceKind', $workspaceKind);
+        $entity->set('entityRef', $entityRef);
 
         $entity->setAsFetched();
 
         return $entity;
     }
 
-    private function extractTenantId(stdClass $data): string
+    /**
+     * @param array<string, mixed> $scopeOpts
+     */
+    private function entityRefFromOpts(string $kind, array $scopeOpts): string
     {
-        if (isset($data->tenantId) && is_string($data->tenantId) && $data->tenantId !== '') {
-            return $data->tenantId;
+        if ($kind === CatalogScope::KIND_USER) {
+            $uid = $scopeOpts['targetUserId'] ?? null;
+            if (!is_string($uid) || $uid === '') {
+                $uid = $this->user->getId();
+            }
+
+            return $uid;
         }
 
-        if (isset($data->tenant) && is_string($data->tenant) && $data->tenant !== '') {
-            return $data->tenant;
+        if ($kind === CatalogScope::KIND_MEMBERSHIP) {
+            return (string) ($scopeOpts['membershipId'] ?? '-');
         }
 
-        throw new BadRequest('tenant (or tenantId) is required.');
+        if ($kind === CatalogScope::KIND_CONTACT) {
+            $aid = (string) ($scopeOpts['chatwootAccountCrmId'] ?? '');
+            $cid = (string) ($scopeOpts['contactId'] ?? '');
+
+            return $aid . '~' . $cid;
+        }
+
+        return '-';
+    }
+
+    private function syntheticGlobalTenant(): Entity
+    {
+        $tenant = $this->entityManager->getNewEntity('Tenant');
+        $tenant->set('id', 'crm-global');
+        $tenant->set('name', 'CRM Global');
+
+        return $tenant;
     }
 
     /**

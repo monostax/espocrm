@@ -1,0 +1,123 @@
+{
+    "fields": {
+        "run": {
+            "type": "link",
+            "required": true
+        },
+        "automation": {
+            "type": "link",
+            "readOnly": true
+        },
+        "target": {
+            "type": "linkParent"
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pending", "Processing", "Waiting", "Retry", "Done", "Failed", "Skipped"],
+            "default": "Pending",
+            "style": {
+                "Pending": null,
+                "Processing": "primary",
+                "Waiting": "warning",
+                "Retry": "warning",
+                "Done": "success",
+                "Failed": "danger",
+                "Skipped": "default"
+            }
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "payload": {
+            "type": "jsonObject",
+            "readOnly": true
+        },
+        "actionLog": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "view": "views/fields/json-object"
+        },
+        "claimedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "wakeAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "finishedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "retryCount": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "run": {
+            "type": "belongsTo",
+            "entity": "AutomationRun",
+            "foreign": "items"
+        },
+        "automation": {
+            "type": "belongsTo",
+            "entity": "Automation"
+        },
+        "target": {
+            "type": "belongsToParent",
+            "entityList": ["Contact", "Account", "Lead", "Opportunity", "User", "Tenant"]
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "runStatus": {
+            "columns": ["runId", "status", "deleted"]
+        },
+        "statusClaimedAt": {
+            "columns": ["status", "claimedAt"]
+        },
+        "statusWakeAt": {
+            "columns": ["status", "wakeAt"]
+        },
+        "runTarget": {
+            "columns": ["runId", "targetType", "targetId"],
+            "unique": true
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        }
+    }
+}

@@ -50,13 +50,17 @@ class AgentMode
     public function find(
         ?string $tenantId,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): RecordCollection {
         $this->assertScope('read');
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
 
-        $tenants = $tenantId !== null && $tenantId !== ''
-            ? [$this->requireTenant($tenantId)]
-            : $this->resolveAccessibleTenants();
+        $tenants = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? [$this->syntheticGlobalTenant()]
+            : ($tenantId !== null && $tenantId !== ''
+                ? [$this->requireTenant($tenantId)]
+                : $this->resolveAccessibleTenants());
 
         $collection = $this->entityManager->getCollectionFactory()->create(self::ENTITY_TYPE);
         $total = 0;
@@ -73,7 +77,9 @@ class AgentMode
                     '/agentbox/modes',
                     $authToken,
                     $authTokenSecret,
-                    ['crmTenantId' => $tid]
+                    CatalogScope::toBackendQuery($tid, array_merge($scopeOpts ?? [], [
+                    'workspaceKind' => $kind ?? CatalogScope::KIND_USER,
+                ]), $this->user)
                 );
             } catch (Throwable $e) {
                 if ($tenantId !== null && $tenantId !== '') {
@@ -98,7 +104,12 @@ class AgentMode
                 if (!is_array($item)) {
                     continue;
                 }
-                $collection->append($this->mapToEntity($item, $tenant));
+                $collection->append($this->mapToEntity(
+                    $item,
+                    $tenant,
+                    $kind,
+                    $this->entityRefFromOpts($kind, $scopeOpts)
+                ));
                 $total++;
             }
         }
@@ -177,10 +188,14 @@ class AgentMode
         string $tenantId,
         string $modeName,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): stdClass {
         $this->assertScope('read');
-        $tenant = $this->requireTenant($tenantId);
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+        $tenant = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? $this->syntheticGlobalTenant()
+            : $this->requireTenant($tenantId);
         $modeName = $this->assertModeName($modeName);
 
         try {
@@ -189,7 +204,9 @@ class AgentMode
                 '/agentbox/modes/' . rawurlencode($modeName),
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId]
+                CatalogScope::toBackendQuery($tenantId, array_merge($scopeOpts ?? [], [
+                    'workspaceKind' => $kind ?? CatalogScope::KIND_USER,
+                ]), $this->user)
             );
         } catch (Error $e) {
             if ($e->getCode() === 404) {
@@ -203,7 +220,12 @@ class AgentMode
             throw new Error('Invalid mode payload from backend.');
         }
 
-        return $this->mapToEntity($body, $tenant)->getValueMap();
+        return $this->mapToEntity(
+            $body,
+            $tenant,
+            $kind,
+            $this->entityRefFromOpts($kind, $scopeOpts)
+        )->getValueMap();
     }
 
     /**
@@ -218,8 +240,25 @@ class AgentMode
     ): stdClass {
         $this->assertScope('create');
 
-        $tenantId = $this->extractTenantId($data);
-        $tenant = $this->requireTenant($tenantId);
+        $scope = CatalogScope::fromRequestData($data, $this->user);
+        $kind = $scope['workspaceKind'];
+        CatalogAuth::assertCanWriteCatalog(
+            $this->user,
+            $this->entityManager,
+            $kind,
+            $scope['targetUserId']
+        );
+        $scopeOpts = [
+            'workspaceKind' => $kind,
+            'targetUserId' => $scope['targetUserId'],
+            'membershipId' => $scope['membershipId'],
+            'contactId' => $scope['contactId'],
+            'chatwootAccountCrmId' => $scope['chatwootAccountCrmId'],
+        ];
+        $tenantId = $scope['tenantId'] ?? 'crm-global';
+        $tenant = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? $this->syntheticGlobalTenant()
+            : $this->requireTenant((string) $scope['tenantId']);
 
         $name = isset($data->name) ? (string) $data->name : '';
         $name = $this->assertModeName($name);
@@ -231,7 +270,7 @@ class AgentMode
                 '/agentbox/modes',
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId],
+                CatalogScope::toBackendQuery($tenantId, $scopeOpts, $this->user),
                 array_merge(['name' => $name], $payload)
             );
         } catch (Error $e) {
@@ -246,7 +285,7 @@ class AgentMode
             throw new Error('Invalid mode payload from backend.');
         }
 
-        return $this->mapToEntity($result, $tenant)->getValueMap();
+        return $this->mapToEntity($result, $tenant, $kind, $scope['entityRef'])->getValueMap();
     }
 
     /**
@@ -260,10 +299,20 @@ class AgentMode
         string $modeName,
         stdClass $data,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): stdClass {
         $this->assertScope('edit');
-        $tenant = $this->requireTenant($tenantId);
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+        CatalogAuth::assertCanWriteCatalog(
+            $this->user,
+            $this->entityManager,
+            $kind,
+            is_string($scopeOpts['targetUserId'] ?? null) ? (string) $scopeOpts['targetUserId'] : null
+        );
+        $tenant = $kind === CatalogScope::KIND_CRM_GLOBAL
+            ? $this->syntheticGlobalTenant()
+            : $this->requireTenant($tenantId);
         $modeName = $this->assertModeName($modeName);
         $payload = $this->buildWritePayload($data);
 
@@ -273,7 +322,9 @@ class AgentMode
                 '/agentbox/modes/' . rawurlencode($modeName),
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId],
+                CatalogScope::toBackendQuery($tenantId, array_merge($scopeOpts ?? [], [
+                    'workspaceKind' => $kind ?? CatalogScope::KIND_USER,
+                ]), $this->user),
                 $payload
             );
         } catch (Error $e) {
@@ -288,7 +339,12 @@ class AgentMode
             throw new Error('Invalid mode payload from backend.');
         }
 
-        return $this->mapToEntity($result, $tenant)->getValueMap();
+        return $this->mapToEntity(
+            $result,
+            $tenant,
+            $kind,
+            $this->entityRefFromOpts($kind, $scopeOpts)
+        )->getValueMap();
     }
 
     /**
@@ -301,10 +357,20 @@ class AgentMode
         string $tenantId,
         string $modeName,
         string $authToken,
-        string $authTokenSecret
+        string $authTokenSecret,
+        array $scopeOpts = []
     ): void {
         $this->assertScope('delete');
-        $this->requireTenant($tenantId);
+        $kind = CatalogScope::normalizeKind($scopeOpts['workspaceKind'] ?? CatalogScope::KIND_USER);
+        CatalogAuth::assertCanWriteCatalog(
+            $this->user,
+            $this->entityManager,
+            $kind,
+            is_string($scopeOpts['targetUserId'] ?? null) ? (string) $scopeOpts['targetUserId'] : null
+        );
+        if ($kind !== CatalogScope::KIND_CRM_GLOBAL) {
+            $this->requireTenant($tenantId);
+        }
         $modeName = $this->assertModeName($modeName);
 
         try {
@@ -313,7 +379,9 @@ class AgentMode
                 '/agentbox/modes/' . rawurlencode($modeName),
                 $authToken,
                 $authTokenSecret,
-                ['crmTenantId' => $tenantId]
+                CatalogScope::toBackendQuery($tenantId, array_merge($scopeOpts ?? [], [
+                    'workspaceKind' => $kind ?? CatalogScope::KIND_USER,
+                ]), $this->user)
             );
         } catch (Error $e) {
             if ($e->getCode() === 404) {
@@ -331,26 +399,29 @@ class AgentMode
      */
     public function parseId(string $id): array
     {
-        $pos = strpos($id, '_');
-        if ($pos === false || $pos === 0 || $pos === strlen($id) - 1) {
-            throw new BadRequest("Invalid AgentMode id. Expected '{tenantId}_{modeName}'.");
-        }
+        $parsed = CatalogScope::parseCompositeId($id);
+        $this->assertModeName($parsed['name']);
 
-        $tenantId = substr($id, 0, $pos);
-        $modeName = substr($id, $pos + 1);
-
-        if ($tenantId === '' || $modeName === '') {
-            throw new BadRequest("Invalid AgentMode id. Expected '{tenantId}_{modeName}'.");
-        }
-
-        $this->assertModeName($modeName);
-
-        return [$tenantId, $modeName];
+        return [
+            $parsed['tenantId'],
+            $parsed['name'],
+            [
+                'workspaceKind' => $parsed['workspaceKind'],
+                'targetUserId' => $parsed['targetUserId'],
+                'membershipId' => $parsed['membershipId'],
+                'contactId' => $parsed['contactId'],
+                'chatwootAccountCrmId' => $parsed['chatwootAccountCrmId'],
+            ],
+        ];
     }
 
-    public function buildId(string $tenantId, string $modeName): string
-    {
-        return $tenantId . '_' . $modeName;
+    public function buildId(
+        string $tenantId,
+        string $modeName,
+        string $workspaceKind = CatalogScope::KIND_USER,
+        string $entityRef = '-'
+    ): string {
+        return CatalogScope::buildCompositeId($tenantId, $workspaceKind, $entityRef, $modeName);
     }
 
     /**
@@ -436,46 +507,75 @@ class AgentMode
     /**
      * @param array<string, mixed> $data
      */
-    private function mapToEntity(array $data, Entity $tenant): Entity
-    {
+
+    private function mapToEntity(
+        array $data,
+        Entity $tenant,
+        string $workspaceKind = CatalogScope::KIND_USER,
+        string $entityRef = '-'
+    ): Entity {
         $name = isset($data['name']) ? (string) $data['name'] : '';
         $entity = $this->entityManager->getNewEntity(self::ENTITY_TYPE);
 
-        $tools = $data['tools'] ?? [];
-        if (!is_array($tools)) {
-            $tools = [];
-        }
-
-        $toolsJson = json_encode($tools, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($toolsJson === false) {
-            $toolsJson = '{}';
-        }
-
-        $temperature = $data['temperature'] ?? null;
-        if ($temperature !== null && !is_numeric($temperature)) {
-            $temperature = null;
-        }
-        if ($temperature !== null) {
-            $temperature = (float) $temperature;
-        }
-
-        $entity->set('id', $this->buildId($tenant->getId(), $name));
+        $entity->set('id', $this->buildId((string) $tenant->getId(), $name, $workspaceKind, $entityRef));
         $entity->set('name', $name);
-        $entity->set('model', isset($data['model']) && $data['model'] !== null
-            ? (string) $data['model']
-            : null);
-        $entity->set('temperature', $temperature);
-        $entity->set('tools', $toolsJson);
+        $entity->set('model', $data['model'] ?? null);
+        $entity->set('temperature', $data['temperature'] ?? null);
+        $tools = $data['tools'] ?? [];
+        if (is_array($tools)) {
+            $entity->set('tools', json_encode($tools, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        } else {
+            $entity->set('tools', is_string($tools) ? $tools : '{}');
+        }
         $entity->set('body', (string) ($data['body'] ?? ''));
         $entity->set('content', (string) ($data['content'] ?? ''));
         $entity->set('path', (string) ($data['path'] ?? ''));
         $entity->set('modifiedAt', $data['modifiedAt'] ?? null);
         $entity->set('tenantId', $tenant->getId());
         $entity->set('tenantName', (string) $tenant->get('name'));
+        $entity->set('workspaceKind', $workspaceKind);
+        $entity->set('entityRef', $entityRef);
 
         $entity->setAsFetched();
 
         return $entity;
+    }
+
+    /**
+     * @param array<string, mixed> $scopeOpts
+     */
+    private function entityRefFromOpts(string $kind, array $scopeOpts): string
+    {
+        if ($kind === CatalogScope::KIND_USER) {
+            $uid = $scopeOpts['targetUserId'] ?? null;
+            if (!is_string($uid) || $uid === '') {
+                $uid = $this->user->getId();
+            }
+
+            return $uid;
+        }
+
+        if ($kind === CatalogScope::KIND_MEMBERSHIP) {
+            return (string) ($scopeOpts['membershipId'] ?? '-');
+        }
+
+        if ($kind === CatalogScope::KIND_CONTACT) {
+            $aid = (string) ($scopeOpts['chatwootAccountCrmId'] ?? '');
+            $cid = (string) ($scopeOpts['contactId'] ?? '');
+
+            return $aid . '~' . $cid;
+        }
+
+        return '-';
+    }
+
+    private function syntheticGlobalTenant(): Entity
+    {
+        $tenant = $this->entityManager->getNewEntity('Tenant');
+        $tenant->set('id', 'crm-global');
+        $tenant->set('name', 'CRM Global');
+
+        return $tenant;
     }
 
     private function extractTenantId(stdClass $data): string

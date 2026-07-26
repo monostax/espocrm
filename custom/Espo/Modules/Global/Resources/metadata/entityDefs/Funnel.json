@@ -15,6 +15,11 @@
             "required": true,
             "view": "views/fields/link"
         },
+        "tenant": {
+            "type": "link",
+            "required": true,
+            "view": "views/fields/link"
+        },
         "isActive": {
             "type": "bool",
             "default": true
@@ -57,6 +62,11 @@
         "team": {
             "type": "belongsTo",
             "entity": "Team",
+            "foreign": "funnels"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
             "foreign": "funnels"
         },
         "opportunityStages": {
@@ -107,6 +117,9 @@
         },
         "teamId": {
             "columns": ["teamId"]
+        },
+        "tenantId": {
+            "columns": ["tenantId"]
         },
         "isActive": {
             "columns": ["isActive"]

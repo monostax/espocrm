@@ -9,7 +9,12 @@
         "maxDuration": "Tempo máx. na etapa",
         "tenant": "Workspace",
         "teams": "Equipes",
-        "actions": "Ações"
+        "actions": "Ações",
+        "fromTransitions": "Transições"
+    },
+    "links": {
+        "actions": "Ações",
+        "fromTransitions": "Transições"
     },
     "options": {
         "stageType": {

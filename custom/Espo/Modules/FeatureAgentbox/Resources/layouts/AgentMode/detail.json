@@ -2,29 +2,16 @@
     {
         "label": "Overview",
         "rows": [
-            [
-                {"name": "name"},
-                {"name": "tenant"}
-            ],
-            [
-                {"name": "model"},
-                {"name": "temperature"}
-            ],
-            [
-                {"name": "tools", "fullWidth": true}
-            ],
-            [
-                {"name": "path"},
-                {"name": "modifiedAt"}
-            ]
+            [{"name": "name"}, {"name": "tenant"}],
+            [{"name": "workspaceKind"}, {"name": "entityRef"}],
+            [{"name": "targetUserId"}, {"name": "membershipId"}],
+            [{"name": "model"}, {"name": "temperature"}],
+            [{"name": "tools", "fullWidth": true}],
+            [{"name": "path"}, {"name": "modifiedAt"}]
         ]
     },
     {
         "label": "Mode Prompt",
-        "rows": [
-            [
-                {"name": "body", "fullWidth": true}
-            ]
-        ]
+        "rows": [[{"name": "body", "fullWidth": true}]]
     }
 ]

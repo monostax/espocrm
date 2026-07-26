@@ -1,0 +1,66 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-bolt",
+    "detailActionList": [
+        {
+            "name": "activateAutomation",
+            "label": "Activate",
+            "handler": "feature-automation:handlers/automation/detail-actions",
+            "actionFunction": "activate",
+            "checkVisibilityFunction": "isActivateAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "pauseAutomation",
+            "label": "Pause",
+            "handler": "feature-automation:handlers/automation/detail-actions",
+            "actionFunction": "pause",
+            "checkVisibilityFunction": "isPauseAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "runNowAutomation",
+            "label": "Run Now",
+            "handler": "feature-automation:handlers/automation/detail-actions",
+            "actionFunction": "runNow",
+            "checkVisibilityFunction": "isRunNowAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "simulateAutomation",
+            "label": "Simulate",
+            "handler": "feature-automation:handlers/automation/detail-actions",
+            "actionFunction": "simulate",
+            "checkVisibilityFunction": "isRunNowAvailable",
+            "groupIndex": 1
+        },
+        {
+            "name": "archiveAutomation",
+            "label": "Archive",
+            "handler": "feature-automation:handlers/automation/detail-actions",
+            "actionFunction": "archive",
+            "checkVisibilityFunction": "isArchiveAvailable",
+            "groupIndex": 1
+        }
+    ],
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "runs",
+                "label": "runs",
+                "view": "views/record/panels/relationship",
+                "link": "runs",
+                "select": false,
+                "create": false,
+                "order": 10
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "runs": {
+            "create": false,
+            "select": false,
+            "view": "views/record/panels/relationship"
+        }
+    }
+}

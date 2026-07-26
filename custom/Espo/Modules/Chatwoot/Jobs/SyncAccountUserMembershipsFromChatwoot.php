@@ -359,7 +359,8 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
      * Enrich a membership with detailed agent profile data from the Account API.
      *
      * IMPORTANT: Never overwrites user-configured fields (isAI, aiPrompt,
-     * timeZone, ignoreGroups, transferScenarios, knowledgeBaseCategories, calendarsToManage).
+     * timeZone, ignoreGroups, transferScenarios, knowledgeBaseCategories,
+     * calendarsToManage, followupsEnabled, delegateEnabled).
      *
      * @param Entity $membership ChatwootAccountUserMembership entity
      * @param array<string, mixed> $agentData Agent data from Account API

@@ -1,0 +1,167 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 255,
+            "link": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Draft", "Active", "Paused", "Archived"],
+            "default": "Draft",
+            "style": {
+                "Draft": null,
+                "Active": "success",
+                "Paused": "warning",
+                "Archived": "default"
+            }
+        },
+        "kind": {
+            "type": "enum",
+            "options": ["Batch", "Machine"],
+            "default": "Batch",
+            "required": true
+        },
+        "triggerType": {
+            "type": "enum",
+            "options": ["manual", "schedule", "entityChange", "signal"],
+            "default": "manual",
+            "required": true
+        },
+        "scheduling": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true
+        },
+        "timezone": {
+            "type": "varchar",
+            "maxLength": 64,
+            "default": "America/Sao_Paulo"
+        },
+        "subjectEntityType": {
+            "type": "enum",
+            "options": ["", "Contact", "Account", "Lead", "Opportunity", "User", "Tenant"],
+            "default": ""
+        },
+        "entityTypeFilter": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true
+        },
+        "signalCodes": {
+            "type": "array",
+            "displayAsLabel": true,
+            "noEmptyString": true,
+            "maxItemLength": 128
+        },
+        "triggerDebouncePeriod": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true
+        },
+        "definition": {
+            "type": "jsonObject",
+            "view": "feature-automation:views/fields/definition",
+            "tooltip": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "tenant": {
+            "type": "link",
+            "view": "views/fields/link",
+            "tooltip": true
+        },
+        "lastRunAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "nextRunAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "runCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "lastRunStatus": {
+            "type": "enum",
+            "options": ["", "Completed", "Failed", "Cancelled", "Running"],
+            "default": "",
+            "readOnly": true
+        },
+        "activatedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams"
+        },
+        "runs": {
+            "type": "linkMultiple",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "automations"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "runs": {
+            "type": "hasMany",
+            "entity": "AutomationRun",
+            "foreign": "automation"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "statusKind": {
+            "columns": ["status", "kind", "deleted"]
+        },
+        "triggerSchedule": {
+            "columns": ["status", "triggerType", "nextRunAt", "deleted"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        }
+    }
+}

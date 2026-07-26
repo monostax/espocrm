@@ -1,0 +1,105 @@
+{
+    "typeList": [
+        "createTask",
+        "sendEmail",
+        "sendWhatsAppMessage",
+        "sendWhatsAppTemplate",
+        "notifyUser",
+        "executeFormula",
+        "updateTarget",
+        "recordTrackingEvent",
+        "startChildAutomation",
+        "waitJoin"
+    ],
+    "types": {
+        "createTask": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateTask",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "name", "type": "varchar", "label": "Task Name"},
+                {"name": "assignedUserId", "type": "link", "entity": "User", "label": "Assigned User", "nameKey": "assignedUserName"},
+                {"name": "description", "type": "text", "label": "Description"},
+                {"name": "status", "type": "enum", "label": "Status", "options": ["Not Started", "Started", "Completed", "Canceled", "Deferred"], "default": "Not Started"},
+                {"name": "priority", "type": "enum", "label": "Priority", "options": ["Low", "Normal", "High", "Urgent"], "default": "Normal"}
+            ]
+        },
+        "sendEmail": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendEmail",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "emailTemplateId", "type": "link", "entity": "EmailTemplate", "label": "Email Template", "nameKey": "emailTemplateName"},
+                {"name": "to", "type": "varchar", "label": "To (optional)"},
+                {"name": "subject", "type": "varchar", "label": "Subject override"},
+                {"name": "body", "type": "text", "label": "Body override"}
+            ]
+        },
+        "sendWhatsAppMessage": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\SendWhatsAppMessage",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox", "nameKey": "chatwootInboxName", "required": true},
+                {"name": "body", "type": "text", "label": "Message body", "required": true},
+                {"name": "phone", "type": "varchar", "label": "Phone override (optional)"}
+            ]
+        },
+        "sendWhatsAppTemplate": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendWhatsAppTemplate",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox", "nameKey": "chatwootInboxName", "required": true},
+                {"name": "templateName", "type": "varchar", "label": "Template name", "required": true},
+                {"name": "templateLanguage", "type": "varchar", "label": "Language", "default": "pt_BR"},
+                {"name": "templateCategory", "type": "enum", "label": "Category", "options": ["UTILITY", "MARKETING", "AUTHENTICATION"], "default": "UTILITY"},
+                {"name": "phone", "type": "varchar", "label": "Phone override (optional)"}
+            ]
+        },
+        "notifyUser": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\NotifyUser",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "userId", "type": "link", "entity": "User", "label": "User", "nameKey": "userName"},
+                {"name": "message", "type": "text", "label": "Message", "required": true}
+            ]
+        },
+        "executeFormula": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ExecuteFormula",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "formula", "type": "text", "label": "Formula"}
+            ]
+        },
+        "updateTarget": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UpdateTarget",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "fields", "type": "json", "label": "Fields (JSON object)"}
+            ]
+        },
+        "recordTrackingEvent": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\RecordTrackingEvent",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "code", "type": "varchar", "label": "Event code", "required": true},
+                {"name": "properties", "type": "json", "label": "Properties JSON"}
+            ]
+        },
+        "startChildAutomation": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\StartChildAutomation",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "automationId", "type": "link", "entity": "Automation", "label": "Child Automation", "nameKey": "automationName", "required": true},
+                {"name": "entityType", "type": "varchar", "label": "Subject entityType override"},
+                {"name": "entityId", "type": "varchar", "label": "Subject entityId override"},
+                {"name": "passPayload", "type": "bool", "label": "Pass parent payload", "default": true}
+            ]
+        },
+        "waitJoin": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\WaitJoin",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "mode", "type": "enum", "label": "Join mode", "options": ["waitAll", "waitAny"], "default": "waitAll"},
+                {"name": "timeoutPeriod", "type": "varchar", "label": "Timeout period", "default": "2 hours"}
+            ]
+        }
+    }
+}

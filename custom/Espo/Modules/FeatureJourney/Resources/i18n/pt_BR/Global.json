@@ -8,7 +8,7 @@
         "JourneyStage": "Etapa da jornada",
         "JourneyStageAction": "Ação da jornada",
         "JourneyTransition": "Conexão da jornada",
-        "JourneyRecord": "Pessoa na jornada",
+        "JourneyRecord": "Jornada / Inscrição",
         "JourneyRecordLog": "Entrada do histórico"
     },
     "scopeNamesPlural": {
@@ -16,7 +16,7 @@
         "JourneyStage": "Etapas da jornada",
         "JourneyStageAction": "Ações da jornada",
         "JourneyTransition": "Conexões da jornada",
-        "JourneyRecord": "Pessoas nas jornadas",
-        "JourneyRecordLog": "Histórico da jornada"
+        "JourneyRecord": "Jornadas / Inscrições",
+        "JourneyRecordLog": "Jornadas / Histórico"
     }
 }

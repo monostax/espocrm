@@ -336,7 +336,7 @@ function createKbEditor(options) {
                 }
 
                 $insertNodes(nodes);
-            });
+            }, {discrete: true});
         },
         getHtml() {
             let html = '';
@@ -356,7 +356,7 @@ function createKbEditor(options) {
             const body = stripFrontmatter(markdown || '');
             editor.update(() => {
                 $convertFromMarkdownString(body, TRANSFORMERS);
-            });
+            }, {discrete: true});
         },
         getMarkdown() {
             let md = '';

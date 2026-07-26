@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "tenant": "Tenant",
+        "customFields": "Custom Fields"
+    },
+    "links": {
+        "tenant": "Tenant"
+    },
+    "tooltips": {
+        "customFields": "Tenant-defined custom attributes for this lead. Values follow Lead access control."
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "labels": {
+        "Automations": "Automations",
+        "Automation runs": "Automation runs",
+        "Automation run items": "Automation run items",
+        "Action receipts": "Action receipts"
+    },
+    "descriptions": {
+        "automations": "System jobs: schedules, entity/signal triggers, Batch map fan-out, Machine waits/joins (n8n / Make style on CRM data).",
+        "automationRuns": "Each fire of an automation — counts, status, parent/child linking.",
+        "automationRunItems": "Per-target work units inside a run (Processing, Waiting, join, Done).",
+        "automationActionReceipts": "Idempotency and debounce receipts (action + trigger keys)."
+    },
+    "keywords": {
+        "automations": "automation,batch,machine,schedule,cron,map,join,fan-in,n8n,make,zapier,workflow",
+        "automationRuns": "automation,run,execution,job,status,parent,child",
+        "automationRunItems": "automation,item,target,waiting,retry,join",
+        "automationActionReceipts": "idempotency,debounce,receipt,duplicate,cooldown"
+    }
+}
