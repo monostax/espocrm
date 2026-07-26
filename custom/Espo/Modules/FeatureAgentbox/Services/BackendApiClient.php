@@ -29,7 +29,7 @@ class BackendApiClient
 
     /**
      * @param array<string, scalar|null> $query
-     * @param array<string, string>|null $body
+     * @param array<string, mixed>|null $body JSON-serializable payload
      * @return array{status:int, body:?array, raw:string}
      * @throws Error
      */

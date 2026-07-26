@@ -15,7 +15,8 @@
     },
     "messages": {
         "bodyFormatSwitchConfirm": "Switching format converts the body. Rich HTML (tables, custom styles) may not round-trip cleanly. Continue?",
-        "bodyFormatSwitchEmpty": "Body is empty — format will only apply on next edit."
+        "bodyFormatSwitchEmpty": "Body is empty — format will only apply on next edit.",
+        "insertTablePrompt": "Table size (rows x columns), e.g. 3x3"
     },
     "labels": {
         "Body Editor": "Body editor"

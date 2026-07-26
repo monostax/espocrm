@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "name": "Name",
+        "model": "Model",
+        "temperature": "Temperature",
+        "tools": "Tools",
+        "body": "Prompt",
+        "content": "Full Content",
+        "path": "Workspace Path",
+        "modifiedAt": "Modified At",
+        "tenant": "Tenant",
+        "tenantId": "Tenant ID",
+        "tenantName": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
+    },
+    "labels": {
+        "Create AgentMode": "Create Mode"
+    },
+    "tooltips": {
+        "name": "OpenCode mode file name (lowercase, hyphens). Maps to .config/opencode/modes/{name}.md",
+        "model": "Optional model override (provider/model-id), e.g. anthropic/claude-sonnet-4-20250514",
+        "temperature": "Optional 0.0–2.0 creativity control. Lower = focused, higher = creative",
+        "tools": "JSON object of tool flags, e.g. {\"write\":false,\"edit\":false,\"bash\":false}. Empty = all tools enabled.",
+        "body": "System prompt (markdown after YAML frontmatter). Frontmatter is Name/Model/Temperature/Tools — Lexical only receives the prompt body. Pasting a full mode .md strips --- yaml --- automatically."
+    }
+}

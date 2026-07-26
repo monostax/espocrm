@@ -22,23 +22,39 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
     `
     editTemplateContent = `
         <div class="kb-lexical-field" data-name="{{name}}">
-            <div class="kb-lexical-toolbar btn-group btn-group-sm" role="toolbar">
-                <button type="button" class="btn btn-default" data-action="undo" title="Undo"><span class="fas fa-undo fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="redo" title="Redo"><span class="fas fa-redo fa-sm"></span></button>
+            <div class="kb-lexical-toolbar" role="toolbar">
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-default" data-action="undo" title="Undo"><span class="fas fa-undo fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="redo" title="Redo"><span class="fas fa-redo fa-sm"></span></button>
+                </div>
                 <span class="btn-group-divider"></span>
-                <button type="button" class="btn btn-default" data-action="bold" title="Bold"><span class="fas fa-bold fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="italic" title="Italic"><span class="fas fa-italic fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="underline" title="Underline"><span class="fas fa-underline fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="strike" title="Strike"><span class="fas fa-strikethrough fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="code" title="Code"><span class="fas fa-code fa-sm"></span></button>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-default" data-action="bold" title="Bold"><span class="fas fa-bold fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="italic" title="Italic"><span class="fas fa-italic fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="underline" title="Underline"><span class="fas fa-underline fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="strike" title="Strike"><span class="fas fa-strikethrough fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="code" title="Code"><span class="fas fa-code fa-sm"></span></button>
+                </div>
                 <span class="btn-group-divider"></span>
-                <button type="button" class="btn btn-default" data-action="ul" title="Bullet list"><span class="fas fa-list-ul fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="ol" title="Numbered list"><span class="fas fa-list-ol fa-sm"></span></button>
-                <button type="button" class="btn btn-default" data-action="link" title="Link"><span class="fas fa-link fa-sm"></span></button>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-default" data-action="ul" title="Bullet list"><span class="fas fa-list-ul fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="ol" title="Numbered list"><span class="fas fa-list-ol fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="link" title="Link"><span class="fas fa-link fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="table" title="Insert table"><span class="fas fa-table fa-sm"></span></button>
+                </div>
                 <span class="btn-group-divider"></span>
-                <button type="button" class="btn btn-default" data-action="source" title="Toggle source">
-                    <span class="fas fa-file-code fa-sm"></span>
-                </button>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-default" data-action="source" title="Toggle source">
+                        <span class="fas fa-file-code fa-sm"></span>
+                    </button>
+                </div>
+                <span class="btn-group-divider"></span>
+                <div class="kb-lexical-format-select btn-group btn-group-sm">
+                    <select class="form-control input-sm" data-name="bodyFormatInline" title="{{translate 'bodyFormat' 'fields' 'KnowledgeBaseArticle'}}">
+                        <option value="Html"{{#if isHtmlFormat}} selected{{/if}}>HTML</option>
+                        <option value="Markdown"{{#if isMarkdownFormat}} selected{{/if}}>Markdown</option>
+                    </select>
+                </div>
             </div>
             <div class="kb-lexical-editor-wrap">
                 <div class="kb-lexical-editor form-control" contenteditable="true"></div>
@@ -98,6 +114,16 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
             const action = target.getAttribute('data-action');
             this.onToolbarAction(action);
         });
+
+        this.addHandler('change', 'select[data-name="bodyFormatInline"]', (e, target) => {
+            const next = target.value === 'Markdown' ? 'Markdown' : 'Html';
+
+            if (next === this.getBodyFormat()) {
+                return;
+            }
+
+            this.model.set('bodyFormat', next, {ui: true});
+        });
     }
 
     data() {
@@ -106,6 +132,9 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
         const value = this.model.get(this.name);
 
         data.isPlain = format === 'Markdown';
+        data.bodyFormat = format;
+        data.isHtmlFormat = format !== 'Markdown';
+        data.isMarkdownFormat = format === 'Markdown';
         data.isNone = !data.isNotEmpty && data.valueIsSet && this.isDetailMode();
         data.formatLabel = this.translate(format, 'options', 'KnowledgeBaseArticle') ||
             this.translate(format, 'labels') ||
@@ -253,6 +282,9 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
             case 'link':
                 this.promptLink();
                 break;
+            case 'table':
+                this.promptTable();
+                break;
         }
 
         this.trigger('change');
@@ -266,6 +298,31 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
         }
 
         this.kbEditor.toggleLink(url.trim() || null);
+    }
+
+    promptTable() {
+        const raw = window.prompt(
+            this.translate('insertTablePrompt', 'messages', 'KnowledgeBaseArticle') ||
+                'Table size (rows x columns)',
+            '3x3'
+        );
+
+        if (raw === null) {
+            return;
+        }
+
+        const match = String(raw).trim().match(/^(\d+)\s*[xX,;]\s*(\d+)$/) ||
+            String(raw).trim().match(/^(\d+)\s+(\d+)$/);
+
+        let rows = 3;
+        let columns = 3;
+
+        if (match) {
+            rows = parseInt(match[1], 10);
+            columns = parseInt(match[2], 10);
+        }
+
+        this.kbEditor.insertTable({rows, columns, includeHeaders: true});
     }
 
     toggleSourceMode() {
@@ -451,6 +508,7 @@ class KnowledgeBaseBodyFieldView extends BaseFieldView {
 
         data[this.name] = body;
         data.bodyEditorState = state;
+        data.bodyFormat = this.getBodyFormat();
 
         return data;
     }

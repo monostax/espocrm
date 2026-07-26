@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "name": "Nome",
+        "model": "Modelo",
+        "temperature": "Temperatura",
+        "tools": "Ferramentas",
+        "body": "Prompt",
+        "content": "Conteúdo completo",
+        "path": "Caminho no workspace",
+        "modifiedAt": "Modificado em",
+        "tenant": "Tenant",
+        "tenantId": "ID do Tenant",
+        "tenantName": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
+    },
+    "labels": {
+        "Create AgentMode": "Criar Mode"
+    },
+    "tooltips": {
+        "name": "Nome do arquivo do mode no OpenCode (minúsculas, hífens). Mapeia para .config/opencode/modes/{name}.md",
+        "model": "Override opcional de modelo (provider/model-id), ex. anthropic/claude-sonnet-4-20250514",
+        "temperature": "Opcional 0.0–2.0. Menor = focado, maior = criativo",
+        "tools": "Objeto JSON de flags de tools, ex. {\"write\":false,\"edit\":false,\"bash\":false}. Vazio = todas habilitadas.",
+        "body": "Prompt de sistema (Markdown após o frontmatter YAML). O frontmatter é Name/Model/Temperature/Tools — o Lexical só edita o corpo. Colar um .md completo remove o bloco --- yaml --- automaticamente."
+    }
+}

@@ -1,0 +1,30 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {"name": "name"},
+                {"name": "tenant"}
+            ],
+            [
+                {"name": "model"},
+                {"name": "temperature"}
+            ],
+            [
+                {"name": "tools", "fullWidth": true}
+            ],
+            [
+                {"name": "path"},
+                {"name": "modifiedAt"}
+            ]
+        ]
+    },
+    {
+        "label": "Mode Prompt",
+        "rows": [
+            [
+                {"name": "body", "fullWidth": true}
+            ]
+        ]
+    }
+]

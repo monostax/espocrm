@@ -1,7 +1,7 @@
 {
     "name": "FeatureAgentbox",
-    "description": "Agentbox workspace features — virtual AgentSkill entity backed by OpenCode skills FS. Lexical markdown editor for AgentSkill.body (frontmatter kept on name/description fields).",
-    "version": "1.0.0",
+    "description": "Agentbox workspace features — virtual AgentSkill / AgentMode entities backed by OpenCode skills & modes FS. Lexical markdown for body/prompt (frontmatter on discrete CRM fields).",
+    "version": "1.1.0",
     "order": 35,
     "jsTranspiled": true
 }

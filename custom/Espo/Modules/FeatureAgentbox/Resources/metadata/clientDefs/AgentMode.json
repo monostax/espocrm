@@ -1,0 +1,7 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-sliders-h",
+    "createDisabled": false,
+    "editDisabled": false,
+    "deleteDisabled": false
+}

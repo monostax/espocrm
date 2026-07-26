@@ -15,7 +15,8 @@
     },
     "messages": {
         "bodyFormatSwitchConfirm": "Trocar o formato converte o corpo. HTML rico (tabelas, estilos) pode não sobreviver à conversão. Continuar?",
-        "bodyFormatSwitchEmpty": "Corpo vazio — o formato só se aplica na próxima edição."
+        "bodyFormatSwitchEmpty": "Corpo vazio — o formato só se aplica na próxima edição.",
+        "insertTablePrompt": "Tamanho da tabela (linhas x colunas), ex. 3x3"
     },
     "labels": {
         "Body Editor": "Editor do corpo"

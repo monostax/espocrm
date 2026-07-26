@@ -35,7 +35,15 @@ import {
     registerLink,
 } from '@lexical/link';
 import {CodeNode, CodeHighlightNode} from '@lexical/code';
-import {TableNode, TableCellNode, TableRowNode} from '@lexical/table';
+import {
+    TableNode,
+    TableCellNode,
+    TableRowNode,
+    INSERT_TABLE_COMMAND,
+    $createTableNodeWithDimensions,
+    registerTablePlugin,
+    registerTableSelectionObserver,
+} from '@lexical/table';
 import {$generateHtmlFromNodes, $generateNodesFromDOM} from '@lexical/html';
 import {
     $convertFromMarkdownString,
@@ -58,6 +66,11 @@ const theme = {
         ul: 'kb-lex-ul',
         ol: 'kb-lex-ol',
         listitem: 'kb-lex-li',
+        nested: {
+            listitem: 'kb-lex-nested-li',
+        },
+        listitemChecked: 'kb-lex-li-checked',
+        listitemUnchecked: 'kb-lex-li-unchecked',
     },
     link: 'kb-lex-link',
     text: {
@@ -70,7 +83,11 @@ const theme = {
     code: 'kb-lex-codeblock',
     table: 'kb-lex-table table table-bordered',
     tableCell: 'kb-lex-td',
+    tableCellHeader: 'kb-lex-th',
     tableRow: 'kb-lex-tr',
+    tableSelected: 'kb-lex-table-selected',
+    tableCellSelected: 'kb-lex-td-selected',
+    tableSelection: 'kb-lex-table-selection',
 };
 
 function createNodes() {
@@ -167,6 +184,54 @@ function registerLinkFallback(editor) {
 }
 
 /**
+ * Minimal signal store for Lexical 0.48 plugins that call .peek().
+ * @param {*} initial
+ */
+function createSignal(initial) {
+    let value = initial;
+
+    return {
+        peek: () => value,
+        get value() {
+            return value;
+        },
+        set(next) {
+            value = next;
+        },
+    };
+}
+
+/**
+ * Fallback INSERT_TABLE if registerTablePlugin signature changes.
+ */
+function registerTableFallback(editor) {
+    return editor.registerCommand(
+        INSERT_TABLE_COMMAND,
+        (payload) => {
+            if (!payload) {
+                return false;
+            }
+
+            const rows = Number(payload.rows) || 0;
+            const columns = Number(payload.columns) || 0;
+
+            if (rows < 1 || columns < 1) {
+                return false;
+            }
+
+            const includeHeaders =
+                payload.includeHeaders === undefined ? true : payload.includeHeaders;
+
+            const tableNode = $createTableNodeWithDimensions(rows, columns, includeHeaders);
+            $insertNodes([tableNode, $createParagraphNode()]);
+
+            return true;
+        },
+        COMMAND_PRIORITY_EDITOR
+    );
+}
+
+/**
  * @param {object} options
  * @param {HTMLElement} options.element
  * @param {string} [options.namespace]
@@ -205,10 +270,25 @@ function createKbEditor(options) {
         linkUnregister = registerLinkFallback(editor);
     }
 
+    let tableUnregister;
+    try {
+        // Lexical 0.48: hasNestedTables is a signal store with .peek()
+        tableUnregister = mergeRegister(
+            registerTablePlugin(editor, {
+                hasNestedTables: createSignal(false),
+            }),
+            registerTableSelectionObserver(editor, true)
+        );
+    } catch (e) {
+        console.warn('[EspoLexical] registerTablePlugin failed, using fallback', e);
+        tableUnregister = registerTableFallback(editor);
+    }
+
     const unregisters = [
         registerRichText(editor),
         registerList(editor),
         linkUnregister,
+        tableUnregister,
         registerHistory(editor, historyState, 300),
         editor.registerUpdateListener(() => {
             if (typeof onChange === 'function') {
@@ -357,6 +437,35 @@ function createKbEditor(options) {
         },
         toggleLink(url) {
             editor.dispatchCommand(TOGGLE_LINK_COMMAND, url ? url : null);
+        },
+        /**
+         * @param {{rows?: number|string, columns?: number|string, includeHeaders?: boolean}|number} [rowsOrOpts]
+         * @param {number|string} [columns]
+         */
+        insertTable(rowsOrOpts = 3, columns = 3) {
+            let rows = 3;
+            let cols = 3;
+            let includeHeaders = true;
+
+            if (rowsOrOpts && typeof rowsOrOpts === 'object') {
+                rows = Number(rowsOrOpts.rows) || 3;
+                cols = Number(rowsOrOpts.columns) || 3;
+                if (rowsOrOpts.includeHeaders !== undefined) {
+                    includeHeaders = !!rowsOrOpts.includeHeaders;
+                }
+            } else {
+                rows = Number(rowsOrOpts) || 3;
+                cols = Number(columns) || 3;
+            }
+
+            rows = Math.min(Math.max(rows, 1), 20);
+            cols = Math.min(Math.max(cols, 1), 12);
+
+            editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                rows: String(rows),
+                columns: String(cols),
+                includeHeaders,
+            });
         },
         insertHeading(tag) {
             editor.update(() => {

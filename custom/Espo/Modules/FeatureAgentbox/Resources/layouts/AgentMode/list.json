@@ -1,0 +1,23 @@
+[
+    {
+        "name": "name",
+        "width": 18,
+        "link": true
+    },
+    {
+        "name": "model",
+        "width": 22
+    },
+    {
+        "name": "temperature",
+        "width": 12
+    },
+    {
+        "name": "tenantName",
+        "width": 20
+    },
+    {
+        "name": "modifiedAt",
+        "width": 20
+    }
+]

@@ -1,0 +1,74 @@
+{
+    "skipRebuild": true,
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 64,
+            "readOnlyAfterCreate": true,
+            "tooltip": true
+        },
+        "model": {
+            "type": "varchar",
+            "maxLength": 256,
+            "tooltip": true
+        },
+        "temperature": {
+            "type": "float",
+            "min": 0,
+            "max": 2,
+            "tooltip": true
+        },
+        "tools": {
+            "type": "text",
+            "tooltip": true
+        },
+        "body": {
+            "type": "text",
+            "required": true,
+            "tooltip": true,
+            "view": "feature-agentbox:views/agent-mode/fields/body",
+            "minHeight": 280
+        },
+        "content": {
+            "type": "text",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutListDisabled": true
+        },
+        "path": {
+            "type": "varchar",
+            "maxLength": 512,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "notStorable": true
+        },
+        "tenant": {
+            "type": "link",
+            "required": true,
+            "readOnlyAfterCreate": true
+        },
+        "tenantId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true,
+            "notStorable": true
+        },
+        "tenantName": {
+            "type": "varchar",
+            "maxLength": 255,
+            "readOnly": true,
+            "notStorable": true
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        }
+    }
+}

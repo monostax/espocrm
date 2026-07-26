@@ -1,8 +1,10 @@
 {
     "scopeNames": {
-        "AgentSkill": "Skill do Agente"
+        "AgentSkill": "Skill do Agente",
+        "AgentMode": "Mode do Agente"
     },
     "scopeNamesPlural": {
-        "AgentSkill": "Skills do Agente"
+        "AgentSkill": "Skills do Agente",
+        "AgentMode": "Modes do Agente"
     }
 }

@@ -1,0 +1,9 @@
+{
+    "readOnly": false,
+    "createDisabled": false,
+    "editDisabled": false,
+    "deleteDisabled": false,
+    "massUpdateDisabled": true,
+    "exportDisabled": true,
+    "duplicateDisabled": true
+}
