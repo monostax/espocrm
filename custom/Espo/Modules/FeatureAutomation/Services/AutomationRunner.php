@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureAutomation\Services;
 
+use Espo\Core\AclManager;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Job\QueueName;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
 use Espo\Modules\FeatureAutomation\Entities\Automation;
 use Espo\Modules\FeatureAutomation\Entities\AutomationRun;
 use Espo\Modules\FeatureAutomation\Entities\AutomationRunItem;
@@ -33,7 +35,12 @@ class AutomationRunner
         private ScheduleHelper $scheduleHelper,
         private JoinCoordinator $joinCoordinator,
         private TenantGuard $tenantGuard,
+        private AutomationTriggerFilterEvaluator $triggerFilterEvaluator,
+        private AutomationRunIdentity $identity,
+        private AclManager $aclManager,
         private JobSchedulerFactory $jobSchedulerFactory,
+        private RunDataBag $runDataBag,
+        private CrossTenantAccess $crossTenantAccess,
         private Log $log,
     ) {}
 
@@ -46,18 +53,39 @@ class AutomationRunner
             throw new Error('Cannot activate archived automation.');
         }
 
-        $scheduling = (string) ($automation->get('scheduling') ?? '');
+        // Fail fast: non-manual triggers need an ACL identity before go-live.
+        $triggerType = (string) ($automation->get('triggerType') ?? '');
+        if ($triggerType !== '' && $triggerType !== Automation::TRIGGER_MANUAL) {
+            $this->identity->resolve($automation, $triggerType);
+        }
+
+        $scheduling = trim((string) ($automation->get('scheduling') ?? ''));
+        $timezone = (string) ($automation->get('timezone') ?: 'UTC');
+        $activatedAt = date('Y-m-d H:i:s');
+        $scheduleStartAt = new \DateTimeImmutable($activatedAt, new \DateTimeZone('UTC'));
         $next = null;
-        if ($automation->get('triggerType') === Automation::TRIGGER_SCHEDULE && $scheduling !== '') {
+        if ($automation->get('triggerType') === Automation::TRIGGER_SCHEDULE) {
+            if ($scheduling === '') {
+                throw new Error('RRULE is required for a scheduled automation.');
+            }
+
+            try {
+                $this->scheduleHelper->validate($scheduling, $timezone);
+            } catch (\InvalidArgumentException $e) {
+                throw new Error($e->getMessage());
+            }
+
             $next = $this->scheduleHelper->nextRunAt(
                 $scheduling,
-                (string) ($automation->get('timezone') ?: 'UTC')
+                $timezone,
+                null,
+                $scheduleStartAt,
             );
         }
 
         $automation->set([
             'status' => Automation::STATUS_ACTIVE,
-            'activatedAt' => date('Y-m-d H:i:s'),
+            'activatedAt' => $activatedAt,
             'nextRunAt' => $next,
         ]);
         $this->entityManager->saveEntity($automation);
@@ -90,6 +118,7 @@ class AutomationRunner
         string $id,
         string $triggeredBy = 'manual',
         array $triggerPayload = [],
+        ?string $overrideUserId = null,
     ): Entity {
         $automation = $this->getAutomation($id);
 
@@ -101,7 +130,7 @@ class AutomationRunner
             throw new Error('Automation cannot run in status ' . $automation->get('status'));
         }
 
-        return $this->startRun($automation, $triggeredBy, $triggerPayload);
+        return $this->startRun($automation, $triggeredBy, $triggerPayload, $overrideUserId);
     }
 
     /**
@@ -114,6 +143,7 @@ class AutomationRunner
         string $id,
         array $triggerPayload = [],
         int $maxPreview = 50,
+        ?string $overrideUserId = null,
     ): array {
         $automation = $this->getAutomation($id);
         $def = $this->validator->normalizeAndValidate($automation);
@@ -124,10 +154,33 @@ class AutomationRunner
         $maxPreview = max(1, min(200, $maxPreview));
         $warnings = [];
 
+        $actor = $this->identity->resolve($automation, 'manual', $overrideUserId);
+
         if ($kind === 'machine') {
-            $rows = $this->materializeMachineItems($def, $automationTenantId, $triggerPayload);
+            $rows = $this->materializeMachineItems(
+                $automation,
+                $def,
+                $automationTenantId,
+                $triggerPayload,
+                $actor,
+            );
         } else {
-            $rows = $this->mapMaterializer->materialize($def, $automationTenantId, $triggerPayload);
+            $first = $this->firstStage($def);
+            $mapDef = [
+                'map' => $first['map'] ?? $def['map'] ?? [],
+                'limits' => $def['limits'] ?? [],
+            ];
+            if (($first['scope'] ?? 'forEach') === 'once') {
+                $rows = [$this->buildOnceRow($automation, $def, null, $triggerPayload, $actor)];
+            } else {
+                $rows = $this->mapMaterializer->materialize(
+                    $mapDef,
+                    $automationTenantId,
+                    $triggerPayload,
+                    $actor,
+                    $this->crossTenantAccess->isAuthorized($automation, $actor),
+                );
+            }
         }
 
         $itemCount = count($rows);
@@ -171,23 +224,41 @@ class AutomationRunner
                     $target,
                     $tenantId,
                     $payload,
+                    $actor,
                 );
                 $entry['actions'] = $trace['log'];
                 $entry['machineStatus'] = $trace['status'];
                 $entry['finalState'] = $trace['payload']['_state'] ?? null;
             } else {
+                $stage = $this->firstStage($def) ?? [];
                 $plan = $this->actionRunner->planActions(
-                    $def['actions'] ?? [],
+                    $stage['actions'] ?? $def['actions'] ?? [],
                     $automation,
                     $target,
                     $tenantId,
                     $payload,
-                    (string) ($def['itemMode'] ?? 'allMatching'),
+                    (string) ($stage['itemMode'] ?? $def['itemMode'] ?? 'allMatching'),
+                    $actor,
                 );
                 $entry['actions'] = $plan['log'];
+                $entry['stageId'] = $stage['id'] ?? 's0';
+                $entry['scope'] = $stage['scope'] ?? 'forEach';
             }
 
             $preview[] = $entry;
+        }
+
+        $stagesMeta = [];
+        if ($kind !== 'machine') {
+            foreach ($this->batchStages($def) as $si => $st) {
+                $stagesMeta[] = [
+                    'index' => $si,
+                    'id' => $st['id'] ?? ('s' . $si),
+                    'scope' => $st['scope'] ?? 'forEach',
+                    'mapSteps' => count($st['map'] ?? []),
+                    'actions' => count($st['actions'] ?? []),
+                ];
+            }
         }
 
         return [
@@ -195,6 +266,7 @@ class AutomationRunner
             'itemCount' => $itemCount,
             'truncated' => count($preview),
             'items' => $preview,
+            'stages' => $stagesMeta,
             'warnings' => $warnings,
         ];
     }
@@ -217,8 +289,16 @@ class AutomationRunner
 
             $tz = (string) ($automation->get('timezone') ?: 'UTC');
             $last = $automation->get('lastRunAt') ? (string) $automation->get('lastRunAt') : null;
+            $next = $automation->get('nextRunAt') ? (string) $automation->get('nextRunAt') : null;
 
-            if (!$this->scheduleHelper->isDue($scheduling, $last, $tz)) {
+            if (!$this->scheduleHelper->isDue(
+                $scheduling,
+                $last,
+                $tz,
+                null,
+                $this->getScheduleStartAt($automation),
+                $next,
+            )) {
                 continue;
             }
 
@@ -285,6 +365,7 @@ class AutomationRunner
         Entity $automation,
         string $triggeredBy,
         array $triggerPayload = [],
+        ?string $overrideUserId = null,
     ): Entity {
         $depth = (int) ($triggerPayload['_depth'] ?? 0);
         if ($depth > self::MAX_CHILD_DEPTH) {
@@ -306,6 +387,8 @@ class AutomationRunner
         if (!is_array($teamsIds)) {
             $teamsIds = [];
         }
+
+        $actor = $this->identity->resolve($automation, $triggeredBy, $overrideUserId);
 
         $parentRunId = !empty($triggerPayload['_parentRunId'])
             ? (string) $triggerPayload['_parentRunId']
@@ -336,16 +419,43 @@ class AutomationRunner
             'doneCount' => 0,
             'failedCount' => 0,
             'skippedCount' => 0,
+            'stageIndex' => 0,
             'parentRunId' => $parentRunId,
             'parentRunItemId' => $parentRunItemId,
+            'runAsUserId' => $actor->getId(),
         ]);
         $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
 
         try {
             if ($kind === 'machine') {
-                $items = $this->materializeMachineItems($def, $automationTenantId, $triggerPayload);
+                $items = $this->materializeMachineItems(
+                    $automation,
+                    $def,
+                    $automationTenantId,
+                    $triggerPayload,
+                    $actor,
+                );
+                $count = $this->persistRunItems(
+                    $run,
+                    $automation,
+                    $items,
+                    $automationTenantId,
+                    $teamsIds,
+                    'machine',
+                );
+                $run->set('itemCount', $count);
+                $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
             } else {
-                $items = $this->mapMaterializer->materialize($def, $automationTenantId, $triggerPayload);
+                $this->beginBatchStage(
+                    $run,
+                    $automation,
+                    $def,
+                    0,
+                    $automationTenantId,
+                    $teamsIds,
+                    $triggerPayload,
+                    $actor,
+                );
             }
         } catch (Throwable $e) {
             $run->set([
@@ -359,46 +469,17 @@ class AutomationRunner
             throw $e;
         }
 
-        $count = 0;
-        foreach ($items as $row) {
-            $item = $this->entityManager->getNewEntity(AutomationRunItem::ENTITY_TYPE);
-            $item->set([
-                'runId' => $run->getId(),
-                'automationId' => $automation->getId(),
-                'targetType' => $row['targetType'],
-                'targetId' => $row['targetId'],
-                'tenantId' => $row['tenantId'] ?? $automationTenantId,
-                'payload' => $row['payload'] ?? [],
-                'status' => AutomationRunItem::STATUS_PENDING,
-                'teamsIds' => $teamsIds,
-                'retryCount' => 0,
-            ]);
-
-            try {
-                $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
-                $count++;
-            } catch (Throwable $e) {
-                $this->log->warning('AutomationRunner item save: ' . $e->getMessage());
-            }
-        }
-
-        $run->set('itemCount', $count);
-        $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
-
         $this->touchAutomationAfterRun($automation, 'Running');
 
-        if ($count === 0) {
-            $run->set([
-                'status' => AutomationRun::STATUS_COMPLETED,
-                'completedAt' => date('Y-m-d H:i:s'),
-            ]);
-            $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
-            $this->touchAutomationAfterRun($automation, 'Completed');
+        // Empty forEach stages advance; may land on once or complete.
+        $this->finalizeRunIfComplete((string) $run->getId());
 
-            return $run;
+        $run = $this->entityManager->getEntityById(AutomationRun::ENTITY_TYPE, (string) $run->getId())
+            ?: $run;
+
+        if ($run->get('status') === AutomationRun::STATUS_RUNNING) {
+            $this->dispatchChunks((string) $run->getId());
         }
-
-        $this->dispatchChunks((string) $run->getId());
 
         return $run;
     }
@@ -444,9 +525,9 @@ class AutomationRunner
 
         $def = $this->validator->normalizeAndValidate($automation);
         $isMachine = ($def['kind'] ?? '') === 'machine';
-        $actions = $def['actions'] ?? [];
         $onFailure = $def['onFailure'] ?? [];
-        $itemMode = (string) ($def['itemMode'] ?? 'allMatching');
+
+        $actor = $this->identity->fromRun($run);
 
         $where = [
             'runId' => $runId,
@@ -473,9 +554,18 @@ class AutomationRunner
             }
 
             if ($isMachine) {
-                $this->processMachineItem($item, $automation, $run, $def, $onFailure);
+                $this->processMachineItem($item, $automation, $run, $def, $onFailure, $actor);
             } else {
-                $this->processItem($item, $automation, $run, $actions, $onFailure, $itemMode);
+                $stage = $this->stageForItem($def, $item);
+                $this->processItem(
+                    $item,
+                    $automation,
+                    $run,
+                    $stage['actions'] ?? [],
+                    $stage['onFailure'] ?? [],
+                    (string) ($stage['itemMode'] ?? 'allMatching'),
+                    $actor,
+                );
             }
         }
 
@@ -492,6 +582,7 @@ class AutomationRunner
         Entity $run,
         array $def,
         array $onFailure,
+        User $actor,
     ): void {
         $tenantId = $item->get('tenantId')
             ? (string) $item->get('tenantId')
@@ -538,6 +629,7 @@ class AutomationRunner
             $target,
             $tenantId,
             $payload,
+            $actor,
         );
 
         $status = $result['status'];
@@ -576,6 +668,8 @@ class AutomationRunner
                     $tenantId,
                     $newPayload,
                     'allMatching',
+                    false,
+                    $actor,
                 );
             } catch (Throwable $e) {
                 $this->log->warning('onFailure: ' . $e->getMessage());
@@ -603,6 +697,7 @@ class AutomationRunner
         array $actions,
         array $onFailure,
         string $itemMode,
+        User $actor,
     ): void {
         $tenantId = $item->get('tenantId')
             ? (string) $item->get('tenantId')
@@ -650,6 +745,8 @@ class AutomationRunner
             $tenantId,
             $payload,
             $itemMode,
+            false,
+            $actor,
         );
 
         $newPayload = $result['payload'] ?? $payload;
@@ -686,6 +783,8 @@ class AutomationRunner
                     $tenantId,
                     $newPayload,
                     'allMatching',
+                    false,
+                    $actor,
                 );
             } catch (Throwable $e) {
                 $this->log->warning('onFailure: ' . $e->getMessage());
@@ -842,6 +941,110 @@ class AutomationRunner
             return;
         }
 
+        $automation = $this->entityManager->getEntityById(
+            Automation::ENTITY_TYPE,
+            (string) $run->get('automationId')
+        );
+
+        if ($automation) {
+            try {
+                $def = $this->validator->normalizeAndValidate($automation);
+            } catch (Throwable $e) {
+                $this->log->warning('finalize normalize: ' . $e->getMessage());
+                $def = null;
+            }
+
+            if (is_array($def) && ($def['kind'] ?? '') === 'batch') {
+                $stages = $this->batchStages($def);
+                $stageIndex = (int) ($run->get('stageIndex') ?? 0);
+                $nextIndex = $stageIndex + 1;
+
+                // Opt-in: export public payload keys from completed stage into run.dataBag
+                // before the next stage materializes (so importRunBag can read them).
+                try {
+                    $completedStage = $stages[$stageIndex] ?? null;
+                    if (is_array($completedStage)) {
+                        $exportCfg = $this->runDataBag->normalizeExportConfig(
+                            $completedStage['exportToRunBag'] ?? null
+                        );
+                        if ($exportCfg !== null) {
+                            $stageId = (string) ($completedStage['id'] ?? ('s' . $stageIndex));
+                            $this->runDataBag->exportStageToRun($run, $stageId, $exportCfg);
+                            $run = $this->entityManager->getEntityById(AutomationRun::ENTITY_TYPE, $runId)
+                                ?: $run;
+                        }
+                    }
+                } catch (Throwable $e) {
+                    $this->log->warning('RunDataBag export: ' . $e->getMessage());
+                    $run->set([
+                        'status' => AutomationRun::STATUS_FAILED,
+                        'errorSummary' => 'exportToRunBag: ' . $e->getMessage(),
+                        'completedAt' => date('Y-m-d H:i:s'),
+                    ]);
+                    $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
+                    if ($automation) {
+                        $this->touchAutomationAfterRun($automation, 'Failed');
+                    }
+
+                    return;
+                }
+
+                if ($nextIndex < count($stages)) {
+                    // CAS-style advance to avoid double-begin from concurrent finalizers
+                    $advanced = $this->tryAdvanceStageIndex($runId, $stageIndex, $nextIndex);
+                    if (!$advanced) {
+                        return;
+                    }
+
+                    $run = $this->entityManager->getEntityById(AutomationRun::ENTITY_TYPE, $runId);
+                    if (!$run || $run->get('status') !== AutomationRun::STATUS_RUNNING) {
+                        return;
+                    }
+
+                    $actor = $this->identity->fromRun($run);
+                    $tenantId = $run->get('tenantId') ? (string) $run->get('tenantId') : null;
+                    $teamsIds = $run->get('teamsIds') ?: [];
+                    if (!is_array($teamsIds)) {
+                        $teamsIds = [];
+                    }
+                    $triggerPayload = $this->normalizePayload($run->get('triggerPayload'));
+
+                    try {
+                        $this->beginBatchStage(
+                            $run,
+                            $automation,
+                            $def,
+                            $nextIndex,
+                            $tenantId,
+                            $teamsIds,
+                            $triggerPayload,
+                            $actor,
+                        );
+                    } catch (Throwable $e) {
+                        $run->set([
+                            'status' => AutomationRun::STATUS_FAILED,
+                            'errorSummary' => $e->getMessage(),
+                            'completedAt' => date('Y-m-d H:i:s'),
+                        ]);
+                        $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
+                        $this->touchAutomationAfterRun($automation, 'Failed');
+
+                        return;
+                    }
+
+                    // Recurse: empty stages keep advancing; else dispatch new work.
+                    $this->finalizeRunIfComplete($runId);
+
+                    $run = $this->entityManager->getEntityById(AutomationRun::ENTITY_TYPE, $runId);
+                    if ($run && $run->get('status') === AutomationRun::STATUS_RUNNING) {
+                        $this->dispatchChunks($runId);
+                    }
+
+                    return;
+                }
+            }
+        }
+
         $failed = (int) $run->get('failedCount');
         $status = $failed > 0 && (int) $run->get('doneCount') === 0
             ? AutomationRun::STATUS_FAILED
@@ -852,11 +1055,6 @@ class AutomationRunner
             'completedAt' => date('Y-m-d H:i:s'),
         ]);
         $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
-
-        $automation = $this->entityManager->getEntityById(
-            Automation::ENTITY_TYPE,
-            (string) $run->get('automationId')
-        );
 
         if ($automation) {
             $this->touchAutomationAfterRun(
@@ -875,6 +1073,336 @@ class AutomationRunner
         }
     }
 
+    /**
+     * @param array<string, mixed> $def
+     * @param list<string> $teamsIds
+     * @param array<string, mixed> $triggerPayload
+     */
+    private function beginBatchStage(
+        Entity $run,
+        Entity $automation,
+        array $def,
+        int $stageIndex,
+        ?string $automationTenantId,
+        array $teamsIds,
+        array $triggerPayload,
+        User $actor,
+    ): void {
+        $stages = $this->batchStages($def);
+        if (!isset($stages[$stageIndex])) {
+            return;
+        }
+
+        $stage = $stages[$stageIndex];
+        $stageId = (string) ($stage['id'] ?? ('s' . $stageIndex));
+        $scope = (string) ($stage['scope'] ?? 'forEach');
+
+        $run->set('stageIndex', $stageIndex);
+        $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
+
+        if ($scope === 'once') {
+            $row = $this->buildOnceRow($automation, $def, $run, $triggerPayload, $actor);
+            $row = $this->applyImportRunBag($row, $run, $stage);
+            $count = $this->persistRunItems(
+                $run,
+                $automation,
+                [$row],
+                $automationTenantId,
+                $teamsIds,
+                $stageId,
+            );
+        } else {
+            $mapDef = [
+                'map' => $stage['map'] ?? [],
+                'limits' => $def['limits'] ?? [],
+            ];
+            $materializePayload = array_merge($triggerPayload, [
+                '_run' => $this->buildRunStats($run, $stageIndex, $stageId, $scope),
+                '_stageId' => $stageId,
+                '_stageIndex' => $stageIndex,
+            ]);
+            $rows = $this->mapMaterializer->materialize(
+                $mapDef,
+                $automationTenantId,
+                $materializePayload,
+                $actor,
+                $this->crossTenantAccess->isAuthorized($automation, $actor),
+            );
+            $importCfg = $this->runDataBag->normalizeImportConfig($stage['importRunBag'] ?? null);
+            if ($importCfg !== null) {
+                $bag = $this->runDataBag->read($run);
+                foreach ($rows as $i => $row) {
+                    $rows[$i] = $this->seedRowFromRunBag($row, $bag, $importCfg);
+                }
+            }
+            $count = $this->persistRunItems(
+                $run,
+                $automation,
+                $rows,
+                $automationTenantId,
+                $teamsIds,
+                $stageId,
+            );
+        }
+
+        $prev = (int) ($run->get('itemCount') ?? 0);
+        $run->set('itemCount', $prev + $count);
+        $this->entityManager->saveEntity($run, [SaveOption::SKIP_ALL => true]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @param list<string> $teamsIds
+     */
+    private function persistRunItems(
+        Entity $run,
+        Entity $automation,
+        array $rows,
+        ?string $automationTenantId,
+        array $teamsIds,
+        string $stageId,
+    ): int {
+        $count = 0;
+        foreach ($rows as $row) {
+            $item = $this->entityManager->getNewEntity(AutomationRunItem::ENTITY_TYPE);
+            $item->set([
+                'runId' => $run->getId(),
+                'automationId' => $automation->getId(),
+                'targetType' => $row['targetType'],
+                'targetId' => $row['targetId'],
+                'tenantId' => $row['tenantId'] ?? $automationTenantId,
+                'payload' => $row['payload'] ?? [],
+                'stageId' => $stageId,
+                'status' => AutomationRunItem::STATUS_PENDING,
+                'teamsIds' => $teamsIds,
+                'retryCount' => 0,
+            ]);
+
+            try {
+                $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
+                $count++;
+            } catch (Throwable $e) {
+                $this->log->warning('AutomationRunner item save: ' . $e->getMessage());
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * @param array<string, mixed> $def
+     * @param array<string, mixed> $triggerPayload
+     * @return array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>}
+     */
+    private function buildOnceRow(
+        Entity $automation,
+        array $def,
+        ?Entity $run,
+        array $triggerPayload,
+        User $actor,
+    ): array {
+        $tenantId = $automation->get('tenantId') ? (string) $automation->get('tenantId') : null;
+        if ($run && $run->get('tenantId')) {
+            $tenantId = (string) $run->get('tenantId');
+        }
+
+        $targetType = null;
+        $targetId = null;
+
+        if ($tenantId) {
+            $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
+            if ($tenant) {
+                $targetType = 'Tenant';
+                $targetId = $tenantId;
+            }
+        }
+
+        if ($targetType === null) {
+            $targetType = 'User';
+            $targetId = $actor->getId();
+        }
+
+        $stageIndex = $run ? (int) ($run->get('stageIndex') ?? 0) : 0;
+        $stages = $this->batchStages($def);
+        $stageId = (string) (($stages[$stageIndex]['id'] ?? null) ?: ('s' . $stageIndex));
+
+        $payload = [
+            '_trigger' => $triggerPayload,
+            '_scope' => 'once',
+            '_stageId' => $stageId,
+            '_stageIndex' => $stageIndex,
+            '_run' => $run
+                ? $this->buildRunStats($run, $stageIndex, $stageId, 'once')
+                : [
+                    'itemCount' => 0,
+                    'doneCount' => 0,
+                    'failedCount' => 0,
+                    'skippedCount' => 0,
+                    'stageIndex' => $stageIndex,
+                    'stageId' => $stageId,
+                    'scope' => 'once',
+                ],
+        ];
+
+        return [
+            'targetType' => $targetType,
+            'targetId' => $targetId,
+            'tenantId' => $tenantId,
+            'payload' => $payload,
+        ];
+    }
+
+    /**
+     * @param array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>} $row
+     * @param array<string, mixed> $stage
+     * @return array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>}
+     */
+    private function applyImportRunBag(array $row, Entity $run, array $stage): array
+    {
+        $importCfg = $this->runDataBag->normalizeImportConfig($stage['importRunBag'] ?? null);
+        if ($importCfg === null) {
+            return $row;
+        }
+
+        return $this->seedRowFromRunBag($row, $this->runDataBag->read($run), $importCfg);
+    }
+
+    /**
+     * @param array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>} $row
+     * @param array<string, mixed> $bag
+     * @param array{keys: list<string>|true, into: string, overwrite: bool} $importCfg
+     * @return array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>}
+     */
+    private function seedRowFromRunBag(array $row, array $bag, array $importCfg): array
+    {
+        $payload = $row['payload'] ?? [];
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+        $row['payload'] = $this->runDataBag->seedPayload(
+            $payload,
+            $bag,
+            $importCfg['keys'],
+            $importCfg['into'],
+            $importCfg['overwrite'],
+        );
+
+        return $row;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildRunStats(Entity $run, int $stageIndex, string $stageId, string $scope): array
+    {
+        return [
+            'runId' => (string) $run->getId(),
+            'itemCount' => (int) ($run->get('itemCount') ?? 0),
+            'doneCount' => (int) ($run->get('doneCount') ?? 0),
+            'failedCount' => (int) ($run->get('failedCount') ?? 0),
+            'skippedCount' => (int) ($run->get('skippedCount') ?? 0),
+            'stageIndex' => $stageIndex,
+            'stageId' => $stageId,
+            'scope' => $scope,
+        ];
+    }
+
+    private function tryAdvanceStageIndex(string $runId, int $from, int $to): bool
+    {
+        $update = $this->entityManager
+            ->getQueryBuilder()
+            ->update()
+            ->in(AutomationRun::ENTITY_TYPE)
+            ->set(['stageIndex' => $to])
+            ->where([
+                'id' => $runId,
+                'status' => AutomationRun::STATUS_RUNNING,
+                'stageIndex' => $from,
+            ])
+            ->build();
+
+        $sth = $this->entityManager->getQueryExecutor()->execute($update);
+
+        return $sth->rowCount() > 0;
+    }
+
+    /**
+     * @param array<string, mixed> $def
+     * @return list<array<string, mixed>>
+     */
+    private function batchStages(array $def): array
+    {
+        $stages = $def['stages'] ?? null;
+        if (is_array($stages) && $stages !== []) {
+            $out = [];
+            foreach ($stages as $s) {
+                if (is_array($s)) {
+                    $out[] = $s;
+                }
+            }
+
+            return $out;
+        }
+
+        // Fallback if validation not applied
+        if (!empty($def['map']) && is_array($def['map'])) {
+            return [[
+                'id' => 's0',
+                'scope' => 'forEach',
+                'map' => $def['map'],
+                'actions' => $def['actions'] ?? [],
+                'onFailure' => $def['onFailure'] ?? [],
+                'itemMode' => $def['itemMode'] ?? 'allMatching',
+            ]];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<string, mixed> $def
+     * @return array<string, mixed>|null
+     */
+    private function firstStage(array $def): ?array
+    {
+        $stages = $this->batchStages($def);
+
+        return $stages[0] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $def
+     * @return array<string, mixed>
+     */
+    private function stageForItem(array $def, Entity $item): array
+    {
+        $stages = $this->batchStages($def);
+        $stageId = (string) ($item->get('stageId') ?? '');
+
+        if ($stageId !== '') {
+            foreach ($stages as $st) {
+                if ((string) ($st['id'] ?? '') === $stageId) {
+                    return $st;
+                }
+            }
+        }
+
+        $idx = 0;
+        // Prefer stageIndex from run if accessible via payload
+        $payload = $this->normalizePayload($item->get('payload'));
+        if (isset($payload['_stageIndex'])) {
+            $idx = (int) $payload['_stageIndex'];
+        }
+
+        return $stages[$idx] ?? ($stages[0] ?? [
+            'actions' => $def['actions'] ?? [],
+            'onFailure' => $def['onFailure'] ?? [],
+            'itemMode' => $def['itemMode'] ?? 'allMatching',
+            'scope' => 'forEach',
+            'id' => 's0',
+        ]);
+    }
+
     private function touchAutomationAfterRun(Entity $automation, string $lastStatus): void
     {
         $scheduling = (string) ($automation->get('scheduling') ?? '');
@@ -886,7 +1414,9 @@ class AutomationRunner
         ) {
             $next = $this->scheduleHelper->nextRunAt(
                 $scheduling,
-                (string) ($automation->get('timezone') ?: 'UTC')
+                (string) ($automation->get('timezone') ?: 'UTC'),
+                null,
+                $this->getScheduleStartAt($automation),
             );
         }
 
@@ -902,6 +1432,24 @@ class AutomationRunner
 
         $automation->set($patch);
         $this->entityManager->saveEntity($automation, [SaveOption::SKIP_ALL => true]);
+    }
+
+    private function getScheduleStartAt(Entity $automation): ?\DateTimeImmutable
+    {
+        foreach (['activatedAt', 'createdAt'] as $field) {
+            $value = $automation->get($field);
+            if (!$value) {
+                continue;
+            }
+
+            try {
+                return new \DateTimeImmutable((string) $value, new \DateTimeZone('UTC'));
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     private function wakeWaitingItems(): void
@@ -958,25 +1506,110 @@ class AutomationRunner
     /**
      * @param array<string, mixed> $def
      * @param array<string, mixed> $triggerPayload
-     * @return list<array{targetType: ?string, targetId: ?string, tenantId: ?string, payload: array<string, mixed>}>
+     * @return list<array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>}>
      */
     private function materializeMachineItems(
+        Entity $automation,
         array $def,
         ?string $automationTenantId,
         array $triggerPayload,
+        User $actor,
     ): array {
         $type = (string) ($triggerPayload['entityType'] ?? '');
         $id = (string) ($triggerPayload['entityId'] ?? '');
 
-        if ($type === '' || $id === '') {
-            throw new Error('Machine run requires triggerPayload.entityType and entityId.');
+        if ($type !== '' && $id !== '') {
+            return [$this->machineItemFromSubject(
+                $type,
+                $id,
+                $automationTenantId,
+                $triggerPayload,
+                $def,
+                $actor,
+            )];
         }
 
+        // Schedule / bulk path: materialize subjects from subjectEntityType + filter.
+        $type = $this->triggerFilterEvaluator->resolveSubjectEntityType($automation);
+        if ($type === '') {
+            throw new Error(
+                'Machine run requires triggerPayload.entityType and entityId, '
+                . 'or subjectEntityType with a filter for schedule/bulk runs.'
+            );
+        }
+
+        $limits = is_array($def['limits'] ?? null) ? $def['limits'] : [];
+        $maxItems = (int) ($limits['maxItems'] ?? 500);
+        $maxItems = max(1, min(2000, $maxItems));
+
+        $subjects = $this->triggerFilterEvaluator->findMatchingSubjects(
+            $automation,
+            $type,
+            $automationTenantId,
+            $maxItems,
+            $triggerPayload,
+            $actor,
+            $this->crossTenantAccess->isAuthorized($automation, $actor),
+        );
+
+        $items = [];
+        foreach ($subjects as $target) {
+            $items[] = $this->machineItemFromEntity(
+                $target,
+                $automationTenantId,
+                array_merge($triggerPayload, [
+                    'entityType' => $target->getEntityType(),
+                    'entityId' => $target->getId(),
+                ]),
+                $def,
+            );
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param array<string, mixed> $triggerPayload
+     * @param array<string, mixed> $def
+     * @return array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>}
+     */
+    private function machineItemFromSubject(
+        string $type,
+        string $id,
+        ?string $automationTenantId,
+        array $triggerPayload,
+        array $def,
+        User $actor,
+    ): array {
         $target = $this->entityManager->getEntityById($type, $id);
         if (!$target) {
             throw new Error("Machine subject {$type}/{$id} not found.");
         }
 
+        try {
+            if (!$this->aclManager->createUserAcl($actor)->check($target, 'read')) {
+                throw new Error("Machine subject {$type}/{$id} not readable by run-as user.");
+            }
+        } catch (Error $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw new Error("Machine subject {$type}/{$id} ACL check failed: " . $e->getMessage());
+        }
+
+        return $this->machineItemFromEntity($target, $automationTenantId, $triggerPayload, $def);
+    }
+
+    /**
+     * @param array<string, mixed> $triggerPayload
+     * @param array<string, mixed> $def
+     * @return array{targetType: string, targetId: string, tenantId: ?string, payload: array<string, mixed>}
+     */
+    private function machineItemFromEntity(
+        Entity $target,
+        ?string $automationTenantId,
+        array $triggerPayload,
+        array $def,
+    ): array {
         $tenantId = $automationTenantId;
         if (!$tenantId && $target->hasAttribute('tenantId') && $target->get('tenantId')) {
             $tenantId = (string) $target->get('tenantId');
@@ -986,16 +1619,16 @@ class AutomationRunner
             $this->tenantGuard->assertEntityTenant($target, $tenantId, 'machine-subject');
         }
 
-        return [[
-            'targetType' => $type,
-            'targetId' => $id,
+        return [
+            'targetType' => $target->getEntityType(),
+            'targetId' => (string) $target->getId(),
             'tenantId' => $tenantId,
             'payload' => [
                 '_trigger' => $triggerPayload,
                 '_state' => $def['initial'] ?? null,
                 '_depth' => (int) ($triggerPayload['_depth'] ?? 0),
             ],
-        ]];
+        ];
     }
 
     /**

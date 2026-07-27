@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureJourney\Services;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Htmlizer\TemplateRendererFactory;
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
 use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
@@ -15,22 +16,39 @@ use Espo\ORM\EntityManager;
 use Throwable;
 
 /**
- * Shared WhatsApp send path for journey stage actions (Chatwoot-backed).
+ * Shared WhatsApp send path for journey/automation actions (Chatwoot-backed).
  *
- * Credentials come from ChatwootInbox → Account → Platform.
- * Templates go through ChatwootApiClient::sendTemplateMessage (Cloud/Coexistence).
- * Free text uses sendOutgoingMessage (WAHA QR, Cloud session, Coexistence companion).
+ * Free-text (`sendWhatsAppMessage`) channels:
+ *   - whatsappCloudApi
+ *   - whatsappCoexistence
+ *   - whatsappQrcode (WAHA)
+ *
+ * Templates (`sendWhatsAppTemplate`) are Meta-only:
+ *   - whatsappCloudApi
+ *   - whatsappCoexistence
+ *
+ * Credentials: ChatwootInbox → Account → Platform.
+ * Free text → ChatwootApiClient::sendOutgoingMessage.
+ * Templates → ChatwootApiClient::sendTemplateMessage.
  */
 class JourneyWhatsAppOutbound
 {
-    /** @var list<string> */
+    /**
+     * Free-text outbound allow-list (Cloud + Coexistence + QR/WAHA).
+     *
+     * @var list<string>
+     */
     public const CHANNELS_MESSAGE = [
         'whatsappQrcode',
         'whatsappCloudApi',
         'whatsappCoexistence',
     ];
 
-    /** @var list<string> */
+    /**
+     * Meta template allow-list (no WAHA QR templates).
+     *
+     * @var list<string>
+     */
     public const CHANNELS_TEMPLATE = [
         'whatsappCloudApi',
         'whatsappCoexistence',
@@ -60,11 +78,13 @@ class JourneyWhatsAppOutbound
         string $chatwootInboxId,
         string $tenantId,
         array $allowedChannels,
+        ?User $actor = null,
     ): array {
         $inbox = $this->tenantGuard->assertChatwootInboxAllowedForSending(
             $chatwootInboxId,
             $tenantId,
             $allowedChannels,
+            $actor,
         );
 
         $channelType = (string) ($inbox->get('channelType') ?? '');

@@ -5,8 +5,11 @@
         "rows": [
             [{"name": "name"}, {"name": "status"}],
             [{"name": "kind"}, {"name": "triggerType"}],
-            [{"name": "scheduling"}, {"name": "timezone"}],
-            [{"name": "subjectEntityType"}, {"name": "entityTypeFilter"}],
+            [{"name": "scheduling", "fullWidth": true}],
+            [{"name": "timezone"}, false],
+            [{"name": "subjectEntityType"}, false],
+            [{"name": "entityTypeFilter", "fullWidth": true}],
+            [{"name": "entityTypeFilterFormula", "fullWidth": true}],
             [{"name": "signalCodes", "fullWidth": true}],
             [{"name": "triggerDebouncePeriod"}, false],
             [{"name": "description", "fullWidth": true}]

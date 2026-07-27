@@ -8,7 +8,7 @@
         "JourneyStage": "Journey step",
         "JourneyStageAction": "Journey action",
         "JourneyTransition": "Journey connection",
-        "JourneyRecord": "Person in journey",
+        "JourneyRecord": "Journey enrollment",
         "JourneyRecordLog": "Journey history entry"
     },
     "scopeNamesPlural": {
@@ -16,7 +16,7 @@
         "JourneyStage": "Journey steps",
         "JourneyStageAction": "Journey actions",
         "JourneyTransition": "Journey connections",
-        "JourneyRecord": "People in journeys",
+        "JourneyRecord": "Journey enrollments",
         "JourneyRecordLog": "Journey history"
     }
 }

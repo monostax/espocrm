@@ -324,37 +324,54 @@ define("feature-journey:helpers/transition-rules", [], function () {
         return sa <= sb ? a : b;
     }
 
+    /**
+     * Duration in seconds, or null when unparseable.
+     *
+     * Accepts English and pt-BR unit words so a rule typed as "3 dias" scores the same
+     * as "3 days". Mirrors PeriodParser.php — keep the alias table in sync with:
+     *   custom/Espo/Modules/FeatureJourney/Services/PeriodParser.php
+     *   client/custom/modules/feature-journey/src/views/fields/period.js
+     */
     function scorePeriod(p) {
         if (!p || typeof p !== "string") {
             return null;
         }
 
-        const m = p
-            .trim()
-            .match(
-                /^(\d+)\s*(second|seconds|minute|minutes|hour|hours|day|days|week|weeks)$/i
-            );
+        const m = p.trim().match(/^(\d+)\s*([A-Za-zÀ-ÿ]+)$/);
 
         if (!m) {
             return null;
         }
 
-        const n = parseInt(m[1], 10);
-        const u = m[2].toLowerCase();
+        const u = m[2]
+            .replace(/[áàãâÁÀÃÂ]/g, "a")
+            .replace(/[éêÉÊ]/g, "e")
+            .replace(/[íÍ]/g, "i")
+            .replace(/[óôõÓÔÕ]/g, "o")
+            .replace(/[úÚ]/g, "u")
+            .replace(/[çÇ]/g, "c")
+            .toLowerCase();
+
         const mult = {
-            second: 1,
-            seconds: 1,
-            minute: 60,
-            minutes: 60,
-            hour: 3600,
-            hours: 3600,
-            day: 86400,
-            days: 86400,
-            week: 604800,
-            weeks: 604800,
+            // English
+            second: 1, seconds: 1,
+            minute: 60, minutes: 60,
+            hour: 3600, hours: 3600,
+            day: 86400, days: 86400,
+            week: 604800, weeks: 604800,
+            // pt-BR
+            segundo: 1, segundos: 1,
+            minuto: 60, minutos: 60,
+            hora: 3600, horas: 3600,
+            dia: 86400, dias: 86400,
+            semana: 604800, semanas: 604800,
         };
 
-        return n * (mult[u] || 0);
+        if (!mult[u]) {
+            return null;
+        }
+
+        return parseInt(m[1], 10) * mult[u];
     }
 
     return {

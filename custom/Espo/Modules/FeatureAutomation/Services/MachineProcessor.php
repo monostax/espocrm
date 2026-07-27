@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureAutomation\Services;
 
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Services\PeriodParser;
 use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\ORM\Entity;
@@ -12,7 +13,7 @@ use Throwable;
 
 /**
  * Advances Machine automation items: onEnter/onExit, when-gated transitions,
- * waitPeriod on state or transition, join fan-in, final termination.
+ * waitPeriod / waitUntil on state or transition, join fan-in, final termination.
  *
  * Payload keys:
  *  - _state, _enteredStateAt, _wakeAt, _pendingTo, _onEnterDone, _machineLog, _machineSteps
@@ -26,6 +27,7 @@ class MachineProcessor
         private AutomationActionRunner $actionRunner,
         private JoinCoordinator $joinCoordinator,
         private PeriodParser $periodParser,
+        private WakeAtResolver $wakeAtResolver,
         private RestrictedFormulaRunner $formulaRunner,
         private Log $log,
     ) {}
@@ -48,8 +50,9 @@ class MachineProcessor
         Entity $target,
         string $tenantId,
         array $payload,
+        ?User $actor = null,
     ): array {
-        return $this->advance($def, $automation, $run, $item, $target, $tenantId, $payload, false);
+        return $this->advance($def, $automation, $run, $item, $target, $tenantId, $payload, false, $actor);
     }
 
     /**
@@ -70,11 +73,12 @@ class MachineProcessor
         Entity $target,
         string $tenantId,
         array $payload,
+        ?User $actor = null,
     ): array {
         $run = $automation; // unused placeholder for signature parity
         $item = $automation;
 
-        return $this->advance($def, $automation, $run, $item, $target, $tenantId, $payload, true);
+        return $this->advance($def, $automation, $run, $item, $target, $tenantId, $payload, true, $actor);
     }
 
     /**
@@ -96,6 +100,7 @@ class MachineProcessor
         string $tenantId,
         array $payload,
         bool $dryRun,
+        ?User $actor = null,
     ): array {
         $states = $this->indexStates($def['states'] ?? []);
         $transitions = is_array($def['transitions'] ?? null) ? $def['transitions'] : [];
@@ -166,6 +171,7 @@ class MachineProcessor
                             'onExit',
                             $stateId,
                             $dryRun,
+                            $actor,
                         );
                         $log = array_merge($log, $exitLog['log']);
                         if (!$exitLog['ok']) {
@@ -244,6 +250,7 @@ class MachineProcessor
                         'onEnter',
                         $stateId,
                         $dryRun,
+                        $actor,
                     );
                     $log = array_merge($log, $enterLog['log']);
                     if (!$enterLog['ok']) {
@@ -312,11 +319,6 @@ class MachineProcessor
             }
 
             if ($type === 'wait' && empty($payload['_onEnterDone'])) {
-                $period = trim((string) ($state['waitPeriod'] ?? ''));
-                if ($period === '') {
-                    return $this->fail($payload, $log, $steps, "Wait state '{$stateId}' missing waitPeriod");
-                }
-
                 $enterLog = $this->runSide(
                     $state['onEnter'] ?? [],
                     $automation,
@@ -328,6 +330,7 @@ class MachineProcessor
                     'onEnter',
                     $stateId,
                     $dryRun,
+                    $actor,
                 );
                 $log = array_merge($log, $enterLog['log']);
                 if (!$enterLog['ok']) {
@@ -342,16 +345,36 @@ class MachineProcessor
                     return ['status' => 'Waiting', 'payload' => $payload, 'log' => $log];
                 }
 
-                if ($dryRun) {
-                    $log[] = ['state' => $stateId, 'status' => 'would_wait', 'period' => $period];
+                $resolved = $this->resolveWaitClock(
+                    $state,
+                    $target,
+                    $item,
+                    $automation,
+                    $tenantId,
+                    $payload,
+                    "Wait state '{$stateId}'",
+                );
+                if (isset($resolved['error'])) {
+                    return $this->fail($payload, $log, $steps, $resolved['error']);
+                }
+
+                if ($resolved['mode'] === 'elapsed') {
+                    $log[] = [
+                        'state' => $stateId,
+                        'status' => $dryRun ? 'would_wait_elapsed' : 'wait_elapsed',
+                        'wakeAt' => $resolved['wakeAt'] ?? null,
+                    ];
+                    $payload['_onEnterDone'] = true;
+                } elseif ($dryRun) {
+                    $log[] = [
+                        'state' => $stateId,
+                        'status' => 'would_wait',
+                        'period' => $resolved['period'] ?? null,
+                        'wakeAt' => $resolved['wakeAt'] ?? null,
+                    ];
                     $payload['_onEnterDone'] = true;
                 } else {
-                    try {
-                        $payload['_wakeAt'] = $this->periodParser->addToNow($period);
-                    } catch (Throwable $e) {
-                        return $this->fail($payload, $log, $steps, 'waitPeriod: ' . $e->getMessage());
-                    }
-
+                    $payload['_wakeAt'] = $resolved['wakeAt'];
                     $payload['_onEnterDone'] = true;
                     $payload['_state'] = $stateId;
                     $payload['_enteredStateAt'] = date('Y-m-d H:i:s');
@@ -361,6 +384,7 @@ class MachineProcessor
                         'state' => $stateId,
                         'status' => 'waiting',
                         'wakeAt' => $payload['_wakeAt'],
+                        'period' => $resolved['period'] ?? null,
                     ];
 
                     return ['status' => 'Waiting', 'payload' => $payload, 'log' => $log];
@@ -379,6 +403,7 @@ class MachineProcessor
                     'onEnter',
                     $stateId,
                     $dryRun,
+                    $actor,
                 );
                 $log = array_merge($log, $enterLog['log']);
                 if (!$enterLog['ok']) {
@@ -424,28 +449,41 @@ class MachineProcessor
             }
 
             $to = (string) $match['to'];
-            $waitPeriod = trim((string) ($match['waitPeriod'] ?? ''));
+            $hasClockWait = trim((string) ($match['waitPeriod'] ?? '')) !== ''
+                || trim((string) ($match['waitUntil'] ?? '')) !== ''
+                || trim((string) ($match['waitUntilFormula'] ?? '')) !== '';
 
-            if ($waitPeriod !== '') {
-                if ($dryRun) {
+            if ($hasClockWait) {
+                $resolved = $this->resolveWaitClock(
+                    $match,
+                    $target,
+                    $item,
+                    $automation,
+                    $tenantId,
+                    $payload,
+                    'transition wait',
+                );
+                if (isset($resolved['error'])) {
+                    return $this->fail($payload, $log, $steps, $resolved['error']);
+                }
+
+                if ($resolved['mode'] === 'elapsed') {
+                    $log[] = [
+                        'from' => $stateId,
+                        'to' => $to,
+                        'status' => $dryRun ? 'would_wait_transition_elapsed' : 'wait_transition_elapsed',
+                        'wakeAt' => $resolved['wakeAt'] ?? null,
+                    ];
+                } elseif ($dryRun) {
                     $log[] = [
                         'from' => $stateId,
                         'to' => $to,
                         'status' => 'would_wait_transition',
-                        'period' => $waitPeriod,
+                        'period' => $resolved['period'] ?? null,
+                        'wakeAt' => $resolved['wakeAt'] ?? null,
                     ];
                 } else {
-                    try {
-                        $payload['_wakeAt'] = $this->periodParser->addToNow($waitPeriod);
-                    } catch (Throwable $e) {
-                        return $this->fail(
-                            $payload,
-                            $log,
-                            $steps,
-                            'transition waitPeriod: ' . $e->getMessage()
-                        );
-                    }
-
+                    $payload['_wakeAt'] = $resolved['wakeAt'];
                     $payload['_pendingTo'] = $to;
                     $payload['_state'] = $stateId;
                     $payload['_machineLog'] = $log;
@@ -455,6 +493,7 @@ class MachineProcessor
                         'to' => $to,
                         'status' => 'waiting_transition',
                         'wakeAt' => $payload['_wakeAt'],
+                        'period' => $resolved['period'] ?? null,
                     ];
 
                     return ['status' => 'Waiting', 'payload' => $payload, 'log' => $log];
@@ -472,6 +511,7 @@ class MachineProcessor
                 'onExit',
                 $stateId,
                 $dryRun,
+                $actor,
             );
             $log = array_merge($log, $exitLog['log']);
             if (!$exitLog['ok']) {
@@ -603,6 +643,7 @@ class MachineProcessor
         string $side,
         string $stateId,
         bool $dryRun,
+        ?User $actor = null,
     ): array {
         if ($actions === []) {
             return ['ok' => true, 'log' => [['state' => $stateId, 'side' => $side, 'status' => 'empty']]];
@@ -618,6 +659,7 @@ class MachineProcessor
             $payload,
             'allMatching',
             $dryRun,
+            $actor,
         );
 
         $tagged = [];
@@ -653,6 +695,95 @@ class MachineProcessor
             'log' => $tagged,
             'payload' => $result['payload'] ?? $payload,
         ];
+    }
+
+    /**
+     * Resolve relative waitPeriod or absolute waitUntil into a wake plan.
+     *
+     * @param array<string, mixed> $spec
+     * @param array<string, mixed> $payload
+     * @return array{
+     *   mode: 'wait'|'elapsed',
+     *   wakeAt?: string,
+     *   period?: string,
+     *   error?: string
+     * }
+     */
+    private function resolveWaitClock(
+        array $spec,
+        Entity $target,
+        Entity $item,
+        Entity $automation,
+        string $tenantId,
+        array $payload,
+        string $ctx,
+    ): array {
+        $period = trim((string) ($spec['waitPeriod'] ?? ''));
+        $until = trim((string) ($spec['waitUntil'] ?? ''));
+        $untilFormula = trim((string) ($spec['waitUntilFormula'] ?? ''));
+        $tz = trim((string) ($spec['waitUntilTimezone'] ?? ''));
+
+        if ($period !== '') {
+            try {
+                $wakeAt = $this->periodParser->addToNow($period);
+            } catch (Throwable $e) {
+                return ['mode' => 'wait', 'error' => "{$ctx} waitPeriod: " . $e->getMessage()];
+            }
+
+            return ['mode' => 'wait', 'wakeAt' => $wakeAt, 'period' => $period];
+        }
+
+        if ($untilFormula !== '') {
+            try {
+                $variables = (object) [
+                    'automationId' => $automation->getId(),
+                    'runItemId' => $item->getId(),
+                    'tenantId' => $tenantId,
+                    'payload' => json_decode(json_encode($payload) ?: '{}'),
+                    'state' => $payload['_state'] ?? null,
+                ];
+                $evaluated = $this->formulaRunner->run(
+                    $untilFormula,
+                    $target,
+                    $variables,
+                    RestrictedFormulaRunner::MODE_CONDITION,
+                );
+                if ($evaluated === null || $evaluated === false || $evaluated === '') {
+                    return [
+                        'mode' => 'wait',
+                        'error' => "{$ctx}: waitUntilFormula returned empty value",
+                    ];
+                }
+                $until = is_scalar($evaluated) ? trim((string) $evaluated) : '';
+                if ($until === '') {
+                    return [
+                        'mode' => 'wait',
+                        'error' => "{$ctx}: waitUntilFormula returned empty value",
+                    ];
+                }
+            } catch (Throwable $e) {
+                return [
+                    'mode' => 'wait',
+                    'error' => "{$ctx} waitUntilFormula: " . $e->getMessage(),
+                ];
+            }
+        }
+
+        if ($until === '') {
+            return ['mode' => 'wait', 'error' => "{$ctx}: missing waitPeriod or waitUntil"];
+        }
+
+        try {
+            $wakeAt = $this->wakeAtResolver->toUtcSql($until, $tz !== '' ? $tz : null);
+        } catch (Throwable $e) {
+            return ['mode' => 'wait', 'error' => "{$ctx} waitUntil: " . $e->getMessage()];
+        }
+
+        if (strtotime($wakeAt) <= time()) {
+            return ['mode' => 'elapsed', 'wakeAt' => $wakeAt];
+        }
+
+        return ['mode' => 'wait', 'wakeAt' => $wakeAt];
     }
 
     /**

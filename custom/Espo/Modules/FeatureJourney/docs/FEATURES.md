@@ -87,17 +87,23 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 
 | Action | Tier | Description |
 |---|---|---|
-| createTask | tenant | Create Task linked/teamed appropriately |
+| createTask | tenant | Create Task linked/teamed; stamps tenantId + journey teams |
+| createRecord | tenant | Generic create (allow-listed entity types); stamps tenant + teams; field allow-list |
+| createRelatedRecord | tenant | Create on target relation; same stamp + field allow-list |
 | sendEmail | tenant | Send via tenant Group/Personal SMTP account only (no system SMTP); recipient allow-checks |
 | sendWhatsAppMessage | tenant | Free-text WhatsApp via Chatwoot (WAHA QR / Cloud / Coexistence); optional Meta template fallback when 24h window closed |
 | sendWhatsAppTemplate | tenant | Meta template + parameter mapping (WhatsAppCampaign style); Cloud/Coexistence only |
-| notifyUser | tenant | In-app user notification |
+| notifyUser | tenant | In-app user notification (user must be in tenant) |
+| makeFollowed | tenant | Stream follow for specified tenant users only |
 | updateTarget | tenant | Patch target fields via allow-list + c* columns + CustomField bag merge |
+| updateRelatedRecord | tenant | Patch related records (same-tenant only) via same field allow-list |
+| linkRecord | tenant | Relate target ↔ foreign only when foreign is same-tenant |
+| unlinkRecord | tenant | Unrelate with same-tenant foreign assert |
+| applyAssignmentRule | tenant | Round-Robin / Least-Busy within a tenant team; listReportId blocked |
 | executeFormula | tenant | Restricted MODE_ACTION formula |
+| sendHttpRequest | tenant | HTTP egress; URL prefix allow-list + SSRF host blocks (empty prefix list = disabled) |
 | recordTrackingEvent | tenant | Emit Tracking event when module present |
 | runScript | platform | Allow-listed PHP invokable |
-| triggerWorkflow | platform | Advanced Workflow bridge |
-| startBpmnProcess | platform | Advanced BPM bridge |
 
 ---
 
@@ -170,6 +176,10 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 | Role seeding | tenant-base read vs tenant-admin author |
 | Platform allow-lists | Scripts + evaluators metadata lists |
 | updateTarget allow-list | Per-entity field lists + c* prefix + CustomField bag (`customFields.<valueKey>`) |
+| createRecord allow-list | `app.journeyCreateRecord.entityTypeList` + fields; always stamp tenantId + tenant teams |
+| Related / link guards | Foreign entities must `entityBelongsToTenant`; skip foreign rows |
+| Assignment | Team must be in tenant teams; report-based assignee blocked |
+| HTTP egress | `app.journeyHttpRequest` prefix allow-list + blocked hosts/private IPs (fail-closed) |
 | Email recipient checks | Tenant-safe destination filtering |
 | Ambiguity policy | Skip ambiguous tenant resolution (no cross-tenant guess) |
 
@@ -221,7 +231,7 @@ Jobs registered via metadata + `SeedScheduledJobs` rebuild.
 |---|---|
 | Module order | 29 (after FeatureTrackingEvent 28) |
 | jsTranspiled | Client module `feature-journey` |
-| Optional hard deps | None — Tracking & Advanced are soft |
+| Optional hard deps | None — Tracking is soft |
 | Rebuild required | clear-cache + rebuild seeds jobs/navbar/roles |
 
 ---

@@ -43,41 +43,64 @@ class TenantFromTeamsSync
             return;
         }
 
-        $teamIds = [];
+        $preferred = [];
 
         foreach ($preferredTeamIds as $teamId) {
             $normalized = $this->normalizeNullableString($teamId);
 
-            if ($normalized !== null) {
-                $teamIds[] = $normalized;
+            if ($normalized !== null && !in_array($normalized, $preferred, true)) {
+                $preferred[] = $normalized;
             }
         }
+
+        $entityTeamIds = [];
 
         if ($entity instanceof CoreEntity && $entity->hasLinkMultipleField('teams')) {
             foreach ($entity->getLinkMultipleIdList('teams') as $teamId) {
                 $normalized = $this->normalizeNullableString($teamId);
 
-                if ($normalized !== null && !in_array($normalized, $teamIds, true)) {
-                    $teamIds[] = $normalized;
+                if ($normalized !== null && !in_array($normalized, $entityTeamIds, true)) {
+                    $entityTeamIds[] = $normalized;
                 }
             }
         }
 
-        if ($teamIds === []) {
+        if ($preferred === [] && $entityTeamIds === []) {
             // No team and no tenant — let required validators raise normally.
             return;
         }
 
-        $tenantId = $this->tenantResolver->resolveFromTeamIds($teamIds);
+        // Resolve tier by tier so an explicit ownership team (e.g. Funnel.teamId)
+        // still decides the tenant even when the broader `teams` ACL list spans
+        // more. Within a tier, ambiguity is refused rather than guessed:
+        // stamping an arbitrary one of several tenants silently misfiles the
+        // record and is unrecoverable afterwards. Mirrors
+        // TeamTenantAccess::deriveTenantId(), the other derivation path.
+        foreach ([$preferred, $entityTeamIds] as $tier) {
+            if ($tier === []) {
+                continue;
+            }
 
-        if (!$tenantId) {
-            throw new BadRequest(
-                "Cannot determine tenant for this {$entityLabel} from its team. "
-                . 'Ensure the team belongs to exactly one Tenant (as baseUserTeam or otherUserTeam).'
-            );
+            $tenantIds = $this->tenantResolver->resolveAllFromTeamIds($tier);
+
+            if (count($tenantIds) > 1) {
+                throw new BadRequest(
+                    "Cannot determine tenant for this {$entityLabel}: its teams belong to more than one Tenant "
+                    . '(' . implode(', ', $tenantIds) . '). Assign teams from a single Tenant.'
+                );
+            }
+
+            if (isset($tenantIds[0])) {
+                $entity->set('tenantId', $tenantIds[0]);
+
+                return;
+            }
         }
 
-        $entity->set('tenantId', $tenantId);
+        throw new BadRequest(
+            "Cannot determine tenant for this {$entityLabel} from its team. "
+            . 'Ensure the team belongs to exactly one Tenant (as baseUserTeam or otherUserTeam).'
+        );
     }
 
     private function normalizeNullableString(mixed $value): ?string

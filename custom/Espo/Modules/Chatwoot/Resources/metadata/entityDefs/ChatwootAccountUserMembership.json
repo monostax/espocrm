@@ -106,6 +106,12 @@
             "default": false,
             "tooltip": true
         },
+        "whatsappMessageTemplates": {
+            "type": "jsonArray",
+            "tooltip": true,
+            "view": "chatwoot:views/account-user-membership/fields/whatsapp-message-templates",
+            "comment": "Allow-list of WhatsApp Cloud/Coexistence message templates this AI may send (name+language+inbox). Used by send_message_template when the 24h session window is closed."
+        },
         "transferScenarios": {
             "type": "text",
             "rowsMin": 10

@@ -104,17 +104,20 @@ class DeliveryWebhook
         }
 
         if ($event === 'message_created') {
-            return $this->handleMessageCreated($data, $accountId);
+            return $this->handleMessageCreated($data, $accountId, $account->getId());
         }
 
-        return $this->handleMessageUpdated($data, $accountId);
+        return $this->handleMessageUpdated($data, $accountId, $account->getId());
     }
 
     /**
      * Handle `message_created` — detect incoming replies to campaign conversations.
      * Only the first reply per contact is tracked.
+     *
+     * @param string $accountId Chatwoot-side numeric account ID (for logging).
+     * @param string $espoAccountId EspoCRM ChatwootAccount ID the signature authenticated.
      */
-    private function handleMessageCreated(object $data, string $accountId): stdClass
+    private function handleMessageCreated(object $data, string $accountId, string $espoAccountId): stdClass
     {
         $messageType = $data->message_type ?? null;
 
@@ -135,9 +138,16 @@ class DeliveryWebhook
             return (object) ['success' => true, 'message' => 'No conversation ID in payload.'];
         }
 
+        // Chatwoot conversation display_id is only unique WITHIN an account and
+        // restarts at 1 per account, so it must never be resolved without also
+        // constraining to the account the HMAC signature authenticated. Matches
+        // the `accountConversation` composite index.
         $campaignContact = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignContact')
-            ->where(['chatwootConversationId' => $conversationId])
+            ->where([
+                'chatwootConversationId' => $conversationId,
+                'chatwootAccountId' => $espoAccountId,
+            ])
             ->findOne();
 
         if (!$campaignContact) {
@@ -173,8 +183,11 @@ class DeliveryWebhook
 
     /**
      * Handle `message_updated` — delivery/read/failed status changes.
+     *
+     * @param string $accountId Chatwoot-side numeric account ID (for logging).
+     * @param string $espoAccountId EspoCRM ChatwootAccount ID the signature authenticated.
      */
-    private function handleMessageUpdated(object $data, string $accountId): stdClass
+    private function handleMessageUpdated(object $data, string $accountId, string $espoAccountId): stdClass
     {
         $messageId = isset($data->id) ? (string) $data->id : null;
 
@@ -182,9 +195,14 @@ class DeliveryWebhook
             return (object) ['success' => true, 'message' => 'No message ID in payload.'];
         }
 
+        // Chatwoot message IDs are per-account sequential, so they collide across
+        // accounts. Constrain to the account the HMAC signature authenticated.
         $campaignContact = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignContact')
-            ->where(['chatwootMessageId' => $messageId])
+            ->where([
+                'chatwootMessageId' => $messageId,
+                'chatwootAccountId' => $espoAccountId,
+            ])
             ->findOne();
 
         if (!$campaignContact) {

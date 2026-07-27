@@ -21,7 +21,7 @@ Enroll Contacts, Accounts, or Leads into staged journeys; move them with signals
 | Order | 29 |
 | Namespace | `Espo\Modules\FeatureJourney` |
 | Client | `client/custom/modules/feature-journey/` |
-| Soft peers | FeatureTrackingEvent (signals), Advanced (workflow/BPM actions) |
+| Soft peers | FeatureTrackingEvent (signals) |
 
 ## Quick links (in-app)
 
@@ -38,5 +38,32 @@ Audience → JourneyRecord (Entry)
         → OnExit actions → stage move → OnEnter actions
         → JourneyRecordLog + counters + optional Tracking lifecycle events
 ```
+
+## Run-as User / ACL
+
+Journeys never run as the system user for ACL/authorship. Each enrollment snapshots a **runAsUser**:
+
+| Source | When |
+|--------|------|
+| Journey.`runAsUser` | Preferred |
+| Activating clicker | Review & Publish when no runAs configured and user is eligible |
+| Journey.`createdBy` | Fallback if still an active eligible user |
+
+- `JourneyRecord.runAsUserId` is durable for transitions / OnEnter–OnExit jobs.
+- Entity filters use `SelectBuilder::forUser` + access-control filter.
+- Create-record actions stamp `createdById` from the actor; TenantGuard still applies.
+
+### Who can be selected
+
+The `runAsUser` field tooltip is intentionally one line; the full rule lives here.
+
+| Editing user | Selectable users |
+|--------------|------------------|
+| Espo admin | Any user |
+| Tenant admin | Users in the workspace |
+| Regular user | Themselves only |
+
+Required unless `createdBy` is still an active eligible user. Snapshotted onto each
+`JourneyRecord` at enroll time. Enforced by `Hooks/Journey/ValidateRunAsUser.php`.
 
 After deploy: `php command.php clear-cache && php command.php rebuild` (seeds jobs, navbar, roles).

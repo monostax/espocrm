@@ -10,11 +10,11 @@
         "tenant": "Workspace",
         "teams": "Teams",
         "actions": "Actions",
-        "fromTransitions": "Transitions"
+        "fromTransitions": "Connections"
     },
     "links": {
         "actions": "Actions",
-        "fromTransitions": "Transitions"
+        "fromTransitions": "Connections"
     },
     "options": {
         "stageType": {
@@ -25,7 +25,7 @@
         }
     },
     "tooltips": {
-        "stageType": "Entry = where people start. Success / Exit = end of the flow. Step = anything in between.",
+        "stageType": "Entry = where records start. Success / Exit = end of the flow. Step = anything in between.",
         "maxDuration": "Optional time limit in this step before timeout handling applies.",
         "order": "Display order in the flow. Lower numbers appear first.",
         "style": "Color of this step on the flow board."

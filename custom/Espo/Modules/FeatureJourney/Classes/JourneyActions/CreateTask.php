@@ -46,12 +46,15 @@ class CreateTask implements Action
             'assignedUserId' => $assignedUserId,
             'parentType' => $context->target->getEntityType(),
             'parentId' => $context->target->getId(),
-            'teamsIds' => $teamsIds,
         ]);
+        $this->tenantGuard->stampNewEntity($task, $tenantId, $teamsIds);
+
+        $createdById = $context->actor?->getId() ?: 'system';
 
         $this->entityManager->saveEntity($task, [
             SaveOption::SILENT => true,
             'skipJourneyDispatch' => true,
+            SaveOption::CREATED_BY_ID => $createdById,
         ]);
     }
 }

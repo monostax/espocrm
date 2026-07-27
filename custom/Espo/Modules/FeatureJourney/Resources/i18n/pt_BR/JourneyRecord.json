@@ -4,7 +4,7 @@
     },
     "fields": {
         "journey": "Jornada",
-        "target": "Pessoa",
+        "target": "Alvo",
         "currentStage": "Etapa atual",
         "status": "Status",
         "enteredStageAt": "Entrou na etapa em",
@@ -14,7 +14,8 @@
         "exitReason": "Saiu porque",
         "tenant": "Workspace",
         "teams": "Equipes",
-        "logs": "Histórico"
+        "logs": "Histórico",
+        "runAsUser": "Executar como usuário"
     },
     "options": {
         "status": {
@@ -27,9 +28,9 @@
         }
     },
     "messages": {
-        "confirmExit": "Remover esta pessoa da jornada? Ela para de avançar. O histórico fica (status → Saiu cedo). Isso não apaga o contato.",
+        "confirmExit": "Remover este registro da jornada? Ele para de avançar. O histórico fica (status → Saiu cedo). Isso não apaga o registro em si.",
         "exiting": "Saindo da jornada…",
-        "exited": "Pessoa saiu da jornada",
+        "exited": "Registro saiu da jornada",
         "failedToExit": "Não foi possível sair da jornada"
     },
     "presetFilters": {

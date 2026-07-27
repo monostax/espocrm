@@ -15,15 +15,25 @@ declare(strict_types=1);
 namespace Espo\Modules\Global\Hooks\CustomFieldDef;
 
 use Espo\Core\Hook\Hook\BeforeSave;
-use Espo\Core\ORM\Entity as CoreEntity;
-use Espo\Core\Utils\Log;
+use Espo\Modules\Global\Services\TeamTenantAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /**
- * Derives tenantId from the def's selected teams, falling back to the
- * linked group's tenant when teams do not resolve.
+ * Derives tenantId from the def's selected teams, falling back to the linked
+ * group's tenant when teams do not resolve.
+ *
+ * Resolution lives in TeamTenantAccess, which matches a tenant's base user team
+ * AND its other user teams. Matching only the base team used to leave a null
+ * tenant for legitimate secondary-team assignments, which made the field vanish
+ * from meta / template / import responses: MetaProvider filters on
+ * `tenantId = <tenant>`, and no SQL equality matches NULL.
+ *
+ * Ambiguity is deliberately non-strict here: unlike the other tenant-scoped
+ * config entities, this one has a legitimate disambiguator in the linked group,
+ * so teams spanning several tenants fall through to the group's tenant instead
+ * of refusing the save.
  *
  * @implements BeforeSave<Entity>
  */
@@ -32,8 +42,8 @@ class AssignTenantFromTeam implements BeforeSave
     public static int $order = 9;
 
     public function __construct(
+        private TeamTenantAccess $teamTenantAccess,
         private EntityManager $entityManager,
-        private Log $log,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
@@ -46,70 +56,41 @@ class AssignTenantFromTeam implements BeforeSave
             return;
         }
 
-        $teamIds = $this->resolveTeamIds($entity);
+        $tenantId = $this->teamTenantAccess->deriveTenantId(
+            $entity,
+            'custom field',
+            strictAmbiguity: false,
+        );
 
-        if ($teamIds !== []) {
-            $tenants = $this->entityManager
-                ->getRDBRepository('Tenant')
-                ->where(['baseUserTeamId' => $teamIds])
-                ->find();
+        if ($tenantId !== null) {
+            $entity->set('tenantId', $tenantId);
 
-            $tenantIds = [];
-
-            foreach ($tenants as $tenant) {
-                $tenantIds[$tenant->getId()] = true;
-            }
-
-            if (count($tenantIds) === 1) {
-                $entity->set('tenantId', array_key_first($tenantIds));
-
-                return;
-            }
-
-            if (count($tenantIds) > 1) {
-                $this->log->warning(
-                    'AssignTenantFromTeam: CustomFieldDef ' . ($entity->getId() ?? '(new)') .
-                    ' resolves to multiple tenants; leaving tenant unset.'
-                );
-            }
+            return;
         }
 
+        $groupTenantId = $this->resolveGroupTenantId($entity);
+
+        if ($groupTenantId !== null) {
+            $entity->set('tenantId', $groupTenantId);
+        }
+    }
+
+    private function resolveGroupTenantId(Entity $entity): ?string
+    {
         $groupId = $entity->get('groupId');
 
         if (!is_string($groupId) || $groupId === '') {
-            return;
+            return null;
         }
 
         $group = $this->entityManager->getEntityById('CustomFieldGroup', $groupId);
 
-        if ($group && $group->get('tenantId')) {
-            $entity->set('tenantId', $group->get('tenantId'));
-        }
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function resolveTeamIds(Entity $entity): array
-    {
-        if ($entity instanceof CoreEntity) {
-            try {
-                $ids = $entity->getLinkMultipleIdList('teams');
-
-                if (is_array($ids) && $ids !== []) {
-                    return array_values(array_unique($ids));
-                }
-            } catch (\Throwable) {
-                // fall through
-            }
+        if (!$group) {
+            return null;
         }
 
-        $teamsIds = $entity->get('teamsIds');
+        $tenantId = $group->get('tenantId');
 
-        if (is_array($teamsIds) && $teamsIds !== []) {
-            return array_values(array_unique($teamsIds));
-        }
-
-        return [];
+        return is_string($tenantId) && $tenantId !== '' ? $tenantId : null;
     }
 }

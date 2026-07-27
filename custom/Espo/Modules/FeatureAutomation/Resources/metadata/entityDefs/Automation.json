@@ -30,14 +30,16 @@
             "required": true
         },
         "scheduling": {
-            "type": "varchar",
-            "maxLength": 64,
+            "type": "text",
+            "view": "feature-automation:views/fields/scheduling",
+            "height": 80,
             "tooltip": true
         },
         "timezone": {
-            "type": "varchar",
-            "maxLength": 64,
-            "default": "America/Sao_Paulo"
+            "type": "enum",
+            "view": "views/preferences/fields/time-zone",
+            "default": "America/Sao_Paulo",
+            "required": false
         },
         "subjectEntityType": {
             "type": "enum",
@@ -45,9 +47,42 @@
             "default": ""
         },
         "entityTypeFilter": {
-            "type": "varchar",
-            "maxLength": 64,
+            "type": "jsonObject",
+            "view": "feature-automation:views/fields/entity-type-filter",
             "tooltip": true
+        },
+        "entityTypeFilterFormula": {
+            "type": "text",
+            "view": "views/fields/formula",
+            "tooltip": true,
+            "height": 160,
+            "allowedFunctionList": [
+                "ifThen",
+                "ifThenElse",
+                "string\\",
+                "number\\",
+                "datetime\\",
+                "logical\\",
+                "comparison\\",
+                "entity\\attribute",
+                "entity\\isAttributeChanged",
+                "entity\\isNew",
+                "entity\\attributeFetched",
+                "util\\empty",
+                "json\\retrieve",
+                "json\\encode",
+                "object\\get",
+                "object\\create",
+                "object\\cloneDeep",
+                "array\\includes",
+                "array\\length",
+                "array\\at",
+                "array\\push",
+                "array\\join",
+                "list",
+                "bundle",
+                "assign"
+            ]
         },
         "signalCodes": {
             "type": "array",
@@ -71,6 +106,12 @@
         "tenant": {
             "type": "link",
             "view": "views/fields/link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "crossTenant": {
+            "type": "bool",
+            "default": false,
             "tooltip": true
         },
         "lastRunAt": {
@@ -114,6 +155,11 @@
             "readOnly": true,
             "view": "views/fields/user"
         },
+        "runAsUser": {
+            "type": "link",
+            "view": "global:views/fields/run-as-user",
+            "tooltip": true
+        },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams"
@@ -128,6 +174,10 @@
             "type": "belongsTo",
             "entity": "Tenant",
             "foreign": "automations"
+        },
+        "runAsUser": {
+            "type": "belongsTo",
+            "entity": "User"
         },
         "createdBy": {
             "type": "belongsTo",

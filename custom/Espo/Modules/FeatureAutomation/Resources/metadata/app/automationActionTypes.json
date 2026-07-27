@@ -1,15 +1,28 @@
 {
     "typeList": [
         "createTask",
+        "createRecord",
+        "createRelatedRecord",
         "sendEmail",
         "sendWhatsAppMessage",
         "sendWhatsAppTemplate",
         "notifyUser",
+        "makeFollowed",
         "executeFormula",
         "updateTarget",
+        "updateRelatedRecord",
+        "linkRecord",
+        "unlinkRecord",
+        "applyAssignmentRule",
+        "sendHttpRequest",
         "recordTrackingEvent",
         "startChildAutomation",
-        "waitJoin"
+        "waitJoin",
+        "waitUntil",
+        "runReport",
+        "setPayload",
+        "assign",
+        "exportToRunBag"
     ],
     "types": {
         "createTask": {
@@ -21,6 +34,23 @@
                 {"name": "description", "type": "text", "label": "Description"},
                 {"name": "status", "type": "enum", "label": "Status", "options": ["Not Started", "Started", "Completed", "Canceled", "Deferred"], "default": "Not Started"},
                 {"name": "priority", "type": "enum", "label": "Priority", "options": ["Low", "Normal", "High", "Urgent"], "default": "Normal"}
+            ]
+        },
+        "createRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateRecord",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "entityType", "type": "enum", "label": "Record type", "options": ["Task", "Case", "Meeting", "Call", "Opportunity", "Note", "Contact", "Lead", "Account"], "required": true},
+                {"name": "fields", "type": "json", "label": "Fields JSON"},
+                {"name": "linkToTarget", "type": "varchar", "label": "Link name to target (optional)"}
+            ]
+        },
+        "createRelatedRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateRelatedRecord",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "link", "type": "varchar", "label": "Relation link", "required": true},
+                {"name": "fields", "type": "json", "label": "Fields JSON"}
             ]
         },
         "sendEmail": {
@@ -37,7 +67,7 @@
             "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\SendWhatsAppMessage",
             "tier": "tenant",
             "paramDefs": [
-                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox", "nameKey": "chatwootInboxName", "required": true},
+                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox (Cloud / Coexistence / QR WAHA)", "nameKey": "chatwootInboxName", "required": true},
                 {"name": "body", "type": "text", "label": "Message body", "required": true},
                 {"name": "phone", "type": "varchar", "label": "Phone override (optional)"}
             ]
@@ -46,7 +76,7 @@
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendWhatsAppTemplate",
             "tier": "tenant",
             "paramDefs": [
-                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox", "nameKey": "chatwootInboxName", "required": true},
+                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox (Cloud / Coexistence)", "nameKey": "chatwootInboxName", "required": true},
                 {"name": "templateName", "type": "varchar", "label": "Template name", "required": true},
                 {"name": "templateLanguage", "type": "varchar", "label": "Language", "default": "pt_BR"},
                 {"name": "templateCategory", "type": "enum", "label": "Category", "options": ["UTILITY", "MARKETING", "AUTHENTICATION"], "default": "UTILITY"},
@@ -61,6 +91,13 @@
                 {"name": "message", "type": "text", "label": "Message", "required": true}
             ]
         },
+        "makeFollowed": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\MakeFollowed",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "userIds", "type": "json", "label": "Follower user IDs JSON array", "required": true}
+            ]
+        },
         "executeFormula": {
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ExecuteFormula",
             "tier": "tenant",
@@ -73,6 +110,51 @@
             "tier": "tenant",
             "paramDefs": [
                 {"name": "fields", "type": "json", "label": "Fields (JSON object)"}
+            ]
+        },
+        "updateRelatedRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UpdateRelatedRecord",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "link", "type": "varchar", "label": "Relation link", "required": true},
+                {"name": "fields", "type": "json", "label": "Fields JSON"},
+                {"name": "relatedId", "type": "varchar", "label": "Related id (optional)"}
+            ]
+        },
+        "linkRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\LinkRecord",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "link", "type": "varchar", "label": "Relation link", "required": true},
+                {"name": "entityId", "type": "varchar", "label": "Foreign id", "required": true}
+            ]
+        },
+        "unlinkRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UnlinkRecord",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "link", "type": "varchar", "label": "Relation link", "required": true},
+                {"name": "entityId", "type": "varchar", "label": "Foreign id"}
+            ]
+        },
+        "applyAssignmentRule": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ApplyAssignmentRule",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "assignmentRule", "type": "enum", "label": "Rule", "options": ["Round-Robin", "Least-Busy"], "default": "Round-Robin"},
+                {"name": "targetTeamId", "type": "link", "entity": "Team", "label": "Team", "nameKey": "targetTeamName", "required": true},
+                {"name": "targetUserPosition", "type": "varchar", "label": "Team role (optional)"}
+            ]
+        },
+        "sendHttpRequest": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendHttpRequest",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "requestUrl", "type": "varchar", "label": "URL", "required": true},
+                {"name": "requestType", "type": "enum", "label": "Method", "options": ["GET", "POST", "PUT", "PATCH"], "default": "POST"},
+                {"name": "contentType", "type": "enum", "label": "Content-Type", "options": ["", "application/json", "application/x-www-form-urlencoded"], "default": "application/json"},
+                {"name": "content", "type": "text", "label": "Body"},
+                {"name": "headers", "type": "json", "label": "Headers JSON array"}
             ]
         },
         "recordTrackingEvent": {
@@ -99,6 +181,58 @@
             "paramDefs": [
                 {"name": "mode", "type": "enum", "label": "Join mode", "options": ["waitAll", "waitAny"], "default": "waitAll"},
                 {"name": "timeoutPeriod", "type": "varchar", "label": "Timeout period", "default": "2 hours"}
+            ]
+        },
+        "waitUntil": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\WaitUntil",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "at", "type": "varchar", "label": "Wait until (datetime)", "placeholder": "2026-08-01 14:00:00", "required": true},
+                {"name": "timezone", "type": "varchar", "label": "Timezone (if at has no offset)", "placeholder": "America/Sao_Paulo", "default": "UTC"}
+            ]
+        },
+        "runReport": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\RunReport",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "reportId", "type": "link", "entity": "Report", "label": "Report", "nameKey": "reportName", "required": true},
+                {"name": "as", "type": "varchar", "label": "Store as (payload path)", "default": "report", "placeholder": "report", "required": true},
+                {"name": "mode", "type": "enum", "label": "Run mode", "options": ["auto", "list", "grid"], "default": "auto"},
+                {"name": "maxRows", "type": "varchar", "label": "Max rows (list)", "default": "500", "placeholder": "500"},
+                {"name": "period", "type": "enum", "label": "Period filter", "options": ["none", "currentDay", "previousDay", "currentWeek", "previousWeek", "currentMonth", "previousMonth"], "default": "none"},
+                {"name": "periodField", "type": "varchar", "label": "Period date field", "placeholder": "createdAt"},
+                {"name": "scopeAiAgentConversations", "type": "bool", "label": "Scope to AI-touched conversations (Opportunity ↔ Chatwoot via AI Agent Run period)", "default": false},
+                {"name": "timezone", "type": "varchar", "label": "Period timezone", "default": "America/Sao_Paulo", "placeholder": "America/Sao_Paulo"},
+                {"name": "where", "type": "json", "label": "Extra where (JSON)"}
+            ]
+        },
+        "setPayload": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\SetPayload",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "path", "type": "varchar", "label": "Payload path", "placeholder": "vars.digest", "required": true},
+                {"name": "value", "type": "text", "label": "Value", "required": true},
+                {"name": "merge", "type": "bool", "label": "Merge objects", "default": false},
+                {"name": "assignments", "type": "json", "label": "Assignments JSON (optional multi)"}
+            ]
+        },
+        "assign": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\SetPayload",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "path", "type": "varchar", "label": "Payload path", "placeholder": "vars.digest", "required": true},
+                {"name": "value", "type": "text", "label": "Value", "required": true},
+                {"name": "merge", "type": "bool", "label": "Merge objects", "default": false},
+                {"name": "assignments", "type": "json", "label": "Assignments JSON (optional multi)"}
+            ]
+        },
+        "exportToRunBag": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\ExportToRunBag",
+            "tier": "tenant",
+            "paramDefs": [
+                {"name": "keys", "type": "varchar", "label": "Keys to export (comma list, empty = all)", "placeholder": "report,conversations,leadTime"},
+                {"name": "mode", "type": "enum", "label": "Write mode", "options": ["merge", "replace"], "default": "merge"},
+                {"name": "path", "type": "varchar", "label": "Single payload path (optional)", "placeholder": "report"}
             ]
         }
     }

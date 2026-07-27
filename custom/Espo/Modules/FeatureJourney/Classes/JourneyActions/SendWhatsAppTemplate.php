@@ -71,6 +71,7 @@ class SendWhatsAppTemplate implements Action
             $inboxId,
             $tenantId,
             JourneyWhatsAppOutbound::CHANNELS_TEMPLATE,
+            $context->actor,
         );
 
         $mapping = $params['parameterMapping'] ?? [];

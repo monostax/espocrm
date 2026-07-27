@@ -10,11 +10,11 @@
         "tenant": "Workspace",
         "teams": "Equipes",
         "actions": "Ações",
-        "fromTransitions": "Transições"
+        "fromTransitions": "Conexões"
     },
     "links": {
         "actions": "Ações",
-        "fromTransitions": "Transições"
+        "fromTransitions": "Conexões"
     },
     "options": {
         "stageType": {
@@ -25,8 +25,8 @@
         }
     },
     "tooltips": {
-        "stageType": "Entrada = onde as pessoas começam. Sucesso / Saída = fim do fluxo. Etapa = o meio do caminho.",
-        "maxDuration": "Limite opcional de tempo nesta etapa antes do tratamento de tempo esgotado.",
+        "stageType": "Entrada = onde os registros começam. Sucesso / Saída = fim do fluxo. Etapa = o meio do caminho.",
+        "maxDuration": "Limite opcional de tempo nesta etapa antes do tratamento de tempo esgotado. Ex.: 3 dias, 12 horas.",
         "order": "Ordem de exibição no fluxo. Números menores aparecem primeiro.",
         "style": "Cor desta etapa no quadro do fluxo."
     }

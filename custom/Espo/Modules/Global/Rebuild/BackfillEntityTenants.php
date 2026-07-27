@@ -118,7 +118,23 @@ class BackfillEntityTenants implements RebuildAction
                 continue;
             }
 
-            $tenantId = $this->tenantResolver->resolveFromTeamIds($teamIds);
+            $tenantIds = $this->tenantResolver->resolveAllFromTeamIds($teamIds);
+
+            if (count($tenantIds) > 1) {
+                // Skip rather than guess: a backfill that stamps an arbitrary
+                // one of several tenants writes an unrecoverable wrong answer
+                // across the tenancy boundary. Leaving tenant_id NULL is
+                // fail-closed on read paths and stays visible for repair.
+                $this->log->warning(
+                    "Global Module: {$entityType} '{$entity->getId()}' — teams span multiple Tenants ("
+                    . implode(', ', $tenantIds) . '); refusing to guess. Fix the team assignment.'
+                );
+                $skipped++;
+
+                continue;
+            }
+
+            $tenantId = $tenantIds[0] ?? null;
 
             if (!$tenantId) {
                 $this->log->warning(

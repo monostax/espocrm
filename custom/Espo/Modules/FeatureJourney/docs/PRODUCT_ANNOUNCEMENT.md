@@ -47,7 +47,7 @@ Until now, engagement paths were either campaigns (send once) or opaque platform
 - Every journey belongs to a **Tenant** (derived from Teams) — cross-tenant signal matching never happens.
 - Journey Records and Logs **delegate ACL** to the parent Journey.
 - Formula and target updates run behind a **restricted formula runner**, **update-target allow-list**, **tenant guard**, and **effect-depth cap** (no runaway nested effects).
-- Platform-only hooks (`runScript`, custom evaluators, Advanced workflow/BPM) require **superadmin + allow-lists**.
+- Platform-only hooks (`runScript`, custom evaluators) require **superadmin + allow-lists**.
 
 ---
 
@@ -64,7 +64,6 @@ Until now, engagement paths were either campaigns (send once) or opaque platform
 
 - **FeatureTrackingEvent** — Tracking codes become journey *signals*; lifecycle codes (`journey_enrolled`, `journey_stage_entered`, `journey_completed`, `journey_goal_reached`) flow back into the event ledger when Tracking is installed.
 - **Target Lists** — same audience model as WhatsApp / email campaigns.
-- **Advanced (optional)** — `triggerWorkflow` / `startBpmnProcess` actions when Advanced is present.
 - **Funnels / Opportunity stages** — complementary: Funnels drive sales stages; Journeys orchestrate *who does what next* across Contacts, Accounts, and Leads.
 
 ---

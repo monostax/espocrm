@@ -14,7 +14,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureMetaLeadAds\Services;
 
 use Espo\Core\Utils\Log;
-use Espo\ORM\EntityManager;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver as GlobalTenantResolver;
 
 /**
  * Reusable Team → Tenant resolver for the Meta Lead Ads ingestion pipeline.
@@ -32,14 +32,17 @@ use Espo\ORM\EntityManager;
  *   - >1 match  → null + warning (ambiguous — the page would belong to
  *                 multiple tenants; refuse to guess).
  *
- * This service is intentionally narrow — it does NOT also look at
- * `Tenant.otherUserTeams` because the canonical "owns" relationship is
- * `baseUserTeam`. That matches the hook's behavior exactly.
+ * The team -> tenant edge is delegated to the canonical Global TenantResolver,
+ * which matches a tenant's base user team AND its other user teams. This used to
+ * consider only `baseUserTeam`, justified as matching the hook exactly — but the
+ * hook (MetaFacebookPage\AssignTenantFromTeam) now resolves through
+ * TeamTenantAccess and counts both, so base-team-only would silently disagree
+ * with the derivation it is supposed to mirror.
  */
 class TenantResolver
 {
     public function __construct(
-        private EntityManager $entityManager,
+        private GlobalTenantResolver $globalTenantResolver,
         private Log $log,
     ) {}
 
@@ -57,16 +60,7 @@ class TenantResolver
             return null;
         }
 
-        $tenants = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => $teamIds])
-            ->find();
-
-        $tenantIds = [];
-
-        foreach ($tenants as $tenant) {
-            $tenantIds[$tenant->getId()] = true;
-        }
+        $tenantIds = $this->globalTenantResolver->resolveAllFromTeamIds($teamIds);
 
         if (count($tenantIds) === 0) {
             return null;
@@ -81,6 +75,6 @@ class TenantResolver
             return null;
         }
 
-        return array_key_first($tenantIds);
+        return $tenantIds[0];
     }
 }

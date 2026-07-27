@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureJourney\Services;
 
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyRecord;
 use Espo\Modules\FeatureJourney\Entities\JourneyRecordLog;
@@ -29,6 +30,7 @@ class TransitionExecutor
         private ActionRunner $actionRunner,
         private JourneyLifecycleEmitter $lifecycleEmitter,
         private TenantGuard $tenantGuard,
+        private JourneyRunIdentity $identity,
         private Log $log,
     ) {}
 
@@ -81,15 +83,17 @@ class TransitionExecutor
                 $evalSignal['firedBy'] = $firedBy;
             }
 
-            if (!$this->evaluator->evaluate($record, $transition, $evalSignal)) {
+            $journey = $this->entityManager->getEntityById(Journey::ENTITY_TYPE, (string) $record->get('journeyId'));
+
+            if (!$journey || $journey->get('status') !== Journey::STATUS_ACTIVE) {
                 $this->releaseClaim($record);
 
                 return false;
             }
 
-            $journey = $this->entityManager->getEntityById(Journey::ENTITY_TYPE, (string) $record->get('journeyId'));
+            $actor = $this->identity->fromRecord($record, $journey);
 
-            if (!$journey || $journey->get('status') !== Journey::STATUS_ACTIVE) {
+            if (!$this->evaluator->evaluate($record, $transition, $evalSignal, $actor)) {
                 $this->releaseClaim($record);
 
                 return false;
@@ -149,6 +153,7 @@ class TransitionExecutor
                     $target,
                     $record,
                     $journey,
+                    $actor,
                 );
 
                 if (!$exitResult['ok']) {
@@ -177,6 +182,7 @@ class TransitionExecutor
                 $target,
                 $record,
                 $journey,
+                $actor,
             );
 
             if (!$enterResult['ok']) {
@@ -202,7 +208,7 @@ class TransitionExecutor
             }
 
             $this->handleTerminalStage($record, $journey, $toStage, $tenantId, $target);
-            $this->checkGoal($record, $journey, $target, $tenantId, $signal);
+            $this->checkGoal($record, $journey, $target, $tenantId, $signal, $actor);
 
             return true;
         } catch (Throwable $e) {
@@ -418,7 +424,8 @@ class TransitionExecutor
         }
 
         $tenantId = (string) ($record->get('tenantId') ?: $journey->get('tenantId') ?: '');
-        $this->checkGoal($record, $journey, $target, $tenantId, $signal);
+        $actor = $this->identity->fromRecord($record, $journey);
+        $this->checkGoal($record, $journey, $target, $tenantId, $signal, $actor);
     }
 
     /**
@@ -430,6 +437,7 @@ class TransitionExecutor
         Entity $target,
         string $tenantId,
         ?array $signal,
+        ?User $actor = null,
     ): void {
         if (!in_array($record->get('status'), [JourneyRecord::STATUS_ACTIVE, JourneyRecord::STATUS_COMPLETED], true)) {
             // already exited/failed
@@ -461,7 +469,7 @@ class TransitionExecutor
                         : $filter,
                 ]);
 
-                if ($this->evaluator->evaluate($record, $fakeTransition, $signal)) {
+                if ($this->evaluator->evaluate($record, $fakeTransition, $signal, $actor)) {
                     $matched = true;
                 }
             }

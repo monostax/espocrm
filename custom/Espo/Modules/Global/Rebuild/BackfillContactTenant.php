@@ -26,6 +26,7 @@ namespace Espo\Modules\Global\Rebuild;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\ORM\EntityManager;
 use Throwable;
 
@@ -49,6 +50,7 @@ class BackfillContactTenant implements RebuildAction
 
     public function __construct(
         private EntityManager $entityManager,
+        private TenantResolver $tenantResolver,
         private Log $log,
     ) {}
 
@@ -108,7 +110,7 @@ class BackfillContactTenant implements RebuildAction
                     continue;
                 }
 
-                $tenantId = $this->resolveTenantIdFromTeam($teamId);
+                $tenantId = $this->tenantResolver->resolveFromTeamId($teamId);
 
                 if ($tenantId) {
                     break;
@@ -155,27 +157,5 @@ class BackfillContactTenant implements RebuildAction
         $this->log->info(
             "Global Module: Contact.tenantId backfill complete. Updated: {$updated}, Skipped: {$skipped}."
         );
-    }
-
-    private function resolveTenantIdFromTeam(string $teamId): ?string
-    {
-        $tenantByBase = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->select(['id'])
-            ->where(['baseUserTeamId' => $teamId])
-            ->findOne();
-
-        if ($tenantByBase) {
-            return $tenantByBase->getId();
-        }
-
-        $tenantByOther = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->select(['id'])
-            ->join('otherUserTeams', 'otherUserTeams')
-            ->where(['otherUserTeamsMiddle.teamId' => $teamId])
-            ->findOne();
-
-        return $tenantByOther?->getId();
     }
 }

@@ -13,6 +13,7 @@ namespace Espo\Modules\Chatwoot\Jobs;
 
 use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
+use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
@@ -58,17 +59,35 @@ class ProcessWahaLabelWebhook implements Job
             return;
         }
 
-        $teamsIds = $channel->getLinkMultipleIdList('teams');
-        $teamId = $teamsIds[0] ?? null;
-        if (!$teamId) {
-            $this->log->warning("ProcessWahaLabelWebhook: Channel {$channelId} has no teams, ACL may be bypassed");
+        $teamIds = [];
+
+        if ($channel instanceof CoreEntity && $channel->hasLinkMultipleField('teams')) {
+            foreach ($channel->getLinkMultipleIdList('teams') as $id) {
+                if (is_string($id) && $id !== '' && !in_array($id, $teamIds, true)) {
+                    $teamIds[] = $id;
+                }
+            }
+        }
+
+        // Fail closed. `teams` is the only scoping this job has: every lookup
+        // below matches on a WhatsApp phone number, which is not tenant-unique.
+        // Processing a teamless channel ran those queries unscoped, so a label
+        // event could reassign or relabel another tenant's conversation that
+        // happened to share a phone number.
+        if ($teamIds === []) {
+            $this->log->error(
+                "ProcessWahaLabelWebhook: Channel {$channelId} has no teams; refusing to process "
+                . "{$event} because conversation lookups cannot be scoped."
+            );
+
+            return;
         }
 
         try {
             if ($event === 'label.chat.added') {
-                $this->handleLabelAdded($payload, $channel, $teamId);
+                $this->handleLabelAdded($payload, $channel, $teamIds);
             } elseif ($event === 'label.chat.deleted') {
-                $this->handleLabelDeleted($payload, $channel, $teamId);
+                $this->handleLabelDeleted($payload, $channel, $teamIds);
             } else {
                 $this->log->warning("ProcessWahaLabelWebhook: Unknown event type: {$event}");
             }
@@ -83,9 +102,9 @@ class ProcessWahaLabelWebhook implements Job
      *
      * @param object $payload
      * @param Entity $channel
-     * @param string|null $teamId
+     * @param list<string> $teamIds Non-empty; scopes every lookup.
      */
-    private function handleLabelAdded(object $payload, Entity $channel, ?string $teamId): void
+    private function handleLabelAdded(object $payload, Entity $channel, array $teamIds): void
     {
         // WAHA payload format: { labelId: "6", chatId: "123@c.us", label: { id: "6", ... } }
         // Note: label can be null right after scanning QR code
@@ -101,17 +120,14 @@ class ProcessWahaLabelWebhook implements Job
 
         $this->log->warning("ProcessWahaLabelWebhook: Label {$labelId} added to chat {$chatId}");
 
-        // Find WahaSessionLabel by wahaLabelId and teamId
+        // Find WahaSessionLabel by wahaLabelId and team
         $wahaSessionLabelQuery = $this->entityManager
             ->getRDBRepository('WahaSessionLabel')
             ->where([
                 'wahaLabelId' => (string) $labelId,
                 'inboxIntegrationId' => $channel->getId(),
+                'teamId' => $teamIds,
             ]);
-
-        if ($teamId) {
-            $wahaSessionLabelQuery->where(['teamId' => $teamId]);
-        }
 
         $wahaSessionLabel = $wahaSessionLabelQuery->findOne();
 
@@ -143,7 +159,7 @@ class ProcessWahaLabelWebhook implements Job
         $chatwootInboxId = $this->getChatwootInboxIdFromChannel($channel);
         $this->log->warning("ProcessWahaLabelWebhook: Looking for conversation with phone {$phoneNumber} in inbox {$chatwootInboxId}");
         
-        $conversation = $this->findConversationByPhone($phoneNumber, $chatwootInboxId, $teamId);
+        $conversation = $this->findConversationByPhone($phoneNumber, $chatwootInboxId, $teamIds);
         if (!$conversation) {
             $this->log->warning("ProcessWahaLabelWebhook: No conversation found for phone {$phoneNumber} in inbox {$chatwootInboxId}");
             return;
@@ -172,9 +188,9 @@ class ProcessWahaLabelWebhook implements Job
      *
      * @param object $payload
      * @param Entity $channel
-     * @param string|null $teamId
+     * @param list<string> $teamIds Non-empty; scopes every lookup.
      */
-    private function handleLabelDeleted(object $payload, Entity $channel, ?string $teamId): void
+    private function handleLabelDeleted(object $payload, Entity $channel, array $teamIds): void
     {
         // WAHA payload format: { labelId: "6", chatId: "123@c.us", label: null }
         // Note: label can be null, so we must use labelId field directly
@@ -196,11 +212,8 @@ class ProcessWahaLabelWebhook implements Job
             ->where([
                 'wahaLabelId' => (string) $labelId,
                 'inboxIntegrationId' => $channel->getId(),
+                'teamId' => $teamIds,
             ]);
-
-        if ($teamId) {
-            $wahaSessionLabelQuery->where(['teamId' => $teamId]);
-        }
 
         $wahaSessionLabel = $wahaSessionLabelQuery->findOne();
 
@@ -232,7 +245,7 @@ class ProcessWahaLabelWebhook implements Job
         $chatwootInboxId = $this->getChatwootInboxIdFromChannel($channel);
         $this->log->warning("ProcessWahaLabelWebhook: Looking for conversation with phone {$phoneNumber} in inbox {$chatwootInboxId}");
         
-        $conversation = $this->findConversationByPhone($phoneNumber, $chatwootInboxId, $teamId);
+        $conversation = $this->findConversationByPhone($phoneNumber, $chatwootInboxId, $teamIds);
         if (!$conversation) {
             $this->log->warning("ProcessWahaLabelWebhook: No conversation found for phone {$phoneNumber} in inbox {$chatwootInboxId}");
             return;
@@ -348,11 +361,17 @@ class ProcessWahaLabelWebhook implements Job
      *
      * @param string $phoneNumber
      * @param int|null $chatwootInboxId Filter by specific inbox (session)
-     * @param string|null $teamId Filter by team for ACL
+     * @param list<string> $teamIds Non-empty. Mandatory scope — a phone number
+     *        is not tenant-unique, so an unscoped match can return another
+     *        tenant's conversation.
      * @return Entity|null
      */
-    private function findConversationByPhone(string $phoneNumber, ?int $chatwootInboxId, ?string $teamId): ?Entity
+    private function findConversationByPhone(string $phoneNumber, ?int $chatwootInboxId, array $teamIds): ?Entity
     {
+        if ($teamIds === []) {
+            return null;
+        }
+
         // Try to find by contactPhoneNumber
         $whereConditions = [
             'OR' => [
@@ -371,11 +390,9 @@ class ProcessWahaLabelWebhook implements Job
             ->getRDBRepository('ChatwootConversation')
             ->where($whereConditions);
 
-        // Filter by team for ACL (teams is a linkMultiple via entityTeam junction)
-        if ($teamId) {
-            $query->join('teams');
-            $query->where(['teams.id' => $teamId]);
-        }
+        // Mandatory team scope (teams is a linkMultiple via entityTeam junction).
+        $query->join('teams');
+        $query->where(['teams.id' => $teamIds]);
 
         return $query->findOne();
     }

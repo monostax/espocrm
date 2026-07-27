@@ -8,8 +8,10 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
+use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Classes\JourneyActions\Action as JourneyAction;
 use Espo\Modules\FeatureJourney\Services\ActionContext as JourneyActionContext;
+use Espo\Modules\FeatureJourney\Services\FormulaReadScope;
 use Espo\Modules\FeatureJourney\Services\PeriodParser;
 use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
@@ -20,7 +22,7 @@ use Throwable;
 
 /**
  * Runs action lists for one AutomationRunItem.
- * Supports dry-run planning, waitJoin fan-in, and action idempotency/debounce.
+ * Supports dry-run planning, waitJoin / waitUntil parks, and action idempotency/debounce.
  */
 class AutomationActionRunner
 {
@@ -33,6 +35,7 @@ class AutomationActionRunner
         private ActionReceiptStore $receiptStore,
         private JoinCoordinator $joinCoordinator,
         private PeriodParser $periodParser,
+        private WakeAtResolver $wakeAtResolver,
         private Log $log,
     ) {}
 
@@ -58,6 +61,7 @@ class AutomationActionRunner
         array $payload,
         string $itemMode = 'allMatching',
         bool $dryRun = false,
+        ?User $actor = null,
     ): array {
         $log = [];
         $matchedOnce = false;
@@ -68,7 +72,7 @@ class AutomationActionRunner
 
             if (is_string($when) && trim($when) !== '') {
                 try {
-                    $pass = $this->evalWhen($when, $target, $item, $automation, $tenantId, $payload);
+                    $pass = $this->evalWhen($when, $target, $item, $automation, $tenantId, $payload, $actor);
                 } catch (Throwable $e) {
                     $log[] = [
                         'index' => $index,
@@ -131,6 +135,7 @@ class AutomationActionRunner
                     $automation,
                     $tenantId,
                     $payload,
+                    $actor,
                 );
             } catch (Throwable $e) {
                 $log[] = [
@@ -182,8 +187,77 @@ class AutomationActionRunner
                 continue;
             }
 
-            // —— dry-run: plan only ——
+            // —— waitUntil special path ——
+            if ($type === 'waitUntil') {
+                $untilResult = $this->handleWaitUntil($params, $payload, $item, $dryRun);
+                $payload = $untilResult['payload'];
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => $untilResult['status'],
+                    'wakeAt' => $untilResult['wakeAt'],
+                ];
+
+                if ($untilResult['waiting']) {
+                    return [
+                        'ok' => true,
+                        'log' => $log,
+                        'waiting' => true,
+                        'wakeAt' => $untilResult['wakeAt'],
+                        'payload' => $payload,
+                    ];
+                }
+
+                if (!$untilResult['ok']) {
+                    if (!(bool) ($action['continueOnError'] ?? false)) {
+                        return [
+                            'ok' => false,
+                            'log' => $log,
+                            'error' => $untilResult['error'] ?? 'waitUntil failed',
+                            'payload' => $payload,
+                        ];
+                    }
+                }
+
+                continue;
+            }
+
+            // —— dry-run: plan only (payload writers still apply for simulate chaining) ——
             if ($dryRun) {
+                if (in_array($type, ['runReport', 'setPayload', 'assign', 'exportToRunBag'], true)) {
+                    try {
+                        // Coerce maxRows if provided as string from UI.
+                        if ($type === 'runReport' && isset($params['maxRows'])) {
+                            $params['maxRows'] = (int) $params['maxRows'];
+                        }
+                        $this->runOne($type, $params, $automation, $run, $item, $target, $tenantId, $actor);
+                        $payload = $this->readItemPayload($item, $payload);
+                        $log[] = [
+                            'index' => $index,
+                            'type' => $type,
+                            'status' => 'would_run',
+                            'params' => $params,
+                            'payloadKeys' => array_keys($payload),
+                        ];
+                    } catch (Throwable $e) {
+                        $log[] = [
+                            'index' => $index,
+                            'type' => $type,
+                            'status' => 'error',
+                            'error' => $e->getMessage(),
+                        ];
+                        if (!(bool) ($action['continueOnError'] ?? false)) {
+                            return [
+                                'ok' => false,
+                                'log' => $log,
+                                'error' => $e->getMessage(),
+                                'payload' => $payload,
+                            ];
+                        }
+                    }
+                    continue;
+                }
+
                 $log[] = [
                     'index' => $index,
                     'type' => $type,
@@ -236,8 +310,11 @@ class AutomationActionRunner
 
             for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
                 try {
-                    $this->runOne($type, $params, $automation, $run, $item, $target, $tenantId);
-                    // Refresh payload after side effects that mutate item (e.g. startChild)
+                    if ($type === 'runReport' && isset($params['maxRows'])) {
+                        $params['maxRows'] = (int) $params['maxRows'];
+                    }
+                    $this->runOne($type, $params, $automation, $run, $item, $target, $tenantId, $actor);
+                    // Refresh payload after side effects that mutate item (e.g. startChild, setPayload)
                     $payload = $this->readItemPayload($item, $payload);
                     $ok = true;
                     break;
@@ -297,6 +374,7 @@ class AutomationActionRunner
         string $tenantId,
         array $payload,
         string $itemMode = 'allMatching',
+        ?User $actor = null,
     ): array {
         $run = $this->entityManager->getNewEntity('AutomationRun');
         $item = $this->entityManager->getNewEntity('AutomationRunItem');
@@ -312,6 +390,7 @@ class AutomationActionRunner
             $payload,
             $itemMode,
             true,
+            $actor,
         );
 
         return [
@@ -378,6 +457,88 @@ class AutomationActionRunner
             'satisfied' => false,
             'wakeAt' => $wakeAt,
             'mode' => $mode,
+            'payload' => $payload,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $payload
+     * @return array{
+     *   ok: bool,
+     *   waiting: bool,
+     *   status: string,
+     *   wakeAt: ?string,
+     *   payload: array<string, mixed>,
+     *   error?: string
+     * }
+     */
+    private function handleWaitUntil(array $params, array $payload, Entity $item, bool $dryRun): array
+    {
+        $at = $params['at'] ?? null;
+        if ($at === null || $at === '') {
+            return [
+                'ok' => false,
+                'waiting' => false,
+                'status' => 'error',
+                'wakeAt' => null,
+                'payload' => $payload,
+                'error' => 'waitUntil: params.at is required',
+            ];
+        }
+
+        $tz = trim((string) ($params['timezone'] ?? ''));
+
+        try {
+            $wakeAt = $this->wakeAtResolver->toUtcSql($at, $tz !== '' ? $tz : null);
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'waiting' => false,
+                'status' => 'error',
+                'wakeAt' => null,
+                'payload' => $payload,
+                'error' => 'waitUntil: ' . $e->getMessage(),
+            ];
+        }
+
+        if (strtotime($wakeAt) <= time()) {
+            unset($payload['_wakeAt']);
+
+            return [
+                'ok' => true,
+                'waiting' => false,
+                'status' => $dryRun ? 'would_wait_elapsed' : 'wait_elapsed',
+                'wakeAt' => $wakeAt,
+                'payload' => $payload,
+            ];
+        }
+
+        if ($dryRun) {
+            return [
+                'ok' => true,
+                'waiting' => false,
+                'status' => 'would_wait_until',
+                'wakeAt' => $wakeAt,
+                'payload' => $payload,
+            ];
+        }
+
+        $payload['_wakeAt'] = $wakeAt;
+
+        if ($item->hasId()) {
+            $item->set('payload', $payload);
+            try {
+                $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
+            } catch (Throwable) {
+            }
+        }
+
+        return [
+            'ok' => true,
+            'waiting' => true,
+            'status' => 'waiting_until',
+            'wakeAt' => $wakeAt,
             'payload' => $payload,
         ];
     }
@@ -474,6 +635,7 @@ class AutomationActionRunner
         Entity $item,
         Entity $target,
         string $tenantId,
+        ?User $actor = null,
     ): void {
         if ($target->getEntityType() === 'User') {
             $this->tenantGuard->assertUserInTenant($target->getId(), $tenantId, 'automation-target');
@@ -503,6 +665,7 @@ class AutomationActionRunner
             trigger: 'automation',
             params: $params,
             tenantId: $tenantId,
+            actor: $actor,
         );
 
         /** @var JourneyAction $impl */
@@ -516,27 +679,41 @@ class AutomationActionRunner
      */
     private function readItemPayload(Entity $item, array $fallback): array
     {
-        if (!$item->hasId()) {
-            return $fallback;
+        $live = $this->payloadToArray($item->get('payload'));
+
+        if ($item->hasId()) {
+            $id = (string) $item->getId();
+            // Simulate / ephemeral ids are not persisted — keep in-memory bag.
+            if ($id !== '' && !str_starts_with($id, 'sim_')) {
+                $fresh = $this->entityManager->getEntityById($item->getEntityType(), $id);
+                if ($fresh) {
+                    $db = $this->payloadToArray($fresh->get('payload'));
+                    if ($db !== null) {
+                        $item->set('payload', $db);
+
+                        return $db;
+                    }
+                }
+            }
         }
 
-        $fresh = $this->entityManager->getEntityById($item->getEntityType(), (string) $item->getId());
-        if (!$fresh) {
-            return $fallback;
+        if ($live !== null) {
+            return $live;
         }
 
-        $raw = $fresh->get('payload');
+        return $fallback;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function payloadToArray(mixed $raw): ?array
+    {
         if ($raw instanceof stdClass) {
             $raw = json_decode(json_encode($raw) ?: '{}', true) ?: [];
         }
 
-        if (is_array($raw)) {
-            $item->set('payload', $raw);
-
-            return $raw;
-        }
-
-        return $fallback;
+        return is_array($raw) ? $raw : null;
     }
 
     /**
@@ -553,6 +730,7 @@ class AutomationActionRunner
         Entity $automation,
         string $tenantId,
         array $payload,
+        ?User $actor = null,
     ): array {
         if ($formulas === []) {
             return $params;
@@ -574,11 +752,15 @@ class AutomationActionRunner
                 continue;
             }
 
-            $value = $this->formulaRunner->run(
-                $script,
-                $target,
-                $variables,
-                RestrictedFormulaRunner::MODE_CONDITION,
+            $value = $this->inReadScope(
+                $tenantId,
+                $actor,
+                fn () => $this->formulaRunner->run(
+                    $script,
+                    $target,
+                    $variables,
+                    RestrictedFormulaRunner::MODE_CONDITION,
+                ),
             );
 
             if (!str_contains($key, '.')) {
@@ -616,6 +798,7 @@ class AutomationActionRunner
         Entity $automation,
         string $tenantId,
         array $payload,
+        ?User $actor = null,
     ): bool {
         $variables = (object) [
             'automationId' => $automation->getId(),
@@ -624,13 +807,38 @@ class AutomationActionRunner
             'payload' => json_decode(json_encode($payload) ?: '{}'),
         ];
 
-        $result = $this->formulaRunner->run(
-            $script,
-            $target,
-            $variables,
-            RestrictedFormulaRunner::MODE_CONDITION,
+        $result = $this->inReadScope(
+            $tenantId,
+            $actor,
+            fn () => $this->formulaRunner->run(
+                $script,
+                $target,
+                $variables,
+                RestrictedFormulaRunner::MODE_CONDITION,
+            ),
         );
 
         return (bool) $result;
+    }
+
+    /**
+     * Open the tenant/actor frame that guarded formula reads
+     * (scoped\recordAttribute) resolve against.
+     *
+     * Without an actor there is nobody to check ACL against, so no frame is
+     * opened and guarded reads fail closed inside FormulaReadScope. Plain
+     * formulas are unaffected either way.
+     *
+     * @template T
+     * @param callable(): T $fn
+     * @return T
+     */
+    private function inReadScope(string $tenantId, ?User $actor, callable $fn): mixed
+    {
+        if ($actor === null || $tenantId === '') {
+            return $fn();
+        }
+
+        return FormulaReadScope::run($tenantId, $actor, $fn);
     }
 }

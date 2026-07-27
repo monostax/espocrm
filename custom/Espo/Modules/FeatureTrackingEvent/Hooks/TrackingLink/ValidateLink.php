@@ -155,7 +155,17 @@ class ValidateLink implements BeforeSave
 
         $sourceTenantId = $source->get('tenantId');
 
-        if (is_string($sourceTenantId) && $sourceTenantId !== '' && $sourceTenantId !== $tenantId) {
+        // Fail closed: the link's own tenant is already guaranteed non-empty by
+        // the caller, so an unresolvable source tenant means same-tenancy cannot
+        // be proven. Skipping the comparison let a source whose team maps to no
+        // Tenant be attached to any tenant's link.
+        if (!is_string($sourceTenantId) || $sourceTenantId === '') {
+            throw new BadRequest(
+                'Tracking Source does not resolve to a tenant — assign it a team that belongs to exactly one Tenant.'
+            );
+        }
+
+        if ($sourceTenantId !== $tenantId) {
             throw new BadRequest(
                 'Tracking Source belongs to a different tenant than this link\'s teams.'
             );

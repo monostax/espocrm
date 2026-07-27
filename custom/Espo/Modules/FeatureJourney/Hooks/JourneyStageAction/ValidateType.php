@@ -148,6 +148,68 @@ class ValidateType implements BeforeSave
                 'sendWhatsAppTemplate'
             );
         }
+
+        if ($type === 'createRecord') {
+            $entityType = trim((string) ($params['entityType'] ?? $params['link'] ?? ''));
+            if ($entityType === '') {
+                throw new BadRequest('createRecord requires entityType.');
+            }
+            /** @var list<string>|null $allowed */
+            $allowed = $this->metadata->get(['app', 'journeyCreateRecord', 'entityTypeList']);
+            if (is_array($allowed) && $allowed !== [] && !in_array($entityType, $allowed, true)) {
+                throw new BadRequest("createRecord: entityType '{$entityType}' is not allow-listed.");
+            }
+        }
+
+        if ($type === 'createRelatedRecord' || $type === 'updateRelatedRecord' || $type === 'linkRecord') {
+            if (trim((string) ($params['link'] ?? '')) === '') {
+                throw new BadRequest("{$type} requires params.link.");
+            }
+        }
+
+        if ($type === 'linkRecord') {
+            if (trim((string) ($params['entityId'] ?? $params['foreignId'] ?? '')) === '') {
+                throw new BadRequest('linkRecord requires entityId.');
+            }
+        }
+
+        if ($type === 'unlinkRecord' && trim((string) ($params['link'] ?? '')) === '') {
+            throw new BadRequest('unlinkRecord requires params.link.');
+        }
+
+        if ($type === 'applyAssignmentRule') {
+            $teamId = trim((string) ($params['targetTeamId'] ?? $params['teamId'] ?? ''));
+            if ($teamId === '') {
+                throw new BadRequest('applyAssignmentRule requires targetTeamId.');
+            }
+            if (!empty($params['listReportId'])) {
+                throw new BadRequest('applyAssignmentRule does not allow listReportId (not tenant-scoped).');
+            }
+        }
+
+        if ($type === 'makeFollowed') {
+            $userIds = $params['userIds'] ?? $params['userIdList'] ?? null;
+            $hasUser = (isset($params['userId']) && (string) $params['userId'] !== '')
+                || (is_array($userIds) && $userIds !== [])
+                || (is_string($userIds) && $userIds !== '');
+            if (!$hasUser) {
+                throw new BadRequest('makeFollowed requires userIds.');
+            }
+        }
+
+        if ($type === 'sendHttpRequest') {
+            $url = trim((string) ($params['requestUrl'] ?? $params['url'] ?? ''));
+            if ($url === '') {
+                throw new BadRequest('sendHttpRequest requires requestUrl.');
+            }
+            /** @var list<string>|null $prefixes */
+            $prefixes = $this->metadata->get(['app', 'journeyHttpRequest', 'allowedUrlPrefixList']);
+            if (!is_array($prefixes) || $prefixes === []) {
+                throw new BadRequest(
+                    'sendHttpRequest is disabled until app.journeyHttpRequest.allowedUrlPrefixList is configured.'
+                );
+            }
+        }
     }
 
     /**

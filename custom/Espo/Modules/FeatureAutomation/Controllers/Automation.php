@@ -52,7 +52,7 @@ class Automation extends Record implements Di\EntityManagerAware
             $payload = (array) $body->triggerPayload;
         }
 
-        $run = $this->getRunner()->runNow($id, 'manual', $payload);
+        $run = $this->getRunner()->runNow($id, 'manual', $payload, $this->user->getId());
 
         return (object) $run->getValueMap();
     }
@@ -72,7 +72,7 @@ class Automation extends Record implements Di\EntityManagerAware
             $maxPreview = (int) $body->maxPreview;
         }
 
-        $result = $this->getRunner()->simulate($id, $payload, $maxPreview);
+        $result = $this->getRunner()->simulate($id, $payload, $maxPreview, $this->user->getId());
 
         return json_decode(json_encode($result) ?: '{}') ?: (object) [];
     }

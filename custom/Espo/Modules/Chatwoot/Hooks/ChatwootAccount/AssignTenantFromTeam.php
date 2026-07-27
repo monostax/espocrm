@@ -23,33 +23,34 @@
 
 namespace Espo\Modules\Chatwoot\Hooks\ChatwootAccount;
 
-use Espo\Core\Utils\Log;
+use Espo\Modules\Global\Services\TeamTenantAccess;
 use Espo\ORM\Entity;
-use Espo\ORM\EntityManager;
 
 /**
  * Derives ChatwootAccount.tenant from the account's teams.
  *
- * Every Tenant points at a base Team via Tenant.baseUserTeam. ChatwootAccount
- * carries the same Team via the entityTeam linkMultiple (typically a single
- * tenant-scoped team). This hook resolves tenantId from that team list when
- * the field is left empty, so callers don't have to set it explicitly and
- * existing creation paths (seeds, UI, API) keep working unchanged.
+ * Resolution lives in TeamTenantAccess, which matches a tenant's base user team
+ * AND its other user teams. Matching only the base team used to leave a null
+ * tenant for legitimate secondary-team assignments — and every Chatwoot consumer
+ * treats a null tenant as a missing key rather than an optional filter
+ * (ContactReconciler skips reconciliation entirely, SyncContactsFromChatwoot
+ * skips the account), so the integration silently stopped linking contacts.
  *
- * Runs after CascadeTeamsFromAccount (order=1) and before
- * ValidateBeforeSync (order=9) so teams are already populated but the
- * platform validation has not yet fired.
+ * Runs after CascadeTeamsFromAccount (order=1) and before ValidateBeforeSync
+ * (order=9) so teams are already populated but platform validation has not yet
+ * fired.
  *
- * Idempotent: never overwrites an explicitly-set tenantId, never logs
- * (beyond a single warning) when ambiguity prevents resolution.
+ * Legacy hook signature (array $options) is retained deliberately — this class
+ * predates the typed BeforeSave interface and GeneralInvoker dispatches both.
+ *
+ * Idempotent: never overwrites an explicitly-set tenantId.
  */
 class AssignTenantFromTeam
 {
     public static int $order = 5;
 
     public function __construct(
-        private EntityManager $entityManager,
-        private Log $log
+        private TeamTenantAccess $teamTenantAccess,
     ) {}
 
     /**
@@ -67,76 +68,14 @@ class AssignTenantFromTeam
             return;
         }
 
-        $teamIds = $this->resolveTeamIds($entity);
-        if (empty($teamIds)) {
-            return;
+        $tenantId = $this->teamTenantAccess->deriveTenantId(
+            $entity,
+            'Chatwoot account',
+            includePersistedTeams: true,
+        );
+
+        if ($tenantId !== null) {
+            $entity->set('tenantId', $tenantId);
         }
-
-        $tenants = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => $teamIds])
-            ->find();
-
-        $tenantIds = [];
-        foreach ($tenants as $tenant) {
-            $tenantIds[$tenant->getId()] = true;
-        }
-
-        if (count($tenantIds) === 0) {
-            return;
-        }
-
-        if (count($tenantIds) > 1) {
-            $this->log->warning(
-                'AssignTenantFromTeam: ChatwootAccount ' . ($entity->getId() ?? '(new)') .
-                ' resolves to multiple tenants via teams ' . implode(',', $teamIds) .
-                '; leaving tenant unset.'
-            );
-            return;
-        }
-
-        $entity->set('tenantId', array_key_first($tenantIds));
-    }
-
-    /**
-     * Read the in-memory team id list, falling back to whatever is already
-     * persisted for updates that didn't touch the teams field.
-     *
-     * @return list<string>
-     */
-    private function resolveTeamIds(Entity $entity): array
-    {
-        $ids = [];
-
-        if (method_exists($entity, 'getLinkMultipleIdList')) {
-            try {
-                $ids = $entity->getLinkMultipleIdList('teams') ?: [];
-            } catch (\Throwable) {
-                $ids = [];
-            }
-        }
-
-        if (!empty($ids)) {
-            return array_values(array_unique($ids));
-        }
-
-        $teamsIds = $entity->get('teamsIds');
-        if (is_array($teamsIds) && !empty($teamsIds)) {
-            return array_values(array_unique($teamsIds));
-        }
-
-        // Updates that didn't mutate the teams field — re-read from DB.
-        if (!$entity->isNew() && $entity->getId()) {
-            $existing = $this->entityManager->getEntityById($entity->getEntityType(), $entity->getId());
-            if ($existing && method_exists($existing, 'getLinkMultipleIdList')) {
-                try {
-                    return array_values(array_unique($existing->getLinkMultipleIdList('teams') ?: []));
-                } catch (\Throwable) {
-                    return [];
-                }
-            }
-        }
-
-        return [];
     }
 }

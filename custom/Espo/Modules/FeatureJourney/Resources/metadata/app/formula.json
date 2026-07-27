@@ -3,7 +3,8 @@
         "journey\\enroll": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\EnrollType",
         "journey\\moveToStage": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\MoveToStageType",
         "journey\\signal": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\SignalType",
-        "journey\\updateTarget": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\UpdateTargetType"
+        "journey\\updateTarget": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\JourneyGroup\\UpdateTargetType",
+        "scoped\\recordAttribute": "Espo\\Modules\\FeatureJourney\\Classes\\FormulaFunctions\\ScopedGroup\\RecordAttributeType"
     },
     "functionList": [
         "__APPEND__",
@@ -30,6 +31,11 @@
             "insertText": "journey\\updateTarget(FIELD, VALUE)",
             "returnType": "bool",
             "unsafe": true
+        },
+        {
+            "name": "scoped\\recordAttribute",
+            "insertText": "scoped\\recordAttribute(ENTITY_TYPE, ID, ATTRIBUTE)",
+            "returnType": "mixed"
         }
     ]
 }

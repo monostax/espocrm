@@ -33,6 +33,11 @@
             "type": "jsonObject",
             "readOnly": true
         },
+        "stageId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
         "actionLog": {
             "type": "jsonObject",
             "readOnly": true,
@@ -113,7 +118,7 @@
             "columns": ["status", "wakeAt"]
         },
         "runTarget": {
-            "columns": ["runId", "targetType", "targetId"],
+            "columns": ["runId", "stageId", "targetType", "targetId"],
             "unique": true
         },
         "tenantId": {

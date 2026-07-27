@@ -8,6 +8,8 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
+use Espo\Entities\User;
+use Espo\Modules\Global\Classes\Utils\TenantRoleAuth;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Throwable;
@@ -361,8 +363,12 @@ class TenantGuard
     }
 
     /**
-     * Chatwoot WhatsApp inbox for journey send actions.
+     * Chatwoot WhatsApp inbox for journey/automation send actions.
      * Must share a team with the journey tenant and match allowed channelTypes.
+     *
+     * Instance-admin runAsUser may send from a platform/closed inbox that is
+     * not shared with the target tenant (ops notifications) without opening
+     * that inbox to customer workspaces.
      *
      * @param list<string> $allowedChannels e.g. whatsappQrcode / whatsappCloudApi / whatsappCoexistence
      * @return Entity ChatwootInbox
@@ -371,6 +377,7 @@ class TenantGuard
         string $chatwootInboxId,
         string $tenantId,
         array $allowedChannels,
+        ?User $actor = null,
     ): Entity {
         $inbox = $this->entityManager->getEntityById('ChatwootInbox', $chatwootInboxId);
 
@@ -378,7 +385,7 @@ class TenantGuard
             throw new Error('TenantGuard: Chatwoot inbox not found.');
         }
 
-        $channelType = (string) ($inbox->get('channelType') ?? '');
+        $channelType = $this->resolveChatwootInboxChannelType($inbox);
         if ($channelType === '' || !in_array($channelType, $allowedChannels, true)) {
             throw new Error(
                 'TenantGuard: Chatwoot inbox channelType "' . $channelType .
@@ -386,37 +393,155 @@ class TenantGuard
             );
         }
 
-        $status = (string) ($inbox->get('status') ?? '');
+        // Expose resolved type for callers that still read foreign attrition
+        // off a bare getEntityById load.
+        $inbox->set('channelType', $channelType);
+
+        $status = $this->resolveChatwootInboxStatus($inbox);
         if ($status !== '' && $status !== 'ACTIVE') {
             throw new Error('TenantGuard: Chatwoot inbox is not ACTIVE.');
         }
 
-        $inboxTeams = $this->getEntityTeamIds($inbox);
-        $tenantTeams = $this->getTenantTeamIds($tenantId);
+        $platformBypass = $actor !== null && TenantRoleAuth::isInstanceAdmin($actor);
 
-        if ($inboxTeams === [] || array_intersect($inboxTeams, $tenantTeams) === []) {
-            // Fall back to account teams when inbox teams empty/stale.
-            $accountId = (string) ($inbox->get('chatwootAccountId') ?? '');
-            $accountTeams = [];
-            if ($accountId !== '') {
-                $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
-                if ($account) {
-                    $accountTeams = $this->getEntityTeamIds($account);
+        if (!$platformBypass) {
+            $inboxTeams = $this->getEntityTeamIds($inbox);
+            $tenantTeams = $this->getTenantTeamIds($tenantId);
+
+            if ($inboxTeams === [] || array_intersect($inboxTeams, $tenantTeams) === []) {
+                // Fall back to account teams when inbox teams empty/stale.
+                $accountId = (string) ($inbox->get('chatwootAccountId') ?? '');
+                $accountTeams = [];
+                if ($accountId !== '') {
+                    $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
+                    if ($account) {
+                        $accountTeams = $this->getEntityTeamIds($account);
+                    }
+                }
+
+                if ($accountTeams === [] || array_intersect($accountTeams, $tenantTeams) === []) {
+                    throw new Error('TenantGuard: Chatwoot inbox not shared with tenant.');
                 }
             }
 
-            if ($accountTeams === [] || array_intersect($accountTeams, $tenantTeams) === []) {
-                throw new Error('TenantGuard: Chatwoot inbox not shared with tenant.');
-            }
-        }
-
-        if ($inbox->hasAttribute('tenantId') && $inbox->get('tenantId')) {
-            if ((string) $inbox->get('tenantId') !== $tenantId) {
-                throw new Error('TenantGuard: Chatwoot inbox outside tenant.');
+            if ($inbox->hasAttribute('tenantId') && $inbox->get('tenantId')) {
+                if ((string) $inbox->get('tenantId') !== $tenantId) {
+                    throw new Error('TenantGuard: Chatwoot inbox outside tenant.');
+                }
             }
         }
 
         return $inbox;
+    }
+
+    /**
+     * Resolve Monostax channel enum for a ChatwootInbox:
+     * foreign channelType → ChatwootInboxIntegration.channelType →
+     * provider / remoteChannelType heuristics.
+     *
+     * Supported outbound free-text types:
+     *   whatsappCloudApi | whatsappCoexistence | whatsappQrcode (WAHA)
+     */
+    private function resolveChatwootInboxChannelType(Entity $inbox): string
+    {
+        $candidates = [
+            trim((string) ($inbox->get('channelType') ?? '')),
+        ];
+
+        $integrationId = (string) ($inbox->get('chatwootInboxIntegrationId') ?? '');
+        if ($integrationId !== '') {
+            $integration = $this->entityManager->getEntityById('ChatwootInboxIntegration', $integrationId);
+            if ($integration) {
+                $candidates[] = trim((string) ($integration->get('channelType') ?? ''));
+            }
+        }
+
+        foreach ($candidates as $c) {
+            $normalized = $this->normalizeWhatsAppChannelType($c);
+            if ($normalized !== '') {
+                return $normalized;
+            }
+        }
+
+        $provider = strtolower(trim((string) ($inbox->get('provider') ?? '')));
+        $remote = trim((string) ($inbox->get('remoteChannelType') ?? ''));
+        $remoteLower = strtolower($remote);
+
+        // Coexistence is only trusted from integration.channelType above.
+        if ($provider === 'whatsapp_cloud' || str_contains($remoteLower, 'whatsapp')) {
+            // Cloud API boxes carry provider=whatsapp_cloud + remote Channel::Whatsapp.
+            if ($provider === 'whatsapp_cloud') {
+                return 'whatsappCloudApi';
+            }
+        }
+
+        // WAHA / QR companion typically remote Channel::Api with null provider.
+        if (
+            $remote === 'Channel::Api' ||
+            str_contains($remoteLower, 'api') ||
+            $provider === 'waha' ||
+            $provider === 'whatsapp_qr' ||
+            $provider === 'whatsapp_qrcode'
+        ) {
+            return 'whatsappQrcode';
+        }
+
+        return '';
+    }
+
+    private function normalizeWhatsAppChannelType(string $raw): string
+    {
+        if ($raw === '') {
+            return '';
+        }
+
+        $map = [
+            'whatsappcloudapi' => 'whatsappCloudApi',
+            'whatsapp_cloud_api' => 'whatsappCloudApi',
+            'whatsapp_cloud' => 'whatsappCloudApi',
+            'cloud' => 'whatsappCloudApi',
+            'whatsappcoexistence' => 'whatsappCoexistence',
+            'whatsapp_coexistence' => 'whatsappCoexistence',
+            'coexistence' => 'whatsappCoexistence',
+            'whatsappqrcode' => 'whatsappQrcode',
+            'whatsapp_qrcode' => 'whatsappQrcode',
+            'whatsapp_qr' => 'whatsappQrcode',
+            'qrcode' => 'whatsappQrcode',
+            'waha' => 'whatsappQrcode',
+            'channel::api' => 'whatsappQrcode',
+            'channel::whatsapp' => 'whatsappCloudApi',
+        ];
+
+        if (isset($map[strtolower($raw)])) {
+            return $map[strtolower($raw)];
+        }
+
+        // Already canonical Monostax enums.
+        if (in_array($raw, ['whatsappCloudApi', 'whatsappCoexistence', 'whatsappQrcode'], true)) {
+            return $raw;
+        }
+
+        return '';
+    }
+
+    private function resolveChatwootInboxStatus(Entity $inbox): string
+    {
+        $direct = trim((string) ($inbox->get('status') ?? ''));
+        if ($direct !== '') {
+            return $direct;
+        }
+
+        $integrationId = (string) ($inbox->get('chatwootInboxIntegrationId') ?? '');
+        if ($integrationId === '') {
+            return '';
+        }
+
+        $integration = $this->entityManager->getEntityById('ChatwootInboxIntegration', $integrationId);
+        if (!$integration) {
+            return '';
+        }
+
+        return trim((string) ($integration->get('status') ?? ''));
     }
 
     /**
@@ -660,6 +785,98 @@ class TenantGuard
     }
 
     /**
+     * Assert a tenant scope was resolved before running a tenant-scoped read.
+     *
+     * Jobs run under a run-as User that {@see \Espo\Modules\FeatureAutomation\Services\AutomationRunIdentity}
+     * permits to be admin / super-admin, and Espo admins bypass ACL entirely
+     * (AclManager::checkReadOnlyRecord et al). An access-control filter is therefore
+     * NOT a tenant boundary. A null/empty tenantId must abort the read rather than
+     * degrade into an instance-wide query.
+     *
+     * @throws Error
+     */
+    public function assertTenantScope(?string $tenantId, string $context = 'query'): string
+    {
+        $tenantId = $tenantId !== null ? trim($tenantId) : '';
+
+        if ($tenantId === '') {
+            $this->log->error(
+                "TenantGuard: refusing unscoped {$context} — tenant could not be resolved."
+            );
+
+            throw new Error(
+                "TenantGuard: {$context} requires a resolved tenant. "
+                . 'Set tenantId (or Teams that map to exactly one Tenant) on the record before running.'
+            );
+        }
+
+        return $tenantId;
+    }
+
+    /**
+     * Fail-closed variant of {@see tenantWhereForEntityType()} for read paths.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws Error
+     */
+    public function requiredTenantWhereForEntityType(
+        string $entityType,
+        ?string $tenantId,
+        string $context = 'query',
+    ): array {
+        return $this->tenantWhereForEntityType(
+            $entityType,
+            $this->assertTenantScope($tenantId, $context),
+        );
+    }
+
+    /**
+     * Tenant predicate for a read, honouring an explicitly authorized cross-tenant run.
+     *
+     * Returns an EMPTY array only when $crossTenantAuthorized is true — that is the
+     * single sanctioned way to run without a tenant predicate, and it is granted only
+     * by {@see \Espo\Modules\FeatureAutomation\Services\CrossTenantAccess}. Any other
+     * unresolved tenant throws.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws Error
+     */
+    public function tenantWhereForRead(
+        string $entityType,
+        ?string $tenantId,
+        string $context = 'query',
+        bool $crossTenantAuthorized = false,
+    ): array {
+        if ($crossTenantAuthorized) {
+            return [];
+        }
+
+        return $this->requiredTenantWhereForEntityType($entityType, $tenantId, $context);
+    }
+
+    /**
+     * Membership check for a row that a read produced, honouring an authorized
+     * cross-tenant run. Fails closed on an unresolved tenant.
+     */
+    public function entityAllowedForRead(
+        Entity $entity,
+        ?string $tenantId,
+        bool $crossTenantAuthorized = false,
+    ): bool {
+        if ($crossTenantAuthorized) {
+            return true;
+        }
+
+        if ($tenantId === null || trim($tenantId) === '') {
+            return false;
+        }
+
+        return $this->entityBelongsToTenant($entity, trim($tenantId));
+    }
+
+    /**
      * Build where-append for entityFilter so tenant filters cannot match foreign rows.
      *
      * @return array<string, mixed>
@@ -668,6 +885,11 @@ class TenantGuard
     {
         if ($tenantId === '') {
             return ['id' => null]; // match nothing
+        }
+
+        // A Tenant row is scoped by identity, not by a tenantId column.
+        if ($entityType === 'Tenant') {
+            return ['id' => $tenantId];
         }
 
         try {
@@ -689,6 +911,349 @@ class TenantGuard
         return [
             'teams.id' => $teamIds,
         ];
+    }
+
+    public function assertTeamInTenant(string $teamId, string $tenantId, string $context = 'team'): void
+    {
+        if ($teamId === '' || $tenantId === '') {
+            throw new Error("TenantGuard: {$context} missing.");
+        }
+
+        $allowed = $this->getTenantTeamIds($tenantId);
+
+        if ($allowed === [] || !in_array($teamId, $allowed, true)) {
+            throw new Error("TenantGuard: {$context} outside tenant.");
+        }
+    }
+
+    /**
+     * Entity types tenants may create via journey createRecord / createRelatedRecord.
+     *
+     * @return list<string>
+     */
+    public function getCreatableEntityTypes(): array
+    {
+        /** @var list<string>|null $list */
+        $list = $this->metadata->get(['app', 'journeyCreateRecord', 'entityTypeList']);
+
+        if (!is_array($list) || $list === []) {
+            return ['Task'];
+        }
+
+        return array_values(array_filter(array_map('strval', $list)));
+    }
+
+    public function assertEntityTypeCreatable(string $entityType): void
+    {
+        if (!in_array($entityType, $this->getCreatableEntityTypes(), true)) {
+            throw new Error("TenantGuard: entity type '{$entityType}' is not creatable via journey.");
+        }
+    }
+
+    /**
+     * Stamp tenantId + teams on a new entity (never trust params for these).
+     *
+     * @param list<string> $teamsIds
+     */
+    public function stampNewEntity(Entity $entity, string $tenantId, array $teamsIds): void
+    {
+        if ($tenantId === '') {
+            throw new Error('TenantGuard: cannot stamp empty tenantId.');
+        }
+
+        if ($entity->hasAttribute('tenantId')) {
+            $entity->set('tenantId', $tenantId);
+        }
+
+        $teamsIds = array_values(array_unique(array_filter(array_map('strval', $teamsIds))));
+        $tenantTeams = $this->getTenantTeamIds($tenantId);
+
+        if ($tenantTeams !== []) {
+            $teamsIds = array_values(array_intersect($teamsIds, $tenantTeams));
+        }
+
+        if ($teamsIds === [] && $tenantTeams !== []) {
+            $teamsIds = $tenantTeams;
+        }
+
+        if ($teamsIds === []) {
+            throw new Error('TenantGuard: no tenant teams available to stamp on create.');
+        }
+
+        try {
+            if ($entity->hasRelation('teams') || $entity->hasAttribute('teamsIds')) {
+                $entity->set('teamsIds', $teamsIds);
+            }
+        } catch (Throwable) {
+            $entity->set('teamsIds', $teamsIds);
+        }
+    }
+
+    /**
+     * Filter fields for create/update mutations (same allow-list spine as updateTarget).
+     * Always strips tenancy/ACL service fields; optionally validates assignedUserId.
+     *
+     * @param array<string, mixed> $fields
+     * @return array<string, mixed>
+     */
+    public function filterMutationFields(
+        string $entityType,
+        array $fields,
+        string $tenantId,
+        bool $forCreate = false,
+    ): array {
+        $source = $forCreate
+            ? $this->metadata->get(['app', 'journeyCreateRecord', 'fieldsByEntityType'])
+            : null;
+
+        if (!is_array($source) || !isset($source[$entityType])) {
+            $filtered = $this->filterTargetUpdateFields($entityType, $fields);
+        } else {
+            $prevByType = $this->metadata->get(['app', 'journeyUpdateTarget', 'fieldsByEntityType']) ?? [];
+            // Temporarily prefer create allow-list by merging into the filter path.
+            $merged = $fields;
+            $allowed = is_array($source[$entityType] ?? null) ? $source[$entityType] : [];
+            $out = [];
+            $allowCustomPrefix = (bool) (
+                $this->metadata->get(['app', 'journeyCreateRecord', 'allowCustomFieldPrefix'])
+                ?? $this->metadata->get(['app', 'journeyUpdateTarget', 'allowCustomFieldPrefix'])
+                ?? true
+            );
+            $allowCustomFieldsBag = (bool) (
+                $this->metadata->get(['app', 'journeyCreateRecord', 'allowCustomFieldsBag'])
+                ?? $this->metadata->get(['app', 'journeyUpdateTarget', 'allowCustomFieldsBag'])
+                ?? true
+            );
+            $bagAttr = $this->customFieldsBag->getAttributeName();
+            $bagOk = $allowCustomFieldsBag && $this->customFieldsBag->isEntityEnabled($entityType);
+
+            foreach ($merged as $name => $value) {
+                if (!is_string($name) || $name === '' || in_array($name, self::ALWAYS_BLOCKED_TARGET_FIELDS, true)) {
+                    continue;
+                }
+
+                $isBagKey = $name === $bagAttr || str_starts_with($name, $bagAttr . '.');
+                $ok = in_array($name, $allowed, true)
+                    || in_array('*', $allowed, true)
+                    || ($isBagKey && $bagOk)
+                    || ($allowCustomPrefix && (bool) preg_match('/^c[A-Z]/', $name));
+
+                if ($ok) {
+                    $out[$name] = $value;
+                }
+            }
+
+            $filtered = $out;
+            unset($prevByType);
+        }
+
+        if (isset($fields['assignedUserId']) && is_string($fields['assignedUserId']) && $fields['assignedUserId'] !== '') {
+            $this->assertUserInTenant($fields['assignedUserId'], $tenantId, 'assignedUser');
+            $filtered['assignedUserId'] = $fields['assignedUserId'];
+        }
+
+        // Never allow create/update to smuggle teams/tenant via filtered map again.
+        unset($filtered['tenantId'], $filtered['teamsIds'], $filtered['teamsNames'], $filtered['teamsColumns']);
+
+        return $filtered;
+    }
+
+    public function loadEntityInTenant(
+        string $entityType,
+        string $id,
+        string $tenantId,
+        string $context = 'foreign',
+    ): Entity {
+        if ($entityType === '' || $id === '') {
+            throw new Error("TenantGuard: {$context} missing id/type.");
+        }
+
+        $entity = $this->entityManager->getEntityById($entityType, $id);
+
+        if (!$entity) {
+            throw new Error("TenantGuard: {$context} not found.");
+        }
+
+        $this->assertEntityTenant($entity, $tenantId, $context);
+
+        return $entity;
+    }
+
+    /**
+     * Resolve related entities for a link on the target, dropping foreign-tenant rows.
+     *
+     * @return list<Entity>
+     */
+    public function getRelatedEntitiesInTenant(
+        Entity $target,
+        string $link,
+        string $tenantId,
+        ?string $parentEntityType = null,
+        int $max = 50,
+    ): array {
+        if ($link === '' || !$target->hasRelation($link)) {
+            throw new Error("TenantGuard: link '{$link}' is not defined on {$target->getEntityType()}.");
+        }
+
+        $type = $target->getRelationType($link);
+        $out = [];
+
+        try {
+            if ($type === Entity::BELONGS_TO_PARENT) {
+                $parentType = (string) ($target->get($link . 'Type') ?? '');
+                $parentId = (string) ($target->get($link . 'Id') ?? '');
+                if ($parentType === '' || $parentId === '') {
+                    return [];
+                }
+                if ($parentEntityType && $parentType !== $parentEntityType) {
+                    return [];
+                }
+                $related = $this->entityManager->getEntityById($parentType, $parentId);
+                if ($related) {
+                    $out[] = $related;
+                }
+            } elseif (in_array($type, [Entity::HAS_MANY, Entity::HAS_CHILDREN, Entity::MANY_MANY], true)) {
+                $collection = $this->entityManager
+                    ->getRDBRepository($target->getEntityType())
+                    ->getRelation($target, $link)
+                    ->limit(0, max(1, $max))
+                    ->find();
+
+                foreach ($collection as $related) {
+                    $out[] = $related;
+                }
+            } else {
+                $related = $this->entityManager
+                    ->getRDBRepository($target->getEntityType())
+                    ->getRelation($target, $link)
+                    ->findOne();
+
+                if ($related) {
+                    $out[] = $related;
+                }
+            }
+        } catch (Throwable $e) {
+            throw new Error('TenantGuard: failed loading related: ' . $e->getMessage());
+        }
+
+        $filtered = [];
+        foreach ($out as $related) {
+            if (!$related instanceof Entity) {
+                continue;
+            }
+            if ($parentEntityType && $related->getEntityType() !== $parentEntityType) {
+                continue;
+            }
+            if ($this->entityBelongsToTenant($related, $tenantId)) {
+                $filtered[] = $related;
+            } else {
+                $this->log->warning(sprintf(
+                    'TenantGuard: skip foreign related %s/%s on link %s',
+                    $related->getEntityType(),
+                    $related->hasId() ? $related->getId() : '?',
+                    $link,
+                ));
+            }
+        }
+
+        return $filtered;
+    }
+
+    public function resolveLinkForeignEntityType(Entity $entity, string $link): string
+    {
+        if ($link === '') {
+            throw new Error("TenantGuard: empty link.");
+        }
+
+        $entityType = $entity->getEntityType();
+
+        $fromMeta = $this->metadata->get(['entityDefs', $entityType, 'links', $link, 'entity']);
+        if (is_string($fromMeta) && $fromMeta !== '') {
+            return $fromMeta;
+        }
+
+        try {
+            if ($entity->hasRelation($link)) {
+                $foreign = $entity->getRelationParam($link, 'entity');
+                if (is_string($foreign) && $foreign !== '') {
+                    return $foreign;
+                }
+            }
+        } catch (Throwable) {
+        }
+
+        throw new Error("TenantGuard: cannot resolve foreign entity type for link '{$link}'.");
+    }
+
+    /**
+     * SSRF-safe URL gate for sendHttpRequest. Empty allow-list → deny all.
+     */
+    public function assertHttpUrlAllowed(string $url): void
+    {
+        $url = trim($url);
+        if ($url === '') {
+            throw new Error('TenantGuard: empty HTTP URL.');
+        }
+
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            throw new Error('TenantGuard: invalid HTTP URL.');
+        }
+
+        $scheme = strtolower((string) $parts['scheme']);
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            throw new Error('TenantGuard: HTTP URL scheme not allowed.');
+        }
+
+        $host = strtolower((string) $parts['host']);
+        $host = trim($host, '[]');
+
+        /** @var list<string>|null $blocked */
+        $blocked = $this->metadata->get(['app', 'journeyHttpRequest', 'blockedHostList']);
+        if (!is_array($blocked)) {
+            $blocked = [
+                'localhost',
+                '127.0.0.1',
+                '0.0.0.0',
+                '::1',
+                'metadata',
+                'metadata.google.internal',
+            ];
+        }
+
+        foreach ($blocked as $b) {
+            $b = strtolower(trim((string) $b));
+            if ($b !== '' && ($host === $b || str_ends_with($host, '.' . $b))) {
+                throw new Error('TenantGuard: HTTP URL host is blocked.');
+            }
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (!filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                throw new Error('TenantGuard: HTTP URL private/reserved IP blocked.');
+            }
+        }
+
+        /** @var list<string>|null $prefixes */
+        $prefixes = $this->metadata->get(['app', 'journeyHttpRequest', 'allowedUrlPrefixList']);
+        if (!is_array($prefixes) || $prefixes === []) {
+            throw new Error(
+                'TenantGuard: no app.journeyHttpRequest.allowedUrlPrefixList configured (HTTP disabled).'
+            );
+        }
+
+        $ok = false;
+        foreach ($prefixes as $prefix) {
+            $prefix = trim((string) $prefix);
+            if ($prefix !== '' && str_starts_with($url, $prefix)) {
+                $ok = true;
+                break;
+            }
+        }
+
+        if (!$ok) {
+            throw new Error('TenantGuard: HTTP URL is not on the tenant allow-list.');
+        }
     }
 
     /**

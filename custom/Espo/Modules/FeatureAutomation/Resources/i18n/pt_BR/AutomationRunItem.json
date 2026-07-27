@@ -5,7 +5,7 @@
         "target": "Alvo",
         "status": "Status",
         "tenant": "Workspace",
-        "payload": "Payload",
+        "payload": "Dados da execução",
         "actionLog": "Log de ações",
         "claimedAt": "Reservado em",
         "wakeAt": "Acordar em",

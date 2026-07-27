@@ -1,13 +1,13 @@
 {
     "labels": {
         "Journeys": "Journeys",
-        "People in journeys": "People in journeys",
+        "People in journeys": "Journey enrollments",
         "Journey history": "Journey history",
-        "Journey Records": "People in journeys",
+        "Journey Records": "Journey enrollments",
         "Journey Record Logs": "Journey history"
     },
     "descriptions": {
-        "journeys": "Build multi-step automations — who joins, steps, connections, and actions (Zapier / Make style).",
+        "journeys": "Build multi-step automations — who joins, steps, connections, and actions.",
         "journeyRecords": "Who is in each journey right now, which step they are on, and status.",
         "journeyRecordLogs": "History of moves between steps and what triggered them."
     },

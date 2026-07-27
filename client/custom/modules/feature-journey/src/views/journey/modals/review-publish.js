@@ -278,8 +278,6 @@ define("feature-journey:views/journey/modals/review-publish", ["views/modal"], f
                 executeFormula: this.translateScoped("actionTypeExecuteFormula"),
                 recordTrackingEvent: this.translateScoped("actionTypeRecordTrackingEvent"),
                 runScript: this.translateScoped("actionTypeRunScript"),
-                triggerWorkflow: this.translateScoped("actionTypeTriggerWorkflow"),
-                startBpmnProcess: this.translateScoped("actionTypeStartBpmnProcess"),
             };
 
             return map[type] || type;

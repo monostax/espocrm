@@ -5,31 +5,27 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureMetaConversionsApi\Hooks\MetaCapiDataset;
 
 use Espo\Core\Hook\Hook\BeforeSave;
-use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiDataset;
+use Espo\Modules\Global\Services\TeamTenantAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /**
- * Derives MetaCapiDataset.tenant from the dataset's selected teams.
+ * Derives Meta CAPI dataset `tenantId` from the assigned teams.
  *
- * Every Tenant points at a base Team via Tenant.baseUserTeam. When a
- * MetaCapiDataset is saved with at least one team picked, this hook
- * looks up the Tenant whose baseUserTeam matches one of the selected
- * teams and assigns it. Never overwrites an explicitly-set tenantId.
+ * Resolution lives in TeamTenantAccess, which matches a tenant's base user team
+ * AND its other user teams. Matching only the base team used to leave a null
+ * tenant for legitimate secondary-team assignments, and every consumer treats a
+ * null tenant as a missing key — so the record silently stopped working.
  *
- * Mirrors Espo\Modules\Chatwoot\Hooks\ChatwootAccount\AssignTenantFromTeam
- * so the codebase has one consistent pattern for tenant resolution.
- *
- * @implements BeforeSave<MetaCapiDataset>
+ * @implements BeforeSave<Entity>
  */
 class AssignTenantFromTeam implements BeforeSave
 {
     public static int $order = 9;
 
     public function __construct(
-        private \Espo\ORM\EntityManager $entityManager,
-        private Log $log,
+        private TeamTenantAccess $teamTenantAccess,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
@@ -47,79 +43,14 @@ class AssignTenantFromTeam implements BeforeSave
             return;
         }
 
-        $teamIds = $this->resolveTeamIds($entity);
+        $tenantId = $this->teamTenantAccess->deriveTenantId(
+            $entity,
+            'Meta CAPI dataset',
+            includePersistedTeams: true,
+        );
 
-        if (empty($teamIds)) {
-            return;
+        if ($tenantId !== null) {
+            $entity->set('tenantId', $tenantId);
         }
-
-        $tenants = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => $teamIds])
-            ->find();
-
-        $tenantIds = [];
-
-        foreach ($tenants as $tenant) {
-            $tenantIds[$tenant->getId()] = true;
-        }
-
-        if (count($tenantIds) === 0) {
-            return;
-        }
-
-        if (count($tenantIds) > 1) {
-            $this->log->warning(
-                'AssignTenantFromTeam: MetaCapiDataset ' . ($entity->getId() ?? '(new)') .
-                ' resolves to multiple tenants via teams ' . implode(',', $teamIds) .
-                '; leaving tenant unset.'
-            );
-
-            return;
-        }
-
-        $entity->set('tenantId', array_key_first($tenantIds));
-    }
-
-    /**
-     * Read the in-memory team id list, falling back to whatever is already
-     * persisted for updates that didn't touch the teams field.
-     *
-     * @return list<string>
-     */
-    private function resolveTeamIds(MetaCapiDataset $entity): array
-    {
-        $ids = [];
-
-        try {
-            $ids = $entity->getLinkMultipleIdList('teams') ?: [];
-        } catch (\Throwable) {
-            $ids = [];
-        }
-
-        if (!empty($ids)) {
-            return array_values(array_unique($ids));
-        }
-
-        $teamsIds = $entity->get('teamsIds');
-
-        if (is_array($teamsIds) && !empty($teamsIds)) {
-            return array_values(array_unique($teamsIds));
-        }
-
-        // Updates that didn't mutate the teams field — re-read from DB.
-        if (!$entity->isNew() && $entity->getId()) {
-            $existing = $this->entityManager->getEntityById($entity->getEntityType(), $entity->getId());
-
-            if ($existing && method_exists($existing, 'getLinkMultipleIdList')) {
-                try {
-                    return array_values(array_unique($existing->getLinkMultipleIdList('teams') ?: []));
-                } catch (\Throwable) {
-                    return [];
-                }
-            }
-        }
-
-        return [];
     }
 }

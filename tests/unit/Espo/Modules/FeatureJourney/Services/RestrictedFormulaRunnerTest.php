@@ -127,6 +127,16 @@ class RestrictedFormulaRunnerTest extends TestCase
         );
     }
 
+    public function testConditionAllowsJsonEncode(): void
+    {
+        $this->runner->assertScriptAllowed(
+            'json\\encode(object\\create())',
+            RestrictedFormulaRunner::MODE_CONDITION
+        );
+
+        $this->assertTrue(true);
+    }
+
     public function testEmptyScriptIsNoop(): void
     {
         $this->runner->assertScriptAllowed('   ', RestrictedFormulaRunner::MODE_CONDITION);

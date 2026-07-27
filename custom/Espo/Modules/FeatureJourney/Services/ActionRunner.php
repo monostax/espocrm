@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureJourney\Services;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
+use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Classes\JourneyActions\Action;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -37,6 +38,7 @@ class ActionRunner
         Entity $target,
         Entity $record,
         Entity $journey,
+        ?User $actor = null,
     ): array {
         $tenantId = $record->get('tenantId') ?: $journey->get('tenantId');
         $tenantId = $tenantId ? (string) $tenantId : null;
@@ -65,6 +67,7 @@ class ActionRunner
             $journey,
             $trigger,
             $tenantId,
+            $actor,
         );
     }
 
@@ -80,16 +83,22 @@ class ActionRunner
         Entity $journey,
         string $trigger,
         ?string $tenantId,
+        ?User $actor = null,
     ): array {
-        if ($tenantId) {
-            try {
-                $this->tenantGuard->assertEntityTenant($target, $tenantId, 'action-target');
-                $this->tenantGuard->assertRecordMatchesJourney($record, $journey);
-            } catch (Throwable $e) {
-                $this->log->error('ActionRunner: tenant guard: ' . $e->getMessage());
+        try {
+            // Fail closed. Previously an unresolved tenant skipped BOTH assertions, so
+            // actions (updateTarget / sendEmail / createRecord …) could fire against a
+            // foreign-tenant target. Record/journey pairing is checked unconditionally.
+            $this->tenantGuard->assertRecordMatchesJourney($record, $journey);
+            $this->tenantGuard->assertEntityTenant(
+                $target,
+                $this->tenantGuard->assertTenantScope($tenantId, 'journey action'),
+                'action-target',
+            );
+        } catch (Throwable $e) {
+            $this->log->error('ActionRunner: tenant guard: ' . $e->getMessage());
 
-                return ['ok' => false, 'error' => 'tenant_mismatch'];
-            }
+            return ['ok' => false, 'error' => 'tenant_mismatch'];
         }
 
         $skipped = 0;
@@ -150,6 +159,7 @@ class ActionRunner
                 trigger: $trigger,
                 params: $params,
                 tenantId: $tenantId,
+                actor: $actor,
             );
 
             $lastError = null;

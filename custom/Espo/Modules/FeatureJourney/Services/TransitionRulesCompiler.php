@@ -291,31 +291,9 @@ class TransitionRulesCompiler
 
     private function scorePeriod(string $period): ?int
     {
-        $period = trim($period);
-
-        if (!preg_match(
-            '/^(\d+)\s*(second|seconds|minute|minutes|hour|hours|day|days|week|weeks)$/i',
-            $period,
-            $m
-        )) {
-            return null;
-        }
-
-        $n = (int) $m[1];
-        $unit = strtolower($m[2]);
-        $map = [
-            'second' => 1,
-            'seconds' => 1,
-            'minute' => 60,
-            'minutes' => 60,
-            'hour' => 3600,
-            'hours' => 3600,
-            'day' => 86400,
-            'days' => 86400,
-            'week' => 604800,
-            'weeks' => 604800,
-        ];
-
-        return $n * ($map[$unit] ?? 0);
+        // Delegated to PeriodParser so English, pt-BR and ISO-8601 inputs all score the
+        // same way. This used to carry its own regex, which rejected values the rest of
+        // the stack accepted.
+        return (new PeriodParser())->toSeconds($period);
     }
 }

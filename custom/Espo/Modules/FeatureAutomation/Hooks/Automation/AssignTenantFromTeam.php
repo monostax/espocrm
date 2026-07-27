@@ -5,20 +5,26 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureAutomation\Hooks\Automation;
 
 use Espo\Core\Hook\Hook\BeforeSave;
-use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureAutomation\Entities\Automation as AutomationEntity;
+use Espo\Modules\Global\Services\TeamTenantAccess;
 use Espo\ORM\Entity;
-use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
 
-/** @implements BeforeSave<AutomationEntity> */
+/**
+ * Derives `tenantId` from the assigned teams.
+ *
+ * Resolution lives in TeamTenantAccess so that derivation and the
+ * ValidateTeamsTenant authorization check can never disagree about which tenant
+ * a team belongs to.
+ *
+ * @implements BeforeSave<AutomationEntity>
+ */
 class AssignTenantFromTeam implements BeforeSave
 {
     public static int $order = 9;
 
     public function __construct(
-        private EntityManager $entityManager,
-        private Log $log,
+        private TeamTenantAccess $teamTenantAccess,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
@@ -31,34 +37,10 @@ class AssignTenantFromTeam implements BeforeSave
             return;
         }
 
-        $teamIds = [];
-        try {
-            $teamIds = $entity->getLinkMultipleIdList('teams') ?: [];
-        } catch (\Throwable) {
-            $teamIds = is_array($entity->get('teamsIds')) ? $entity->get('teamsIds') : [];
-        }
+        $tenantId = $this->teamTenantAccess->deriveTenantId($entity, 'automation');
 
-        if ($teamIds === []) {
-            return;
-        }
-
-        $tenants = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => $teamIds])
-            ->find();
-
-        $tenantIds = [];
-        foreach ($tenants as $tenant) {
-            $tenantIds[$tenant->getId()] = true;
-        }
-
-        if (count($tenantIds) === 1) {
-            $entity->set('tenantId', array_key_first($tenantIds));
-        } elseif (count($tenantIds) > 1) {
-            $this->log->warning(
-                'FeatureAutomation AssignTenantFromTeam: multiple tenants for Automation ' .
-                ($entity->getId() ?? '(new)')
-            );
+        if ($tenantId !== null) {
+            $entity->set('tenantId', $tenantId);
         }
     }
 }

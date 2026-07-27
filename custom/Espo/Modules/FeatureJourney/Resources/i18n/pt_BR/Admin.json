@@ -1,13 +1,13 @@
 {
     "labels": {
         "Journeys": "Jornadas",
-        "People in journeys": "Jornadas / Inscrições",
+        "People in journeys": "Inscrições na jornada",
         "Journey history": "Jornadas / Histórico",
-        "Journey Records": "Jornadas / Inscrições",
+        "Journey Records": "Inscrições na jornada",
         "Journey Record Logs": "Jornadas / Histórico"
     },
     "descriptions": {
-        "journeys": "Monte automações em etapas — quem entra, etapas, conexões e ações (estilo Zapier / Make).",
+        "journeys": "Monte automações em etapas — quem entra, etapas, conexões e ações.",
         "journeyRecords": "Quem está em cada jornada agora, em qual etapa e com qual status.",
         "journeyRecordLogs": "Histórico de avanços entre etapas e o que disparou cada um."
     },

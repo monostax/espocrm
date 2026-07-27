@@ -82,6 +82,18 @@ class ProcessJourneyTimers implements JobDataLess
                 continue;
             }
 
+            // Validated once per transition rather than swallowed per record: an
+            // unparseable waitPeriod used to make the timer silently never fire.
+            if (!$this->periodParser->isValid((string) $wait)) {
+                $this->log->warning(
+                    'ProcessJourneyTimers: transition ' . $transition->getId() .
+                    ' has an invalid waitPeriod "' . $wait . '" — timer will never fire. ' .
+                    'Use a format like "3 days" / "3 dias".'
+                );
+
+                continue;
+            }
+
             $journey = $this->entityManager->getEntityById(
                 Journey::ENTITY_TYPE,
                 (string) $transition->get('journeyId')
@@ -116,7 +128,12 @@ class ProcessJourneyTimers implements JobDataLess
                     if (!$this->periodParser->isDue((string) $entered, (string) $wait)) {
                         continue;
                     }
-                } catch (Throwable) {
+                } catch (Throwable $e) {
+                    $this->log->warning(
+                        'ProcessJourneyTimers: transition ' . $transition->getId() .
+                        ' record ' . $record->getId() . ' timer check failed: ' . $e->getMessage()
+                    );
+
                     continue;
                 }
 
@@ -153,6 +170,18 @@ class ProcessJourneyTimers implements JobDataLess
                 continue;
             }
 
+            // Validated once per stage: an unparseable maxDuration used to make the SLA
+            // silently never apply.
+            if (!$this->periodParser->isValid((string) $max)) {
+                $this->log->warning(
+                    'ProcessJourneyTimers: stage ' . $stage->getId() .
+                    ' has an invalid maxDuration "' . $max . '" — SLA will never apply. ' .
+                    'Use a format like "3 days" / "3 dias".'
+                );
+
+                continue;
+            }
+
             $records = $this->entityManager
                 ->getRDBRepository(JourneyRecord::ENTITY_TYPE)
                 ->where([
@@ -172,7 +201,12 @@ class ProcessJourneyTimers implements JobDataLess
                     if (!$this->periodParser->isDue((string) $entered, (string) $max)) {
                         continue;
                     }
-                } catch (Throwable) {
+                } catch (Throwable $e) {
+                    $this->log->warning(
+                        'ProcessJourneyTimers: stage ' . $stage->getId() .
+                        ' record ' . $record->getId() . ' SLA check failed: ' . $e->getMessage()
+                    );
+
                     continue;
                 }
 

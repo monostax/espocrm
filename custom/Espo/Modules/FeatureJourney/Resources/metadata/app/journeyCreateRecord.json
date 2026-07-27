@@ -1,0 +1,98 @@
+{
+    "entityTypeList": [
+        "Task",
+        "Case",
+        "Meeting",
+        "Call",
+        "Opportunity",
+        "Note",
+        "Contact",
+        "Lead",
+        "Account"
+    ],
+    "allowCustomFieldPrefix": true,
+    "allowCustomFieldsBag": true,
+    "maxRelatedBatch": 50,
+    "fieldsByEntityType": {
+        "Task": [
+            "name",
+            "status",
+            "priority",
+            "description",
+            "dateEnd",
+            "dateStart",
+            "assignedUserId",
+            "parentId",
+            "parentType"
+        ],
+        "Case": [
+            "name",
+            "status",
+            "priority",
+            "description",
+            "type",
+            "assignedUserId"
+        ],
+        "Meeting": [
+            "name",
+            "status",
+            "dateStart",
+            "dateEnd",
+            "description",
+            "assignedUserId"
+        ],
+        "Call": [
+            "name",
+            "status",
+            "dateStart",
+            "dateEnd",
+            "description",
+            "direction",
+            "assignedUserId"
+        ],
+        "Opportunity": [
+            "name",
+            "stage",
+            "probability",
+            "description",
+            "amount",
+            "amountCurrency",
+            "closeDate",
+            "assignedUserId"
+        ],
+        "Note": [
+            "post",
+            "type",
+            "isInternal"
+        ],
+        "Contact": [
+            "firstName",
+            "lastName",
+            "middleName",
+            "salutationName",
+            "title",
+            "description",
+            "accountId",
+            "assignedUserId"
+        ],
+        "Lead": [
+            "firstName",
+            "lastName",
+            "status",
+            "source",
+            "description",
+            "title",
+            "opportunityAmount",
+            "opportunityAmountCurrency",
+            "assignedUserId"
+        ],
+        "Account": [
+            "name",
+            "description",
+            "industry",
+            "type",
+            "website",
+            "assignedUserId"
+        ]
+    }
+}

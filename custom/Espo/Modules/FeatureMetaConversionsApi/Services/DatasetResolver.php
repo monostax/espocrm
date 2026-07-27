@@ -98,16 +98,23 @@ class DatasetResolver
         // tenant boundaries (admin misconfiguration, data migration error,
         // ACL bypass). Without this check, a misconfigured funnel would
         // silently route Tenant A's events to Tenant B's Pixel.
+        //
+        // Fail CLOSED: both sides must be known AND equal. An unresolvable
+        // tenant on either side cannot prove same-tenancy, and PII egress must
+        // never depend on an unprovable condition. This mirrors the strict
+        // `resolveForEntity` behaviour above, which already refuses a
+        // default-dataset lookup when the subject has no tenantId.
         $oppTenantId = (string) ($opportunity->get('tenantId') ?? '');
         $dsTenantId  = (string) ($dataset->get('tenantId') ?? '');
 
-        if ($oppTenantId !== '' && $dsTenantId !== '' && $oppTenantId !== $dsTenantId) {
+        if ($oppTenantId === '' || $dsTenantId === '' || $oppTenantId !== $dsTenantId) {
             $this->log->error(sprintf(
-                'MetaCapi: cross-tenant dataset resolution refused — Opportunity %s tenant=%s vs Funnel.metaCapiDataset %s tenant=%s.',
+                'MetaCapi: cross-tenant dataset resolution refused — Opportunity %s tenant=%s vs '
+                . 'Funnel.metaCapiDataset %s tenant=%s (both must be set and equal).',
                 (string) $opportunity->getId(),
-                $oppTenantId,
+                $oppTenantId !== '' ? $oppTenantId : '(unset)',
                 (string) $dataset->getId(),
-                $dsTenantId,
+                $dsTenantId !== '' ? $dsTenantId : '(unset)',
             ));
 
             return null;

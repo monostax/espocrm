@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureJourney\Services;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyRecord;
 use Espo\Modules\FeatureJourney\Entities\JourneyRecordLog;
@@ -27,6 +28,7 @@ class JourneyEnrollmentService
         private JourneyRateLimiter $rateLimiter,
         private TenantGuard $tenantGuard,
         private ActionRunner $actionRunner,
+        private JourneyRunIdentity $identity,
         private Log $log,
     ) {}
 
@@ -208,6 +210,8 @@ class JourneyEnrollmentService
             ];
         }
 
+        $actor = $this->identity->resolve($journey, 'enroll');
+
         $audience = $this->resolveAudience($journey);
         $enrolled = 0;
         $skipped = [];
@@ -227,7 +231,7 @@ class JourneyEnrollmentService
 
         foreach ($audience as $row) {
             try {
-                $result = $this->tryEnrollOne($journey, $row['targetType'], $row['targetId']);
+                $result = $this->tryEnrollOne($journey, $row['targetType'], $row['targetId'], $actor);
             } catch (Throwable $e) {
                 $this->log->error(
                     "JourneyEnrollmentService: enroll failed journey={$journeyId} " .
@@ -294,14 +298,20 @@ class JourneyEnrollmentService
     /**
      * @return array{ok: bool, reason?: string, error?: string}
      */
-    public function tryEnrollOne(Entity $journey, string $targetType, string $targetId): array
-    {
+    public function tryEnrollOne(
+        Entity $journey,
+        string $targetType,
+        string $targetId,
+        ?User $actor = null,
+    ): array {
         $tenantId = $journey->get('tenantId');
         if ($tenantId && !$this->rateLimiter->allowEnrollments((string) $tenantId)) {
             $this->log->warning("JourneyEnrollmentService: enrollment rate limit tenant={$tenantId}");
 
             return ['ok' => false, 'reason' => 'rate_limited'];
         }
+
+        $actor ??= $this->identity->resolve($journey, 'enroll');
 
         $target = $this->entityManager->getEntityById($targetType, $targetId);
         if (!$target) {
@@ -397,6 +407,7 @@ class JourneyEnrollmentService
             'retryCount' => 0,
             'tenantId' => $journey->get('tenantId'),
             'teamsIds' => $teamsIds,
+            'runAsUserId' => $actor->getId(),
             'deleteId' => '0',
         ]);
 
@@ -404,6 +415,7 @@ class JourneyEnrollmentService
             $this->entityManager->saveEntity($record, [
                 SaveOption::SILENT => true,
                 self::SKIP_OPT => true,
+                SaveOption::CREATED_BY_ID => $actor->getId(),
             ]);
         } catch (Throwable $e) {
             // unique index race backstop
@@ -451,6 +463,7 @@ class JourneyEnrollmentService
                     'recordId' => $record->getId(),
                     'stageId' => $entryStage->getId(),
                     'cycleCount' => $nextCycle,
+                    'runAsUserId' => $actor->getId(),
                 ],
                 'detail' => $journey->get('name'),
             ]);
@@ -463,6 +476,7 @@ class JourneyEnrollmentService
             $target,
             $record,
             $journey,
+            $actor,
         );
 
         if (!$enterResult['ok']) {

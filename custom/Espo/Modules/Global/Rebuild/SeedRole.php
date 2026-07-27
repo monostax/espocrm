@@ -336,6 +336,31 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // FeatureAutomation — mirrors FeatureJourney: agents can view
+                // automations and their run history; authoring is tenant-admin
+                // (override below). Runs/items are an append-only ledger.
+                //
+                // Reads stay tenant-safe because Automation.tenant is readOnly
+                // (derived from Teams) and RunAsUserAccess forbids a non-instance
+                // -admin from delegating to an ACL-bypassing admin identity.
+                'Automation' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'AutomationRun' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'AutomationRunItem' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'ChatwootUser' => [
                     'create' => 'yes',
                     'read' => 'team',
@@ -966,6 +991,9 @@ class SeedRole implements RebuildAction
                 'JourneyTransition' => (object)[],
                 'JourneyRecord' => (object)[],
                 'JourneyRecordLog' => (object)[],
+                'Automation' => (object)[],
+                'AutomationRun' => (object)[],
+                'AutomationRunItem' => (object)[],
 
                 'Unidade' => (object)[],
                 'Profissional' => (object)[],
@@ -1420,6 +1448,27 @@ class SeedRole implements RebuildAction
                         'delete' => 'no',
                     ],
                     'JourneyRecordLog' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'no',
+                        'delete' => 'no',
+                    ],
+
+                    // FeatureAutomation — tenant-admin authors automations and may
+                    // cancel/pause runs; run items stay read-only (append-only ledger).
+                    'Automation' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'AutomationRun' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'no',
+                    ],
+                    'AutomationRunItem' => [
                         'create' => 'no',
                         'read' => 'team',
                         'edit' => 'no',

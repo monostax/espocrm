@@ -12,7 +12,11 @@ use stdClass;
 use Throwable;
 
 /**
- * Validates Automation.definition JSON (Batch map + actions; Machine with waits).
+ * Validates Automation.definition JSON.
+ *
+ * Batch: stages[] with scope forEach|once (map materializes sets; actions never nest under map steps).
+ * Legacy flat {map, actions} expands to a single forEach stage.
+ * Machine: states + transitions with waits.
  */
 class AutomationDefinitionValidator
 {
@@ -36,6 +40,8 @@ class AutomationDefinitionValidator
     public function __construct(
         private Metadata $metadata,
         private PeriodParser $periodParser,
+        private RunDataBag $runDataBag,
+        private WakeAtResolver $wakeAtResolver,
     ) {}
 
     /**
@@ -70,21 +76,180 @@ class AutomationDefinitionValidator
     private function validateBatch(array $def): array
     {
         $def['kind'] = 'batch';
-        $map = $def['map'] ?? null;
 
+        $limits = $this->toArray($def['limits'] ?? []);
+        $def['limits'] = [
+            'maxItems' => max(1, min(50000, (int) ($limits['maxItems'] ?? 5000))),
+            'maxExpandPerParent' => max(1, min(5000, (int) ($limits['maxExpandPerParent'] ?? 500))),
+        ];
+
+        $rawStages = $this->expandLegacyBatchStages($def);
+        if ($rawStages === []) {
+            throw new Error('Batch definition requires stages[] (or legacy map[]).');
+        }
+
+        $stages = [];
+        $stageIds = [];
+        foreach ($rawStages as $i => $raw) {
+            $raw = $this->toArray($raw);
+            if ($raw === []) {
+                throw new Error("Stage {$i} must be an object.");
+            }
+
+            $id = trim((string) ($raw['id'] ?? ('s' . $i)));
+            if ($id === '') {
+                $id = 's' . $i;
+            }
+            if (isset($stageIds[$id])) {
+                throw new Error("Duplicate stage id '{$id}'.");
+            }
+            $stageIds[$id] = true;
+
+            $scope = $this->normalizeStageScope($raw, $i);
+
+            $itemMode = in_array(($raw['itemMode'] ?? 'allMatching'), ['allMatching', 'firstMatch'], true)
+                ? (string) $raw['itemMode']
+                : 'allMatching';
+
+            $map = [];
+            if ($scope === 'forEach') {
+                $rawMap = $raw['map'] ?? null;
+                if (!is_array($rawMap) || $rawMap === []) {
+                    throw new Error("Stage '{$id}' (forEach) requires non-empty map[].");
+                }
+                $map = $this->validateMapSteps($rawMap, "stage '{$id}'");
+            } elseif (isset($raw['map']) && is_array($raw['map']) && $raw['map'] !== []) {
+                // once stages may carry map only if explicitly provided (ignored at runtime)
+                $map = $this->validateMapSteps($raw['map'], "stage '{$id}'");
+            }
+
+            $stages[] = [
+                'id' => $id,
+                'scope' => $scope,
+                'map' => $map,
+                'actions' => $this->validateActions($raw['actions'] ?? []),
+                'onFailure' => $this->validateActions($raw['onFailure'] ?? []),
+                'itemMode' => $itemMode,
+                'exportToRunBag' => $this->validateExportToRunBag(
+                    $raw['exportToRunBag'] ?? null,
+                    "stage '{$id}'"
+                ),
+                'importRunBag' => $this->validateImportRunBag(
+                    $raw['importRunBag'] ?? null,
+                    "stage '{$id}'"
+                ),
+            ];
+        }
+
+        $def['stages'] = $stages;
+
+        // Backward-compatible top-level mirrors (first forEach, else first stage).
+        $mirror = null;
+        foreach ($stages as $st) {
+            if (($st['scope'] ?? '') === 'forEach') {
+                $mirror = $st;
+                break;
+            }
+        }
+        $mirror ??= $stages[0];
+
+        $def['map'] = $mirror['map'] ?? [];
+        $def['actions'] = $mirror['actions'] ?? [];
+        $def['onFailure'] = $mirror['onFailure'] ?? [];
+        $def['itemMode'] = $mirror['itemMode'] ?? 'allMatching';
+
+        if (($mirror['scope'] ?? '') === 'forEach' && ($def['map'] ?? []) === []) {
+            throw new Error('Batch definition requires at least one forEach stage with map[], or legacy map[].');
+        }
+
+        return $def;
+    }
+
+    /**
+     * Legacy {map,actions} → single forEach stage; or pass-through stages[].
+     *
+     * @param array<string, mixed> $def
+     * @return list<array<string, mixed>>
+     */
+    private function expandLegacyBatchStages(array $def): array
+    {
+        $stages = $def['stages'] ?? null;
+        if (is_array($stages) && $stages !== []) {
+            $out = [];
+            foreach ($stages as $s) {
+                $out[] = $this->toArray($s);
+            }
+
+            return $out;
+        }
+
+        $map = $def['map'] ?? null;
         if (!is_array($map) || $map === []) {
-            throw new Error('Batch definition requires non-empty map[].');
+            return [];
+        }
+
+        return [[
+            'id' => 's0',
+            'scope' => 'forEach',
+            'map' => $map,
+            'actions' => $def['actions'] ?? [],
+            'onFailure' => $def['onFailure'] ?? [],
+            'itemMode' => $def['itemMode'] ?? 'allMatching',
+        ]];
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function normalizeStageScope(array $raw, int $index): string
+    {
+        $scope = strtolower(trim((string) ($raw['scope'] ?? '')));
+        if ($scope === '') {
+            $type = strtolower(trim((string) ($raw['type'] ?? '')));
+            $scope = match ($type) {
+                'once', 'run', 'afterall', 'after_all', 'complete' => 'once',
+                'foreach', 'for_each', 'map', 'items', 'batch' => 'forEach',
+                default => '',
+            };
+        }
+
+        if ($scope === 'foreach' || $scope === 'for_each') {
+            $scope = 'forEach';
+        }
+        if (in_array($scope, ['run', 'afterall', 'after_all', 'complete'], true)) {
+            $scope = 'once';
+        }
+
+        if (!in_array($scope, ['forEach', 'once'], true)) {
+            // Infer: map present → forEach, else once
+            $hasMap = isset($raw['map']) && is_array($raw['map']) && $raw['map'] !== [];
+            $scope = $hasMap ? 'forEach' : 'once';
+        }
+
+        if (!in_array($scope, ['forEach', 'once'], true)) {
+            throw new Error("Stage {$index}: scope must be forEach|once.");
+        }
+
+        return $scope;
+    }
+
+    /**
+     * @param mixed $map
+     * @return list<array<string, mixed>>
+     */
+    private function validateMapSteps(mixed $map, string $ctx): array
+    {
+        if (!is_array($map) || $map === []) {
+            throw new Error("{$ctx}: non-empty map[] required.");
         }
 
         $ids = [];
-        foreach ($map as $i => $step) {
-            if ($step instanceof stdClass) {
-                $step = (array) $step;
-                $map[$i] = $step;
-            }
+        $out = [];
 
-            if (!is_array($step)) {
-                throw new Error("Map step {$i} must be an object.");
+        foreach ($map as $i => $step) {
+            $step = $this->toArray($step);
+            if ($step === [] && !is_array($map[$i] ?? null)) {
+                throw new Error("{$ctx} map step {$i} must be an object.");
             }
 
             $id = (string) ($step['id'] ?? "step{$i}");
@@ -96,7 +261,6 @@ class AutomationDefinitionValidator
 
             $source = (string) ($step['source'] ?? '');
 
-            // Legacy mode=report → source=report
             if ($mode === 'report') {
                 $source = $source !== '' ? $source : 'report';
                 $mode = $i === 0 ? 'primary' : 'expand';
@@ -119,48 +283,53 @@ class AutomationDefinitionValidator
             }
 
             if (!in_array($mode, ['primary', 'expand', 'passThrough', 'groupBy'], true)) {
-                throw new Error("Map step {$id}: invalid mode (primary|expand|loop|passThrough|groupBy).");
+                throw new Error("{$ctx} map step {$id}: invalid mode (primary|expand|loop|passThrough|groupBy).");
             }
 
             if (!in_array($source, self::MAP_SOURCES, true)) {
-                throw new Error("Map step {$id}: invalid source '{$source}'.");
+                throw new Error("{$ctx} map step {$id}: invalid source '{$source}'.");
             }
 
             if ($source !== 'payload' && $entityType === '') {
-                throw new Error("Map step {$id}: entityType is required for source={$source}.");
+                throw new Error("{$ctx} map step {$id}: entityType is required for source={$source}.");
             }
 
             if ($entityType !== '' && !in_array($entityType, self::MAP_ENTITY_ALLOW, true)) {
-                throw new Error("Map step {$id}: entityType '{$entityType}' not allowed.");
+                throw new Error("{$ctx} map step {$id}: entityType '{$entityType}' not allowed.");
             }
 
             if ($i === 0) {
                 if (in_array($source, ['relation', 'linkMultiple'], true)) {
-                    throw new Error("Map step {$id}: first step cannot use source={$source} (no parent).");
+                    throw new Error("{$ctx} map step {$id}: first step cannot use source={$source} (no parent).");
                 }
                 $mode = 'primary';
             }
 
+            $row = $step;
+            $row['id'] = $id;
+            $row['mode'] = $mode;
+            $row['source'] = $source;
+
             if ($source === 'report') {
                 if ((string) ($step['reportId'] ?? '') === '') {
-                    throw new Error("Map step {$id}: reportId required for source=report.");
+                    throw new Error("{$ctx} map step {$id}: reportId required for source=report.");
                 }
-                $map[$i]['reportId'] = (string) $step['reportId'];
+                $row['reportId'] = (string) $step['reportId'];
                 if (isset($step['maxRows'])) {
-                    $map[$i]['maxRows'] = max(1, min(10000, (int) $step['maxRows']));
+                    $row['maxRows'] = max(1, min(10000, (int) $step['maxRows']));
                 }
             }
 
             if ($source === 'payload' && empty($step['payloadPath'])) {
-                throw new Error("Map step {$id}: payloadPath required for source=payload.");
+                throw new Error("{$ctx} map step {$id}: payloadPath required for source=payload.");
             }
 
             if ($source === 'ids' && empty($step['ids']) && empty($step['idsPath'])) {
-                throw new Error("Map step {$id}: ids or idsPath required for source=ids.");
+                throw new Error("{$ctx} map step {$id}: ids or idsPath required for source=ids.");
             }
 
             if ($source === 'linkMultiple' && empty($step['link']) && empty($step['linkMultiple'])) {
-                throw new Error("Map step {$id}: link required for source=linkMultiple.");
+                throw new Error("{$ctx} map step {$id}: link required for source=linkMultiple.");
             }
 
             if (
@@ -169,59 +338,84 @@ class AutomationDefinitionValidator
                 in_array($source, ['relation', 'linkMultiple'], true) &&
                 empty($step['parent'])
             ) {
-                throw new Error("Map step {$id}: parent is required for source={$source}.");
+                throw new Error("{$ctx} map step {$id}: parent is required for source={$source}.");
             }
 
             if (isset($ids[$id])) {
-                throw new Error("Duplicate map step id '{$id}'.");
+                throw new Error("{$ctx}: duplicate map step id '{$id}'.");
             }
-
             $ids[$id] = true;
-            $map[$i]['id'] = $id;
-            $map[$i]['mode'] = $mode;
-            $map[$i]['source'] = $source;
+
             if ($entityType !== '') {
-                $map[$i]['entityType'] = $entityType;
+                $row['entityType'] = $entityType;
             }
             if (!empty($step['payloadPath'])) {
-                $map[$i]['payloadPath'] = (string) $step['payloadPath'];
+                $row['payloadPath'] = (string) $step['payloadPath'];
             }
             if (!empty($step['idsPath'])) {
-                $map[$i]['idsPath'] = (string) $step['idsPath'];
+                $row['idsPath'] = (string) $step['idsPath'];
             }
             if (isset($step['ids']) && is_array($step['ids'])) {
-                $map[$i]['ids'] = array_values($step['ids']);
+                $row['ids'] = array_values($step['ids']);
             }
             if (!empty($step['link'])) {
-                $map[$i]['link'] = (string) $step['link'];
+                $row['link'] = (string) $step['link'];
             } elseif (!empty($step['linkMultiple'])) {
-                $map[$i]['link'] = (string) $step['linkMultiple'];
+                $row['link'] = (string) $step['linkMultiple'];
             }
             if (!empty($step['parent'])) {
-                $map[$i]['parent'] = (string) $step['parent'];
+                $row['parent'] = (string) $step['parent'];
             }
             if (!empty($step['relation'])) {
-                $map[$i]['relation'] = (string) $step['relation'];
+                $row['relation'] = (string) $step['relation'];
             }
             if (!empty($step['foreignKey'])) {
-                $map[$i]['foreignKey'] = (string) $step['foreignKey'];
+                $row['foreignKey'] = (string) $step['foreignKey'];
             }
-            if (isset($step['where'])) {
-                $w = $step['where'];
-                if ($w instanceof stdClass) {
-                    $w = json_decode(json_encode($w) ?: '{}', true) ?: [];
+            if (!empty($step['ignoreParent'])) {
+                $row['ignoreParent'] = true;
+            }
+
+            // requireRoles: keep only Users holding one of these roles (direct or
+            // via teams). Only meaningful for User steps — the materializer drops
+            // non-User members rather than passing them through.
+            $requireRoles = $this->normalizeStringList($step['requireRoles'] ?? null);
+            if ($requireRoles !== []) {
+                if ($entityType !== 'User') {
+                    throw new Error(
+                        "{$ctx} map step {$id}: requireRoles only applies to entityType User, got '{$entityType}'."
+                    );
                 }
-                if (is_array($w)) {
-                    $map[$i]['where'] = $w;
+                $row['requireRoles'] = $requireRoles;
+            }
+
+            if (isset($step['where'])) {
+                $w = $this->toArray($step['where']);
+                $row['where'] = $w;
+            }
+            if (isset($step['whereFormulas'])) {
+                $wf = $this->toArray($step['whereFormulas']);
+                $cleanWf = [];
+                foreach ($wf as $field => $script) {
+                    if (!is_string($field) || $field === '' || $field === 'deleted' || $field === 'tenantId') {
+                        continue;
+                    }
+                    if (!is_string($script) || trim($script) === '') {
+                        continue;
+                    }
+                    $cleanWf[$field] = trim($script);
+                }
+                if ($cleanWf !== []) {
+                    $row['whereFormulas'] = $cleanWf;
                 }
             }
 
             if ($mode === 'groupBy') {
                 if (isset($step['groupBy'])) {
                     if (is_string($step['groupBy']) && $step['groupBy'] !== '') {
-                        $map[$i]['groupBy'] = $step['groupBy'];
+                        $row['groupBy'] = $step['groupBy'];
                     } elseif (is_array($step['groupBy'])) {
-                        $map[$i]['groupBy'] = array_values(array_filter(
+                        $row['groupBy'] = array_values(array_filter(
                             array_map('strval', $step['groupBy']),
                             fn($f) => $f !== ''
                         ));
@@ -230,9 +424,9 @@ class AutomationDefinitionValidator
                 if (!empty($step['groupTargetEntityType'])) {
                     $gt = (string) $step['groupTargetEntityType'];
                     if (!in_array($gt, self::MAP_ENTITY_ALLOW, true)) {
-                        throw new Error("Map step {$id}: groupTargetEntityType '{$gt}' not allowed.");
+                        throw new Error("{$ctx} map step {$id}: groupTargetEntityType '{$gt}' not allowed.");
                     }
-                    $map[$i]['groupTargetEntityType'] = $gt;
+                    $row['groupTargetEntityType'] = $gt;
                 }
                 if (isset($step['timeBucket'])) {
                     $tb = $this->toArray($step['timeBucket']);
@@ -241,10 +435,10 @@ class AutomationDefinitionValidator
                         try {
                             $this->periodParser->parse($size);
                         } catch (Throwable $e) {
-                            throw new Error("Map step {$id}: invalid timeBucket.size — " . $e->getMessage());
+                            throw new Error("{$ctx} map step {$id}: invalid timeBucket.size — " . $e->getMessage());
                         }
                     }
-                    $map[$i]['timeBucket'] = [
+                    $row['timeBucket'] = [
                         'field' => (string) ($tb['field'] ?? 'createdAt'),
                         'size' => $size !== '' ? $size : '1 hour',
                         'timezone' => (string) ($tb['timezone'] ?? 'UTC'),
@@ -256,33 +450,22 @@ class AutomationDefinitionValidator
                         $agg = $this->toArray($agg);
                         $op = strtolower((string) ($agg['op'] ?? 'count'));
                         if (!in_array($op, ['count', 'sum', 'min', 'max', 'avg', 'average', 'collectIds', 'collect_ids', 'ids'], true)) {
-                            throw new Error("Map step {$id}: invalid aggregate op '{$op}'.");
+                            throw new Error("{$ctx} map step {$id}: invalid aggregate op '{$op}'.");
                         }
-                        $row = ['op' => $op, 'as' => (string) ($agg['as'] ?? $op)];
+                        $aggRow = ['op' => $op, 'as' => (string) ($agg['as'] ?? $op)];
                         if (!empty($agg['field'])) {
-                            $row['field'] = (string) $agg['field'];
+                            $aggRow['field'] = (string) $agg['field'];
                         }
-                        $aggs[] = $row;
+                        $aggs[] = $aggRow;
                     }
-                    $map[$i]['aggregates'] = $aggs;
+                    $row['aggregates'] = $aggs;
                 }
             }
+
+            $out[] = $row;
         }
 
-        $def['map'] = array_values($map);
-        $def['actions'] = $this->validateActions($def['actions'] ?? []);
-        $def['onFailure'] = $this->validateActions($def['onFailure'] ?? []);
-        $def['itemMode'] = in_array(($def['itemMode'] ?? 'allMatching'), ['allMatching', 'firstMatch'], true)
-            ? $def['itemMode']
-            : 'allMatching';
-
-        $limits = $this->toArray($def['limits'] ?? []);
-        $def['limits'] = [
-            'maxItems' => max(1, min(50000, (int) ($limits['maxItems'] ?? 5000))),
-            'maxExpandPerParent' => max(1, min(5000, (int) ($limits['maxExpandPerParent'] ?? 500))),
-        ];
-
-        return $def;
+        return array_values($out);
     }
 
     private function validateMachine(array $def): array
@@ -322,16 +505,7 @@ class AutomationDefinitionValidator
             }
 
             if ($type === 'wait') {
-                $period = trim((string) ($state['waitPeriod'] ?? ''));
-                if ($period === '') {
-                    throw new Error("Wait state {$id}: waitPeriod required (e.g. '1 day').");
-                }
-                try {
-                    $this->periodParser->parse($period);
-                } catch (Throwable $e) {
-                    throw new Error("State {$id}: invalid waitPeriod — " . $e->getMessage());
-                }
-                $state['waitPeriod'] = $period;
+                $state = $this->normalizeWaitSpec($state, "Wait state {$id}");
             }
 
             if ($type === 'join') {
@@ -379,17 +553,7 @@ class AutomationDefinitionValidator
                 throw new Error('Invalid machine transition.');
             }
 
-            $waitPeriod = trim((string) ($t['waitPeriod'] ?? ''));
-            if ($waitPeriod !== '') {
-                try {
-                    $this->periodParser->parse($waitPeriod);
-                } catch (Throwable $e) {
-                    throw new Error('Transition waitPeriod invalid: ' . $e->getMessage());
-                }
-                $t['waitPeriod'] = $waitPeriod;
-            } else {
-                unset($t['waitPeriod']);
-            }
+            $t = $this->normalizeWaitSpec($t, 'Transition', false);
 
             if (isset($t['when']) && !is_string($t['when'])) {
                 unset($t['when']);
@@ -466,6 +630,146 @@ class AutomationDefinitionValidator
                 }
             }
 
+            if ($type === 'waitUntil') {
+                $at = trim((string) ($params['at'] ?? ''));
+                $hasFormula = isset($paramFormulas['at']) &&
+                    is_string($paramFormulas['at']) &&
+                    trim($paramFormulas['at']) !== '';
+                if ($at === '' && !$hasFormula) {
+                    throw new Error("Action {$i} waitUntil: params.at (or at formula) required.");
+                }
+                $tz = trim((string) ($params['timezone'] ?? ''));
+                if ($at !== '') {
+                    if (!$this->wakeAtResolver->isValidFixed($at, $tz !== '' ? $tz : null)) {
+                        throw new Error(
+                            "Action {$i} waitUntil: invalid params.at — use datetime " .
+                            "(e.g. 2026-08-01 14:00:00 or ISO-8601)."
+                        );
+                    }
+                    $params['at'] = $at;
+                }
+                if ($tz !== '') {
+                    try {
+                        new \DateTimeZone($tz);
+                    } catch (Throwable $e) {
+                        throw new Error("Action {$i} waitUntil: invalid params.timezone — " . $e->getMessage());
+                    }
+                    $params['timezone'] = $tz;
+                } else {
+                    unset($params['timezone']);
+                }
+            }
+
+            if ($type === 'runReport') {
+                $reportId = trim((string) ($params['reportId'] ?? ''));
+                if ($reportId === '') {
+                    throw new Error("Action {$i} runReport requires params.reportId.");
+                }
+                $params['reportId'] = $reportId;
+                $as = trim((string) ($params['as'] ?? 'report'));
+                if ($as === '') {
+                    $as = 'report';
+                }
+                if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/', $as)) {
+                    throw new Error("Action {$i} runReport: invalid params.as path.");
+                }
+                if (str_starts_with(explode('.', $as)[0], '_')) {
+                    throw new Error("Action {$i} runReport: params.as cannot use reserved payload roots.");
+                }
+                $params['as'] = $as;
+                $mode = strtolower(trim((string) ($params['mode'] ?? 'auto')));
+                if (!in_array($mode, ['auto', 'list', 'grid'], true)) {
+                    throw new Error("Action {$i} runReport: params.mode must be auto|list|grid.");
+                }
+                $params['mode'] = $mode;
+                $period = trim((string) ($params['period'] ?? 'none'));
+                $allowedPeriods = [
+                    'none', 'currentDay', 'previousDay', 'currentWeek', 'previousWeek',
+                    'currentMonth', 'previousMonth', 'today', 'yesterday', 'thisWeek',
+                    'lastWeek', 'thisMonth', 'lastMonth',
+                ];
+                if ($period !== '' && !in_array($period, $allowedPeriods, true)) {
+                    throw new Error("Action {$i} runReport: invalid params.period.");
+                }
+                if ($period !== '' && $period !== 'none') {
+                    $params['period'] = $period;
+                    $pf = trim((string) ($params['periodField'] ?? ''));
+                    // period without field still stored (report may have own filters)
+                    if ($pf !== '') {
+                        $params['periodField'] = $pf;
+                    }
+                } else {
+                    $params['period'] = 'none';
+                }
+                if (isset($params['maxRows'])) {
+                    $params['maxRows'] = max(1, min(2000, (int) $params['maxRows']));
+                }
+                if (array_key_exists('scopeAiAgentConversations', $params)) {
+                    $v = $params['scopeAiAgentConversations'];
+                    $params['scopeAiAgentConversations'] = $v === true
+                        || $v === 1
+                        || $v === '1'
+                        || (is_string($v) && in_array(strtolower(trim($v)), ['true', 'yes', 'on'], true));
+                }
+                unset($params['tenantScoped']);
+            }
+
+            if ($type === 'setPayload' || $type === 'assign') {
+                $hasPath = trim((string) ($params['path'] ?? '')) !== '';
+                $hasValue = array_key_exists('value', $params) ||
+                    (isset($paramFormulas['value']) && is_string($paramFormulas['value']) && trim($paramFormulas['value']) !== '');
+                $assignments = $params['assignments'] ?? null;
+                $hasAssignments = is_array($assignments) && $assignments !== [];
+                if ((!$hasPath || !$hasValue) && !$hasAssignments) {
+                    throw new Error(
+                        "Action {$i} {$type}: require path+value (or value formula) or assignments[]."
+                    );
+                }
+                if ($hasPath) {
+                    $p = trim((string) $params['path']);
+                    if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/', $p)) {
+                        throw new Error("Action {$i} {$type}: invalid params.path.");
+                    }
+                    if (str_starts_with(explode('.', $p)[0], '_')) {
+                        throw new Error("Action {$i} {$type}: cannot write reserved payload root.");
+                    }
+                    $params['path'] = $p;
+                }
+            }
+
+            if ($type === 'exportToRunBag') {
+                $mode = strtolower(trim((string) ($params['mode'] ?? 'merge')));
+                if (!in_array($mode, ['merge', 'replace'], true)) {
+                    throw new Error("Action {$i} exportToRunBag: params.mode must be merge|replace.");
+                }
+                $params['mode'] = $mode;
+                if (isset($params['path']) && is_string($params['path']) && trim($params['path']) !== '') {
+                    $p = trim($params['path']);
+                    if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', explode('.', $p)[0])) {
+                        throw new Error("Action {$i} exportToRunBag: invalid params.path.");
+                    }
+                    if (str_starts_with(explode('.', $p)[0], '_')) {
+                        throw new Error("Action {$i} exportToRunBag: cannot export reserved payload root.");
+                    }
+                    $params['path'] = $p;
+                }
+                if (array_key_exists('keys', $params) && $params['keys'] !== null && $params['keys'] !== '') {
+                    try {
+                        $cfg = $this->runDataBag->normalizeExportConfig(
+                            is_string($params['keys']) || is_array($params['keys']) || is_bool($params['keys'])
+                                ? $params['keys']
+                                : true
+                        );
+                        if ($cfg === null) {
+                            throw new Error('empty keys');
+                        }
+                        $params['keys'] = $cfg['keys'] === true ? true : $cfg['keys'];
+                    } catch (Error $e) {
+                        throw new Error("Action {$i} exportToRunBag: invalid keys — " . $e->getMessage());
+                    }
+                }
+            }
+
             $row = [
                 'type' => $type,
                 'when' => isset($action['when']) && is_string($action['when']) ? $action['when'] : null,
@@ -495,6 +799,161 @@ class AutomationDefinitionValidator
             }
 
             $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Normalise waitPeriod / waitUntil / waitUntilFormula on a state or transition.
+     * When $required, exactly one of period or until(+formula) must be set.
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function normalizeWaitSpec(array $row, string $ctx, bool $required = true): array
+    {
+        $period = trim((string) ($row['waitPeriod'] ?? ''));
+        $until = trim((string) ($row['waitUntil'] ?? ''));
+        $untilFormula = trim((string) ($row['waitUntilFormula'] ?? ''));
+        $tz = trim((string) ($row['waitUntilTimezone'] ?? ''));
+
+        $hasPeriod = $period !== '';
+        $hasUntil = $until !== '' || $untilFormula !== '';
+
+        if ($hasPeriod && $hasUntil) {
+            throw new Error("{$ctx}: use waitPeriod or waitUntil, not both.");
+        }
+
+        if ($required && !$hasPeriod && !$hasUntil) {
+            throw new Error(
+                "{$ctx}: waitPeriod (e.g. '1 day') or waitUntil (datetime) required."
+            );
+        }
+
+        if ($hasPeriod) {
+            try {
+                $this->periodParser->parse($period);
+            } catch (Throwable $e) {
+                throw new Error("{$ctx}: invalid waitPeriod — " . $e->getMessage());
+            }
+            $row['waitPeriod'] = $period;
+            unset($row['waitUntil'], $row['waitUntilFormula'], $row['waitUntilTimezone']);
+
+            return $row;
+        }
+
+        unset($row['waitPeriod']);
+
+        if (!$hasUntil) {
+            unset($row['waitUntil'], $row['waitUntilFormula'], $row['waitUntilTimezone']);
+
+            return $row;
+        }
+
+        if ($tz !== '') {
+            try {
+                new \DateTimeZone($tz);
+            } catch (Throwable $e) {
+                throw new Error("{$ctx}: invalid waitUntilTimezone — " . $e->getMessage());
+            }
+            $row['waitUntilTimezone'] = $tz;
+        } else {
+            unset($row['waitUntilTimezone']);
+            $tz = '';
+        }
+
+        if ($untilFormula !== '') {
+            $row['waitUntilFormula'] = $untilFormula;
+        } else {
+            unset($row['waitUntilFormula']);
+        }
+
+        if ($until !== '') {
+            if (!$this->wakeAtResolver->isValidFixed($until, $tz !== '' ? $tz : null)) {
+                throw new Error(
+                    "{$ctx}: invalid waitUntil — use datetime " .
+                    "(e.g. 2026-08-01 14:00:00 or ISO-8601)."
+                );
+            }
+            $row['waitUntil'] = $until;
+        } else {
+            unset($row['waitUntil']);
+        }
+
+        return $row;
+    }
+
+    /**
+     * @return array{keys: list<string>|true, from: string, mode: string}|false
+     */
+    private function validateExportToRunBag(mixed $raw, string $ctx): array|false
+    {
+        if ($raw === null || $raw === false || $raw === '' || $raw === 0 || $raw === '0') {
+            return false;
+        }
+
+        try {
+            $cfg = $this->runDataBag->normalizeExportConfig($raw);
+        } catch (Error $e) {
+            throw new Error("{$ctx} exportToRunBag: " . $e->getMessage());
+        }
+
+        if ($cfg === null) {
+            return false;
+        }
+
+        return $cfg;
+    }
+
+    /**
+     * @return array{keys: list<string>|true, into: string, overwrite: bool}|false
+     */
+    private function validateImportRunBag(mixed $raw, string $ctx): array|false
+    {
+        if ($raw === null || $raw === false || $raw === '' || $raw === 0 || $raw === '0') {
+            return false;
+        }
+
+        try {
+            $cfg = $this->runDataBag->normalizeImportConfig($raw);
+        } catch (Error $e) {
+            throw new Error("{$ctx} importRunBag: " . $e->getMessage());
+        }
+
+        if ($cfg === null) {
+            return false;
+        }
+
+        return $cfg;
+    }
+
+    /**
+     * Accepts a string or list of strings; trims, drops empties, dedupes.
+     *
+     * @return list<string>
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        if ($value instanceof stdClass) {
+            $value = (array) $value;
+        }
+        if (is_string($value)) {
+            $value = [$value];
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($value as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+            $item = trim($item);
+            if ($item !== '' && !in_array($item, $out, true)) {
+                $out[] = $item;
+            }
         }
 
         return $out;

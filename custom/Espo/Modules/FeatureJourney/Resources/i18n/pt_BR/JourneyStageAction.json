@@ -30,7 +30,7 @@
         "removeDynamicValue": "Remover valor dinâmico",
         "searchExpressions": "Buscar campos e funções…",
         "expressionExamples": "Exemplos",
-        "snippetGroupTarget": "Pessoa (alvo)",
+        "snippetGroupTarget": "Registro alvo",
         "snippetGroupJourney": "Jornada",
         "snippetGroupHelpers": "Atalhos",
         "snippetGroupFunctions": "Funções",
@@ -53,13 +53,13 @@
         "formula": "Script para ações “Rodar fórmula”. Pode atualizar a pessoa, mudar etapa ou enviar eventos — operações inseguras são bloqueadas.",
         "maxRetries": "Quantas vezes tentar de novo esta ação (0–5) se falhar. Não reinicia a conexão inteira.",
         "continueOnError": "Se ligado, segue para as próximas ações após uma falha. Se desligado, para aqui.",
-        "trigger": "Rodar esta ação quando a pessoa entrar ou sair desta etapa.",
+        "trigger": "Executa esta ação quando o registro entra ou sai desta etapa.",
         "order": "Números menores rodam primeiro na mesma etapa."
     },
     "messages": {
         "selectActionTypeFirst": "Escolha uma ação para configurar.",
         "useFormulaField": "Escreva o script no campo Fórmula acima. Configurações aqui são opcionais.",
-        "paramFormulasHint": "Opcional: preencher uma configuração a partir da pessoa quando o passo rodar (por exemplo o responsável). O workspace nunca é sobrescrito.",
+        "paramFormulasHint": "Opcional: preencher uma configuração a partir do registro alvo quando a etapa rodar (por exemplo o responsável). O workspace nunca é sobrescrito.",
         "platformActionHint": "Ação de plataforma — exige acesso de plataforma / superadmin.",
         "jsonParseError": "JSON inválido.",
         "updateTargetFieldsHint": "Escolha um campo padrão ou personalizado. Use fx para um valor calculado na execução. Os demais valores personalizados ficam; só o que você definir aqui muda.",
@@ -73,7 +73,7 @@
         "expressionNoMatches": "Nenhum campo ou função correspondente.",
         "linkExpressionHint": "Ative fx para resolver este link por fórmula (ex.: entity\\attribute('assignedUserId')).",
         "orphanParamFormulasHint": "Chaves dinâmicas que não aparecem acima (configs antigas ou JSON avançado).",
-        "docAttrName": "Nome de exibição da pessoa na jornada.",
+        "docAttrName": "Nome completo exibido do registro alvo.",
         "docAttrEmail": "E-mail principal do registro alvo.",
         "docAttrPhone": "Telefone principal do registro alvo.",
         "docAttrOwner": "Id do usuário responsável — útil para roteamento.",
@@ -97,7 +97,13 @@
         "docFnToday": "Data atual (servidor).",
         "docFnObjectGet": "Lê uma chave de um objeto (ex.: bag customFields).",
         "docFnAttribute": "Lê um campo da pessoa (entidade alvo).",
-        "docFnEmpty": "Verdadeiro quando o valor está vazio/nulo."
+        "docFnEmpty": "Verdadeiro quando o valor está vazio/nulo.",
+        "applyAssignmentRuleHint": "Distribui a titularidade apenas dentro de uma equipe do workspace. Regras baseadas em relatório são bloqueadas.",
+        "createRecordHint": "Cria um registro marcado com o workspace (tenant) e as equipes desta jornada. A lista de campos permitidos se aplica.",
+        "createRelatedRecordHint": "Cria um registro relacionado no alvo e marca tenant + equipes. O tipo vem do vínculo.",
+        "linkRecordHint": "Vincula somente quando os dois lados pertencem a este workspace.",
+        "makeFollowedHint": "Apenas usuários que pertencem a este workspace podem ser adicionados como seguidores.",
+        "sendHttpRequestHint": "A URL precisa corresponder a um prefixo da lista de permissões da plataforma. IPs privados e localhost são bloqueados."
     },
     "options": {
         "trigger": {
@@ -105,17 +111,23 @@
             "OnExit": "Ao sair da etapa"
         },
         "type": {
-            "createTask": "Criar uma tarefa",
-            "sendEmail": "Enviar um e-mail",
+            "createTask": "Criar tarefa",
+            "createRecord": "Criar registro",
+            "createRelatedRecord": "Criar registro relacionado",
+            "sendEmail": "Enviar e-mail",
             "sendWhatsAppMessage": "Enviar mensagem WhatsApp",
             "sendWhatsAppTemplate": "Enviar template WhatsApp",
-            "notifyUser": "Notificar um usuário",
-            "executeFormula": "Rodar uma fórmula",
-            "updateTarget": "Atualizar campos da pessoa",
-            "runScript": "Rodar um script (plataforma)",
-            "recordTrackingEvent": "Registrar evento de tracking",
-            "triggerWorkflow": "Iniciar um workflow (plataforma)",
-            "startBpmnProcess": "Iniciar processo BPMN (plataforma)"
+            "notifyUser": "Notificar usuário",
+            "makeFollowed": "Adicionar seguidores",
+            "executeFormula": "Executar fórmula",
+            "updateTarget": "Atualizar alvo",
+            "updateRelatedRecord": "Atualizar registro relacionado",
+            "linkRecord": "Vincular registro",
+            "unlinkRecord": "Desvincular registro",
+            "applyAssignmentRule": "Aplicar regra de atribuição",
+            "sendHttpRequest": "Enviar requisição HTTP",
+            "runScript": "Executar script",
+            "recordTrackingEvent": "Registrar evento de tracking"
         }
     }
 }

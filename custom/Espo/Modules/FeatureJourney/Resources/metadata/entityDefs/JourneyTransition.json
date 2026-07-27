@@ -79,6 +79,7 @@
                 "entity\\attributeFetched",
                 "util\\empty",
                 "json\\retrieve",
+                "json\\encode",
                 "object\\get",
                 "object\\create",
                 "object\\cloneDeep",

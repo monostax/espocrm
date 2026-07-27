@@ -20,6 +20,7 @@
         "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",
         "followupsEnabled": "Automatic Follow-up Enabled",
         "delegateEnabled": "OpenCode Delegate Enabled",
+        "whatsappMessageTemplates": "WhatsApp Message Templates",
         "transferScenarios": "Transfer Scenarios",
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
@@ -67,7 +68,17 @@
         "confirmDisableAiProfile": "This will disable AI capabilities for this account member. Continue?",
         "aiProfileEnabled": "AI profile has been enabled successfully.",
         "aiProfileDisabled": "AI profile has been disabled.",
-        "inboxMustBelongToSameAccount": "Only inboxes from the same Chat Account can be linked to this Account Membership."
+        "inboxMustBelongToSameAccount": "Only inboxes from the same Chat Account can be linked to this Account Membership.",
+        "whatsappTemplatesLoading": "Loading templates…",
+        "whatsappTemplatesLoadingInboxes": "Loading linked inboxes…",
+        "whatsappTemplatesLoadingMeta": "Loading templates from Meta…",
+        "whatsappTemplatesNoCloudInboxes": "Link this AI member to a WhatsApp Cloud / Coexistence inbox first (side panel Inboxes). QR Code inboxes do not support Meta message templates.",
+        "whatsappTemplatesLinkedInboxesSummary": "Currently linked: {list}",
+        "whatsappTemplatesNoApproved": "No APPROVED templates.",
+        "whatsappTemplatesNoApprovedForInbox": "No APPROVED templates for this inbox.",
+        "whatsappTemplatesNoMetaCredentials": "Inbox has no Meta Cloud API credentials.",
+        "whatsappTemplatesLoadInboxesFailed": "Failed to load inboxes for this membership.",
+        "whatsappTemplatesLoadTemplatesFailed": "Failed to load templates."
     },
     "options": {
         "role": {
@@ -93,6 +104,7 @@
     "tooltips": {
         "followupsEnabled": "When disabled, this AI agent never runs automated follow-ups: new opportunities it creates are NOT armed with a follow-up loop, scheduled follow-ups for opportunities it drives stop firing, and any opportunities currently in 'Follow-up Active' driven by this agent are reset to 'Action Needed' the moment you disable it. The agent can still create and update opportunities normally.",
         "delegateEnabled": "When enabled, this AI agent may call the OpenCode `delegate` tool for multi-step research in each customer's isolated contact workspace (AI-profile skills/modes are copied as a baseline; contact overrides are preserved). Leave OFF unless you want untrusted conversation content to trigger nested agent runs in contact sandboxes. Requires the AI membership's assigned CRM user (for baseline skills/modes) and a linked CRM Contact on the conversation.",
+        "whatsappMessageTemplates": "Select Meta-approved WhatsApp message templates this AI may send on WhatsApp Cloud / Coexistence inboxes it belongs to. At runtime the AI only sees templates for the conversation's inbox, and only when the 24-hour customer-service window is closed (free-form messaging is unavailable). Templates are loaded from the linked inbox's Meta Business Account.",
         "chatwootAccountUserId": "The account-user membership ID in Chat. This field is automatically populated after sync.",
         "chatwootInboxes": "The inboxes this account member has access to. Managed automatically by the inbox member sync.",
         "isAI": "Enable to configure this member as an AI-powered agent.",

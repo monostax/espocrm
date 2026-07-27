@@ -116,6 +116,11 @@
             "readOnly": true,
             "view": "views/fields/user"
         },
+        "runAsUser": {
+            "type": "link",
+            "view": "global:views/fields/run-as-user",
+            "tooltip": true
+        },
         "teams": {
             "type": "linkMultiple",
             "required": true,
@@ -178,6 +183,10 @@
             "type": "hasMany",
             "entity": "JourneyRecord",
             "foreign": "journey"
+        },
+        "runAsUser": {
+            "type": "belongsTo",
+            "entity": "User"
         },
         "createdBy": {
             "type": "belongsTo",

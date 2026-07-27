@@ -16,6 +16,8 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Json;
 use Espo\Entities\User;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\EntityManager;
 use Espo\Tools\Import\UpdateEntityFinder;
 use stdClass;
@@ -41,6 +43,8 @@ class ContactImportUpdateEntityFinder implements UpdateEntityFinder
     public function __construct(
         private EntityManager $entityManager,
         private AclManager $aclManager,
+        private TenantResolver $tenantResolver,
+        private UserTenantResolver $userTenantResolver,
     ) {}
 
     /**
@@ -197,7 +201,7 @@ class ContactImportUpdateEntityFinder implements UpdateEntityFinder
 
     private function resolveTenantId(User $user, stdClass $values): string
     {
-        $allowedTenantIds = $this->findTenantIdsForTeams($user->getTeamIdList());
+        $allowedTenantIds = $this->userTenantResolver->resolveTenantIds($user);
         $requestedTenantId = $this->normalizeString($values->tenantId ?? null);
         $requestedTeamIds = $this->normalizeTeamIds($values->teamsIds ?? null);
         $teamTenantId = null;
@@ -266,28 +270,7 @@ class ContactImportUpdateEntityFinder implements UpdateEntityFinder
      */
     private function findTenantIdsForTeams(array $teamIds): array
     {
-        $tenantIds = [];
-
-        foreach ($teamIds as $teamId) {
-            $tenant = $this->entityManager
-                ->getRDBRepository('Tenant')
-                ->select(['id'])
-                ->where(['baseUserTeamId' => $teamId])
-                ->findOne();
-
-            $tenant ??= $this->entityManager
-                ->getRDBRepository('Tenant')
-                ->select(['id'])
-                ->join('otherUserTeams', 'otherUserTeams')
-                ->where(['otherUserTeamsMiddle.teamId' => $teamId])
-                ->findOne();
-
-            if ($tenant) {
-                $tenantIds[$tenant->getId()] = true;
-            }
-        }
-
-        return array_keys($tenantIds);
+        return $this->tenantResolver->resolveAllFromTeamIds(array_values($teamIds));
     }
 
     /** @return string[] */

@@ -4,7 +4,7 @@
     },
     "fields": {
         "journey": "Journey",
-        "target": "Person",
+        "target": "Target",
         "currentStage": "Current step",
         "status": "Status",
         "enteredStageAt": "Entered step at",
@@ -14,7 +14,8 @@
         "exitReason": "Left because",
         "tenant": "Workspace",
         "teams": "Teams",
-        "logs": "History"
+        "logs": "History",
+        "runAsUser": "Run as user"
     },
     "options": {
         "status": {
@@ -27,9 +28,9 @@
         }
     },
     "messages": {
-        "confirmExit": "Remove this person from the journey? They stop moving forward. History is kept (status → Left early). This does not delete the contact.",
+        "confirmExit": "Remove this record from the journey? It stops moving forward. History is kept (status → Left early). This does not delete the record itself.",
         "exiting": "Exiting journey…",
-        "exited": "Person left the journey",
+        "exited": "Record left the journey",
         "failedToExit": "Could not exit journey"
     },
     "presetFilters": {

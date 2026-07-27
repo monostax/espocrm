@@ -5,18 +5,25 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureJourney\Services;
 
 use Espo\Core\Utils\Log;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver as GlobalTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Throwable;
 
 /**
- * Teams → Tenant.baseUserTeamId unambiguous-single-match.
- * Port of InternalEventRecorder::resolveTenantIdForEntity.
+ * An entity's own `tenantId`, else the single tenant owning its teams.
+ *
+ * Entity -> team ids is the part that belongs here; the team -> tenant edge is
+ * delegated to the canonical Global TenantResolver, which matches a tenant's
+ * base user team AND its other user teams. Resolving only the base team left a
+ * null tenant for records assigned to a secondary team, and every consumer
+ * treats a null tenant as a missing key.
  */
 class TenantResolver
 {
     public function __construct(
         private EntityManager $entityManager,
+        private GlobalTenantResolver $globalTenantResolver,
         private Log $log,
     ) {}
 
@@ -55,19 +62,14 @@ class TenantResolver
             return null;
         }
 
-        $tenants = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => array_values(array_unique($teamIds))])
-            ->find();
-
-        $tenantIds = [];
-
-        foreach ($tenants as $tenant) {
-            $tenantIds[$tenant->getId()] = true;
-        }
+        // resolveAllFromTeamIds rather than resolveUniqueFromTeamIds: the unique
+        // variant collapses "no match" and "ambiguous" into null, and the ambiguous
+        // case is the one worth logging.
+        $tenantIds = $this->globalTenantResolver
+            ->resolveAllFromTeamIds(array_values(array_unique($teamIds)));
 
         if (count($tenantIds) === 1) {
-            return array_key_first($tenantIds);
+            return $tenantIds[0];
         }
 
         if (count($tenantIds) > 1) {

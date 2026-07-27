@@ -4,176 +4,252 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureAutomation\Services;
 
+use RRule\RSet;
+
 /**
- * Lightweight schedule helpers for Automation.scheduling.
+ * RFC 5545 recurrence-set helpers for Automation.scheduling.
  *
- * Supports:
- * - cron 5-field: m h dom mon dow  (e.g. "0 19 * * *")
- * - every:Nmin / every:Nminutes
- * - daily:HH:MM
+ * A schedule can contain one or more RRULE lines as well as EXDATE, RDATE,
+ * and EXRULE entries. Bare FREQ=... values are normalized into a recurrence
+ * set using the Automation activation timestamp as DTSTART.
  */
 class ScheduleHelper
 {
     /**
-     * Whether a schedule is due at $now given last successful fire time.
+     * @throws \InvalidArgumentException
      */
-    public function isDue(
-        string $scheduling,
-        ?string $lastRunAt,
-        string $timezone = 'UTC',
-        ?\DateTimeInterface $now = null,
-    ): bool {
-        $scheduling = trim($scheduling);
-        if ($scheduling === '') {
-            return false;
-        }
-
-        try {
-            $tz = new \DateTimeZone($timezone ?: 'UTC');
-        } catch (\Throwable) {
-            $tz = new \DateTimeZone('UTC');
-        }
-
-        $nowDt = $now
-            ? \DateTimeImmutable::createFromInterface($now)->setTimezone($tz)
-            : new \DateTimeImmutable('now', $tz);
-
-        $last = null;
-        if ($lastRunAt) {
-            try {
-                $last = new \DateTimeImmutable($lastRunAt, new \DateTimeZone('UTC'));
-                $last = $last->setTimezone($tz);
-            } catch (\Throwable) {
-                $last = null;
-            }
-        }
-
-        if (preg_match('/^every:(\d+)\s*(m|min|minutes?)?$/i', $scheduling, $m)) {
-            $minutes = max(1, (int) $m[1]);
-            if (!$last) {
-                return true;
-            }
-
-            return $last->getTimestamp() + ($minutes * 60) <= $nowDt->getTimestamp();
-        }
-
-        if (preg_match('/^daily:(\d{1,2}):(\d{2})$/', $scheduling, $m)) {
-            $scheduling = sprintf('%d %d * * *', (int) $m[2], (int) $m[1]);
-        }
-
-        $parts = preg_split('/\s+/', $scheduling);
-        if (!is_array($parts) || count($parts) !== 5) {
-            return false;
-        }
-
-        [$min, $hour, $dom, $mon, $dow] = $parts;
-
-        if (!$this->cronFieldMatches($min, (int) $nowDt->format('i'), 0, 59)) {
-            return false;
-        }
-
-        if (!$this->cronFieldMatches($hour, (int) $nowDt->format('G'), 0, 23)) {
-            return false;
-        }
-
-        if (!$this->cronFieldMatches($mon, (int) $nowDt->format('n'), 1, 12)) {
-            return false;
-        }
-
-        if (!$this->cronFieldMatches($dom, (int) $nowDt->format('j'), 1, 31)) {
-            return false;
-        }
-
-        // cron dow: 0-7 (0 and 7 = Sunday). PHP format('w') is 0=Sunday.
-        if (!$this->cronFieldMatches($dow, (int) $nowDt->format('w'), 0, 7)) {
-            return false;
-        }
-
-        // Fire at most once per matching minute window
-        if ($last) {
-            $windowStart = $nowDt->setTime((int) $nowDt->format('G'), (int) $nowDt->format('i'), 0);
-            if ($last >= $windowStart) {
-                return false;
-            }
-        }
-
-        return true;
+    public function validate(string $schedule, string $timezone = 'UTC'): void
+    {
+        $this->buildSet($schedule, $timezone, null);
     }
 
     /**
-     * Rough next run timestamp (UTC string) for display; best-effort.
+     * Whether a schedule is due at $now given its persisted next occurrence.
+     *
+     * nextRunAt is preferred because it preserves RRULE seconds and avoids
+     * re-iterating a long-running high-frequency recurrence on every poll.
      */
-    public function nextRunAt(
-        string $scheduling,
+    public function isDue(
+        string $schedule,
+        ?string $lastRunAt,
         string $timezone = 'UTC',
-        ?\DateTimeInterface $from = null,
-    ): ?string {
+        ?\DateTimeInterface $now = null,
+        ?\DateTimeInterface $startAt = null,
+        ?string $nextRunAt = null,
+    ): bool {
         try {
-            $tz = new \DateTimeZone($timezone ?: 'UTC');
-        } catch (\Throwable) {
-            $tz = new \DateTimeZone('UTC');
-        }
+            $tz = $this->getTimezone($timezone);
+            $nowDt = $now
+                ? \DateTimeImmutable::createFromInterface($now)->setTimezone($tz)
+                : new \DateTimeImmutable('now', $tz);
+            $last = $this->parseUtcDate($lastRunAt);
+            $set = $this->buildSet($schedule, $timezone, $startAt);
+            $next = $this->parseUtcDate($nextRunAt);
+            if ($next) {
+                if ($last && $last >= $next) {
+                    return false;
+                }
 
-        $cursor = $from
-            ? \DateTimeImmutable::createFromInterface($from)->setTimezone($tz)
-            : new \DateTimeImmutable('now', $tz);
-
-        // Scan next 8 days by minute steps carefully: hour steps then minutes
-        for ($i = 0; $i < 60 * 24 * 8; $i++) {
-            $cursor = $cursor->modify('+1 minute');
-            if ($this->isDue($scheduling, null, $timezone, $cursor)) {
-                // isDue with null last always true when match — re-check fields only
-                return $cursor->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+                return $next <= $nowDt;
             }
-        }
 
-        return null;
+            // Existing schedules without nextRunAt retain the previous
+            // minute-granular behavior unless their rule explicitly uses seconds.
+            $point = $this->hasSecondPrecision($set)
+                ? $nowDt
+                : $this->toMinute($nowDt, $tz);
+
+            if ($last && $last >= $point) {
+                return false;
+            }
+
+            return $set->occursAt($point);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
-    private function cronFieldMatches(string $field, int $value, int $min, int $max): bool
-    {
-        $field = trim($field);
-        if ($field === '*') {
-            return true;
+    /**
+     * Next recurrence-set occurrence as a UTC timestamp for display and due tracking.
+     */
+    public function nextRunAt(
+        string $schedule,
+        string $timezone = 'UTC',
+        ?\DateTimeInterface $from = null,
+        ?\DateTimeInterface $startAt = null,
+    ): ?string {
+        try {
+            $tz = $this->getTimezone($timezone);
+            $fromDt = $from
+                ? \DateTimeImmutable::createFromInterface($from)->setTimezone($tz)
+                : new \DateTimeImmutable('now', $tz);
+            $next = $this->buildSet($schedule, $timezone, $startAt)
+                ->getNthOccurrenceAfter($fromDt, 1);
+
+            if (!$next) {
+                return null;
+            }
+
+            return \DateTimeImmutable::createFromInterface($next)
+                ->setTimezone(new \DateTimeZone('UTC'))
+                ->format('Y-m-d H:i:s');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     */
+    // RSet's vendor type omits an IteratorAggregate value type.
+    /** @phpstan-ignore-next-line missingType.iterableValue */
+    private function buildSet(
+        string $schedule,
+        string $timezone,
+        ?\DateTimeInterface $startAt,
+    ): RSet {
+        $schedule = trim(str_replace(["\r\n", "\r"], "\n", $schedule));
+        if ($schedule === '') {
+            throw new \InvalidArgumentException('RRULE is required.');
         }
 
-        foreach (explode(',', $field) as $part) {
-            $part = trim($part);
-            if ($part === '') {
-                continue;
-            }
+        $tz = $this->getTimezone($timezone);
+        $fallbackStart = $startAt
+            ? \DateTimeImmutable::createFromInterface($startAt)
+            : new \DateTimeImmutable('2000-01-01 00:00:00', $tz);
+        $fallbackStart = $this->toMinute($fallbackStart, $tz);
+        $schedule = $this->normalizeSet($schedule, $fallbackStart, $tz);
 
-            if (str_contains($part, '/')) {
-                [$range, $step] = explode('/', $part, 2);
-                $step = max(1, (int) $step);
-                if ($range === '*') {
-                    if (($value - $min) % $step === 0) {
-                        return true;
-                    }
-                    continue;
-                }
-            }
+        try {
+            $set = new RSet($schedule);
+        } catch (\Throwable $e) {
+            throw new \InvalidArgumentException('Invalid recurrence rule: ' . $e->getMessage(), 0, $e);
+        }
 
-            if (str_contains($part, '-')) {
-                [$a, $b] = explode('-', $part, 2);
-                $a = (int) $a;
-                $b = (int) $b;
-                if ($value >= $a && $value <= $b) {
-                    return true;
-                }
-                continue;
-            }
+        if ($set->getRRules() === [] && $set->getDates() === []) {
+            throw new \InvalidArgumentException('A recurrence set requires an RRULE or RDATE.');
+        }
 
-            if ((int) $part === $value) {
+        return $set;
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     */
+    private function normalizeSet(
+        string $schedule,
+        \DateTimeImmutable $fallbackStart,
+        \DateTimeZone $timezone,
+    ): string {
+        $hasDtStart = preg_match('/(^|\n)\s*DTSTART(?:;[^:]*)?:/i', $schedule) === 1;
+        if ($hasDtStart && !preg_match(
+            '/(^|\n)\s*DTSTART(?:(?:;TZID=[^:]+):[^\n]*|:[^\n]*Z)\s*$/im',
+            $schedule,
+        )) {
+            throw new \InvalidArgumentException('DTSTART must use TZID or UTC (Z).');
+        }
+
+        $hasProperty = preg_match('/(^|\n)\s*[A-Z][A-Z0-9-]*(?:;[^:]*)?:/i', $schedule) === 1;
+        if (!$hasProperty) {
+            $schedule = 'RRULE:' . $schedule;
+        }
+
+        if (!$hasDtStart) {
+            $schedule = $this->formatDtStart($fallbackStart, $timezone) . "\n" . $schedule;
+        }
+
+        return $schedule;
+    }
+
+    /** @phpstan-ignore-next-line missingType.iterableValue */
+    private function hasSecondPrecision(RSet $set): bool
+    {
+        foreach (array_merge($set->getRRules(), $set->getExRules()) as $rule) {
+            $parts = $rule->getRule();
+            if (strtoupper((string) ($parts['FREQ'] ?? '')) === 'SECONDLY') {
                 return true;
             }
 
-            // Sunday 0 or 7
-            if ($max === 7 && (int) $part === 7 && $value === 0) {
+            foreach ($this->toList($parts['BYSECOND'] ?? null) as $second) {
+                if ((int) $second !== 0) {
+                    return true;
+                }
+            }
+
+            $dtStart = $parts['DTSTART'] ?? null;
+            if ($dtStart instanceof \DateTimeInterface && (int) $dtStart->format('s') !== 0) {
+                return true;
+            }
+        }
+
+        foreach (array_merge($set->getDates(), $set->getExDates()) as $date) {
+            if ((int) $date->format('s') !== 0) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function formatDtStart(\DateTimeImmutable $date, \DateTimeZone $timezone): string
+    {
+        $date = $date->setTimezone($timezone);
+        if ($timezone->getName() === 'UTC') {
+            return 'DTSTART:' . $date->format('Ymd\THis\Z');
+        }
+
+        return 'DTSTART;TZID=' . $timezone->getName() . ':' . $date->format('Ymd\THis');
+    }
+
+    private function getTimezone(string $timezone): \DateTimeZone
+    {
+        try {
+            return new \DateTimeZone($timezone ?: 'UTC');
+        } catch (\Throwable $e) {
+            throw new \InvalidArgumentException('Invalid timezone: ' . $timezone, 0, $e);
+        }
+    }
+
+    private function parseUtcDate(?string $value): ?\DateTimeImmutable
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($value, new \DateTimeZone('UTC'));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function toMinute(\DateTimeImmutable $date, \DateTimeZone $timezone): \DateTimeImmutable
+    {
+        $date = $date->setTimezone($timezone);
+
+        return $date->setTime(
+            (int) $date->format('G'),
+            (int) $date->format('i'),
+            0,
+        );
+    }
+
+    /**
+     * @return list<string|int>
+     */
+    private function toList(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        if (!is_array($value)) {
+            return explode(',', (string) $value);
+        }
+
+        return array_values(array_map(
+            static fn (mixed $item): string|int => is_int($item) ? $item : (string) $item,
+            $value,
+        ));
     }
 }

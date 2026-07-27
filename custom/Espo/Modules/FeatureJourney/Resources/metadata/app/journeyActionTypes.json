@@ -1,16 +1,22 @@
 {
     "typeList": [
         "createTask",
+        "createRecord",
+        "createRelatedRecord",
         "sendEmail",
         "sendWhatsAppMessage",
         "sendWhatsAppTemplate",
         "notifyUser",
-        "executeFormula",
+        "makeFollowed",
         "updateTarget",
-        "runScript",
+        "updateRelatedRecord",
+        "linkRecord",
+        "unlinkRecord",
+        "applyAssignmentRule",
+        "executeFormula",
+        "sendHttpRequest",
         "recordTrackingEvent",
-        "triggerWorkflow",
-        "startBpmnProcess"
+        "runScript"
     ],
     "types": {
         "createTask": {
@@ -55,6 +61,50 @@
                     "type": "varchar",
                     "label": "Due (YYYY-MM-DD or datetime)",
                     "placeholder": "2026-08-01"
+                }
+            ]
+        },
+        "createRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateRecord",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "entityType",
+                    "type": "enum",
+                    "label": "Record type",
+                    "options": ["Task", "Case", "Meeting", "Call", "Opportunity", "Note", "Contact", "Lead", "Account"],
+                    "required": true
+                },
+                {
+                    "name": "fields",
+                    "type": "fieldMap",
+                    "label": "Fields"
+                },
+                {
+                    "name": "linkToTarget",
+                    "type": "varchar",
+                    "label": "Link name to target (optional)",
+                    "placeholder": "parent / contact / account"
+                }
+            ]
+        },
+        "createRelatedRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateRelatedRecord",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "link",
+                    "type": "varchar",
+                    "label": "Relation link on target",
+                    "required": true,
+                    "placeholder": "opportunities / cases / tasks"
+                },
+                {
+                    "name": "fields",
+                    "type": "fieldMap",
+                    "label": "Fields"
                 }
             ]
         },
@@ -261,6 +311,20 @@
                 }
             ]
         },
+        "makeFollowed": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\MakeFollowed",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "userIds",
+                    "type": "json",
+                    "label": "Follower user IDs (JSON array)",
+                    "required": true,
+                    "placeholder": "[\"userId1\", \"userId2\"]"
+                }
+            ]
+        },
         "executeFormula": {
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ExecuteFormula",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
@@ -277,6 +341,137 @@
                     "name": "fields",
                     "type": "fieldMap",
                     "label": "Fields to update"
+                }
+            ]
+        },
+        "updateRelatedRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UpdateRelatedRecord",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "link",
+                    "type": "varchar",
+                    "label": "Relation link on target",
+                    "required": true
+                },
+                {
+                    "name": "fields",
+                    "type": "fieldMap",
+                    "label": "Fields to update"
+                },
+                {
+                    "name": "relatedId",
+                    "type": "varchar",
+                    "label": "Related record id (optional single)"
+                },
+                {
+                    "name": "parentEntityType",
+                    "type": "varchar",
+                    "label": "Parent entity type filter (optional)"
+                }
+            ]
+        },
+        "linkRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\LinkRecord",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "link",
+                    "type": "varchar",
+                    "label": "Relation link on target",
+                    "required": true
+                },
+                {
+                    "name": "entityId",
+                    "type": "varchar",
+                    "label": "Foreign record id",
+                    "required": true
+                }
+            ]
+        },
+        "unlinkRecord": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UnlinkRecord",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "link",
+                    "type": "varchar",
+                    "label": "Relation link on target",
+                    "required": true
+                },
+                {
+                    "name": "entityId",
+                    "type": "varchar",
+                    "label": "Foreign record id (required for multi links)"
+                }
+            ]
+        },
+        "applyAssignmentRule": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ApplyAssignmentRule",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "assignmentRule",
+                    "type": "enum",
+                    "label": "Rule",
+                    "options": ["Round-Robin", "Least-Busy"],
+                    "default": "Round-Robin",
+                    "required": true
+                },
+                {
+                    "name": "targetTeamId",
+                    "type": "link",
+                    "entity": "Team",
+                    "label": "Team (must be in workspace)",
+                    "nameKey": "targetTeamName",
+                    "required": true
+                },
+                {
+                    "name": "targetUserPosition",
+                    "type": "varchar",
+                    "label": "Team role / position (optional)"
+                }
+            ]
+        },
+        "sendHttpRequest": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendHttpRequest",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "requestUrl",
+                    "type": "varchar",
+                    "label": "URL (must match allow-list prefix)",
+                    "required": true,
+                    "placeholder": "https://hooks.example.com/journey"
+                },
+                {
+                    "name": "requestType",
+                    "type": "enum",
+                    "label": "Method",
+                    "options": ["GET", "POST", "PUT", "PATCH"],
+                    "default": "POST"
+                },
+                {
+                    "name": "contentType",
+                    "type": "enum",
+                    "label": "Content-Type",
+                    "options": ["", "application/json", "application/x-www-form-urlencoded"],
+                    "default": "application/json"
+                },
+                {
+                    "name": "content",
+                    "type": "text",
+                    "label": "Body (supports {$field} tokens)"
+                },
+                {
+                    "name": "headers",
+                    "type": "json",
+                    "label": "Extra headers (JSON string array)"
                 }
             ]
         },
@@ -309,32 +504,6 @@
                     "name": "properties",
                     "type": "json",
                     "label": "Properties (optional JSON)"
-                }
-            ]
-        },
-        "triggerWorkflow": {
-            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\TriggerWorkflow",
-            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
-            "tier": "platform",
-            "paramDefs": [
-                {
-                    "name": "workflowId",
-                    "type": "varchar",
-                    "label": "Workflow ID",
-                    "required": true
-                }
-            ]
-        },
-        "startBpmnProcess": {
-            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\StartBpmnProcess",
-            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
-            "tier": "platform",
-            "paramDefs": [
-                {
-                    "name": "flowchartId",
-                    "type": "varchar",
-                    "label": "Flowchart ID",
-                    "required": true
                 }
             ]
         }

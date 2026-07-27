@@ -1,6 +1,6 @@
 {
     "fields": {
-        "record": "Person in journey",
+        "record": "Journey enrollment",
         "journey": "Journey",
         "fromStage": "From step",
         "toStage": "To step",

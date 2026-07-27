@@ -563,6 +563,108 @@ class SeedChatwootReports implements RebuildAction
                 'isGloballyShared' => true,
                 'applyAcl' => true,
             ],
+            [
+                // Conversation-days with ≥1 AI run outside commercial hours
+                // (Mon–Fri 08:00–18:00 system TZ). Same grain as billing /
+                // ConversationsEngaged. Digest: "N fora do horário comercial".
+                'staticId' => 'chwRptOffHrs',
+                'name' => 'AI Agent Run (Conversas-Dia Fora do Horário Comercial / Por Dia)',
+                'description' =>
+                    'Conversas-dia (conversation × dia civil no fuso do ' .
+                    'Ambiente) com ao menos uma execução de Agente IA fora ' .
+                    'do horário comercial (segunda a sexta, 08:00–18:00 no ' .
+                    'Tenant.timeZone; vazio = fuso da instância). Finais de ' .
+                    'semana contam por completo. Agrupado por dia local do ' .
+                    'Ambiente. ACL-strict em ChatwootAiAgentRun.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt'],
+                'runtimeFilters' => ['runAt'],
+                'orderBy' => [],
+                'depth' => 1,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:EngagementsOutsideBusinessHoursPerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            // ------------------------------------------------------------------
+            // Opportunities linked to conversations touched by AI in period.
+            // Runtime filter: ChatwootAiAgentRun.runAt (+ tenant via runReport).
+            // Digest: "R$ em oportunidades" scoped to AI-engaged conversations.
+            // ------------------------------------------------------------------
+            [
+                'staticId' => 'chwRptAiOpp',
+                'name' => 'Oportunidades (R$) · Conversas com IA no Período',
+                'description' =>
+                    'Soma amountConverted de Oportunidades distintas ligadas ' .
+                    '(m2m chatwootConversationOpportunity) a ChatwootConversations ' .
+                    'que tiveram ≥1 ChatwootAiAgentRun no filtro de período ' .
+                    '(runAt). Inclui abertas, ganhas e perdidas. Colunas ' .
+                    'compatíveis com Oportunidades (R$). ACL-strict em ' .
+                    'ChatwootAiAgentRun + Opportunity. Drill-down lista as opps.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => [
+                    'SUM:IF:(EQUAL:(probability, 100), amountConverted, 0)',
+                    'SUM:IF:(EQUAL:(probability, 0), 1, 0)',
+                    'SUM:IF:(AND:(NOT_EQUAL:(probability, 100), NOT_EQUAL:(probability, 0)), amountConverted, 0)',
+                    'SUM:IF:(AND:(NOT_EQUAL:(probability, 100), NOT_EQUAL:(probability, 0)), 1, 0)',
+                    'SUM:IF:(EQUAL:(probability, 0), amountConverted, 0)',
+                    'SUM:IF:(EQUAL:(probability, 100), 1, 0)',
+                    'SUM:amountConverted',
+                    'COUNT:id',
+                ],
+                'groupBy' => [],
+                'runtimeFilters' => ['runAt', 'tenant'],
+                'orderBy' => [],
+                'depth' => 0,
+                'chartType' => null,
+                'fillEmptyDateBuckets' => false,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:OpportunitiesFromAiAgentConversations',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            // ------------------------------------------------------------------
+            // Single-payload daily/weekly WhatsApp digest (all KPIs, no day grid).
+            // ------------------------------------------------------------------
+            [
+                'staticId' => 'chwRptDigest',
+                'name' => 'IA Digest · Totais (WhatsApp)',
+                'description' =>
+                    'Relatório interno de totais (sem agrupamento por dia) para ' .
+                    'a automação de notificação WhatsApp. Em um único payload: ' .
+                    'SUM:amountConverted (opps ligadas a conversas com IA), ' .
+                    'COUNT:conversations (conversas-dia engajadas), ' .
+                    'COUNT:afterHours (+ weekend/weekday breakdown), ' .
+                    'AVG:leadTimeMs, turns. Filtro runtime runAt (+ tenant via ' .
+                    'runReport). ACL-strict.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => [
+                    'SUM:amountConverted',
+                    'COUNT:opportunities',
+                    'COUNT:conversations',
+                    'COUNT:afterHours',
+                    'COUNT:afterHoursWeekend',
+                    'COUNT:afterHoursWeekday',
+                    'AVG:leadTimeMs',
+                    'turns',
+                ],
+                'groupBy' => [],
+                'runtimeFilters' => ['runAt', 'tenant'],
+                'orderBy' => [],
+                'depth' => 0,
+                'chartType' => null,
+                'fillEmptyDateBuckets' => false,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:DailyAiDigest',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
         ];
     }
 

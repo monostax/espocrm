@@ -8,6 +8,7 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Select\Where\Item as WhereItem;
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Throwable;
@@ -30,8 +31,12 @@ class TransitionEvaluator
     /**
      * @param array{code?: string, payload?: array<string, mixed>, eventId?: string}|null $signal
      */
-    public function evaluate(Entity $record, Entity $transition, ?array $signal = null): bool
-    {
+    public function evaluate(
+        Entity $record,
+        Entity $transition,
+        ?array $signal = null,
+        ?User $actor = null,
+    ): bool {
         $evaluatorClass = $transition->get('evaluatorClassName');
 
         if (is_string($evaluatorClass) && $evaluatorClass !== '') {
@@ -83,7 +88,7 @@ class TransitionEvaluator
             return true;
         }
 
-        return $this->evaluateNode($group, $record, $signal);
+        return $this->evaluateNode($group, $record, $signal, $actor);
     }
 
     /**
@@ -118,11 +123,11 @@ class TransitionEvaluator
      * @param array<string, mixed> $node
      * @param array{code?: string, payload?: array<string, mixed>, eventId?: string}|null $signal
      */
-    private function evaluateNode(array $node, Entity $record, ?array $signal): bool
+    private function evaluateNode(array $node, Entity $record, ?array $signal, ?User $actor = null): bool
     {
         if (isset($node['and']) && is_array($node['and'])) {
             foreach ($node['and'] as $child) {
-                if (!is_array($child) || !$this->evaluateNode($child, $record, $signal)) {
+                if (!is_array($child) || !$this->evaluateNode($child, $record, $signal, $actor)) {
                     return false;
                 }
             }
@@ -132,7 +137,7 @@ class TransitionEvaluator
 
         if (isset($node['or']) && is_array($node['or'])) {
             foreach ($node['or'] as $child) {
-                if (is_array($child) && $this->evaluateNode($child, $record, $signal)) {
+                if (is_array($child) && $this->evaluateNode($child, $record, $signal, $actor)) {
                     return true;
                 }
             }
@@ -141,14 +146,14 @@ class TransitionEvaluator
         }
 
         if (isset($node['not']) && is_array($node['not'])) {
-            return !$this->evaluateNode($node['not'], $record, $signal);
+            return !$this->evaluateNode($node['not'], $record, $signal, $actor);
         }
 
         $type = $node['type'] ?? null;
 
         return match ($type) {
             'payloadPath' => $this->evalPayloadPath($node, $signal),
-            'entityFilter' => $this->evalEntityFilter($node, $record),
+            'entityFilter' => $this->evalEntityFilter($node, $record, $actor),
             'eventHistory' => $this->evalEventHistory($node, $record),
             'elapsedInStage' => $this->evalElapsedInStage($node, $record),
             'currentSignal' => $this->evalCurrentSignal($node, $signal),
@@ -238,7 +243,7 @@ class TransitionEvaluator
      *
      * @param array<string, mixed> $node
      */
-    private function evalEntityFilter(array $node, Entity $record): bool
+    private function evalEntityFilter(array $node, Entity $record, ?User $actor = null): bool
     {
         $where = $node['where'] ?? null;
         $targetType = $record->get('targetType');
@@ -273,10 +278,12 @@ class TransitionEvaluator
                     return false;
                 }
 
-                if ($tenantId) {
-                    if (!$this->tenantGuard->entityBelongsToTenant($target, (string) $tenantId)) {
-                        return false;
-                    }
+                // Unconditional: entityBelongsToTenant('') is false, so an unresolved
+                // tenant fails closed here exactly like the native branch below, which
+                // degrades to ['id' => null]. Previously a null tenantId skipped this
+                // check entirely and evaluated conditions against foreign-tenant data.
+                if (!$this->tenantGuard->entityBelongsToTenant($target, (string) $tenantId)) {
+                    return false;
                 }
 
                 if (!$this->customFieldsBag->matchWhereItems($partition['bag'], $target)) {
@@ -293,9 +300,17 @@ class TransitionEvaluator
                 ? $this->tenantGuard->tenantWhereForEntityType((string) $targetType, (string) $tenantId)
                 : ['id' => null];
 
-            $builder = $this->selectBuilderFactory
+            $selectBuilder = $this->selectBuilderFactory
                 ->create()
-                ->from((string) $targetType)
+                ->from((string) $targetType);
+
+            if ($actor !== null) {
+                $selectBuilder
+                    ->forUser($actor)
+                    ->withAccessControlFilter();
+            }
+
+            $builder = $selectBuilder
                 ->withWhere(WhereItem::fromRawAndGroup($partition['native']))
                 ->buildQueryBuilder()
                 ->where(['id' => $targetId])

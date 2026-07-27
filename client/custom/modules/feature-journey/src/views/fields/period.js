@@ -1,9 +1,73 @@
 define("feature-journey:views/fields/period", ["views/fields/base"], function (Dep) {
     /**
-     * Friendly period picker → stores "3 days", "12 hours", etc.
+     * Friendly period picker.
+     *
+     * Storage is always canonical English ("3 days", "12 hours") so the backend and the
+     * rule compiler see one format. The dropdown labels are localised, and free-form
+     * input accepts pt-BR words ("3 dias") which are normalised to English on save.
+     *
+     * The unit alias table mirrors PeriodParser.php. Keep the two in sync:
+     *   custom/Espo/Modules/FeatureJourney/Services/PeriodParser.php
      */
+    const UNIT_ALIASES = {
+        // English
+        second: "second", seconds: "second",
+        minute: "minute", minutes: "minute",
+        hour: "hour", hours: "hour",
+        day: "day", days: "day",
+        week: "week", weeks: "week",
+        // pt-BR
+        segundo: "second", segundos: "second",
+        minuto: "minute", minutos: "minute",
+        hora: "hour", horas: "hour",
+        dia: "day", dias: "day",
+        semana: "week", semanas: "week",
+    };
+
+    const stripAccents = (s) =>
+        s.replace(/[áàãâÁÀÃÂ]/g, "a")
+            .replace(/[éêÉÊ]/g, "e")
+            .replace(/[íÍ]/g, "i")
+            .replace(/[óôõÓÔÕ]/g, "o")
+            .replace(/[úÚ]/g, "u")
+            .replace(/[çÇ]/g, "c");
+
+    /** "3 dias" | "3 days" | "PT30M" -> {amount, unit} in canonical singular, or null. */
+    const splitPeriod = function (value) {
+        if (!value || typeof value !== "string") {
+            return null;
+        }
+
+        const m = value.trim().match(/^(\d+)\s*([A-Za-zÀ-ÿ]+)$/);
+
+        if (!m) {
+            return null;
+        }
+
+        const unit = UNIT_ALIASES[stripAccents(m[2]).toLowerCase()];
+
+        if (!unit) {
+            return null;
+        }
+
+        return { amount: parseInt(m[1], 10), unit: unit };
+    };
+
+    /** Canonical English storage form, or null when unparseable. */
+    const canonicalise = function (value) {
+        const parsed = splitPeriod(value);
+
+        if (!parsed) {
+            return null;
+        }
+
+        return parsed.amount + " " + parsed.unit + (parsed.amount === 1 ? "" : "s");
+    };
+
     return Dep.extend({
         type: "base",
+
+        validations: ["required", "period"],
 
         editTemplateContent:
             '<div class="input-group journey-period-field">' +
@@ -20,25 +84,26 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
             '{{#if rawFallback}}' +
             '<div class="margin-top-sm">' +
                 '<input type="text" class="form-control period-raw" value="{{rawValue}}" ' +
-                    'placeholder="or free-form e.g. 3 days">' +
+                    'placeholder="{{rawPlaceholder}}">' +
             '</div>' +
             '{{/if}}',
 
         detailTemplateContent:
             '{{#if isNotEmpty}}' +
-            '<span>{{value}}</span>' +
+            '<span>{{displayValue}}</span>' +
             '{{else}}' +
             '<span class="none-value">{{translate "None"}}</span>' +
             '{{/if}}',
 
         listTemplateContent:
-            '{{#if isNotEmpty}}{{value}}{{else}}' +
+            '{{#if isNotEmpty}}{{displayValue}}{{else}}' +
             '<span class="none-value">{{translate "None"}}</span>{{/if}}',
 
         unitList: ["minutes", "hours", "days", "weeks"],
 
         data: function () {
-            const parsed = this.parseValue(this.model.get(this.name));
+            const raw = this.model.get(this.name);
+            const parsed = this.parseValue(raw);
             const unitList = this.unitList.map((u) => ({
                 value: u,
                 label: this.translate(u, "labels", "Journey") || u,
@@ -49,11 +114,36 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
                 ...Dep.prototype.data.call(this),
                 amount: parsed.amount !== null ? parsed.amount : "",
                 unitList: unitList,
-                value: this.model.get(this.name) || "",
-                rawValue: this.model.get(this.name) || "",
+                value: raw || "",
+                displayValue: this.getDisplayValue(raw),
+                rawValue: raw || "",
+                rawPlaceholder: this.translateMessage("periodRawPlaceholder"),
                 rawFallback: true,
-                isNotEmpty: !!this.model.get(this.name),
+                isNotEmpty: !!raw,
             };
+        },
+
+        translateMessage: function (key) {
+            const text = this.translate(key, "messages", "Journey");
+
+            return text === key ? "" : text;
+        },
+
+        /**
+         * Localised read-only rendering. The stored value stays English; only what the
+         * user sees is translated, so "3 days" shows as "3 dias" in pt-BR.
+         */
+        getDisplayValue: function (value) {
+            const parsed = splitPeriod(value);
+
+            if (!parsed) {
+                return value || "";
+            }
+
+            const key = parsed.amount === 1 ? parsed.unit : parsed.unit + "s";
+            const label = this.translate(key, "labels", "Journey");
+
+            return parsed.amount + " " + (label === key ? key : label);
         },
 
         afterRender: function () {
@@ -83,30 +173,41 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
         },
 
         parseValue: function (value) {
-            if (!value || typeof value !== "string") {
-                return { amount: null, unit: "days" };
+            const parsed = splitPeriod(value);
+
+            if (!parsed) {
+                return { amount: null, unit: "days", raw: value || undefined };
             }
 
-            const m = value
-                .trim()
-                .match(
-                    /^(\d+)\s*(seconds?|minutes?|hours?|days?|weeks?)$/i
-                );
-
-            if (!m) {
-                return { amount: null, unit: "days", raw: value };
-            }
-
-            let unit = m[2].toLowerCase();
-            if (!unit.endsWith("s")) {
-                unit = unit + "s";
-            }
-            // normalize second(s) → not in unit list; fall to minutes raw
-            if (unit === "seconds") {
+            // "seconds" is not offered in the dropdown; keep it in the raw box.
+            if (parsed.unit === "second") {
                 return { amount: null, unit: "minutes", raw: value };
             }
 
-            return { amount: parseInt(m[1], 10), unit: unit };
+            return { amount: parsed.amount, unit: parsed.unit + "s" };
+        },
+
+        /**
+         * Blocks values the backend cannot parse. Without this an invalid string was
+         * saved happily and the timer / SLA then silently never fired.
+         */
+        validatePeriod: function () {
+            const value = this.model.get(this.name);
+
+            if (!value) {
+                return false;
+            }
+
+            if (canonicalise(value) || /^P(?=[\dT])[\dTWDHMSY.,]*$/i.test(String(value).trim())) {
+                return false;
+            }
+
+            const msg = this.translateMessage("periodInvalid") ||
+                'Use a format like "3 days" or "12 hours".';
+
+            this.showValidationMessage(msg);
+
+            return true;
         },
 
         fetch: function () {
@@ -116,7 +217,11 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
             }
 
             if (this._useRaw && this.$raw && this.$raw.val()) {
-                data[this.name] = String(this.$raw.val()).trim() || null;
+                const raw = String(this.$raw.val()).trim();
+                // Normalise pt-BR / singular input to canonical English storage. Values
+                // we cannot parse are kept verbatim so validatePeriod() can flag them.
+                data[this.name] = canonicalise(raw) || raw || null;
+
                 return data;
             }
 
@@ -125,17 +230,20 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
 
             if (amount === "" || amount === null || isNaN(Number(amount))) {
                 const raw = this.$raw ? String(this.$raw.val() || "").trim() : "";
-                data[this.name] = raw || null;
+                data[this.name] = raw ? canonicalise(raw) || raw : null;
+
                 return data;
             }
 
             const n = parseInt(amount, 10);
             if (n <= 0) {
                 data[this.name] = null;
+
                 return data;
             }
 
-            data[this.name] = n + " " + unit;
+            data[this.name] = canonicalise(n + " " + unit) || n + " " + unit;
+
             return data;
         },
     });

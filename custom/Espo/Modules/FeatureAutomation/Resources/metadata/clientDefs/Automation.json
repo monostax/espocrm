@@ -62,5 +62,153 @@
             "select": false,
             "view": "views/record/panels/relationship"
         }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "scheduling": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "schedule"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "schedule"
+                        }
+                    ]
+                }
+            },
+            "timezone": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "schedule"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "schedule"
+                        }
+                    ]
+                }
+            },
+            "subjectEntityType": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "kind",
+                                    "value": "Machine"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "triggerType",
+                                    "value": "entityChange"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "or",
+                            "value": [
+                                {
+                                    "type": "equals",
+                                    "attribute": "kind",
+                                    "value": "Machine"
+                                },
+                                {
+                                    "type": "equals",
+                                    "attribute": "triggerType",
+                                    "value": "entityChange"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "nextRunAt": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "schedule"
+                        }
+                    ]
+                }
+            },
+            "signalCodes": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "signal"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "signal"
+                        }
+                    ]
+                }
+            },
+            "entityTypeFilter": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "entityChange"
+                        }
+                    ]
+                }
+            },
+            "entityTypeFilterFormula": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "triggerType",
+                            "value": "entityChange"
+                        }
+                    ]
+                }
+            },
+            "triggerDebouncePeriod": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "triggerType",
+                            "value": ["entityChange", "signal"]
+                        }
+                    ]
+                }
+            }
+        }
     }
 }

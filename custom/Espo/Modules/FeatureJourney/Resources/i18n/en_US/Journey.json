@@ -1,9 +1,9 @@
 {
     "labels": {
         "Create Journey": "Create Journey",
-        "Activate": "Review & Publish",
+        "Activate": "Review & turn on",
         "Turn on": "Turn on",
-        "Review & Publish": "Review & Publish",
+        "Review & Publish": "Review & turn on",
         "Pause": "Pause",
         "Stop Enrollment": "Stop new joiners",
         "Archive": "Archive",
@@ -15,7 +15,13 @@
         "minutes": "minutes",
         "hours": "hours",
         "days": "days",
-        "weeks": "weeks"
+        "weeks": "weeks",
+        "second": "second",
+        "seconds": "seconds",
+        "minute": "minute",
+        "hour": "hour",
+        "day": "day",
+        "week": "week"
     },
     "fields": {
         "name": "Name",
@@ -38,8 +44,9 @@
         "description": "Description",
         "stages": "Steps",
         "transitions": "Connections",
-        "records": "People in journey",
-        "teams": "Teams"
+        "records": "Enrollments",
+        "teams": "Teams",
+        "runAsUser": "Run as user"
     },
     "options": {
         "status": {
@@ -66,7 +73,7 @@
         "archiving": "Archiving…",
         "activated": "Journey is on",
         "activatedWithCounts": "Journey is on · enrolled {enrolled} · skipped {skipped} · failed {failed}",
-        "activationFailuresDetail": "Some people failed enrollment (often entry actions). Review Journey Records filtered by Failed.",
+        "activationFailuresDetail": "Some records failed enrollment (often entry actions). Review Journey enrollments filtered by Failed.",
         "paused": "Journey paused",
         "enrollmentStopped": "New joiners stopped",
         "archived": "Journey archived",
@@ -74,7 +81,7 @@
         "failedToPause": "Could not pause journey",
         "failedToStopEnrollment": "Could not stop new joiners",
         "failedToArchive": "Could not archive journey",
-        "flowEmpty": "No steps yet. Start with an Entry step, then add actions and connections — like building a Zap or Make scenario.",
+        "flowEmpty": "No steps yet. Start with an Entry step, then add actions and connections.",
         "reviewLoading": "Checking journey…",
         "reviewLoadFailed": "Could not load review.",
         "reviewErrorsTitle": "Must fix before turning on",
@@ -100,18 +107,18 @@
         "reviewSideEffectsTitle": "What this journey does",
         "reviewNoSideEffects": "No active actions configured.",
         "reviewConfirmHint": "Turning on enrolls the audience and runs Entry actions immediately.",
-        "reviewBlockedHint": "Fix the errors above, then open Review & Publish again.",
+        "reviewBlockedHint": "Fix the errors above, then open Review & turn on again.",
         "actionTypeSendEmail": "Send email",
-        "actionTypeSendWhatsAppMessage": "WhatsApp message",
-        "actionTypeSendWhatsAppTemplate": "WhatsApp template",
+        "actionTypeSendWhatsAppMessage": "Send WhatsApp message",
+        "actionTypeSendWhatsAppTemplate": "Send WhatsApp template",
         "actionTypeCreateTask": "Create task",
         "actionTypeNotifyUser": "Notify user",
-        "actionTypeUpdateTarget": "Update person",
-        "actionTypeExecuteFormula": "Formula",
-        "actionTypeRecordTrackingEvent": "Tracking event",
-        "actionTypeRunScript": "Script",
-        "actionTypeTriggerWorkflow": "Workflow",
-        "actionTypeStartBpmnProcess": "BPMN process"
+        "actionTypeUpdateTarget": "Update target",
+        "actionTypeExecuteFormula": "Run formula",
+        "actionTypeRecordTrackingEvent": "Log tracking event",
+        "actionTypeRunScript": "Run script",
+        "periodInvalid": "Use a format like “3 days” or “12 hours”. Accepted units: minutes, hours, days, weeks.",
+        "periodRawPlaceholder": "or free-form, e.g. 3 days"
     },
     "tooltips": {
         "continuousEnrollment": "While the journey is on, anyone newly added to the audience joins automatically.",
@@ -119,8 +126,9 @@
         "goalEventCodes": "When one of these events is received, count the person as goal reached and finish their run.",
         "goalEntityFilter": "After a step runs, finish as goal reached if the person matches these fields (standard or Custom Fields).",
         "tenant": "Taken from the journey’s teams.",
-        "targetEntityType": "Contacts, leads, or accounts this automation applies to.",
+        "targetEntityType": "Contacts, leads, or accounts this journey applies to.",
         "targetLists": "People on these lists can join.",
-        "excludeTargetLists": "People on these lists never join, even if they are on an include list."
+        "excludeTargetLists": "People on these lists never join, even if they are on an include list.",
+        "runAsUser": "Whose permissions and record ownership this journey runs with. Defaults to the creator when left empty."
     }
 }

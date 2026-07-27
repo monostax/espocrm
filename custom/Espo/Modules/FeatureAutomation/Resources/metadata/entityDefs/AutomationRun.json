@@ -30,6 +30,11 @@
             "type": "jsonObject",
             "readOnly": true
         },
+        "dataBag": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "tooltip": true
+        },
         "parentRun": {
             "type": "link",
             "readOnly": true
@@ -42,6 +47,11 @@
         "tenant": {
             "type": "link",
             "readOnly": true
+        },
+        "runAsUser": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
         },
         "itemCount": {
             "type": "int",
@@ -59,6 +69,11 @@
             "default": 0
         },
         "skippedCount": {
+            "type": "int",
+            "readOnly": true,
+            "default": 0
+        },
+        "stageIndex": {
             "type": "int",
             "readOnly": true,
             "default": 0
@@ -122,6 +137,10 @@
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant"
+        },
+        "runAsUser": {
+            "type": "belongsTo",
+            "entity": "User"
         },
         "createdBy": {
             "type": "belongsTo",

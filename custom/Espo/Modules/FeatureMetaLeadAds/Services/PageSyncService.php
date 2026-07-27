@@ -51,6 +51,7 @@ class PageSyncService
      *   pagesUpdated: int,
      *   subscribed: int,
      *   subscribeErrors: array<int, array{pageId: string, error: string}>,
+     *   tenantConflicts: list<string>,
      *   error?: string,
      * }
      */
@@ -63,6 +64,7 @@ class PageSyncService
             'pagesUpdated'    => 0,
             'subscribed'      => 0,
             'subscribeErrors' => [],
+            'tenantConflicts' => [],
         ];
 
         $account = $this->entityManager
@@ -143,6 +145,16 @@ class PageSyncService
                 $accountTenantId,
             );
 
+            // Refused: the page row belongs to a different tenant. Skip the
+            // subscribe step too — subscribeAppForPage would register this
+            // tenant's token against the other tenant's page, and
+            // markSubscribed() resolves by pageId and would write to their row.
+            if ($created === null) {
+                $result['tenantConflicts'][] = $pageId;
+
+                continue;
+            }
+
             if ($created) {
                 $result['pagesCreated']++;
             } else {
@@ -185,10 +197,18 @@ class PageSyncService
      *   - Existing pages keep their admin-edited teamsIds/tenantId untouched
      *     UNLESS those are empty (e.g. legacy rows from before this refactor),
      *     in which case we backfill from the OAuthAccount.
+     *   - An existing page owned by a DIFFERENT tenant is refused, not
+     *     overwritten. `pageId` is globally unique (unique index on
+     *     [pageId, deleted]) and is the webhook routing discriminator, so only
+     *     one tenant can hold a given Meta page. Overwriting silently replaced
+     *     that tenant's oAuthAccountId and pageAccessToken with this one's,
+     *     leaving their teams/tenant in place — their lead-ads sync would then
+     *     run against a foreign token.
      *
      * @param list<string> $accountTeamIds
      *
-     * @return bool True if a new row was created, false if updated.
+     * @return bool|null True if a new row was created, false if updated,
+     *         null if refused because the page belongs to another tenant.
      */
     private function upsertPage(
         string $pageId,
@@ -197,7 +217,7 @@ class PageSyncService
         string $oAuthAccountId,
         array $accountTeamIds,
         ?string $accountTenantId,
-    ): bool {
+    ): ?bool {
         $existing = $this->entityManager
             ->getRDBRepository(MetaFacebookPage::ENTITY_TYPE)
             ->where(['pageId' => $pageId, 'deleted' => false])
@@ -207,6 +227,27 @@ class PageSyncService
         $now = date('Y-m-d H:i:s');
 
         if ($existing instanceof MetaFacebookPage) {
+            $existingTenantId = (string) ($existing->get('tenantId') ?? '');
+            $incomingTenantId = (string) ($accountTenantId ?? '');
+
+            if (
+                $existingTenantId !== ''
+                && $incomingTenantId !== ''
+                && $existingTenantId !== $incomingTenantId
+            ) {
+                $this->log->error(sprintf(
+                    'MetaLeadAds: refused cross-tenant MetaFacebookPage takeover — page %s is owned by '
+                    . 'tenant=%s but OAuthAccount %s resolves to tenant=%s. The Meta page must be '
+                    . 'disconnected from the other tenant first.',
+                    $pageId,
+                    $existingTenantId,
+                    $oAuthAccountId,
+                    $incomingTenantId,
+                ));
+
+                return null;
+            }
+
             $existing->set('name', $name);
             $existing->set('oAuthAccountId', $oAuthAccountId);
             // We bypass the beforeSave hook here because we're storing

@@ -15,6 +15,8 @@ use Espo\Core\AclManager;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Entities\User;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\Modules\Chatwoot\Tools\ContactImportUpdateEntityFinder;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityCollection;
@@ -32,6 +34,25 @@ class ContactImportUpdateEntityFinderTest extends TestCase
         $user->method('isSystem')->willReturn(false);
 
         return $user;
+    }
+
+    /**
+     * Tenant resolution now lives in TenantResolver / UserTenantResolver (both
+     * covered by their own tests). This suite exercises the finder's matching
+     * and authorisation logic, so membership is stubbed: the user belongs to
+     * tenant-1, and teams resolve to tenant-1.
+     *
+     * @return array{TenantResolver, UserTenantResolver}
+     */
+    private function createTenantResolvers(): array
+    {
+        $tenantResolver = $this->createMock(TenantResolver::class);
+        $tenantResolver->method('resolveAllFromTeamIds')->willReturn(['tenant-1']);
+
+        $userTenantResolver = $this->createMock(UserTenantResolver::class);
+        $userTenantResolver->method('resolveTenantIds')->willReturn(['tenant-1']);
+
+        return [$tenantResolver, $userTenantResolver];
     }
 
     /** @return RDBRepository<Entity> */
@@ -103,7 +124,14 @@ class ContactImportUpdateEntityFinderTest extends TestCase
             ['Contact', $contactRepository],
         ]);
 
-        $finder = new ContactImportUpdateEntityFinder($entityManager, $aclManager);
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
+        $finder = new ContactImportUpdateEntityFinder(
+            $entityManager,
+            $aclManager,
+            $tenantResolver,
+            $userTenantResolver,
+        );
 
         $this->assertSame($contact, $finder->find([
             'whatsappNumber' => '(16) 99392-1469',
@@ -170,7 +198,14 @@ class ContactImportUpdateEntityFinderTest extends TestCase
             ['Contact', $contactRepository],
         ]);
 
-        $finder = new ContactImportUpdateEntityFinder($entityManager, $aclManager);
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
+        $finder = new ContactImportUpdateEntityFinder(
+            $entityManager,
+            $aclManager,
+            $tenantResolver,
+            $userTenantResolver,
+        );
 
         $this->assertSame($contact, $finder->find([
             'whatsappNumber' => '+5516993921469',
@@ -218,7 +253,14 @@ class ContactImportUpdateEntityFinderTest extends TestCase
             ['Contact', $contactRepository],
         ]);
 
-        $finder = new ContactImportUpdateEntityFinder($entityManager, $aclManager);
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
+        $finder = new ContactImportUpdateEntityFinder(
+            $entityManager,
+            $aclManager,
+            $tenantResolver,
+            $userTenantResolver,
+        );
 
         $this->assertSame(
             $contact,
@@ -248,9 +290,13 @@ class ContactImportUpdateEntityFinderTest extends TestCase
             ['Contact', $contactRepository],
         ]);
 
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
         $finder = new ContactImportUpdateEntityFinder(
             $entityManager,
             $this->createMock(AclManager::class),
+            $tenantResolver,
+            $userTenantResolver,
         );
 
         $this->assertNull($finder->find([
@@ -288,9 +334,13 @@ class ContactImportUpdateEntityFinderTest extends TestCase
             ['ContactChannelIdentity', $identityRepository],
         ]);
 
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
         $finder = new ContactImportUpdateEntityFinder(
             $entityManager,
             $this->createMock(AclManager::class),
+            $tenantResolver,
+            $userTenantResolver,
         );
 
         $this->assertNull($finder->find(
@@ -307,9 +357,13 @@ class ContactImportUpdateEntityFinderTest extends TestCase
             ->with('Tenant')
             ->willReturn($this->createTenantRepository());
 
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
         $finder = new ContactImportUpdateEntityFinder(
             $entityManager,
             $this->createMock(AclManager::class),
+            $tenantResolver,
+            $userTenantResolver,
         );
 
         $this->expectException(BadRequest::class);
@@ -330,7 +384,14 @@ class ContactImportUpdateEntityFinderTest extends TestCase
         $entityManager = $this->createMock(EntityManager::class);
         $entityManager->method('getRDBRepository')->with('Tenant')->willReturn($this->createTenantRepository());
 
-        $finder = new ContactImportUpdateEntityFinder($entityManager, $this->createMock(AclManager::class));
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
+        $finder = new ContactImportUpdateEntityFinder(
+            $entityManager,
+            $this->createMock(AclManager::class),
+            $tenantResolver,
+            $userTenantResolver,
+        );
 
         $this->expectException(BadRequest::class);
         $this->expectExceptionMessage('Invalid phone number');
@@ -372,7 +433,14 @@ class ContactImportUpdateEntityFinderTest extends TestCase
         $aclManager = $this->createMock(AclManager::class);
         $aclManager->method('checkEntityEdit')->willReturn(true);
 
-        $finder = new ContactImportUpdateEntityFinder($entityManager, $aclManager);
+        [$tenantResolver, $userTenantResolver] = $this->createTenantResolvers();
+
+        $finder = new ContactImportUpdateEntityFinder(
+            $entityManager,
+            $aclManager,
+            $tenantResolver,
+            $userTenantResolver,
+        );
 
         $this->expectException(BadRequest::class);
         $this->expectExceptionMessage('multiple editable contacts');

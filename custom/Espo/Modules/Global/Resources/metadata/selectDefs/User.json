@@ -1,0 +1,5 @@
+{
+    "boolFilterClassNameMap": {
+        "onlyInMyTenants": "Espo\\Modules\\Global\\Classes\\Select\\User\\BoolFilters\\OnlyInMyTenants"
+    }
+}

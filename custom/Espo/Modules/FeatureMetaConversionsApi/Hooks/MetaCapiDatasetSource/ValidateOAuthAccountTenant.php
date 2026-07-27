@@ -6,7 +6,9 @@ namespace Espo\Modules\FeatureMetaConversionsApi\Hooks\MetaCapiDatasetSource;
 
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Hook\Hook\BeforeSave;
+use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiDataset;
 use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiDatasetSource;
 use Espo\ORM\Entity;
@@ -21,8 +23,10 @@ use Espo\ORM\Repository\Option\SaveOptions;
  * authorizing OAuthAccount belongs to another tenant, we'd report one tenant's
  * conversions through another tenant's credentials. Refuse at save time.
  *
- * The OAuthAccount's tenant is resolved via its teams → Tenant.baseUserTeam.
- * If either side's tenant is unknown the save proceeds (runtime checks apply).
+ * The OAuthAccount's tenants are resolved from its teams via TenantResolver,
+ * counting both a tenant's base user team and its other user teams, and the
+ * dataset's tenant must be one of them. If the dataset has no tenant, or the
+ * account resolves to none, the save proceeds (runtime checks apply).
  *
  * @implements BeforeSave<MetaCapiDatasetSource>
  */
@@ -32,6 +36,7 @@ class ValidateOAuthAccountTenant implements BeforeSave
 
     public function __construct(
         private EntityManager $entityManager,
+        private TenantResolver $tenantResolver,
         private Log $log,
     ) {}
 
@@ -68,16 +73,20 @@ class ValidateOAuthAccountTenant implements BeforeSave
             return;
         }
 
-        $oAuthTenant = $this->resolveOAuthAccountTenant((string) $oAuthAccountId);
+        $oAuthTenantIds = $this->resolveOAuthAccountTenantIds((string) $oAuthAccountId);
 
-        if ($oAuthTenant === '' || $oAuthTenant === $datasetTenant) {
+        // Unresolved stays permissive, as before: an account owned by no tenant
+        // cannot name a foreign one. But an account reachable from several tenants
+        // is legitimate for any of them, so test membership instead of equality —
+        // picking one and comparing would refuse valid links at random.
+        if ($oAuthTenantIds === [] || in_array($datasetTenant, $oAuthTenantIds, true)) {
             return;
         }
 
         $this->log->error(sprintf(
             'MetaCapi: refused cross-tenant MetaCapiDatasetSource.oAuthAccount link — OAuthAccount %s tenant=%s vs MetaCapiDataset %s tenant=%s.',
             (string) $oAuthAccountId,
-            $oAuthTenant,
+            implode(',', $oAuthTenantIds),
             (string) $dataset->getId(),
             $datasetTenant,
         ));
@@ -88,31 +97,36 @@ class ValidateOAuthAccountTenant implements BeforeSave
     }
 
     /**
-     * Resolves an OAuthAccount's tenant via its teams → Tenant.baseUserTeam.
+     * Every tenant reachable from the OAuthAccount's teams.
+     *
+     * Delegated to the canonical TenantResolver, which counts a tenant's base user
+     * team AND its other user teams. Matching only the base team returned '' for an
+     * account held by a secondary team, and '' is treated as "no tenant, allow" up
+     * in beforeSave — so this guard used to wave through exactly the cross-tenant
+     * link it exists to refuse.
+     *
+     * @return list<string>
      */
-    private function resolveOAuthAccountTenant(string $oAuthAccountId): string
+    private function resolveOAuthAccountTenantIds(string $oAuthAccountId): array
     {
         $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
 
-        if (!$oAuthAccount) {
-            return '';
+        // Only CoreEntity exposes link-multiple reads; anything else cannot name a
+        // tenant, which the permissive branch in beforeSave already handles.
+        if (!$oAuthAccount instanceof CoreEntity) {
+            return [];
         }
 
         try {
             $teamIds = $oAuthAccount->getLinkMultipleIdList('teams');
         } catch (\Throwable) {
-            return '';
+            return [];
         }
 
         if (empty($teamIds)) {
-            return '';
+            return [];
         }
 
-        $tenant = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => $teamIds])
-            ->findOne();
-
-        return $tenant ? (string) $tenant->getId() : '';
+        return $this->tenantResolver->resolveAllFromTeamIds(array_values($teamIds));
     }
 }

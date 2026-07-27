@@ -19,6 +19,7 @@ class AutomationEventDispatcher
         private EntityManager $entityManager,
         private AutomationRunner $runner,
         private ActionReceiptStore $receiptStore,
+        private AutomationTriggerFilterEvaluator $triggerFilterEvaluator,
         private Log $log,
     ) {}
 
@@ -41,12 +42,7 @@ class AutomationEventDispatcher
                 ->find();
 
             foreach ($list as $automation) {
-                $filter = (string) ($automation->get('entityTypeFilter') ?: $automation->get('subjectEntityType') ?: '');
-                if ($filter !== '' && $filter !== $entityType) {
-                    continue;
-                }
-
-                if (!$this->passTriggerDebounce($automation, "entityChange|{$entityType}|{$entityId}|{$event}")) {
+                if (!$this->matchesSubjectEntityType($automation, $entityType)) {
                     continue;
                 }
 
@@ -55,6 +51,14 @@ class AutomationEventDispatcher
                     'entityId' => $entityId,
                     'event' => $event,
                 ]);
+
+                if (!$this->triggerFilterEvaluator->matches($automation, $entityType, $entityId, $payload)) {
+                    continue;
+                }
+
+                if (!$this->passTriggerDebounce($automation, "entityChange|{$entityType}|{$entityId}|{$event}")) {
+                    continue;
+                }
 
                 try {
                     $this->runner->startRun($automation, 'entityChange', $payload);
@@ -106,8 +110,7 @@ class AutomationEventDispatcher
                     continue;
                 }
 
-                $fp = 'signal|' . $code . '|' . ($entityType ?? '') . '|' . ($entityId ?? '');
-                if (!$this->passTriggerDebounce($automation, $fp)) {
+                if (!$this->matchesSubjectEntityType($automation, $entityType)) {
                     continue;
                 }
 
@@ -116,6 +119,15 @@ class AutomationEventDispatcher
                     'entityType' => $entityType,
                     'entityId' => $entityId,
                 ]);
+
+                if (!$this->triggerFilterEvaluator->matches($automation, $entityType, $entityId, $payload)) {
+                    continue;
+                }
+
+                $fp = 'signal|' . $code . '|' . ($entityType ?? '') . '|' . ($entityId ?? '');
+                if (!$this->passTriggerDebounce($automation, $fp)) {
+                    continue;
+                }
 
                 try {
                     $this->runner->startRun($automation, 'signal', $payload);
@@ -147,5 +159,24 @@ class AutomationEventDispatcher
             $period,
             $tenantId,
         );
+    }
+
+    private function matchesSubjectEntityType(Automation $automation, ?string $entityType): bool
+    {
+        $expected = trim((string) ($automation->get('subjectEntityType') ?? ''));
+
+        if ($expected === '') {
+            $legacy = $automation->get('entityTypeFilter');
+
+            if (is_string($legacy) && !str_starts_with(ltrim($legacy), '{') && !str_starts_with(ltrim($legacy), '[')) {
+                $expected = trim($legacy);
+            }
+        }
+
+        if ($expected === '') {
+            return true;
+        }
+
+        return $entityType !== null && $entityType === $expected;
     }
 }

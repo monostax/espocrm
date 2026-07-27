@@ -54,21 +54,24 @@ class CapiDispatcher
     ): MetaCapiEventLog {
         $dataset = $dataset ?? $this->resolver->resolveForEntity($subject);
 
+        $skipReason = null;
+
         // Defense in depth: even if a caller passed an explicit $dataset
         // (e.g. cal.com path, admin test endpoint), refuse to dispatch when
-        // the subject and dataset belong to different tenants. Without this,
-        // an admin or integration bug could silently fire Tenant B's stage
-        // change under Tenant A's Pixel using Tenant A's access token.
+        // the subject and dataset are not provably in the same tenant. Without
+        // this, an admin or integration bug could silently fire Tenant B's
+        // stage change under Tenant A's Pixel using Tenant A's access token.
         if ($dataset && !$this->assertTenantMatch($subject, $dataset)) {
-            // Fall through to Skipped log with the cross-tenant error message.
             $dataset = null;
+            $skipReason = 'Cross-tenant dispatch refused: subject and MetaCapiDataset '
+                . 'are not provably in the same tenant.';
         }
 
         $logEntity = $this->createLogEntity($subject, $eventName, $dataset, $context);
 
         if (!$dataset) {
             $logEntity->set('status', MetaCapiEventLog::STATUS_SKIPPED);
-            $logEntity->set('errorMessage', 'No MetaCapiDataset resolved for subject.');
+            $logEntity->set('errorMessage', $skipReason ?? 'No MetaCapiDataset resolved for subject.');
             $this->entityManager->saveEntity($logEntity);
 
             return $logEntity;
@@ -440,34 +443,27 @@ class CapiDispatcher
     }
 
     /**
-     * Returns true iff the subject and dataset belong to the same tenant
-     * (or either side has no tenant set, in which case we can't assert
-     * mismatch — those edge cases are logged separately when they arise).
+     * Returns true iff the subject and dataset are both known to belong to the
+     * SAME tenant. Fails closed: an unresolvable tenant on either side is a
+     * refusal, because same-tenancy cannot be proven and the payload carries
+     * hashed PII to a third party under the dataset's access token.
      */
     private function assertTenantMatch(Entity $subject, MetaCapiDataset $dataset): bool
     {
         $subjectTenantId = (string) ($subject->get('tenantId') ?? '');
         $datasetTenantId = (string) ($dataset->get('tenantId') ?? '');
 
-        if ($subjectTenantId === '' || $datasetTenantId === '') {
-            // One side has no tenant — can't prove mismatch, defer to caller
-            // (resolveFromOpportunity already short-circuits the case it
-            // controls; admin test endpoints may legitimately use untenanted
-            // entities during testing).
-            return true;
-        }
-
-        if ($subjectTenantId === $datasetTenantId) {
+        if ($subjectTenantId !== '' && $subjectTenantId === $datasetTenantId) {
             return true;
         }
 
         $this->log->error(sprintf(
-            'MetaCapi dispatch refused: %s %s tenant=%s vs dataset %s tenant=%s.',
+            'MetaCapi dispatch refused: %s %s tenant=%s vs dataset %s tenant=%s (both must be set and equal).',
             $subject->getEntityType(),
             (string) $subject->getId(),
-            $subjectTenantId,
+            $subjectTenantId !== '' ? $subjectTenantId : '(unset)',
             (string) $dataset->getId(),
-            $datasetTenantId,
+            $datasetTenantId !== '' ? $datasetTenantId : '(unset)',
         ));
 
         return false;

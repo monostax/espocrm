@@ -5,7 +5,7 @@
         "target": "Target",
         "status": "Status",
         "tenant": "Workspace",
-        "payload": "Payload",
+        "payload": "Run data",
         "actionLog": "Action log",
         "claimedAt": "Claimed",
         "wakeAt": "Wake at",

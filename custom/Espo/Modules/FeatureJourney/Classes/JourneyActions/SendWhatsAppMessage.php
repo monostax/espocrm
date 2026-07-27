@@ -67,6 +67,7 @@ class SendWhatsAppMessage implements Action
             $inboxId,
             $tenantId,
             JourneyWhatsAppOutbound::CHANNELS_MESSAGE,
+            $context->actor,
         );
 
         $name = $this->outbound->displayName($context->target);

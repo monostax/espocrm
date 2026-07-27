@@ -6,6 +6,7 @@
     },
     "columnLabels": {
         "conversationsEngaged": "Conversas Engajadas",
+        "engagementsOutsideBusinessHours": "Fora do horário comercial",
         "amount": "Valor ({currency})",
         "amountDeal": "Valor (moeda do acordo)",
         "packs": "Pacotes",

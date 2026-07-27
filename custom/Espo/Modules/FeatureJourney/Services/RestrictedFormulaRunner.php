@@ -45,6 +45,7 @@ class RestrictedFormulaRunner
         'entity\\attributeFetched',
         'util\\empty',
         'json\\retrieve',
+        'json\\encode',
         'object\\get',
         'object\\create',
         'object\\cloneDeep',
@@ -53,6 +54,10 @@ class RestrictedFormulaRunner
         'array\\at',
         'array\\push',
         'array\\join',
+        // Guarded cross-record read. Not `record\*`: those core functions bypass
+        // tenant + ACL (see BLOCKED_PREFIXES). This one derives tenant and actor
+        // from FormulaReadScope and is read-only.
+        'scoped\\recordAttribute',
     ];
 
     /** @var list<string> */

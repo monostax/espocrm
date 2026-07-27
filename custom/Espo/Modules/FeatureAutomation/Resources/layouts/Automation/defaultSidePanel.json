@@ -3,5 +3,7 @@
     {"name": "kind"},
     {"name": "triggerType"},
     {"name": "tenant"},
+    {"name": "crossTenant"},
+    {"name": "runAsUser"},
     {"name": "teams"}
 ]

@@ -1,0 +1,7 @@
+{
+    "cssList": [
+        "__APPEND__",
+        "client/custom/modules/feature-journey/css/expression-input.css",
+        "client/custom/modules/feature-automation/css/automation.css"
+    ]
+}

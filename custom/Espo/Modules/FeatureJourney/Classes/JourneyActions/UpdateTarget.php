@@ -73,9 +73,14 @@ class UpdateTarget implements Action
         $skipDispatch = JourneyEffectDepth::current() > 0
             || !empty($context->params['skipJourneyDispatch']);
 
-        $this->entityManager->saveEntity($context->target, [
+        $saveOpts = [
             SaveOption::SILENT => false,
             'skipJourneyDispatch' => $skipDispatch,
-        ]);
+        ];
+        if ($context->actor !== null) {
+            $saveOpts[SaveOption::MODIFIED_BY_ID] = $context->actor->getId();
+        }
+
+        $this->entityManager->saveEntity($context->target, $saveOpts);
     }
 }

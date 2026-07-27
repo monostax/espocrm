@@ -23,6 +23,7 @@ use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\CustomField\MetaProvider;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\EntityManager;
 
 /**
@@ -47,6 +48,7 @@ class CustomField
     public function __construct(
         private MetaProvider $metaProvider,
         private TenantResolver $tenantResolver,
+        private UserTenantResolver $userTenantResolver,
         private EntityManager $entityManager,
         private Acl $acl,
         private User $user,
@@ -155,7 +157,24 @@ class CustomField
         $explicit = $request->getQueryParam('tenantId');
 
         if (is_string($explicit) && trim($explicit) !== '') {
-            return trim($explicit);
+            $tenantId = trim($explicit);
+
+            // An explicitly-supplied tenantId is caller-controlled input and
+            // MUST be authorized. Without this, any user able to read the host
+            // entity could pass an arbitrary tenantId and receive another
+            // tenant's entire custom-field schema — bypassing CustomFieldDef
+            // ACL by design (meta is gated on host-entity read, not schema
+            // admin). The team-derived branch below was already constrained to
+            // the user's own teams; this branch was not.
+            if (!$this->user->isAdmin()) {
+                $allowed = array_flip($this->resolveAccessibleTenantIds());
+
+                if (!isset($allowed[$tenantId])) {
+                    throw new Forbidden('No access to the requested tenant.');
+                }
+            }
+
+            return $tenantId;
         }
 
         $teamIds = $this->parseTeamIds($request->getQueryParam('teamIds'));
@@ -299,11 +318,16 @@ class CustomField
     }
 
     /**
-     * Tenants whose CF schema the current user may surface in template pickers.
+     * Tenants whose CF schema the current user may surface in template pickers,
+     * and the authorisation set for an explicitly-supplied `tenantId`.
      *
      * - Admin / system: every active Tenant.
-     * - Others: unique tenants reachable from the user's teams
-     *   (baseUserTeam / otherUserTeams), same Rules as single resolve.
+     * - Others: every tenant the user can act for, via UserTenantResolver.
+     *
+     * This used to derive tenants from teams ONLY, which disagreed with
+     * RunAsUserAccess::getUserTenantIds() — a user explicitly linked to a tenant
+     * through `tenantUser` but not a member of any of its teams was refused
+     * there yet allowed here. Both now resolve the same union.
      *
      * @return list<string>
      */
@@ -328,22 +352,6 @@ class CustomField
             return array_values(array_unique($ids));
         }
 
-        $teamIds = $this->getUserTeamIds();
-
-        if ($teamIds === []) {
-            return [];
-        }
-
-        $ids = [];
-
-        foreach ($teamIds as $teamId) {
-            $tenantId = $this->tenantResolver->resolveFromTeamId($teamId);
-
-            if ($tenantId) {
-                $ids[] = $tenantId;
-            }
-        }
-
-        return array_values(array_unique($ids));
+        return $this->userTenantResolver->resolveTenantIds($this->user);
     }
 }

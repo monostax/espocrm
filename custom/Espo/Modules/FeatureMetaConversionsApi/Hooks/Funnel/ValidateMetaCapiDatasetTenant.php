@@ -72,25 +72,36 @@ class ValidateMetaCapiDatasetTenant implements BeforeSave
         $funnelTenant  = (string) ($entity->get('tenantId') ?? '');
         $datasetTenant = (string) ($dataset->get('tenantId') ?? '');
 
-        // If either side has no tenant, we can't assert mismatch.
-        // (Funnel.tenant is derived by a different hook; if it's missing
-        // we let the save proceed and rely on the DatasetResolver's
-        // runtime check.)
-        if ($funnelTenant === '' || $datasetTenant === '') {
+        if ($funnelTenant !== '' && $funnelTenant === $datasetTenant) {
             return;
         }
 
-        if ($funnelTenant === $datasetTenant) {
-            return;
-        }
-
+        // Fail CLOSED. Both tenants must be known and equal.
+        //
+        // Funnel.tenant is `required` and is derived at $order = 5 by
+        // Global\Hooks\Funnel\SyncTenantFromTeam (which itself throws when a
+        // team resolves to no tenant), so by the time this hook runs at
+        // $order = 15 an empty Funnel tenant means the record is already
+        // misconfigured. An empty dataset tenant likewise means the dataset
+        // cannot dispatch at all (DatasetResolver / CapiDispatcher both refuse
+        // it). In either case the link is unsafe to persist: it is the wiring
+        // that would later route this tenant's hashed PII to whichever Pixel
+        // the dataset points at.
         $this->log->error(sprintf(
-            'MetaCapi: refused cross-tenant Funnel.metaCapiDataset link — Funnel %s tenant=%s vs MetaCapiDataset %s tenant=%s.',
+            'MetaCapi: refused Funnel.metaCapiDataset link — Funnel %s tenant=%s vs '
+            . 'MetaCapiDataset %s tenant=%s (both must be set and equal).',
             (string) $entity->getId(),
-            $funnelTenant,
+            $funnelTenant !== '' ? $funnelTenant : '(unset)',
             (string) $dataset->getId(),
-            $datasetTenant,
+            $datasetTenant !== '' ? $datasetTenant : '(unset)',
         ));
+
+        if ($funnelTenant === '' || $datasetTenant === '') {
+            throw new BadRequest(
+                'Cannot link this MetaCapiDataset: the tenant of the funnel and/or of the dataset '
+                . 'could not be determined. Ensure both belong to a team that maps to exactly one Tenant.'
+            );
+        }
 
         throw new BadRequest(
             'Cross-tenant link refused: the selected MetaCapiDataset belongs to a different tenant than this Funnel.'

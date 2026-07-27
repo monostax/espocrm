@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureAutomation\Services;
 
+use Espo\Core\AclManager;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SearchParams;
+use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Log;
+use Espo\Entities\User;
+use Espo\Modules\FeatureJourney\Services\PeriodParser;
+use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\Global\Classes\Utils\TenantRoleAuth;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use stdClass;
 use Throwable;
 
 /**
@@ -28,6 +35,9 @@ class MapMaterializer
         private EntityManager $entityManager,
         private TenantGuard $tenantGuard,
         private InjectableFactory $injectableFactory,
+        private RestrictedFormulaRunner $formulaRunner,
+        private SelectBuilderFactory $selectBuilderFactory,
+        private AclManager $aclManager,
         private Log $log,
     ) {}
 
@@ -40,7 +50,11 @@ class MapMaterializer
         array $definition,
         ?string $automationTenantId,
         array $triggerPayload = [],
+        ?User $actor = null,
+        bool $crossTenant = false,
     ): array {
+        $actor = $this->assertActor($actor);
+
         $map = $definition['map'] ?? [];
         if (!is_array($map) || $map === []) {
             throw new Error('MapMaterializer: empty map.');
@@ -69,7 +83,14 @@ class MapMaterializer
 
             if ($mode === 'primary' || $stepIndex === 0) {
                 // Root seed (query, report, ids, payload, …)
-                $rows = $this->applyPrimary($step, $rows, $automationTenantId, $maxItems);
+                $rows = $this->applyPrimary(
+                    $step,
+                    $rows,
+                    $automationTenantId,
+                    $maxItems,
+                    $actor,
+                    $crossTenant,
+                );
                 continue;
             }
 
@@ -102,7 +123,9 @@ class MapMaterializer
                     $row,
                     $parentEntity instanceof Entity ? $parentEntity : null,
                     $parentTenant,
-                    $maxExpand
+                    $maxExpand,
+                    $actor,
+                    $crossTenant,
                 );
 
                 if ($mode === 'passThrough') {
@@ -117,7 +140,16 @@ class MapMaterializer
                 }
 
                 if ($mode === 'groupBy') {
-                    $this->applyGroupBy($step, $stepId, $row, $members, $parentTenant, $next, $maxItems);
+                    $this->applyGroupBy(
+                        $step,
+                        $stepId,
+                        $row,
+                        $members,
+                        $parentTenant,
+                        $next,
+                        $maxItems,
+                        $actor,
+                    );
                     if (count($next) >= $maxItems) {
                         break;
                     }
@@ -233,6 +265,8 @@ class MapMaterializer
         array $rows,
         ?string $automationTenantId,
         int $maxItems,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         $stepId = (string) $step['id'];
         $ctx = $rows[0]['__ctx'] ?? [];
@@ -250,21 +284,41 @@ class MapMaterializer
             empty($step['forceQuery'])
         ) {
             $ent = $this->entityManager->getEntityById($entityType, (string) $ctx['entityId']);
-            if ($ent) {
-                $tenantId = $this->resolveTenantId($ent, $automationTenantId);
 
+            // Global (tenantless) automations may derive scope from the trigger record
+            // itself — this targets one known id, so no cross-tenant query is possible.
+            // Everything downstream then runs against that concrete tenant.
+            $seedTenantId = $ent
+                ? ($automationTenantId ?? $this->resolveTenantId($ent, null))
+                : null;
+
+            if (
+                $ent &&
+                $seedTenantId !== null &&
+                $seedTenantId !== '' &&
+                $this->tenantOk($ent, $seedTenantId, $crossTenant) &&
+                $this->canRead($actor, $ent)
+            ) {
                 return [[
                     'entities' => [$stepId => $ent],
                     'targetType' => $entityType,
                     'targetId' => $ent->getId(),
-                    '__tenantId' => $tenantId,
+                    '__tenantId' => $seedTenantId,
                     'payload' => [$stepId => $this->entityPayload($ent)],
                     '__ctx' => $ctx,
                 ]];
             }
         }
 
-        $members = $this->resolveMembers($step, $rows[0] ?? [], null, $automationTenantId, $maxItems);
+        $members = $this->resolveMembers(
+            $step,
+            $rows[0] ?? [],
+            null,
+            $automationTenantId,
+            $maxItems,
+            $actor,
+            $crossTenant,
+        );
         $out = [];
 
         foreach ($members as $member) {
@@ -309,37 +363,59 @@ class MapMaterializer
         ?Entity $parent,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         $source = (string) ($step['source'] ?? 'query');
         $stepId = (string) ($step['id'] ?? '?');
 
-        return match ($source) {
-            'relation' => $this->membersFromRelation($step, $parent, $tenantId, $limit),
-            'linkMultiple' => $this->membersFromLinkMultiple($step, $parent, $tenantId, $limit),
-            'ids' => $this->membersFromIds($step, $row, $tenantId, $limit),
-            'payload' => $this->membersFromPayload($step, $row, $tenantId, $limit),
-            'report' => $this->membersFromReport($step, $tenantId, $limit),
-            'query' => $this->membersFromQuery($step, $parent, $tenantId, $limit),
+        // Single funnel for every discovery path. Each of these either runs a query or
+        // loads rows by id, and the run-as user may be an admin (ACL bypass), so an
+        // unresolved tenant here would mean instance-wide reads. Fail closed.
+        //
+        // The trigger-seed path in applyPrimary() deliberately does NOT come through
+        // here: it targets one known record and derives its tenant from that record,
+        // which keeps global (tenantless) entity-change automations working.
+        if (!$crossTenant) {
+            $tenantId = $this->tenantGuard->assertTenantScope(
+                $tenantId,
+                "map step {$stepId} (source={$source})",
+            );
+        }
+
+        $members = match ($source) {
+            'relation' => $this->membersFromRelation($step, $parent, $row, $tenantId, $limit, $actor, $crossTenant),
+            'linkMultiple' => $this->membersFromLinkMultiple($step, $parent, $tenantId, $limit, $actor, $crossTenant),
+            'ids' => $this->membersFromIds($step, $row, $tenantId, $limit, $actor, $crossTenant),
+            'payload' => $this->membersFromPayload($step, $row, $tenantId, $limit, $actor, $crossTenant),
+            'report' => $this->membersFromReport($step, $tenantId, $limit, $actor, $crossTenant),
+            'query' => $this->membersFromQuery($step, $parent, $row, $tenantId, $limit, $actor, $crossTenant),
             default => throw new Error("Map step {$stepId}: unknown source '{$source}'."),
         };
+
+        return $this->filterMembersByRoles($members, $step);
     }
 
     /**
      * @param array<string, mixed> $step
+     * @param array<string, mixed> $row
      * @return list<array{kind: string, entity?: Entity, value?: mixed}>
      */
     private function membersFromQuery(
         array $step,
         ?Entity $parent,
+        array $row,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         $entityType = (string) ($step['entityType'] ?? '');
         if ($entityType === '') {
             throw new Error('source=query requires entityType.');
         }
 
-        $where = $this->normalizeWhere($step['where'] ?? []);
+        $where = $this->resolveWhere($step, $parent, $row, $tenantId);
 
         if ($parent && empty($step['ignoreParent'])) {
             $fk = (string) ($step['foreignKey'] ?? '');
@@ -353,34 +429,40 @@ class MapMaterializer
             $where[$fk] = $parent->getId();
         }
 
-        if ($tenantId && $entityType !== 'Tenant' && $this->entityHasTenant($entityType)) {
-            $where['tenantId'] = $tenantId;
-        }
+        // Tenant predicate is applied as a separate AND-ed clause via the guard, which
+        // also covers entity types that carry no tenantId column (team-scoped) and the
+        // Tenant type itself. The old inline `tenantId` key silently skipped both.
+        $tenantWhere = $this->tenantGuard->tenantWhereForRead(
+            $entityType,
+            $tenantId,
+            'map query',
+            $crossTenant,
+        );
 
         try {
-            $found = $this->entityManager
-                ->getRDBRepository($entityType)
-                ->where($where)
-                ->limit(0, $limit)
-                ->find();
+            $found = $this->findWithAcl($entityType, $where, $actor, $limit, $tenantWhere);
         } catch (Throwable $e) {
             $this->log->error('MapMaterializer query: ' . $e->getMessage());
 
             return [];
         }
 
-        return $this->entitiesToMembers($found, $tenantId, $entityType);
+        return $this->entitiesToMembers($found, $tenantId, $entityType, $actor, $crossTenant);
     }
 
     /**
      * @param array<string, mixed> $step
+     * @param array<string, mixed> $row
      * @return list<array{kind: string, entity?: Entity, value?: mixed}>
      */
     private function membersFromRelation(
         array $step,
         ?Entity $parent,
+        array $row,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         if (!$parent) {
             return [];
@@ -388,7 +470,7 @@ class MapMaterializer
 
         $entityType = (string) ($step['entityType'] ?? '');
         $relation = (string) ($step['relation'] ?? '');
-        $where = $this->normalizeWhere($step['where'] ?? []);
+        $where = $this->resolveWhere($step, $parent, $row, $tenantId);
 
         try {
             if ($relation !== '') {
@@ -403,7 +485,7 @@ class MapMaterializer
                 $found = $rel->limit(0, $limit)->find();
             } else {
                 // FK convention under relation source
-                return $this->membersFromQuery($step, $parent, $tenantId, $limit);
+                return $this->membersFromQuery($step, $parent, $row, $tenantId, $limit, $actor, $crossTenant);
             }
         } catch (Throwable $e) {
             $this->log->error('MapMaterializer relation: ' . $e->getMessage());
@@ -411,7 +493,13 @@ class MapMaterializer
             return [];
         }
 
-        return $this->entitiesToMembers($found, $tenantId, $entityType !== '' ? $entityType : null);
+        return $this->entitiesToMembers(
+            $found,
+            $tenantId,
+            $entityType !== '' ? $entityType : null,
+            $actor,
+            $crossTenant,
+        );
     }
 
     /**
@@ -423,6 +511,8 @@ class MapMaterializer
         ?Entity $parent,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         if (!$parent) {
             return [];
@@ -468,7 +558,7 @@ class MapMaterializer
             if (!$ent) {
                 continue;
             }
-            if (!$this->tenantOk($ent, $tenantId)) {
+            if (!$this->tenantOk($ent, $tenantId, $crossTenant) || !$this->canRead($actor, $ent)) {
                 continue;
             }
             $members[] = ['kind' => 'entity', 'entity' => $ent];
@@ -487,6 +577,8 @@ class MapMaterializer
         array $row,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         $entityType = (string) ($step['entityType'] ?? '');
         if ($entityType === '') {
@@ -515,7 +607,7 @@ class MapMaterializer
                 continue;
             }
             $ent = $this->entityManager->getEntityById($entityType, $id);
-            if (!$ent || !$this->tenantOk($ent, $tenantId)) {
+            if (!$ent || !$this->tenantOk($ent, $tenantId, $crossTenant) || !$this->canRead($actor, $ent)) {
                 continue;
             }
             $members[] = ['kind' => 'entity', 'entity' => $ent];
@@ -536,6 +628,8 @@ class MapMaterializer
         array $row,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         $path = (string) ($step['payloadPath'] ?? '');
         if ($path === '') {
@@ -555,7 +649,7 @@ class MapMaterializer
 
         foreach (array_slice(array_values($list), 0, $limit) as $item) {
             if ($item instanceof Entity) {
-                if ($this->tenantOk($item, $tenantId)) {
+                if ($this->tenantOk($item, $tenantId, $crossTenant) && $this->canRead($actor, $item)) {
                     $members[] = ['kind' => 'entity', 'entity' => $item];
                 }
                 continue;
@@ -569,7 +663,7 @@ class MapMaterializer
                 $type = (string) ($item['entityType'] ?? $entityType);
                 if ($type !== '') {
                     $ent = $this->entityManager->getEntityById($type, (string) $item['id']);
-                    if ($ent && $this->tenantOk($ent, $tenantId)) {
+                    if ($ent && $this->tenantOk($ent, $tenantId, $crossTenant) && $this->canRead($actor, $ent)) {
                         $members[] = ['kind' => 'entity', 'entity' => $ent];
                         continue;
                     }
@@ -578,7 +672,7 @@ class MapMaterializer
 
             if (is_string($item) && $entityType !== '' && preg_match('/^[a-f0-9]{17}$/i', $item)) {
                 $ent = $this->entityManager->getEntityById($entityType, $item);
-                if ($ent && $this->tenantOk($ent, $tenantId)) {
+                if ($ent && $this->tenantOk($ent, $tenantId, $crossTenant) && $this->canRead($actor, $ent)) {
                     $members[] = ['kind' => 'entity', 'entity' => $ent];
                     continue;
                 }
@@ -599,6 +693,8 @@ class MapMaterializer
         array $step,
         ?string $tenantId,
         int $limit,
+        User $actor,
+        bool $crossTenant = false,
     ): array {
         $reportId = (string) ($step['reportId'] ?? '');
         $entityType = (string) ($step['entityType'] ?? '');
@@ -620,8 +716,24 @@ class MapMaterializer
 
         try {
             $service = $this->injectableFactory->create($class);
-            $searchParams = SearchParams::fromRaw(['maxSize' => $maxRows]);
-            $result = $service->runList($reportId, $searchParams, null);
+
+            // Push the tenant predicate into the report query. entitiesToMembers() still
+            // post-filters via tenantOk(), but without this a report spanning tenants
+            // would burn maxRows on foreign rows and silently truncate real results.
+            $searchRaw = ['maxSize' => $maxRows];
+
+            if (!$crossTenant && $this->entityHasTenant($entityType)) {
+                $searchRaw['where'] = [
+                    [
+                        'type' => 'equals',
+                        'attribute' => 'tenantId',
+                        'value' => $tenantId,
+                    ],
+                ];
+            }
+
+            $searchParams = SearchParams::fromRaw($searchRaw);
+            $result = $service->runList($reportId, $searchParams, $actor);
             $collection = $result->getCollection();
         } catch (Throwable $e) {
             throw new Error("Map step {$stepId} report failed: " . $e->getMessage());
@@ -645,15 +757,20 @@ class MapMaterializer
             }
         }
 
-        return $this->entitiesToMembers($list, $tenantId, $entityType);
+        return $this->entitiesToMembers($list, $tenantId, $entityType, $actor, $crossTenant);
     }
 
     /**
      * @param iterable<Entity>|array<int, Entity> $found
      * @return list<array{kind: string, entity?: Entity, value?: mixed}>
      */
-    private function entitiesToMembers(iterable $found, ?string $tenantId, ?string $expectedType): array
-    {
+    private function entitiesToMembers(
+        iterable $found,
+        ?string $tenantId,
+        ?string $expectedType,
+        User $actor,
+        bool $crossTenant = false,
+    ): array {
         $members = [];
         foreach ($found as $child) {
             if (!$child instanceof Entity) {
@@ -662,7 +779,7 @@ class MapMaterializer
             if ($expectedType && $child->getEntityType() !== $expectedType) {
                 // keep lenient
             }
-            if (!$this->tenantOk($child, $tenantId)) {
+            if (!$this->tenantOk($child, $tenantId, $crossTenant) || !$this->canRead($actor, $child)) {
                 continue;
             }
             $members[] = ['kind' => 'entity', 'entity' => $child];
@@ -671,10 +788,74 @@ class MapMaterializer
         return $members;
     }
 
-    private function tenantOk(Entity $entity, ?string $tenantId): bool
+    /**
+     * @throws Error
+     */
+    private function assertActor(?User $actor): User
     {
-        if (!$tenantId) {
+        if ($actor === null) {
+            throw new Error('MapMaterializer requires run-as user for ACL');
+        }
+
+        return $actor;
+    }
+
+    private function canRead(User $actor, Entity $entity): bool
+    {
+        try {
+            return $this->aclManager->createUserAcl($actor)->check($entity, 'read');
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $where
+     * @param array<string, mixed> $tenantWhere
+     * @return iterable<Entity>
+     */
+    private function findWithAcl(
+        string $entityType,
+        array $where,
+        User $actor,
+        int $limit,
+        array $tenantWhere = [],
+    ): iterable {
+        $builder = $this->selectBuilderFactory
+            ->create()
+            ->from($entityType)
+            ->forUser($actor)
+            ->withAccessControlFilter();
+        $qb = $builder->buildQueryBuilder();
+        if ($where !== []) {
+            $qb->where($where);
+        }
+        if ($tenantWhere !== []) {
+            // Separate where() call so a user-authored key can never overwrite it.
+            $qb->where($tenantWhere);
+        }
+        $query = $qb->limit(0, $limit)->build();
+
+        return $this->entityManager->getRDBRepository($entityType)->clone($query)->find();
+    }
+
+    private function tenantOk(Entity $entity, ?string $tenantId, bool $crossTenant = false): bool
+    {
+        // Explicitly authorized instance-wide run — no tenant constraint applies.
+        if ($crossTenant) {
             return true;
+        }
+
+        // Fail closed. Previously an unresolved tenant returned true, which turned
+        // every membership check (including the report source, whose own query has
+        // no tenant predicate) into a no-op and admitted foreign-tenant rows.
+        if (!$tenantId) {
+            $this->log->error(
+                'MapMaterializer: rejecting member ' . $entity->getEntityType()
+                . ' — no tenant scope resolved for this run.'
+            );
+
+            return false;
         }
 
         $type = $entity->getEntityType();
@@ -714,6 +895,15 @@ class MapMaterializer
     }
 
     /**
+     * Identity blob only.
+     *
+     * This class is the generic loop engine and must not know what an Opportunity
+     * (or any other type) is worth publishing. Actions that need more than the
+     * identity read the record through the guarded formula fetch, which applies
+     * tenant + ACL checks at read time — unlike this blob, which is persisted on
+     * AutomationRunItem.payload and is therefore readable by a wider audience
+     * than the record itself.
+     *
      * @return array<string, mixed>
      */
     private function entityPayload(Entity $ent): array
@@ -723,6 +913,89 @@ class MapMaterializer
             'name' => $ent->get('name'),
             'entityType' => $ent->getEntityType(),
         ];
+    }
+
+    /**
+     * Optional map step `requireRoles`: keep Users holding any listed role,
+     * counting roles granted directly and through teams (TenantRoleAuth rules).
+     *
+     * @param list<array{kind: string, entity?: Entity, value?: mixed}> $members
+     * @param array<string, mixed> $step
+     * @return list<array{kind: string, entity?: Entity, value?: mixed}>
+     */
+    private function filterMembersByRoles(array $members, array $step): array
+    {
+        $required = $this->normalizeStringList($step['requireRoles'] ?? null);
+        if ($required === []) {
+            return $members;
+        }
+
+        $need = [];
+        foreach ($required as $roleId) {
+            $need[$roleId] = true;
+            // Role ids are static strings normally and md5 of those under the
+            // UUID rebuild mode — accept both, as TenantRoleAuth does.
+            $need[md5($roleId)] = true;
+        }
+
+        $out = [];
+        foreach ($members as $member) {
+            $ent = ($member['kind'] ?? '') === 'entity' ? ($member['entity'] ?? null) : null;
+
+            // Fail closed: a role predicate can only be decided for Users, and
+            // silently passing anything else through would widen the audience
+            // the step was written to narrow.
+            if (!$ent instanceof User) {
+                $this->log->warning(sprintf(
+                    'MapMaterializer: step %s has requireRoles but produced a non-User member (%s) — dropped.',
+                    (string) ($step['id'] ?? '?'),
+                    $ent instanceof Entity ? $ent->getEntityType() : 'value',
+                ));
+
+                continue;
+            }
+
+            foreach (TenantRoleAuth::collectUserRoleIds($ent, $this->entityManager) as $roleId) {
+                if (isset($need[$roleId])) {
+                    $out[] = $member;
+
+                    break;
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Accepts a string or list of strings; trims, drops empties, dedupes.
+     *
+     * @return list<string>
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        if ($value instanceof stdClass) {
+            $value = (array) $value;
+        }
+        if (is_string($value)) {
+            $value = [$value];
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($value as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+            $item = trim($item);
+            if ($item !== '' && !in_array($item, $out, true)) {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -739,6 +1012,7 @@ class MapMaterializer
         ?string $parentTenant,
         array &$next,
         int $maxItems,
+        User $actor,
     ): void {
         // groupBy: string | string[] of entity fields
         $groupFields = $step['groupBy'] ?? 'assignedUserId';
@@ -823,7 +1097,7 @@ class MapMaterializer
             $copy = $row;
             // Prefer groupTarget load by first group field value when single key field
             $targetKey = (string) ($group['keyParts'][0] ?? $gKey);
-            $target = $this->resolveGroupTarget($step, $targetKey, $list);
+            $target = $this->resolveGroupTarget($step, $targetKey, $list, $actor);
             if ($target) {
                 $copy['entities'][$stepId] = $target;
                 $copy['targetType'] = $target->getEntityType();
@@ -939,17 +1213,17 @@ class MapMaterializer
             }
         }
 
-        $size = trim(strtolower($size));
-        $seconds = 3600;
-        if (preg_match('/^(\d+)\s*(minute|minutes|hour|hours|day|days)$/', $size, $m)) {
-            $n = max(1, (int) $m[1]);
-            $unit = $m[2];
-            $seconds = match (true) {
-                str_starts_with($unit, 'minute') => $n * 60,
-                str_starts_with($unit, 'hour') => $n * 3600,
-                str_starts_with($unit, 'day') => $n * 86400,
-                default => 3600,
-            };
+        // Delegated to PeriodParser so this agrees with what AutomationDefinitionValidator
+        // accepted at save time. The old local regex knew only minute/hour/day, so a
+        // validated "2 weeks" was silently bucketed as 1 hour.
+        $seconds = (new PeriodParser())->toSeconds($size);
+
+        if ($seconds === null || $seconds < 1) {
+            $this->log->warning(
+                'MapMaterializer: unsupported timeBucket.size "' . $size . '" — falling back to 1 hour.'
+            );
+
+            $seconds = 3600;
         }
 
         $ts = $dt->getTimestamp();
@@ -966,16 +1240,28 @@ class MapMaterializer
     /**
      * @param list<Entity> $list
      */
-    private function resolveGroupTarget(array $step, string $groupKey, array $list): ?Entity
-    {
+    private function resolveGroupTarget(
+        array $step,
+        string $groupKey,
+        array $list,
+        User $actor,
+    ): ?Entity {
         $targetEntityType = (string) ($step['groupTargetEntityType'] ?? '');
         if ($targetEntityType !== '' && $groupKey !== '_null') {
             $ent = $this->entityManager->getEntityById($targetEntityType, $groupKey);
+            if ($ent && $this->canRead($actor, $ent)) {
+                return $ent;
+            }
 
-            return $ent ?: null;
+            return null;
         }
 
-        return $list[0] ?? null;
+        $first = $list[0] ?? null;
+        if ($first instanceof Entity && $this->canRead($actor, $first)) {
+            return $first;
+        }
+
+        return null;
     }
 
     /**
@@ -1099,11 +1385,78 @@ class MapMaterializer
     }
 
     /**
+     * Merge static where + whereFormulas (fx values evaluated against parent/target + row payload).
+     *
+     * @param array<string, mixed> $step
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function resolveWhere(
+        array $step,
+        ?Entity $parent,
+        array $row,
+        ?string $tenantId,
+    ): array {
+        $where = $this->normalizeWhere($step['where'] ?? []);
+        $formulas = $step['whereFormulas'] ?? [];
+        if ($formulas instanceof stdClass) {
+            $formulas = (array) $formulas;
+        }
+        if (!is_array($formulas) || $formulas === []) {
+            return $where;
+        }
+
+        $payload = [];
+        if (isset($row['payload']) && is_array($row['payload'])) {
+            $payload = $row['payload'];
+        }
+        $ctx = $row['__ctx'] ?? [];
+        if (is_array($ctx) && $ctx !== []) {
+            $payload = array_merge(['__trigger' => $ctx], $payload);
+        }
+
+        $variables = (object) [
+            'tenantId' => $tenantId,
+            'payload' => json_decode(json_encode($payload) ?: '{}'),
+        ];
+
+        $target = $parent;
+        if (!$target instanceof Entity) {
+            // Ephemeral target so RestrictedFormulaRunner still has an entity arg.
+            $target = $this->entityManager->getNewEntity('Tenant');
+        }
+
+        foreach ($formulas as $field => $script) {
+            if (!is_string($field) || $field === '' || $field === 'deleted' || $field === 'tenantId') {
+                continue;
+            }
+            if (!is_string($script) || trim($script) === '') {
+                continue;
+            }
+
+            try {
+                $where[$field] = $this->formulaRunner->run(
+                    $script,
+                    $target,
+                    $variables,
+                    RestrictedFormulaRunner::MODE_CONDITION,
+                );
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    'MapMaterializer whereFormulas.' . $field . ': ' . $e->getMessage()
+                );
+            }
+        }
+
+        return $where;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function normalizeWhere(mixed $where): array
     {
-        if ($where instanceof \stdClass) {
+        if ($where instanceof stdClass) {
             $where = (array) $where;
         }
         if (!is_array($where)) {

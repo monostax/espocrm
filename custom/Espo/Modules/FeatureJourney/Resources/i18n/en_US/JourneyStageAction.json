@@ -30,7 +30,7 @@
         "removeDynamicValue": "Remove dynamic value",
         "searchExpressions": "Search fields and functions…",
         "expressionExamples": "Examples",
-        "snippetGroupTarget": "Person (target)",
+        "snippetGroupTarget": "Target record",
         "snippetGroupJourney": "Journey",
         "snippetGroupHelpers": "Helpers",
         "snippetGroupFunctions": "Functions",
@@ -50,19 +50,25 @@
     },
     "tooltips": {
         "params": "How this action runs. Optional dynamic values fill a setting automatically when the step runs.",
-        "formula": "Script for “Run formula” actions. You can update the person, move steps, or send events — unsafe operations are blocked.",
+        "formula": "Script for “Run formula” actions. You can update the target, move steps, or send events — unsafe operations are blocked.",
         "maxRetries": "How many times to retry this action (0–5) if it fails. Does not restart the whole connection.",
         "continueOnError": "If on, run the next actions after a failure. If off, stop here.",
-        "trigger": "Run this action when the person enters or leaves this step.",
+        "trigger": "Run this action when the record enters or leaves this step.",
         "order": "Lower numbers run first inside the same step."
     },
     "messages": {
         "selectActionTypeFirst": "Choose an action to configure.",
         "useFormulaField": "Write the script in the Formula field above. Settings here are optional.",
-        "paramFormulasHint": "Optional: fill a setting from the person when the step runs (for example the owner). Workspace is never overwritten.",
+        "paramFormulasHint": "Optional: fill a setting from the target record when the step runs (for example the owner). Workspace is never overwritten.",
         "platformActionHint": "Platform action — needs platform access / superadmin.",
         "jsonParseError": "Invalid JSON.",
         "updateTargetFieldsHint": "Choose a standard field or a Custom Field. Use fx for a value computed when the step runs. Other custom values stay; only what you set here changes.",
+        "createRecordHint": "Creates a record stamped with this journey’s workspace (tenant) and teams. Field allow-list applies.",
+        "createRelatedRecordHint": "Creates a related record on the target and stamps tenant + teams. Foreign type comes from the link.",
+        "linkRecordHint": "Links only when both sides belong to this workspace.",
+        "applyAssignmentRuleHint": "Routes ownership inside a workspace team only. Report-based rules are blocked.",
+        "sendHttpRequestHint": "URL must match a platform allow-list prefix. Private IPs and localhost are blocked.",
+        "makeFollowedHint": "Only users that belong to this workspace can be added as followers.",
         "sendEmailAccountHint": "Pick a Group or Personal email account that belongs to this workspace. System SMTP is never used.",
         "sendWhatsAppMessageHint": "Pick any active WhatsApp inbox (WAHA QR, Cloud API, or Coexistence). Optional fallback Meta template is used only when Cloud session window is closed.",
         "sendWhatsAppTemplateHint": "Cloud API / Coexistence inbox only. Template name + language + parameter mapping (Handlebars like WhatsApp Campaign).",
@@ -73,7 +79,7 @@
         "expressionNoMatches": "No matching fields or functions.",
         "linkExpressionHint": "Turn on fx to resolve this link from a formula (e.g. entity\\attribute('assignedUserId')).",
         "orphanParamFormulasHint": "Dynamic keys not shown above (from older configs or advanced JSON).",
-        "docAttrName": "Full display name of the person in the journey.",
+        "docAttrName": "Full display name of the target record.",
         "docAttrEmail": "Primary email address on the target record.",
         "docAttrPhone": "Primary phone number on the target record.",
         "docAttrOwner": "Assigned user id — use for ownership / routing.",
@@ -96,7 +102,7 @@
         "docFnNow": "Current date-time (server).",
         "docFnToday": "Current date (server).",
         "docFnObjectGet": "Read a key from an object (e.g. customFields bag).",
-        "docFnAttribute": "Read a field from the person (target entity).",
+        "docFnAttribute": "Read a field from the target record.",
         "docFnEmpty": "True when the value is empty/null."
     },
     "options": {
@@ -105,17 +111,23 @@
             "OnExit": "When leaving the step"
         },
         "type": {
-            "createTask": "Create a task",
-            "sendEmail": "Send an email",
+            "createTask": "Create task",
+            "createRecord": "Create record",
+            "createRelatedRecord": "Create related record",
+            "sendEmail": "Send email",
             "sendWhatsAppMessage": "Send WhatsApp message",
             "sendWhatsAppTemplate": "Send WhatsApp template",
-            "notifyUser": "Notify a user",
-            "executeFormula": "Run a formula",
-            "updateTarget": "Update the person’s fields",
-            "runScript": "Run a script (platform)",
-            "recordTrackingEvent": "Log a tracking event",
-            "triggerWorkflow": "Start a workflow (platform)",
-            "startBpmnProcess": "Start a BPMN process (platform)"
+            "notifyUser": "Notify user",
+            "makeFollowed": "Add followers",
+            "executeFormula": "Run formula",
+            "updateTarget": "Update target",
+            "updateRelatedRecord": "Update related record",
+            "linkRecord": "Link record",
+            "unlinkRecord": "Unlink record",
+            "applyAssignmentRule": "Apply assignment rule",
+            "sendHttpRequest": "Send HTTP request",
+            "runScript": "Run script",
+            "recordTrackingEvent": "Log tracking event"
         }
     }
 }

@@ -93,6 +93,11 @@
             "readOnly": true,
             "view": "views/fields/user"
         },
+        "runAsUser": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
@@ -133,6 +138,10 @@
             "type": "hasMany",
             "entity": "JourneyRecordLog",
             "foreign": "record"
+        },
+        "runAsUser": {
+            "type": "belongsTo",
+            "entity": "User"
         },
         "createdBy": {
             "type": "belongsTo",

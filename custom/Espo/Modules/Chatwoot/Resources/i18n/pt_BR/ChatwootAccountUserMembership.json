@@ -20,6 +20,7 @@
         "contextualTransferIsEnabled": "Habilitar Transferência Contextual (IA)",
         "followupsEnabled": "Follow-up Automático Ativado",
         "delegateEnabled": "Delegate OpenCode Ativado",
+        "whatsappMessageTemplates": "Templates de Mensagem WhatsApp",
         "transferScenarios": "Cenários de Transferência",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
         "calendarsToManage": "Calendários Gerenciados",
@@ -69,7 +70,17 @@
         "confirmDisableAiProfile": "Isto desativará as capacidades de IA deste membro da conta. Continuar?",
         "aiProfileEnabled": "Perfil de Agente IA ativado com sucesso.",
         "aiProfileDisabled": "Perfil de Agente IA desativado.",
-        "inboxMustBelongToSameAccount": "Apenas inboxes do mesmo Chat Account podem ser vinculadas a este membro da conta."
+        "inboxMustBelongToSameAccount": "Apenas inboxes do mesmo Chat Account podem ser vinculadas a este membro da conta.",
+        "whatsappTemplatesLoading": "Carregando templates…",
+        "whatsappTemplatesLoadingInboxes": "Carregando caixas de entrada vinculadas…",
+        "whatsappTemplatesLoadingMeta": "Carregando templates da Meta…",
+        "whatsappTemplatesNoCloudInboxes": "Vincule este membro IA a uma caixa de entrada WhatsApp Cloud / Coexistência primeiro (painel lateral Caixas de Entrada). Caixas QR Code não suportam templates de mensagem da Meta.",
+        "whatsappTemplatesLinkedInboxesSummary": "Vinculadas atualmente: {list}",
+        "whatsappTemplatesNoApproved": "Nenhum template APROVADO.",
+        "whatsappTemplatesNoApprovedForInbox": "Nenhum template APROVADO para esta caixa de entrada.",
+        "whatsappTemplatesNoMetaCredentials": "A caixa de entrada não tem credenciais Meta Cloud API.",
+        "whatsappTemplatesLoadInboxesFailed": "Falha ao carregar as caixas de entrada deste membro.",
+        "whatsappTemplatesLoadTemplatesFailed": "Falha ao carregar templates."
     },
     "options": {
         "role": {
@@ -95,6 +106,7 @@
     "tooltips": {
         "followupsEnabled": "Quando desativado, este agente IA nunca executa follow-ups automáticos: novas oportunidades criadas por ele NÃO são armadas com o loop de follow-up, follow-ups agendados de oportunidades conduzidas por ele deixam de disparar, e oportunidades atualmente em 'Follow-up Ativo' conduzidas por este agente são redefinidas para 'Ação Necessária' no momento em que você desativa. O agente continua criando e atualizando oportunidades normalmente.",
         "delegateEnabled": "Quando ativado, este agente IA pode chamar a ferramenta OpenCode `delegate` para pesquisa em várias etapas no workspace isolado de cada cliente (skills/modes do perfil IA entram como baseline; overrides do contact são preservados). Deixe DESLIGADO a menos que queira que conteúdo de conversas dispare agentes aninhados em sandboxes por contact. Requer o usuário CRM atribuído da membership (baseline) e Contact CRM ligado à conversa.",
+        "whatsappMessageTemplates": "Selecione os templates Meta aprovados que este agente IA pode enviar nos inboxes WhatsApp Cloud / Coexistência dos quais participa. Em runtime a IA só vê templates do inbox da conversa, e somente quando a janela de 24h de atendimento está fechada (mensagem livre indisponível). Templates são carregados da conta Meta do inbox vinculado.",
         "chatwootAccountUserId": "O ID do membro da conta no Chat. Este campo é preenchido automaticamente após a sincronização.",
         "chatwootInboxes": "Os canais aos quais este membro da conta tem acesso. Gerenciado automaticamente pela sincronização de membros de canal.",
         "isAI": "Habilite para configurar este membro como um agente com inteligência artificial.",

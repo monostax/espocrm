@@ -32,6 +32,7 @@ class JourneyPublishService
     public function __construct(
         private EntityManager $entityManager,
         private JourneyEnrollmentService $enrollmentService,
+        private JourneyRunIdentity $identity,
         private Metadata $metadata,
     ) {}
 
@@ -53,6 +54,16 @@ class JourneyPublishService
                 'error',
                 'invalid_status',
                 "Cannot activate journey in status {$status}."
+            );
+        }
+
+        try {
+            $this->identity->resolve($journey, 'activate');
+        } catch (\Throwable $e) {
+            $issues[] = $this->issue(
+                'error',
+                'missing_run_as_user',
+                $e->getMessage()
             );
         }
 
@@ -312,6 +323,9 @@ class JourneyPublishService
         if (!in_array($status, [JourneyEntity::STATUS_DRAFT, JourneyEntity::STATUS_PAUSED], true)) {
             throw new BadRequest("Cannot activate journey in status {$status}.");
         }
+
+        // Fail fast: continuous jobs + enrollment need an ACL identity before go-live.
+        $this->identity->resolve($journey, 'activate');
 
         $journey->set([
             'status' => JourneyEntity::STATUS_ACTIVE,
@@ -576,13 +590,19 @@ class JourneyPublishService
             ) ?: 'WhatsApp message',
             'sendWhatsAppTemplate' => (string) ($params['templateName'] ?? 'WhatsApp template'),
             'createTask' => (string) ($params['name'] ?? 'task'),
+            'createRecord' => (string) ($params['entityType'] ?? 'record'),
+            'createRelatedRecord' => 'related:' . (string) ($params['link'] ?? '?'),
             'notifyUser' => $this->truncate(trim((string) ($params['message'] ?? '')), 60) ?: 'notify user',
+            'makeFollowed' => 'follow users',
             'updateTarget' => $this->summarizeUpdateTarget($params),
+            'updateRelatedRecord' => 'related:' . (string) ($params['link'] ?? '?'),
+            'linkRecord' => 'link:' . (string) ($params['link'] ?? '?'),
+            'unlinkRecord' => 'unlink:' . (string) ($params['link'] ?? '?'),
+            'applyAssignmentRule' => (string) ($params['assignmentRule'] ?? 'assign'),
+            'sendHttpRequest' => $this->truncate((string) ($params['requestUrl'] ?? $params['url'] ?? 'http'), 60),
             'recordTrackingEvent' => (string) ($params['code'] ?? 'tracking event'),
             'executeFormula' => 'formula',
             'runScript' => (string) ($params['className'] ?? 'script'),
-            'triggerWorkflow' => (string) ($params['workflowId'] ?? 'workflow'),
-            'startBpmnProcess' => (string) ($params['flowchartId'] ?? 'BPMN'),
             default => $type,
         };
     }

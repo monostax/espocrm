@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureTrackingEvent\Services;
 use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\Modules\FeatureTrackingEvent\Entities\TrackingEvent;
 use Espo\Modules\FeatureTrackingEvent\Entities\TrackingEventType;
 use Espo\Modules\FeatureTrackingEvent\Entities\TrackingSource;
@@ -51,6 +52,7 @@ class InternalEventRecorder
 {
     public function __construct(
         private EntityManager $entityManager,
+        private TenantResolver $tenantResolver,
         private Log $log,
         private TrackingEventPersister $persister,
         private TrackingEventNameBuilder $nameBuilder,
@@ -86,14 +88,29 @@ class InternalEventRecorder
     }
 
     /**
-     * Derive the tenant for an entity that carries tenancy via teams only
-     * (Opportunity, Lead, ... have no tenantId column): teams ->
-     * Tenant.baseUserTeam, requiring an unambiguous single match. Falls back
-     * to the persisted entity_team relation when the in-memory entity has no
-     * teamsIds loaded (partial updates).
+     * Derive the tenant for an entity: its own `tenantId` when set, else the
+     * single tenant owning its teams. Falls back to the persisted entity_team
+     * relation when the in-memory entity has no teamsIds loaded (partial
+     * updates).
+     *
+     * The stored `tenantId` is checked first because it is authoritative, and
+     * Opportunity/Lead/Contact/Account all define the column — contrary to the
+     * "tenancy via teams only" premise this used to state. Deriving from teams
+     * regardless meant an entity with a known tenant but no teams (or teams
+     * spanning several tenants) resolved to null, and callers such as
+     * Hooks\Opportunity\TrackStageChange drop the event on null, so tracking
+     * was silently lost for records whose tenant was sitting right on the row.
      */
     public function resolveTenantIdForEntity(Entity $entity): ?string
     {
+        if ($entity->hasAttribute('tenantId')) {
+            $direct = $entity->get('tenantId');
+
+            if ($direct) {
+                return (string) $direct;
+            }
+        }
+
         $teamIds = [];
 
         try {
@@ -121,19 +138,14 @@ class InternalEventRecorder
             return null;
         }
 
-        $tenants = $this->entityManager
-            ->getRDBRepository('Tenant')
-            ->where(['baseUserTeamId' => array_values(array_unique($teamIds))])
-            ->find();
-
-        $tenantIds = [];
-
-        foreach ($tenants as $tenant) {
-            $tenantIds[$tenant->getId()] = true;
-        }
+        // Delegated so the team -> tenant edge (base user team AND other user teams)
+        // is defined once. resolveAllFromTeamIds keeps the ambiguous case visible,
+        // which resolveUniqueFromTeamIds would flatten into null.
+        $tenantIds = $this->tenantResolver
+            ->resolveAllFromTeamIds(array_values(array_unique($teamIds)));
 
         if (count($tenantIds) === 1) {
-            return array_key_first($tenantIds);
+            return $tenantIds[0];
         }
 
         if (count($tenantIds) > 1) {

@@ -1,9 +1,9 @@
 {
     "labels": {
         "Create Journey": "Criar jornada",
-        "Activate": "Revisar e publicar",
+        "Activate": "Revisar e ligar",
         "Turn on": "Ligar",
-        "Review & Publish": "Revisar e publicar",
+        "Review & Publish": "Revisar e ligar",
         "Pause": "Pausar",
         "Stop Enrollment": "Parar novos entrantes",
         "Archive": "Arquivar",
@@ -15,7 +15,13 @@
         "minutes": "minutos",
         "hours": "horas",
         "days": "dias",
-        "weeks": "semanas"
+        "weeks": "semanas",
+        "second": "segundo",
+        "seconds": "segundos",
+        "minute": "minuto",
+        "hour": "hora",
+        "day": "dia",
+        "week": "semana"
     },
     "fields": {
         "name": "Nome",
@@ -38,8 +44,9 @@
         "description": "Descrição",
         "stages": "Etapas",
         "transitions": "Conexões",
-        "records": "Pessoas na jornada",
-        "teams": "Equipes"
+        "records": "Inscrições",
+        "teams": "Equipes",
+        "runAsUser": "Executar como usuário"
     },
     "options": {
         "status": {
@@ -66,7 +73,7 @@
         "archiving": "Arquivando…",
         "activated": "Jornada ligada",
         "activatedWithCounts": "Jornada ligada · inscritos {enrolled} · ignorados {skipped} · falhas {failed}",
-        "activationFailuresDetail": "Algumas pessoas falharam na inscrição (muitas vezes nas ações de entrada). Veja Registros da jornada filtrados por Failed.",
+        "activationFailuresDetail": "Alguns registros falharam na inscrição (muitas vezes nas ações de entrada). Veja Inscrições na jornada filtradas por Failed.",
         "paused": "Jornada pausada",
         "enrollmentStopped": "Novos entrantes parados",
         "archived": "Jornada arquivada",
@@ -74,7 +81,7 @@
         "failedToPause": "Não foi possível pausar a jornada",
         "failedToStopEnrollment": "Não foi possível parar novos entrantes",
         "failedToArchive": "Não foi possível arquivar a jornada",
-        "flowEmpty": "Ainda sem etapas. Comece com uma etapa de Entrada, depois ações e conexões — como montar um Zap ou cenário no Make.",
+        "flowEmpty": "Ainda sem etapas. Comece com uma etapa de Entrada, depois adicione ações e conexões.",
         "reviewLoading": "Verificando jornada…",
         "reviewLoadFailed": "Não foi possível carregar a revisão.",
         "reviewErrorsTitle": "Corrija antes de ligar",
@@ -100,18 +107,18 @@
         "reviewSideEffectsTitle": "O que esta jornada faz",
         "reviewNoSideEffects": "Nenhuma ação ativa configurada.",
         "reviewConfirmHint": "Ao ligar, o público é inscrito e as ações de Entrada rodam na hora.",
-        "reviewBlockedHint": "Corrija os erros acima e abra Revisar e publicar de novo.",
+        "reviewBlockedHint": "Corrija os erros acima e abra Revisar e ligar de novo.",
         "actionTypeSendEmail": "Enviar e-mail",
-        "actionTypeSendWhatsAppMessage": "Mensagem WhatsApp",
-        "actionTypeSendWhatsAppTemplate": "Template WhatsApp",
+        "actionTypeSendWhatsAppMessage": "Enviar mensagem WhatsApp",
+        "actionTypeSendWhatsAppTemplate": "Enviar template WhatsApp",
         "actionTypeCreateTask": "Criar tarefa",
         "actionTypeNotifyUser": "Notificar usuário",
-        "actionTypeUpdateTarget": "Atualizar pessoa",
-        "actionTypeExecuteFormula": "Fórmula",
-        "actionTypeRecordTrackingEvent": "Evento de tracking",
-        "actionTypeRunScript": "Script",
-        "actionTypeTriggerWorkflow": "Workflow",
-        "actionTypeStartBpmnProcess": "Processo BPMN"
+        "actionTypeUpdateTarget": "Atualizar alvo",
+        "actionTypeExecuteFormula": "Executar fórmula",
+        "actionTypeRecordTrackingEvent": "Registrar evento de tracking",
+        "actionTypeRunScript": "Executar script",
+        "periodInvalid": "Use um formato como “3 dias” ou “12 horas”. Unidades aceitas: minutos, horas, dias, semanas.",
+        "periodRawPlaceholder": "ou texto livre, ex.: 3 dias"
     },
     "tooltips": {
         "continuousEnrollment": "Enquanto a jornada estiver ligada, quem entrar no público é incluído automaticamente.",
@@ -119,8 +126,9 @@
         "goalEventCodes": "Quando um destes eventos chegar, a pessoa conta meta atingida e a execução termina.",
         "goalEntityFilter": "Após um passo rodar, encerra com meta se a pessoa atender a estes campos (padrão ou personalizados).",
         "tenant": "Vem das equipes da jornada.",
-        "targetEntityType": "Contatos, leads ou contas a que esta automação se aplica.",
+        "targetEntityType": "Contatos, leads ou contas a que esta jornada se aplica.",
         "targetLists": "Pessoas nestas listas podem entrar.",
-        "excludeTargetLists": "Pessoas nestas listas nunca entram, mesmo que estejam numa lista de inclusão."
+        "excludeTargetLists": "Pessoas nestas listas nunca entram, mesmo que estejam numa lista de inclusão.",
+        "runAsUser": "Com quais permissões e titularidade de registros esta jornada roda. Vazio = usa o criador."
     }
 }

@@ -12,6 +12,7 @@ use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyStage;
 use Espo\Modules\FeatureJourney\Entities\JourneyTransition;
+use Espo\Modules\FeatureJourney\Services\PeriodParser;
 use Espo\Modules\FeatureJourney\Services\TransitionRulesCompiler;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -27,6 +28,7 @@ class ValidateTransition implements BeforeSave
         private User $user,
         private Metadata $metadata,
         private TransitionRulesCompiler $rulesCompiler,
+        private PeriodParser $periodParser,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
@@ -117,6 +119,25 @@ class ValidateTransition implements BeforeSave
                 throw new BadRequest(
                     'Add a “time in this step” rule (e.g. 3 days) so the timer knows when to re-check.'
                 );
+            }
+        }
+
+        // Format check, not just presence. An unparseable waitPeriod is accepted by the
+        // DB (plain varchar) and then makes the timer silently never fire.
+        $wait = $entity->get('waitPeriod');
+        if (is_string($wait) && trim($wait) !== '') {
+            $normalised = $this->periodParser->normalise($wait);
+
+            if ($normalised === null && !$this->periodParser->isValid($wait)) {
+                throw new BadRequest(
+                    "waitPeriod '{$wait}' is not a valid period. " .
+                    'Use a format like “3 days” / “3 dias”, or an ISO-8601 duration like “PT30M”.'
+                );
+            }
+
+            // Persist canonical English so the compiler and the job agree on one format.
+            if ($normalised !== null && $normalised !== $wait) {
+                $entity->set('waitPeriod', $normalised);
             }
         }
 

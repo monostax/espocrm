@@ -9,6 +9,7 @@ use Espo\Core\Hook\Hook\BeforeSave;
 use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyRecord;
 use Espo\Modules\FeatureJourney\Entities\JourneyStage;
+use Espo\Modules\FeatureJourney\Services\PeriodParser;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
@@ -20,6 +21,7 @@ class ValidateStage implements BeforeSave
 
     public function __construct(
         private EntityManager $entityManager,
+        private PeriodParser $periodParser,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
@@ -34,6 +36,24 @@ class ValidateStage implements BeforeSave
         }
 
         $this->assertParentEditable((string) $journeyId);
+
+        // maxDuration had no format validation at all: an unparseable value was stored
+        // and the SLA then silently never applied.
+        $max = $entity->get('maxDuration');
+        if (is_string($max) && trim($max) !== '') {
+            $normalised = $this->periodParser->normalise($max);
+
+            if ($normalised === null && !$this->periodParser->isValid($max)) {
+                throw new BadRequest(
+                    "maxDuration '{$max}' is not a valid period. " .
+                    'Use a format like “3 days” / “3 dias”, or an ISO-8601 duration like “PT30M”.'
+                );
+            }
+
+            if ($normalised !== null && $normalised !== $max) {
+                $entity->set('maxDuration', $normalised);
+            }
+        }
 
         if ($entity->get('stageType') === JourneyStage::TYPE_ENTRY) {
             $where = [

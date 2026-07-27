@@ -177,21 +177,28 @@ Actions run **inline** inside the claimed transition (preserve OnExit → move �
 
 | Type | Tier | Behavior |
 |---|---|---|
-| **createTask** | tenant | Task teamed to journey teams |
+| **createTask** | tenant | Task stamped with journey `tenantId` + teams |
+| **createRecord** | tenant | Allow-listed entity types; stamp tenant + teams; field allow-list (`app.journeyCreateRecord`) |
+| **createRelatedRecord** | tenant | Create on target link; same stamp + field allow-list |
 | **sendEmail** | tenant | Required Group (`inboundEmailId`) or Personal (`emailAccountId`) SMTP — **never** system SMTP; recipient allow-checks via TenantGuard |
 | **sendWhatsAppMessage** | tenant | Free-text via Chatwoot WhatsApp inbox (WAHA QR / Cloud / Coexistence). Optional Cloud **fallback Meta template** when 24h session window is closed. Soft-skips if no phone / WhatsApp opted-out. |
 | **sendWhatsAppTemplate** | tenant | Approved Meta template + `parameterMapping` (Handlebars, same as WhatsAppCampaign). Cloud API / Coexistence inboxes only — not WAHA QR. |
-| **notifyUser** | tenant | In-app notification |
+| **notifyUser** | tenant | In-app notification (user must be in tenant) |
+| **makeFollowed** | tenant | Stream follow for specified tenant users only |
 | **updateTarget** | tenant | Field writes filtered by `app.journeyUpdateTarget` allow-list (+ Espo `cCustom*` prefix + Monostax CustomField bag merge) |
+| **updateRelatedRecord** | tenant | Same field filter on related rows; skips foreign-tenant relations |
+| **linkRecord** / **unlinkRecord** | tenant | Relate only when foreign entity is same-tenant |
+| **applyAssignmentRule** | tenant | Round-Robin / Least-Busy inside a tenant team; `listReportId` blocked |
 | **executeFormula** | tenant | Restricted formula MODE_ACTION |
+| **sendHttpRequest** | tenant | URL must match `app.journeyHttpRequest.allowedUrlPrefixList`; private hosts blocked. Empty list = disabled |
 | **recordTrackingEvent** | tenant | Lazy InternalEventRecorder if Tracking present |
 | **runScript** | platform | Allow-listed class via InjectableFactory |
-| **triggerWorkflow** | platform | Advanced Workflow if present |
-| **startBpmnProcess** | platform | Advanced BPM if present |
 
 Missing optional modules → validate-on-save and/or runtime no-op with warning (`class_exists` guards).
 
 Per-tenant **action rate limit** (best-effort).
+
+**Configure HTTP egress:** set `app.journeyHttpRequest.allowedUrlPrefixList` (e.g. `["https://hooks.n8n.example/"]`) via custom metadata before enabling `sendHttpRequest` for tenants.
 
 ---
 
@@ -341,7 +348,7 @@ i18n ships **en_US** and **pt_BR**.
 | Update-target fields | `app.journeyUpdateTarget` per entity type |
 | Platform classes | `app.journeyPlatformAllowList` |
 | Watched entity types | Add thin afterSave hook → `EntityChangeDispatcher` |
-| Optional modules | Lazy `class_exists` (Tracking, Advanced) |
+| Optional modules | Lazy `class_exists` (Tracking) |
 
 ---
 
@@ -362,7 +369,7 @@ i18n ships **en_US** and **pt_BR**.
 - [ ] Audience lists populated; continuous enrollment intentional  
 - [ ] Signal codes match TrackingEventType codes  
 - [ ] Timer periods use supported period strings  
-- [ ] Action types available in this deployment (Advanced/Tracking)  
+- [ ] Action types available in this deployment (Tracking)  
 - [ ] Scheduled jobs enabled after rebuild  
 - [ ] Tenant-admin can see Configurations → Journeys  
 - [ ] After go-live, spot-check Logs + counters next morning (reconcile)  

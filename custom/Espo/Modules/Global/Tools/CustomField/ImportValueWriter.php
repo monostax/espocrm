@@ -244,14 +244,18 @@ class ImportValueWriter
         $teamIds = $this->collectTeamIds($entity);
 
         if ($teamIds !== []) {
-            $resolved = $this->tenantResolver->resolveFromTeamIds($teamIds);
+            // Strict: when the row's teams span multiple tenants we cannot know
+            // whose field definitions apply, and applying the wrong tenant's
+            // schema would write values under foreign valueKeys. Returning null
+            // makes resolveDef() skip the value (fail-closed).
+            $resolved = $this->tenantResolver->resolveUniqueFromTeamIds($teamIds);
 
             if ($resolved) {
                 return $resolved;
             }
         }
 
-        return $this->tenantResolver->resolveFromTeamIds($this->getUserTeamIds());
+        return $this->tenantResolver->resolveUniqueFromTeamIds($this->getUserTeamIds());
     }
 
     /**
