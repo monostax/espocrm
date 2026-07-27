@@ -379,6 +379,12 @@ class AutomationActionRunner
         $run = $this->entityManager->getNewEntity('AutomationRun');
         $item = $this->entityManager->getNewEntity('AutomationRunItem');
         $item->set('id', 'sim_' . substr(md5((string) microtime(true)), 0, 14));
+        // Seed the ephemeral item with the materialized map payload. Payload-writing
+        // actions (runReport/setPayload/assign) merge into the item payload and
+        // readItemPayload() then returns it verbatim, so without this seed the map
+        // steps would be dropped and any later formula referencing them would fail
+        // in preview only — while the real run, whose item is persisted, succeeds.
+        $item->set('payload', $payload);
 
         $result = $this->runActions(
             $actions,

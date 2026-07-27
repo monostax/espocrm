@@ -381,13 +381,15 @@ define('feature-automation:views/fields/definition', [
                     open ? this.tLabel('hideAdvanced') : this.tLabel('showAdvanced')
                 );
             });
-            this.$el.on('change.defBuilder', '.def-map-source, .def-map-mode', (e) => {
+            this.$el.on('change.defBuilder', '.def-map-source, .def-map-mode, .def-map-parent', (e) => {
                 const $card = $(e.currentTarget).closest('.map-step');
                 this.applyMapStepVisibility($card);
                 this.updateMapStepTitle($card);
             });
             this.$el.on('change.defBuilder input.defBuilder', '.def-map-id, .def-map-et', (e) => {
-                this.updateMapStepTitle($(e.currentTarget).closest('.map-step'));
+                const $card = $(e.currentTarget).closest('.map-step');
+                this.applyMapStepVisibility($card);
+                this.updateMapStepTitle($card);
             });
             this.$el.on('input.defBuilder change.defBuilder', '.def-map-id', () => {
                 this.refreshParentSelects();
@@ -1229,7 +1231,8 @@ define('feature-automation:views/fields/definition', [
                     index + '-' + Math.floor(Math.random() * 1e6);
                 const $card = $('<div class="automation-card map-step panel panel-default">')
                     .attr('data-index', index)
-                    .attr('data-view-prefix', prefix);
+                    .attr('data-view-prefix', prefix)
+                    .data('originalStep', step);
 
                 if (stageIndex != null && !isNaN(stageIndex)) {
                     $card.attr('data-stage-index', stageIndex);
@@ -1361,12 +1364,57 @@ define('feature-automation:views/fields/definition', [
                                 this.tMessage('mapIdsHint')
                             )
                         ),
-                        $('<div class="col-sm-6 map-f-report">').append(
+                        $('<div class="col-sm-4 map-f-report">').append(
                             this.fieldGroup(
                                 this.tLabel('reportId'),
                                 $('<input type="text" class="form-control def-map-report">')
                                     .val(step.reportId || ''),
                                 this.tMessage('mapReportHint')
+                            )
+                        ),
+                        $('<div class="col-sm-2 map-f-maxrows">').append(
+                            this.fieldGroup(
+                                this.tLabel('maxRows'),
+                                $('<input type="number" min="1" max="10000" class="form-control def-map-maxrows">')
+                                    .val(step.maxRows || '')
+                                    .attr('placeholder', '500'),
+                                this.tMessage('mapMaxRowsHint')
+                            )
+                        )
+                    )
+                );
+
+                $body.append(
+                    $('<div class="row">').append(
+                        $('<div class="col-sm-4 map-f-requireroles">').append(
+                            this.fieldGroup(
+                                this.tLabel('requireRoles'),
+                                $('<input type="text" class="form-control def-map-requireroles">')
+                                    .val(this.formatStringList(step.requireRoles))
+                                    .attr('placeholder', 'tenant-admin'),
+                                this.tMessage('mapRequireRolesHint')
+                            )
+                        ),
+                        $('<div class="col-sm-4 map-f-fk">').append(
+                            this.fieldGroup(
+                                this.tLabel('foreignKey'),
+                                $('<input type="text" class="form-control def-map-fk">')
+                                    .val(step.foreignKey || '')
+                                    .attr('placeholder', 'tenantId'),
+                                this.tMessage('mapForeignKeyHint')
+                            )
+                        ),
+                        $('<div class="col-sm-4 map-f-ignoreparent">').append(
+                            this.fieldGroup(
+                                this.tLabel('ignoreParent'),
+                                $('<div>').append(
+                                    $('<label class="checkbox-inline">').append(
+                                        $('<input type="checkbox" class="def-map-ignoreparent">')
+                                            .prop('checked', !!step.ignoreParent),
+                                        ' ' + this.getHelper().escapeString(this.tLabel('ignoreParentEnable'))
+                                    )
+                                ),
+                                this.tMessage('mapIgnoreParentHint')
                             )
                         )
                     )
@@ -1560,6 +1608,8 @@ define('feature-automation:views/fields/definition', [
         applyMapStepVisibility: function ($card) {
             const source = $card.find('.def-map-source').val() || 'query';
             const mode = $card.find('.def-map-mode').val() || 'primary';
+            const entityType = $card.find('.def-map-et').val() || '';
+            const hasParent = !!($card.find('.def-map-parent').val() || '');
 
             $card.find('.map-f-entity').toggle(source !== 'payload' || mode === 'groupBy');
             $card.find('.map-f-parent').toggle(source === 'relation' || source === 'linkMultiple' || source === 'query');
@@ -1569,8 +1619,14 @@ define('feature-automation:views/fields/definition', [
             $card.find('.map-f-idspath').toggle(source === 'ids');
             $card.find('.map-f-ids').toggle(source === 'ids');
             $card.find('.map-f-report').toggle(source === 'report');
+            $card.find('.map-f-maxrows').toggle(source === 'report');
             $card.find('.map-f-groupby').toggle(mode === 'groupBy');
             $card.find('.map-f-where').toggle(['query', 'relation', 'linkMultiple', 'report'].indexOf(source) !== -1);
+            // requireRoles is a User-only post-filter (see AutomationDefinitionValidator).
+            $card.find('.map-f-requireroles').toggle(entityType === 'User');
+            // foreignKey / ignoreParent only affect parent-scoped query steps.
+            $card.find('.map-f-fk').toggle(source === 'query' && hasParent);
+            $card.find('.map-f-ignoreparent').toggle(source === 'query' && hasParent);
         },
 
         refreshParentSelects: function () {
@@ -1729,10 +1785,41 @@ define('feature-automation:views/fields/definition', [
             return t.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
         },
 
+        formatStringList: function (list) {
+            if (!list) {
+                return '';
+            }
+            if (Array.isArray(list)) {
+                return list.join(', ');
+            }
+            if (typeof list === 'string') {
+                return list;
+            }
+
+            return '';
+        },
+
+        parseStringList: function (text) {
+            const t = (text || '').trim();
+            if (!t) {
+                return [];
+            }
+            if (t.charAt(0) === '[') {
+                try {
+                    const parsed = JSON.parse(t);
+
+                    return Array.isArray(parsed) ? parsed.map(String).map((s) => s.trim()).filter(Boolean) : [];
+                } catch (e) {
+                    // fall through
+                }
+            }
+
+            return t.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+        },
+
         normalizeWhereObject: function (where) {
             return this.inspectWhere(where).simple;
         },
-
         inspectWhere: function (where) {
             if (!where) {
                 return {simple: {}, advanced: false, advancedText: ''};
@@ -3090,6 +3177,19 @@ define('feature-automation:views/fields/definition', [
             return msg;
         },
 
+        // Keys the builder renders and therefore owns on save. Anything absent
+        // from this set is preserved verbatim from the loaded definition.
+        MAP_STEP_KNOWN_KEYS: {
+            id: true, mode: true, source: true, entityType: true,
+            where: true, whereFormulas: true,
+            parent: true, relation: true, link: true, linkMultiple: true,
+            payloadPath: true, idsPath: true, ids: true,
+            reportId: true, maxRows: true,
+            requireRoles: true, foreignKey: true, ignoreParent: true,
+            groupBy: true, groupTargetEntityType: true,
+            timeBucket: true, aggregates: true,
+        },
+
         readMapStepFromCard: function ($card, i) {
             let where = {};
             let whereFormulas = {};
@@ -3135,6 +3235,11 @@ define('feature-automation:views/fields/definition', [
 
             const aggregates = this.readAggregatesFromCard($card);
 
+            const requireRoles = this.parseStringList($card.find('.def-map-requireroles').val());
+            const foreignKey = ($card.find('.def-map-fk').val() || '').trim();
+            const maxRowsRaw = ($card.find('.def-map-maxrows').val() || '').trim();
+            const ignoreParent = $card.find('.def-map-ignoreparent').prop('checked');
+
             if (parent) step.parent = parent;
             if (relation) step.relation = relation;
             if (link) step.link = link;
@@ -3142,6 +3247,12 @@ define('feature-automation:views/fields/definition', [
             if (idsPath) step.idsPath = idsPath;
             if (ids.length) step.ids = ids;
             if (reportId) step.reportId = reportId;
+            if (maxRowsRaw !== '' && !isNaN(parseInt(maxRowsRaw, 10))) {
+                step.maxRows = parseInt(maxRowsRaw, 10);
+            }
+            if (requireRoles.length) step.requireRoles = requireRoles;
+            if (foreignKey) step.foreignKey = foreignKey;
+            if (ignoreParent) step.ignoreParent = true;
             if (groupByRaw) {
                 const parts = groupByRaw.split(',').map(s => s.trim()).filter(Boolean);
                 step.groupBy = parts.length === 1 ? parts[0] : parts;
@@ -3149,6 +3260,17 @@ define('feature-automation:views/fields/definition', [
             if (gTarget) step.groupTargetEntityType = gTarget;
             if (timeBucket) step.timeBucket = timeBucket;
             if (aggregates) step.aggregates = aggregates;
+
+            // Carry over any keys the builder does not model, so that editing a
+            // definition in builder mode never silently drops backend-only options.
+            const original = $card.data('originalStep');
+            if (original && typeof original === 'object') {
+                Object.keys(original).forEach((key) => {
+                    if (!Object.prototype.hasOwnProperty.call(step, key) && !this.MAP_STEP_KNOWN_KEYS[key]) {
+                        step[key] = original[key];
+                    }
+                });
+            }
 
             return step;
         },
