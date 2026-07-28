@@ -34,8 +34,9 @@ use stdClass;
  * ≥1 ChatwootAiAgentRun matching the runtime where (typically runAt period
  * + tenantId from runReport).
  *
- * No day grouping — single grand-total row used by daily/weekly WhatsApp
- * digests. Distinct opportunities once even if many AI runs / conversations.
+ * Won / Lost require Opportunity.closeDate ∈ the same calendar window as the
+ * runAt filter. Open is a snapshot of currently open AI-touched opps.
+ * ALL = OPEN + Won(in period) + Lost(in period).
  *
  * Columns mirror "Oportunidades (R$)" so formula templates stay compatible:
  *   SUM:amountConverted
@@ -79,7 +80,8 @@ class OpportunitiesFromAiAgentConversations implements GridReport
     {
         $conversationIds = $this->fetchDistinctConversationIds($where, $user);
         $opportunityIds = $this->fetchOpportunityIdsForConversations($conversationIds);
-        $totals = $this->sumOpportunities($opportunityIds, $user);
+        $period = AiLinkedOpportunityBuckets::extractDatePeriod($where, 'runAt');
+        $totals = $this->sumOpportunities($opportunityIds, $user, $period['start'], $period['end']);
 
         $columnList = [
             self::COL_WON_AMT,
@@ -276,8 +278,12 @@ class OpportunitiesFromAiAgentConversations implements GridReport
      * @param list<string> $opportunityIds
      * @return array<string, float|int>
      */
-    private function sumOpportunities(array $opportunityIds, ?User $user): array
-    {
+    private function sumOpportunities(
+        array $opportunityIds,
+        ?User $user,
+        ?string $periodStart = null,
+        ?string $periodEnd = null,
+    ): array {
         $empty = [
             self::COL_WON_AMT => 0.0,
             self::COL_LOST_CNT => 0,
@@ -312,7 +318,7 @@ class OpportunitiesFromAiAgentConversations implements GridReport
         // (SelectBuilder does not support report IF: aggregate dialect).
         $queryBuilder
             ->where(['id' => $opportunityIds])
-            ->select(['id', 'amount', 'amountCurrency', 'probability'])
+            ->select(['id', 'amount', 'amountCurrency', 'probability', 'closeDate'])
             ->leftJoin(
                 'Currency',
                 'amountCurrencyRate',
@@ -341,19 +347,34 @@ class OpportunitiesFromAiAgentConversations implements GridReport
             }
             $converted = $amount * $rate;
             $prob = (int) ($row['probability'] ?? 0);
-
-            $allAmt += $converted;
-            $allCnt++;
+            $closeDate = isset($row['closeDate']) ? (string) $row['closeDate'] : null;
+            $inClosePeriod = AiLinkedOpportunityBuckets::isCloseDateInPeriod(
+                $closeDate,
+                $periodStart,
+                $periodEnd
+            );
 
             if ($prob === 100) {
+                if (!$inClosePeriod) {
+                    continue;
+                }
                 $wonAmt += $converted;
                 $wonCnt++;
+                $allAmt += $converted;
+                $allCnt++;
             } elseif ($prob === 0) {
+                if (!$inClosePeriod) {
+                    continue;
+                }
                 $lostAmt += $converted;
                 $lostCnt++;
+                $allAmt += $converted;
+                $allCnt++;
             } else {
                 $openAmt += $converted;
                 $openCnt++;
+                $allAmt += $converted;
+                $allCnt++;
             }
         }
 

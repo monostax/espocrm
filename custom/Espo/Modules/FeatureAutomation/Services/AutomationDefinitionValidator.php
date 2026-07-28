@@ -770,8 +770,20 @@ class AutomationDefinitionValidator
                 }
             }
 
+            $enabled = true;
+            if (array_key_exists('enabled', $action)) {
+                $enabled = (bool) $action['enabled'];
+            } elseif (array_key_exists('isActive', $action)) {
+                $enabled = (bool) $action['isActive'];
+            } elseif (array_key_exists('paused', $action) && $action['paused']) {
+                $enabled = false;
+            } elseif (array_key_exists('disabled', $action) && $action['disabled']) {
+                $enabled = false;
+            }
+
             $row = [
                 'type' => $type,
+                'enabled' => $enabled,
                 'when' => isset($action['when']) && is_string($action['when']) ? $action['when'] : null,
                 'params' => $params,
                 'paramFormulas' => $paramFormulas,

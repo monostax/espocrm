@@ -7,6 +7,7 @@
         "Espo\\Modules\\Global\\Rebuild\\BackfillOpportunityFollowupStatus",
         "Espo\\Modules\\Global\\Rebuild\\BackfillOpportunityFollowupActiveCollapse",
         "Espo\\Modules\\Global\\Rebuild\\BackfillOpportunityFollowupAiAgentId",
+        "Espo\\Modules\\Global\\Rebuild\\BackfillOpportunityCloseDate",
         "Espo\\Modules\\Global\\Rebuild\\SeedRole",
         "Espo\\Modules\\Global\\Rebuild\\BackfillTenantAdminTeams",
         "Espo\\Modules\\Global\\Rebuild\\EnforceReportApplyAcl"

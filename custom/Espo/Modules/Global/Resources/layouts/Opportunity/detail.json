@@ -18,6 +18,12 @@
             ],
             [
                 {
+                    "name": "tenant"
+                },
+                false
+            ],
+            [
+                {
                     "name": "amount"
                 },
                 {

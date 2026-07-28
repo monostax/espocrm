@@ -66,6 +66,9 @@
         "massUpdate": {
             "module": "Global"
         },
+        "defaultSidePanel": {
+            "module": "Global"
+        },
         "sidePanelsDetail": {
             "module": "Global"
         },

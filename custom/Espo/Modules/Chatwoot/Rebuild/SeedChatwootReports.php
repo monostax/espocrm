@@ -602,8 +602,8 @@ class SeedChatwootReports implements RebuildAction
                     'Soma amountConverted de Oportunidades distintas ligadas ' .
                     '(m2m chatwootConversationOpportunity) a ChatwootConversations ' .
                     'que tiveram ≥1 ChatwootAiAgentRun no filtro de período ' .
-                    '(runAt). Inclui abertas, ganhas e perdidas. Colunas ' .
-                    'compatíveis com Oportunidades (R$). ACL-strict em ' .
+                    '(runAt). Ganhas/perdidas exigem closeDate no mesmo período; ' .
+                    'abertas = snapshot aberto. ACL-strict em ' .
                     'ChatwootAiAgentRun + Opportunity. Drill-down lista as opps.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
@@ -637,11 +637,10 @@ class SeedChatwootReports implements RebuildAction
                 'description' =>
                     'Relatório interno de totais (sem agrupamento por dia) para ' .
                     'a automação de notificação WhatsApp. Em um único payload: ' .
-                    'SUM:amountConverted (opps ligadas a conversas com IA), ' .
-                    'COUNT:conversations (conversas-dia engajadas), ' .
-                    'COUNT:afterHours (+ weekend/weekday breakdown), ' .
-                    'AVG:leadTimeMs, turns. Filtro runtime runAt (+ tenant via ' .
-                    'runReport). ACL-strict.',
+                    'SUM:amountConverted (abertas + ganhas/perdidas com closeDate ' .
+                    'no período), ganhas/perdidas filtradas por closeDate, ' .
+                    'COUNT:conversations, afterHours, AVG:leadTimeMs, turns. ' .
+                    'Filtro runtime runAt (+ tenant via runReport). ACL-strict.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => [

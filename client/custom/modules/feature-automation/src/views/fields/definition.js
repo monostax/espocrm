@@ -233,10 +233,10 @@ define('feature-automation:views/fields/definition', [
                 if (!isNaN(stageIndex) && this._def.stages[stageIndex]) {
                     const stage = this._def.stages[stageIndex];
                     stage[list] = stage[list] || [];
-                    stage[list].push({type: 'notifyUser', params: {message: ''}});
+                    stage[list].push({type: 'notifyUser', enabled: true, params: {message: ''}});
                 } else {
                     this._def[list] = this._def[list] || [];
-                    this._def[list].push({type: 'notifyUser', params: {message: ''}});
+                    this._def[list].push({type: 'notifyUser', enabled: true, params: {message: ''}});
                 }
                 this.mirrorStagesTopLevel();
                 this.renderBuilderLists();
@@ -251,7 +251,37 @@ define('feature-automation:views/fields/definition', [
                     return;
                 }
                 st[bucket] = st[bucket] || [];
-                st[bucket].push({type: 'notifyUser', params: {message: ''}});
+                st[bucket].push({type: 'notifyUser', enabled: true, params: {message: ''}});
+                this.renderBuilderLists();
+            });
+            this.$el.on('click.defBuilder', '[data-action="toggleActionEnabled"]', (e) => {
+                const $t = $(e.currentTarget);
+                const bucket = $t.data('bucket');
+                const idx = parseInt($t.data('index'), 10);
+                const parent = $t.data('parent');
+                const parentIndex = parseInt($t.data('parent-index'), 10);
+                this.readBuilderIntoMemory();
+                let list = null;
+                if (parent === 'state' && !isNaN(parentIndex)) {
+                    const st = (this._def.states || [])[parentIndex];
+                    if (st && Array.isArray(st[bucket])) {
+                        list = st[bucket];
+                    }
+                }
+                else if (parent === 'stage' && !isNaN(parentIndex)) {
+                    this.ensureStages();
+                    const stg = (this._def.stages || [])[parentIndex];
+                    if (stg && Array.isArray(stg[bucket])) {
+                        list = stg[bucket];
+                    }
+                }
+                else if (Array.isArray(this._def[bucket])) {
+                    list = this._def[bucket];
+                }
+                if (list && list[idx]) {
+                    list[idx].enabled = list[idx].enabled === false;
+                }
+                this.mirrorStagesTopLevel();
                 this.renderBuilderLists();
             });
             this.$el.on('click.defBuilder', '[data-action="addState"]', () => {
@@ -1978,10 +2008,26 @@ define('feature-automation:views/fields/definition', [
             const types = this.actionTypeOptions();
 
             items.forEach((action, index) => {
+                const enabled = action.enabled !== false;
+                const rowMeta = nestedMeta ? (
+                    nestedMeta.parent === 'stage' ? {
+                        'data-parent': 'stage',
+                        'data-parent-index': nestedMeta.stageIndex,
+                    } : {
+                        'data-parent': 'state',
+                        'data-parent-index': nestedMeta.stateIndex,
+                    }
+                ) : {};
+                const rowBucket = nestedMeta ? nestedMeta.bucket : bucket;
                 const $card = $('<div class="automation-card panel panel-default">')
                     .attr('data-action-card', '1')
                     .attr('data-bucket', bucket)
-                    .attr('data-index', index);
+                    .attr('data-index', index)
+                    .attr('data-enabled', enabled ? '1' : '0');
+
+                if (!enabled) {
+                    $card.addClass('automation-action-disabled');
+                }
 
                 if (nestedMeta) {
                     $card.addClass('automation-nested-card');
@@ -2001,21 +2047,27 @@ define('feature-automation:views/fields/definition', [
                     $('<div class="automation-card-header">').append(
                         $('<div class="automation-card-title def-action-title">')
                             .text(this.actionTitle(action, index)),
-                        $('<button type="button" class="btn btn-link btn-sm text-danger">')
-                            .attr(Object.assign({
-                                'data-action': 'removeRow',
-                                'data-bucket': nestedMeta ? nestedMeta.bucket : bucket,
-                                'data-index': index,
-                            }, nestedMeta ? (
-                                nestedMeta.parent === 'stage' ? {
-                                    'data-parent': 'stage',
-                                    'data-parent-index': nestedMeta.stageIndex,
-                                } : {
-                                    'data-parent': 'state',
-                                    'data-parent-index': nestedMeta.stateIndex,
-                                }
-                            ) : {}))
-                            .text(this.tLabel('remove'))
+                        $('<div class="automation-card-header-actions">').append(
+                            $('<button type="button" class="btn btn-link btn-sm">')
+                                .attr(Object.assign({
+                                    'data-action': 'toggleActionEnabled',
+                                    'data-bucket': rowBucket,
+                                    'data-index': index,
+                                    title: enabled
+                                        ? this.tLabel('pauseAction')
+                                        : this.tLabel('resumeAction'),
+                                }, rowMeta))
+                                .text(enabled
+                                    ? this.tLabel('pauseAction')
+                                    : this.tLabel('resumeAction')),
+                            $('<button type="button" class="btn btn-link btn-sm text-danger">')
+                                .attr(Object.assign({
+                                    'data-action': 'removeRow',
+                                    'data-bucket': rowBucket,
+                                    'data-index': index,
+                                }, rowMeta))
+                                .text(this.tLabel('remove'))
+                        )
                     )
                 );
 
@@ -2109,14 +2161,21 @@ define('feature-automation:views/fields/definition', [
 
         actionTitle: function (action, index) {
             const type = (action && action.type) || 'notifyUser';
+            let title = (index + 1) + '. ' + this.actionTypeLabel(type);
+            if (action && action.enabled === false) {
+                title += ' (' + this.tLabel('actionPaused') + ')';
+            }
 
-            return (index + 1) + '. ' + this.actionTypeLabel(type);
+            return title;
         },
 
         updateActionTitle: function ($card) {
             const index = parseInt($card.attr('data-index'), 10) || 0;
             const type = $card.find('.def-action-type').val() || 'notifyUser';
-            $card.find('.def-action-title').text(this.actionTitle({type: type}, index));
+            const enabled = $card.attr('data-enabled') !== '0';
+            $card.find('.def-action-title').text(
+                this.actionTitle({type: type, enabled: enabled}, index)
+            );
         },
 
         mountActionParams: function ($card, type, params, paramFormulas) {
@@ -2659,6 +2718,7 @@ define('feature-automation:views/fields/definition', [
                 }
                 const a = {
                     type: $card.find('.def-action-type').val() || 'notifyUser',
+                    enabled: $card.attr('data-enabled') !== '0',
                     params: params,
                 };
                 if (paramFormulas && Object.keys(paramFormulas).length) {

@@ -50,6 +50,27 @@
     padding: 8px 12px;
 }
 
+.automation-definition-builder .automation-card-header-actions {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    gap: 2px;
+}
+
+.automation-definition-builder .automation-action-disabled {
+    border-left-color: var(--gray-400, #999);
+    opacity: 0.72;
+}
+
+.automation-definition-builder .automation-action-disabled > .automation-card-header {
+    background: var(--gray-200, #eee);
+}
+
+.automation-definition-builder .automation-action-disabled .def-action-title {
+    color: var(--text-muted, #777);
+    font-style: italic;
+}
+
 .automation-definition-builder .automation-card-title {
     font-size: 13px;
     font-weight: 600;

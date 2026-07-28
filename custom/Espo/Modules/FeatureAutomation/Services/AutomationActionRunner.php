@@ -70,6 +70,15 @@ class AutomationActionRunner
             $type = (string) ($action['type'] ?? '');
             $when = $action['when'] ?? null;
 
+            if (!$this->isActionEnabled($action)) {
+                $log[] = [
+                    'index' => $index,
+                    'type' => $type,
+                    'status' => 'skipped_disabled',
+                ];
+                continue;
+            }
+
             if (is_string($when) && trim($when) !== '') {
                 try {
                     $pass = $this->evalWhen($when, $target, $item, $automation, $tenantId, $payload, $actor);
@@ -711,6 +720,33 @@ class AutomationActionRunner
     }
 
     /**
+     * Soft-disabled action nodes keep their config but are not executed.
+     * Default true when the flag is omitted (backward compatible).
+     *
+     * @param array<string, mixed> $action
+     */
+    private function isActionEnabled(array $action): bool
+    {
+        if (array_key_exists('enabled', $action)) {
+            return (bool) $action['enabled'];
+        }
+
+        if (array_key_exists('isActive', $action)) {
+            return (bool) $action['isActive'];
+        }
+
+        if (array_key_exists('paused', $action) && $action['paused']) {
+            return false;
+        }
+
+        if (array_key_exists('disabled', $action) && $action['disabled']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function payloadToArray(mixed $raw): ?array
@@ -785,6 +821,32 @@ class AutomationActionRunner
                 }
 
                 $params['fields'][$fieldKey] = $value;
+                continue;
+            }
+
+            // `parameterMapping.<name>` builds the WhatsApp template variable map one
+            // entry at a time. Values must be strings: resolveParameterMapping()
+            // renders only string expressions and silently drops anything else.
+            if (str_starts_with($key, 'parameterMapping.')) {
+                $mapKey = substr($key, strlen('parameterMapping.'));
+                if ($mapKey === '') {
+                    continue;
+                }
+
+                if (!isset($params['parameterMapping']) || !is_array($params['parameterMapping'])) {
+                    $params['parameterMapping'] = is_object($params['parameterMapping'] ?? null)
+                        ? (array) $params['parameterMapping']
+                        : [];
+                }
+
+                if ($value === null || $value === false) {
+                    $params['parameterMapping'][$mapKey] = '';
+                } elseif (is_scalar($value)) {
+                    $params['parameterMapping'][$mapKey] = (string) $value;
+                } else {
+                    $params['parameterMapping'][$mapKey] = '';
+                }
+
                 continue;
             }
 

@@ -122,6 +122,7 @@ Payload step blob: `{ groupKey, bucketStart, bucketEnd, count, ids, …aggs }`.
   "actions": [
     {
       "type": "sendWhatsAppMessage",
+      "enabled": true,
       "idempotencyKey": "digest|{targetId}|{type}",
       "debounce": "20 hours",
       "params": { "chatwootInboxId": "…", "body": "Resumo" }
@@ -279,6 +280,7 @@ Depth capped at 3.
 
 | Layer | How |
 |-------|-----|
+| **Action** | `enabled: false` pauses the node (config kept; runtime log `skipped_disabled`). Default `true` when omitted. Builder: Pause / Resume next to Remove. |
 | **Action** | `idempotencyKey`: `true` (auto) · template `{type}` `{targetId}` … · or `=formula` · optional `debounce` period |
 | **Trigger** | Automation.`triggerDebouncePeriod` e.g. `5 minutes` on entityChange/signal |
 

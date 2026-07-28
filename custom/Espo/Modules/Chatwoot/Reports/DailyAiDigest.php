@@ -34,15 +34,14 @@ use Throwable;
  * Single grand-total grid for the daily/weekly WhatsApp AI digest.
  *
  * Totals (no day grouping) under the runtime where (typically runAt + tenant):
- *   SUM:amountConverted   — distinct Opportunities linked to AI-touched convos
- *   COUNT:conversations   — conversation-days engaged (same grain as chwRptCvDay)
- *   COUNT:afterHours      — conversation-days with ≥1 run outside BH
- *   COUNT:afterHoursWeekend — of which weekend (Sat/Sun) local days
- *   COUNT:afterHoursWeekday — of which weekday outside 08:00–18:00
- *   AVG:leadTimeMs        — mean leadTimeMs of runs that carry one
- *   turns                 — all AI runs (same as pack billing turns)
- *
- * Also exposes opportunity bucket columns for formula flexibility.
+ *   Opp scope            — distinct Opportunities linked to AI-touched convos
+ *   SUM:amountConverted — OPEN snapshot + Won/Lost with closeDate in period
+ *   COUNT:opportunities — same membership as SUM:amountConverted
+ *   ganhas/perdidas     — probability 100/0 AND closeDate ∈ [period start, end)
+ *   abertas             — currently open (prob ∉ {0,100}), no closeDate gate
+ *   COUNT:conversations — conversation-days engaged (same grain as chwRptCvDay)
+ *   COUNT:afterHours    — conversation-days with ≥1 run outside BH
+ *   AVG:leadTimeMs / turns
  */
 class DailyAiDigest implements GridReport
 {
@@ -198,6 +197,10 @@ class DailyAiDigest implements GridReport
             return $empty;
         }
 
+        $period = AiLinkedOpportunityBuckets::extractDatePeriod($where, 'runAt');
+        $start = $period['start'];
+        $end = $period['end'];
+
         $selectBuilder = $this->selectBuilderFactory
             ->create()
             ->from(self::OPP_ENTITY)
@@ -215,7 +218,7 @@ class DailyAiDigest implements GridReport
 
         $queryBuilder
             ->where(['id' => $opportunityIds])
-            ->select(['id', 'amount', 'amountCurrency', 'probability'])
+            ->select(['id', 'amount', 'amountCurrency', 'probability', 'closeDate'])
             ->leftJoin(
                 'Currency',
                 'amountCurrencyRate',
@@ -241,16 +244,31 @@ class DailyAiDigest implements GridReport
             }
             $converted = $amount * $rate;
             $prob = (int) ($row['probability'] ?? 0);
-
-            $allAmt += $converted;
-            $allCnt++;
+            $closeDate = isset($row['closeDate']) ? (string) $row['closeDate'] : null;
+            $inClosePeriod = AiLinkedOpportunityBuckets::isCloseDateInPeriod(
+                $closeDate,
+                $start,
+                $end
+            );
 
             if ($prob === 100) {
+                if (!$inClosePeriod) {
+                    continue;
+                }
                 $wonAmt += $converted;
+                $allAmt += $converted;
+                $allCnt++;
             } elseif ($prob === 0) {
+                if (!$inClosePeriod) {
+                    continue;
+                }
                 $lostAmt += $converted;
+                $allAmt += $converted;
+                $allCnt++;
             } else {
                 $openAmt += $converted;
+                $allAmt += $converted;
+                $allCnt++;
             }
         }
 
