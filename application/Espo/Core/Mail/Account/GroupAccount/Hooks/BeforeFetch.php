@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Mail\Account\GroupAccount\Hooks;
 
+use Espo\Core\InjectableFactory;
 use Espo\Core\Mail\Account\Hook\BeforeFetch as BeforeFetchInterface;
 use Espo\Core\Mail\Account\Hook\BeforeFetchResult;
 use Espo\Core\Mail\Account\Account;
@@ -46,12 +47,16 @@ use Throwable;
 
 class BeforeFetch implements BeforeFetchInterface
 {
+    private const JOURNEY_BOUNCE_HANDLER =
+        'Espo\\Modules\\FeatureJourney\\Services\\JourneyBounceHandler';
+
     public function __construct(
         private Log $log,
         private EntityManager $entityManager,
         private BouncedRecognizer $bouncedRecognizer,
         private CampaignService $campaignService,
         private AutoReplyDetector $autoReplyDetector,
+        private InjectableFactory $injectableFactory,
     ) {}
 
     public function process(Account $account, Message $message): BeforeFetchResult
@@ -81,6 +86,15 @@ class BeforeFetch implements BeforeFetchInterface
     private function processBounced(Message $message): bool
     {
         $isHard = $this->bouncedRecognizer->isHard($message);
+
+        $campaignHandled = $this->processCampaignBounced($message, $isHard);
+        $journeyHandled = $this->processJourneyBounced($message, $isHard);
+
+        return $campaignHandled || $journeyHandled;
+    }
+
+    private function processCampaignBounced(Message $message, bool $isHard): bool
+    {
         $queueItemId = $this->bouncedRecognizer->extractQueueItemId($message);
 
         if (!$queueItemId) {
@@ -123,6 +137,28 @@ class BeforeFetch implements BeforeFetchInterface
         }
 
         return true;
+    }
+
+    private function processJourneyBounced(Message $message, bool $isHard): bool
+    {
+        if (!class_exists(self::JOURNEY_BOUNCE_HANDLER)) {
+            return false;
+        }
+
+        try {
+            /** @var object $handler */
+            $handler = $this->injectableFactory->create(self::JOURNEY_BOUNCE_HANDLER);
+
+            if (!method_exists($handler, 'process')) {
+                return false;
+            }
+
+            return (bool) $handler->process($message, $isHard);
+        } catch (Throwable $e) {
+            $this->log->warning('BeforeFetch journey bounce: ' . $e->getMessage());
+
+            return false;
+        }
     }
 
     private function checkMessageIsAutoReply(Message $message): bool

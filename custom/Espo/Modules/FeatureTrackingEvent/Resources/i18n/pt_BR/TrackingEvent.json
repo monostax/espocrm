@@ -73,6 +73,7 @@
         "opportunity_created": "Oportunidade Criada",
         "opportunity_won": "Oportunidade Ganha",
         "opportunity_lost": "Oportunidade Perdida",
-        "email_replied": "E-mail Respondido"
+        "email_replied": "E-mail Respondido",
+        "whatsapp_replied": "WhatsApp Respondido"
     }
 }

@@ -181,6 +181,81 @@ define("feature-journey:views/journey-stage-action/fields/params", [
             const seen = {};
 
             (defs || []).forEach((def) => {
+                if (def.type === "whatsappTemplate") {
+                    const managedKeys = def.managedKeys || [
+                        "templateName",
+                        "templateLanguage",
+                        "templateCategory",
+                        "parameterMapping",
+                        "templateBody",
+                        "headerMediaUrl",
+                        "headerMediaType",
+                    ];
+
+                    managedKeys.forEach((k) => {
+                        seen[k] = true;
+                    });
+
+                    const name = params.templateName;
+                    const lang = params.templateLanguage;
+                    const cat = params.templateCategory;
+
+                    if (!name && !lang) {
+                        return;
+                    }
+
+                    let display = String(name || "");
+
+                    if (lang) {
+                        display += " (" + lang + ")";
+                    }
+
+                    if (cat) {
+                        display += " [" + cat + "]";
+                    }
+
+                    rows.push({
+                        label: def.label || "Template",
+                        value: this.getHelper().escapeString(display),
+                    });
+
+                    if (params.parameterMapping && typeof params.parameterMapping === "object") {
+                        rows.push({
+                            label: "Parameter mapping",
+                            value: this.getHelper().escapeString(
+                                JSON.stringify(params.parameterMapping)
+                            ),
+                        });
+                    }
+
+                    return;
+                }
+
+                if (def.type === "emailTemplate") {
+                    const managedKeys = def.managedKeys || [
+                        "emailTemplateId",
+                        "emailTemplateName",
+                    ];
+
+                    managedKeys.forEach((k) => {
+                        seen[k] = true;
+                    });
+
+                    const display =
+                        params.emailTemplateName || params.emailTemplateId || "";
+
+                    if (!display) {
+                        return;
+                    }
+
+                    rows.push({
+                        label: def.label || "Email Template",
+                        value: this.getHelper().escapeString(String(display)),
+                    });
+
+                    return;
+                }
+
                 if (def.type === "fieldMap") {
                     const fields = params.fields || {};
                     const keys = Object.keys(fields);
@@ -469,6 +544,20 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 return;
             }
 
+            if (def.type === "whatsappTemplate") {
+                this.renderWhatsAppTemplateParam(def, params, $group);
+                this.$form.append($group);
+
+                return;
+            }
+
+            if (def.type === "emailTemplate") {
+                this.renderEmailTemplateParam(def, params, $group);
+                this.$form.append($group);
+
+                return;
+            }
+
             if (
                 supportsExpr &&
                 (def.type === "varchar" ||
@@ -566,6 +655,152 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                     this.markChanged();
                 });
             });
+        },
+
+        renderWhatsAppTemplateParam: function (def, params, $group) {
+            const name = def.name;
+            const viewName = "param-" + name;
+            const managedKeys = def.managedKeys || [
+                "templateName",
+                "templateLanguage",
+                "templateCategory",
+                "parameterMapping",
+                "templateBody",
+                "headerMediaUrl",
+                "headerMediaType",
+            ];
+
+            this._whatsappTemplateManaged = this._whatsappTemplateManaged || {};
+            this._whatsappTemplateManaged[viewName] = managedKeys;
+
+            managedKeys.forEach((key) => {
+                if (params[key] !== undefined) {
+                    this._helperModel.set(key, params[key]);
+                }
+            });
+
+            const $field = $("<div>")
+                .addClass("field journey-whatsapp-template-field")
+                .attr("data-name", name);
+            $group.append($field);
+
+            $group.append(
+                $("<p>")
+                    .addClass("text-muted small")
+                    .css({ marginTop: "4px", marginBottom: 0 })
+                    .text(
+                        this.translate(
+                            "sendWhatsAppTemplateHint",
+                            "messages",
+                            "JourneyStageAction"
+                        )
+                    )
+            );
+
+            this._paramViews.push(viewName);
+            this.createView(
+                viewName,
+                "feature-journey:views/journey-stage-action/fields/whatsapp-template",
+                {
+                    model: this._helperModel,
+                    name: name,
+                    el:
+                        this.getSelector() +
+                        ' [data-param="' +
+                        name +
+                        '"] .journey-whatsapp-template-field',
+                    mode: "edit",
+                    defs: {
+                        name: name,
+                        type: "varchar",
+                    },
+                    params: {},
+                },
+                (view) => {
+                    view.render();
+                    this.listenTo(view, "change", () => {
+                        this.markChanged();
+                    });
+                    this.listenTo(this._helperModel, "change", () => {
+                        this.markChanged();
+                    });
+                }
+            );
+        },
+
+        renderEmailTemplateParam: function (def, params, $group) {
+            const name = def.name;
+            const viewName = "param-" + name;
+            const managedKeys = def.managedKeys || [
+                "emailTemplateId",
+                "emailTemplateName",
+            ];
+
+            this._emailTemplateManaged = this._emailTemplateManaged || {};
+            this._emailTemplateManaged[viewName] = managedKeys;
+
+            managedKeys.forEach((key) => {
+                if (params[key] !== undefined) {
+                    this._helperModel.set(key, params[key]);
+                }
+            });
+
+            // Link field name is emailTemplate → emailTemplateId / emailTemplateName
+            if (params.emailTemplateId) {
+                this._helperModel.set("emailTemplateId", params.emailTemplateId);
+                this._helperModel.set(
+                    "emailTemplateName",
+                    params.emailTemplateName || params.emailTemplateId
+                );
+            }
+
+            const $field = $("<div>")
+                .addClass("field journey-email-template-field")
+                .attr("data-name", name);
+            $group.append($field);
+
+            $group.append(
+                $("<p>")
+                    .addClass("text-muted small")
+                    .css({ marginTop: "4px", marginBottom: 0 })
+                    .text(
+                        this.translate(
+                            "sendEmailTemplateHint",
+                            "messages",
+                            "JourneyStageAction"
+                        )
+                    )
+            );
+
+            this._paramViews.push(viewName);
+            this.createView(
+                viewName,
+                "feature-journey:views/journey-stage-action/fields/email-template",
+                {
+                    model: this._helperModel,
+                    name: name,
+                    el:
+                        this.getSelector() +
+                        ' [data-param="' +
+                        name +
+                        '"] .journey-email-template-field',
+                    mode: "edit",
+                    defs: {
+                        name: name,
+                        type: "varchar",
+                    },
+                    params: {},
+                },
+                (view) => {
+                    view.render();
+                    this.listenTo(view, "change", () => {
+                        this.markChanged();
+                    });
+                    this.listenTo(this._helperModel, "change:emailTemplateId", () => {
+                        this.markChanged();
+                    });
+                }
+            );
         },
 
         renderLinkParam: function (def, params, formulas, $group) {
@@ -1100,6 +1335,68 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                     continue;
                 }
 
+                if (
+                    def.type === "whatsappTemplate" ||
+                    def.type === "emailTemplate"
+                ) {
+                    const view = this.getView("param-" + def.name);
+                    const registry =
+                        def.type === "emailTemplate"
+                            ? this._emailTemplateManaged
+                            : this._whatsappTemplateManaged;
+                    const defaultKeys =
+                        def.type === "emailTemplate"
+                            ? ["emailTemplateId", "emailTemplateName"]
+                            : [
+                                  "templateName",
+                                  "templateLanguage",
+                                  "templateCategory",
+                                  "parameterMapping",
+                                  "templateBody",
+                                  "headerMediaUrl",
+                                  "headerMediaType",
+                              ];
+                    const managedKeys =
+                        def.managedKeys ||
+                        (registry && registry["param-" + def.name]) ||
+                        defaultKeys;
+
+                    let fetched = null;
+
+                    if (view && typeof view.fetch === "function") {
+                        fetched = view.fetch();
+                    }
+
+                    managedKeys.forEach((key) => {
+                        let val =
+                            fetched &&
+                            Object.prototype.hasOwnProperty.call(fetched, key)
+                                ? fetched[key]
+                                : this._helperModel
+                                  ? this._helperModel.get(key)
+                                  : undefined;
+
+                        if (val === null || val === undefined || val === "") {
+                            return;
+                        }
+
+                        // Keep plain objects (parameterMapping) even without string coercion.
+                        if (typeof val === "object" && !Array.isArray(val)) {
+                            if (!Object.keys(val).length) {
+                                return;
+                            }
+
+                            out[key] = val;
+
+                            return;
+                        }
+
+                        out[key] = val;
+                    });
+
+                    continue;
+                }
+
                 if (def.type === "link") {
                     const ex = this._expressionInputs[def.name];
 
@@ -1256,6 +1553,19 @@ define("feature-journey:views/journey-stage-action/fields/params", [
 
                 if (d.type === "fieldMap") {
                     managed.fields = true;
+                }
+
+                if (
+                    (d.type === "whatsappTemplate" || d.type === "emailTemplate") &&
+                    Array.isArray(d.managedKeys)
+                ) {
+                    d.managedKeys.forEach((k) => {
+                        managed[k] = true;
+                    });
+                }
+
+                if (d.type === "emailTemplate" && d.nameKey) {
+                    managed[d.nameKey] = true;
                 }
             });
             managed.paramFormulas = true;

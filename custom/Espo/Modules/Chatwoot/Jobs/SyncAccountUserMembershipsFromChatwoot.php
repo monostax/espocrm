@@ -385,11 +385,11 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
         $membership->set('availabilityStatus', $agentData['availability_status'] ?? 'offline');
         $membership->set('autoOffline', $agentData['auto_offline'] ?? true);
         $membership->set('confirmed', $agentData['confirmed'] ?? false);
-        // Prefer the original blob URL (`avatar_url`) over the resized
-        // `thumbnail` representation. Mirroring the re-encoded thumbnail back
-        // into the CRM avatar would never byte-match what we pushed, driving an
-        // infinite re-encode loop (see AgentAvatarSyncService loop-prevention).
-        $membership->set('avatarUrl', $agentData['avatar_url'] ?? $agentData['thumbnail'] ?? null);
+        // Prefer original blob (`avatar_original_url` / `avatar_url` after CW
+        // fix) over the resized `thumbnail` representation. Mirroring the
+        // re-encoded 250px thumbnail back into the CRM avatar drives generation
+        // loss (see AgentAvatarSyncService loop-prevention).
+        $membership->set('avatarUrl', $this->pickAgentAvatarUrl($agentData));
         $membership->set('customRoleId', $agentData['custom_role_id'] ?? null);
 
         // NOTE: isAI is intentionally NOT set here. It is a user-configured field
@@ -543,6 +543,43 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
     private function isAccountGoneError(string $message): bool
     {
         return (bool) preg_match('/HTTP\s+404\b/', $message);
+    }
+
+    /**
+     * Prefer lossless original blob URL for avatar sync.
+     *
+     * Order: avatar_original_url → avatar_url → thumbnail.
+     * Skips Active Storage representation URLs when a non-variant candidate
+     * is also present (defense in depth for mixed/legacy payloads).
+     *
+     * @param array<string, mixed> $agentData
+     */
+    private function pickAgentAvatarUrl(array $agentData): ?string
+    {
+        $candidates = [];
+
+        foreach (['avatar_original_url', 'avatar_url', 'thumbnail'] as $key) {
+            $url = $agentData[$key] ?? null;
+
+            if (is_string($url) && $url !== '') {
+                $candidates[] = $url;
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        foreach ($candidates as $url) {
+            if (!str_contains($url, '/rails/active_storage/representations/')) {
+                return $url;
+            }
+        }
+
+        // All candidates are variants — still return one so membership keeps a
+        // display URL; AgentAvatarSyncService refuses to overwrite CRM bytes
+        // with representation downloads when a CRM avatar already exists.
+        return $candidates[0];
     }
 
     /**

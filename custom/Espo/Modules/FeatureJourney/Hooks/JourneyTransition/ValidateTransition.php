@@ -63,6 +63,27 @@ class ValidateTransition implements BeforeSave
         }
 
         $fromStageId = $entity->get('fromStageId');
+
+        $scope = $entity->get('scope');
+        if (!is_string($scope) || $scope === '') {
+            $scope = $fromStageId
+                ? JourneyTransition::SCOPE_STAGE
+                : JourneyTransition::SCOPE_ENROLLMENT;
+            $entity->set('scope', $scope);
+        }
+
+        if (!in_array($scope, JourneyTransition::SCOPES, true)) {
+            throw new BadRequest('scope must be stage, journey, or enrollment.');
+        }
+
+        if ($scope === JourneyTransition::SCOPE_STAGE && !$fromStageId) {
+            throw new BadRequest('fromStage is required for stage-scoped transitions.');
+        }
+
+        if ($scope !== JourneyTransition::SCOPE_STAGE && $fromStageId) {
+            throw new BadRequest('fromStage must be empty for journey and enrollment transitions.');
+        }
+
         if ($fromStageId) {
             $fromStage = $this->entityManager->getEntityById(JourneyStage::ENTITY_TYPE, (string) $fromStageId);
             if (!$fromStage || $fromStage->get('journeyId') !== $journeyId) {
@@ -78,6 +99,13 @@ class ValidateTransition implements BeforeSave
             ? $entity->getWakeSources()
             : JourneyTransition::resolveWakeSources($entity);
         $trigger = (string) ($entity->get('triggerType') ?? '');
+
+        if (
+            $scope === JourneyTransition::SCOPE_JOURNEY &&
+            in_array(JourneyTransition::TRIGGER_TIMER, $wakes, true)
+        ) {
+            throw new BadRequest('Journey-wide transitions cannot use time-in-step rules; select a source stage.');
+        }
 
         if ($wakes === [] && $trigger === JourneyTransition::TRIGGER_FORMULA) {
             $formula = $entity->get('conditionsFormula');

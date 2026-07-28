@@ -11,7 +11,17 @@
     },
     {
         "label": "Meta System User",
+        "name": "metaSystemUser",
         "style": "default",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "equals",
+                    "attribute": "providerType",
+                    "value": "meta-system-user"
+                }
+            ]
+        },
         "rows": [
             [{ "name": "metaSystemUserId" }, { "name": "metaBusinessId" }],
             [{ "name": "metaTokenInfo" }, false]

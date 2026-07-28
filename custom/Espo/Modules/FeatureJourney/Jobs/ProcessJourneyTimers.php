@@ -38,10 +38,15 @@ class ProcessJourneyTimers implements JobDataLess
     {
         $cutoff = date('Y-m-d H:i:s', time() - self::STALE_CLAIM_MINUTES * 60);
 
+        // Stage actions keep records Active for signal dispatch while claimedAt
+        // prevents another worker from claiming the same record.
         $stale = $this->entityManager
             ->getRDBRepository(JourneyRecord::ENTITY_TYPE)
             ->where([
-                'status' => JourneyRecord::STATUS_PROCESSING,
+                'status' => [
+                    JourneyRecord::STATUS_ACTIVE,
+                    JourneyRecord::STATUS_PROCESSING,
+                ],
                 'claimedAt<' => $cutoff,
             ])
             ->limit(0, 200)
@@ -100,6 +105,11 @@ class ProcessJourneyTimers implements JobDataLess
             );
 
             if (!$journey || $journey->get('status') !== Journey::STATUS_ACTIVE) {
+                continue;
+            }
+
+            $scope = JourneyTransition::resolveScope($transition);
+            if ($scope !== JourneyTransition::SCOPE_STAGE) {
                 continue;
             }
 

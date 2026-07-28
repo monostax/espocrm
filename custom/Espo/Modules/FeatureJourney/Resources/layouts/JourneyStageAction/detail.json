@@ -27,6 +27,18 @@
             ],
             [
                 {
+                    "name": "conditionsGroup",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "conditionFormula",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
                     "name": "maxRetries"
                 },
                 {

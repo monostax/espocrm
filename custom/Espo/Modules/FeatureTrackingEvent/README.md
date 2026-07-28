@@ -250,6 +250,7 @@ hidden for this kind (not applicable).
 | `opportunity_won` | Derived `status` transitions to `Won` | `value`/`currency` from the opportunity amount |
 | `opportunity_lost` | Derived `status` transitions to `Lost` | — |
 | `email_replied` | Inbound Email threaded (`repliedId`) to a journey outbound whose Message-ID carries `jrn.{token}@journey.monostax` (FeatureJourney `TrackJourneyReply`) | `journeyToken`, `journeyId`, `journeyRecordId`, `emailId` — clients do **not** return custom X-headers; correlation is Message-ID only |
+| `whatsapp_replied` | Inbound WhatsApp on a conversation that received a journey outbound (FeatureJourney `TrackJourneyWhatsAppReply` + DeliveryWebhook) | `chatwootMessageId`, `chatwootConversationId`, `journeyId`, `journeyRecordId`, `contentPreview` — correlation is conversation id stamped on JourneyRecord / ChatwootConversation |
 
 All carry `parentType=Opportunity` + `parentId`, `contactId` (the
 opportunity's primary contact, if set) and a `payload` with

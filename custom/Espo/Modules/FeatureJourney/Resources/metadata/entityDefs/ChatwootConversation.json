@@ -1,0 +1,27 @@
+{
+    "fields": {
+        "journeyId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
+        "journeyRecordId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        }
+    },
+    "indexes": {
+        "journeyRecordId": {
+            "columns": ["journeyRecordId", "deleted"]
+        }
+    }
+}

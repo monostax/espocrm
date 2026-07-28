@@ -5,25 +5,25 @@
     },
     {
         "name": "account",
-        "width": 25
+        "width": 18
     },
     {
         "name": "emailAddress",
         "notSortable": true,
-        "width": 20
+        "width": 18
     },
     {
         "name": "phoneNumber",
         "notSortable": true,
-        "width": 18
+        "width": 15
     },
     {
         "name": "tags",
         "notSortable": true,
-        "width": 15
+        "width": 12
     },
     {
         "name": "tenant",
-        "width": 15
+        "width": 12
     }
 ]

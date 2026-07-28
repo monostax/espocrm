@@ -10,6 +10,7 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
 use Espo\Modules\FeatureJourney\Services\ActionRunner;
+use Espo\Modules\FeatureJourney\Services\ActionConditionEvaluator;
 use Espo\Modules\FeatureJourney\Services\JourneyRateLimiter;
 use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
@@ -43,6 +44,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             $this->createMock(JourneyRateLimiter::class),
             $this->createMock(TenantGuard::class),
             new RestrictedFormulaRunner($formulaManager),
+            $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
         );
 
@@ -88,6 +90,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             $this->createMock(JourneyRateLimiter::class),
             $this->createMock(TenantGuard::class),
             new RestrictedFormulaRunner($formulaManager),
+            $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
         );
 
@@ -123,6 +126,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             $this->createMock(JourneyRateLimiter::class),
             $this->createMock(TenantGuard::class),
             new RestrictedFormulaRunner($formulaManager),
+            $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
         );
 
@@ -157,6 +161,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             $this->createMock(JourneyRateLimiter::class),
             $this->createMock(TenantGuard::class),
             new RestrictedFormulaRunner($formulaManager),
+            $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
         );
 
@@ -177,5 +182,70 @@ class ActionRunnerParamFormulasTest extends TestCase
             $entity,
             't1',
         );
+    }
+
+    /**
+     * jsonObject params arrive as nested stdClass; assigning fields.* must not wipe static fields.
+     */
+    public function testResolveParamFormulasPreservesNestedStdClassFields(): void
+    {
+        $formulaManager = $this->createMock(FormulaManager::class);
+        $formulaManager->method('run')->willReturnCallback(
+            function (string $script) {
+                if (str_contains($script, 'accountId')) {
+                    return 'acc-1';
+                }
+
+                return 'Lead — Cold Outreach';
+            }
+        );
+
+        $runner = new ActionRunner(
+            $this->createMock(EntityManager::class),
+            $this->createMock(Metadata::class),
+            $this->createMock(InjectableFactory::class),
+            $this->createMock(JourneyRateLimiter::class),
+            $this->createMock(TenantGuard::class),
+            new RestrictedFormulaRunner($formulaManager),
+            $this->createMock(ActionConditionEvaluator::class),
+            $this->createMock(Log::class),
+        );
+
+        $entity = $this->createMock(Entity::class);
+        $entity->method('getId')->willReturn('x');
+
+        // Simulate normalizeParams depth-cast of DB jsonObject.
+        $ref = new \ReflectionClass($runner);
+        $normalize = $ref->getMethod('normalizeParams');
+        $normalize->setAccessible(true);
+        $params = $normalize->invoke($runner, (object) [
+            'link' => 'opportunitiesPrimary',
+            'fields' => (object) [
+                'funnelId' => 'funnel-1',
+                'opportunityStageId' => 'stage-1',
+                'amount' => 0,
+            ],
+            'paramFormulas' => (object) [
+                'fields.name' => 'string\\concatenate("Lead", " — Cold Outreach")',
+                'fields.accountId' => 'entity\\attribute("accountId")',
+            ],
+        ]);
+
+        $resolved = $runner->resolveParamFormulas(
+            $params,
+            $entity,
+            $entity,
+            $entity,
+            $entity,
+            'tenant-1',
+        );
+
+        $this->assertSame('opportunitiesPrimary', $resolved['link']);
+        $this->assertIsArray($resolved['fields']);
+        $this->assertSame('funnel-1', $resolved['fields']['funnelId']);
+        $this->assertSame('stage-1', $resolved['fields']['opportunityStageId']);
+        $this->assertSame(0, $resolved['fields']['amount']);
+        $this->assertSame('Lead — Cold Outreach', $resolved['fields']['name']);
+        $this->assertSame('acc-1', $resolved['fields']['accountId']);
     }
 }

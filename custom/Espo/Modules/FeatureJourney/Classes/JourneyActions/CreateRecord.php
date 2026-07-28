@@ -57,6 +57,8 @@ class CreateRecord implements Action
             $this->attachTargetLink($entity, $context, $linkToTarget);
         }
 
+        $this->applyContactAccountDefaults($context->target, $entity);
+
         $teamsIds = $this->tenantGuard->getJourneyTeamsIds($context->journey);
         $this->tenantGuard->stampNewEntity($entity, $tenantId, $teamsIds);
 
@@ -93,5 +95,32 @@ class CreateRecord implements Action
             $entity->set('parentId', $target->getId());
             $entity->set('parentType', $target->getEntityType());
         }
+    }
+
+    /**
+     * When the target is a Contact and the new record can take accountId,
+     * copy the contact's primary account if fields left it empty.
+     */
+    private function applyContactAccountDefaults(\Espo\ORM\Entity $target, \Espo\ORM\Entity $entity): void
+    {
+        if ($target->getEntityType() !== 'Contact') {
+            return;
+        }
+
+        if (!$entity->hasAttribute('accountId')) {
+            return;
+        }
+
+        $existing = $entity->get('accountId');
+        if (is_string($existing) && $existing !== '') {
+            return;
+        }
+
+        $accountId = $target->get('accountId');
+        if (!is_string($accountId) || $accountId === '') {
+            return;
+        }
+
+        $entity->set('accountId', $accountId);
     }
 }

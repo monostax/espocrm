@@ -58,7 +58,11 @@
             "amount",
             "amountCurrency",
             "closeDate",
-            "assignedUserId"
+            "assignedUserId",
+            "accountId",
+            "contactId",
+            "funnelId",
+            "opportunityStageId"
         ],
         "Note": [
             "post",

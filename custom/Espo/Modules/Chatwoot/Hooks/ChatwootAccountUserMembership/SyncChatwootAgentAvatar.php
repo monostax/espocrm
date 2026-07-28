@@ -31,8 +31,9 @@ use Espo\Modules\Chatwoot\Services\AgentAvatarSyncService;
  * Mirror a Chatwoot agent's avatar onto the linked CRM {@see \Espo\Entities\User}
  * whenever the membership's `avatarUrl` is dirty.
  *
- * The `avatarUrl` column on `ChatwootAccountUserMembership` is already the
- * landing spot for Chatwoot's agent `thumbnail` URL — populated by
+ * The `avatarUrl` column on `ChatwootAccountUserMembership` is the landing
+ * spot for Chatwoot's agent original-blob URL (`avatar_original_url` /
+ * `avatar_url`), falling back to `thumbnail` on legacy payloads — populated by
  * {@see \Espo\Modules\Chatwoot\Jobs\SyncAccountUserMembershipsFromChatwoot} and
  * {@see \Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService::populateMembershipFromAgentResponse()}.
  * This hook converts that URL change into bytes on the CRM User's

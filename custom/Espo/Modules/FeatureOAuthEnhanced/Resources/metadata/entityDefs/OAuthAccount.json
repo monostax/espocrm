@@ -1,5 +1,14 @@
 {
     "fields": {
+        "providerType": {
+            "type": "foreign",
+            "link": "provider",
+            "field": "provider",
+            "readOnly": true,
+            "select": {
+                "select": "provider.provider"
+            }
+        },
         "metaSystemUserId": {
             "type": "varchar",
             "maxLength": 64,

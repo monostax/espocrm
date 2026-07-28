@@ -52,6 +52,10 @@ class ForeignType implements FieldSchemaBuilder
         $link = $fieldDefs->getParam(FieldParam::LINK);
         $foreignField = $fieldDefs->getParam(FieldParam::FIELD);
 
+        if (!is_string($link) || $link === '' || !is_string($foreignField) || $foreignField === '') {
+            return new FieldSchemaResult([]);
+        }
+
         $foreignEntityType = $this->defs
             ->getEntity($entityType)
             ->tryGetRelation($link)

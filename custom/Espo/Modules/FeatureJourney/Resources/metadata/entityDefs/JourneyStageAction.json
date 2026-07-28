@@ -64,6 +64,44 @@
                 "journey\\updateTarget"
             ]
         },
+        "conditionFormula": {
+            "type": "text",
+            "view": "views/fields/formula",
+            "tooltip": true,
+            "height": 120,
+            "allowedFunctionList": [
+                "ifThen",
+                "ifThenElse",
+                "string\\",
+                "number\\",
+                "datetime\\",
+                "logical\\",
+                "comparison\\",
+                "entity\\attribute",
+                "entity\\isAttributeChanged",
+                "entity\\isNew",
+                "entity\\attributeFetched",
+                "util\\empty",
+                "json\\retrieve",
+                "json\\encode",
+                "object\\get",
+                "object\\create",
+                "object\\cloneDeep",
+                "array\\includes",
+                "array\\length",
+                "array\\at",
+                "array\\push",
+                "array\\join",
+                "list",
+                "bundle",
+                "assign"
+            ]
+        },
+        "conditionsGroup": {
+            "type": "jsonObject",
+            "view": "feature-journey:views/fields/entity-where",
+            "tooltip": true
+        },
         "maxRetries": {
             "type": "int",
             "default": 0,

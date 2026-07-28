@@ -1,31 +1,30 @@
 define("feature-journey:views/fields/entity-where", [
     "views/fields/base",
     "feature-journey:helpers/custom-fields",
-], function (Dep, CustomFieldsHelper) {
-    /**
-     * Espo where-array builder with native attributes + CustomField bag leaves
-     * (`customFields.<valueKey>`). Used by goalEntityFilter and reusable by
-     * conditions-group entityFilter leaves.
-     */
+    "feature-journey:helpers/expression-input",
+], function (Dep, CustomFieldsHelper, ExpressionInput) {
+    const MAX_DEPTH = 5;
+
     return Dep.extend({
         type: "jsonObject",
 
         editTemplateContent:
             '<div class="journey-entity-where">' +
-                '<div class="where-rows"></div>' +
+                '<div class="alert alert-warning formula-override-warning hidden"></div>' +
+                '<div class="where-tree"></div>' +
                 '<div class="margin-top-sm">' +
-                    '<button type="button" class="btn btn-default btn-sm" data-action="addWhereRow">' +
-                        '<span class="fas fa-plus"></span> {{translate "addFilterRow" category="labels" scope="JourneyTransition"}}' +
-                    '</button>' +
-                    '<button type="button" class="btn btn-link btn-sm" data-action="toggleWhereAdvanced" style="margin-left:8px">' +
+                    '<button type="button" class="btn btn-link btn-sm" data-action="toggleWhereAdvanced">' +
                         '{{translate "advancedJson" category="labels" scope="JourneyStageAction"}}' +
                     '</button>' +
                 '</div>' +
                 '<div class="where-raw-wrap hidden margin-top-sm">' +
-                    '<textarea class="form-control where-raw" rows="6"></textarea>' +
+                    '<textarea class="form-control where-raw" rows="8"></textarea>' +
                 '</div>' +
                 '<p class="text-muted small" style="margin-top:8px">' +
-                    '{{translate "entityFilterHint" category="messages" scope="JourneyTransition"}}' +
+                    '{{translate "conditionsHint" category="messages" scope="JourneyStageAction"}}' +
+                '</p>' +
+                '<p class="text-muted small condition-value-formula-hint hidden">' +
+                    '{{translate "conditionValueFormulaHint" category="messages" scope="JourneyStageAction"}}' +
                 '</p>' +
             '</div>',
 
@@ -46,57 +45,35 @@ define("feature-journey:views/fields/entity-where", [
         setup: function () {
             Dep.prototype.setup.call(this);
             this.cfHelper = new CustomFieldsHelper(this);
-            this._rows = this.normalizeWhere(this.model.get(this.name));
+            this._tree = this.normalizeTree(this.model.get(this.name));
             this._attrOptions = [];
             this._advancedOpen = false;
             this._rawDirty = false;
-            this._context = { tenantId: null, entityType: null };
+            this._parseError = false;
+            this._loadGeneration = 0;
+            this._valueInputs = [];
+            this._removed = false;
+
+            this.listenTo(
+                this.model,
+                "change:stageId change:journeyId change:targetEntityType change:tenantId",
+                () => this.loadOptions()
+            );
+            this.listenTo(this.model, "change:conditionFormula", () => {
+                this.renderFormulaOverrideWarning();
+            });
         },
 
         data: function () {
-            const where = this.normalizeWhere(this.model.get(this.name));
+            const tree = this.cleanTree(this.normalizeTree(this.model.get(this.name)));
+            const count = this.countLeaves(tree);
+
             return {
                 ...Dep.prototype.data.call(this),
-                isNotEmpty: where.length > 0,
-                summaryHtml: this.renderSummaryHtml(where),
-                summary: where.length ? where.length + " filter(s)" : "",
+                isNotEmpty: count > 0,
+                summaryHtml: this.renderSummaryHtml(tree),
+                summary: count ? count + " condition(s)" : "",
             };
-        },
-
-        normalizeWhere: function (value) {
-            if (!value) {
-                return [];
-            }
-
-            let v = value;
-
-            if (typeof v === "string") {
-                try {
-                    v = JSON.parse(v);
-                } catch (e) {
-                    return [];
-                }
-            }
-
-            if (v && typeof v === "object" && !Array.isArray(v)) {
-                if (v.type || v.attribute) {
-                    v = [v];
-                } else {
-                    return [];
-                }
-            }
-
-            if (!Array.isArray(v)) {
-                return [];
-            }
-
-            return v.map((item) => {
-                if (!item || typeof item !== "object") {
-                    return { type: "equals", attribute: "", value: "" };
-                }
-
-                return Object.assign({}, item);
-            });
         },
 
         afterRender: function () {
@@ -104,24 +81,17 @@ define("feature-journey:views/fields/entity-where", [
                 return;
             }
 
-            this._rows = this.normalizeWhere(this.model.get(this.name));
-            this.$rows = this.$el.find(".where-rows");
+            this._tree = this.normalizeTree(this.model.get(this.name));
+            this.$tree = this.$el.find(".where-tree");
             this.$raw = this.$el.find(".where-raw");
             this.$rawWrap = this.$el.find(".where-raw-wrap");
-
-            this.$el.find('[data-action="addWhereRow"]').on("click", () => {
-                this._rows.push({ type: "equals", attribute: "", value: "" });
-                this._rawDirty = false;
-                this.renderRows();
-                this.trigger("change");
-            });
 
             this.$el.find('[data-action="toggleWhereAdvanced"]').on("click", () => {
                 this._advancedOpen = !this._advancedOpen;
                 this.$rawWrap.toggleClass("hidden", !this._advancedOpen);
 
                 if (this._advancedOpen) {
-                    this.$raw.val(JSON.stringify(this._rows, null, 2));
+                    this.$raw.val(JSON.stringify(this.cleanTree(this._tree), null, 2));
                 }
             });
 
@@ -129,10 +99,14 @@ define("feature-journey:views/fields/entity-where", [
                 this._rawDirty = true;
 
                 try {
-                    this._rows = this.normalizeWhere(
-                        JSON.parse(String(this.$raw.val() || "[]"))
-                    );
+                    const parsed = JSON.parse(String(this.$raw.val() || "null"));
+                    if (!this.isEditableTree(parsed)) {
+                        throw new Error("Invalid condition tree");
+                    }
+
+                    this._tree = this.normalizeTree(parsed);
                     this._parseError = false;
+                    this.renderTree();
                 } catch (e) {
                     this._parseError = true;
                 }
@@ -140,134 +114,325 @@ define("feature-journey:views/fields/entity-where", [
                 this.trigger("change");
             });
 
-            this.cfHelper.resolveContext().then((ctx) => {
-                this._context = ctx;
-
-                return this.cfHelper.loadAttributeOptions(ctx.entityType, ctx.tenantId);
-            }).then((opts) => {
-                this._attrOptions = opts || [];
-                this.renderRows();
-            });
+            this.renderTree();
+            this.renderFormulaOverrideWarning();
+            this.$el.find(".condition-value-formula-hint")
+                .toggleClass("hidden", !this.allowsValueFormula());
+            this.loadOptions();
         },
 
-        renderRows: function () {
-            if (!this.$rows) {
+        normalizeTree: function (value) {
+            let current = value;
+
+            if (typeof current === "string") {
+                try {
+                    current = JSON.parse(current);
+                } catch (e) {
+                    current = null;
+                }
+            }
+
+            if (!current) {
+                return {type: "and", value: []};
+            }
+
+            current = this.cloneValue(current);
+
+            if (Array.isArray(current)) {
+                return {type: "and", value: current};
+            }
+
+            if (current && typeof current === "object") {
+                if (current.type === "and" || current.type === "or") {
+                    current.value = Array.isArray(current.value) ? current.value : [];
+
+                    return current;
+                }
+
+                if (current.type || current.attribute) {
+                    return {type: "and", value: [current]};
+                }
+            }
+
+            return {type: "and", value: []};
+        },
+
+        cloneValue: function (value) {
+            return JSON.parse(JSON.stringify(value));
+        },
+
+        isEditableTree: function (value) {
+            if (value === null || (Array.isArray(value) && !value.length)) {
+                return true;
+            }
+
+            if (Array.isArray(value)) {
+                return value.every((node) => this.isEditableNode(node, 1));
+            }
+
+            return this.isEditableNode(value, 1);
+        },
+
+        isEditableNode: function (node, depth) {
+            if (!node || typeof node !== "object" || Array.isArray(node) || depth > MAX_DEPTH) {
+                return false;
+            }
+
+            if (node.type === "and" || node.type === "or") {
+                return Array.isArray(node.value) &&
+                    node.value.every((child) => this.isEditableNode(child, depth + 1));
+            }
+
+            return typeof node.attribute === "string";
+        },
+
+        loadOptions: function () {
+            if (!this.isEditMode() || !this.cfHelper) {
+                return Promise.resolve([]);
+            }
+
+            const generation = ++this._loadGeneration;
+
+            return this.cfHelper.resolveContext()
+                .then((context) => {
+                    return this.cfHelper.loadAttributeOptions(
+                        context.entityType,
+                        context.tenantId
+                    );
+                })
+                .then((options) => {
+                    if (this._removed || generation !== this._loadGeneration) {
+                        return options || [];
+                    }
+
+                    this._attrOptions = options || [];
+                    this.renderTree();
+
+                    return this._attrOptions;
+                });
+        },
+
+        renderTree: function () {
+            if (!this.$tree) {
                 return;
             }
 
-            this.$rows.empty();
+            this.destroyValueInputs();
+            this.$tree.empty().append(this.buildGroup(this._tree, null, 1));
+        },
 
-            if (!this._rows.length) {
-                this.$rows.append(
+        buildGroup: function (group, parent, depth) {
+            const $group = $("<div>")
+                .addClass("panel panel-default")
+                .css({marginBottom: "8px"});
+            const $heading = $("<div>")
+                .addClass("panel-heading")
+                .css({display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap"});
+            const $mode = $("<select>").addClass("form-control input-sm").css({width: "auto"});
+
+            $mode.append(
+                $("<option>")
+                    .val("and")
+                    .text(this.translate("matchAll", "labels", "JourneyStageAction"))
+            );
+            $mode.append(
+                $("<option>")
+                    .val("or")
+                    .text(this.translate("matchAny", "labels", "JourneyStageAction"))
+            );
+            $mode.val(group.type === "or" ? "or" : "and");
+
+            const $addCondition = $("<button>")
+                .attr("type", "button")
+                .addClass("btn btn-default btn-sm")
+                .prop("disabled", depth >= MAX_DEPTH || this.countLeaves(this._tree) >= 50)
+                .html('<span class="fas fa-plus"></span> ' +
+                    this.translate("addCondition", "labels", "JourneyStageAction"));
+            const $addGroup = $("<button>")
+                .attr("type", "button")
+                .addClass("btn btn-default btn-sm")
+                .prop("disabled", depth >= MAX_DEPTH - 1)
+                .html('<span class="fas fa-layer-group"></span> ' +
+                    this.translate("addConditionGroup", "labels", "JourneyStageAction"));
+
+            $heading.append($mode).append($addCondition).append($addGroup);
+
+            if (parent) {
+                const $remove = $("<button>")
+                    .attr("type", "button")
+                    .addClass("btn btn-link btn-sm text-danger")
+                    .css({marginLeft: "auto"})
+                    .html('<span class="fas fa-times"></span>');
+                $remove.on("click", () => {
+                    parent.value = parent.value.filter((node) => node !== group);
+                    this.renderTree();
+                    this.onChanged();
+                });
+                $heading.append($remove);
+            }
+
+            const $body = $("<div>").addClass("panel-body").css({padding: "10px"});
+            const children = Array.isArray(group.value) ? group.value : [];
+
+            if (!children.length) {
+                $body.append(
                     $("<div>")
                         .addClass("text-muted")
-                        .text(
-                            this.translate(
-                                "entityFilterEmpty",
-                                "messages",
-                                "JourneyTransition"
-                            )
-                        )
+                        .text(this.translate("conditionsEmpty", "messages", "JourneyStageAction"))
                 );
-
-                return;
             }
 
-            this._rows.forEach((row, index) => {
-                this.$rows.append(this.buildRow(row, index));
+            children.forEach((node) => {
+                if (node && (node.type === "and" || node.type === "or")) {
+                    $body.append(this.buildGroup(node, group, depth + 1));
+                } else {
+                    $body.append(this.buildLeaf(node || {}, group));
+                }
             });
+
+            $mode.on("change", () => {
+                group.type = $mode.val() === "or" ? "or" : "and";
+                this.onChanged();
+            });
+            $addCondition.on("click", () => {
+                if (depth >= MAX_DEPTH || this.countLeaves(this._tree) >= 50) {
+                    return;
+                }
+
+                group.value.push({type: "equals", attribute: "", value: ""});
+                this.renderTree();
+                this.onChanged();
+            });
+            $addGroup.on("click", () => {
+                if (depth >= MAX_DEPTH - 1) {
+                    return;
+                }
+
+                group.value.push({type: "and", value: []});
+                this.renderTree();
+                this.onChanged();
+            });
+
+            return $group.append($heading).append($body);
         },
 
-        buildRow: function (row, index) {
-            const $row = $("<div>")
-                .addClass("row")
-                .css({ marginBottom: "6px" })
-                .attr("data-index", index);
+        buildLeaf: function (leaf, parent) {
+            const $row = $("<div>").addClass("row").css({marginBottom: "6px"});
+            const $attr = $("<select>").addClass("form-control input-sm");
+            const $op = $("<select>").addClass("form-control input-sm");
+            const $valueHost = $("<div>");
 
-            const $colAttr = $("<div>").addClass("col-sm-5");
-            const $colOp = $("<div>").addClass("col-sm-3");
-            const $colVal = $("<div>").addClass("col-sm-3");
-            const $colRm = $("<div>").addClass("col-sm-1");
-
-            const $attr = $("<select>").addClass("form-control input-sm where-attr");
-            $attr.append($("<option>").val("").text("—"));
-            this._attrOptions.forEach((opt) => {
-                const $o = $("<option>").val(opt.value).text(opt.label);
-
-                if (opt.value === row.attribute) {
-                    $o.prop("selected", true);
-                }
-
-                $attr.append($o);
+            $attr.append($("<option>").val("").text("-"));
+            this._attrOptions.forEach((option) => {
+                $attr.append($("<option>").val(option.value).text(option.label));
             });
+            if (leaf.attribute && !this._attrOptions.some((option) => option.value === leaf.attribute)) {
+                $attr.append($("<option>").val(leaf.attribute).text(leaf.attribute + " *"));
+            }
+            $attr.val(leaf.attribute || "");
 
-            if (row.attribute && !this._attrOptions.some((o) => o.value === row.attribute)) {
-                $attr.append(
+            const operators = this.cfHelper.whereOperators();
+            operators.forEach((operator) => {
+                $op.append(
                     $("<option>")
-                        .val(row.attribute)
-                        .text(row.attribute + " *")
-                        .prop("selected", true)
+                        .val(operator)
+                        .text(this.translate(operator, "conditionOperators", "JourneyStageAction"))
                 );
-            }
-
-            const $op = $("<select>").addClass("form-control input-sm where-op");
-            this.cfHelper.whereOperators().forEach((op) => {
-                const $o = $("<option>").val(op).text(op);
-
-                if (op === (row.type || "equals")) {
-                    $o.prop("selected", true);
-                }
-
-                $op.append($o);
             });
-
-            const needsValue = this.cfHelper.operatorNeedsValue(row.type || "equals");
-            let displayVal = "";
-
-            if (Array.isArray(row.value)) {
-                displayVal = row.value.join(", ");
-            } else if (row.value !== undefined && row.value !== null) {
-                displayVal = String(row.value);
+            if (leaf.type && operators.indexOf(leaf.type) === -1) {
+                $op.append($("<option>").val(leaf.type).text(leaf.type + " *"));
             }
+            $op.val(leaf.type || "equals");
 
-            const $val = $("<input>")
-                .attr("type", "text")
-                .addClass("form-control input-sm where-val")
-                .prop("disabled", !needsValue)
-                .val(displayVal);
-
-            const $rm = $("<button>")
+            const $remove = $("<button>")
                 .attr("type", "button")
                 .addClass("btn btn-default btn-sm")
                 .html('<span class="fas fa-times"></span>');
 
-            $colAttr.append($attr);
-            $colOp.append($op);
-            $colVal.append($val);
-            $colRm.append($rm);
-            $row.append($colAttr).append($colOp).append($colVal).append($colRm);
+            $row.append($("<div>").addClass("col-sm-4").append($attr));
+            $row.append($("<div>").addClass("col-sm-3").append($op));
+            $row.append($("<div>").addClass("col-sm-4").append($valueHost));
+            $row.append($("<div>").addClass("col-sm-1").append($remove));
+
+            if (
+                this.cfHelper.operatorNeedsValue(leaf.type || "equals") &&
+                this.allowsValueFormula()
+            ) {
+                const displayValue = Array.isArray(leaf.value)
+                    ? leaf.value.join(", ")
+                    : leaf.value === undefined || leaf.value === null
+                        ? ""
+                        : String(leaf.value);
+                let valueInput;
+
+                valueInput = new ExpressionInput(this, {
+                    paramKey: "conditionValue",
+                    mode: leaf.valueFormula ? "expression" : "fixed",
+                    fixedValue: displayValue,
+                    expressionValue: leaf.valueFormula || "",
+                    snippets: this.valueSnippets(),
+                    onChange: () => {
+                        const state = valueInput.getState();
+                        leaf.value = this.cfHelper.coerceValue(
+                            state.fixed,
+                            leaf.type || "equals"
+                        );
+
+                        if (state.mode === "expression" && state.expression) {
+                            leaf.valueFormula = state.expression;
+                        } else {
+                            delete leaf.valueFormula;
+                        }
+
+                        this.onChanged();
+                    },
+                }).mount($valueHost);
+                this._valueInputs.push(valueInput);
+            } else if (this.cfHelper.operatorNeedsValue(leaf.type || "equals")) {
+                const displayValue = Array.isArray(leaf.value)
+                    ? leaf.value.join(", ")
+                    : leaf.value === undefined || leaf.value === null
+                        ? ""
+                        : String(leaf.value);
+                const $staticValue = $("<input>")
+                    .attr("type", "text")
+                    .addClass("form-control input-sm")
+                    .val(displayValue);
+                $staticValue.on("change input", () => {
+                    leaf.value = this.cfHelper.coerceValue(
+                        $staticValue.val(),
+                        leaf.type || "equals"
+                    );
+                    this.onChanged();
+                });
+                $valueHost.append($staticValue);
+            } else {
+                $valueHost.append(
+                    $("<input>")
+                        .attr("type", "text")
+                        .addClass("form-control input-sm")
+                        .prop("disabled", true)
+                );
+            }
 
             const sync = () => {
-                row.attribute = $attr.val() || "";
-                row.type = $op.val() || "equals";
+                leaf.attribute = $attr.val() || "";
+                leaf.type = $op.val() || "equals";
 
-                if (!this.cfHelper.operatorNeedsValue(row.type)) {
-                    delete row.value;
-                    $val.prop("disabled", true).val("");
-                } else {
-                    $val.prop("disabled", false);
-                    row.value = this.cfHelper.coerceValue($val.val(), row.type);
+                if (!this.cfHelper.operatorNeedsValue(leaf.type)) {
+                    delete leaf.value;
+                    delete leaf.valueFormula;
                 }
 
+                this.renderTree();
                 this.onChanged();
             };
 
             $attr.on("change", sync);
             $op.on("change", sync);
-            $val.on("change input", sync);
-            $rm.on("click", () => {
-                this._rows.splice(index, 1);
-                this.renderRows();
+            $remove.on("click", () => {
+                parent.value = parent.value.filter((node) => node !== leaf);
+                this.renderTree();
                 this.onChanged();
             });
 
@@ -276,54 +441,168 @@ define("feature-journey:views/fields/entity-where", [
 
         onChanged: function () {
             this._rawDirty = false;
+            this._parseError = false;
 
             if (this._advancedOpen && this.$raw) {
-                this.$raw.val(JSON.stringify(this._rows, null, 2));
+                this.$raw.val(JSON.stringify(this.cleanTree(this._tree), null, 2));
             }
 
             this.trigger("change");
         },
 
-        renderSummaryHtml: function (where) {
-            if (!where.length) {
+        cleanTree: function (tree) {
+            return this.cleanNode(tree);
+        },
+
+        cleanNode: function (node) {
+            if (!node || typeof node !== "object" || Array.isArray(node)) {
+                return null;
+            }
+
+            if (node.type === "and" || node.type === "or") {
+                const children = (Array.isArray(node.value) ? node.value : [])
+                    .map((child) => this.cleanNode(child))
+                    .filter((child) => child !== null);
+
+                return children.length ? {type: node.type, value: children} : null;
+            }
+
+            const attribute = String(node.attribute || "").trim();
+            if (!attribute) {
+                return null;
+            }
+
+            const type = node.type || "equals";
+            const clean = {type: type, attribute: attribute};
+
+            if (this.cfHelper.operatorNeedsValue(type)) {
+                clean.value = type === "in" && Array.isArray(node.value)
+                    ? this.cloneValue(node.value)
+                    : this.cfHelper.coerceValue(
+                        node.value === undefined ? "" : node.value,
+                        type
+                    );
+
+                if (
+                    this.allowsValueFormula() &&
+                    typeof node.valueFormula === "string" &&
+                    node.valueFormula.trim()
+                ) {
+                    clean.valueFormula = node.valueFormula.trim();
+                }
+            }
+
+            return clean;
+        },
+
+        countLeaves: function (node) {
+            if (!node) {
+                return 0;
+            }
+
+            if (node.type === "and" || node.type === "or") {
+                return (node.value || []).reduce(
+                    (count, child) => count + this.countLeaves(child),
+                    0
+                );
+            }
+
+            return node.attribute ? 1 : 0;
+        },
+
+        renderSummaryHtml: function (node) {
+            if (!node) {
                 return "";
             }
 
-            let html = "<ul style=\"margin:0 0 0 16px;padding:0\">";
-            where.forEach((item) => {
-                const line =
-                    (item.attribute || "?") +
-                    " " +
-                    (item.type || "equals") +
-                    (item.value !== undefined
-                        ? " " +
-                          this.getHelper().escapeString(
-                              Array.isArray(item.value)
-                                  ? item.value.join(",")
-                                  : String(item.value)
-                          )
-                        : "");
-                html +=
-                    "<li>" + this.getHelper().escapeString(line) + "</li>";
-            });
-            html += "</ul>";
+            const escapeHtml = (value) => this.getHelper().escapeString(String(value));
 
-            return html;
+            if (node.type === "and" || node.type === "or") {
+                const label = node.type === "or"
+                    ? this.translate("matchAny", "labels", "JourneyStageAction")
+                    : this.translate("matchAll", "labels", "JourneyStageAction");
+                const children = (node.value || [])
+                    .map((child) => "<li>" + this.renderSummaryHtml(child) + "</li>")
+                    .join("");
+
+                return "<strong>" + escapeHtml(label) + "</strong><ul>" + children + "</ul>";
+            }
+
+            const operator = this.translate(
+                node.type || "equals",
+                "conditionOperators",
+                "JourneyStageAction"
+            );
+            const value = node.value === undefined
+                ? ""
+                : " " + escapeHtml(Array.isArray(node.value) ? node.value.join(", ") : node.value);
+            const formula = node.valueFormula
+                ? " <code>fx</code> " + escapeHtml(node.valueFormula)
+                : "";
+
+            return escapeHtml(node.attribute || "?") + " " + escapeHtml(operator) + formula + value;
+        },
+
+        valueSnippets: function () {
+            const prefix = this.cfHelper.attributeName() + ".";
+
+            return [{
+                kind: "field",
+                label: this.translate("snippetGroupTarget", "labels", "JourneyStageAction"),
+                items: this._attrOptions.map((option) => {
+                    const insert = option.value.indexOf(prefix) === 0
+                        ? "object\\get(entity\\attribute('" +
+                            this.cfHelper.attributeName() + "'), '" +
+                            option.value.slice(prefix.length).replace(/'/g, "\\'") + "')"
+                        : "entity\\attribute('" + option.value.replace(/'/g, "\\'") + "')";
+
+                    return {
+                        label: option.label,
+                        chip: option.label,
+                        insert: insert,
+                    };
+                }),
+            }];
+        },
+
+        allowsValueFormula: function () {
+            return !!this.model &&
+                this.model.entityType === "JourneyStageAction" &&
+                this.name === "conditionsGroup";
+        },
+
+        destroyValueInputs: function () {
+            (this._valueInputs || []).forEach((input) => {
+                input.destroy();
+            });
+            this._valueInputs = [];
+        },
+
+        renderFormulaOverrideWarning: function () {
+            if (!this.$el) {
+                return;
+            }
+
+            const formula = this.model.get("conditionFormula");
+            this.$el.find(".formula-override-warning")
+                .toggleClass("hidden", !(typeof formula === "string" && formula.trim()))
+                .text(this.translate(
+                    "conditionFormulaOverride",
+                    "messages",
+                    "JourneyStageAction"
+                ));
         },
 
         fetch: function () {
             const data = {};
 
-            if (this._rawDirty && this.$raw) {
-                if (this._parseError) {
-                    data[this.name] = this.model.get(this.name);
+            if (this._rawDirty && this._parseError) {
+                data[this.name] = this.model.get(this.name);
 
-                    return data;
-                }
+                return data;
             }
 
-            const rows = (this._rows || []).filter((r) => r && r.attribute);
-            data[this.name] = rows.length ? rows : null;
+            data[this.name] = this.cleanTree(this._tree);
 
             return data;
         },
@@ -340,56 +619,13 @@ define("feature-journey:views/fields/entity-where", [
             return false;
         },
 
-        /**
-         * Public: render where-row UI into an external $container (conditions-group).
-         */
-        mountInline: function ($container, where, onChange) {
-            this._rows = this.normalizeWhere(where);
-            this._inlineOnChange = onChange;
-            this.$el = $container;
-            this.mode = "edit";
+        remove: function () {
+            this._removed = true;
+            this._loadGeneration++;
+            this.destroyValueInputs();
+            this.$tree = null;
 
-            $container.html(
-                '<div class="where-rows"></div>' +
-                    '<div class="margin-top-sm">' +
-                    '<button type="button" class="btn btn-default btn-xs" data-action="addWhereRow">' +
-                    '<span class="fas fa-plus"></span></button></div>'
-            );
-            this.$rows = $container.find(".where-rows");
-
-            $container.find('[data-action="addWhereRow"]').on("click", () => {
-                this._rows.push({ type: "equals", attribute: "", value: "" });
-                this.renderRows();
-                this.emitInline();
-            });
-
-            // override onChanged for inline
-            this.onChanged = () => {
-                this.emitInline();
-            };
-
-            return this.cfHelper.resolveContext().then((ctx) => {
-                this._context = ctx;
-
-                return this.cfHelper.loadAttributeOptions(ctx.entityType, ctx.tenantId);
-            }).then((opts) => {
-                this._attrOptions = opts || [];
-                this.renderRows();
-
-                return this;
-            });
-        },
-
-        emitInline: function () {
-            if (typeof this._inlineOnChange === "function") {
-                this._inlineOnChange(
-                    (this._rows || []).filter((r) => r && r.attribute)
-                );
-            }
-        },
-
-        getWhere: function () {
-            return (this._rows || []).filter((r) => r && r.attribute);
+            return Dep.prototype.remove.call(this);
         },
     });
 });

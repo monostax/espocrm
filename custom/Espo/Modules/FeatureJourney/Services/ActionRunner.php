@@ -26,6 +26,7 @@ class ActionRunner
         private JourneyRateLimiter $rateLimiter,
         private TenantGuard $tenantGuard,
         private RestrictedFormulaRunner $formulaRunner,
+        private ActionConditionEvaluator $conditionEvaluator,
         private Log $log,
     ) {}
 
@@ -127,6 +128,90 @@ class ActionRunner
                 return ['ok' => false, 'error' => "missing_class:{$type}"];
             }
 
+            $maxRetries = (int) ($actionEntity->get('maxRetries') ?? self::DEFAULT_MAX_RETRIES);
+            $maxRetries = max(0, min(self::ABSOLUTE_MAX_RETRIES, $maxRetries));
+            $continueOnError = (bool) $actionEntity->get('continueOnError');
+            $conditionFormula = $actionEntity->get('conditionFormula');
+
+            if (is_string($conditionFormula) && trim($conditionFormula) !== '') {
+                try {
+                    $shouldRun = (bool) $this->formulaRunner->run(
+                        $conditionFormula,
+                        $target,
+                        (object) [
+                            'journeyRecordId' => $record->getId(),
+                            'journeyId' => $journey->getId(),
+                            'stageId' => $stage->getId(),
+                            'tenantId' => $tenantId,
+                        ],
+                        RestrictedFormulaRunner::MODE_CONDITION,
+                    );
+                } catch (Throwable $e) {
+                    $lastError = 'conditionFormula: ' . $e->getMessage();
+                    $failed[] = "{$type}:{$lastError}";
+                    $this->log->error(
+                        "ActionRunner: action {$actionEntity->getId()} ({$type}) {$lastError}"
+                    );
+
+                    if ($continueOnError) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    return [
+                        'ok' => false,
+                        'error' => $lastError,
+                        'failed' => $failed,
+                        'skipped' => $skipped,
+                    ];
+                }
+
+                if (!$shouldRun) {
+                    $skipped++;
+                    continue;
+                }
+            } else {
+                $conditionsGroup = $actionEntity->get('conditionsGroup');
+
+                if (!$this->conditionEvaluator->isEmpty($conditionsGroup)) {
+                    try {
+                        $matches = $this->conditionEvaluator->matches(
+                            $target,
+                            $conditionsGroup,
+                            (object) [
+                                'journeyRecordId' => $record->getId(),
+                                'journeyId' => $journey->getId(),
+                                'stageId' => $stage->getId(),
+                                'tenantId' => $tenantId,
+                            ],
+                        );
+                    } catch (Throwable $e) {
+                        $lastError = 'conditionsGroup: ' . $e->getMessage();
+                        $failed[] = "{$type}:{$lastError}";
+                        $this->log->error(
+                            "ActionRunner: action {$actionEntity->getId()} ({$type}) {$lastError}"
+                        );
+
+                        if ($continueOnError) {
+                            $skipped++;
+                            continue;
+                        }
+
+                        return [
+                            'ok' => false,
+                            'error' => $lastError,
+                            'failed' => $failed,
+                            'skipped' => $skipped,
+                        ];
+                    }
+
+                    if (!$matches) {
+                        $skipped++;
+                        continue;
+                    }
+                }
+            }
+
             $params = $this->normalizeParams($actionEntity->get('params'));
 
             // Dedicated entity field overrides params.formula for executeFormula UI.
@@ -146,10 +231,6 @@ class ActionRunner
                 $journey,
                 $tenantId,
             );
-
-            $maxRetries = (int) ($actionEntity->get('maxRetries') ?? self::DEFAULT_MAX_RETRIES);
-            $maxRetries = max(0, min(self::ABSOLUTE_MAX_RETRIES, $maxRetries));
-            $continueOnError = (bool) $actionEntity->get('continueOnError');
 
             $ctx = new ActionContext(
                 target: $target,
@@ -331,14 +412,36 @@ class ActionRunner
      */
     private function normalizeParams(mixed $params): array
     {
-        if ($params instanceof stdClass) {
-            return (array) $params;
+        return $this->stdClassToArray($params);
+    }
+
+    /**
+     * Deep-cast jsonObject params so nested maps (e.g. fields) are arrays.
+     * Otherwise assignParamPath sees stdClass fields and replaces them with [].
+     *
+     * @return array<string, mixed>
+     */
+    private function stdClassToArray(mixed $value): array
+    {
+        if ($value instanceof stdClass) {
+            $value = (array) $value;
         }
 
-        if (is_array($params)) {
-            return $params;
+        if (!is_array($value)) {
+            return [];
         }
 
-        return [];
+        $out = [];
+        foreach ($value as $k => $v) {
+            if ($v instanceof stdClass) {
+                $out[$k] = $this->stdClassToArray($v);
+            } elseif (is_array($v)) {
+                $out[$k] = $this->stdClassToArray($v);
+            } else {
+                $out[$k] = $v;
+            }
+        }
+
+        return $out;
     }
 }

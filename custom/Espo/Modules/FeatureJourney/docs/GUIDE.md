@@ -10,7 +10,7 @@ Reference for building, running, and securing **FeatureJourney** (Monostax CRM).
 Journey (definition)
  ├─ Stages (Entry / Normal / Success / Exit)
  │   └─ Stage Actions (OnEnter / OnExit)
- ├─ Transitions (fromStage? → toStage + trigger + conditions)
+ ├─ Transitions (stage / journey / enrollment scope → toStage + trigger + conditions)
  └─ Records (runtime enrollment of a target)
       └─ Record Logs (append-only ledger)
 ```
@@ -19,7 +19,7 @@ Journey (definition)
 |---|---|
 | **Journey** | Versioned-in-place definition: audience, goals, lifecycle status |
 | **Stage** | A step; types Entry, Normal, Success, Exit |
-| **Transition** | Rule that moves a record between stages (or enrolls when `fromStage` is empty) |
+| **Transition** | Rule that moves a record from one stage, any active stage, or a new enrollment |
 | **Stage Action** | Side effect when entering or leaving a stage |
 | **Journey Record** | One enrollment cycle of one target in one journey |
 | **Journey Record Log** | Immutable history row for a move |
@@ -97,7 +97,8 @@ Per-tenant **enrollment rate limit** applies (best-effort fixed window).
 - Cannot remove/deactivate a stage that still holds active records
 - Tenant + teams cascade from parent Journey
 
-**Success / Exit:** executor completes the record; goals may increment **goalCount** when criteria match.
+**Success / Exit:** executor completes the record. A goal match moves the record through its configured
+**Goal success step**, including the current step's OnExit and the Success step's OnEnter actions.
 
 ---
 
@@ -105,7 +106,8 @@ Per-tenant **enrollment rate limit** applies (best-effort fixed window).
 
 | Field | Notes |
 |---|---|
-| fromStage | Empty = enrollment path |
+| scope | `stage` = one source stage; `journey` = any active stage; `enrollment` = new record only |
+| fromStage | Required for `stage`; empty for `journey` and `enrollment` |
 | toStage | Required |
 | priority | Lower wins (first match) |
 | conditionsGroup | **Primary UX:** nested AND/OR rules (“Advance when”). Engine `wakeSources` / `eventCodes` / `waitPeriod` are **derived on save** |
@@ -117,6 +119,12 @@ Per-tenant **enrollment rate limit** applies (best-effort fixed window).
 | evaluatorClassName | Platform tier only (allow-listed) |
 
 Matching always starts with **tenantId**. Cross-tenant events never enroll or move foreign records.
+
+Journey-wide transitions participate in the same priority order as stage transitions. Lower priority wins;
+at the same priority, a stage-specific transition is checked first. They only apply to existing Active
+records, do not resurrect terminal records, and no-op when the record is already at the destination.
+Enrollment transitions are dispatched separately and never move an already-active record.
+Time-in-step rules require a specific source stage and are not available on journey-wide transitions.
 
 ### 5.1 Builder UX vs engine
 
@@ -145,6 +153,8 @@ Matching always starts with **tenantId**. Cross-tenant events never enroll or mo
 `eventHistory(email_replied)` + `eventHistory(link_clicked)` + `elapsedInStage(3 days)`  
 → signal+timer wakes; fires when all true regardless of order.
 
+**WhatsApp reply (`whatsapp_replied`):** journey `sendWhatsAppMessage` / `sendWhatsAppTemplate` stamp the Chatwoot conversation id on the JourneyRecord (and ChatwootConversation when already synced). An inbound message on that conversation (DeliveryWebhook and/or ChatwootMessage afterSave) emits `whatsapp_replied` — same dual-path as `email_replied` (TrackingEvent → DispatchToJourneys, with dispatcher fallback).
+
 ### 5.3 Execution path
 
 1. Dispatcher or timer queues `ProcessJourneyTransition` job `{ journeyRecordId, transitionId, signal? }`
@@ -166,6 +176,8 @@ Matching always starts with **tenantId**. Cross-tenant events never enroll or mo
 | params | JSON; type-specific |
 | paramFormulas | Map of param → **MODE_CONDITION** formula (never sets `tenantId`). UI: n8n-style **fx** toggle on each setting. Keys may be top-level (`assignedUserId`) or `fields.<attribute>` for updateTarget. Variables: `$journeyRecordId`, `$journeyId`, `$stageId`, `$tenantId` (read). |
 | formula | Dedicated field for `executeFormula` (**MODE_ACTION**) |
+| conditionsGroup | Visual target-field condition tree with nested AND/OR groups. Expected values support fixed values or restricted **fx** formulas. False skips the action. |
+| conditionFormula | Advanced **MODE_CONDITION** guard. When filled, overrides `conditionsGroup`; errors follow `continueOnError`. Variables match `paramFormulas`. |
 | order | Ascending within trigger |
 | maxRetries | 0–5 in-request retries (does **not** re-queue whole transition) |
 | continueOnError | If true, next actions still run after failure |
@@ -180,9 +192,9 @@ Actions run **inline** inside the claimed transition (preserve OnExit → move �
 | **createTask** | tenant | Task stamped with journey `tenantId` + teams |
 | **createRecord** | tenant | Allow-listed entity types; stamp tenant + teams; field allow-list (`app.journeyCreateRecord`) |
 | **createRelatedRecord** | tenant | Create on target link; same stamp + field allow-list |
-| **sendEmail** | tenant | Required Group (`inboundEmailId`) or Personal (`emailAccountId`) SMTP — **never** system SMTP; recipient allow-checks via TenantGuard |
-| **sendWhatsAppMessage** | tenant | Free-text via Chatwoot WhatsApp inbox (WAHA QR / Cloud / Coexistence). Optional Cloud **fallback Meta template** when 24h session window is closed. Soft-skips if no phone / WhatsApp opted-out. |
-| **sendWhatsAppTemplate** | tenant | Approved Meta template + `parameterMapping` (Handlebars, same as WhatsAppCampaign). Cloud API / Coexistence inboxes only — not WAHA QR. |
+| **sendEmail** | tenant | Required Group (`inboundEmailId`) or Personal (`emailAccountId`) SMTP — **never** system SMTP; recipient allow-checks via TenantGuard. Empty `to` → one send per sendable email on the target (primary + secondary; skips opt-out/invalid). Override may be a single address or comma/semicolon list (each must still be on the target). |
+| **sendWhatsAppMessage** | tenant | Free-text via Chatwoot WhatsApp inbox (WAHA QR / Cloud / Coexistence). Optional Cloud **fallback Meta template** when 24h session window is closed. Soft-skips if no phone / WhatsApp opted-out. Empty `phone` → one send per sendable number (phoneNumberData + WhatsApp channel identities; skips opt-out/invalid/Fax), same multi-number model as WhatsApp Campaign. |
+| **sendWhatsAppTemplate** | tenant | Approved Meta template + `parameterMapping` (Handlebars, same as WhatsAppCampaign). Cloud API / Coexistence inboxes only — not WAHA QR. Multi-number same as sendWhatsAppMessage. |
 | **notifyUser** | tenant | In-app notification (user must be in tenant) |
 | **makeFollowed** | tenant | Stream follow for specified tenant users only |
 | **updateTarget** | tenant | Field writes filtered by `app.journeyUpdateTarget` allow-list (+ Espo `cCustom*` prefix + Monostax CustomField bag merge) |
@@ -248,8 +260,11 @@ Bag enabled entity types come from `app.customFields.entityTypeList` (Contact, L
 
 - `goalEventCodes` — cheap set match in the signal dispatcher  
 - `goalEntityFilter` — where-clause on target after each executed transition  
+- `goalSuccessStage` — required active Success destination when either goal criterion is configured
 
-On match: complete record, `goalCount++`, emit goal lifecycle.
+On match: move to the configured Success step, run normal stage actions, complete with
+`exitReason=goal`, increment `completedCount` and `goalCount`, then emit completed and goal lifecycles.
+Goal event codes take precedence over ordinary transitions queued by the same signal.
 
 **Lifecycle codes** (via lazy Tracking `InternalEventRecorder`, never throws if Tracking absent):
 

@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureJourney\Services;
 
 /**
- * Stable Message-ID tokens for journey outbound email ↔ reply correlation.
+ * Stable Message-ID tokens for journey outbound email ↔ reply/bounce correlation.
  *
  * Clients do NOT echo custom X-headers on reply. Correlation is:
- *   outbound Message-ID → inbound In-Reply-To → Email.repliedId → stored journeyToken.
+ *   outbound Message-ID → inbound In-Reply-To → Email.repliedId → stored journeyToken (reply)
+ *   outbound Message-ID → DSN Original-Message-ID / nested Message-ID → Email.journeyRecordId (bounce)
  *
  * Message-ID shape aims to look like a normal MTA id (not a vendor prefix / fake TLD):
  *   <{32-hex}.{8-hex}@{from-domain}>
@@ -22,6 +23,7 @@ class JourneyEmailToken
     public const HEADER_JOURNEY = 'X-Monostax-Journey-Id';
 
     public const CODE_REPLIED = 'email_replied';
+    public const CODE_BOUNCED = 'email_bounced';
 
     /**
      * @param string|null $fromAddress Outbound From used as Message-ID domain (preferred).

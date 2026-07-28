@@ -14,6 +14,7 @@ use Throwable;
 /**
  * Free-text WhatsApp via Chatwoot inbox (WAHA QR / Cloud / Coexistence).
  *
+ * Sends to every sendable phone on the target (or phone override list).
  * Cloud/Coexistence: when the 24h session window is closed, optional fallback
  * Meta template (name + mapping) is sent instead of failing hard.
  */
@@ -56,8 +57,8 @@ class SendWhatsAppMessage implements Action
             return;
         }
 
-        $phone = $this->outbound->resolvePhone($context->target, $phoneOverride);
-        if ($phone === null) {
+        $phones = $this->outbound->resolvePhones($context->target, $phoneOverride);
+        if ($phones === []) {
             $this->log->warning('SendWhatsAppMessage: no phone on target, skipping.');
 
             return;
@@ -71,9 +72,54 @@ class SendWhatsAppMessage implements Action
         );
 
         $name = $this->outbound->displayName($context->target);
+        $journeyContext = [
+            'journeyId' => $context->journey->getId(),
+            'journeyRecordId' => $context->record->getId(),
+        ];
 
+        $errors = [];
+        $sent = 0;
+
+        foreach ($phones as $phone) {
+            try {
+                $this->sendOne($conn, $phone, $name, $body, $params, $context, $journeyContext);
+                $sent++;
+            } catch (Throwable $e) {
+                $errors[] = $phone . ': ' . $e->getMessage();
+                $this->log->error(
+                    'SendWhatsAppMessage failed for ' . $phone . ': ' . $e->getMessage()
+                );
+            }
+        }
+
+        if ($sent === 0 && $errors !== []) {
+            throw new Error('SendWhatsAppMessage: all recipients failed. ' . implode('; ', $errors));
+        }
+
+        if ($errors !== []) {
+            throw new Error(
+                'SendWhatsAppMessage: sent ' . $sent . '/' . count($phones) .
+                ' failed: ' . implode('; ', $errors)
+            );
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $conn
+     * @param array<string, mixed> $params
+     * @param array{journeyId: string, journeyRecordId: string} $journeyContext
+     */
+    private function sendOne(
+        array $conn,
+        string $phone,
+        string $name,
+        string $body,
+        array $params,
+        ActionContext $context,
+        array $journeyContext,
+    ): void {
         try {
-            $this->outbound->sendFreeText($conn, $phone, $name, $body);
+            $this->outbound->sendFreeText($conn, $phone, $name, $body, $journeyContext);
 
             return;
         } catch (Throwable $e) {
@@ -86,13 +132,12 @@ class SendWhatsAppMessage implements Action
                 && $this->outbound->isOutsideSessionWindow($e->getMessage());
 
             if (!$canFallback) {
-                $this->log->error('SendWhatsAppMessage failed: ' . $e->getMessage());
                 throw $e;
             }
 
             $this->log->info(
-                'SendWhatsAppMessage: session window closed; sending fallback template ' .
-                $fallbackName
+                'SendWhatsAppMessage: session window closed for ' . $phone .
+                '; sending fallback template ' . $fallbackName
             );
         }
 
@@ -123,22 +168,18 @@ class SendWhatsAppMessage implements Action
             $headerType = null;
         }
 
-        try {
-            $this->outbound->sendTemplate(
-                $conn,
-                $phone,
-                $name,
-                $fallbackName,
-                $language,
-                $resolved,
-                $category !== '' ? $category : 'UTILITY',
-                '',
-                $headerUrl,
-                $headerType,
-            );
-        } catch (Throwable $e) {
-            $this->log->error('SendWhatsAppMessage fallback template failed: ' . $e->getMessage());
-            throw $e;
-        }
+        $this->outbound->sendTemplate(
+            $conn,
+            $phone,
+            $name,
+            $fallbackName,
+            $language,
+            $resolved,
+            $category !== '' ? $category : 'UTILITY',
+            '',
+            $headerUrl,
+            $headerType,
+            $journeyContext,
+        );
     }
 }

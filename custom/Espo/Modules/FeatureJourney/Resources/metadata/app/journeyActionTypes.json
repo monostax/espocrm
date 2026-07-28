@@ -129,16 +129,21 @@
                 },
                 {
                     "name": "emailTemplateId",
-                    "type": "link",
+                    "type": "emailTemplate",
                     "entity": "EmailTemplate",
                     "label": "Email Template",
-                    "nameKey": "emailTemplateName"
+                    "nameKey": "emailTemplateName",
+                    "primaryFilter": "actual",
+                    "managedKeys": [
+                        "emailTemplateId",
+                        "emailTemplateName"
+                    ]
                 },
                 {
                     "name": "to",
                     "type": "varchar",
                     "label": "To (optional)",
-                    "placeholder": "Leave empty to use target email"
+                    "placeholder": "Leave empty = all target emails; or list a,b@x.com"
                 },
                 {
                     "name": "subject",
@@ -182,7 +187,7 @@
                     "name": "phone",
                     "type": "varchar",
                     "label": "Phone override (optional)",
-                    "placeholder": "Leave empty to use target phone"
+                    "placeholder": "Leave empty = all target phones; or list"
                 },
                 {
                     "name": "fallbackTemplateName",
@@ -240,54 +245,24 @@
                 },
                 {
                     "name": "templateName",
-                    "type": "varchar",
-                    "label": "Template name",
+                    "type": "whatsappTemplate",
+                    "label": "WhatsApp template",
                     "required": true,
-                    "placeholder": "hello_world"
-                },
-                {
-                    "name": "templateLanguage",
-                    "type": "varchar",
-                    "label": "Template language",
-                    "required": true,
-                    "placeholder": "pt_BR",
-                    "default": "pt_BR"
-                },
-                {
-                    "name": "templateCategory",
-                    "type": "enum",
-                    "label": "Template category",
-                    "options": ["UTILITY", "MARKETING", "AUTHENTICATION"],
-                    "default": "UTILITY"
-                },
-                {
-                    "name": "parameterMapping",
-                    "type": "json",
-                    "label": "Parameter mapping (JSON)",
-                    "placeholder": "{\"1\": \"{{firstName}}\", \"2\": \"{{account.name}}\"}"
-                },
-                {
-                    "name": "templateBody",
-                    "type": "text",
-                    "label": "Template body preview (optional)"
-                },
-                {
-                    "name": "headerMediaUrl",
-                    "type": "varchar",
-                    "label": "Header media URL"
-                },
-                {
-                    "name": "headerMediaType",
-                    "type": "enum",
-                    "label": "Header media type",
-                    "options": ["", "image", "video", "document"],
-                    "default": ""
+                    "managedKeys": [
+                        "templateName",
+                        "templateLanguage",
+                        "templateCategory",
+                        "parameterMapping",
+                        "templateBody",
+                        "headerMediaUrl",
+                        "headerMediaType"
+                    ]
                 },
                 {
                     "name": "phone",
                     "type": "varchar",
                     "label": "Phone override (optional)",
-                    "placeholder": "Leave empty to use target phone"
+                    "placeholder": "Leave empty = all target phones; or list"
                 }
             ]
         },

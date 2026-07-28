@@ -34,13 +34,14 @@ use Espo\ORM\EntityManager;
  *
  * ## Background
  *
- * Before the fix in {@see \Espo\Modules\Chatwoot\Services\AgentAvatarSyncService},
- * the CW→CRM pull mirrored Chatwoot's *resized* `thumbnail`
- * (`resize_to_fill: [250, nil]`) instead of the original `avatar_url` blob.
- * Because the thumbnail is a fresh JPEG re-encode, its bytes never matched
- * what the CRM had pushed, so the byte-hash loop guard never tripped. Each
- * round-trip re-encoded the image once more (generation loss), and after
- * thousands of cycles the avatars degraded into grayscale noise.
+ * Before the fix in {@see \Espo\Modules\Chatwoot\Services\AgentAvatarSyncService}
+ * (prefer `avatar_original_url` blob + refuse representation URLs over an
+ * existing CRM avatar), the CW→CRM pull mirrored Chatwoot's *resized*
+ * `thumbnail` (`resize_to_fill: [250, nil]`). Because the thumbnail is a fresh
+ * JPEG re-encode, its bytes never matched what the CRM had pushed, so the
+ * byte-hash loop guard never tripped. Each round-trip re-encoded the image
+ * once more (generation loss), and after thousands of cycles the avatars
+ * degraded into grayscale noise.
  *
  * Forensics found three users caught in loops of 4,618 / 2,829 / 1,688
  * iterations, totalling ~9,100 orphaned `cw-avatar-*` Attachment rows. The

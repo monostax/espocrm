@@ -180,31 +180,6 @@ class SelectBuilderTest extends BaseTestCase
                 ],
             ],
             'whereClause' => [
-                'id=s' => Select::fromRaw([
-                    'select' => [
-                        'id',
-                    ],
-                    'from' => 'Account',
-                    'joins' => [
-                        [
-                            'EntityTeam',
-                            'entityTeam',
-                            [
-                                'entityTeam.entityId:' => 'id',
-                                'entityTeam.entityType' => 'Account',
-                                'entityTeam.deleted' => false,
-                            ],
-                            ['type' => JoinType::left]
-                        ],
-                    ],
-                    'whereClause' => [
-                        'OR' =>
-                            [
-                                'entityTeam.teamId' => [],
-                                'assignedUserId' => $userId,
-                            ],
-                    ],
-                ]),
                 'OR' => [
                     'assignedUserId=' => $userId,
                 ],
@@ -214,6 +189,26 @@ class SelectBuilderTest extends BaseTestCase
                 ],
                 [
                     'createdAt<' => '2020-12-12 10:00:00',
+                ],
+                [
+                    'OR' => [
+                        [
+                            'id=s' => Select::fromRaw([
+                                'select' => [
+                                    'entityId',
+                                ],
+                                'from' => 'EntityTeam',
+                                'whereClause' => [
+                                    'teamId' => [],
+                                    'entityType' => 'Account',
+                                    'deleted' => false,
+                                ],
+                            ]),
+                        ],
+                        [
+                            'assignedUserId' => $userId,
+                        ],
+                    ],
                 ],
             ],
         ];

@@ -2,6 +2,7 @@
     "fields": {
         "name": "Nome",
         "journey": "Jornada",
+        "scope": "Aplica-se a",
         "fromStage": "Da etapa",
         "toStage": "Para a etapa",
         "priority": "Prioridade",
@@ -65,6 +66,11 @@
         "lessThanOrEquals": "é menor ou igual a"
     },
     "options": {
+        "scope": {
+            "stage": "Uma etapa específica",
+            "journey": "Qualquer etapa ativa",
+            "enrollment": "Nova inscrição"
+        },
         "triggerType": {
             "signal": "Quando um evento chegar",
             "timer": "Depois de esperar",
@@ -80,6 +86,8 @@
         },
         "eventCodes": {
             "email_replied": "Resposta de e-mail recebida",
+            "email_bounced": "E-mail bounced (devolvido)",
+            "whatsapp_replied": "Resposta de WhatsApp recebida",
             "link_clicked": "Link de rastreamento clicado",
             "opportunity_created": "Oportunidade criada",
             "opportunity_stage_changed": "Etapa da oportunidade alterada",
@@ -115,6 +123,16 @@
         "fromAddress": "Remetente",
         "emailId": "Id do e-mail de resposta",
         "repliedEmailId": "Id do e-mail original",
+        "isHard": "Bounce permanente",
+        "statusCode": "Código de status do bounce",
+        "toAddress": "Destinatário do bounce",
+        "messageId": "Id da mensagem",
+        "chatwootMessageId": "Id da mensagem no Chatwoot",
+        "conversationId": "Id da conversa (CRM)",
+        "chatwootConversationId": "Id da conversa no Chatwoot",
+        "contentPreview": "Prévia da mensagem",
+        "inboxId": "Id da inbox",
+        "channelType": "Tipo de canal",
         "journeyToken": "Token da jornada",
         "journeyId": "Id da jornada",
         "journeyRecordId": "Id do registro na jornada",
@@ -147,7 +165,8 @@
         "exitReason": "Motivo da saída"
     },
     "tooltips": {
-        "fromStage": "Deixe vazio para definir como um registro entra na jornada.",
+        "scope": "Escolha uma etapa de origem, qualquer etapa ativa desta jornada ou uma regra para novas inscrições.",
+        "fromStage": "Obrigatória somente quando Aplica-se a for Uma etapa específica.",
         "toStage": "Para onde o registro vai quando esta conexão dispara.",
         "waitPeriod": "Definido automaticamente pelas regras de “tempo na etapa”.",
         "eventCodes": "Definido automaticamente pelas regras de evento.",

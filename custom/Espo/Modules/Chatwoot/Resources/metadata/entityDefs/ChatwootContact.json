@@ -14,8 +14,9 @@
         },
         "contactName": {
             "type": "foreign",
-            "relation": "contact",
-            "foreign": "name",
+            "link": "contact",
+            "field": "name",
+            "view": "views/fields/foreign-varchar",
             "readOnly": true
         },
         "email": {

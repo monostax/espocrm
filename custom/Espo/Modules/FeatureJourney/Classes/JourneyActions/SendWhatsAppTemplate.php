@@ -14,6 +14,7 @@ use Throwable;
 /**
  * Meta template WhatsApp via Chatwoot (Cloud API / Coexistence only).
  * Parameter mapping matches WhatsAppCampaign (Handlebars {{field}}).
+ * Sends to every sendable phone on the target (or phone override list).
  */
 class SendWhatsAppTemplate implements Action
 {
@@ -60,8 +61,8 @@ class SendWhatsAppTemplate implements Action
             return;
         }
 
-        $phone = $this->outbound->resolvePhone($context->target, $phoneOverride);
-        if ($phone === null) {
+        $phones = $this->outbound->resolvePhones($context->target, $phoneOverride);
+        if ($phones === []) {
             $this->log->warning('SendWhatsAppTemplate: no phone on target, skipping.');
 
             return;
@@ -94,22 +95,48 @@ class SendWhatsAppTemplate implements Action
             }
         }
 
-        try {
-            $this->outbound->sendTemplate(
-                $conn,
-                $phone,
-                $this->outbound->displayName($context->target),
-                $templateName,
-                $language,
-                $resolved,
-                $category !== '' ? $category : 'UTILITY',
-                $content,
-                $headerUrl,
-                $headerType,
+        $name = $this->outbound->displayName($context->target);
+        $journeyContext = [
+            'journeyId' => $context->journey->getId(),
+            'journeyRecordId' => $context->record->getId(),
+        ];
+
+        $errors = [];
+        $sent = 0;
+
+        foreach ($phones as $phone) {
+            try {
+                $this->outbound->sendTemplate(
+                    $conn,
+                    $phone,
+                    $name,
+                    $templateName,
+                    $language,
+                    $resolved,
+                    $category !== '' ? $category : 'UTILITY',
+                    $content,
+                    $headerUrl,
+                    $headerType,
+                    $journeyContext,
+                );
+                $sent++;
+            } catch (Throwable $e) {
+                $errors[] = $phone . ': ' . $e->getMessage();
+                $this->log->error(
+                    'SendWhatsAppTemplate failed for ' . $phone . ': ' . $e->getMessage()
+                );
+            }
+        }
+
+        if ($sent === 0 && $errors !== []) {
+            throw new Error('SendWhatsAppTemplate: all recipients failed. ' . implode('; ', $errors));
+        }
+
+        if ($errors !== []) {
+            throw new Error(
+                'SendWhatsAppTemplate: sent ' . $sent . '/' . count($phones) .
+                ' failed: ' . implode('; ', $errors)
             );
-        } catch (Throwable $e) {
-            $this->log->error('SendWhatsAppTemplate failed: ' . $e->getMessage());
-            throw $e;
         }
     }
 }

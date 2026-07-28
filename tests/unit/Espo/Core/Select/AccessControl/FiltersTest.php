@@ -34,6 +34,7 @@ use Espo\Core\Field\LinkMultipleItem;
 use Espo\Core\Portal\Acl\OwnershipChecker\MetadataProvider;
 use Espo\Core\Select\AccessControl\Filter as AccessControlFilter;
 use Espo\Core\Select\AccessControl\Filters\No;
+use Espo\Core\Select\AccessControl\Filters\OnlyTeam;
 use Espo\Core\Select\AccessControl\Filters\PortalOnlyAccount;
 use Espo\Core\Select\AccessControl\Filters\PortalOnlyContact;
 use Espo\Core\Select\AccessControl\Filters\PortalOnlyOwn;
@@ -43,6 +44,7 @@ use Espo\Entities\User;
 use Espo\Modules\Crm\Entities\Account;
 use Espo\Modules\Crm\Entities\Contact;
 use Espo\ORM\Defs;
+use Espo\ORM\Defs\EntityDefs;
 use Espo\ORM\Defs\RelationDefs;
 use Espo\ORM\Query\Part\Where\OrGroup;
 use Espo\ORM\Query\SelectBuilder as QueryBuilder;
@@ -86,6 +88,126 @@ class FiltersTest extends TestCase
             ->method('where')
             ->with([
                 'id' => null,
+            ]);
+
+        $filter->apply($this->queryBuilder);
+    }
+
+    public function testOnlyTeamNoTeamsField(): void
+    {
+        $defs = $this->createMock(Defs::class);
+
+        $filter = new OnlyTeam($this->user, $this->fieldHelper, $this->entityType, $defs);
+
+        $this->initHelperMethods([
+            ['hasTeamsField', false],
+        ]);
+
+        $this->queryBuilder
+            ->expects($this->once())
+            ->method('where')
+            ->with([
+                'id' => null,
+            ]);
+
+        $filter->apply($this->queryBuilder);
+    }
+
+    public function testOnlyTeamAssignedUser(): void
+    {
+        $defs = $this->createMock(Defs::class);
+
+        $filter = new OnlyTeam($this->user, $this->fieldHelper, $this->entityType, $defs);
+
+        $this->initHelperMethods([
+            ['hasTeamsField', true],
+            ['hasAssignedUsersField', false],
+            ['hasAssignedUserField', true],
+            ['hasCollaboratorsField', false],
+        ]);
+
+        $teamSubQuery = QueryBuilder::create()
+            ->select('entityId')
+            ->from('EntityTeam')
+            ->where([
+                'teamId' => ['team-id'],
+                'entityType' => 'Test',
+                'deleted' => false,
+            ])
+            ->build();
+
+        $this->queryBuilder
+            ->expects($this->once())
+            ->method('where')
+            ->with([
+                'OR' => [
+                    ['id=s' => $teamSubQuery],
+                    ['assignedUserId' => 'user-id'],
+                ],
+            ]);
+
+        $filter->apply($this->queryBuilder);
+    }
+
+    public function testOnlyTeamAssignedUsers(): void
+    {
+        $defs = $this->createMock(Defs::class);
+        $entityDefs = $this->createMock(EntityDefs::class);
+
+        $defs
+            ->expects($this->any())
+            ->method('getEntity')
+            ->with('Test')
+            ->willReturn($entityDefs);
+
+        $entityDefs
+            ->expects($this->any())
+            ->method('getRelation')
+            ->with('assignedUsers')
+            ->willReturn(
+                RelationDefs::fromRaw([
+                    'type' => RelationType::MANY_MANY,
+                    'entity' => 'User',
+                    'midKeys' => ['testId', 'userId'],
+                    'relationName' => 'testUser',
+                ], 'assignedUsers')
+            );
+
+        $filter = new OnlyTeam($this->user, $this->fieldHelper, $this->entityType, $defs);
+
+        $this->initHelperMethods([
+            ['hasTeamsField', true],
+            ['hasAssignedUsersField', true],
+            ['hasCollaboratorsField', false],
+        ]);
+
+        $teamSubQuery = QueryBuilder::create()
+            ->select('entityId')
+            ->from('EntityTeam')
+            ->where([
+                'teamId' => ['team-id'],
+                'entityType' => 'Test',
+                'deleted' => false,
+            ])
+            ->build();
+
+        $assignedUsersSubQuery = QueryBuilder::create()
+            ->select('testId')
+            ->from('TestUser')
+            ->where([
+                'userId' => 'user-id',
+                'deleted' => false,
+            ])
+            ->build();
+
+        $this->queryBuilder
+            ->expects($this->once())
+            ->method('where')
+            ->with([
+                'OR' => [
+                    ['id=s' => $teamSubQuery],
+                    ['id=s' => $assignedUsersSubQuery],
+                ],
             ]);
 
         $filter->apply($this->queryBuilder);

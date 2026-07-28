@@ -26,16 +26,20 @@ use Espo\Entities\InboundEmail;
 use Espo\Entities\OAuthAccount;
 use Espo\Entities\OAuthProvider;
 use Espo\Modules\FeatureIntegrationGmail\Rebuild\SeedOAuthProviderGmail;
+use Espo\Modules\FeatureIntegrationMicrosoft365\Rebuild\SeedOAuthProviderMicrosoft365;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Imports a Chatwoot-native Google email grant into the CRM OAuthAccount
- * linked to its mirrored mailbox. The privileged endpoint keeps provider_config
- * out of the normal inbox payload and browser-facing API responses.
+ * Imports a Chatwoot-native Google or Microsoft email grant into the CRM
+ * OAuthAccount linked to its mirrored mailbox. The privileged endpoint keeps
+ * provider_config out of the normal inbox payload and browser-facing API responses.
  */
 class SyncEmailOAuthCredentials
 {
+    /** @var list<string> */
+    private const SUPPORTED_PROVIDERS = ['google', 'microsoft'];
+
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
@@ -55,9 +59,12 @@ class SyncEmailOAuthCredentials
         ?Entity $mailbox,
         array $teamsIds = []
     ): void {
+        $remoteProvider = $chatwootInbox['provider'] ?? null;
+
         if (
             ($chatwootInbox['channel_type'] ?? null) !== EmailChannelBridge::REMOTE_CHANNEL_EMAIL ||
-            ($chatwootInbox['provider'] ?? null) !== 'google'
+            !is_string($remoteProvider) ||
+            !in_array($remoteProvider, self::SUPPORTED_PROVIDERS, true)
         ) {
             $this->revokeForInbox($localInbox, $mailbox);
 
@@ -85,7 +92,7 @@ class SyncEmailOAuthCredentials
             );
         } catch (\Throwable $e) {
             $this->log->warning(
-                "SyncEmailOAuthCredentials: Failed to fetch Google OAuth credentials for inbox {$inboxId}: " .
+                "SyncEmailOAuthCredentials: Failed to fetch {$remoteProvider} OAuth credentials for inbox {$inboxId}: " .
                 $e->getMessage()
             );
 
@@ -98,7 +105,7 @@ class SyncEmailOAuthCredentials
             return;
         }
 
-        if (($credentials['provider'] ?? null) !== 'google') {
+        if (($credentials['provider'] ?? null) !== $remoteProvider) {
             $this->log->warning(
                 "SyncEmailOAuthCredentials: Unexpected credential provider for inbox {$inboxId}."
             );
@@ -125,27 +132,30 @@ class SyncEmailOAuthCredentials
             !is_string($sourceRevision) || !preg_match('/^[a-f0-9]{64}$/', $sourceRevision)
         ) {
             $this->log->warning(
-                "SyncEmailOAuthCredentials: Chatwoot returned an incomplete Google OAuth grant for inbox {$inboxId}."
+                "SyncEmailOAuthCredentials: Chatwoot returned an incomplete {$remoteProvider} OAuth grant for inbox {$inboxId}."
             );
 
             return;
         }
 
+        $providerId = $this->crmProviderIdFor($remoteProvider);
+        $providerLabel = $this->providerLabel($remoteProvider);
+
         $provider = $this->entityManager->getEntityById(
             OAuthProvider::ENTITY_TYPE,
-            SeedOAuthProviderGmail::PROVIDER_ID
+            $providerId
         );
 
         if (!$provider instanceof OAuthProvider || !$provider->isActive()) {
             $this->log->warning(
-                'SyncEmailOAuthCredentials: Google Gmail OAuthProvider is unavailable; run rebuild before syncing inbox ' .
+                "SyncEmailOAuthCredentials: {$providerLabel} OAuthProvider is unavailable; run rebuild before syncing inbox " .
                 $inboxId . '.'
             );
 
             return;
         }
 
-        if (!$this->hasCompatibleOAuthClient($provider, $credentials, $inboxId)) {
+        if (!$this->hasCompatibleOAuthClient($provider, $credentials, $inboxId, $providerLabel)) {
             return;
         }
 
@@ -162,7 +172,7 @@ class SyncEmailOAuthCredentials
             !$oAuthAccount->get('refreshToken')
         ) {
             if ($oAuthAccount->isNew()) {
-                $oAuthAccount->set('name', $this->sourceAccountName($mailbox, $inboxId));
+                $oAuthAccount->set('name', $this->sourceAccountName($mailbox, $inboxId, $providerLabel));
                 $oAuthAccount->set('providerId', $provider->getId());
                 $oAuthAccount->set('chatwootEmailInboxId', $localInbox->getId());
             }
@@ -187,7 +197,7 @@ class SyncEmailOAuthCredentials
 
         if ($mailbox->get('oAuthAccountId') !== $oAuthAccount->getId()) {
             $mailbox->set('oAuthAccountId', $oAuthAccount->getId());
-            // The Gmail BeforeSave hook must run to install XOAUTH2 handlers.
+            // Provider BeforeSave hooks must run to install XOAUTH2 handlers.
             // The bridge flag prevents the resulting host/password changes looping back.
             $this->entityManager->saveEntity($mailbox, [
                 EmailChannelBridge::SAVE_OPTION_SKIP => true,
@@ -195,12 +205,12 @@ class SyncEmailOAuthCredentials
         }
 
         $this->log->debug(
-            "SyncEmailOAuthCredentials: Synced Google OAuthAccount {$oAuthAccount->getId()} for inbox {$inboxId}."
+            "SyncEmailOAuthCredentials: Synced {$providerLabel} OAuthAccount {$oAuthAccount->getId()} for inbox {$inboxId}."
         );
     }
 
     /**
-     * Remove the source-owned credential when the remote Google grant, inbox,
+     * Remove the source-owned credential when the remote OAuth grant, inbox,
      * or email channel is no longer present. Manually managed OAuth accounts
      * are never discovered by this source-specific lookup.
      */
@@ -231,9 +241,27 @@ class SyncEmailOAuthCredentials
         $this->entityManager->saveEntity($oAuthAccount, ['silent' => true]);
         $this->entityManager->removeEntity($oAuthAccount);
         $this->log->debug(
-            "SyncEmailOAuthCredentials: Revoked source-owned Google OAuthAccount {$oAuthAccount->getId()} " .
+            "SyncEmailOAuthCredentials: Revoked source-owned OAuthAccount {$oAuthAccount->getId()} " .
             "for Chatwoot inbox {$localInbox->getId()}."
         );
+    }
+
+    private function crmProviderIdFor(string $remoteProvider): string
+    {
+        return match ($remoteProvider) {
+            'google' => SeedOAuthProviderGmail::PROVIDER_ID,
+            'microsoft' => SeedOAuthProviderMicrosoft365::PROVIDER_ID,
+            default => throw new \InvalidArgumentException("Unsupported email OAuth provider: {$remoteProvider}"),
+        };
+    }
+
+    private function providerLabel(string $remoteProvider): string
+    {
+        return match ($remoteProvider) {
+            'google' => 'Google Gmail',
+            'microsoft' => 'Microsoft 365',
+            default => $remoteProvider,
+        };
     }
 
     private function resolveOAuthAccount(
@@ -351,7 +379,8 @@ class SyncEmailOAuthCredentials
     private function hasCompatibleOAuthClient(
         OAuthProvider $provider,
         array $credentials,
-        int $inboxId
+        int $inboxId,
+        string $providerLabel
     ): bool {
         $sourceClientId = $credentials['client_id'] ?? null;
 
@@ -369,7 +398,7 @@ class SyncEmailOAuthCredentials
             !is_string($crmClientSecret) || $crmClientSecret === ''
         ) {
             $this->log->warning(
-                "SyncEmailOAuthCredentials: Configure the CRM Google Gmail OAuth client before syncing inbox {$inboxId}."
+                "SyncEmailOAuthCredentials: Configure the CRM {$providerLabel} OAuth client before syncing inbox {$inboxId}."
             );
 
             return false;
@@ -377,7 +406,7 @@ class SyncEmailOAuthCredentials
 
         if (!hash_equals($sourceClientId, $crmClientId)) {
             $this->log->warning(
-                "SyncEmailOAuthCredentials: CRM and Chatwoot use different Google OAuth clients for inbox {$inboxId}."
+                "SyncEmailOAuthCredentials: CRM and Chatwoot use different {$providerLabel} OAuth clients for inbox {$inboxId}."
             );
 
             return false;
@@ -386,12 +415,12 @@ class SyncEmailOAuthCredentials
         return true;
     }
 
-    private function sourceAccountName(Entity $mailbox, int $inboxId): string
+    private function sourceAccountName(Entity $mailbox, int $inboxId, string $providerLabel): string
     {
         $email = (string) ($mailbox->get('emailAddress') ?? '');
         $suffix = $email ?: "inbox #{$inboxId}";
 
-        return substr('Chatwoot Gmail ' . $suffix, 0, 100);
+        return substr("Chatwoot {$providerLabel} " . $suffix, 0, 100);
     }
 
     private function parseExpiresAt(mixed $expiresOn): ?DateTime

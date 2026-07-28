@@ -31,10 +31,13 @@ namespace Espo\Core\Utils\Database\Orm\LinkConverters;
 
 use Espo\Core\Utils\Database\Orm\Defs\AttributeDefs;
 use Espo\Core\Utils\Database\Orm\Defs\EntityDefs;
+use Espo\Core\Utils\Database\Orm\Defs\IndexDefs;
 use Espo\Core\Utils\Database\Orm\Defs\RelationDefs;
 use Espo\Core\Utils\Database\Orm\LinkConverter;
 use Espo\Entities\Team;
 use Espo\ORM\Defs\RelationDefs as LinkDefs;
+use Espo\ORM\Defs\Params\IndexParam;
+use Espo\ORM\Defs\Params\RelationParam;
 use Espo\ORM\Type\AttributeType;
 use Espo\ORM\Type\RelationType;
 
@@ -46,6 +49,13 @@ class EntityTeam implements LinkConverter
     {
         $name = $linkDefs->getName();
         $relationshipName = $linkDefs->getRelationshipName();
+        $index = IndexDefs::create('teamEntityTypeDeletedEntityId')
+            ->withParam(IndexParam::COLUMNS, [
+                'teamId',
+                'entityType',
+                'deleted',
+                'entityId',
+            ]);
 
         return EntityDefs::create()
             ->withRelation(
@@ -60,6 +70,9 @@ class EntityTeam implements LinkConverter
                             ->withType(AttributeType::VARCHAR)
                             ->withLength(self::ENTITY_TYPE_LENGTH)
                     )
+                    ->withParam(RelationParam::INDEXES, [
+                        $index->getName() => $index->toAssoc(),
+                    ])
             );
     }
 }

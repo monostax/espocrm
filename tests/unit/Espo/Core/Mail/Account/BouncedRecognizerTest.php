@@ -104,4 +104,34 @@ class BouncedRecognizerTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($this->bouncedRecognizer->isHard($message));
         $this->assertEquals('5.4.1', $this->bouncedRecognizer->extractStatus($message));
     }
+
+    public function testExtractFinalRecipientAndOriginalMessageIds(): void
+    {
+        $contents = file_get_contents('tests/unit/testData/Core/Mail/bounced_1.eml');
+        $message = $this->createMessage($contents);
+
+        $this->assertEquals('wrongster@test.com', $this->bouncedRecognizer->extractFinalRecipient($message));
+
+        $ids = $this->bouncedRecognizer->extractOriginalMessageIds($message);
+
+        $this->assertContains(
+            '<000001372d0dbf88-76d26d51-9d96-468a-9071-318ba2c35003-000000@email.amazonses.com>',
+            $ids
+        );
+    }
+
+    public function testExtractOriginalMessageIdsFromRfc822Headers(): void
+    {
+        $contents = file_get_contents('tests/unit/testData/Core/Mail/bounced_3.eml');
+        $message = $this->createMessage($contents);
+
+        $this->assertEquals('receiver@test.com', $this->bouncedRecognizer->extractFinalRecipient($message));
+
+        $ids = $this->bouncedRecognizer->extractOriginalMessageIds($message);
+
+        $this->assertContains(
+            '<CAKouvC4fBcE7qfvhEq0-qOtsD45mWckUfhtr7KHhobwwvy0thA@mail.gmail.com>',
+            $ids
+        );
+    }
 }

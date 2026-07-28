@@ -61,6 +61,26 @@ define("feature-journey:views/journey/record/panels/flow", [
                         '{{/each}}' +
                     '</div>' +
                     '{{/if}}' +
+                    '{{#if hasJourneyWide}}' +
+                    '<div class="journey-flow-global" style="margin-bottom:16px">' +
+                        '<div class="text-muted small" style="margin-bottom:6px">' +
+                            '<span class="fas fa-globe"></span> ' +
+                            '{{translate "journeyWideTransitions" category="labels" scope="Journey"}}' +
+                        '</div>' +
+                        '{{#each journeyWideTransitions}}' +
+                        '<div class="journey-flow-edge" ' +
+                            'style="padding:8px 12px;margin-bottom:6px;border:1px solid #b9d4ef;border-radius:6px;cursor:pointer;background:#f4f9ff" ' +
+                            'data-action="openTransition" data-id="{{id}}">' +
+                            '<span class="label label-info" style="margin-right:6px">{{triggerType}}</span>' +
+                            '<strong>{{name}}</strong>' +
+                            ' <span class="text-muted">→ {{toStageName}}</span>' +
+                            '{{#if eventCodes}}' +
+                            ' <span class="text-muted small">({{eventCodes}})</span>' +
+                            '{{/if}}' +
+                        '</div>' +
+                        '{{/each}}' +
+                    '</div>' +
+                    '{{/if}}' +
                     '{{#each stages}}' +
                     '<div class="journey-flow-stage" data-stage-id="{{id}}" ' +
                         'style="border:1px solid #d8d8d8;border-radius:10px;background:#fff;margin-bottom:4px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)">' +
@@ -166,6 +186,7 @@ define("feature-journey:views/journey/record/panels/flow", [
             this.loading = true;
             this.stages = [];
             this.enrollmentTransitions = [];
+            this.journeyWideTransitions = [];
             this.canEdit = this.getAcl().check("JourneyStage", "edit");
             this._flowInFlight = false;
             this._flowQueued = false;
@@ -216,6 +237,11 @@ define("feature-journey:views/journey/record/panels/flow", [
                 hasEnrollment: !!(
                     this.enrollmentTransitions &&
                     this.enrollmentTransitions.length
+                ),
+                journeyWideTransitions: this.journeyWideTransitions || [],
+                hasJourneyWide: !!(
+                    this.journeyWideTransitions &&
+                    this.journeyWideTransitions.length
                 ),
                 canEdit: this.canEdit,
             };
@@ -269,7 +295,7 @@ define("feature-journey:views/journey/record/panels/flow", [
                 order: "asc",
                 select:
                     "id,name,priority,isActive,triggerType,eventCodes,waitPeriod," +
-                    "fromStageId,fromStageName,toStageId,toStageName,journeyId",
+                    "scope,fromStageId,fromStageName,toStageId,toStageName,journeyId",
                 where: [
                     {
                         type: "equals",
@@ -328,6 +354,7 @@ define("feature-journey:views/journey/record/panels/flow", [
                     this.loading = false;
                     this.stages = [];
                     this.enrollmentTransitions = [];
+                    this.journeyWideTransitions = [];
                     this._flowInFlight = false;
 
                     if (this._flowQueued) {
@@ -370,7 +397,11 @@ define("feature-journey:views/journey/record/panels/flow", [
             });
 
             this.enrollmentTransitions = transitions
-                .filter((t) => !t.fromStageId)
+                .filter((t) => this.scopeOf(t) === "enrollment")
+                .map((t) => this.mapTransition(t, stageNameById));
+
+            this.journeyWideTransitions = transitions
+                .filter((t) => this.scopeOf(t) === "journey")
                 .map((t) => this.mapTransition(t, stageNameById));
 
             this.stages = stages.map((s) => {
@@ -410,7 +441,9 @@ define("feature-journey:views/journey/record/panels/flow", [
                     });
 
                 const outTransitions = transitions
-                    .filter((t) => t.fromStageId === s.id)
+                    .filter((t) =>
+                        this.scopeOf(t) === "stage" && t.fromStageId === s.id
+                    )
                     .map((t) => this.mapTransition(t, stageNameById));
 
                 const style = s.style || "default";
@@ -450,6 +483,18 @@ define("feature-journey:views/journey/record/panels/flow", [
             };
         },
 
+        scopeOf: function (transition) {
+            if (
+                transition.scope === "stage" ||
+                transition.scope === "journey" ||
+                transition.scope === "enrollment"
+            ) {
+                return transition.scope;
+            }
+
+            return transition.fromStageId ? "stage" : "enrollment";
+        },
+
         headBgFor: function (stageType, style) {
             if (stageType === "Entry") {
                 return "#f0f7ff";
@@ -477,6 +522,7 @@ define("feature-journey:views/journey/record/panels/flow", [
             this.createRelated("JourneyTransition", {
                 journeyId: this.model.id,
                 journeyName: this.model.get("name"),
+                scope: "enrollment",
             });
         },
 
@@ -489,6 +535,7 @@ define("feature-journey:views/journey/record/panels/flow", [
             this.createRelated("JourneyTransition", {
                 journeyId: this.model.id,
                 journeyName: this.model.get("name"),
+                scope: "stage",
                 fromStageId: stageId,
                 fromStageName: stage ? stage.name : null,
             });

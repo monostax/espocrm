@@ -108,6 +108,33 @@
             "readOnly": true,
             "layoutDetailDisabled": true,
             "layoutListDisabled": true
+        },
+        "whatsAppChatwootConversationId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
+        "whatsAppChatwootAccountId": {
+            "type": "varchar",
+            "maxLength": 17,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
+        "whatsAppLastReplyChatwootMessageId": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
         }
     },
     "links": {
@@ -200,6 +227,19 @@
                 "targetId",
                 "deleted"
             ]
+        },
+        "whatsAppConversation": {
+            "columns": [
+                "whatsAppChatwootConversationId",
+                "whatsAppChatwootAccountId",
+                "status",
+                "deleted"
+            ]
         }
+    },
+    "cascadeDelete": {
+        "links": [
+            "logs"
+        ]
     }
 }

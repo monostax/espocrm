@@ -60,20 +60,37 @@ class EntityChangeDispatcher
                 ->getRDBRepository(JourneyTransition::ENTITY_TYPE)
                 ->where([
                     'journeyId' => $record->get('journeyId'),
-                    'fromStageId' => $record->get('currentStageId'),
                     'isActive' => true,
                 ])
                 ->order('priority', 'ASC')
                 ->find();
 
+            $candidates = [];
+
             foreach ($transitions as $transition) {
+                if (!JourneyTransition::appliesToStage($transition, (string) $record->get('currentStageId'))) {
+                    continue;
+                }
+
                 if (!JourneyTransition::entityWakesOn($transition, JourneyTransition::TRIGGER_ENTITY_CHANGE)) {
                     continue;
                 }
 
-                $this->queue((string) $record->getId(), (string) $transition->getId());
-                break;
+                $candidates[] = $transition;
             }
+
+            if ($candidates === []) {
+                continue;
+            }
+
+            usort($candidates, [JourneyTransition::class, 'compareForRecord']);
+            $this->queue(
+                (string) $record->getId(),
+                array_map(
+                    static fn (Entity $transition): string => (string) $transition->getId(),
+                    $candidates,
+                ),
+            );
         }
     }
 
@@ -135,7 +152,10 @@ class EntityChangeDispatcher
         return $has;
     }
 
-    private function queue(string $recordId, string $transitionId): void
+    /**
+     * @param non-empty-list<string> $transitionIds
+     */
+    private function queue(string $recordId, array $transitionIds): void
     {
         try {
             $this->jobSchedulerFactory
@@ -143,7 +163,8 @@ class EntityChangeDispatcher
                 ->setClassName(ProcessJourneyTransition::class)
                 ->setData([
                     'journeyRecordId' => $recordId,
-                    'transitionId' => $transitionId,
+                    'transitionId' => $transitionIds[0],
+                    'transitionIds' => $transitionIds,
                     'signal' => null,
                     'firedBy' => 'entityChange',
                 ])

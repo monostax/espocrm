@@ -16,6 +16,7 @@ use Espo\Core\Api\Response;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
 use Espo\ORM\EntityManager;
@@ -45,6 +46,7 @@ class DeliveryWebhook
     public function __construct(
         private EntityManager $entityManager,
         private WhatsAppOptOutService $optOutService,
+        private InjectableFactory $injectableFactory,
         private Log $log
     ) {}
 
@@ -127,15 +129,30 @@ class DeliveryWebhook
         }
 
         $conversationId = null;
+        $conversationIdCandidates = [];
 
         if (isset($data->conversation->display_id)) {
             $conversationId = (string) $data->conversation->display_id;
-        } elseif (isset($data->conversation->id)) {
-            $conversationId = (string) $data->conversation->id;
+            $conversationIdCandidates[] = $conversationId;
+        }
+        if (isset($data->conversation->id)) {
+            $idStr = (string) $data->conversation->id;
+            if ($conversationId === null) {
+                $conversationId = $idStr;
+            }
+            if (!in_array($idStr, $conversationIdCandidates, true)) {
+                $conversationIdCandidates[] = $idStr;
+            }
         }
 
         if (!$conversationId) {
             return (object) ['success' => true, 'message' => 'No conversation ID in payload.'];
+        }
+
+        // Real-time journey signal (soft-dep on FeatureJourney). ChatwootMessage
+        // sync remains a backfill/idempotent second path. Try display_id and id.
+        foreach ($conversationIdCandidates as $candidateId) {
+            $this->tryDispatchJourneyWhatsAppReply($data, $candidateId, $espoAccountId);
         }
 
         // Chatwoot conversation display_id is only unique WITHIN an account and
@@ -179,6 +196,44 @@ class DeliveryWebhook
         );
 
         return (object) ['success' => true];
+    }
+
+    /**
+     * Soft-dep FeatureJourney `whatsapp_replied` when conversation was
+     * stamped by a journey outbound send.
+     */
+    private function tryDispatchJourneyWhatsAppReply(
+        object $data,
+        string $conversationId,
+        string $espoAccountId,
+    ): void {
+        $trackerClass = 'Espo\\Modules\\FeatureJourney\\Services\\JourneyWhatsAppReplyTracker';
+
+        if (!class_exists($trackerClass)) {
+            return;
+        }
+
+        try {
+            $tracker = $this->injectableFactory->create($trackerClass);
+
+            if (!method_exists($tracker, 'handleWebhookIncoming')) {
+                return;
+            }
+
+            $content = isset($data->content) && is_string($data->content) ? $data->content : null;
+            $messageId = $data->id ?? null;
+
+            $tracker->handleWebhookIncoming([
+                'chatwootConversationId' => $conversationId,
+                'espoAccountId' => $espoAccountId,
+                'chatwootMessageId' => $messageId,
+                'content' => $content,
+            ]);
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                'DeliveryWebhook: journey whatsapp_replied dispatch failed: ' . $e->getMessage()
+            );
+        }
     }
 
     /**

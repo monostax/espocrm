@@ -60,6 +60,7 @@ class CreateRelatedRecord implements Action
         }
 
         $this->wireRelationBeforeSave($target, $entity, $link);
+        $this->applyContactAccountDefaults($target, $entity);
 
         $teamsIds = $this->tenantGuard->getJourneyTeamsIds($context->journey);
         $this->tenantGuard->stampNewEntity($entity, $tenantId, $teamsIds);
@@ -101,6 +102,33 @@ class CreateRelatedRecord implements Action
                 $entity->set('parentType', $target->getEntityType());
             }
         }
+    }
+
+    /**
+     * When the target is a Contact and the new record can take accountId,
+     * copy the contact's primary account if fields left it empty.
+     */
+    private function applyContactAccountDefaults(Entity $target, Entity $entity): void
+    {
+        if ($target->getEntityType() !== 'Contact') {
+            return;
+        }
+
+        if (!$entity->hasAttribute('accountId')) {
+            return;
+        }
+
+        $existing = $entity->get('accountId');
+        if (is_string($existing) && $existing !== '') {
+            return;
+        }
+
+        $accountId = $target->get('accountId');
+        if (!is_string($accountId) || $accountId === '') {
+            return;
+        }
+
+        $entity->set('accountId', $accountId);
     }
 
     private function wireRelationAfterSave(Entity $target, Entity $entity, string $link): void

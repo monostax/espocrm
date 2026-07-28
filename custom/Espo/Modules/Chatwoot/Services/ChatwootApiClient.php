@@ -1916,17 +1916,18 @@ public function getInboxVoipCredentialConfig(
 }
 
 /**
- * Get non-redacted Google OAuth credentials for an email inbox.
+ * Get non-redacted Google/Microsoft OAuth credentials for an email inbox.
  *
  * Hits the privileged Chatwoot endpoint
  *   GET /api/v1/accounts/{account_id}/inboxes/{inbox_id}/email_oauth_credentials
- * which returns only the Google OAuth grant omitted from normal inbox JSON,
+ * which returns only the OAuth grant omitted from normal inbox JSON,
  * plus the non-secret OAuth client ID needed to validate refresh compatibility.
  * Requires an account API key belonging to a user who can update the inbox.
  *
- * A Google inbox without a grant returns `{ provider: google, active: false }`
- * so callers can revoke its source-managed CRM mirror. Returns null on HTTP
- * 404 when the inbox is not Google OAuth or the endpoint is not deployed yet.
+ * An OAuth inbox without a grant returns `{ provider, active: false }` so
+ * callers can revoke its source-managed CRM mirror. Returns null on HTTP 404
+ * when the inbox is not a supported email OAuth provider or the endpoint is
+ * not deployed yet.
  *
  * @param string $platformUrl The Chatwoot platform URL
  * @param string $accountApiKey The account API key

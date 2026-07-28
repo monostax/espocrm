@@ -34,6 +34,8 @@ class JourneyPublishService
         private JourneyEnrollmentService $enrollmentService,
         private JourneyRunIdentity $identity,
         private Metadata $metadata,
+        private RestrictedFormulaRunner $formulaRunner,
+        private ActionConditionEvaluator $conditionEvaluator,
     ) {}
 
     /**
@@ -121,6 +123,29 @@ class JourneyPublishService
                 'no_terminal_stage',
                 'No active Success or Exit stage. People may stay in the journey indefinitely.'
             );
+        }
+
+        if ($this->hasGoalConfiguration($journey)) {
+            $goalSuccessStageId = (string) ($journey->get('goalSuccessStageId') ?? '');
+            $goalSuccessStage = $stageMap[$goalSuccessStageId] ?? null;
+
+            if ($goalSuccessStageId === '') {
+                $issues[] = $this->issue(
+                    'error',
+                    'goal_success_stage_required',
+                    'Choose an active Success step for goal completion.'
+                );
+            } elseif (
+                !$goalSuccessStage ||
+                !$goalSuccessStage->get('isActive') ||
+                $goalSuccessStage->get('stageType') !== JourneyStage::TYPE_SUCCESS
+            ) {
+                $issues[] = $this->issue(
+                    'error',
+                    'invalid_goal_success_stage',
+                    'The goal completion step must be an active Success step in this journey.'
+                );
+            }
         }
 
         if ($stagesWithMaxDuration !== []) {
@@ -371,6 +396,22 @@ class JourneyPublishService
         return $list;
     }
 
+    private function hasGoalConfiguration(Entity $journey): bool
+    {
+        $codes = $journey->get('goalEventCodes');
+        if (is_array($codes) && $codes !== []) {
+            return true;
+        }
+
+        $filter = $journey->get('goalEntityFilter');
+
+        if ($filter instanceof \stdClass) {
+            return (array) $filter !== [];
+        }
+
+        return is_array($filter) && $filter !== [];
+    }
+
     /**
      * @param list<Entity> $actions
      * @param array<string, Entity> $stageMap
@@ -407,6 +448,39 @@ class JourneyPublishService
                     "Action \"{$name}\" on step \"{$stageName}\" is not available (implementation missing).",
                     ['actionId' => $action->getId(), 'type' => $type]
                 );
+            }
+
+            $conditionFormula = $action->get('conditionFormula');
+            if (is_string($conditionFormula) && trim($conditionFormula) !== '') {
+                try {
+                    $this->formulaRunner->assertScriptAllowed(
+                        $conditionFormula,
+                        RestrictedFormulaRunner::MODE_CONDITION,
+                    );
+                } catch (\Throwable $e) {
+                    $issues[] = $this->issue(
+                        'error',
+                        'invalid_action_condition_formula',
+                        "Action \"{$name}\" on step \"{$stageName}\" has an invalid Run if formula: " .
+                        $e->getMessage(),
+                        ['actionId' => $action->getId()]
+                    );
+                }
+            }
+
+            $conditionsGroup = $action->get('conditionsGroup');
+            if (!$this->conditionEvaluator->isEmpty($conditionsGroup)) {
+                try {
+                    $this->conditionEvaluator->assertValid($conditionsGroup);
+                } catch (\Throwable $e) {
+                    $issues[] = $this->issue(
+                        'error',
+                        'invalid_action_conditions_group',
+                        "Action \"{$name}\" on step \"{$stageName}\" has invalid visual conditions: " .
+                        $e->getMessage(),
+                        ['actionId' => $action->getId()]
+                    );
+                }
             }
 
             $params = $action->get('params');
@@ -579,6 +653,7 @@ class JourneyPublishService
         return match ($type) {
             'sendEmail' => $this->firstNonEmpty([
                 (string) ($params['subject'] ?? ''),
+                (string) ($params['emailTemplateName'] ?? ''),
                 (string) ($params['templateName'] ?? ''),
                 !empty($params['inboundEmailId']) ? 'group account' : '',
                 !empty($params['emailAccountId']) ? 'personal account' : '',

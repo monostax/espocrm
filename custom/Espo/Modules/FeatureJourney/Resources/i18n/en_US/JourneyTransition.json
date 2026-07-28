@@ -2,6 +2,7 @@
     "fields": {
         "name": "Name",
         "journey": "Journey",
+        "scope": "Applies to",
         "fromStage": "From step",
         "toStage": "To step",
         "priority": "Priority",
@@ -65,6 +66,11 @@
         "lessThanOrEquals": "is less than or equal to"
     },
     "options": {
+        "scope": {
+            "stage": "One specific step",
+            "journey": "Any active step",
+            "enrollment": "New enrollment"
+        },
         "triggerType": {
             "signal": "When an event is received",
             "timer": "After waiting",
@@ -80,6 +86,8 @@
         },
         "eventCodes": {
             "email_replied": "Email reply received",
+            "email_bounced": "Email bounced",
+            "whatsapp_replied": "WhatsApp reply received",
             "link_clicked": "Tracking link clicked",
             "opportunity_created": "Opportunity created",
             "opportunity_stage_changed": "Opportunity stage changed",
@@ -115,6 +123,16 @@
         "fromAddress": "From address",
         "emailId": "Reply email id",
         "repliedEmailId": "Original email id",
+        "isHard": "Hard bounce",
+        "statusCode": "Bounce status code",
+        "toAddress": "Bounced recipient",
+        "messageId": "Message id",
+        "chatwootMessageId": "Chatwoot message id",
+        "conversationId": "Conversation id (CRM)",
+        "chatwootConversationId": "Chatwoot conversation id",
+        "contentPreview": "Message preview",
+        "inboxId": "Inbox id",
+        "channelType": "Channel type",
         "journeyToken": "Journey token",
         "journeyId": "Journey id",
         "journeyRecordId": "Journey record id",
@@ -147,7 +165,8 @@
         "exitReason": "Exit reason"
     },
     "tooltips": {
-        "fromStage": "Leave empty for how a record first enters the journey.",
+        "scope": "Choose a specific source step, any active step in this journey, or a rule for new enrollments.",
+        "fromStage": "Required only when Applies to is One specific step.",
         "toStage": "Where the record goes next when this connection fires.",
         "waitPeriod": "Set automatically from “time in step” rules.",
         "eventCodes": "Set automatically from the event rules.",

@@ -1,4 +1,5 @@
 {
+    "mandatoryAttributeList": ["providerType"],
     "beforeCreateHookClassNameList": [
         "__APPEND__",
         "Espo\\Modules\\FeatureOAuthEnhanced\\Classes\\RecordHooks\\OAuthAccount\\ValidateAgentEgress"

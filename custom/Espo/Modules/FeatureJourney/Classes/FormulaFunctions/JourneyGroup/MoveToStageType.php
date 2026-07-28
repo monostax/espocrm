@@ -77,19 +77,40 @@ class MoveToStageType extends BaseFunction implements EntityManagerAware, Inject
                 ->order('priority', 'ASC')
                 ->find();
 
-            $transition = null;
+            $transitions = [];
 
             foreach ($candidates as $candidate) {
-                if (JourneyTransition::entityWakesOn($candidate, JourneyTransition::TRIGGER_MANUAL)) {
-                    $transition = $candidate;
-                    break;
+                if (!JourneyTransition::appliesToStage($candidate, (string) $record->get('currentStageId'))) {
+                    continue;
                 }
+
+                if (!JourneyTransition::entityWakesOn($candidate, JourneyTransition::TRIGGER_MANUAL)) {
+                    continue;
+                }
+
+                $transitions[] = $candidate;
             }
 
-            if ($transition) {
+            if ($transitions !== []) {
+                usort($transitions, [JourneyTransition::class, 'compareForRecord']);
                 $executor = $this->injectableFactory->create(TransitionExecutor::class);
 
-                return $executor->execute((string) $recordId, (string) $transition->getId(), null, 'formula');
+                foreach ($transitions as $transition) {
+                    $transitionId = (string) $transition->getId();
+
+                    if (!$executor->matches((string) $recordId, $transitionId, null, 'formula')) {
+                        continue;
+                    }
+
+                    return $executor->executeMatched(
+                        (string) $recordId,
+                        $transitionId,
+                        null,
+                        'formula',
+                    );
+                }
+
+                return false;
             }
 
             $record->set([

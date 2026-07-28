@@ -66,6 +66,7 @@
         "opportunity_created": "Opportunity Created",
         "opportunity_won": "Opportunity Won",
         "opportunity_lost": "Opportunity Lost",
-        "email_replied": "Email Replied"
+        "email_replied": "Email Replied",
+        "whatsapp_replied": "WhatsApp Replied"
     }
 }

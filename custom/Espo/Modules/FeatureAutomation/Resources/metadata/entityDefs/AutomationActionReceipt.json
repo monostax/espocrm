@@ -54,7 +54,8 @@
     "links": {
         "automation": {
             "type": "belongsTo",
-            "entity": "Automation"
+            "entity": "Automation",
+            "foreign": "receipts"
         },
         "tenant": {
             "type": "belongsTo",

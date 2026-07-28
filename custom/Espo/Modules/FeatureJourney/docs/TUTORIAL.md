@@ -51,19 +51,23 @@ Rules to remember:
 
 - Exactly **one active Entry** stage per journey.
 - Enrollment always lands on Entry.
-- **Success** / **Exit** complete the enrollment (Success can also pair with goal counting).
+- **Success** / **Exit** complete the enrollment; goal matches enter the selected Success step.
+
+Return to the journey's **Goal** panel and set **Goal success step** to `Done`. Goal-enabled journeys
+cannot be turned on until an active Success destination is selected.
 
 ---
 
 ## 4. Enrollment transition (into Entry)
 
-Transitions with **empty From Stage** are enrollment rules.
+Transitions with **Applies to = New enrollment** are enrollment rules. Their From Stage stays empty.
 
 Create transition:
 
 | Field | Value |
 |---|---|
 | **Name** | `Enroll from audience` |
+| **Applies to** | `New enrollment` |
 | **From Stage** | *(empty)* |
 | **To Stage** | `New` |
 | **Trigger Type** | `manual` *(or leave simple — activation enrollment places targets on Entry directly)* |
@@ -133,7 +137,8 @@ If FeatureTrackingEvent is installed:
 | Field | Value |
 |---|---|
 | **Name** | `Demo booked` |
-| **From** | `New` *(or leave broader with conditions)* |
+| **Applies to** | `Any active step` for a journey-wide fast path, or `One specific step` |
+| **From** | `New` when using one specific step; otherwise empty |
 | **To** | `Done` |
 | **Trigger** | `signal` |
 | **Event Codes** | `demo_booked` |

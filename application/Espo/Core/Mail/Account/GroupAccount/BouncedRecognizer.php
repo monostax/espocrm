@@ -143,6 +143,71 @@ class BouncedRecognizer
         return null;
     }
 
+    /**
+     * Final-Recipient from delivery-status (or plain body), if present.
+     */
+    public function extractFinalRecipient(Message $message): ?string
+    {
+        $content = $message->getRawContent();
+
+        if (preg_match('/Final-Recipient:\s*(?:rfc822;)\s*([^\s;<>]+)/i', $content, $m)) {
+            return strtolower(trim($m[1], " \t\"'<>"));
+        }
+
+        if (preg_match('/(?:The following message to|was undeliverable\.?)\s*<([^>]+)>/i', $content, $m)) {
+            return strtolower(trim($m[1]));
+        }
+
+        return null;
+    }
+
+    /**
+     * Original Message-ID values from the DSN (Original-Message-ID + nested rfc822 headers).
+     * Correlates journey outbound via Email.messageId / journeyToken embedded in Message-ID.
+     *
+     * @return list<string>
+     */
+    public function extractOriginalMessageIds(Message $message): array
+    {
+        $content = $message->getRawContent();
+        $ids = [];
+
+        if (preg_match_all('/Original-Message-ID:\s*(<[^>\r\n]+>|[^:\s<>]+@[^\s<>]+)/i', $content, $matches)) {
+            foreach ($matches[1] as $raw) {
+                $normalized = $this->normalizeMessageId((string) $raw);
+                if ($normalized !== null) {
+                    $ids[] = $normalized;
+                }
+            }
+        }
+
+        // Nested original headers (message/rfc822 or text/rfc822-headers).
+        if (preg_match_all('/(?:^|\n)Message-I[Dd]:\s*(<[^>\r\n]+>)/', $content, $matches)) {
+            foreach ($matches[1] as $raw) {
+                $normalized = $this->normalizeMessageId((string) $raw);
+                if ($normalized !== null) {
+                    $ids[] = $normalized;
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    private function normalizeMessageId(string $raw): ?string
+    {
+        $id = trim($raw);
+        if ($id === '') {
+            return null;
+        }
+
+        if ($id[0] !== '<') {
+            $id = '<' . rtrim($id, '>') . '>';
+        }
+
+        return $id;
+    }
+
     private function getDeliveryStatusPart(Message $message): ?Part
     {
         foreach ($message->getPartList() as $part) {

@@ -11,16 +11,21 @@
             ],
             [
                 {
-                    "name": "fromStage"
+                    "name": "scope"
                 },
                 {
-                    "name": "toStage"
+                    "name": "fromStage"
                 }
             ],
             [
                 {
-                    "name": "priority"
+                    "name": "toStage"
                 },
+                {
+                    "name": "priority"
+                }
+            ],
+            [
                 {
                     "name": "isActive"
                 }

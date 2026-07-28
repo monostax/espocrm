@@ -197,6 +197,12 @@
             "type": "hasMany",
             "entity": "AutomationRun",
             "foreign": "automation"
+        },
+        "receipts": {
+            "type": "hasMany",
+            "entity": "AutomationActionReceipt",
+            "foreign": "automation",
+            "layoutRelationshipsDisabled": true
         }
     },
     "collection": {
@@ -213,5 +219,11 @@
         "tenantId": {
             "columns": ["tenantId", "deleted"]
         }
+    },
+    "cascadeDelete": {
+        "links": [
+            "runs",
+            "receipts"
+        ]
     }
 }

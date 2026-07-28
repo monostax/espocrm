@@ -55,7 +55,8 @@
         },
         "allowReEnrollment": {
             "type": "bool",
-            "default": false
+            "default": false,
+            "tooltip": true
         },
         "goalEventCodes": {
             "type": "multiEnum",
@@ -65,6 +66,11 @@
         "goalEntityFilter": {
             "type": "jsonObject",
             "view": "feature-journey:views/fields/entity-where",
+            "tooltip": true
+        },
+        "goalSuccessStage": {
+            "type": "link",
+            "view": "feature-journey:views/journey/fields/goal-success-stage",
             "tooltip": true
         },
         "activeCount": {
@@ -169,6 +175,10 @@
             "foreign": "journeysExcluding",
             "relationName": "journeyTargetListExcluding"
         },
+        "goalSuccessStage": {
+            "type": "belongsTo",
+            "entity": "JourneyStage"
+        },
         "stages": {
             "type": "hasMany",
             "entity": "JourneyStage",
@@ -227,5 +237,26 @@
                 "id"
             ]
         }
+    },
+    "cascadeDelete": {
+        "links": [
+            "records",
+            "transitions",
+            "stages"
+        ],
+        "junctionTables": [
+            {
+                "table": "JourneyTargetList",
+                "column": "journeyId"
+            },
+            {
+                "table": "JourneyManualContact",
+                "column": "journeyId"
+            },
+            {
+                "table": "JourneyTargetListExcluding",
+                "column": "journeyId"
+            }
+        ]
     }
 }

@@ -33,7 +33,7 @@ use Espo\ORM\EntityManager;
 /**
  * Keeps agent avatars in sync between an EspoCRM {@see User} (the CRM-side
  * identity) and its Chatwoot counterpart (the {@see ChatwootUser} entity plus
- * the Chatwoot Platform user behind it).
+ * the Chatwoot platform user behind it).
  *
  * ## Directions
  *
@@ -44,29 +44,29 @@ use Espo\ORM\EntityManager;
  *
  *   - **Chatwoot → CRM** (pull): invoked by the
  *     `ChatwootAccountUserMembership.afterSave` hook when `avatarUrl` is dirty.
- *     Downloads the hosted thumbnail, creates a fresh `Attachment` row, and
- *     overwrites the CRM user's `avatarId` unconditionally (per product
- *     decision — Chatwoot is the source of truth for agent avatar when it
- *     changes there).
+ *     Downloads the hosted **original blob** (not the 250px representation),
+ *     creates a fresh `Attachment` row, and overwrites the CRM user's
+ *     `avatarId` when Chatwoot is the source of a real change.
  *
- * ## Loop prevention
+ * ## Loop / quality-loss prevention
  *
- * Without guards, the two directions would chase each other indefinitely:
- * a CRM avatar change pushes to Chatwoot, the sync job pulls back the
- * (re-encoded) thumbnail, that triggers `User.afterSave` again, which pushes
- * again, etc.
+ * Chatwoot's public `thumbnail` / UI `avatar_url` is an Active Storage
+ * `representation(resize_to_fill: [250, nil])` — a fresh JPEG re-encode on
+ * every generation. Pulling that back into the CRM and then re-pushing it
+ * caused generational loss that collapsed avatars into grayscale noise after
+ * enough round-trips (see {@see \Espo\Modules\Chatwoot\Rebuild\CleanupAgentAvatarSyncLoop}).
  *
- * We defeat this with **two content-hash columns on `ChatwootUser`**:
+ * Defenses:
  *
- *   - `crmAvatarSyncHash` — SHA-256 of the attachment bytes we last *pushed*
- *     to (or mirrored into) Chatwoot.
- *   - `chatwootAvatarSyncHash` — SHA-256 of the thumbnail bytes we last *pulled*
- *     from Chatwoot.
- *
- * Each direction short-circuits when the bytes it's about to move match the
- * corresponding column. After a pull, both columns are set to the downloaded
- * hash so the `User.afterSave` hook that fires from the ensuing `avatarId`
- * change recognises the bytes as "ours" and declines to push.
+ *   1. Membership sync prefers Chatwoot's `avatar_original_url` (raw blob).
+ *   2. Representation URLs (`.../representations/...`) never overwrite an existing
+ *      CRM avatar; if CRM already has bytes we re-push them to heal CW.
+ *   3. Two content-hash columns on `ChatwootUser`:
+ *        - `crmAvatarSyncHash` — SHA-256 of bytes last *pushed* to CW
+ *        - `chatwootAvatarSyncHash` — SHA-256 of bytes last *pulled* from CW
+ *      Each direction short-circuits when bytes match the corresponding column.
+ *      After a successful pull both columns are aligned so the ensuing
+ *      `User.afterSave` push no-ops.
  *
  * ## Best-effort policy
  *
@@ -214,10 +214,10 @@ class AgentAvatarSyncService
 
         // Loop-break (defense-in-depth): never push back bytes that we just
         // pulled *from* Chatwoot. If the CRM avatar is byte-identical to the
-        // last thumbnail we mirrored down (`chatwootAvatarSyncHash`), pushing
-        // it would make Chatwoot re-encode it, we'd pull the re-encode, and the
-        // image would degrade one generation per round-trip. Realign the push
-        // hash so subsequent unrelated saves also no-op.
+        // last bytes we mirrored down (`chatwootAvatarSyncHash`), pushing
+        // it would make Chatwoot re-encode a thumbnail, we'd pull the re-encode,
+        // and the image would degrade one generation per round-trip. Realign
+        // the push hash so subsequent unrelated saves also no-op.
         if ($payload !== null && $chatwootUser->get('chatwootAvatarSyncHash') === $newHash) {
             if ($chatwootUser->get('crmAvatarSyncHash') !== $newHash) {
                 $chatwootUser->set('crmAvatarSyncHash', $newHash);
@@ -368,9 +368,28 @@ class AgentAvatarSyncService
      * Download `$avatarUrl`, make it the new CRM User avatar, and align both
      * hash columns so the resulting `User.afterSave` push hook sees the bytes
      * as "already in sync" and no-ops.
+     *
+     * Representation (thumbnail) URLs never clobber an existing CRM avatar —
+     * they are a re-encode of the original and would degrade quality. When CRM
+     * already has an avatar we instead re-push it so Chatwoot recovers.
      */
     private function applyAvatarUrlToCrmUser(Entity $crmUser, Entity $chatwootUser, string $avatarUrl): void
     {
+        // Hard guard: never ingest Active Storage *representations* over a
+        // good CRM avatar. Those are lossy 250px variants; round-tripping them
+        // causes generation loss (grayscale noise). Prefer healing CW from CRM
+        // when CRM still has a clean original (not a legacy noisy `cw-avatar-*`).
+        if ($this->isActiveStorageRepresentationUrl($avatarUrl) && $crmUser->get('avatarId')) {
+            $this->log->info(
+                'AgentAvatarSyncService: Refusing CW representation URL for CRM User ' .
+                $crmUser->getId() . ' — keeping CRM avatar'
+            );
+
+            $this->maybeHealPushCrmAvatar($crmUser, $chatwootUser);
+
+            return;
+        }
+
         $bytes = $this->apiClient->downloadBinary($avatarUrl);
 
         if ($bytes === '') {
@@ -380,9 +399,27 @@ class AgentAvatarSyncService
         $hash = $this->computeHash($bytes);
 
         if ($chatwootUser->get('chatwootAvatarSyncHash') === $hash) {
-            // This thumbnail is byte-identical to the last one we synced;
-            // the avatarUrl changed (ActiveStorage variant URLs rotate) but
+            // This avatar is byte-identical to the last one we synced;
+            // the avatarUrl changed (ActiveStorage signed URLs rotate) but
             // the underlying image didn't. Skip to avoid a no-op write loop.
+            return;
+        }
+
+        // When CRM already has larger bytes than the download, refuse to
+        // downgrade (e.g. mixed deployment before CW exposes original URL).
+        if ($crmUser->get('avatarId') && $this->wouldDegradeCrmAvatar((string) $crmUser->get('avatarId'), $bytes)) {
+            $this->log->info(
+                'AgentAvatarSyncService: Skipping CW→CRM pull for User ' .
+                $crmUser->getId() . ' — download is smaller than existing CRM avatar'
+            );
+
+            // Remember download hash so URL rotation doesn't re-trigger; leave
+            // crmAvatarSyncHash alone so a later CRM push still runs.
+            $chatwootUser->set('chatwootAvatarSyncHash', $hash);
+            $this->entityManager->saveEntity($chatwootUser, ['silent' => true, 'skipHooks' => true]);
+
+            $this->maybeHealPushCrmAvatar($crmUser, $chatwootUser);
+
             return;
         }
 
@@ -406,7 +443,8 @@ class AgentAvatarSyncService
 
         $this->log->info(
             'AgentAvatarSyncService: Mirrored Chatwoot avatar onto CRM User ' .
-            $crmUser->getId() . ' from ChatwootUser ' . $chatwootUser->getId()
+            $crmUser->getId() . ' from ChatwootUser ' . $chatwootUser->getId() .
+            ($this->isActiveStorageRepresentationUrl($avatarUrl) ? ' (representation seed)' : ' (original blob)')
         );
     }
 
@@ -486,6 +524,72 @@ class AgentAvatarSyncService
     }
 
     /**
+     * Active Storage variant/representation redirect path — always a lossy
+     * transform of the master blob when used for avatars (`resize_to_fill`).
+     */
+    private function isActiveStorageRepresentationUrl(string $url): bool
+    {
+        return str_contains($url, '/rails/active_storage/representations/');
+    }
+
+    /**
+     * Re-push CRM avatar to Chatwoot when it is a clean original (not a
+     * corrupted `cw-avatar-*` residue of the historical sync loop).
+     */
+    private function maybeHealPushCrmAvatar(Entity $crmUser, Entity $chatwootUser): void
+    {
+        $avatarId = $crmUser->get('avatarId');
+        if (!$avatarId) {
+            return;
+        }
+
+        $payload = $this->loadAttachmentPayload((string) $avatarId);
+        if ($payload === null) {
+            return;
+        }
+
+        if (str_starts_with($payload['name'], 'cw-avatar-')) {
+            $this->log->debug(
+                'AgentAvatarSyncService: Skipping heal-push for CRM User ' .
+                $crmUser->getId() . ' — current avatar is a corrupted cw-avatar-* residue'
+            );
+            return;
+        }
+
+        try {
+            $this->pushToChatwootUser($chatwootUser, $payload);
+        } catch (\Throwable $e) {
+            $this->log->warning(
+                'AgentAvatarSyncService: Heal-push failed for ChatwootUser ' .
+                $chatwootUser->getId() . ' — ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * True when the download is sneakily smaller than the current CRM avatar
+     * (strong signal of a 250px variant / re-encode vs a full original).
+     * Uses an 85% threshold to absorb innocent format conversion shrinkage.
+     */
+    private function wouldDegradeCrmAvatar(string $existingAttachmentId, string $newBytes): bool
+    {
+        $existing = $this->loadAttachmentPayload($existingAttachmentId);
+
+        if ($existing === null) {
+            return false;
+        }
+
+        $existingSize = strlen($existing['bytes']);
+        $newSize = strlen($newBytes);
+
+        if ($existingSize <= 0 || $newSize <= 0) {
+            return false;
+        }
+
+        return $newSize < (int) floor($existingSize * 0.85);
+    }
+
+    /**
      * Best-effort MIME sniffing. `finfo` on a raw buffer beats parsing the URL
      * (ActiveStorage paths rarely carry the right extension). Falls back to
      * the URL's extension, then `image/png`.
@@ -518,15 +622,12 @@ class AgentAvatarSyncService
      * Produce a reasonable filename for the mirrored Attachment. Falls back
      * to a MIME-derived extension when the URL doesn't have one (Chatwoot's
      * `rails/active_storage/blobs/redirect/...` URLs usually don't).
+     *
+     * Never preserve legacy `cw-avatar-*` basenames from corrupted loop blobs —
+     * those names mark unusable noise for CleanupAgentAvatarSyncLoop.
      */
     private function deriveFilename(string $url, string $mime): string
     {
-        $basename = basename(parse_url($url, PHP_URL_PATH) ?: '');
-
-        if ($basename !== '' && pathinfo($basename, PATHINFO_EXTENSION) !== '') {
-            return $basename;
-        }
-
         $extension = match ($mime) {
             'image/jpeg' => 'jpg',
             'image/gif' => 'gif',
@@ -534,6 +635,16 @@ class AgentAvatarSyncService
             'image/svg+xml' => 'svg',
             default => 'png',
         };
+
+        $basename = basename(parse_url($url, PHP_URL_PATH) ?: '');
+
+        if (
+            $basename !== '' &&
+            pathinfo($basename, PATHINFO_EXTENSION) !== '' &&
+            !str_starts_with($basename, 'cw-avatar-')
+        ) {
+            return $basename;
+        }
 
         return 'avatar.' . $extension;
     }

@@ -18,6 +18,9 @@ class ValidateStructure implements BeforeSave
     private const LOCKED = [
         'targetEntityType',
         'allowReEnrollment',
+        'goalEventCodes',
+        'goalEntityFilter',
+        'goalSuccessStageId',
     ];
 
     public function beforeSave(Entity $entity, SaveOptions $options): void

@@ -641,12 +641,8 @@ class ChatwootAccountUserMembershipService
         if (isset($response['confirmed'])) {
             $membership->set('confirmed', $response['confirmed']);
         }
-        // Prefer the original blob URL (`avatar_url`) over the resized
-        // `thumbnail` representation. The thumbnail is a `resize_to_fill`
-        // re-encode whose bytes differ from what we push, so mirroring it back
-        // would never byte-match `crmAvatarSyncHash` and would drive an
-        // infinite re-encode loop (generation loss → grayscale noise).
-        $avatarUrl = $response['avatar_url'] ?? $response['thumbnail'] ?? null;
+        // Prefer original blob over resized thumbnail (generation-loss loop).
+        $avatarUrl = $this->pickAgentAvatarUrl($response);
         if ($avatarUrl !== null) {
             $membership->set('avatarUrl', $avatarUrl);
         }
@@ -692,6 +688,36 @@ class ChatwootAccountUserMembershipService
         return str_contains($normalized, 'already been taken') ||
             str_contains($normalized, 'already exists') ||
             str_contains($normalized, 'has already been taken');
+    }
+
+    /**
+     * Prefer lossless original blob URL for avatar sync.
+     *
+     * @param array<string, mixed> $agentData
+     */
+    private function pickAgentAvatarUrl(array $agentData): ?string
+    {
+        $candidates = [];
+
+        foreach (['avatar_original_url', 'avatar_url', 'thumbnail'] as $key) {
+            $url = $agentData[$key] ?? null;
+
+            if (is_string($url) && $url !== '') {
+                $candidates[] = $url;
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        foreach ($candidates as $url) {
+            if (!str_contains($url, '/rails/active_storage/representations/')) {
+                return $url;
+            }
+        }
+
+        return $candidates[0];
     }
 
     /**

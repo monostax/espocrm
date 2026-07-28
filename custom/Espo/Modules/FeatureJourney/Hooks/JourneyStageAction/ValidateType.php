@@ -11,9 +11,12 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyStage;
+use Espo\Modules\FeatureJourney\Services\ActionConditionEvaluator;
+use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
+use Throwable;
 
 /** @implements BeforeSave<Entity> */
 class ValidateType implements BeforeSave
@@ -24,6 +27,8 @@ class ValidateType implements BeforeSave
         private EntityManager $entityManager,
         private Metadata $metadata,
         private User $user,
+        private RestrictedFormulaRunner $formulaRunner,
+        private ActionConditionEvaluator $conditionEvaluator,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
@@ -63,6 +68,27 @@ class ValidateType implements BeforeSave
         $tier = $meta['tier'] ?? 'tenant';
         if ($tier === 'platform' && !$this->user->isAdmin()) {
             throw new Forbidden("Action type '{$type}' is platform-tier (superadmin only).");
+        }
+
+        $conditionFormula = $entity->get('conditionFormula');
+        if (is_string($conditionFormula) && trim($conditionFormula) !== '') {
+            try {
+                $this->formulaRunner->assertScriptAllowed(
+                    $conditionFormula,
+                    RestrictedFormulaRunner::MODE_CONDITION,
+                );
+            } catch (Throwable $e) {
+                throw new BadRequest('conditionFormula is invalid: ' . $e->getMessage());
+            }
+        }
+
+        $conditionsGroup = $entity->get('conditionsGroup');
+        if (!$this->conditionEvaluator->isEmpty($conditionsGroup)) {
+            try {
+                $this->conditionEvaluator->assertValid($conditionsGroup);
+            } catch (Throwable $e) {
+                throw new BadRequest('conditionsGroup is invalid: ' . $e->getMessage());
+            }
         }
 
         $params = $entity->get('params');

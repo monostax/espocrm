@@ -1,6 +1,8 @@
 {
     "codeList": [
         "email_replied",
+        "email_bounced",
+        "whatsapp_replied",
         "link_clicked",
         "opportunity_created",
         "opportunity_stage_changed",
@@ -18,6 +20,31 @@
             "fromAddress",
             "emailId",
             "repliedEmailId",
+            "journeyId",
+            "journeyRecordId",
+            "targetType",
+            "targetId"
+        ],
+        "email_bounced": [
+            "emailId",
+            "isHard",
+            "statusCode",
+            "toAddress",
+            "messageId",
+            "journeyToken",
+            "journeyId",
+            "journeyRecordId",
+            "targetType",
+            "targetId"
+        ],
+        "whatsapp_replied": [
+            "messageId",
+            "chatwootMessageId",
+            "conversationId",
+            "chatwootConversationId",
+            "contentPreview",
+            "inboxId",
+            "channelType",
             "journeyId",
             "journeyRecordId",
             "targetType",

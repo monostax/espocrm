@@ -452,6 +452,16 @@ class EmailChannelBridge
             $entity->set('smtpSecurity', 'TLS');
             $entity->set('useSmtp', true);
         }
+
+        if ($provider === 'microsoft' && !$imapHost) {
+            $entity->set('host', 'outlook.office365.com');
+            $entity->set('port', 993);
+            $entity->set('security', 'SSL');
+            $entity->set('smtpHost', 'smtp.office365.com');
+            $entity->set('smtpPort', 587);
+            $entity->set('smtpSecurity', 'TLS');
+            $entity->set('useSmtp', true);
+        }
     }
 
     /**
@@ -499,14 +509,23 @@ class EmailChannelBridge
             }
         }
 
-        // Chatwoot cannot use CRM-side OAuthAccount tokens. A Gmail OAuth
-        // mailbox must be authorized in Chatwoot first and then mirrored back.
+        // Chatwoot cannot use CRM-side OAuthAccount tokens. Gmail / Microsoft 365
+        // OAuth mailboxes must be authorized in Chatwoot first (provider + tokens
+        // in provider_config) and then mirrored back via SyncEmailOAuthCredentials.
+        // Pushing hosts alone leaves Chatwoot on password IMAP with an empty
+        // password → AUTHENTICATE failed.
         $host = (string) ($mailbox->get('host') ?? '');
+        $requiresChatwootOAuth = str_contains($host, 'gmail.com')
+            || str_contains($host, 'office365.com')
+            || str_contains($host, 'outlook.office.com');
 
-        if (str_contains($host, 'gmail.com') && empty($channel['imap_password'])) {
+        if ($requiresChatwootOAuth && empty($channel['imap_password'])) {
+            $providerLabel = str_contains($host, 'gmail.com') ? 'Google' : 'Microsoft';
+
             throw new \RuntimeException(
-                'Chatwoot email inboxes require their own Google OAuth authorization. ' .
-                'Create the Gmail inbox in Chatwoot first, then sync it to CRM.'
+                "Chatwoot email inboxes require their own {$providerLabel} OAuth authorization. " .
+                "Create the {$providerLabel} inbox in Chatwoot first (or set an IMAP app password), " .
+                'then sync it to CRM. CRM-side OAuth alone is not enough for Chatwoot IMAP fetch.'
             );
         }
 

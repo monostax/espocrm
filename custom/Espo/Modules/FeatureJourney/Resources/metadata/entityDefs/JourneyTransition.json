@@ -8,6 +8,16 @@
             "type": "link",
             "required": true
         },
+        "scope": {
+            "type": "enum",
+            "options": [
+                "",
+                "stage",
+                "journey",
+                "enrollment"
+            ],
+            "tooltip": true
+        },
         "fromStage": {
             "type": "link",
             "view": "feature-journey:views/journey-transition/fields/stage-link"
@@ -175,6 +185,14 @@
         "fromStageActive": {
             "columns": [
                 "fromStageId",
+                "isActive",
+                "deleted"
+            ]
+        },
+        "journeyScopeActive": {
+            "columns": [
+                "journeyId",
+                "scope",
                 "isActive",
                 "deleted"
             ]

@@ -73,6 +73,12 @@
                     "name": "goalEntityFilter",
                     "fullWidth": true
                 }
+            ],
+            [
+                {
+                    "name": "goalSuccessStage",
+                    "fullWidth": true
+                }
             ]
         ]
     },

@@ -16,6 +16,17 @@ class JourneyTransition extends Entity
     public const TRIGGER_MANUAL = 'manual';
     public const TRIGGER_FORMULA = 'formula';
 
+    public const SCOPE_STAGE = 'stage';
+    public const SCOPE_JOURNEY = 'journey';
+    public const SCOPE_ENROLLMENT = 'enrollment';
+
+    /** @var list<string> */
+    public const SCOPES = [
+        self::SCOPE_STAGE,
+        self::SCOPE_JOURNEY,
+        self::SCOPE_ENROLLMENT,
+    ];
+
     /** @var list<string> */
     public const WAKE_SOURCES = [
         self::TRIGGER_SIGNAL,
@@ -136,5 +147,61 @@ class JourneyTransition extends Entity
     public static function entityWakesOn(Entity $entity, string $source): bool
     {
         return in_array($source, self::resolveWakeSources($entity), true);
+    }
+
+    /**
+     * Rows created before the scope field existed remain deterministic until rebuild backfills them.
+     */
+    public static function resolveScope(Entity $entity): string
+    {
+        if ($entity->get('fromStageId')) {
+            return self::SCOPE_STAGE;
+        }
+
+        $scope = $entity->get('scope');
+
+        if (is_string($scope) && in_array($scope, self::SCOPES, true)) {
+            return $scope;
+        }
+
+        return self::SCOPE_ENROLLMENT;
+    }
+
+    public static function appliesToStage(Entity $entity, ?string $stageId): bool
+    {
+        $scope = self::resolveScope($entity);
+
+        if ($scope === self::SCOPE_JOURNEY) {
+            return $stageId !== null && $stageId !== '';
+        }
+
+        if ($scope !== self::SCOPE_STAGE) {
+            return false;
+        }
+
+        $fromStageId = $entity->get('fromStageId');
+
+        return $stageId !== null && $stageId !== '' && (string) $fromStageId === $stageId;
+    }
+
+    /**
+     * Lower priority wins; a stage-specific edge wins a tie over a journey-wide edge.
+     */
+    public static function compareForRecord(Entity $a, Entity $b): int
+    {
+        $priority = (int) ($a->get('priority') ?? 10) <=> (int) ($b->get('priority') ?? 10);
+
+        if ($priority !== 0) {
+            return $priority;
+        }
+
+        $specificity = (self::resolveScope($a) === self::SCOPE_STAGE ? 0 : 1)
+            <=> (self::resolveScope($b) === self::SCOPE_STAGE ? 0 : 1);
+
+        if ($specificity !== 0) {
+            return $specificity;
+        }
+
+        return strcmp((string) $a->getId(), (string) $b->getId());
     }
 }

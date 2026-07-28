@@ -6,13 +6,16 @@ namespace Espo\Modules\FeatureJourney\Services;
 
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Htmlizer\TemplateRendererFactory;
+use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Utils\Log;
+use Espo\Entities\PhoneNumber;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
 use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\Repositories\PhoneNumber as PhoneNumberRepository;
 use Throwable;
 
 /**
@@ -127,10 +130,65 @@ class JourneyWhatsAppOutbound
         ];
     }
 
+    /**
+     * Single sendable phone (override, or first of {@see resolvePhones}).
+     */
     public function resolvePhone(Entity $target, ?string $override = null): ?string
     {
+        $phones = $this->resolvePhones($target, $override);
+
+        return $phones[0] ?? null;
+    }
+
+    /**
+     * All sendable phones on the target (primary + secondary).
+     *
+     * - Non-empty override → that number only (semicolon/comma/whitespace separated list allowed).
+     * - Otherwise: phoneNumberData (skip opted-out / invalid / Fax), then primary field fallbacks,
+     *   then ContactChannelIdentity whatsapp sourceIds when available.
+     *
+     * Matches WhatsAppCampaign multi-number enrollment semantics.
+     *
+     * @return list<string> E.164-normalized unique phones
+     */
+    public function resolvePhones(Entity $target, ?string $override = null): array
+    {
         if (is_string($override) && trim($override) !== '') {
-            return PhoneNormalizer::normalize(trim($override));
+            return $this->normalizePhoneList($override);
+        }
+
+        $phones = [];
+        $seen = [];
+
+        $append = function (?string $raw) use (&$phones, &$seen): void {
+            if ($raw === null || trim($raw) === '') {
+                return;
+            }
+            $n = PhoneNormalizer::normalize(trim($raw));
+            if ($n === null || isset($seen[$n])) {
+                return;
+            }
+            $seen[$n] = true;
+            $phones[] = $n;
+        };
+
+        if ($target->hasId()) {
+            try {
+                /** @var PhoneNumberRepository $repo */
+                $repo = $this->entityManager->getRepository(PhoneNumber::ENTITY_TYPE);
+
+                foreach ($repo->getPhoneNumberData($target) as $row) {
+                    if (!empty($row->optOut) || !empty($row->invalid)) {
+                        continue;
+                    }
+                    if (strcasecmp((string) ($row->type ?? ''), 'Fax') === 0) {
+                        continue;
+                    }
+                    $append(isset($row->phoneNumber) ? (string) $row->phoneNumber : null);
+                }
+            } catch (Throwable $e) {
+                $this->log->debug('JourneyWhatsApp: phoneNumberData: ' . $e->getMessage());
+            }
         }
 
         foreach (['phoneNumber', 'phoneNumberMobile', 'mobilePhone'] as $field) {
@@ -138,15 +196,57 @@ class JourneyWhatsAppOutbound
                 continue;
             }
             $raw = $target->get($field);
-            if (is_string($raw) && trim($raw) !== '') {
-                $n = PhoneNormalizer::normalize(trim($raw));
-                if ($n !== null) {
-                    return $n;
-                }
+            if (is_string($raw)) {
+                $append($raw);
             }
         }
 
-        return null;
+        // WhatsApp channel identities (multi-number) when not yet mirrored to phoneNumber.
+        if ($target->hasId() && $target->getEntityType() === 'Contact') {
+            try {
+                $identities = $this->entityManager
+                    ->getRDBRepository('ContactChannelIdentity')
+                    ->where([
+                        'contactId' => $target->getId(),
+                        'channelType' => 'whatsapp',
+                    ])
+                    ->select(['sourceId'])
+                    ->find();
+
+                foreach ($identities as $identity) {
+                    $append((string) ($identity->get('sourceId') ?? ''));
+                }
+            } catch (Throwable $e) {
+                $this->log->debug('JourneyWhatsApp: channel identities: ' . $e->getMessage());
+            }
+        }
+
+        return $phones;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function normalizePhoneList(string $raw): array
+    {
+        $parts = preg_split('/[\s,;]+/', $raw) ?: [];
+        $phones = [];
+        $seen = [];
+
+        foreach ($parts as $part) {
+            $part = trim((string) $part);
+            if ($part === '') {
+                continue;
+            }
+            $n = PhoneNormalizer::normalize($part);
+            if ($n === null || isset($seen[$n])) {
+                continue;
+            }
+            $seen[$n] = true;
+            $phones[] = $n;
+        }
+
+        return $phones;
     }
 
     public function isOptedOut(Entity $target): bool
@@ -172,51 +272,21 @@ class JourneyWhatsAppOutbound
     }
 
     /**
+     * Optional journey correlation context for reply tracking (`whatsapp_replied`).
+     *
+     * @param array{
+     *   journeyId?: string,
+     *   journeyRecordId?: string
+     * }|null $journeyContext
      * @param array<string, mixed> $conn from resolveConnection
      * @return array{message_id: mixed, conversation_id: mixed}
      */
-    public function sendFreeText(array $conn, string $phone, string $name, string $body): array
-    {
-        $contact = $this->chatwootApiClient->findOrCreateContact(
-            $conn['platformUrl'],
-            $conn['accountApiKey'],
-            $conn['externalAccountId'],
-            $conn['externalInboxId'],
-            $phone,
-            $name !== '' ? $name : null,
-        );
-
-        $contactId = (int) ($contact['id'] ?? 0);
-        if ($contactId <= 0) {
-            throw new Error('JourneyWhatsApp: failed to resolve Chatwoot contact id.');
-        }
-
-        return $this->chatwootApiClient->sendOutgoingMessage(
-            $conn['platformUrl'],
-            $conn['accountApiKey'],
-            $conn['externalAccountId'],
-            $contactId,
-            $conn['externalInboxId'],
-            $body,
-        );
-    }
-
-    /**
-     * @param array<string, mixed> $conn
-     * @param array<string, string> $params number => value
-     * @return array{message_id: mixed, conversation_id: mixed}
-     */
-    public function sendTemplate(
+    public function sendFreeText(
         array $conn,
         string $phone,
         string $name,
-        string $templateName,
-        string $language,
-        array $params = [],
-        string $category = 'UTILITY',
-        string $content = '',
-        ?string $headerMediaUrl = null,
-        ?string $headerMediaType = null,
+        string $body,
+        ?array $journeyContext = null,
     ): array {
         $contact = $this->chatwootApiClient->findOrCreateContact(
             $conn['platformUrl'],
@@ -232,7 +302,57 @@ class JourneyWhatsAppOutbound
             throw new Error('JourneyWhatsApp: failed to resolve Chatwoot contact id.');
         }
 
-        return $this->chatwootApiClient->sendTemplateMessage(
+        $result = $this->chatwootApiClient->sendOutgoingMessage(
+            $conn['platformUrl'],
+            $conn['accountApiKey'],
+            $conn['externalAccountId'],
+            $contactId,
+            $conn['externalInboxId'],
+            $body,
+        );
+
+        $this->stampJourneyOutbound($conn, $result, $journeyContext);
+
+        return $result;
+    }
+
+    /**
+     * @param array{
+     *   journeyId?: string,
+     *   journeyRecordId?: string
+     * }|null $journeyContext
+     * @param array<string, mixed> $conn
+     * @param array<string, string> $params number => value
+     * @return array{message_id: mixed, conversation_id: mixed}
+     */
+    public function sendTemplate(
+        array $conn,
+        string $phone,
+        string $name,
+        string $templateName,
+        string $language,
+        array $params = [],
+        string $category = 'UTILITY',
+        string $content = '',
+        ?string $headerMediaUrl = null,
+        ?string $headerMediaType = null,
+        ?array $journeyContext = null,
+    ): array {
+        $contact = $this->chatwootApiClient->findOrCreateContact(
+            $conn['platformUrl'],
+            $conn['accountApiKey'],
+            $conn['externalAccountId'],
+            $conn['externalInboxId'],
+            $phone,
+            $name !== '' ? $name : null,
+        );
+
+        $contactId = (int) ($contact['id'] ?? 0);
+        if ($contactId <= 0) {
+            throw new Error('JourneyWhatsApp: failed to resolve Chatwoot contact id.');
+        }
+
+        $result = $this->chatwootApiClient->sendTemplateMessage(
             $conn['platformUrl'],
             $conn['accountApiKey'],
             $conn['externalAccountId'],
@@ -246,6 +366,88 @@ class JourneyWhatsAppOutbound
             $headerMediaUrl,
             $headerMediaType,
         );
+
+        $this->stampJourneyOutbound($conn, $result, $journeyContext);
+
+        return $result;
+    }
+
+    /**
+     * Persist conversation trail so inbound WhatsApp can emit `whatsapp_replied`.
+     *
+     * @param array<string, mixed> $conn
+     * @param array{message_id?: mixed, conversation_id?: mixed} $sendResult
+     * @param array{journeyId?: string, journeyRecordId?: string}|null $journeyContext
+     */
+    public function stampJourneyOutbound(
+        array $conn,
+        array $sendResult,
+        ?array $journeyContext,
+    ): void {
+        if ($journeyContext === null) {
+            return;
+        }
+
+        $journeyId = isset($journeyContext['journeyId']) ? trim((string) $journeyContext['journeyId']) : '';
+        $journeyRecordId = isset($journeyContext['journeyRecordId'])
+            ? trim((string) $journeyContext['journeyRecordId'])
+            : '';
+
+        if ($journeyId === '' || $journeyRecordId === '') {
+            return;
+        }
+
+        $conversationExternalId = isset($sendResult['conversation_id'])
+            ? trim((string) $sendResult['conversation_id'])
+            : '';
+
+        if ($conversationExternalId === '') {
+            return;
+        }
+
+        $espoAccountId = '';
+        $inbox = $conn['inbox'] ?? null;
+        if ($inbox instanceof Entity) {
+            $espoAccountId = (string) ($inbox->get('chatwootAccountId') ?? '');
+        }
+
+        if ($espoAccountId === '') {
+            return;
+        }
+
+        try {
+            $record = $this->entityManager->getEntityById('JourneyRecord', $journeyRecordId);
+            if ($record) {
+                $record->set('whatsAppChatwootConversationId', $conversationExternalId);
+                $record->set('whatsAppChatwootAccountId', $espoAccountId);
+                $this->entityManager->saveEntity($record, [SaveOption::SILENT => true]);
+            }
+        } catch (Throwable $e) {
+            $this->log->warning(
+                'JourneyWhatsApp: failed to stamp JourneyRecord for reply tracking: ' . $e->getMessage()
+            );
+        }
+
+        try {
+            $conversation = $this->entityManager
+                ->getRDBRepository('ChatwootConversation')
+                ->where([
+                    'chatwootConversationId' => (int) $conversationExternalId,
+                    'chatwootAccountId' => $espoAccountId,
+                ])
+                ->findOne();
+
+            if ($conversation) {
+                $conversation->set('journeyId', $journeyId);
+                $conversation->set('journeyRecordId', $journeyRecordId);
+                $this->entityManager->saveEntity($conversation, [SaveOption::SILENT => true]);
+            }
+        } catch (Throwable $e) {
+            $this->log->warning(
+                'JourneyWhatsApp: failed to stamp ChatwootConversation for reply tracking: ' .
+                $e->getMessage()
+            );
+        }
     }
 
     /**

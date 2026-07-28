@@ -41,19 +41,21 @@ class JourneySignalDispatcher
             'eventId' => $eventId,
         ];
 
-        $this->dispatchToActiveRecords($tenantId, $code, $targetEntity, $signal);
-        $this->dispatchGoalFastPath($tenantId, $code, $targetEntity, $signal);
+        $goalRecordIds = $this->dispatchGoalFastPath($tenantId, $code, $targetEntity, $signal);
+        $this->dispatchToActiveRecords($tenantId, $code, $targetEntity, $signal, $goalRecordIds);
         $this->dispatchEnrollmentRules($tenantId, $code, $targetEntity, $signal);
     }
 
     /**
      * @param array{code: string, payload: array<string, mixed>, eventId?: ?string} $signal
+     * @param list<string> $skipRecordIds
      */
     private function dispatchToActiveRecords(
         string $tenantId,
         string $code,
         ?Entity $targetEntity,
         array $signal,
+        array $skipRecordIds = [],
     ): void {
         $where = [
             'tenantId' => $tenantId,
@@ -72,6 +74,10 @@ class JourneySignalDispatcher
             ->find();
 
         foreach ($records as $record) {
+            if (in_array((string) $record->getId(), $skipRecordIds, true)) {
+                continue;
+            }
+
             $stageId = $record->get('currentStageId');
             $journeyId = $record->get('journeyId');
 
@@ -88,13 +94,18 @@ class JourneySignalDispatcher
                 ->getRDBRepository(JourneyTransition::ENTITY_TYPE)
                 ->where([
                     'journeyId' => $journeyId,
-                    'fromStageId' => $stageId,
                     'isActive' => true,
                 ])
                 ->order('priority', 'ASC')
                 ->find();
 
+            $candidates = [];
+
             foreach ($transitions as $transition) {
+                if (!JourneyTransition::appliesToStage($transition, (string) $stageId)) {
+                    continue;
+                }
+
                 if (!JourneyTransition::entityWakesOn($transition, JourneyTransition::TRIGGER_SIGNAL)) {
                     continue;
                 }
@@ -104,28 +115,43 @@ class JourneySignalDispatcher
                     continue;
                 }
 
-                $this->queueTransition((string) $record->getId(), (string) $transition->getId(), $signal);
-                break; // first-match-wins per record
+                $candidates[] = $transition;
             }
+
+            if ($candidates === []) {
+                continue;
+            }
+
+            usort($candidates, [JourneyTransition::class, 'compareForRecord']);
+            $transitionIds = array_map(
+                static fn (Entity $transition): string => (string) $transition->getId(),
+                $candidates,
+            );
+
+            $this->queueTransition(
+                (string) $record->getId(),
+                $transitionIds[0],
+                $signal,
+                $transitionIds,
+            );
         }
     }
 
     /**
      * @param array{code: string, payload: array<string, mixed>, eventId?: ?string} $signal
+     * @return list<string>
      */
     private function dispatchGoalFastPath(
         string $tenantId,
         string $code,
         ?Entity $targetEntity,
         array $signal,
-    ): void {
-        // Goal codes are handled inside TransitionExecutor after transitions;
-        // also queue a no-op-transition goal check via ProcessJourneyTransition
-        // when a record's journey lists the code. Cheapest path is already covered
-        // when a matching stage transition fires. Standalone goal check:
+    ): array {
         if (!$targetEntity) {
-            return;
+            return [];
         }
+
+        $queuedRecordIds = [];
 
         $records = $this->entityManager
             ->getRDBRepository(JourneyRecord::ENTITY_TYPE)
@@ -153,9 +179,13 @@ class JourneySignalDispatcher
                 continue;
             }
 
-            // Queue with transitionId empty sentinel handled differently — use dedicated goal marker
-            $this->queueTransition((string) $record->getId(), '__goal__', $signal);
+            $recordId = (string) $record->getId();
+            if ($this->queueTransition($recordId, '__goal__', $signal)) {
+                $queuedRecordIds[] = $recordId;
+            }
         }
+
+        return $queuedRecordIds;
     }
 
     /**
@@ -192,6 +222,10 @@ class JourneySignalDispatcher
                 ->find();
 
             foreach ($transitions as $transition) {
+                if (JourneyTransition::resolveScope($transition) !== JourneyTransition::SCOPE_ENROLLMENT) {
+                    continue;
+                }
+
                 if (!JourneyTransition::entityWakesOn($transition, JourneyTransition::TRIGGER_SIGNAL)) {
                     continue;
                 }
@@ -216,21 +250,37 @@ class JourneySignalDispatcher
 
     /**
      * @param array<string, mixed> $signal
+     * @param list<string> $transitionIds
      */
-    private function queueTransition(string $recordId, string $transitionId, array $signal): void
+    private function queueTransition(
+        string $recordId,
+        string $transitionId,
+        array $signal,
+        array $transitionIds = [],
+    ): bool
     {
         try {
+            $data = [
+                'journeyRecordId' => $recordId,
+                'transitionId' => $transitionId,
+                'signal' => $signal,
+            ];
+
+            if ($transitionIds !== []) {
+                $data['transitionIds'] = $transitionIds;
+            }
+
             $this->jobSchedulerFactory
                 ->create()
                 ->setClassName(ProcessJourneyTransition::class)
-                ->setData([
-                    'journeyRecordId' => $recordId,
-                    'transitionId' => $transitionId,
-                    'signal' => $signal,
-                ])
+                ->setData($data)
                 ->schedule();
+
+            return true;
         } catch (\Throwable $e) {
             $this->log->error('JourneySignalDispatcher: failed to queue: ' . $e->getMessage());
+
+            return false;
         }
     }
 }

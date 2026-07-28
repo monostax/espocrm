@@ -179,5 +179,11 @@
         "parentRunItemId": {
             "columns": ["parentRunItemId", "status"]
         }
+    },
+    "cascadeDelete": {
+        "links": [
+            "items",
+            "childRuns"
+        ]
     }
 }

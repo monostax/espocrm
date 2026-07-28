@@ -87,6 +87,25 @@ Both integrations share `EmailAccount.oAuthAccount`. Connecting one provider
 replaces the other's link on that mailbox. Side panels only show Connected /
 Disconnect for accounts of their own provider.
 
+### 6. Chatwoot-managed Microsoft 365 inboxes
+
+Chatwoot owns IMAP fetch for email channels. CRM-side Microsoft 365 OAuth alone
+is **not** enough: the Chatwoot channel needs `provider=microsoft` and tokens in
+`provider_config`. Bridging an Office 365 mailbox without an IMAP app password
+is rejected — authorize Microsoft OAuth in Chatwoot first (or set an app password).
+
+When Chatwoot owns a Microsoft inbox, inbox sync imports its OAuth grant through
+the administrator-only `email_oauth_credentials` endpoint and links the mirrored
+CRM mailbox to an encrypted `OAuthAccount`. Configure the CRM **Microsoft 365**
+provider with the same Azure app client ID/secret as Chatwoot (`AZURE_APP_ID` /
+`AZURE_APP_SECRET`). A refresh token belongs to the client that issued it; the
+sync verifies the client ID and refuses a mismatch.
+
+The imported OAuthAccount is source-managed by its Chatwoot inbox. If Chatwoot
+removes the grant, changes the channel provider, or deletes the inbox, the sync
+clears the CRM mailbox link and removes the copied tokens. A manually linked CRM
+OAuthAccount is never overwritten.
+
 ## Flow
 
 ```

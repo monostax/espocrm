@@ -58,17 +58,20 @@ class OnlyTeam implements Filter
             return;
         }
 
-        $subQueryBuilder = SelectBuilder::create()
-            ->select(Attribute::ID)
-            ->from($this->entityType)
-            ->leftJoin(Team::RELATIONSHIP_ENTITY_TEAM, 'entityTeam', [
-                'entityTeam.entityId:' => Attribute::ID,
-                'entityTeam.entityType' => $this->entityType,
-                'entityTeam.deleted' => false,
-            ]);
-
         // Empty list is converted to false statement by ORM.
-        $orGroup = ['entityTeam.teamId' => $this->user->getTeamIdList()];
+        $teamSubQuery = SelectBuilder::create()
+            ->select('entityId')
+            ->from(Team::RELATIONSHIP_ENTITY_TEAM)
+            ->where([
+                'teamId' => $this->user->getTeamIdList(),
+                'entityType' => $this->entityType,
+                'deleted' => false,
+            ])
+            ->build();
+
+        $orGroup = [
+            [Attribute::ID . '=s' => $teamSubQuery],
+        ];
 
         if ($this->fieldHelper->hasAssignedUsersField()) {
             $relationDefs = $this->defs
@@ -79,16 +82,20 @@ class OnlyTeam implements Filter
             $key1 = $relationDefs->getMidKey();
             $key2 = $relationDefs->getForeignMidKey();
 
-            $subQueryBuilder->leftJoin($middleEntityType, 'assignedUsersMiddle', [
-                "assignedUsersMiddle.$key1:" => Attribute::ID,
-                'assignedUsersMiddle.deleted' => false,
-            ]);
+            $assignedUsersSubQuery = SelectBuilder::create()
+                ->select($key1)
+                ->from($middleEntityType)
+                ->where([
+                    $key2 => $this->user->getId(),
+                    'deleted' => false,
+                ])
+                ->build();
 
-            $orGroup["assignedUsersMiddle.$key2"] = $this->user->getId();
+            $orGroup[] = [Attribute::ID . '=s' => $assignedUsersSubQuery];
         } else if ($this->fieldHelper->hasAssignedUserField()) {
-            $orGroup['assignedUserId'] = $this->user->getId();
+            $orGroup[] = ['assignedUserId' => $this->user->getId()];
         } else if ($this->fieldHelper->hasCreatedByField()) {
-            $orGroup['createdById'] = $this->user->getId();
+            $orGroup[] = ['createdById' => $this->user->getId()];
         }
 
         if ($this->fieldHelper->hasCollaboratorsField()) {
@@ -100,18 +107,18 @@ class OnlyTeam implements Filter
             $key1 = $relationDefs->getMidKey();
             $key2 = $relationDefs->getForeignMidKey();
 
-            $subQueryBuilder->leftJoin($middleEntityType, 'collaboratorsMiddle', [
-                "collaboratorsMiddle.$key1:" => Attribute::ID,
-                'collaboratorsMiddle.deleted' => false,
-            ]);
+            $collaboratorsSubQuery = SelectBuilder::create()
+                ->select($key1)
+                ->from($middleEntityType)
+                ->where([
+                    $key2 => $this->user->getId(),
+                    'deleted' => false,
+                ])
+                ->build();
 
-            $orGroup["collaboratorsMiddle.$key2"] = $this->user->getId();
+            $orGroup[] = [Attribute::ID . '=s' => $collaboratorsSubQuery];
         }
 
-        $subQuery = $subQueryBuilder
-            ->where(['OR' => $orGroup])
-            ->build();
-
-        $queryBuilder->where(['id=s' => $subQuery]);
+        $queryBuilder->where(['OR' => $orGroup]);
     }
 }

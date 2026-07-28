@@ -31,7 +31,7 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 | Audience sources | Target Lists, manual Contacts, exclude lists |
 | Continuous enrollment | Opt-in minute job while Active |
 | Re-enrollment | Opt-in new `cycleCount` after terminal states |
-| Goals | Multi-code event goals + entity where-filter goals |
+| Goals | Multi-code event goals + entity where-filter goals routed through a selected Success step |
 | Live counters | active · completed · exited · goals reached (nightly reconcile) |
 | Timestamps | activatedAt · completedAt |
 | Structural lock | Server validation when not Draft/Paused (+ client dynamicLogic) |
@@ -57,8 +57,10 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 
 | Feature | Details |
 |---|---|
-| Graph edges | fromStage (nullable) → toStage |
-| Enrollment edges | Null fromStage |
+| Transition scopes | `stage` · `journey` (any active stage) · `enrollment` |
+| Graph edges | `stage` requires fromStage; `journey` and `enrollment` keep it empty |
+| Enrollment edges | New records only; never reused as an any-stage fallback |
+| Journey-wide edges | Existing Active records only; self-targets no-op |
 | Priority | First-match-wins (ascending) |
 | **wakeSources** | Multi OR: signal · timer · entityChange · manual (BC: empty → triggerType) |
 | **signal** | Match eventCodes (OR gate); stateful multi-event AND via eventHistory |
@@ -82,6 +84,7 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 | Inline runtime | Same job as transition (ordered semantics) |
 | Retries | `maxRetries` 0–5 in-request |
 | continueOnError | Proceed to next action after failure |
+| Conditional guard | Visual `conditionsGroup` with nested AND/OR and fixed/**fx** values; optional `conditionFormula` advanced override |
 | paramFormulas | Dynamic params via MODE_CONDITION formulas; n8n-style **fx** UI per setting (`fields.*` paths for updateTarget) |
 ### Action types
 
@@ -90,9 +93,9 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 | createTask | tenant | Create Task linked/teamed; stamps tenantId + journey teams |
 | createRecord | tenant | Generic create (allow-listed entity types); stamps tenant + teams; field allow-list |
 | createRelatedRecord | tenant | Create on target relation; same stamp + field allow-list |
-| sendEmail | tenant | Send via tenant Group/Personal SMTP account only (no system SMTP); recipient allow-checks |
-| sendWhatsAppMessage | tenant | Free-text WhatsApp via Chatwoot (WAHA QR / Cloud / Coexistence); optional Meta template fallback when 24h window closed |
-| sendWhatsAppTemplate | tenant | Meta template + parameter mapping (WhatsAppCampaign style); Cloud/Coexistence only |
+| sendEmail | tenant | Send via tenant Group/Personal SMTP account only (no system SMTP); recipient allow-checks; multi-email (all sendable on target) |
+| sendWhatsAppMessage | tenant | Free-text WhatsApp via Chatwoot (WAHA QR / Cloud / Coexistence); optional Meta template fallback when 24h window closed; multi-phone |
+| sendWhatsAppTemplate | tenant | Meta template + parameter mapping (WhatsAppCampaign style); Cloud/Coexistence only; multi-phone |
 | notifyUser | tenant | In-app user notification (user must be in tenant) |
 | makeFollowed | tenant | Stream follow for specified tenant users only |
 | updateTarget | tenant | Patch target fields via allow-list + c* columns + CustomField bag merge |
@@ -144,6 +147,8 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 |---|---|
 | Tenant-first dispatch | All match queries constrained by tenantId |
 | Tracking integration | afterSave hook → dispatcher (optional module) |
+| Email replied | `email_replied` via inbound Email threaded to journey outbound (Message-ID token) |
+| WhatsApp replied | `whatsapp_replied` via inbound Chatwoot message / DeliveryWebhook on journey-stamped conversation |
 | Goal fast-path | goalEventCodes short-circuit |
 | Entity change cache | O(1) “any listeners?” pre-check before work |
 | Loop prevention | `skipJourneyDispatch` on engine saves |

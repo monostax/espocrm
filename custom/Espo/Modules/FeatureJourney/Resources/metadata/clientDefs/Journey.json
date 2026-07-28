@@ -110,9 +110,19 @@
                 "readOnly": {
                     "conditionGroup": [
                         {
-                            "type": "notEquals",
-                            "attribute": "status",
-                            "value": "Draft"
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Paused"
+                                }
+                            ]
                         }
                     ]
                 }
@@ -139,6 +149,27 @@
                 }
             },
             "goalEntityFilter": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "type": "notEquals",
+                                    "attribute": "status",
+                                    "value": "Paused"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "goalSuccessStage": {
                 "readOnly": {
                     "conditionGroup": [
                         {
