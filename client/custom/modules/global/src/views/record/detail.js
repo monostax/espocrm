@@ -51,6 +51,10 @@ class CustomDetailRecordView extends DetailRecordView {
                 actionItems = [...this.buttonList, ...this.dropdownItemList];
             } else if (target.classList.contains("edit-action-item")) {
                 actionItems = [...this.buttonEditList, ...this.dropdownEditItemList];
+            } else if (target.classList.contains("side-action-item")) {
+                actionItems = [...this.sideButtonList];
+            } else if (target.classList.contains("edit-side-action-item")) {
+                actionItems = [...this.sideButtonEditList];
             }
 
             Espo.Utils.handleAction(this, e.originalEvent, target, {
