@@ -487,6 +487,8 @@ define("feature-journey:views/journey-stage-action/fields/params", [
             }
 
             this.resolveSnippets().then(() => {
+                this.renderTypeHint();
+
                 defs.forEach((def) => {
                     if (def.type === "fieldMap") {
                         this.renderFieldMap(def, params);
@@ -497,6 +499,35 @@ define("feature-journey:views/journey-stage-action/fields/params", [
 
                 this.renderOrphanParamFormulas(params, defs);
             });
+        },
+
+        /**
+         * Optional per-type help from messages.<type>Hint (JourneyStageAction).
+         */
+        renderTypeHint: function () {
+            if (!this.$form || !this.$form.length) {
+                return;
+            }
+
+            const type = this.model.get("type");
+
+            if (!type) {
+                return;
+            }
+
+            const key = type + "Hint";
+            const text = this.translate(key, "messages", "JourneyStageAction");
+
+            if (!text || text === key) {
+                return;
+            }
+
+            this.$form.prepend(
+                $("<p>")
+                    .addClass("text-muted small")
+                    .css({ marginTop: 0, marginBottom: "10px" })
+                    .text(text)
+            );
         },
 
         mountExpression: function (key, $host, options) {

@@ -175,6 +175,21 @@ class ValidateType implements BeforeSave
             );
         }
 
+        if ($type === 'enrollToWhatsAppCampaign') {
+            $campaignId = trim((string) ($params['whatsAppCampaignId'] ?? ''));
+
+            if ($campaignId === '') {
+                throw new BadRequest(
+                    'enrollToWhatsAppCampaign requires whatsAppCampaignId (WhatsApp Campaign).'
+                );
+            }
+
+            $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+            if (!$campaign) {
+                throw new BadRequest('enrollToWhatsAppCampaign: WhatsApp Campaign not found.');
+            }
+        }
+
         if ($type === 'createRecord') {
             $entityType = trim((string) ($params['entityType'] ?? $params['link'] ?? ''));
             if ($entityType === '') {

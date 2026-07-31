@@ -96,6 +96,7 @@
         "sendEmailTemplateHint": "Active Email Templates only. Pick a template, then use Test / render against a sample contact (placeholders resolved, no send). Subject/body overrides apply when the template leaves them empty. With empty To, sends one message to each non-opted-out / non-invalid email on the target (primary + secondary).",
         "sendWhatsAppMessageHint": "Pick any active WhatsApp inbox (WAHA QR, Cloud API, or Coexistence). Optional fallback Meta template is used only when Cloud session window is closed. With empty phone, sends to every sendable number on the target (phone fields + WhatsApp channel identities), like WhatsApp Campaign.",
         "sendWhatsAppTemplateHint": "Cloud API / Coexistence inbox only. Templates are loaded from the selected inbox Meta account (APPROVED). Map parameters with Handlebars like WhatsApp Campaign. Use Test / render to preview against a contact without sending. With empty phone, sends the template to every sendable number on the target.",
+        "enrollToWhatsAppCampaignHint": "Adds the journey Contact to a running WhatsApp Campaign (status Sending). Creates Pending recipient rows (one per sendable phone) and schedules send chunks. Idempotent by phone. Contact targets only. Campaign template/inbox/params come from the campaign — not this action.",
         "whatsappTemplateSelectFirst": "Select a template first.",
         "whatsappTemplatePickTarget": "Pick a sample contact to render against.",
         "whatsappTemplateRenderFailed": "Failed to render template preview.",

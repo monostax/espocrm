@@ -168,6 +168,7 @@
             "sendEmail": "Enviar e-mail",
             "sendWhatsAppMessage": "Enviar mensagem WhatsApp",
             "sendWhatsAppTemplate": "Enviar template WhatsApp",
+            "enrollToWhatsAppCampaign": "Inscrever na Campanha WhatsApp",
             "notifyUser": "Notificar usuário",
             "makeFollowed": "Adicionar seguidores",
             "executeFormula": "Executar fórmula",

@@ -266,6 +266,27 @@
                 }
             ]
         },
+        "enrollToWhatsAppCampaign": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\EnrollToWhatsAppCampaign",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "whatsAppCampaignId",
+                    "type": "link",
+                    "entity": "WhatsAppCampaign",
+                    "label": "WhatsApp Campaign",
+                    "nameKey": "whatsAppCampaignName",
+                    "required": true
+                },
+                {
+                    "name": "phone",
+                    "type": "varchar",
+                    "label": "Phone override (optional)",
+                    "placeholder": "Leave empty = all target phones; or list"
+                }
+            ]
+        },
         "notifyUser": {
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\NotifyUser",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",

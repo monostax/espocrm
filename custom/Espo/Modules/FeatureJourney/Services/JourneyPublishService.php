@@ -664,6 +664,12 @@ class JourneyPublishService
                 60
             ) ?: 'WhatsApp message',
             'sendWhatsAppTemplate' => (string) ($params['templateName'] ?? 'WhatsApp template'),
+            'enrollToWhatsAppCampaign' => $this->firstNonEmpty([
+                (string) ($params['whatsAppCampaignName'] ?? ''),
+                !empty($params['whatsAppCampaignId'])
+                    ? 'campaign:' . (string) $params['whatsAppCampaignId']
+                    : '',
+            ]) ?: 'WhatsApp campaign enroll',
             'createTask' => (string) ($params['name'] ?? 'task'),
             'createRecord' => (string) ($params['entityType'] ?? 'record'),
             'createRelatedRecord' => 'related:' . (string) ($params['link'] ?? '?'),
