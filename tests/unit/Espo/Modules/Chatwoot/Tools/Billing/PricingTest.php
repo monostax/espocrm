@@ -147,7 +147,7 @@ class PricingTest extends TestCase
 
     public function testRateCardFromNullableFallsBackOnEmpty(): void
     {
-        $rates = RateCard::fromNullable(null, 0.0, -1.0, 0, null, '', null);
+        $rates = RateCard::fromNullable(null, null, -1.0, 0, null, '', null);
 
         $this->assertSame(RateCard::DEFAULT_PACK_UNIT_PRICE, $rates->packUnitPrice);
         $this->assertSame(RateCard::DEFAULT_EXTRA_BASE_PRICE, $rates->extraBasePrice);
@@ -158,6 +158,19 @@ class PricingTest extends TestCase
             $rates->extraIncludedCustomerTurns
         );
         $this->assertSame(RateCard::DEFAULT_CURRENCY, $rates->currency);
+    }
+
+    public function testRateCardFromNullableKeepsZeroAsFree(): void
+    {
+        // Explicit 0 = complimentary period (not "unset").
+        $rates = RateCard::fromNullable(0.0, 0.0, 0.0, 4, 0, 'BRL', null);
+
+        $this->assertSame(0.0, $rates->packUnitPrice);
+        $this->assertSame(0.0, $rates->extraBasePrice);
+        $this->assertSame(0.0, $rates->extraUnitPrice);
+        $this->assertSame(4, $rates->packSize);
+        $this->assertSame(0, $rates->extraIncludedCustomerTurns);
+        $this->assertSame('BRL', $rates->currency);
     }
 
     public function testRateCardFromNullableKeepsPositiveOverrides(): void

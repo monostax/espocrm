@@ -273,10 +273,19 @@ abstract class AbstractBillingGrid implements GridReport
     private function columnTypeMap(): array
     {
         $map = [];
-        $money = [self::COL_AMOUNT => true, self::COL_AMOUNT_DEAL => true];
 
         foreach ($this->columnList() as $col) {
-            $map[$col] = isset($money[$col]) ? 'float' : 'int';
+            // currencyConverted → UI (R$) + XLSX/PDF currency number format.
+            // amount is always system-default currency; amountDeal is deal
+            // currency (symbol still system default in ExportXlsx — same as
+            // other Advanced grid money columns).
+            if ($col === self::COL_AMOUNT || $col === self::COL_AMOUNT_DEAL) {
+                $map[$col] = 'currencyConverted';
+
+                continue;
+            }
+
+            $map[$col] = 'int';
         }
 
         return $map;

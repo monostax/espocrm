@@ -13,7 +13,10 @@ use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Throwable;
 
 /**
- * WhatsApp free-text; supports User targets via userBelongsToTenant + phone override.
+ * Free-text WhatsApp via Chatwoot (same behavior as FeatureJourney SendWhatsAppMessage).
+ *
+ * Extra vs Journey: User / Tenant targets allowed (tenant membership check).
+ * Multi-phone + optional Meta template fallback when the 24h window is closed.
  */
 class SendWhatsAppMessage implements Action
 {
@@ -51,14 +54,17 @@ class SendWhatsAppMessage implements Action
         }
 
         if ($this->outbound->isOptedOut($target)) {
-            $this->log->warning('Automation SendWhatsAppMessage: target opted out.');
+            $this->log->warning(
+                'SendWhatsAppMessage: target opted out of WhatsApp, skipping. ' .
+                $target->getEntityType() . '/' . $target->getId()
+            );
 
             return;
         }
 
-        $phone = $this->outbound->resolvePhone($target, $phoneOverride);
-        if ($phone === null) {
-            $this->log->warning('Automation SendWhatsAppMessage: no phone, skipping.');
+        $phones = $this->outbound->resolvePhones($target, $phoneOverride);
+        if ($phones === []) {
+            $this->log->warning('SendWhatsAppMessage: no phone on target, skipping.');
 
             return;
         }
@@ -71,11 +77,115 @@ class SendWhatsAppMessage implements Action
         );
 
         $name = $this->outbound->displayName($target);
+        // Same shape as Journey; stamp is a no-op when record is not a JourneyRecord.
+        $journeyContext = [
+            'journeyId' => $context->journey->getId(),
+            'journeyRecordId' => $context->record->getId(),
+        ];
 
-        try {
-            $this->outbound->sendFreeText($conn, $phone, $name, $body);
-        } catch (Throwable $e) {
-            throw new Error('Automation SendWhatsAppMessage failed: ' . $e->getMessage());
+        $errors = [];
+        $sent = 0;
+
+        foreach ($phones as $phone) {
+            try {
+                $this->sendOne($conn, $phone, $name, $body, $params, $context, $journeyContext);
+                $sent++;
+            } catch (Throwable $e) {
+                $errors[] = $phone . ': ' . $e->getMessage();
+                $this->log->error(
+                    'SendWhatsAppMessage failed for ' . $phone . ': ' . $e->getMessage()
+                );
+            }
         }
+
+        if ($sent === 0 && $errors !== []) {
+            throw new Error('SendWhatsAppMessage: all recipients failed. ' . implode('; ', $errors));
+        }
+
+        if ($errors !== []) {
+            throw new Error(
+                'SendWhatsAppMessage: sent ' . $sent . '/' . count($phones) .
+                ' failed: ' . implode('; ', $errors)
+            );
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $conn
+     * @param array<string, mixed> $params
+     * @param array{journeyId: string, journeyRecordId: string} $journeyContext
+     */
+    private function sendOne(
+        array $conn,
+        string $phone,
+        string $name,
+        string $body,
+        array $params,
+        ActionContext $context,
+        array $journeyContext,
+    ): void {
+        try {
+            $this->outbound->sendFreeText($conn, $phone, $name, $body, $journeyContext);
+
+            return;
+        } catch (Throwable $e) {
+            $fallbackName = isset($params['fallbackTemplateName'])
+                ? trim((string) $params['fallbackTemplateName'])
+                : '';
+            $channel = $conn['channelType'];
+            $canFallback = $fallbackName !== ''
+                && in_array($channel, JourneyWhatsAppOutbound::CHANNELS_TEMPLATE, true)
+                && $this->outbound->isOutsideSessionWindow($e->getMessage());
+
+            if (!$canFallback) {
+                throw $e;
+            }
+
+            $this->log->info(
+                'SendWhatsAppMessage: session window closed for ' . $phone .
+                '; sending fallback template ' . $fallbackName
+            );
+        }
+
+        $language = isset($params['fallbackTemplateLanguage'])
+            ? trim((string) $params['fallbackTemplateLanguage'])
+            : 'pt_BR';
+        if ($language === '') {
+            $language = 'pt_BR';
+        }
+
+        $category = isset($params['fallbackTemplateCategory'])
+            ? trim((string) $params['fallbackTemplateCategory'])
+            : 'UTILITY';
+
+        $mapping = $params['fallbackParameterMapping'] ?? [];
+        $resolved = $this->outbound->resolveParameterMapping($mapping, $context->target);
+
+        $headerUrl = isset($params['fallbackHeaderMediaUrl'])
+            ? (string) $params['fallbackHeaderMediaUrl']
+            : null;
+        $headerType = isset($params['fallbackHeaderMediaType'])
+            ? (string) $params['fallbackHeaderMediaType']
+            : null;
+        if ($headerUrl === '') {
+            $headerUrl = null;
+        }
+        if ($headerType === '') {
+            $headerType = null;
+        }
+
+        $this->outbound->sendTemplate(
+            $conn,
+            $phone,
+            $name,
+            $fallbackName,
+            $language,
+            $resolved,
+            $category !== '' ? $category : 'UTILITY',
+            '',
+            $headerUrl,
+            $headerType,
+            $journeyContext,
+        );
     }
 }

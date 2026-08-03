@@ -365,7 +365,7 @@ class GridExportService
 
             $result[] = $row;
 
-            foreach ($reportResult->getGrouping()[1] ?? [] as $gr2) {
+                foreach ($reportResult->getGrouping()[1] ?? [] as $gr2) {
                 $row = [];
                 $label = $gr2;
 
@@ -383,12 +383,19 @@ class GridExportService
                 }
 
                 foreach ($reportResult->getGrouping()[0] ?? [] as $gr1) {
+                    // Do not use empty(): legitimate 0 / 0.0 must export as 0.
                     $value = 0;
 
-                    if (!empty($reportData->$gr1) && !empty($reportData->$gr1->$gr2)) {
-                        if (!empty($reportData->$gr1->$gr2->$currentColumn)) {
-                            $value = $reportData->$gr1->$gr2->$currentColumn;
-                        }
+                    if (
+                        is_object($reportData) &&
+                        property_exists($reportData, (string) $gr1) &&
+                        is_object($reportData->$gr1) &&
+                        property_exists($reportData->$gr1, (string) $gr2) &&
+                        is_object($reportData->$gr1->$gr2) &&
+                        $currentColumn !== null &&
+                        property_exists($reportData->$gr1->$gr2, $currentColumn)
+                    ) {
+                        $value = $reportData->$gr1->$gr2->$currentColumn ?? 0;
                     }
 
                     $row[] = $value;
@@ -406,11 +413,27 @@ class GridExportService
             }
 
             foreach ($reportResult->getGrouping()[0] ?? [] as $gr1) {
-                $sum = 0;
+                // Prefer live cell sum over group1Sums: internal GridReports may
+                // omit deal-currency (or other) metrics from day rollups while
+                // still exposing them per group2 cell. empty() also drops 0.
+                $sum = $this->sumGroup1ColumnFromReportData(
+                    $reportData,
+                    (string) $gr1,
+                    $reportResult->getGrouping()[1] ?? [],
+                    (string) $currentColumn
+                );
 
-                if (!empty($reportResult->getGroup1Sums()->$gr1)) {
-                    if (!empty($reportResult->getGroup1Sums()->$gr1->$currentColumn)) {
-                        $sum = $reportResult->getGroup1Sums()->$gr1->$currentColumn;
+                if ($sum === null) {
+                    $sum = 0;
+                    $group1Sums = $reportResult->getGroup1Sums();
+
+                    if (
+                        is_object($group1Sums) &&
+                        property_exists($group1Sums, (string) $gr1) &&
+                        is_object($group1Sums->$gr1) &&
+                        property_exists($group1Sums->$gr1, (string) $currentColumn)
+                    ) {
+                        $sum = $group1Sums->$gr1->$currentColumn ?? 0;
                     }
                 }
 
@@ -482,18 +505,27 @@ class GridExportService
 
                 foreach ($aggregatedColumnList as $column) {
                     if (in_array($column, $reportResult->getNumericColumnList())) {
+                        // Do not use empty(): legitimate 0 / 0.0 must export as 0.
                         $value = 0;
 
-                        if (!empty($reportData->$gr)) {
-                            if (!empty($reportData->$gr->$column)) {
-                                $value = $reportData->$gr->$column;
-                            }
+                        if (
+                            is_object($reportData) &&
+                            property_exists($reportData, (string) $gr) &&
+                            is_object($reportData->$gr) &&
+                            property_exists($reportData->$gr, $column)
+                        ) {
+                            $value = $reportData->$gr->$column ?? 0;
                         }
                     }
                     else {
                         $value = '';
 
-                        if (property_exists($reportData, $gr) && property_exists($reportData->$gr, $column)) {
+                        if (
+                            is_object($reportData) &&
+                            property_exists($reportData, (string) $gr) &&
+                            is_object($reportData->$gr) &&
+                            property_exists($reportData->$gr, $column)
+                        ) {
                             $value = $reportData->$gr->$column;
 
                             if (
@@ -524,10 +556,12 @@ class GridExportService
                         continue;
                     }
 
+                    // empty() drops legitimate 0 totals.
                     $sum = 0;
+                    $sums = $reportResult->getSums();
 
-                    if (!empty($reportResult->getSums()->$column)) {
-                        $sum = $reportResult->getSums()->$column;
+                    if (is_object($sums) && property_exists($sums, $column)) {
+                        $sum = $sums->$column ?? 0;
                     }
 
                     $row[] = $sum;
@@ -538,6 +572,49 @@ class GridExportService
         }
 
         return $result;
+    }
+
+    /**
+     * Sum one summary column across group2 keys for a fixed group1 bucket.
+     * Returns null when no cell exists (caller may fall back to group1Sums).
+     *
+     * @param list<string> $group2Keys
+     */
+    private function sumGroup1ColumnFromReportData(
+        mixed $reportData,
+        string $gr1,
+        array $group2Keys,
+        string $column
+    ): ?float {
+        if ($column === '' || !is_object($reportData) || !property_exists($reportData, $gr1)) {
+            return null;
+        }
+
+        $dayNode = $reportData->$gr1;
+
+        if (!is_object($dayNode)) {
+            return null;
+        }
+
+        $found = false;
+        $sum = 0.0;
+
+        foreach ($group2Keys as $gr2) {
+            $gr2 = (string) $gr2;
+
+            if (!property_exists($dayNode, $gr2) || !is_object($dayNode->$gr2)) {
+                continue;
+            }
+
+            if (!property_exists($dayNode->$gr2, $column)) {
+                continue;
+            }
+
+            $found = true;
+            $sum += (float) ($dayNode->$gr2->$column ?? 0);
+        }
+
+        return $found ? $sum : null;
     }
 
     /**

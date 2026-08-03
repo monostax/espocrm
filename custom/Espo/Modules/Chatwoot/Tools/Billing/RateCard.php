@@ -49,9 +49,12 @@ final class RateCard
     }
 
     /**
-     * Build from optional Tenant / period column values. Non-positive pack/extra
-     * numbers are treated as "unset" and replaced by defaults. Plan included
-     * usage treats null as 0 (valid — pay-as-you-go).
+     * Build from optional Tenant / period column values.
+     *
+     * Prices and included-turn counts: null / negative → platform default;
+     * 0 is valid (free rate / no included turns). Pack size still requires
+     * a positive integer (0/null → default). Plan included usage: null → 0
+     * (pay-as-you-go).
      *
      * @param string|null $fallbackCurrency Used when $currency is empty
      *                                      (usually system defaultCurrency).
@@ -71,11 +74,11 @@ final class RateCard
             ?? self::DEFAULT_CURRENCY;
 
         return new self(
-            self::positiveOr($packUnitPrice, self::DEFAULT_PACK_UNIT_PRICE),
-            self::positiveOr($extraBasePrice, self::DEFAULT_EXTRA_BASE_PRICE),
-            self::positiveOr($extraUnitPrice, self::DEFAULT_EXTRA_UNIT_PRICE),
+            self::nonNegativeOr($packUnitPrice, self::DEFAULT_PACK_UNIT_PRICE),
+            self::nonNegativeOr($extraBasePrice, self::DEFAULT_EXTRA_BASE_PRICE),
+            self::nonNegativeOr($extraUnitPrice, self::DEFAULT_EXTRA_UNIT_PRICE),
             self::positiveIntOr($packSize, self::DEFAULT_PACK_SIZE),
-            self::positiveIntOr(
+            self::nonNegativeIntOr(
                 $extraIncludedCustomerTurns,
                 self::DEFAULT_EXTRA_INCLUDED_CUSTOMER_TURNS
             ),
@@ -99,9 +102,9 @@ final class RateCard
         return $code;
     }
 
-    private static function positiveOr(?float $value, float $default): float
+    private static function nonNegativeOr(?float $value, float $default): float
     {
-        if ($value === null || $value <= 0.0) {
+        if ($value === null || $value < 0.0) {
             return $default;
         }
 

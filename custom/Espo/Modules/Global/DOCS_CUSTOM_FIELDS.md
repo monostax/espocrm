@@ -112,6 +112,19 @@ Layouts with panel: Contact, Account, Opportunity.
 
 Non-admins may only resolve via teams they belong to.
 
+## Detail UI — scoped inline edit
+
+`global:views/fields/custom-fields` keeps one host `jsonObject` attribute but supports:
+
+| Action | Scope | Required validation |
+| --- | --- | --- |
+| Pencil on a field row | That `valueKey` only | Only that field if `isRequired` |
+| Pencil on a group title | All fields in the group | Required fields in that group only |
+| Pencil on the cell (whole bag) | All groups | All required fields |
+| Full record create/edit | All groups | All required fields |
+
+Scoped save merges edited keys into the existing bag (other groups unchanged). Clearing a value removes that key.
+
 ## Admin UI
 
 Admin panel → Data → Custom Field Groups / Custom Fields.

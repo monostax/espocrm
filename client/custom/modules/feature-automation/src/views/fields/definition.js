@@ -432,6 +432,14 @@ define('feature-automation:views/fields/definition', [
                 if (prevPrefix) {
                     preservedWhen = this.readFormulaField(prevPrefix, '__when');
                 }
+                // Type change owns a fresh param surface; drop prior action payload
+                // so orphan paramFormulas from the old type are not carried over.
+                $card.data('originalAction', {
+                    type: type,
+                    enabled: $card.attr('data-enabled') !== '0',
+                    params: {},
+                    paramFormulas: {},
+                });
                 this.mountActionParams($card, type, {}, {});
                 const prefix = $card.attr('data-view-prefix');
                 const $whenHost = $card.find('.def-action-when-host').empty();
@@ -2023,7 +2031,8 @@ define('feature-automation:views/fields/definition', [
                     .attr('data-action-card', '1')
                     .attr('data-bucket', bucket)
                     .attr('data-index', index)
-                    .attr('data-enabled', enabled ? '1' : '0');
+                    .attr('data-enabled', enabled ? '1' : '0')
+                    .data('originalAction', action);
 
                 if (!enabled) {
                     $card.addClass('automation-action-disabled');
@@ -2162,6 +2171,16 @@ define('feature-automation:views/fields/definition', [
         actionTitle: function (action, index) {
             const type = (action && action.type) || 'notifyUser';
             let title = (index + 1) + '. ' + this.actionTypeLabel(type);
+            if (type === 'sendWhatsAppTemplate' && action && action.params) {
+                const tn = action.params.templateName;
+                if (tn) {
+                    let bit = String(tn);
+                    if (action.params.templateLanguage) {
+                        bit += ' (' + action.params.templateLanguage + ')';
+                    }
+                    title += ' — ' + bit;
+                }
+            }
             if (action && action.enabled === false) {
                 title += ' (' + this.tLabel('actionPaused') + ')';
             }
@@ -2196,6 +2215,13 @@ define('feature-automation:views/fields/definition', [
                 });
                 delete this._helperModels[prevPrefix];
                 this.clearExpressionInputs(prevPrefix);
+                if (this._whatsappTemplateManaged) {
+                    Object.keys(this._whatsappTemplateManaged).forEach((k) => {
+                        if (k.indexOf(prevPrefix) === 0) {
+                            delete this._whatsappTemplateManaged[k];
+                        }
+                    });
+                }
             }
 
             const prefix = 'ap-' + Math.floor(Math.random() * 1e9);
@@ -2229,6 +2255,63 @@ define('feature-automation:views/fields/definition', [
             defs.forEach((def) => {
                 this.renderParamDef($host, def, params || {}, formulas, helper, prefix, snippets);
             });
+
+            // Nested / hand-authored formulas (e.g. parameterMapping.1) have no
+            // paramDef widget — mount them so save does not silently drop them.
+            this.renderOrphanParamFormulas($host, defs, formulas, prefix, snippets);
+        },
+
+        /**
+         * Formulas for keys not covered by paramDefs UI (e.g. parameterMapping.*).
+         * Mirrors FeatureJourney params orphan handling.
+         */
+        renderOrphanParamFormulas: function ($host, defs, formulas, prefix, snippets) {
+            const managed = {};
+            (defs || []).forEach((d) => {
+                if (d && d.name) {
+                    managed[d.name] = true;
+                }
+            });
+
+            const orphans = Object.keys(formulas || {}).filter((k) => {
+                if (!k || k.indexOf('fields.') === 0) {
+                    return false;
+                }
+
+                return !managed[k];
+            }).sort();
+
+            if (!orphans.length) {
+                return;
+            }
+
+            const $wrap = $('<div class="form-group param-formulas-wrap automation-orphan-formulas">');
+            $wrap.append(
+                $('<label class="control-label small">').text(this.tLabel('orphanParamFormulas'))
+            );
+            $wrap.append(
+                $('<p class="text-muted small automation-field-hint">')
+                    .css({marginTop: 0})
+                    .text(this.tMessage('orphanParamFormulasHint'))
+            );
+
+            orphans.forEach((k) => {
+                const $row = $('<div class="automation-orphan-formula-row">').css({marginBottom: '8px'});
+                $row.append($('<div class="text-muted small">').text(k));
+                const $exHost = $('<div class="journey-expression-host automation-expression-host">');
+                $row.append($exHost);
+                $wrap.append($row);
+                this.mountExpression(prefix, k, $exHost, {
+                    multiline: true,
+                    rows: 2,
+                    fixedValue: '',
+                    expressionValue: formulas[k],
+                    mode: 'expression',
+                    snippets: snippets || [],
+                });
+            });
+
+            $host.append($wrap);
         },
 
         clearExpressionInputs: function (prefix) {
@@ -2337,6 +2420,12 @@ define('feature-automation:views/fields/definition', [
             }
 
             const supportsExpr = ExpressionInput.supportsType(def.type);
+
+            if (def.type === 'whatsappTemplate') {
+                this.renderWhatsAppTemplateParam($host, $group, def, params, helper, prefix);
+
+                return;
+            }
 
             if (def.type === 'bool') {
                 if (helper.get(name) === undefined && def.default !== undefined) {
@@ -2572,7 +2661,88 @@ define('feature-automation:views/fields/definition', [
             });
         },
 
+        /**
+         * Meta template picker + parameter mapping (same UI as FeatureJourney).
+         */
+        renderWhatsAppTemplateParam: function ($host, $group, def, params, helper, prefix) {
+            const name = def.name;
+            const viewName = prefix + '-' + name;
+            const managedKeys = def.managedKeys || [
+                'templateName',
+                'templateLanguage',
+                'templateCategory',
+                'parameterMapping',
+                'templateBody',
+                'headerMediaUrl',
+                'headerMediaType',
+            ];
+
+            this._whatsappTemplateManaged = this._whatsappTemplateManaged || {};
+            this._whatsappTemplateManaged[viewName] = managedKeys;
+
+            managedKeys.forEach((key) => {
+                if (params[key] !== undefined) {
+                    helper.set(key, params[key]);
+                }
+            });
+
+            const $field = $('<div class="field journey-whatsapp-template-field">')
+                .attr('data-name', name);
+            $group.append($field);
+            $group.append(
+                $('<p class="text-muted small automation-field-hint">')
+                    .css({marginTop: '4px', marginBottom: 0})
+                    .text(
+                        this.translate(
+                            'sendWhatsAppTemplateHint',
+                            'messages',
+                            'JourneyStageAction'
+                        )
+                    )
+            );
+            $host.append($group);
+
+            this._paramViewNames = this._paramViewNames || [];
+            this._paramViewNames.push(viewName);
+            this.createView(
+                viewName,
+                'feature-journey:views/journey-stage-action/fields/whatsapp-template',
+                {
+                    model: helper,
+                    name: name,
+                    el:
+                        this.getSelector() +
+                        ' [data-view-prefix="' +
+                        prefix +
+                        '"] [data-param="' +
+                        name +
+                        '"] .journey-whatsapp-template-field',
+                    mode: 'edit',
+                    defs: {
+                        name: name,
+                        type: 'varchar',
+                    },
+                    params: {},
+                },
+                (view) => {
+                    view.render();
+                    this.listenTo(view, 'change', () => {
+                        this.trigger('change');
+                    });
+                    this.listenTo(helper, 'change', () => {
+                        this.trigger('change');
+                    });
+                }
+            );
+        },
+
         readActionParamsFromCard: function ($card) {
+            const original = $card.data('originalAction') || {};
+            const existingFormulas =
+                original.paramFormulas && typeof original.paramFormulas === 'object'
+                    ? original.paramFormulas
+                    : {};
+
             const advanced = ($card.find('.def-action-params-json').val() || '').trim();
             if (advanced) {
                 const parsed = this.parseJsonField(advanced, {});
@@ -2588,7 +2758,7 @@ define('feature-automation:views/fields/definition', [
             if ($fallback.length) {
                 return {
                     params: this.parseJsonField($fallback.val(), {}),
-                    paramFormulas: {},
+                    paramFormulas: Object.assign({}, existingFormulas),
                 };
             }
 
@@ -2598,6 +2768,7 @@ define('feature-automation:views/fields/definition', [
             const helper = prefix ? this._helperModels[prefix] : null;
             const out = {};
             const outFormulas = {};
+            const managedFormulaKeys = {};
             const exprMap = this._expressionInputs || {};
 
             defs.forEach((def) => {
@@ -2605,6 +2776,7 @@ define('feature-automation:views/fields/definition', [
                 const ex = prefix ? exprMap[prefix + '::' + name] : null;
 
                 if (ex) {
+                    managedFormulaKeys[name] = true;
                     const state = ex.getState();
                     if (state.mode === 'expression') {
                         if (state.expression) {
@@ -2656,6 +2828,58 @@ define('feature-automation:views/fields/definition', [
                     return;
                 }
 
+                if (def.type === 'whatsappTemplate') {
+                    const viewName = prefix ? prefix + '-' + name : null;
+                    const view = viewName ? this.getView(viewName) : null;
+                    const managedKeys =
+                        def.managedKeys ||
+                        (viewName &&
+                            this._whatsappTemplateManaged &&
+                            this._whatsappTemplateManaged[viewName]) ||
+                        [
+                            'templateName',
+                            'templateLanguage',
+                            'templateCategory',
+                            'parameterMapping',
+                            'templateBody',
+                            'headerMediaUrl',
+                            'headerMediaType',
+                        ];
+
+                    let fetched = null;
+                    if (view && typeof view.fetch === 'function') {
+                        fetched = view.fetch();
+                    }
+
+                    managedKeys.forEach((key) => {
+                        let val =
+                            fetched &&
+                            Object.prototype.hasOwnProperty.call(fetched, key)
+                                ? fetched[key]
+                                : helper
+                                  ? helper.get(key)
+                                  : undefined;
+
+                        if (val === null || val === undefined || val === '') {
+                            return;
+                        }
+
+                        if (typeof val === 'object' && !Array.isArray(val)) {
+                            if (!Object.keys(val).length) {
+                                return;
+                            }
+
+                            out[key] = val;
+
+                            return;
+                        }
+
+                        out[key] = val;
+                    });
+
+                    return;
+                }
+
                 if (def.type === 'bool' || def.type === 'enum') {
                     const view = prefix ? this.getView(prefix + '-' + name) : null;
                     if (view && typeof view.fetch === 'function') {
@@ -2698,7 +2922,62 @@ define('feature-automation:views/fields/definition', [
                 }
             });
 
+            // Orphan ExpressionInputs (parameterMapping.*, hand-authored keys).
+            if (prefix) {
+                const pfx = prefix + '::';
+                Object.keys(exprMap).forEach((mapKey) => {
+                    if (mapKey.indexOf(pfx) !== 0) {
+                        return;
+                    }
+                    const name = mapKey.slice(pfx.length);
+                    if (!name || name.indexOf('__') === 0) {
+                        return;
+                    }
+                    if (managedFormulaKeys[name]) {
+                        return;
+                    }
+                    managedFormulaKeys[name] = true;
+                    const ex = exprMap[mapKey];
+                    if (!ex || typeof ex.getState !== 'function') {
+                        return;
+                    }
+                    const state = ex.getState();
+                    if (state.mode === 'expression') {
+                        if (state.expression) {
+                            outFormulas[name] = state.expression;
+                        }
+                    }
+                });
+            }
+
+            // Preserve formulas the builder never mounted (safety net).
+            Object.keys(existingFormulas).forEach((k) => {
+                if (managedFormulaKeys[k]) {
+                    return;
+                }
+                if (outFormulas[k] !== undefined) {
+                    return;
+                }
+                if (k.indexOf('fields.') === 0) {
+                    return;
+                }
+                outFormulas[k] = existingFormulas[k];
+            });
+
             return {params: out, paramFormulas: outFormulas};
+        },
+
+        // Keys the action builder renders and therefore owns on save. Anything
+        // absent from this set is preserved verbatim from the loaded action
+        // (e.g. continueOnError, maxRetries).
+        ACTION_KNOWN_KEYS: {
+            type: true,
+            enabled: true,
+            params: true,
+            paramFormulas: true,
+            when: true,
+            idempotencyKey: true,
+            debounce: true,
         },
 
         readActionsFromContainer: function ($c) {
@@ -2738,6 +3017,20 @@ define('feature-automation:views/fields/definition', [
                 }
                 const debounce = ($card.find('.def-action-debounce').val() || '').trim();
                 if (debounce) a.debounce = debounce;
+
+                // Carry over backend-only action keys the builder does not model.
+                const original = $card.data('originalAction');
+                if (original && typeof original === 'object') {
+                    Object.keys(original).forEach((key) => {
+                        if (
+                            !Object.prototype.hasOwnProperty.call(a, key) &&
+                            !this.ACTION_KNOWN_KEYS[key]
+                        ) {
+                            a[key] = original[key];
+                        }
+                    });
+                }
+
                 out.push(a);
             });
 

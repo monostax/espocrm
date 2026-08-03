@@ -6,8 +6,10 @@ namespace Espo\Modules\FeatureAutomation\Services;
 
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Metadata;
+use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\PeriodParser;
 use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
 use stdClass;
 use Throwable;
 
@@ -42,6 +44,7 @@ class AutomationDefinitionValidator
         private PeriodParser $periodParser,
         private RunDataBag $runDataBag,
         private WakeAtResolver $wakeAtResolver,
+        private EntityManager $entityManager,
     ) {}
 
     /**
@@ -737,19 +740,19 @@ class AutomationDefinitionValidator
                 }
             }
 
-            if ($type === 'exportToRunBag') {
+            if ($type === 'exportToRunData') {
                 $mode = strtolower(trim((string) ($params['mode'] ?? 'merge')));
                 if (!in_array($mode, ['merge', 'replace'], true)) {
-                    throw new Error("Action {$i} exportToRunBag: params.mode must be merge|replace.");
+                    throw new Error("Action {$i} exportToRunData: params.mode must be merge|replace.");
                 }
                 $params['mode'] = $mode;
                 if (isset($params['path']) && is_string($params['path']) && trim($params['path']) !== '') {
                     $p = trim($params['path']);
                     if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', explode('.', $p)[0])) {
-                        throw new Error("Action {$i} exportToRunBag: invalid params.path.");
+                        throw new Error("Action {$i} exportToRunData: invalid params.path.");
                     }
                     if (str_starts_with(explode('.', $p)[0], '_')) {
-                        throw new Error("Action {$i} exportToRunBag: cannot export reserved payload root.");
+                        throw new Error("Action {$i} exportToRunData: cannot export reserved payload root.");
                     }
                     $params['path'] = $p;
                 }
@@ -765,8 +768,59 @@ class AutomationDefinitionValidator
                         }
                         $params['keys'] = $cfg['keys'] === true ? true : $cfg['keys'];
                     } catch (Error $e) {
-                        throw new Error("Action {$i} exportToRunBag: invalid keys — " . $e->getMessage());
+                        throw new Error("Action {$i} exportToRunData: invalid keys — " . $e->getMessage());
                     }
+                }
+            }
+
+            if ($type === 'sendWhatsAppMessage') {
+                $inboxId = trim((string) ($params['chatwootInboxId'] ?? ''));
+                $inboxFormula = $this->paramFormulaScript($paramFormulas, 'chatwootInboxId');
+                $body = trim((string) ($params['body'] ?? ''));
+                $bodyFormula = $this->paramFormulaScript($paramFormulas, 'body');
+
+                if ($inboxId === '' && $inboxFormula === '') {
+                    throw new Error(
+                        "Action {$i} sendWhatsAppMessage requires chatwootInboxId (WhatsApp Inbox)."
+                    );
+                }
+
+                if ($body === '' && $bodyFormula === '') {
+                    throw new Error(
+                        "Action {$i} sendWhatsAppMessage requires body (static text or dynamic/fx formula)."
+                    );
+                }
+
+                if ($inboxId !== '') {
+                    $this->assertWhatsAppInboxChannel(
+                        $inboxId,
+                        JourneyWhatsAppOutbound::CHANNELS_MESSAGE,
+                        "Action {$i} sendWhatsAppMessage"
+                    );
+                }
+            }
+
+            if ($type === 'sendWhatsAppTemplate') {
+                $inboxId = trim((string) ($params['chatwootInboxId'] ?? ''));
+                $inboxFormula = $this->paramFormulaScript($paramFormulas, 'chatwootInboxId');
+                $templateName = trim((string) ($params['templateName'] ?? ''));
+
+                if ($inboxId === '' && $inboxFormula === '') {
+                    throw new Error(
+                        "Action {$i} sendWhatsAppTemplate requires chatwootInboxId (Cloud/Coexistence inbox)."
+                    );
+                }
+
+                if ($templateName === '') {
+                    throw new Error("Action {$i} sendWhatsAppTemplate requires templateName.");
+                }
+
+                if ($inboxId !== '') {
+                    $this->assertWhatsAppInboxChannel(
+                        $inboxId,
+                        JourneyWhatsAppOutbound::CHANNELS_TEMPLATE,
+                        "Action {$i} sendWhatsAppTemplate"
+                    );
                 }
             }
 
@@ -814,6 +868,39 @@ class AutomationDefinitionValidator
         }
 
         return $out;
+    }
+
+    /**
+     * @param list<string> $allowed
+     */
+    private function assertWhatsAppInboxChannel(string $inboxId, array $allowed, string $label): void
+    {
+        $inbox = $this->entityManager->getEntityById('ChatwootInbox', $inboxId);
+        if (!$inbox) {
+            throw new Error("{$label}: Chatwoot inbox not found.");
+        }
+
+        $channelType = (string) ($inbox->get('channelType') ?? '');
+        if ($channelType === '' || !in_array($channelType, $allowed, true)) {
+            throw new Error(
+                "{$label}: inbox channelType '{$channelType}' is not allowed " .
+                '(expected: ' . implode(', ', $allowed) . ').'
+            );
+        }
+    }
+
+    /**
+     * Non-empty formula script from action paramFormulas for a field key.
+     *
+     * @param array<string, mixed> $paramFormulas
+     */
+    private function paramFormulaScript(array $paramFormulas, string $key): string
+    {
+        if (!isset($paramFormulas[$key]) || !is_string($paramFormulas[$key])) {
+            return '';
+        }
+
+        return trim($paramFormulas[$key]);
     }
 
     /**

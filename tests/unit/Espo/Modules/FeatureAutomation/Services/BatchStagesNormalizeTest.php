@@ -33,8 +33,11 @@ class BatchStagesNormalizeTest extends TestCase
 
         $em = $this->createMock(EntityManager::class);
         $runBag = new RunDataBag($em, new PayloadBag());
+        $wake = $this->createMock(
+            \Espo\Modules\FeatureAutomation\Services\WakeAtResolver::class
+        );
 
-        return new AutomationDefinitionValidator($metadata, $period, $runBag);
+        return new AutomationDefinitionValidator($metadata, $period, $runBag, $wake, $em);
     }
 
     /**

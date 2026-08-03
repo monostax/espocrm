@@ -67,20 +67,101 @@
             "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\SendWhatsAppMessage",
             "tier": "tenant",
             "paramDefs": [
-                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox (Cloud / Coexistence / QR WAHA)", "nameKey": "chatwootInboxName", "required": true},
-                {"name": "body", "type": "text", "label": "Message body", "required": true},
-                {"name": "phone", "type": "varchar", "label": "Phone override (optional)"}
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "WhatsApp Inbox",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "whatsappAll",
+                    "required": true
+                },
+                {
+                    "name": "body",
+                    "type": "text",
+                    "label": "Message body",
+                    "required": true
+                },
+                {
+                    "name": "phone",
+                    "type": "varchar",
+                    "label": "Phone override (optional)",
+                    "placeholder": "Leave empty = all target phones; or list"
+                },
+                {
+                    "name": "fallbackTemplateName",
+                    "type": "varchar",
+                    "label": "Fallback Meta template (Cloud, if 24h closed)",
+                    "placeholder": "hello_world"
+                },
+                {
+                    "name": "fallbackTemplateLanguage",
+                    "type": "varchar",
+                    "label": "Fallback template language",
+                    "placeholder": "pt_BR",
+                    "default": "pt_BR"
+                },
+                {
+                    "name": "fallbackTemplateCategory",
+                    "type": "enum",
+                    "label": "Fallback template category",
+                    "options": ["UTILITY", "MARKETING", "AUTHENTICATION"],
+                    "default": "UTILITY"
+                },
+                {
+                    "name": "fallbackParameterMapping",
+                    "type": "json",
+                    "label": "Fallback parameter mapping (JSON)",
+                    "placeholder": "{\"1\": \"{{firstName}}\"}"
+                },
+                {
+                    "name": "fallbackHeaderMediaUrl",
+                    "type": "varchar",
+                    "label": "Fallback header media URL"
+                },
+                {
+                    "name": "fallbackHeaderMediaType",
+                    "type": "enum",
+                    "label": "Fallback header media type",
+                    "options": ["", "image", "video", "document"],
+                    "default": ""
+                }
             ]
         },
         "sendWhatsAppTemplate": {
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendWhatsAppTemplate",
             "tier": "tenant",
             "paramDefs": [
-                {"name": "chatwootInboxId", "type": "link", "entity": "ChatwootInbox", "label": "WhatsApp Inbox (Cloud / Coexistence)", "nameKey": "chatwootInboxName", "required": true},
-                {"name": "templateName", "type": "varchar", "label": "Template name", "required": true},
-                {"name": "templateLanguage", "type": "varchar", "label": "Language", "default": "pt_BR"},
-                {"name": "templateCategory", "type": "enum", "label": "Category", "options": ["UTILITY", "MARKETING", "AUTHENTICATION"], "default": "UTILITY"},
-                {"name": "phone", "type": "varchar", "label": "Phone override (optional)"}
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "WhatsApp Inbox (Cloud API)",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "whatsappCloudApi",
+                    "required": true
+                },
+                {
+                    "name": "templateName",
+                    "type": "whatsappTemplate",
+                    "label": "WhatsApp template",
+                    "required": true,
+                    "managedKeys": [
+                        "templateName",
+                        "templateLanguage",
+                        "templateCategory",
+                        "parameterMapping",
+                        "templateBody",
+                        "headerMediaUrl",
+                        "headerMediaType"
+                    ]
+                },
+                {
+                    "name": "phone",
+                    "type": "varchar",
+                    "label": "Phone override (optional)",
+                    "placeholder": "Leave empty = all target phones; or list"
+                }
             ]
         },
         "notifyUser": {

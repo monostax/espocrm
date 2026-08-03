@@ -31,7 +31,12 @@ class SendWhatsAppTemplate implements Action
             throw new Error('SendWhatsAppTemplate: missing tenantId.');
         }
 
-        $this->tenantGuard->assertEntityTenant($context->target, $tenantId, 'target');
+        $target = $context->target;
+        if ($target->getEntityType() === 'User') {
+            $this->tenantGuard->assertUserInTenant($target->getId(), $tenantId, 'target-user');
+        } elseif ($target->getEntityType() !== 'Tenant') {
+            $this->tenantGuard->assertEntityTenant($target, $tenantId, 'target');
+        }
 
         $params = $context->params;
         $inboxId = isset($params['chatwootInboxId']) ? (string) $params['chatwootInboxId'] : '';
@@ -52,16 +57,16 @@ class SendWhatsAppTemplate implements Action
             $language = 'pt_BR';
         }
 
-        if ($this->outbound->isOptedOut($context->target)) {
+        if ($this->outbound->isOptedOut($target)) {
             $this->log->warning(
                 'SendWhatsAppTemplate: target opted out of WhatsApp, skipping. ' .
-                $context->target->getEntityType() . '/' . $context->target->getId()
+                $target->getEntityType() . '/' . $target->getId()
             );
 
             return;
         }
 
-        $phones = $this->outbound->resolvePhones($context->target, $phoneOverride);
+        $phones = $this->outbound->resolvePhones($target, $phoneOverride);
         if ($phones === []) {
             $this->log->warning('SendWhatsAppTemplate: no phone on target, skipping.');
 
@@ -76,7 +81,7 @@ class SendWhatsAppTemplate implements Action
         );
 
         $mapping = $params['parameterMapping'] ?? [];
-        $resolved = $this->outbound->resolveParameterMapping($mapping, $context->target);
+        $resolved = $this->outbound->resolveParameterMapping($mapping, $target);
 
         $headerUrl = isset($params['headerMediaUrl']) ? (string) $params['headerMediaUrl'] : null;
         $headerType = isset($params['headerMediaType']) ? (string) $params['headerMediaType'] : null;
@@ -95,7 +100,7 @@ class SendWhatsAppTemplate implements Action
             }
         }
 
-        $name = $this->outbound->displayName($context->target);
+        $name = $this->outbound->displayName($target);
         $journeyContext = [
             'journeyId' => $context->journey->getId(),
             'journeyRecordId' => $context->record->getId(),

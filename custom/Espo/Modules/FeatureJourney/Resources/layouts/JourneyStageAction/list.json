@@ -1,7 +1,10 @@
 [
     {
-        "name": "type",
+        "name": "name",
         "link": true
+    },
+    {
+        "name": "type"
     },
     {
         "name": "trigger"
