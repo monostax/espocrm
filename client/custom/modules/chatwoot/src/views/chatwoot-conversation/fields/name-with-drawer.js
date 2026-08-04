@@ -68,6 +68,22 @@ class NameWithDrawerFieldView extends VarcharFieldView {
             return "whatsapp.svg";
         }
 
+        if (normalized.includes("webwidget") || normalized.includes("web_widget") || normalized.includes("website")) {
+            return "website.svg";
+        }
+
+        if (normalized.includes("gmail") || normalized === "google") {
+            return "google.svg";
+        }
+
+        if (normalized.includes("outlook") || normalized.includes("microsoft")) {
+            return "outlook.svg";
+        }
+
+        if (normalized.includes("email") || normalized.includes("mail")) {
+            return "mail.svg";
+        }
+
         return null;
     }
 

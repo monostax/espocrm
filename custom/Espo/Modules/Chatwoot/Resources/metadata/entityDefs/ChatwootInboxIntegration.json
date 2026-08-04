@@ -55,7 +55,23 @@
                 "whatsappCloudApi": "whatsapp",
                 "whatsappCoexistence": "whatsapp",
                 "instagram": "instagram",
-                "email": "mail"
+                "email": "mail",
+                "google": "google",
+                "microsoft": "outlook",
+                "outlook": "outlook",
+                "website": "website",
+                "Channel::WebWidget": "website",
+                "web_widget": "website"
+            },
+            "svgIconByContains": {
+                "webwidget": "website",
+                "web_widget": "website",
+                "website": "website",
+                "email": "mail",
+                "gmail": "google",
+                "google": "google",
+                "outlook": "outlook",
+                "microsoft": "outlook"
             },
             "readOnlyAfterCreate": true
         },

@@ -532,6 +532,16 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
             var svgIconByValue = {
                 whatsappQrcode: "whatsapp",
                 whatsappCloudApi: "whatsapp",
+                whatsappCoexistence: "whatsapp",
+                instagram: "instagram",
+                email: "mail",
+                google: "google",
+                microsoft: "outlook",
+                outlook: "outlook",
+                website: "website",
+                "Channel::WebWidget": "website",
+                web_widget: "website",
+                "Channel::Email": "mail",
             };
 
             // Contains-based fallback — mirrors svg-icon-enum.js pickByContains
@@ -542,6 +552,15 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 instagram: "instagram",
                 facebook: "messenger",
                 messenger: "messenger",
+                webwidget: "website",
+                web_widget: "website",
+                website: "website",
+                gmail: "google",
+                google: "google",
+                outlook: "outlook",
+                microsoft: "outlook",
+                email: "mail",
+                mail: "mail",
             };
 
             // Icon name → SVG file — mirrors SVG_ICON_FILE_MAP in svg-icon-enum.js
@@ -550,6 +569,10 @@ define("chatwoot:views/contact/modals/send-message-channel-picker", [
                 telegram: "telegram.svg",
                 instagram: "instagram.svg",
                 messenger: "messenger.svg",
+                mail: "mail.svg",
+                website: "website.svg",
+                google: "google.svg",
+                outlook: "outlook.svg",
             };
 
             // Font Awesome fallback for channels without SVG icons

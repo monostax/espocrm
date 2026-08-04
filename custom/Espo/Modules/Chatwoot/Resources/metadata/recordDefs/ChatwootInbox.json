@@ -1,9 +1,5 @@
 {
     "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
-    "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer"
+    "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer",
+    "mandatoryAttributeList": ["provider", "remoteChannelType", "chatwootInboxId"]
 }
-
-
-
-
-

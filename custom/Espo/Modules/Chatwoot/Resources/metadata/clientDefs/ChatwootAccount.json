@@ -25,7 +25,8 @@
     "relationshipPanels": {
         "inboxes": {
             "unlinkDisabled": true,
-            "selectDisabled": true
+            "selectDisabled": true,
+            "mandatoryAttributeList": ["provider", "remoteChannelType"]
         },
         "webhooks": {
             "unlinkDisabled": true,
@@ -41,6 +42,7 @@
                 "layout": "listSmall",
                 "unlinkDisabled": true,
                 "selectDisabled": true,
+                "mandatoryAttributeList": ["provider", "remoteChannelType", "chatwootInboxId"],
                 "order": 1
             },
             {
@@ -86,6 +88,7 @@
                 "layout": "listSmall",
                 "unlinkDisabled": true,
                 "selectDisabled": true,
+                "mandatoryAttributeList": ["provider", "remoteChannelType", "chatwootInboxId"],
                 "order": 1
             },
             {
