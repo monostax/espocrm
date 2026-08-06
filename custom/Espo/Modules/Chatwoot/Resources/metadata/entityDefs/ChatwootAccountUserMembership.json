@@ -82,7 +82,7 @@
             "view": "views/preferences/fields/time-zone",
             "tooltip": true,
             "audited": true,
-            "comment": "IANA timezone of this AI agent. Used so prompts show Current Date/Time in the agent's local zone (empty = UTC)."
+            "comment": "IANA timezone of this AI agent. Used for conversation-history timestamps and Current Date/Time in prompts (empty = UTC)."
         },
         "ignoreGroups": {
             "type": "bool",
