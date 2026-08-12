@@ -3,7 +3,7 @@
         "Send Message": "Enviar Mensagem"
     },
     "fields": {
-        "createdByAIAgent": "Criado por Agente de IA",
+        "createdByAIAgent": "Criado por Funcionário Digital",
         "whatsAppCampaigns": "Campanhas WhatsApp",
         "whatsAppCampaignTargetLists": "Listas Alvo das Campanhas"
     },

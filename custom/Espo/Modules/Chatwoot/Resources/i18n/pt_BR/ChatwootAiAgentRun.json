@@ -1,6 +1,6 @@
 {
     "labels": {
-        "Create ChatwootAiAgentRun": "Criar Execução de Agente IA",
+        "Create ChatwootAiAgentRun": "Criar Execução de Funcionário Digital",
         "noTenant": "(Sem Ambiente)",
         "restricted": "(Restrito)"
     },
@@ -21,16 +21,16 @@
         "customerTurns": "Turnos mensagem do cliente"
     },
     "scopeNames": {
-        "ChatwootAiAgentRun": "Execução de Agente IA",
-        "ChatwootAiAgentRunPlural": "Execuções de Agente IA"
+        "ChatwootAiAgentRun": "Execução de Funcionário Digital",
+        "ChatwootAiAgentRunPlural": "Execuções de Funcionário Digital"
     },
     "scopeNamesSingular": {
-        "ChatwootAiAgentRun": "Execução de Agente IA"
+        "ChatwootAiAgentRun": "Execução de Funcionário Digital"
     },
     "fields": {
         "name": "Nome",
         "kind": "Tipo",
-        "agent": "Agente IA",
+        "agent": "Funcionário Digital",
         "conversation": "Conversa",
         "chatwootAccount": "Conta",
         "chatwootContact": "Contato",
