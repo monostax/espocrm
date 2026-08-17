@@ -59,14 +59,14 @@ use Espo\ORM\EntityManager;
  * Defenses:
  *
  *   1. Membership sync prefers Chatwoot's `avatar_original_url` (raw blob).
- *   2. Representation URLs (`.../representations/...`) never overwrite an existing
- *      CRM avatar; if CRM already has bytes we re-push them to heal CW.
+ *   2. Representation URLs (`.../representations/...`) are never ingested; if
+ *      CRM already has bytes we re-push them to heal CW.
  *   3. Two content-hash columns on `ChatwootUser`:
  *        - `crmAvatarSyncHash` — SHA-256 of bytes last *pushed* to CW
  *        - `chatwootAvatarSyncHash` — SHA-256 of bytes last *pulled* from CW
  *      Each direction short-circuits when bytes match the corresponding column.
- *      After a successful pull both columns are aligned so the ensuing
- *      `User.afterSave` push no-ops.
+ *      After a successful pull both columns are aligned and the CRM save is
+ *      explicitly marked so the reverse `User.afterSave` push is skipped.
  *
  * ## Best-effort policy
  *
@@ -204,7 +204,7 @@ class AgentAvatarSyncService
      */
     private function pushToChatwootUser(Entity $chatwootUser, ?array $payload): void
     {
-        $newHash = $payload ? $this->computeHash($payload['bytes']) : '';
+        $newHash = $this->computeHash($payload['bytes'] ?? '');
 
         // Short-circuit: we already pushed these exact bytes (or the empty
         // state) last time. Avoids hammering Chatwoot on unrelated User saves.
@@ -366,8 +366,7 @@ class AgentAvatarSyncService
 
     /**
      * Download `$avatarUrl`, make it the new CRM User avatar, and align both
-     * hash columns so the resulting `User.afterSave` push hook sees the bytes
-     * as "already in sync" and no-ops.
+     * hash columns while suppressing the reverse `User.afterSave` push.
      *
      * Representation (thumbnail) URLs never clobber an existing CRM avatar —
      * they are a re-encode of the original and would degrade quality. When CRM
@@ -375,17 +374,18 @@ class AgentAvatarSyncService
      */
     private function applyAvatarUrlToCrmUser(Entity $crmUser, Entity $chatwootUser, string $avatarUrl): void
     {
-        // Hard guard: never ingest Active Storage *representations* over a
-        // good CRM avatar. Those are lossy 250px variants; round-tripping them
-        // causes generation loss (grayscale noise). Prefer healing CW from CRM
-        // when CRM still has a clean original (not a legacy noisy `cw-avatar-*`).
-        if ($this->isActiveStorageRepresentationUrl($avatarUrl) && $crmUser->get('avatarId')) {
+        // Never ingest Active Storage representations, even as an initial CRM
+        // avatar. They are lossy 250px variants and can start the feedback loop
+        // as soon as the mirrored attachment is pushed back to Chatwoot.
+        if ($this->isActiveStorageRepresentationUrl($avatarUrl)) {
             $this->log->info(
                 'AgentAvatarSyncService: Refusing CW representation URL for CRM User ' .
-                $crmUser->getId() . ' — keeping CRM avatar'
+                $crmUser->getId()
             );
 
-            $this->maybeHealPushCrmAvatar($crmUser, $chatwootUser);
+            if ($crmUser->get('avatarId')) {
+                $this->maybeHealPushCrmAvatar($crmUser, $chatwootUser);
+            }
 
             return;
         }
@@ -402,6 +402,16 @@ class AgentAvatarSyncService
             // This avatar is byte-identical to the last one we synced;
             // the avatarUrl changed (ActiveStorage signed URLs rotate) but
             // the underlying image didn't. Skip to avoid a no-op write loop.
+            return;
+        }
+
+        if ($chatwootUser->get('crmAvatarSyncHash') === $hash) {
+            // Chatwoot is reporting the original blob from our last successful
+            // CRM push. Align the pull hash without replacing the user's source
+            // attachment with a duplicate mirrored attachment.
+            $chatwootUser->set('chatwootAvatarSyncHash', $hash);
+            $this->entityManager->saveEntity($chatwootUser, ['silent' => true, 'skipHooks' => true]);
+
             return;
         }
 
@@ -429,14 +439,15 @@ class AgentAvatarSyncService
         $attachmentId = $this->createAvatarAttachment($crmUser->getId(), $bytes, $mime, $filename);
 
         $crmUser->set('avatarId', $attachmentId);
-        // ['silent' => true] keeps this mirror from showing up in the Stream,
-        // but the User.afterSave sync hook still fires — that's fine because
-        // `crmAvatarSyncHash` below will make it recognise the bytes as ours.
-        $this->entityManager->saveEntity($crmUser, ['silent' => true]);
+        // This save is the Chatwoot → CRM direction. Suppress the reverse hook
+        // so it does not immediately re-upload the just-downloaded blob before
+        // the hash bookkeeping below has been persisted.
+        $this->entityManager->saveEntity($crmUser, [
+            'silent' => true,
+            'skipChatwootAvatarSync' => true,
+        ]);
 
-        // Align BOTH hashes: this represents "CRM and Chatwoot are now in
-        // agreement about these bytes". The ensuing User.afterSave will see
-        // `crmAvatarSyncHash === sha256(bytes)` and skip re-pushing.
+        // Align BOTH hashes: CRM and Chatwoot now agree about these bytes.
         $chatwootUser->set('chatwootAvatarSyncHash', $hash);
         $chatwootUser->set('crmAvatarSyncHash', $hash);
         $this->entityManager->saveEntity($chatwootUser, ['silent' => true, 'skipHooks' => true]);
@@ -444,7 +455,7 @@ class AgentAvatarSyncService
         $this->log->info(
             'AgentAvatarSyncService: Mirrored Chatwoot avatar onto CRM User ' .
             $crmUser->getId() . ' from ChatwootUser ' . $chatwootUser->getId() .
-            ($this->isActiveStorageRepresentationUrl($avatarUrl) ? ' (representation seed)' : ' (original blob)')
+            ' (original blob)'
         );
     }
 
@@ -470,7 +481,10 @@ class AgentAvatarSyncService
 
         if ($crmUser->get('avatarId')) {
             $crmUser->set('avatarId', null);
-            $this->entityManager->saveEntity($crmUser, ['silent' => true]);
+            $this->entityManager->saveEntity($crmUser, [
+                'silent' => true,
+                'skipChatwootAvatarSync' => true,
+            ]);
         }
 
         $chatwootUser->set('chatwootAvatarSyncHash', $emptyHash);

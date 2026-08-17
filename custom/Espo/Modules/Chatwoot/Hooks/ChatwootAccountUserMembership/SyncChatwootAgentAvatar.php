@@ -53,9 +53,8 @@ use Espo\Modules\Chatwoot\Services\AgentAvatarSyncService;
  *
  * Deduplication is done downstream via the SHA-256 hash columns on
  * `ChatwootUser` ({@see AgentAvatarSyncService}). If the bytes behind the
- * new URL are the same ones we most recently pulled — which is the common
- * case when ActiveStorage rotates the variant URL without changing the
- * underlying blob — the service no-ops silently.
+ * new URL are the same ones we most recently pulled or pushed, the service
+ * no-ops silently.
  */
 class SyncChatwootAgentAvatar
 {

@@ -43,15 +43,11 @@ use Espo\Modules\Chatwoot\Services\AgentAvatarSyncService;
  * still transient, so we'd be uploading stale bytes (or nothing) on a
  * fresh-avatar save.
  *
- * ### Why no guard for `skipHooks`
+ * ### Pull-loop suppression
  *
- * The service itself is the sole writer that flips hash columns on
- * `ChatwootUser`, and it saves the CRM `User` with `['silent' => true]`
- * (no `skipHooks`). That re-entry is intentional: the hook fires, computes
- * the SHA-256 of the new attachment bytes, sees it already matches
- * `ChatwootUser.crmAvatarSyncHash`, and short-circuits. Adding a
- * `skipHooks` option here would couple the hook to the service's internal
- * save mechanics — the hash check is a cleaner contract.
+ * Chatwoot → CRM writes pass `skipChatwootAvatarSync`. Without that explicit
+ * direction marker this hook would upload the just-downloaded blob back to
+ * Chatwoot before the pull service persists its hash bookkeeping.
  *
  * ### Failure policy
  *
@@ -75,9 +71,7 @@ class SyncChatwootAgentAvatar
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        // Let integrations explicitly opt out — mostly a test seam, but also
-        // useful when a migration bulk-resets avatars and does not want N
-        // spurious Chatwoot pushes.
+        // Pulls and migrations explicitly opt out to avoid reverse pushes.
         if (!empty($options['skipChatwootAvatarSync'])) {
             return;
         }
