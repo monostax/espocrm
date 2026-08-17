@@ -31,6 +31,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootWahaAppTokenSync;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
+use Espo\Modules\Chatwoot\Services\IntegrationUserNameResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -45,7 +46,7 @@ use Espo\ORM\EntityManager;
  * NULL but a non-empty `api_key` inherited from the old automation user):
  *
  *   1. Create a fresh concierge user on the Chatwoot platform
- *      (`concierge.<id>@guest.<tenant-slug>.<gitops-domain>`, name "✦ Concierge (Monostax)").
+ *      (`concierge.<id>@guest.<tenant-slug>.<gitops-domain>`, localized integration display name).
  *   2. Attach it to the Chatwoot account as administrator.
  *   3. Create a matching `ChatwootUser` entity in EspoCRM.
  *   4. Rotate `apiKey` to the fresh user's access token.
@@ -86,6 +87,7 @@ class RotateAutomationToConcierge implements RebuildAction
         private ChatwootAccountUserMembershipService $membershipService,
         private ConciergeAvatarService $conciergeAvatarService,
         private ConciergeEmailDomainResolver $conciergeEmailDomainResolver,
+        private IntegrationUserNameResolver $integrationUserNameResolver,
         private ChatwootWahaAppTokenSync $wahaAppTokenSync,
         private Log $log,
     ) {}
@@ -386,7 +388,7 @@ class RotateAutomationToConcierge implements RebuildAction
         Entity $account,
     ): ?array {
         $email = $this->conciergeEmailDomainResolver->resolveEmail($account, $chatwootAccountId);
-        $name = '✦ Concierge (Monostax)';
+        $name = $this->integrationUserNameResolver->resolve($account);
         $password = $this->generateSecurePassword();
 
         try {
@@ -416,7 +418,8 @@ class RotateAutomationToConcierge implements RebuildAction
                 $chatwootAccountId,
                 $chatwootUserId,
                 'administrator',
-                true // global_admin: concierge needs account-wide inbox visibility
+                true, // global_admin: integration user needs account-wide settings access
+                false // Never expose the integration identity as an assignee.
             );
 
             $userAccessToken = $userResponse['access_token'] ?? null;

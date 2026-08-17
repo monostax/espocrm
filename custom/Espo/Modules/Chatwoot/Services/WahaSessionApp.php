@@ -32,6 +32,7 @@ class WahaSessionApp
     public function __construct(
         private EntityManager $entityManager,
         private WahaApiClient $wahaApiClient,
+        private ChatwootIntegrationUserAccess $integrationUserAccess,
         private Log $log,
         private Acl $acl
     ) {}
@@ -242,6 +243,10 @@ class WahaSessionApp
         $config = $this->resolveConfig($data, $appType);
         $appPayload['config'] = $config;
 
+        if ($appType === 'chatwoot') {
+            $this->ensureChatwootAppAccess($config);
+        }
+
         $appData = $this->wahaApiClient->createApp($platformUrl, $apiKey, $appPayload);
 
         $entity = $this->mapAppToEntity($appData, $platformId, $platform->get('name'));
@@ -444,6 +449,38 @@ class WahaSessionApp
         }
 
         return $config;
+    }
+
+    /**
+     * Ensure a CRM-managed account token can access the configured inbox before
+     * a manually-created WAHA Chatwoot app starts consuming events.
+     *
+     * @param array<string, mixed> $config
+     */
+    private function ensureChatwootAppAccess(array $config): void
+    {
+        $accountId = (int) ($config['accountId'] ?? 0);
+        $inboxId = (int) ($config['inboxId'] ?? 0);
+        $accountToken = $config['accountToken'] ?? null;
+
+        if (!$accountId || !$inboxId || !$accountToken) {
+            return;
+        }
+
+        $account = $this->entityManager
+            ->getRDBRepository('ChatwootAccount')
+            ->where([
+                'chatwootAccountId' => $accountId,
+                'status' => 'active',
+            ])
+            ->findOne();
+
+        // Custom external credentials are outside this service's ownership.
+        if (!$account || !hash_equals((string) $account->get('apiKey'), (string) $accountToken)) {
+            return;
+        }
+
+        $this->integrationUserAccess->ensureInboxAccess($account, $inboxId);
     }
 
     /**

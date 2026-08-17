@@ -52,7 +52,8 @@ class ChatwootInboxIntegration
         private Acl $acl,
         private Config $config,
         private EmailChannelBridge $emailChannelBridge,
-        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials
+        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials,
+        private ChatwootIntegrationUserAccess $integrationUserAccess
     ) {}
 
     /**
@@ -269,6 +270,13 @@ class ChatwootInboxIntegration
             $channel->set('chatwootInboxId', $inboxResult['id']);
             $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
             $channel->set('chatwootInboxRecordId', $this->upsertLocalChatwootInbox($channel, $inboxResult));
+
+            // WAHA authenticates with the account integration user's token. The
+            // user must be a direct member under scoped global-admin access.
+            $this->integrationUserAccess->ensureInboxAccess(
+                $chatwootAccount,
+                (int) $inboxResult['id']
+            );
 
             // Ensure clean internal slate for the session
             try {

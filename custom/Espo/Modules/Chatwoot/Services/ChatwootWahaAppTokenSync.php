@@ -80,6 +80,7 @@ class ChatwootWahaAppTokenSync
     public function __construct(
         private EntityManager $entityManager,
         private WahaApiClient $wahaApiClient,
+        private ChatwootIntegrationUserAccess $integrationUserAccess,
         private Log $log,
     ) {}
 
@@ -112,7 +113,7 @@ class ChatwootWahaAppTokenSync
             ->find();
 
         foreach ($integrations as $integration) {
-            $result = $this->syncIntegration($integration, (string) $apiKey);
+            $result = $this->syncIntegration($chatwootAccount, $integration, (string) $apiKey);
             $stats[$result]++;
         }
 
@@ -127,7 +128,7 @@ class ChatwootWahaAppTokenSync
     /**
      * @return 'refreshed'|'skipped'|'failed'
      */
-    private function syncIntegration(Entity $integration, string $apiKey): string
+    private function syncIntegration(Entity $account, Entity $integration, string $apiKey): string
     {
         $integrationId = $integration->getId();
         $wahaAppId = $integration->get('wahaAppId');
@@ -195,8 +196,28 @@ class ChatwootWahaAppTokenSync
         $currentToken = $config['accountToken'] ?? null;
         $hasEditMessage = array_key_exists('editMessage', $config);
 
+        $inboxId = (int) ($config['inboxId'] ?? 0);
+        if (!$inboxId) {
+            $this->log->warning(
+                "ChatwootWahaAppTokenSync: WAHA app $wahaAppId has no inboxId"
+            );
+            return 'failed';
+        }
+
+        // Establish access before WAHA starts using the token. This also repairs
+        // existing inboxes whenever an account token rotates to a new user.
+        try {
+            $this->integrationUserAccess->ensureInboxAccess($account, $inboxId);
+        } catch (\Throwable $e) {
+            $this->log->error(
+                "ChatwootWahaAppTokenSync: Could not grant integration-user access to inbox " .
+                "$inboxId for app $wahaAppId — {$e->getMessage()}"
+            );
+            return 'failed';
+        }
+
         if ($currentToken === $apiKey && $hasEditMessage) {
-            // Already in sync — no PUT needed.
+            // Token and access are already in sync — no PUT needed.
             return 'skipped';
         }
 

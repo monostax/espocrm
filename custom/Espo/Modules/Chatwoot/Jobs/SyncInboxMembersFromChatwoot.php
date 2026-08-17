@@ -321,7 +321,17 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
             // --- WAHA label lifecycle (derived from memberships directly) ---
             if ($inboxIntegration) {
-                $desiredMembershipIdsForLabels = $desiredMembershipIds;
+                // The account integration user needs direct Chatwoot inbox access
+                // for WAHA API calls, but it is not a human/AI assignee and should
+                // never consume a WhatsApp label slot.
+                $account = $this->entityManager->getEntityById('ChatwootAccount', $espoAccountId);
+                $integrationUserId = $account?->get('conciergeUserId');
+                $membershipsForLabels = array_filter(
+                    $membershipsToLink,
+                    static fn (Entity $membership): bool =>
+                        !$integrationUserId || $membership->get('chatwootUserId') !== $integrationUserId
+                );
+                $desiredMembershipIdsForLabels = array_keys($membershipsForLabels);
 
                 // Removed memberships: delete labels first to free up slots
                 $removedMembershipIds = array_diff($previousMembershipIds, $desiredMembershipIdsForLabels);
@@ -345,7 +355,7 @@ class SyncInboxMembersFromChatwoot implements JobDataLess
 
                 // Reconcile labels for all desired memberships (create missing labels)
                 if (!$labelLimitReached) {
-                    foreach ($membershipsToLink as $membership) {
+                    foreach ($membershipsForLabels as $membership) {
                         if ($labelLimitReached) {
                             break;
                         }

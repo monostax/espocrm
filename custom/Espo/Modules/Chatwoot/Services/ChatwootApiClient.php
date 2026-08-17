@@ -362,6 +362,8 @@ class ChatwootApiClient
      * @param string $role The role for the user in this account (e.g., 'agent', 'administrator')
      * @param bool|null $globalAdmin Whether the account user gets account-wide inbox visibility
      *                               (only meaningful for role 'administrator'). Null omits the field.
+     * @param bool|null $assignable Whether the account user can receive conversation assignments.
+     *                              Null omits the field.
      * @return array<string, mixed> Response data from Chatwoot API
      * @throws Error
      */
@@ -371,7 +373,8 @@ class ChatwootApiClient
         int $accountId,
         int $userId,
         string $role = 'agent',
-        ?bool $globalAdmin = null
+        ?bool $globalAdmin = null,
+        ?bool $assignable = null
     ): array {
         $url = rtrim($platformUrl, '/') . '/platform/api/v1/accounts/' . $accountId . '/account_users';
         
@@ -382,6 +385,10 @@ class ChatwootApiClient
 
         if ($globalAdmin !== null) {
             $data['global_admin'] = $globalAdmin;
+        }
+
+        if ($assignable !== null) {
+            $data['assignable'] = $assignable;
         }
 
         $payload = json_encode($data);
@@ -573,6 +580,40 @@ class ChatwootApiClient
 
         if ($response['code'] < 200 || $response['code'] >= 300) {
             throw new Error('Failed to get user from Chatwoot: HTTP ' . $response['code']);
+        }
+
+        return $response['body'];
+    }
+
+    /**
+     * Update a Chatwoot platform user.
+     *
+     * @param array<string, mixed> $userData
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    public function updateUser(
+        string $platformUrl,
+        string $accessToken,
+        int $userId,
+        array $userData
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/platform/api/v1/users/' . $userId;
+        $headers = [
+            'api_access_token: ' . $accessToken,
+            'Content-Type: application/json'
+        ];
+        $payload = json_encode($userData);
+        $response = $this->executeRequest($url, 'PUT', $payload, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = 'Failed to update user in Chatwoot: HTTP ' . $response['code'];
+            $errorMsg .= isset($response['body']['message'])
+                ? ' - ' . $response['body']['message']
+                : (isset($response['body']['error']) ? ' - ' . $response['body']['error'] : '');
+
+            $this->log->error('Chatwoot API Error (updateUser): ' . json_encode($response));
+            throw new Error($errorMsg);
         }
 
         return $response['body'];
@@ -2475,6 +2516,83 @@ public function listInboxMembers(
     }
 
     // Response format: { "payload": [agents...] }
+    return $response['body']['payload'] ?? $response['body'];
+}
+
+/**
+ * Add members to an inbox without replacing its existing direct members.
+ *
+ * @param array<int> $userIds Chatwoot platform user IDs to add
+ * @return array<int, array<string, mixed>> Updated list of inbox members
+ * @throws Error
+ */
+public function addInboxMembers(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId,
+    array $userIds
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/inbox_members';
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+    $payload = json_encode([
+        'inbox_id' => $inboxId,
+        'user_ids' => $userIds,
+    ]);
+
+    $response = $this->executeRequest($url, 'POST', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to add inbox members in Chatwoot: HTTP ' . $response['code'];
+        $errorMsg .= isset($response['body']['message'])
+            ? ' - ' . $response['body']['message']
+            : (isset($response['body']['error']) ? ' - ' . $response['body']['error'] : '');
+
+        $this->log->error('Chatwoot API Error (addInboxMembers): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
+    return $response['body']['payload'] ?? $response['body'];
+}
+
+/**
+ * Update settings for one direct inbox member.
+ *
+ * @param array<string, mixed> $settings Supported keys include assignable and agent_name_in_message_enabled.
+ * @return array<int, array<string, mixed>> Updated list of inbox members
+ * @throws Error
+ */
+public function updateInboxMemberSettings(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId,
+    int $userId,
+    array $settings
+): array {
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId .
+        '/inbox_members/' . $inboxId . '/update_settings';
+    $headers = [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json'
+    ];
+    $payload = json_encode(['user_id' => $userId] + $settings);
+
+    $response = $this->executeRequest($url, 'PATCH', $payload, $headers);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        $errorMsg = 'Failed to update inbox member settings in Chatwoot: HTTP ' . $response['code'];
+        $errorMsg .= isset($response['body']['message'])
+            ? ' - ' . $response['body']['message']
+            : (isset($response['body']['error']) ? ' - ' . $response['body']['error'] : '');
+
+        $this->log->error('Chatwoot API Error (updateInboxMemberSettings): ' . json_encode($response));
+        throw new Error($errorMsg);
+    }
+
     return $response['body']['payload'] ?? $response['body'];
 }
 

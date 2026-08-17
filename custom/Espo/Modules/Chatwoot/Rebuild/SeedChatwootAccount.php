@@ -32,6 +32,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootWahaAppTokenSync;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
+use Espo\Modules\Chatwoot\Services\IntegrationUserNameResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -53,6 +54,7 @@ class SeedChatwootAccount implements RebuildAction
         private ChatwootAccountUserMembershipService $membershipService,
         private ConciergeAvatarService $conciergeAvatarService,
         private ConciergeEmailDomainResolver $conciergeEmailDomainResolver,
+        private IntegrationUserNameResolver $integrationUserNameResolver,
         private ChatwootWahaAppTokenSync $wahaAppTokenSync,
         private Config $config,
         private Log $log
@@ -426,7 +428,7 @@ class SeedChatwootAccount implements RebuildAction
     ): ?array {
         // Use the same naming convention as SyncWithChatwoot hook
         $email = $this->conciergeEmailDomainResolver->resolveEmail($account, $chatwootAccountId);
-        $name = '✦ Concierge (Monostax)';
+        $name = $this->integrationUserNameResolver->resolve($account);
         $password = $this->generateSecurePassword();
 
         try {
@@ -449,16 +451,16 @@ class SeedChatwootAccount implements RebuildAction
                 return null;
             }
 
-            // Add user to account as administrator with account-wide inbox
-            // visibility (concierge is the CRM integration user and must see
-            // every inbox regardless of department/team scoping).
+            // The integration user can manage account settings, but is never an
+            // assignee. WAHA inboxes grant it direct access during provisioning.
             $accountUserResponse = $this->apiClient->attachUserToAccount(
                 $backendUrl,
                 $platformAccessToken,
                 $chatwootAccountId,
                 $chatwootUserId,
                 'administrator',
-                true
+                true,
+                false
             );
 
             $this->log->info("SeedChatwootAccount: Created concierge user (ID: {$chatwootUserId}) for account {$chatwootAccountId}");

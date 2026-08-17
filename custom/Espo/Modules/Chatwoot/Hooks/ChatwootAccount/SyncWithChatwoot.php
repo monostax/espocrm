@@ -30,6 +30,7 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
+use Espo\Modules\Chatwoot\Services\IntegrationUserNameResolver;
 
 /**
  * Hook to synchronize ChatwootAccount with Chatwoot Platform API.
@@ -54,7 +55,8 @@ class SyncWithChatwoot
         private ChatwootApiClient $apiClient,
         private Log $log,
         private ConciergeAvatarService $conciergeAvatarService,
-        private ConciergeEmailDomainResolver $conciergeEmailDomainResolver
+        private ConciergeEmailDomainResolver $conciergeEmailDomainResolver,
+        private IntegrationUserNameResolver $integrationUserNameResolver,
     ) {}
 
     /**
@@ -249,7 +251,7 @@ class SyncWithChatwoot
     ): ?array {
         // Generate concierge user credentials
         $email = $this->conciergeEmailDomainResolver->resolveEmail($entity, $chatwootAccountId);
-        $name = '✦ Concierge (Monostax)';
+        $name = $this->integrationUserNameResolver->resolve($entity);
         
         // Generate password meeting Chatwoot requirements
         $password = $this->generateSecurePassword();
@@ -274,15 +276,16 @@ class SyncWithChatwoot
 
         $chatwootUserId = $userResponse['id'];
 
-        // Attach user to account as administrator with account-wide inbox
-        // visibility (concierge is the CRM integration user).
+        // The integration user can manage account settings, but is never an assignee.
+        // WAHA inboxes grant it direct conversation access during provisioning.
         $accountUserResponse = $this->apiClient->attachUserToAccount(
             $platformUrl,
             $accessToken,
             $chatwootAccountId,
             $chatwootUserId,
             'administrator',
-            true
+            true,
+            false
         );
 
         $this->log->info("Created concierge user (ID: $chatwootUserId) for account $chatwootAccountId");
