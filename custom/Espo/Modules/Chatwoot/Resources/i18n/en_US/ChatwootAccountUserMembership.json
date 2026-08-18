@@ -20,6 +20,7 @@
         "contextualTransferIsEnabled": "Enable Contextual Transfer (AI)",
         "followupsEnabled": "Automatic Follow-up Enabled",
         "delegateEnabled": "OpenCode Delegate Enabled",
+        "aiDebounceSeconds": "Debounce (seconds)",
         "whatsappMessageTemplates": "WhatsApp Message Templates",
         "transferScenarios": "Transfer Scenarios",
         "knowledgeBaseCategories": "Knowledge Base Categories",
@@ -103,6 +104,7 @@
     },
     "tooltips": {
         "followupsEnabled": "When disabled, this AI agent never runs automated follow-ups: new opportunities it creates are NOT armed with a follow-up loop, scheduled follow-ups for opportunities it drives stop firing, and any opportunities currently in 'Follow-up Active' driven by this agent are reset to 'Action Needed' the moment you disable it. The agent can still create and update opportunities normally.",
+        "aiDebounceSeconds": "How long the AI waits (in seconds) after the customer's last message before it starts processing a reply. New messages arriving during this window reset the wait, so rapid message bursts are answered once. Defaults to 1 second when the agent cannot be resolved yet (e.g. first message before assignment).",
         "delegateEnabled": "When enabled, this AI agent may call the OpenCode `delegate` tool for multi-step research in each customer's isolated contact workspace (AI-profile skills/modes are copied as a baseline; contact overrides are preserved). Leave OFF unless you want untrusted conversation content to trigger nested agent runs in contact sandboxes. Requires the AI membership's assigned CRM user (for baseline skills/modes) and a linked CRM Contact on the conversation.",
         "whatsappMessageTemplates": "Select Meta-approved WhatsApp message templates this AI may send on WhatsApp Cloud / Coexistence inboxes it belongs to. At runtime the AI only sees templates for the conversation's inbox, and only when the 24-hour customer-service window is closed (free-form messaging is unavailable). Templates are loaded from the linked inbox's Meta Business Account.",
         "chatwootAccountUserId": "The account-user membership ID in Chat. This field is automatically populated after sync.",

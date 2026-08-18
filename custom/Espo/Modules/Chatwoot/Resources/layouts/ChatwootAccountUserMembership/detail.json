@@ -160,7 +160,9 @@
                 {
                     "name": "delegateEnabled"
                 },
-                false
+                {
+                    "name": "aiDebounceSeconds"
+                }
             ],
             [
                 {

@@ -87,6 +87,16 @@
                     ]
                 }
             },
+            "aiDebounceSeconds": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
+            },
             "whatsappMessageTemplates": {
                 "visible": {
                     "conditionGroup": [

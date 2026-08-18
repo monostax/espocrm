@@ -20,6 +20,7 @@
         "contextualTransferIsEnabled": "Habilitar Transferência Contextual (Funcionário Digital)",
         "followupsEnabled": "Follow-up Automático Ativado",
         "delegateEnabled": "Delegate OpenCode Ativado",
+        "aiDebounceSeconds": "Aguardar em segundos",
         "whatsappMessageTemplates": "Templates de Mensagem WhatsApp",
         "transferScenarios": "Cenários de Transferência",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
@@ -105,6 +106,7 @@
     },
     "tooltips": {
         "followupsEnabled": "Quando desativado, este funcionário digital nunca executa follow-ups automáticos: novas oportunidades criadas por ele NÃO são armadas com o loop de follow-up, follow-ups agendados de oportunidades conduzidas por ele deixam de disparar, e oportunidades atualmente em 'Follow-up Ativo' conduzidas por este funcionário digital são redefinidas para 'Ação Necessária' no momento em que você desativa. O funcionário digital continua criando e atualizando oportunidades normalmente.",
+        "aiDebounceSeconds": "Quanto tempo o funcionário digital aguarda (em segundos) após a última mensagem do cliente antes de começar a processar a resposta. Novas mensagens que chegam durante essa janela reiniciam a espera, para que rajadas de mensagens sejam respondidas uma única vez. Padrão de 1 segundo quando o funcionário ainda não pode ser resolvido (ex.: primeira mensagem antes da atribuição).",
         "delegateEnabled": "Quando ativado, este funcionário digital pode chamar a ferramenta OpenCode `delegate` para pesquisa em várias etapas no workspace isolado de cada cliente (skills/modes do perfil de funcionário digital entram como baseline; overrides do contact são preservados). Deixe DESLIGADO a menos que queira que conteúdo de conversas dispare agentes aninhados em sandboxes por contact. Requer o usuário CRM atribuído da membership (baseline) e Contact CRM ligado à conversa.",
         "whatsappMessageTemplates": "Selecione os templates Meta aprovados que este funcionário digital pode enviar nos inboxes WhatsApp Cloud / Coexistência dos quais participa. Em runtime o funcionário digital só vê templates do inbox da conversa, e somente quando a janela de 24h de atendimento está fechada (mensagem livre indisponível). Templates são carregados da conta Meta do inbox vinculado.",
         "chatwootAccountUserId": "O ID do membro da conta no Chat. Este campo é preenchido automaticamente após a sincronização.",
