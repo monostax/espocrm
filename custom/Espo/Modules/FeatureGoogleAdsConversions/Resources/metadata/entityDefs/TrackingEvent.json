@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "googleAdUserDataConsent": {
+            "type": "enum",
+            "options": ["Unknown", "Granted", "Denied"],
+            "default": "Unknown",
+            "readOnly": true
+        },
+        "googleAdPersonalizationConsent": {
+            "type": "enum",
+            "options": ["Unknown", "Granted", "Denied"],
+            "default": "Unknown",
+            "readOnly": true
+        }
+    }
+}

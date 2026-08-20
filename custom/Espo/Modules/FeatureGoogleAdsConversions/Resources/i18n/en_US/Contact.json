@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "googleGclid": "Google Ads Click ID (gclid)",
+        "googleWbraid": "Google Ads Web-to-App Click ID (wbraid)",
+        "googleGbraid": "Google Ads App Click ID (gbraid)"
+    },
+    "tooltips": {
+        "googleGclid": "Google Ads click identifier retained for compatibility with existing Contact attribution integrations.",
+        "googleWbraid": "Privacy-preserving Google Ads web-to-app click identifier retained for compatible offline conversion attribution.",
+        "googleGbraid": "Privacy-preserving Google Ads app click identifier retained for compatible offline conversion attribution."
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-list-details",
+    "boolFilterList": ["onlyMy"],
+    "createDisabled": true,
+    "editDisabled": true,
+    "removeDisabled": true,
+    "duplicateDisabled": true,
+    "massUpdateDisabled": true
+}

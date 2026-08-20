@@ -1,0 +1,8 @@
+[
+    [{"name": "name"}, {"name": "status"}],
+    [{"name": "destination"}, {"name": "mapping"}],
+    [{"name": "eventTime"}, {"name": "transactionId"}],
+    [{"name": "opportunity"}, {"name": "contact"}],
+    [{"name": "value"}, {"name": "currency"}],
+    [{"name": "attemptCount"}, {"name": "sentAt"}]
+]

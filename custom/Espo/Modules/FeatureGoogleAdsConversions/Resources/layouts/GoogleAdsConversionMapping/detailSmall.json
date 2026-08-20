@@ -1,0 +1,10 @@
+[
+    [{"name": "name"}, {"name": "isActive"}],
+    [{"name": "destination"}, {"name": "conversionActionId"}],
+    [{"name": "funnel"}, {"name": "opportunityStage"}],
+    [{"name": "includeOnCreate"}, {"name": "includeUserData"}],
+    [{"name": "lookbackDays"}, false],
+    [{"name": "valueSource"}, {"name": "fixedValue"}],
+    [{"name": "currencySource"}, {"name": "fixedCurrency"}],
+    [{"name": "teams"}, {"name": "tenant"}]
+]

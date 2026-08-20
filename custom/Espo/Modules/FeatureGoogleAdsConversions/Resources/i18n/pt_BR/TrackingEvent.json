@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "googleAdUserDataConsent": "Consentimento para Dados do Usuário em Anúncios",
+        "googleAdPersonalizationConsent": "Consentimento para Personalização de Anúncios"
+    },
+    "tooltips": {
+        "googleAdUserDataConsent": "Estado do consentimento para enviar dados do usuário ao Google Ads para mensuração. O consentimento negado impede a inclusão de identificadores de usuário.",
+        "googleAdPersonalizationConsent": "Estado do consentimento para usar os dados do evento na personalização de anúncios. O estado capturado é preservado com o evento de rastreamento."
+    }
+}

@@ -61,6 +61,7 @@ use Throwable;
  *   "userAgent": "...", "ipAddress": "...", // trusted only
  *   "value": 199.9, "currency": "BRL",
  *   "attribution": { "utm_source": "...", "gclid": "..." },
+ *   "consent": { "adUserData": "granted", "adPersonalization": "denied" },
  *   "properties": { ... },               // free-form extras
  *   "parentType": "Opportunity", "parentId": "..." // trusted only
  * }
@@ -233,6 +234,8 @@ class TrackingEventIngester
             'attribution' => is_array($data['attribution'] ?? null) ? (object) $data['attribution'] : null,
             'value' => is_numeric($data['value'] ?? null) ? (float) $data['value'] : null,
             'currency' => in_array($data['currency'] ?? null, TrackingEventPersister::CURRENCIES, true) ? $data['currency'] : '',
+            'googleAdUserDataConsent' => $this->normalizeGoogleAdsConsent($data, 'adUserData'),
+            'googleAdPersonalizationConsent' => $this->normalizeGoogleAdsConsent($data, 'adPersonalization'),
             'teamsIds' => $teamsIds,
             'tenantId' => $tenantId,
         ];
@@ -518,6 +521,24 @@ class TrackingEventIngester
         }
 
         return mb_substr($value, 0, $maxLength);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function normalizeGoogleAdsConsent(array $data, string $key): string
+    {
+        $consent = $data['consent'] ?? null;
+
+        if (!is_array($consent) || !is_string($consent[$key] ?? null)) {
+            return 'Unknown';
+        }
+
+        return match (strtolower(trim($consent[$key]))) {
+            'granted', 'consent_granted' => 'Granted',
+            'denied', 'consent_denied' => 'Denied',
+            default => 'Unknown',
+        };
     }
 
     /**

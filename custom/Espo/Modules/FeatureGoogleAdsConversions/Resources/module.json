@@ -1,0 +1,6 @@
+{
+    "order": 28,
+    "version": "1.0.0",
+    "name": "FeatureGoogleAdsConversions",
+    "description": "Durable Google Ads offline conversion uploads through the Google Data Manager API."
+}

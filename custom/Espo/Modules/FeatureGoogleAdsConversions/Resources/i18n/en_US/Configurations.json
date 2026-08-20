@@ -1,0 +1,18 @@
+{
+    "labels": {
+        "Google Ads": "Google Ads",
+        "Destinations": "Destinations",
+        "Conversion Mappings": "Conversion Mappings",
+        "Conversion Uploads": "Conversion Uploads"
+    },
+    "descriptions": {
+        "googleAdsDestinations": "Configure Google Ads accounts that receive offline conversion uploads.",
+        "googleAdsConversionMappings": "Map CRM funnel stages to conversion actions owned by a Google Ads operating account.",
+        "googleAdsConversionUploads": "Review offline conversion upload status, attribution, retries and Google Ads diagnostics."
+    },
+    "keywords": {
+        "googleAdsDestinations": "google,ads,offline,conversion,destination,customer,account,oauth",
+        "googleAdsConversionMappings": "google,ads,offline,conversion,mapping,funnel,stage,action",
+        "googleAdsConversionUploads": "google,ads,offline,conversion,upload,status,retry,error,diagnostics"
+    }
+}

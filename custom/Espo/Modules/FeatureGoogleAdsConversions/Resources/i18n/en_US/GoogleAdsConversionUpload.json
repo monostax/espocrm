@@ -1,0 +1,63 @@
+{
+    "labels": {
+        "Delivery": "Delivery",
+        "Context": "Context",
+        "Attribution": "Attribution",
+        "Attempts and Diagnostics": "Attempts and Diagnostics",
+        "System": "System"
+    },
+    "fields": {
+        "name": "Summary",
+        "status": "Status",
+        "destination": "Google Ads Destination",
+        "mapping": "Conversion Mapping",
+        "subject": "Source Record",
+        "opportunity": "Opportunity",
+        "contact": "Contact",
+        "stageFrom": "Previous Stage",
+        "stageTo": "New Stage",
+        "eventTime": "Conversion Time",
+        "transactionId": "Transaction ID",
+        "eventSummary": "Event Summary",
+        "validateOnly": "Validate Only",
+        "attributionType": "Attribution Type",
+        "identifierFingerprint": "Identifier Fingerprint",
+        "value": "Conversion Value",
+        "currency": "Currency",
+        "attemptCount": "Attempt Count",
+        "nextAttemptAt": "Next Attempt At",
+        "lastAttemptAt": "Last Attempt At",
+        "sentAt": "Sent At",
+        "httpStatus": "HTTP Status",
+        "requestId": "Google Ads Request ID",
+        "fieldWarnings": "Field Warnings",
+        "errorCode": "Error Code",
+        "errorMessage": "Error Message",
+        "teams": "Teams",
+        "tenant": "Tenant"
+    },
+    "links": {
+        "destination": "Google Ads Destination",
+        "mapping": "Conversion Mapping",
+        "subject": "Source Record",
+        "opportunity": "Opportunity",
+        "contact": "Contact",
+        "stageFrom": "Previous Stage",
+        "stageTo": "New Stage",
+        "teams": "Teams",
+        "tenant": "Tenant"
+    },
+    "tooltips": {
+        "eventTime": "Time attributed to the offline conversion and sent to Google Ads.",
+        "transactionId": "Stable identifier used to deduplicate repeated uploads of the same conversion.",
+        "validateOnly": "Google Ads validates the request without applying the conversion when enabled.",
+        "attributionType": "Click or enhanced-conversion identifier type selected for this upload.",
+        "identifierFingerprint": "Non-reversible fingerprint used to diagnose attribution and deduplication without displaying the underlying identifier.",
+        "attemptCount": "Number of upload attempts made for this record.",
+        "nextAttemptAt": "Time when a retryable upload becomes eligible for another attempt.",
+        "requestId": "Request identifier returned by Google Ads for support and diagnostics.",
+        "fieldWarnings": "Non-fatal field-level warnings returned while preparing or validating the upload.",
+        "errorCode": "Google Data Manager or local processing error code from the latest attempt.",
+        "errorMessage": "Diagnostic message from the latest failed or skipped attempt."
+    }
+}

@@ -1,0 +1,32 @@
+[
+    {
+        "label": "Mapping",
+        "rows": [
+            [{"name": "name"}, {"name": "isActive"}],
+            [{"name": "destination"}, {"name": "conversionActionId"}],
+            [{"name": "funnel"}, {"name": "opportunityStage"}]
+        ]
+    },
+    {
+        "label": "Upload Rules",
+        "rows": [
+            [{"name": "includeOnCreate"}, {"name": "includeUserData"}],
+            [{"name": "lookbackDays"}, false]
+        ]
+    },
+    {
+        "label": "Value and Currency",
+        "rows": [
+            [{"name": "valueSource"}, {"name": "fixedValue"}],
+            [{"name": "currencySource"}, {"name": "fixedCurrency"}]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{"name": "teams"}, {"name": "tenant"}],
+            [{"name": "createdAt"}, {"name": "createdBy"}],
+            [{"name": "modifiedAt"}, {"name": "modifiedBy"}]
+        ]
+    }
+]

@@ -590,6 +590,27 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                 ],
 
+                // Google Ads offline conversions. Destinations and mappings are
+                // tenant-admin managed; uploads are an immutable delivery log.
+                'GoogleAdsDestination' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'GoogleAdsConversionMapping' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'GoogleAdsConversionUpload' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+
                 // Meta / Lead Ads. Pages and lead forms are configuration entities
                 // managed by tenant-admin (overrides below). Leadgen events are
                 // a webhook-driven log; tenant-admin can edit to use the
@@ -944,6 +965,9 @@ class SeedRole implements RebuildAction
                 'MetaCapiDatasetSource' => (object)[],
                 'MetaCapiEventLog' => (object)[],
                 'MetaConversionEvent' => (object)[],
+                'GoogleAdsDestination' => (object)[],
+                'GoogleAdsConversionMapping' => (object)[],
+                'GoogleAdsConversionUpload' => (object)[],
                 'MetaFacebookPage' => (object)[],
                 'MetaLeadForm' => (object)[],
                 'MetaLeadgenEvent' => (object)[],
@@ -1364,6 +1388,27 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                     ],
 
+                    // Google Ads destinations and mappings are configurable;
+                    // upload records remain read-only delivery history.
+                    'GoogleAdsDestination' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'GoogleAdsConversionMapping' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'GoogleAdsConversionUpload' => [
+                        'create' => 'no',
+                        'read' => 'team',
+                        'edit' => 'no',
+                        'delete' => 'no',
+                    ],
+
                     // Meta / Lead Ads — tenant-admin syncs Facebook Pages,
                     // configures lead forms (funnel/stage/fieldMapping), and
                     // can retry failed leadgen ingestions via the mass action
@@ -1496,6 +1541,9 @@ class SeedRole implements RebuildAction
                 ],
                 'fieldData' => [
                     ...$tenantBase['fieldData'],
+                    'GoogleAdsDestination' => (object)[],
+                    'GoogleAdsConversionMapping' => (object)[],
+                    'GoogleAdsConversionUpload' => (object)[],
                     // Tenant-admin manages inbox↔team links (grants Chatwoot
                     // inbox access to department teams); base tenant role is
                     // read-only on these fields.

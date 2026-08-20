@@ -1,0 +1,8 @@
+{
+    "DispatchPendingGoogleAdsConversions": {
+        "name": "Dispatch Pending Google Ads Conversions",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureGoogleAdsConversions\\Jobs\\DispatchPendingGoogleAdsConversions"
+    }
+}

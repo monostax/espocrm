@@ -1,0 +1,13 @@
+[
+    {"name": "name", "link": true},
+    {"name": "status"},
+    {"name": "eventTime"},
+    {"name": "destination"},
+    {"name": "mapping"},
+    {"name": "opportunity"},
+    {"name": "contact"},
+    {"name": "value"},
+    {"name": "currency"},
+    {"name": "attemptCount"},
+    {"name": "sentAt"}
+]

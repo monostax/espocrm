@@ -1,0 +1,63 @@
+{
+    "labels": {
+        "Delivery": "Envio",
+        "Context": "Contexto",
+        "Attribution": "Atribuição",
+        "Attempts and Diagnostics": "Tentativas e Diagnósticos",
+        "System": "Sistema"
+    },
+    "fields": {
+        "name": "Resumo",
+        "status": "Status",
+        "destination": "Destino do Google Ads",
+        "mapping": "Mapeamento de Conversão",
+        "subject": "Registro de Origem",
+        "opportunity": "Oportunidade",
+        "contact": "Contato",
+        "stageFrom": "Etapa Anterior",
+        "stageTo": "Nova Etapa",
+        "eventTime": "Data e Hora da Conversão",
+        "transactionId": "ID da Transação",
+        "eventSummary": "Resumo do Evento",
+        "validateOnly": "Somente Validar",
+        "attributionType": "Tipo de Atribuição",
+        "identifierFingerprint": "Impressão Digital do Identificador",
+        "value": "Valor da Conversão",
+        "currency": "Moeda",
+        "attemptCount": "Número de Tentativas",
+        "nextAttemptAt": "Próxima Tentativa em",
+        "lastAttemptAt": "Última Tentativa em",
+        "sentAt": "Enviado em",
+        "httpStatus": "Status HTTP",
+        "requestId": "ID da Requisição do Google Ads",
+        "fieldWarnings": "Avisos de Campos",
+        "errorCode": "Código do Erro",
+        "errorMessage": "Mensagem de Erro",
+        "teams": "Equipes",
+        "tenant": "Tenant"
+    },
+    "links": {
+        "destination": "Destino do Google Ads",
+        "mapping": "Mapeamento de Conversão",
+        "subject": "Registro de Origem",
+        "opportunity": "Oportunidade",
+        "contact": "Contato",
+        "stageFrom": "Etapa Anterior",
+        "stageTo": "Nova Etapa",
+        "teams": "Equipes",
+        "tenant": "Tenant"
+    },
+    "tooltips": {
+        "eventTime": "Data e hora atribuída à conversão off-line e enviada ao Google Ads.",
+        "transactionId": "Identificador estável usado para evitar envios repetidos da mesma conversão.",
+        "validateOnly": "Quando ativo, o Google Ads valida a requisição sem aplicar a conversão.",
+        "attributionType": "Tipo de identificador de clique ou de conversão otimizada selecionado para este envio.",
+        "identifierFingerprint": "Impressão digital irreversível usada para diagnosticar atribuição e duplicidade sem exibir o identificador original.",
+        "attemptCount": "Quantidade de tentativas de envio realizadas para este registro.",
+        "nextAttemptAt": "Momento em que um envio recuperável poderá ser tentado novamente.",
+        "requestId": "Identificador de requisição retornado pelo Google Ads para suporte e diagnóstico.",
+        "fieldWarnings": "Avisos não fatais de campos retornados na preparação ou validação do envio.",
+        "errorCode": "Código de erro do Google Data Manager ou do processamento local na tentativa mais recente.",
+        "errorMessage": "Mensagem de diagnóstico da tentativa mais recente que falhou ou foi ignorada."
+    }
+}

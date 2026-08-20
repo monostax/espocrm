@@ -1,0 +1,103 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 100,
+            "trim": true,
+            "pattern": "$noBadCharacters"
+        },
+        "oAuthAccount": {
+            "type": "link",
+            "required": true
+        },
+        "operatingAccountId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 10,
+            "trim": true,
+            "pattern": "[0-9]{10}"
+        },
+        "loginAccountId": {
+            "type": "varchar",
+            "maxLength": 10,
+            "trim": true,
+            "pattern": "[0-9]{10}"
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "lastUploadAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastUploadStatus": {
+            "type": "enum",
+            "options": ["", "Success", "Failed"],
+            "default": "",
+            "readOnly": true,
+            "style": {
+                "Success": "success",
+                "Failed": "danger"
+            }
+        },
+        "lastUploadError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "required": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "oAuthAccount": {
+            "type": "belongsTo",
+            "entity": "OAuthAccount",
+            "foreign": "googleAdsDestinations"
+        },
+        "mappings": {
+            "type": "hasMany",
+            "entity": "GoogleAdsConversionMapping",
+            "foreign": "destination"
+        },
+        "uploads": {
+            "type": "hasMany",
+            "entity": "GoogleAdsConversionUpload",
+            "foreign": "destination"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "googleAdsDestinations"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "tenantActive": {
+            "columns": ["tenantId", "isActive", "deleted"]
+        },
+        "operatingAccountIdUnique": {
+            "type": "unique",
+            "columns": ["operatingAccountId", "deleted"]
+        }
+    }
+}

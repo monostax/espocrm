@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "googleGclid": "ID de Clique do Google Ads (gclid)",
+        "googleWbraid": "ID de Clique Web para App do Google Ads (wbraid)",
+        "googleGbraid": "ID de Clique em App do Google Ads (gbraid)"
+    },
+    "tooltips": {
+        "googleGclid": "Identificador de clique do Google Ads mantido para compatibilidade com integrações de atribuição existentes no Contato.",
+        "googleWbraid": "Identificador de clique web para app do Google Ads, com preservação de privacidade, mantido para atribuição compatível de conversões off-line.",
+        "googleGbraid": "Identificador de clique em app do Google Ads, com preservação de privacidade, mantido para atribuição compatível de conversões off-line."
+    }
+}

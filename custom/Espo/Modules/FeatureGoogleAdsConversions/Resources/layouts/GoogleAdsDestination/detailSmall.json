@@ -1,0 +1,7 @@
+[
+    [{"name": "name"}, {"name": "isActive"}],
+    [{"name": "oAuthAccount"}, false],
+    [{"name": "operatingAccountId"}, {"name": "loginAccountId"}],
+    [{"name": "description"}, false],
+    [{"name": "teams"}, {"name": "tenant"}]
+]

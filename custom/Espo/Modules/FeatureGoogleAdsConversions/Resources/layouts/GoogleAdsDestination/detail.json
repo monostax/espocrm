@@ -1,0 +1,26 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "isActive"}],
+            [{"name": "oAuthAccount"}, false],
+            [{"name": "operatingAccountId"}, {"name": "loginAccountId"}],
+            [{"name": "description"}, false]
+        ]
+    },
+    {
+        "label": "Last Upload",
+        "rows": [
+            [{"name": "lastUploadStatus"}, {"name": "lastUploadAt"}],
+            [{"name": "lastUploadError"}, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{"name": "teams"}, {"name": "tenant"}],
+            [{"name": "createdAt"}, {"name": "createdBy"}],
+            [{"name": "modifiedAt"}, {"name": "modifiedBy"}]
+        ]
+    }
+]

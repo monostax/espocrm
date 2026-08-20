@@ -1,0 +1,26 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-route",
+    "boolFilterList": ["onlyMy"],
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "uploads",
+                "label": "Conversion Uploads",
+                "view": "views/record/panels/relationship",
+                "link": "uploads",
+                "layout": "listSmall",
+                "select": false,
+                "create": false,
+                "order": 10
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "uploads": {
+            "layout": "listSmall",
+            "create": false,
+            "select": false
+        }
+    }
+}

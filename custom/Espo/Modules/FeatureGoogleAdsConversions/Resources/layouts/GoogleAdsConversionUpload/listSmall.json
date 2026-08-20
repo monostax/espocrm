@@ -1,0 +1,8 @@
+[
+    {"name": "name", "link": true},
+    {"name": "status"},
+    {"name": "eventTime"},
+    {"name": "opportunity"},
+    {"name": "attemptCount"},
+    {"name": "sentAt"}
+]

@@ -1,0 +1,46 @@
+{
+    "labels": {
+        "Create GoogleAdsConversionMapping": "Criar Mapeamento de Conversão",
+        "Mapping": "Mapeamento",
+        "Upload Rules": "Regras de Envio",
+        "Value and Currency": "Valor e Moeda",
+        "System": "Sistema"
+    },
+    "fields": {
+        "name": "Nome",
+        "destination": "Destino do Google Ads",
+        "funnel": "Funil",
+        "opportunityStage": "Etapa da Oportunidade",
+        "conversionActionId": "ID da Ação de Conversão",
+        "includeOnCreate": "Incluir na Criação da Oportunidade",
+        "includeUserData": "Incluir Dados de Conversão Otimizada",
+        "lookbackDays": "Janela de Atribuição em Dias",
+        "valueSource": "Origem do Valor",
+        "fixedValue": "Valor Fixo",
+        "currencySource": "Origem da Moeda",
+        "fixedCurrency": "Moeda Fixa",
+        "isActive": "Ativo",
+        "teams": "Equipes",
+        "tenant": "Tenant",
+        "uploads": "Envios de Conversão"
+    },
+    "links": {
+        "destination": "Destino do Google Ads",
+        "funnel": "Funil",
+        "opportunityStage": "Etapa da Oportunidade",
+        "teams": "Equipes",
+        "tenant": "Tenant",
+        "uploads": "Envios de Conversão"
+    },
+    "tooltips": {
+        "destination": "Destino cuja conta operacional possui esta ação de conversão.",
+        "conversionActionId": "ID numérico da ação de conversão pertencente à conta operacional do destino. Informe somente dígitos, sem hífens.",
+        "includeOnCreate": "Envie uma conversão quando uma Oportunidade for criada diretamente nesta etapa, e não apenas quando avançar para ela depois.",
+        "includeUserData": "Inclua dados próprios normalizados e com hash do Contato para conversões otimizadas de leads quando o consentimento permitir.",
+        "lookbackDays": "Idade máxima, em dias, da atribuição de clique aceita por este mapeamento.",
+        "valueSource": "Selecione se o valor da conversão vem da Oportunidade ou do valor fixo abaixo.",
+        "fixedValue": "Valor usado quando a Origem do Valor é fixa.",
+        "currencySource": "Selecione se a moeda vem da Oportunidade ou da moeda fixa abaixo.",
+        "fixedCurrency": "Código de moeda ISO 4217 usado quando a Origem da Moeda é fixa."
+    }
+}

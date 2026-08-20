@@ -1,0 +1,38 @@
+{
+    "labels": {
+        "Create GoogleAdsDestination": "Create Google Ads Destination",
+        "Overview": "Overview",
+        "Last Upload": "Last Upload",
+        "System": "System"
+    },
+    "fields": {
+        "name": "Name",
+        "oAuthAccount": "Google OAuth Account",
+        "operatingAccountId": "Operating Account ID",
+        "loginAccountId": "Login Account ID",
+        "isActive": "Active",
+        "description": "Description",
+        "lastUploadAt": "Last Upload At",
+        "lastUploadStatus": "Last Upload Status",
+        "lastUploadError": "Last Upload Error",
+        "teams": "Teams",
+        "tenant": "Tenant",
+        "mappings": "Conversion Mappings",
+        "uploads": "Conversion Uploads"
+    },
+    "links": {
+        "oAuthAccount": "Google OAuth Account",
+        "teams": "Teams",
+        "tenant": "Tenant",
+        "mappings": "Conversion Mappings",
+        "uploads": "Conversion Uploads"
+    },
+    "tooltips": {
+        "oAuthAccount": "OAuth account used to authorize Google Data Manager requests for this destination.",
+        "operatingAccountId": "Google Ads customer ID of the operating account that owns the conversion actions. Enter digits only, without hyphens.",
+        "loginAccountId": "Optional manager account customer ID sent as the login customer. Enter digits only, without hyphens; leave blank when signing in directly to the operating account.",
+        "isActive": "Only active destinations are eligible for conversion uploads.",
+        "lastUploadStatus": "Result of the most recent upload attempt for this destination.",
+        "lastUploadError": "Most recent destination-level upload error returned by Google Ads."
+    }
+}

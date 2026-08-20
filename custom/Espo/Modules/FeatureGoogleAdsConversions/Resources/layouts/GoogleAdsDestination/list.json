@@ -1,0 +1,9 @@
+[
+    {"name": "name", "link": true},
+    {"name": "oAuthAccount"},
+    {"name": "operatingAccountId"},
+    {"name": "loginAccountId"},
+    {"name": "isActive"},
+    {"name": "lastUploadStatus"},
+    {"name": "lastUploadAt"}
+]

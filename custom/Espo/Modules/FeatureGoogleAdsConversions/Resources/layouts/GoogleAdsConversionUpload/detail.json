@@ -1,0 +1,45 @@
+[
+    {
+        "label": "Delivery",
+        "rows": [
+            [{"name": "name"}, {"name": "status"}],
+            [{"name": "destination"}, {"name": "mapping"}],
+            [{"name": "eventTime"}, {"name": "transactionId"}],
+            [{"name": "validateOnly"}, {"name": "sentAt"}]
+        ]
+    },
+    {
+        "label": "Context",
+        "rows": [
+            [{"name": "subject"}, false],
+            [{"name": "opportunity"}, {"name": "contact"}],
+            [{"name": "stageFrom"}, {"name": "stageTo"}],
+            [{"name": "eventSummary"}, false]
+        ]
+    },
+    {
+        "label": "Attribution",
+        "rows": [
+            [{"name": "attributionType"}, {"name": "identifierFingerprint"}],
+            [{"name": "value"}, {"name": "currency"}]
+        ]
+    },
+    {
+        "label": "Attempts and Diagnostics",
+        "rows": [
+            [{"name": "attemptCount"}, {"name": "nextAttemptAt"}],
+            [{"name": "lastAttemptAt"}, {"name": "httpStatus"}],
+            [{"name": "requestId"}, {"name": "errorCode"}],
+            [{"name": "fieldWarnings"}, false],
+            [{"name": "errorMessage"}, false]
+        ]
+    },
+    {
+        "label": "System",
+        "rows": [
+            [{"name": "teams"}, {"name": "tenant"}],
+            [{"name": "createdAt"}, {"name": "createdBy"}],
+            [{"name": "modifiedAt"}, {"name": "modifiedBy"}]
+        ]
+    }
+]

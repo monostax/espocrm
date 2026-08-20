@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "googleAdUserDataConsent": "Ad User Data Consent",
+        "googleAdPersonalizationConsent": "Ad Personalization Consent"
+    },
+    "tooltips": {
+        "googleAdUserDataConsent": "Consent state for sending user data to Google Ads for measurement. Denied consent prevents user-data identifiers from being included.",
+        "googleAdPersonalizationConsent": "Consent state for using event data for ad personalization. The captured state is preserved with the tracking event."
+    }
+}

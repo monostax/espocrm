@@ -1,0 +1,38 @@
+{
+    "labels": {
+        "Create GoogleAdsDestination": "Criar Destino do Google Ads",
+        "Overview": "Visão Geral",
+        "Last Upload": "Último Envio",
+        "System": "Sistema"
+    },
+    "fields": {
+        "name": "Nome",
+        "oAuthAccount": "Conta OAuth do Google",
+        "operatingAccountId": "ID da Conta Operacional",
+        "loginAccountId": "ID da Conta de Login",
+        "isActive": "Ativo",
+        "description": "Descrição",
+        "lastUploadAt": "Último Envio em",
+        "lastUploadStatus": "Status do Último Envio",
+        "lastUploadError": "Erro do Último Envio",
+        "teams": "Equipes",
+        "tenant": "Tenant",
+        "mappings": "Mapeamentos de Conversão",
+        "uploads": "Envios de Conversão"
+    },
+    "links": {
+        "oAuthAccount": "Conta OAuth do Google",
+        "teams": "Equipes",
+        "tenant": "Tenant",
+        "mappings": "Mapeamentos de Conversão",
+        "uploads": "Envios de Conversão"
+    },
+    "tooltips": {
+        "oAuthAccount": "Conta OAuth usada para autorizar as requisições ao Google Data Manager deste destino.",
+        "operatingAccountId": "ID de cliente da conta operacional do Google Ads que possui as ações de conversão. Informe somente dígitos, sem hífens.",
+        "loginAccountId": "ID de cliente opcional da conta de administrador enviada como conta de login. Informe somente dígitos, sem hífens; deixe vazio ao acessar diretamente a conta operacional.",
+        "isActive": "Somente destinos ativos podem receber envios de conversões.",
+        "lastUploadStatus": "Resultado da tentativa de envio mais recente deste destino.",
+        "lastUploadError": "Erro mais recente do destino retornado pelo Google Ads."
+    }
+}

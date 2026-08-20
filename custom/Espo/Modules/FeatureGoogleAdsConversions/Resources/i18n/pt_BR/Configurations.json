@@ -1,0 +1,18 @@
+{
+    "labels": {
+        "Google Ads": "Google Ads",
+        "Destinations": "Destinos",
+        "Conversion Mappings": "Mapeamentos de Conversão",
+        "Conversion Uploads": "Envios de Conversão"
+    },
+    "descriptions": {
+        "googleAdsDestinations": "Configure as contas do Google Ads que recebem envios de conversões off-line.",
+        "googleAdsConversionMappings": "Mapeie etapas do funil do CRM para ações de conversão pertencentes a uma conta operacional do Google Ads.",
+        "googleAdsConversionUploads": "Consulte status, atribuição, novas tentativas e diagnósticos dos envios de conversões off-line."
+    },
+    "keywords": {
+        "googleAdsDestinations": "google,ads,offline,conversao,destino,cliente,conta,oauth",
+        "googleAdsConversionMappings": "google,ads,offline,conversao,mapeamento,funil,etapa,acao",
+        "googleAdsConversionUploads": "google,ads,offline,conversao,envio,status,tentativa,erro,diagnostico"
+    }
+}

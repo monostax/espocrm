@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "provider": {
+            "type": "enum",
+            "options": [
+                "meta-whatsapp",
+                "meta-whatsapp-coexistence",
+                "meta-leadads",
+                "meta-system-user",
+                "google-calendar",
+                "google-meet",
+                "google-gmail",
+                "google-data-manager",
+                "microsoft-365",
+                "meta-instagram",
+                "other"
+            ],
+            "default": "other",
+            "maxLength": 32
+        }
+    }
+}

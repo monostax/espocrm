@@ -1,0 +1,220 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true
+        },
+        "destination": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "mapping": {
+            "type": "link",
+            "required": true,
+            "readOnly": true
+        },
+        "subject": {
+            "type": "linkParent",
+            "entityList": ["Opportunity", "Contact"],
+            "readOnly": true
+        },
+        "opportunity": {
+            "type": "link",
+            "readOnly": true
+        },
+        "contact": {
+            "type": "link",
+            "readOnly": true
+        },
+        "stageFrom": {
+            "type": "link",
+            "readOnly": true
+        },
+        "stageTo": {
+            "type": "link",
+            "readOnly": true
+        },
+        "eventTime": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": true
+        },
+        "transactionId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 128,
+            "readOnly": true
+        },
+        "idempotencyKey": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "encryptedEventData": {
+            "type": "password",
+            "dbType": "text",
+            "readOnly": true,
+            "directAccessDisabled": true,
+            "audited": false
+        },
+        "eventSummary": {
+            "type": "jsonObject",
+            "readOnly": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["Pending", "Processing", "RetryScheduled", "Sent", "Validated", "FailedPermanent", "Skipped"],
+            "default": "Pending",
+            "readOnly": true,
+            "style": {
+                "Pending": "default",
+                "Processing": "info",
+                "RetryScheduled": "warning",
+                "Sent": "success",
+                "Validated": "success",
+                "FailedPermanent": "danger",
+                "Skipped": "warning"
+            }
+        },
+        "validateOnly": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true
+        },
+        "attributionType": {
+            "type": "enum",
+            "options": ["None", "Gclid", "Gbraid", "Wbraid", "Gclid+Gbraid", "Gclid+Wbraid", "UserData"],
+            "default": "None",
+            "readOnly": true
+        },
+        "identifierFingerprint": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true
+        },
+        "value": {
+            "type": "float",
+            "readOnly": true
+        },
+        "currency": {
+            "type": "enum",
+            "options": ["", "USD", "EUR", "BRL", "GBP", "MXN", "ARS"],
+            "default": "",
+            "readOnly": true
+        },
+        "attemptCount": {
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "readOnly": true
+        },
+        "nextAttemptAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "lastAttemptAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "sentAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "httpStatus": {
+            "type": "int",
+            "readOnly": true
+        },
+        "requestId": {
+            "type": "varchar",
+            "maxLength": 128,
+            "readOnly": true
+        },
+        "fieldWarnings": {
+            "type": "jsonArray",
+            "readOnly": true
+        },
+        "errorCode": {
+            "type": "varchar",
+            "maxLength": 128,
+            "readOnly": true
+        },
+        "errorMessage": {
+            "type": "text",
+            "readOnly": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "destination": {
+            "type": "belongsTo",
+            "entity": "GoogleAdsDestination",
+            "foreign": "uploads"
+        },
+        "mapping": {
+            "type": "belongsTo",
+            "entity": "GoogleAdsConversionMapping",
+            "foreign": "uploads"
+        },
+        "subject": {
+            "type": "belongsToParent",
+            "entityList": ["Opportunity", "Contact"]
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "stageFrom": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "stageTo": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "googleAdsConversionUploads"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "idempotencyKeyUnique": {
+            "type": "unique",
+            "columns": ["idempotencyKey", "deleted"]
+        },
+        "queue": {
+            "columns": ["status", "nextAttemptAt", "deleted"]
+        },
+        "destinationQueue": {
+            "columns": ["destinationId", "status", "createdAt"]
+        },
+        "tenantQueue": {
+            "columns": ["tenantId", "status", "createdAt"]
+        }
+    }
+}

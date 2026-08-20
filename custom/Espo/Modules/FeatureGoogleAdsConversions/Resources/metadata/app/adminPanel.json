@@ -1,0 +1,26 @@
+{
+    "googleAds": {
+        "label": "Google Ads",
+        "order": 26,
+        "itemList": [
+            {
+                "url": "#GoogleAdsDestination",
+                "label": "Destinations",
+                "iconClass": "ti ti-brand-google",
+                "description": "googleAdsDestinations"
+            },
+            {
+                "url": "#GoogleAdsConversionMapping",
+                "label": "Conversion Mappings",
+                "iconClass": "ti ti-route",
+                "description": "googleAdsConversionMappings"
+            },
+            {
+                "url": "#GoogleAdsConversionUpload",
+                "label": "Conversion Uploads",
+                "iconClass": "ti ti-list-details",
+                "description": "googleAdsConversionUploads"
+            }
+        ]
+    }
+}

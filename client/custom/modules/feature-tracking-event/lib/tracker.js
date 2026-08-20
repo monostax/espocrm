@@ -75,6 +75,10 @@
  *       HMAC-SHA256 of `email` (or of `email:timestamp` when a unix
  *       `timestamp` is given; 24h replay window) computed by YOUR backend
  *       — never ship the secret to the browser.
+ *   mstx('consent', {adUserData: 'granted'|'denied'|'unknown',
+ *                    adPersonalization: 'granted'|'denied'|'unknown'})
+ *       Stores Google Ads consent independently from visitor identity and
+ *       attaches the current values to every subsequent event.
  *   mstx('reset')
  *       Clears the anonymous id, identity and stored attribution (call on
  *       logout).
@@ -102,6 +106,7 @@
     var KEY_ANON = 'mstx_anon';
     var KEY_IDENTITY = 'mstx_identity';
     var KEY_ATTRIBUTION = 'mstx_attr';
+    var KEY_CONSENT = 'mstx_consent';
 
     var ATTRIBUTION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
     // Server-side mirror: TrackingEventPersister::ATTRIBUTION_PARAMS
@@ -116,6 +121,7 @@
     var state = {
         endpoint: null,
         identity: null, // {email, identitySignature?, identityTimestamp?} | {contactToken}
+        consent: null, // {adUserData?, adPersonalization?}
         decoratorInstalled: false,
         decorateWa: true,
         decorateShortLinks: true,
@@ -301,6 +307,48 @@
             ) {
                 state.identity = data;
             }
+        } catch (e) {}
+    }
+
+    function normalizeConsentValue(value) {
+        if (typeof value !== 'string') {
+            return null;
+        }
+
+        value = value.toLowerCase();
+
+        return value === 'granted' || value === 'denied' || value === 'unknown'
+            ? value
+            : null;
+    }
+
+    function loadConsent() {
+        var raw = storageGet(KEY_CONSENT);
+
+        if (!raw) {
+            return;
+        }
+
+        try {
+            var data = JSON.parse(raw);
+
+            if (!isPlainObject(data)) {
+                return;
+            }
+
+            var consent = {};
+            var adUserData = normalizeConsentValue(data.adUserData);
+            var adPersonalization = normalizeConsentValue(data.adPersonalization);
+
+            if (adUserData) {
+                consent.adUserData = adUserData;
+            }
+
+            if (adPersonalization) {
+                consent.adPersonalization = adPersonalization;
+            }
+
+            state.consent = Object.keys(consent).length ? consent : null;
         } catch (e) {}
     }
 
@@ -587,6 +635,7 @@
         state.endpoint = ingestUrl;
 
         loadIdentity();
+        loadConsent();
         captureAttribution();
         consumeLinkHandoff();
 
@@ -666,6 +715,10 @@
             }
         }
 
+        if (state.consent) {
+            body.consent = state.consent;
+        }
+
         for (var any in properties) {
             if (Object.prototype.hasOwnProperty.call(properties, any)) {
                 body.properties = properties;
@@ -716,9 +769,38 @@
         } catch (e) {}
     };
 
+    api.consent = function (values) {
+        if (!isPlainObject(values)) {
+            return;
+        }
+
+        var consent = state.consent || {};
+        var adUserData = normalizeConsentValue(values.adUserData);
+        var adPersonalization = normalizeConsentValue(values.adPersonalization);
+
+        if (adUserData) {
+            consent.adUserData = adUserData;
+        }
+
+        if (adPersonalization) {
+            consent.adPersonalization = adPersonalization;
+        }
+
+        if (!Object.keys(consent).length) {
+            return;
+        }
+
+        state.consent = consent;
+
+        try {
+            storageSet(KEY_CONSENT, JSON.stringify(consent));
+        } catch (e) {}
+    };
+
     api.reset = function () {
         state.identity = null;
 
+        // Consent is a browser-level privacy choice, not login identity.
         storageRemove(KEY_ANON);
         storageRemove(KEY_IDENTITY);
         storageRemove(KEY_ATTRIBUTION);

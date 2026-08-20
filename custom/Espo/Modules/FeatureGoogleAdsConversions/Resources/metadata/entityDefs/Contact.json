@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "googleGclid": {
+            "type": "varchar",
+            "maxLength": 512,
+            "trim": true
+        },
+        "googleGbraid": {
+            "type": "varchar",
+            "maxLength": 512,
+            "trim": true
+        },
+        "googleWbraid": {
+            "type": "varchar",
+            "maxLength": 512,
+            "trim": true
+        },
+        "googleAdsClickCapturedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "GoogleAdsDestination": "Google Ads Destination",
+        "GoogleAdsConversionMapping": "Google Ads Conversion Mapping",
+        "GoogleAdsConversionUpload": "Google Ads Conversion Upload"
+    },
+    "scopeNamesPlural": {
+        "GoogleAdsDestination": "Google Ads Destinations",
+        "GoogleAdsConversionMapping": "Google Ads Conversion Mappings",
+        "GoogleAdsConversionUpload": "Google Ads Conversion Uploads"
+    },
+    "labels": {
+        "Google Ads": "Google Ads"
+    }
+}

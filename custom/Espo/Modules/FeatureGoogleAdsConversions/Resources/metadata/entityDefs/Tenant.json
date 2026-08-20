@@ -1,0 +1,19 @@
+{
+    "links": {
+        "googleAdsDestinations": {
+            "type": "hasMany",
+            "entity": "GoogleAdsDestination",
+            "foreign": "tenant"
+        },
+        "googleAdsConversionMappings": {
+            "type": "hasMany",
+            "entity": "GoogleAdsConversionMapping",
+            "foreign": "tenant"
+        },
+        "googleAdsConversionUploads": {
+            "type": "hasMany",
+            "entity": "GoogleAdsConversionUpload",
+            "foreign": "tenant"
+        }
+    }
+}

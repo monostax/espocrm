@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "googleAdsConversionUploads": {
+            "type": "linkMultiple",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true
+        }
+    },
+    "links": {
+        "googleAdsConversionUploads": {
+            "type": "hasChildren",
+            "entity": "GoogleAdsConversionUpload",
+            "foreign": "subject"
+        }
+    }
+}

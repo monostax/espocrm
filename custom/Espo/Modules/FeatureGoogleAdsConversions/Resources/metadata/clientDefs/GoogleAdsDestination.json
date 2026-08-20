@@ -1,0 +1,41 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-brand-google",
+    "boolFilterList": ["onlyMy"],
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "mappings",
+                "label": "Conversion Mappings",
+                "view": "views/record/panels/relationship",
+                "link": "mappings",
+                "layout": "listSmall",
+                "select": false,
+                "create": true,
+                "order": 10
+            },
+            {
+                "name": "uploads",
+                "label": "Conversion Uploads",
+                "view": "views/record/panels/relationship",
+                "link": "uploads",
+                "layout": "listSmall",
+                "select": false,
+                "create": false,
+                "order": 20
+            }
+        ]
+    },
+    "relationshipPanels": {
+        "mappings": {
+            "layout": "listSmall",
+            "create": true,
+            "select": false
+        },
+        "uploads": {
+            "layout": "listSmall",
+            "create": false,
+            "select": false
+        }
+    }
+}

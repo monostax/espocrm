@@ -1,0 +1,9 @@
+{
+    "links": {
+        "googleAdsDestinations": {
+            "type": "hasMany",
+            "entity": "GoogleAdsDestination",
+            "foreign": "oAuthAccount"
+        }
+    }
+}

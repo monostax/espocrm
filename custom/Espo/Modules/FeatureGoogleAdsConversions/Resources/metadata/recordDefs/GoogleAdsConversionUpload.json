@@ -1,0 +1,14 @@
+{
+    "beforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureGoogleAdsConversions\\Classes\\RecordHooks\\GoogleAdsConversionUpload\\BlockWrite"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureGoogleAdsConversions\\Classes\\RecordHooks\\GoogleAdsConversionUpload\\BlockWrite"
+    ],
+    "beforeDeleteHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureGoogleAdsConversions\\Classes\\RecordHooks\\GoogleAdsConversionUpload\\BlockDelete"
+    ]
+}

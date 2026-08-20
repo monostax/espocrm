@@ -1,0 +1,124 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 150,
+            "trim": true,
+            "pattern": "$noBadCharacters"
+        },
+        "destination": {
+            "type": "link",
+            "required": true
+        },
+        "funnel": {
+            "type": "link",
+            "required": true
+        },
+        "opportunityStage": {
+            "type": "link",
+            "required": true,
+            "view": "global:views/opportunity/fields/opportunity-stage"
+        },
+        "conversionActionId": {
+            "type": "varchar",
+            "required": true,
+            "maxLength": 32,
+            "trim": true,
+            "pattern": "[0-9]+"
+        },
+        "includeOnCreate": {
+            "type": "bool",
+            "default": true
+        },
+        "includeUserData": {
+            "type": "bool",
+            "default": true
+        },
+        "lookbackDays": {
+            "type": "int",
+            "default": 30,
+            "min": 1,
+            "max": 90
+        },
+        "valueSource": {
+            "type": "enum",
+            "options": ["None", "OpportunityAmount", "Fixed"],
+            "default": "None"
+        },
+        "fixedValue": {
+            "type": "float",
+            "min": 0
+        },
+        "currencySource": {
+            "type": "enum",
+            "options": ["OpportunityCurrency", "Fixed"],
+            "default": "OpportunityCurrency"
+        },
+        "fixedCurrency": {
+            "type": "enum",
+            "options": ["", "USD", "EUR", "BRL", "GBP", "MXN", "ARS"],
+            "default": ""
+        },
+        "isActive": {
+            "type": "bool",
+            "default": true
+        },
+        "teams": {
+            "type": "linkMultiple",
+            "view": "views/fields/teams",
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "destination": {
+            "type": "belongsTo",
+            "entity": "GoogleAdsDestination",
+            "foreign": "mappings"
+        },
+        "funnel": {
+            "type": "belongsTo",
+            "entity": "Funnel"
+        },
+        "opportunityStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "uploads": {
+            "type": "hasMany",
+            "entity": "GoogleAdsConversionUpload",
+            "foreign": "mapping"
+        },
+        "teams": {
+            "type": "hasMany",
+            "entity": "Team",
+            "relationName": "entityTeam",
+            "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "googleAdsConversionMappings"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "indexes": {
+        "destinationStageActionUnique": {
+            "type": "unique",
+            "columns": ["destinationId", "opportunityStageId", "conversionActionId", "deleted"]
+        },
+        "funnelStageActive": {
+            "columns": ["funnelId", "opportunityStageId", "isActive", "deleted"]
+        },
+        "tenantId": {
+            "columns": ["tenantId", "deleted"]
+        }
+    }
+}

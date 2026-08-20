@@ -1,0 +1,46 @@
+{
+    "labels": {
+        "Create GoogleAdsConversionMapping": "Create Conversion Mapping",
+        "Mapping": "Mapping",
+        "Upload Rules": "Upload Rules",
+        "Value and Currency": "Value and Currency",
+        "System": "System"
+    },
+    "fields": {
+        "name": "Name",
+        "destination": "Google Ads Destination",
+        "funnel": "Funnel",
+        "opportunityStage": "Opportunity Stage",
+        "conversionActionId": "Conversion Action ID",
+        "includeOnCreate": "Include on Opportunity Creation",
+        "includeUserData": "Include Enhanced Conversion User Data",
+        "lookbackDays": "Lookback Days",
+        "valueSource": "Value Source",
+        "fixedValue": "Fixed Value",
+        "currencySource": "Currency Source",
+        "fixedCurrency": "Fixed Currency",
+        "isActive": "Active",
+        "teams": "Teams",
+        "tenant": "Tenant",
+        "uploads": "Conversion Uploads"
+    },
+    "links": {
+        "destination": "Google Ads Destination",
+        "funnel": "Funnel",
+        "opportunityStage": "Opportunity Stage",
+        "teams": "Teams",
+        "tenant": "Tenant",
+        "uploads": "Conversion Uploads"
+    },
+    "tooltips": {
+        "destination": "Destination whose operating account owns this conversion action.",
+        "conversionActionId": "Numeric conversion action ID owned by the destination's operating account. Enter digits only, without hyphens.",
+        "includeOnCreate": "Upload a conversion when an Opportunity is created directly in this stage, not only when it moves into the stage later.",
+        "includeUserData": "Include normalized and hashed first-party contact data for enhanced conversions for leads when consent permits.",
+        "lookbackDays": "Maximum age, in days, of click attribution accepted for this mapping.",
+        "valueSource": "Select whether conversion value comes from the Opportunity or the fixed value below.",
+        "fixedValue": "Value used when Value Source is fixed.",
+        "currencySource": "Select whether currency comes from the Opportunity or the fixed currency below.",
+        "fixedCurrency": "ISO 4217 currency code used when Currency Source is fixed."
+    }
+}
