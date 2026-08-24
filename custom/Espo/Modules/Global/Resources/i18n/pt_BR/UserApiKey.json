@@ -24,7 +24,7 @@
         "modifiedBy": "Modificado Por"
     },
     "tooltips": {
-        "name": "Rótulo legível que identifica o uso desta chave (ex.: \"Funcionário Digital do Chatwoot\", \"Integração Zapier\").",
+        "name": "Rótulo legível que identifica o uso desta chave (ex.: \"Agente de IA do Chatwoot\", \"Integração Zapier\").",
         "user": "Usuário do CRM autenticado por esta chave. Usuários não-admin só podem criar chaves para si mesmos.",
         "apiKey": "Envie no cabeçalho `X-Api-Key` das requisições à API. O valor em texto plano só é visível para o proprietário e para administradores.",
         "isActive": "Quando desmarcada, a chave deixa de autenticar imediatamente sem precisar ser excluída.",

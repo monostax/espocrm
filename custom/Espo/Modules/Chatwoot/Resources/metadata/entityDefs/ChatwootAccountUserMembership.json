@@ -101,6 +101,13 @@
             "default": true,
             "tooltip": true
         },
+        "followupBreakoutLimit": {
+            "type": "int",
+            "min": 1,
+            "tooltip": true,
+            "audited": true,
+            "comment": "Agent-level default for the per-deal follow-up breakout limit. Empty = non-deterministic: each deal keeps its own value or falls back to the server constant (3); the AI may choose per opportunity."
+        },
         "delegateEnabled": {
             "type": "bool",
             "default": false,

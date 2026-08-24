@@ -158,6 +158,11 @@
             ],
             [
                 {
+                    "name": "followupBreakoutLimit"
+                }
+            ],
+            [
+                {
                     "name": "delegateEnabled"
                 },
                 {

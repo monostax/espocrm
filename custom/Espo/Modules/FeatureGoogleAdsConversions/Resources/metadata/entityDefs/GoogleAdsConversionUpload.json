@@ -145,6 +145,24 @@
             "type": "text",
             "readOnly": true
         },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
         "teams": {
             "type": "linkMultiple",
             "view": "views/fields/teams",
@@ -185,6 +203,14 @@
         "stageTo": {
             "type": "belongsTo",
             "entity": "OpportunityStage"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
         },
         "teams": {
             "type": "hasMany",

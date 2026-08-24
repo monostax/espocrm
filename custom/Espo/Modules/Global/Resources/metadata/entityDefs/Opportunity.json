@@ -112,8 +112,8 @@
         },
         "followupBreakoutLimit": {
             "type": "int",
-            "required": true,
-            "default": 4,
+            "required": false,
+            "default": null,
             "min": 1,
             "audited": true,
             "tooltip": true

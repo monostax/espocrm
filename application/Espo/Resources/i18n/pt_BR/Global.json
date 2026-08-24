@@ -57,7 +57,7 @@
     "CProfissional": "Profissional",
     "CRegistroBiometrico": "Registro Biométrico",
     "CLigacoesIA": "Ligação IA",
-    "CAIAgent": "Funcionário Digital",
+    "CAIAgent": "Agente de IA",
     "CAIThread": "Nova Atividade",
     "team": "Permissão / Times"
   },
@@ -111,7 +111,7 @@
     "CProfissional": "Profissionais",
     "CRegistroBiometrico": "Registros Biométricos",
     "CLigacoesIA": "Ligações IA",
-    "CAIAgent": "Funcionários Digitais"
+    "CAIAgent": "Agentes de IA"
   },
   "labels": {
     "Merge": "Mesclar",
