@@ -644,15 +644,25 @@ class ImportCsvData implements Job
         $fixed = $stmt->rowCount();
 
         // Phase 3: Insert missing entity_team rows.
+        // NOTE: the LEFT JOIN matches the SPECIFIC team (not "any team") so a
+        // contact carrying only a wrong/legacy team row still gets the correct
+        // one. Restores soft-deleted rows via ON DUPLICATE KEY UPDATE.
+        // The unconditional per-import guarantee lives in
+        // bulkCreateContactsAndLink() Phase 2b; this covers repaired contacts
+        // within the same run.
         $pdo->exec("
-            INSERT IGNORE INTO `entity_team` (`entity_id`, `team_id`, `entity_type`, `deleted`)
+            INSERT INTO `entity_team` (`entity_id`, `team_id`, `entity_type`, `deleted`)
             SELECT c.`id`, '{$this->escapeSqlString($teamId)}', 'Contact', 0
             FROM `contact` c
             JOIN `feature_integration_clinica_nas_nuvens_paciente` p ON p.`contact_id` = c.`id`
-            LEFT JOIN `entity_team` et ON et.`entity_id` = c.`id` AND et.`entity_type` = 'Contact'
+            LEFT JOIN `entity_team` et
+                ON et.`entity_id` = c.`id`
+                AND et.`entity_type` = 'Contact'
+                AND et.`team_id` = '{$this->escapeSqlString($teamId)}'
             WHERE p.`credential_id` = '{$this->escapeSqlString($credentialId)}'
               AND c.`tenant_id` = '{$this->escapeSqlString($tenantId)}'
-              AND et.`entity_id` IS NULL
+              AND (et.`id` IS NULL OR et.`deleted` = 1)
+            ON DUPLICATE KEY UPDATE `deleted` = 0
         ");
 
         $this->log->info("ImportCsvData: Repaired {$fixed} contacts — tenant_id fixed and entity_team rows added.");
@@ -738,6 +748,10 @@ class ImportCsvData implements Job
         // Deterministic ID: substr(md5('contact::' || credentialId || '::' || pacienteId), 1, 17)
         // Matches the formula used by DuckDB ETL for paciente IDs (same seed).
         // ON DUPLICATE KEY UPDATE refreshes first_name/last_name on re-import.
+        // modified_at is assigned FIRST in the update list (assignments execute
+        // in order, and later ones would overwrite the old values the IF
+        // compares against) and only bumps when data actually changed — so
+        // no-op re-imports no longer re-stamp every contact's Modified At.
         $this->log->info("ImportCsvData: Phase 1 — Bulk upserting contacts.");
 
         $stmt1 = $pdo->prepare("
@@ -761,9 +775,15 @@ class ImportCsvData implements Job
               AND p.`name` IS NOT NULL
               AND p.`name` != ''
             ON DUPLICATE KEY UPDATE
+                `modified_at` = IF(
+                    `first_name` <=> VALUES(`first_name`)
+                    AND `last_name` <=> VALUES(`last_name`)
+                    AND `deleted` <=> VALUES(`deleted`),
+                    `modified_at`,
+                    VALUES(`modified_at`)
+                ),
                 `first_name`  = VALUES(`first_name`),
                 `last_name`   = VALUES(`last_name`),
-                `modified_at` = VALUES(`modified_at`),
                 `deleted`     = VALUES(`deleted`)
         ");
         $stmt1->execute([$tenantId, $now, $now, $credentialId]);
@@ -783,6 +803,34 @@ class ImportCsvData implements Job
         $linked = $stmt2->rowCount();
 
         $this->log->info("ImportCsvData: Phase 2 — Linked {$linked} pacientes.");
+
+        // ── Phase 2b: Ensure every contact for this credential has the team ──
+        // The Phase 1 raw-SQL upsert creates contacts WITHOUT entity_team rows
+        // (it bypasses the ORM), which left 36K+ contacts invisible to
+        // team-scoped ACL until a manual backfill. Runs unconditionally on
+        // every import: inserts the missing row, restores soft-deleted ones,
+        // and no-ops when the row already exists. The JOIN on contact guards
+        // against pacientes whose contact was never created (empty name).
+        $stmt2b = $pdo->prepare("
+            INSERT INTO `entity_team` (`entity_id`, `team_id`, `entity_type`, `deleted`)
+            SELECT DISTINCT c.`id`, ?, 'Contact', 0
+            FROM `feature_integration_clinica_nas_nuvens_paciente` p
+            JOIN `contact` c ON c.`id` = p.`contact_id` AND c.`deleted` = 0
+            LEFT JOIN `entity_team` et
+                ON et.`entity_id` = c.`id`
+                AND et.`entity_type` = 'Contact'
+                AND et.`team_id` = ?
+            WHERE p.`credential_id` = ?
+              AND p.`contact_id` IS NOT NULL
+              AND (et.`id` IS NULL OR et.`deleted` = 1)
+            ON DUPLICATE KEY UPDATE `deleted` = 0
+        ");
+        $stmt2b->execute([$teamId, $teamId, $credentialId]);
+        $teamRowsAdded = $stmt2b->rowCount();
+
+        if ($teamRowsAdded > 0) {
+            $this->log->info("ImportCsvData: Phase 2b — Backfilled {$teamRowsAdded} entity_team rows.");
+        }
 
         // ── Phase 3 & 4: Bulk insert phone/email from paciente_contact.csv ──
         if (!file_exists($contactCsvPath)) {
