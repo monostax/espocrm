@@ -659,11 +659,13 @@ class SyncContactsFromChatwoot implements JobDataLess
                     $this->handleDeletedChatwootContact($cwtContact, $espoAccountId);
                     $deletedCount++;
                 } else {
-                    // Other error (API issue, etc) - log but don't mark as deleted
-                    $this->log->debug(
-                        "SyncContactsFromChatwoot: Error checking contact {$chatwootContactId}: " . 
+                    // Stop this batch without marking the contact as deleted. Continuing would amplify an API outage.
+                    $this->log->warning(
+                        "SyncContactsFromChatwoot: Reconciliation stopped for account {$espoAccountId} " .
+                        "after an error on contact {$chatwootContactId}: " .
                         $e->getMessage()
                     );
+                    break;
                 }
             }
             

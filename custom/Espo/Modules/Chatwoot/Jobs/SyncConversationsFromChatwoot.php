@@ -1525,9 +1525,13 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 } else {
                     // Any non-404 error (500, timeout, class issues, etc.) — never treat as deletion
                     $this->log->warning(
-                        "SyncConversationsFromChatwoot: Reconciliation skipped for conversation " .
-                        "{$chatwootConversationId} due to non-404 error (HTTP {$httpCode}): {$msg}"
+                        "SyncConversationsFromChatwoot: Reconciliation stopped for account {$espoAccountId} " .
+                        "after a non-404 error on conversation {$chatwootConversationId} " .
+                        "(HTTP {$httpCode}): {$msg}"
                     );
+
+                    // Fail fast instead of amplifying an outage with the rest of the reconciliation batch.
+                    break;
                 }
             }
 
