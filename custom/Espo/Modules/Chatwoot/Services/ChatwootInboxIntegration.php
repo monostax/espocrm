@@ -42,6 +42,7 @@ class ChatwootInboxIntegration
         private EntityManager $entityManager,
         private WahaApiClient $wahaApiClient,
         private ChatwootApiClient $chatwootApiClient,
+        private ChatwootInboxIdResolver $chatwootInboxIdResolver,
         private CredentialResolver $credentialResolver,
         private TokensProvider $tokensProvider,
         private InstagramGraphApiClient $instagramApiClient,
@@ -1164,33 +1165,12 @@ class ChatwootInboxIntegration
     /**
      * Resolve the numeric Chatwoot inbox id for REST calls.
      *
-     * The integration's `chatwootInboxId` attribute is the LOCAL ChatwootInbox
-     * entity id (string hash) via the hasOne link — not the numeric Chatwoot
-     * API id. Same pattern as patchInboxAccessToken / resolveChatwootInboxForQr.
+     * Delegates to {@see ChatwootInboxIdResolver}, which documents why the
+     * integration's own `chatwootInboxId` attribute cannot be used directly.
      */
     private function getNumericChatwootInboxId(Entity $channel): ?int
     {
-        $chatwootInbox = $channel->get('chatwootInbox');
-        if ($chatwootInbox && $chatwootInbox->get('chatwootInboxId')) {
-            return (int) $chatwootInbox->get('chatwootInboxId');
-        }
-
-        $localInboxId = $channel->get('chatwootInboxId');
-        if (!$localInboxId) {
-            return null;
-        }
-
-        // Numeric already (legacy), or local entity id.
-        if (is_numeric($localInboxId)) {
-            return (int) $localInboxId;
-        }
-
-        $localInbox = $this->entityManager->getEntityById('ChatwootInbox', (string) $localInboxId);
-        if ($localInbox && $localInbox->get('chatwootInboxId')) {
-            return (int) $localInbox->get('chatwootInboxId');
-        }
-
-        return null;
+        return $this->chatwootInboxIdResolver->resolve($channel);
     }
 
     /**
@@ -1420,6 +1400,18 @@ class ChatwootInboxIntegration
         return $inbox ? $inbox->getId() : null;
     }
 
+    /**
+     * Roll back a partially-provisioned channel (used when activation fails).
+     *
+     * This is a top-level delete, not a cascade child, so it must NOT pass
+     * `cascadeParent` — that flag makes CleanupOnRemove skip external teardown
+     * and leaves the WAHA session running and authenticated to a real WhatsApp
+     * number. External cleanup (WAHA session/app + remote Chatwoot inbox) is
+     * delegated entirely to the CleanupOnRemove hook, which covers every
+     * WAHA-backed channel type.
+     *
+     * @param string $channelId
+     */
     public function removeIntegration(string $channelId): void
     {
         try {
@@ -1442,25 +1434,8 @@ class ChatwootInboxIntegration
             return;
         }
 
-        // Coexistence: delete the WAHA send companion session to avoid orphans.
-        if ($channel->get('channelType') === 'whatsappCoexistence') {
-            $wahaPlatform = $this->loadWahaPlatform($channel);
-            $sessionName = $channel->get('wahaSessionName');
-
-            if ($wahaPlatform && $sessionName) {
-                try {
-                    $wahaUrl = $wahaPlatform->get('backendUrl');
-                    $wahaApiKey = $wahaPlatform->get('apiKey');
-                    $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
-                    $this->wahaApiClient->deleteSession($wahaUrl, $wahaApiKey, $sessionName);
-                } catch (\Exception $e) {
-                    $this->log->warning("ChatwootInboxIntegration: Failed to delete WAHA companion session for {$channelId}: " . $e->getMessage());
-                }
-            }
-        }
-
         try {
-            $this->entityManager->removeEntity($channel, ['cascadeParent' => true]);
+            $this->entityManager->removeEntity($channel);
         } catch (\Exception $e) {
             $this->log->error("ChatwootInboxIntegration: Failed to rollback integration {$channelId}: " . $e->getMessage());
         }

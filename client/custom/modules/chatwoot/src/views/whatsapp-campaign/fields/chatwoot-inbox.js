@@ -11,15 +11,18 @@
 /**
  * Link field for WhatsAppCampaign.chatwootInbox.
  *
- * Restricts selection to active Meta Cloud API (and Coexistence) inboxes and,
- * on change, derives chatwootAccount / credential / wabaId / oAuthAccount
- * from the inbox's ChatwootInboxIntegration so templates and send use a single source.
+ * Restricts selection to active WhatsApp inboxes and, on change, derives
+ * chatwootAccount / credential / wabaId / oAuthAccount / channelType from the
+ * inbox's ChatwootInboxIntegration so templates and send use a single source.
+ *
+ * The candidate list depends on messageMode: Template mode only lists
+ * template-capable (Meta Cloud API / Coexistence) inboxes, while Free Text
+ * additionally lists QR Code (WAHA) inboxes, which carry no Meta identity.
  */
 define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/link'], function (Dep) {
 
     return Dep.extend({
 
-        selectPrimaryFilterName: 'whatsappCloudApi',
         createDisabled: true,
 
         setup: function () {
@@ -38,6 +41,26 @@ define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/
 
                 this.deriveFromInbox();
             });
+
+            // Switching to Template mode can invalidate an already-picked QR
+            // inbox; clear it rather than letting the save fail server-side.
+            this.listenTo(this.model, 'change:messageMode', () => {
+                if (
+                    this.model.get('messageMode') === 'Template' &&
+                    this.model.get('channelType') === 'whatsappQrcode'
+                ) {
+                    this.clearLink();
+                }
+            });
+        },
+
+        /**
+         * Free text works on every WhatsApp channel; templates are Meta-only.
+         */
+        getSelectPrimaryFilterName: function () {
+            return this.model.get('messageMode') === 'FreeText'
+                ? 'whatsappAll'
+                : 'whatsappCloudApi';
         },
 
         afterRender: function () {
@@ -81,11 +104,25 @@ define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/
                         credentialId: result.credentialId || null,
                         credentialName: result.credentialName || null,
                         wabaId: result.wabaId || null,
+                        channelType: result.channelType || null,
                     };
 
                     // Transient attrs for template fetch (not storable on entity).
                     this.model.set('_oAuthAccountId', result.oAuthAccountId || null, {silent: true});
                     this.model.set('_businessAccountId', result.wabaId || null, {silent: true});
+
+                    // A QR inbox cannot send templates: force the only mode it
+                    // supports so the form can never submit an invalid pair.
+                    if (!result.supportsTemplates) {
+                        attrs.messageMode = 'FreeText';
+                        attrs.templateName = null;
+                        attrs.templateLanguage = null;
+                        attrs.templateCategory = null;
+                        attrs.templateBody = null;
+                        attrs.parameterMapping = null;
+                        attrs.headerMediaUrl = null;
+                        attrs.headerMediaType = null;
+                    }
 
                     this.model.set(attrs);
 
@@ -113,6 +150,7 @@ define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/
                 credentialId: null,
                 credentialName: null,
                 wabaId: null,
+                channelType: null,
                 templateName: null,
                 templateLanguage: null,
                 templateCategory: null,

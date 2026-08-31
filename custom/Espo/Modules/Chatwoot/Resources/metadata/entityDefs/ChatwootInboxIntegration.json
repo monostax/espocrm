@@ -151,10 +151,6 @@
             "layoutListDisabled": true,
             "layoutMassUpdateDisabled": true
         },
-        "chatwootInboxId": {
-            "type": "int",
-            "readOnly": true
-        },
         "chatwootInboxIdentifier": {
             "type": "varchar",
             "maxLength": 255,

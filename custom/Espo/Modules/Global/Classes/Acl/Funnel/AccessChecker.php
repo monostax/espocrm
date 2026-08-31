@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /************************************************************************
  * This file is part of Monostax.
  *
@@ -17,12 +20,15 @@ use Espo\Core\Acl\AccessEntityCREDSChecker;
 use Espo\Core\Acl\DefaultAccessChecker;
 use Espo\Core\Acl\ScopeData;
 use Espo\Core\Acl\Traits\DefaultAccessCheckerDependency;
+use Espo\Modules\Global\Tools\Acl\TeamsAccess;
 
 /**
  * Custom ACL Access Checker for Funnel.
  *
- * Funnel access is based on the user's team membership.
- * A user can access a Funnel if they belong to the Funnel's team.
+ * A user may access a Funnel only if they share one of its `teams`. This is
+ * enforced in addition to the role's access level, never instead of it: Team
+ * membership is what confines a Funnel to its Tenant, so a role granting `all`
+ * must still not expose funnels from other tenants.
  *
  * @implements AccessEntityCREDSChecker<Entity>
  */
@@ -32,24 +38,9 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     public function __construct(
         DefaultAccessChecker $defaultAccessChecker,
+        private TeamsAccess $teamsAccess,
     ) {
         $this->defaultAccessChecker = $defaultAccessChecker;
-    }
-
-    /**
-     * Check if user belongs to the funnel's team.
-     */
-    private function userBelongsToFunnelTeam(User $user, Entity $entity): bool
-    {
-        $funnelTeamId = $entity->get('teamId');
-
-        if (!$funnelTeamId) {
-            return false;
-        }
-
-        $userTeamIds = $user->getTeamIdList();
-
-        return in_array($funnelTeamId, $userTeamIds);
     }
 
     public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
@@ -59,12 +50,13 @@ class AccessChecker implements AccessEntityCREDSChecker
             return true;
         }
 
-        // Check if user belongs to funnel's team
-        if ($this->userBelongsToFunnelTeam($user, $entity)) {
-            return true;
+        // Check base read permission. Previously omitted, which let team
+        // membership alone grant read regardless of the role's Funnel level.
+        if (!$this->defaultAccessChecker->checkRead($user, $data)) {
+            return false;
         }
 
-        return false;
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 
     public function checkEntityEdit(User $user, Entity $entity, ScopeData $data): bool
@@ -79,8 +71,7 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        // Check if user belongs to funnel's team
-        return $this->userBelongsToFunnelTeam($user, $entity);
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 
     public function checkEntityDelete(User $user, Entity $entity, ScopeData $data): bool
@@ -95,8 +86,7 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        // Check if user belongs to funnel's team
-        return $this->userBelongsToFunnelTeam($user, $entity);
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 
     public function checkEntityStream(User $user, Entity $entity, ScopeData $data): bool

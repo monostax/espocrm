@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /************************************************************************
  * This file is part of Monostax.
  *
@@ -11,19 +14,24 @@
 
 namespace Espo\Modules\Global\Classes\Acl\OpportunityStage;
 
-use Espo\Entities\User;
-use Espo\ORM\Entity;
-use Espo\ORM\EntityManager;
 use Espo\Core\Acl\AccessEntityCREDSChecker;
 use Espo\Core\Acl\DefaultAccessChecker;
 use Espo\Core\Acl\ScopeData;
 use Espo\Core\Acl\Traits\DefaultAccessCheckerDependency;
+use Espo\Entities\User;
+use Espo\Modules\Global\Tools\Acl\TeamsAccess;
+use Espo\ORM\Entity;
 
 /**
  * Custom ACL Access Checker for OpportunityStage.
  *
- * OpportunityStage access is inherited from its Funnel.
- * A user can access an OpportunityStage if they belong to the Funnel's team.
+ * A stage's `teams` mirror its Funnel's (maintained by
+ * Hooks/OpportunityStage/InheritFunnelTeams and Hooks/Funnel/SyncStageTeams),
+ * so access is decided from the stage's own teams rather than by loading the
+ * parent Funnel on every check.
+ *
+ * Team membership is enforced in addition to the role's access level, never
+ * instead of it, since Team membership is what confines a stage to its Tenant.
  *
  * @implements AccessEntityCREDSChecker<Entity>
  */
@@ -33,38 +41,9 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     public function __construct(
         DefaultAccessChecker $defaultAccessChecker,
-        private EntityManager $entityManager,
+        private TeamsAccess $teamsAccess,
     ) {
         $this->defaultAccessChecker = $defaultAccessChecker;
-    }
-
-    /**
-     * Check if user belongs to the stage's funnel's team.
-     */
-    private function userBelongsToFunnelTeam(User $user, Entity $entity): bool
-    {
-        $funnelId = $entity->get('funnelId');
-
-        if (!$funnelId) {
-            return false;
-        }
-
-        // Get the funnel to check its team
-        $funnel = $this->entityManager->getEntityById('Funnel', $funnelId);
-
-        if (!$funnel) {
-            return false;
-        }
-
-        $funnelTeamId = $funnel->get('teamId');
-
-        if (!$funnelTeamId) {
-            return false;
-        }
-
-        $userTeamIds = $user->getTeamIdList();
-
-        return in_array($funnelTeamId, $userTeamIds);
     }
 
     public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
@@ -74,8 +53,13 @@ class AccessChecker implements AccessEntityCREDSChecker
             return true;
         }
 
-        // Check if user belongs to funnel's team
-        return $this->userBelongsToFunnelTeam($user, $entity);
+        // Check base read permission. Previously omitted, which let team
+        // membership alone grant read regardless of the role's access level.
+        if (!$this->defaultAccessChecker->checkRead($user, $data)) {
+            return false;
+        }
+
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 
     public function checkEntityEdit(User $user, Entity $entity, ScopeData $data): bool
@@ -90,8 +74,7 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        // Check if user belongs to funnel's team
-        return $this->userBelongsToFunnelTeam($user, $entity);
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 
     public function checkEntityDelete(User $user, Entity $entity, ScopeData $data): bool
@@ -106,8 +89,7 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        // Check if user belongs to funnel's team
-        return $this->userBelongsToFunnelTeam($user, $entity);
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 
     public function checkEntityStream(User $user, Entity $entity, ScopeData $data): bool

@@ -20,6 +20,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\Chatwoot\Services\WhatsAppCampaignService;
 use Espo\Modules\Chatwoot\Services\WhatsAppCampaignDistributionService;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use stdClass;
 
@@ -117,13 +118,19 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
     }
 
     /**
-     * Resolve Chat account + Meta auth from a Meta Cloud API ChatwootInbox.
+     * Resolve Chat account (and Meta auth, when applicable) from a WhatsApp
+     * ChatwootInbox.
      *
      * GET /api/v1/WhatsAppCampaign/action/resolveInbox?chatwootInboxId=xxx
      *
      * Used by the campaign form after the user picks an inbox: templates and
      * send path then use the derived account/credential/WABA without separate
      * Credential / ChatwootAccount selectors.
+     *
+     * Meta Cloud API / Coexistence inboxes must resolve a WABA + auth.
+     * WAHA QR inboxes have no Meta identity, so those checks are skipped and
+     * the response reports the channel's capabilities instead; the form uses
+     * them to force free-text mode.
      */
     public function getActionResolveInbox(Request $request, Response $response): stdClass
     {
@@ -184,11 +191,10 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             }
         }
 
-        $allowedTypes = ['whatsappCloudApi', 'whatsappCoexistence'];
-
-        if (!$channelType || !in_array($channelType, $allowedTypes, true)) {
+        if (!WhatsAppChannel::isSendable($channelType)) {
             throw new BadRequest(
-                'Selected inbox is not linked to a Meta Cloud API (or Coexistence) channel connection.'
+                'Selected inbox is not linked to a sendable WhatsApp channel connection ' .
+                '(Meta Cloud API, Coexistence, or QR Code).'
             );
         }
 
@@ -200,12 +206,18 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             throw new Error('Inbox has no Chatwoot Account linked.');
         }
 
-        if (!$oAuthAccountId && !$credentialId) {
-            throw new Error('Inbox channel connection has neither OAuth account nor Credential for Meta API access.');
-        }
+        // Only template-capable channels talk to the Meta Graph API; a QR
+        // session has no OAuth account, Credential or WABA by design.
+        if (WhatsAppChannel::requiresMetaAuth($channelType)) {
+            if (!$oAuthAccountId && !$credentialId) {
+                throw new Error(
+                    'Inbox channel connection has neither OAuth account nor Credential for Meta API access.'
+                );
+            }
 
-        if (!$wabaId) {
-            throw new Error('Inbox channel connection does not have a WABA (businessAccountId).');
+            if (!$wabaId) {
+                throw new Error('Inbox channel connection does not have a WABA (businessAccountId).');
+            }
         }
 
         return (object) [
@@ -218,6 +230,9 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             'channelType' => $channelType,
             'status' => $status,
             'chatwootExternalInboxId' => $inbox->get('chatwootInboxId'),
+            'supportsTemplates' => WhatsAppChannel::supportsTemplates($channelType),
+            'supportsFreeText' => WhatsAppChannel::supportsFreeText($channelType),
+            'defaultMessageMode' => WhatsAppChannel::defaultModeFor($channelType),
         ];
     }
 

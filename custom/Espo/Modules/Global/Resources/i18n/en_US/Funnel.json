@@ -2,7 +2,6 @@
     "fields": {
         "name": "Name",
         "description": "Description",
-        "team": "Team",
         "tenant": "Tenant",
         "isActive": "Is Active",
         "isDefault": "Is Default",
@@ -15,7 +14,6 @@
         "opportunities": "Opportunities"
     },
     "links": {
-        "team": "Team",
         "tenant": "Tenant",
         "opportunityStages": "Opportunity Stages",
         "opportunities": "Opportunities",
@@ -39,6 +37,3 @@
         "all": "All"
     }
 }
-
-
-

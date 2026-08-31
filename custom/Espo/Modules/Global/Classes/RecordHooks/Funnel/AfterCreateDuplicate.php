@@ -26,6 +26,7 @@ namespace Espo\Modules\Global\Classes\RecordHooks\Funnel;
 use Espo\Core\Acl;
 use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\Hook\CreateHook;
+use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Metadata;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -80,14 +81,13 @@ class AfterCreateDuplicate implements CreateHook
             ->order('order', 'ASC')
             ->find();
 
-        $teamsIds = $newFunnel->getLinkMultipleIdList('teams');
+        // Stage teams mirror the funnel's; OpportunityStage/InheritFunnelTeams
+        // would also fill this in, but setting it here keeps the clone correct
+        // even when that hook is skipped.
+        $teamsIds = [];
 
-        if ($teamsIds === []) {
-            $teamId = $newFunnel->get('teamId');
-
-            if ($teamId) {
-                $teamsIds = [$teamId];
-            }
+        if ($newFunnel instanceof CoreEntity) {
+            $teamsIds = $newFunnel->getLinkMultipleIdList('teams');
         }
 
         $copyMetaCapi =

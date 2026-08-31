@@ -3,7 +3,109 @@
     "iconClass": "ti ti-send",
     "dynamicLogic": {
         "fields": {
+            "messageMode": {
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
             "templateName": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "messageBody": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "attachment": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
+                        }
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [
+                        {
+                            "type": "notEquals",
+                            "attribute": "status",
+                            "value": "Draft"
+                        }
+                    ]
+                }
+            },
+            "sendAudioAsVoice": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "equals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
+                        },
+                        {
+                            "type": "isNotEmpty",
+                            "attribute": "attachmentId"
+                        }
+                    ]
+                },
                 "readOnly": {
                     "conditionGroup": [
                         {
@@ -206,6 +308,11 @@
                         {
                             "type": "isNotEmpty",
                             "attribute": "parameterMapping"
+                        },
+                        {
+                            "type": "notEquals",
+                            "attribute": "messageMode",
+                            "value": "FreeText"
                         }
                     ]
                 },

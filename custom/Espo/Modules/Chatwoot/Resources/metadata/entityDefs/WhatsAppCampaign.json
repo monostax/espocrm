@@ -26,12 +26,57 @@
                 "Paused": "default"
             }
         },
+        "messageMode": {
+            "type": "enum",
+            "options": [
+                "Template",
+                "FreeText"
+            ],
+            "default": "Template",
+            "tooltip": true
+        },
         "templateName": {
             "type": "varchar",
-            "required": true,
             "maxLength": 255,
             "tooltip": true,
             "view": "chatwoot:views/whatsapp-campaign/fields/template-name"
+        },
+        "messageBody": {
+            "type": "text",
+            "tooltip": true,
+            "view": "chatwoot:views/whatsapp-campaign/fields/message-body"
+        },
+        "attachment": {
+            "type": "file",
+            "tooltip": true,
+            "accept": [
+                "image/*",
+                "video/*",
+                "audio/*",
+                ".pdf",
+                ".doc",
+                ".docx",
+                ".xls",
+                ".xlsx",
+                ".ppt",
+                ".pptx",
+                ".csv",
+                ".txt",
+                ".zip"
+            ]
+        },
+        "sendAudioAsVoice": {
+            "type": "bool",
+            "default": true,
+            "tooltip": true
+        },
+        "channelType": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
         },
         "templateLanguage": {
             "type": "varchar",

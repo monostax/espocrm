@@ -10,11 +10,6 @@
         "description": {
             "type": "text"
         },
-        "team": {
-            "type": "link",
-            "required": true,
-            "view": "views/fields/link"
-        },
         "tenant": {
             "type": "link",
             "required": true,
@@ -59,11 +54,6 @@
         }
     },
     "links": {
-        "team": {
-            "type": "belongsTo",
-            "entity": "Team",
-            "foreign": "funnels"
-        },
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant",
@@ -115,9 +105,6 @@
         "name": {
             "columns": ["name", "deleted"]
         },
-        "teamId": {
-            "columns": ["teamId"]
-        },
         "tenantId": {
             "columns": ["tenantId"]
         },
@@ -126,6 +113,3 @@
         }
     }
 }
-
-
-

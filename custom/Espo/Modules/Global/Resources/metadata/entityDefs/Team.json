@@ -1,10 +1,5 @@
 {
     "links": {
-        "funnels": {
-            "type": "hasMany",
-            "entity": "Funnel",
-            "foreign": "team"
-        },
         "tenantsAsBaseUserTeam": {
             "type": "hasMany",
             "entity": "Tenant",

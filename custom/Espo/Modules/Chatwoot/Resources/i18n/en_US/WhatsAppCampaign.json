@@ -37,7 +37,12 @@
         "teams": "Teams",
         "abWeightOriginal": "Audience % — Original (A)",
         "abWeight": "Audience %",
-        "abActivate": "Start immediately"
+        "abActivate": "Start immediately",
+        "messageMode": "Message Type",
+        "messageBody": "Message",
+        "channelType": "Channel",
+        "attachment": "Attachment",
+        "sendAudioAsVoice": "Send audio as voice message"
     },
     "links": {
         "chatwootInbox": "WhatsApp Inbox",
@@ -65,7 +70,8 @@
         "Variant": "Variant",
         "Recipients": "Recipients",
         "Opportunity Creation": "Opportunity Creation",
-        "Opportunities": "Opportunities"
+        "Opportunities": "Opportunities",
+        "Message": "Message"
     },
     "options": {
         "status": {
@@ -75,6 +81,10 @@
             "Completed": "Completed",
             "Cancelled": "Cancelled",
             "Paused": "Paused"
+        },
+        "messageMode": {
+            "Template": "Meta Template",
+            "FreeText": "Free Text"
         }
     },
     "messages": {
@@ -95,10 +105,11 @@
         "abTestCreated": "A/B test created.",
         "abTestCreatedActivationFailed": "A/B test created, but activation failed: {error} Review the distribution and activate it manually.",
         "failedToCreateAbTest": "Failed to create A/B test",
-        "weightsMustSumTo100": "Audience percentages must sum to 100 (current sum: {sum})."
+        "weightsMustSumTo100": "Audience percentages must sum to 100 (current sum: {sum}).",
+        "insertToken": "Click to insert a field into the message:"
     },
     "tooltips": {
-        "chatwootInbox": "Select an active Meta Cloud API inbox. The Chat account and Meta credentials used to load templates and send are derived from that inbox's channel connection.",
+        "chatwootInbox": "Select an active WhatsApp inbox. The Chat account and (for Meta channels) the credentials used to load templates and send are derived from that inbox's channel connection. QR Code inboxes can only send Free Text.",
         "templateName": "Select the WhatsApp message template to use for this campaign. Templates are fetched from the Meta WhatsApp Business Account linked to the selected inbox.",
         "parameterMapping": "Maps template parameters to contact fields. Define which contact data fills each placeholder in the template.",
         "processedParams": "The resolved parameter values after processing the mapping against actual contact data.",
@@ -107,6 +118,10 @@
         "funnel": "The funnel used to find an existing open Opportunity or create a new one after a successful send.",
         "opportunityStage": "Required open stage for newly created Opportunities. Reused Opportunities keep their current stage.",
         "opportunityAssignedUser": "Assigned user for newly created Opportunities. The user must belong to a funnel team.",
-        "tenant": "Denormalized tenant of the campaign's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations."
+        "tenant": "Denormalized tenant of the campaign's parent ChatwootAccount. Set automatically; used for per-tenant reports and ACL-free aggregations.",
+        "messageMode": "Meta Template sends an approved WhatsApp template and requires a Meta Cloud API or Coexistence inbox. Free Text sends a plain message and also works with QR Code (WAHA) inboxes; on Cloud API it only reaches contacts inside the 24h reply window.",
+        "messageBody": "The message sent to each contact. Supports Handlebars expressions resolved against the Contact, e.g. {{firstName}} or {{account.name}}.",
+        "attachment": "Optional media sent with the message. How WhatsApp renders it is derived from the file type: audio becomes a voice message, images and videos render inline, and anything else is sent as a document. The message body becomes the caption and may be left empty. Max 16 MB.",
+        "sendAudioAsVoice": "On (default): an audio file is delivered as a WhatsApp voice message (the microphone bubble). Off: it is delivered as a downloadable audio document instead. Has no effect on non-audio attachments."
     }
 }

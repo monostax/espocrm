@@ -204,9 +204,7 @@
                 }
             ],
             [
-                {
-                    "name": "chatwootInboxId"
-                },
+                false,
                 {
                     "name": "chatwootInboxIdentifier"
                 }
@@ -259,9 +257,7 @@
                 }
             ],
             [
-                {
-                    "name": "chatwootInboxId"
-                },
+                false,
                 {
                     "name": "chatwootInboxIdentifier"
                 }
@@ -312,9 +308,7 @@
                 }
             ],
             [
-                {
-                    "name": "chatwootInboxId"
-                },
+                false,
                 {
                     "name": "chatwootInboxIdentifier"
                 }

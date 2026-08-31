@@ -14,7 +14,6 @@
     "fields": {
         "name": "Nome",
         "description": "Descrição",
-        "team": "Permissão / Times",
         "tenant": "Ambiente",
         "isActive": "Ativo",
         "isDefault": "É Padrão",

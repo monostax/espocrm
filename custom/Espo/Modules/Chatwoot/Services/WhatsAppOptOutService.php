@@ -27,6 +27,26 @@ class WhatsAppOptOutService
 
     private const CONTACT_LOOKUP_FAILURE = 'Failed to get Chatwoot contact ID';
 
+    /**
+     * Substrings that mean "this number is not on WhatsApp" on QR (WAHA)
+     * channels, which report failures as prose instead of Meta error codes.
+     *
+     * Matched case-insensitively against the failure reason. Kept deliberately
+     * narrow: a false positive permanently opts a Contact out of WhatsApp.
+     *
+     * @var list<string>
+     */
+    private const AUTO_OPTOUT_ERROR_PHRASES = [
+        'not registered on whatsapp',
+        'phone number is not registered',
+        'number is not on whatsapp',
+        'not a whatsapp user',
+        'no whatsapp account',
+        'recipient not found',
+        'invalid whatsapp number',
+        'wid is not valid',
+    ];
+
     public function __construct(
         private EntityManager $entityManager,
         private Log $log,
@@ -35,6 +55,9 @@ class WhatsAppOptOutService
     /**
      * Check if an error message indicates a permanently unreachable phone number
      * that should trigger auto-opt-out.
+     *
+     * Covers both Meta Cloud API numeric codes and the free-form wording used
+     * by WAHA / QR sessions.
      */
     public function isPermanentFailure(string $errorMessage): bool
     {
@@ -44,6 +67,14 @@ class WhatsAppOptOutService
 
         foreach (self::AUTO_OPTOUT_ERROR_CODES as $code) {
             if (str_contains($errorMessage, $code . ':')) {
+                return true;
+            }
+        }
+
+        $normalized = strtolower($errorMessage);
+
+        foreach (self::AUTO_OPTOUT_ERROR_PHRASES as $phrase) {
+            if (str_contains($normalized, $phrase)) {
                 return true;
             }
         }

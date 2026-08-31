@@ -3253,6 +3253,146 @@ public function deleteConversation(
     }
 
     /**
+     * Send a free-text outgoing message with a single media attachment.
+     *
+     * Posts multipart to the same endpoint as {@see sendOutgoingMessage}, with
+     * `attachments[]` carrying the file. Chatwoot derives the attachment's
+     * file_type from the MIME type we advertise (FileTypeHelper: `audio/*` =>
+     * audio, `image/*` => image, `video/*` => video, everything else => file)
+     * and forwards it to the channel.
+     *
+     * That MIME type is therefore the only lever over how WhatsApp renders the
+     * media, and it maps 1:1 onto WAHA's send endpoints:
+     *
+     *   audio/ogg, audio/mpeg, ... -> file_type audio -> WAHA /api/sendVoice (voice bubble)
+     *   image/*                    -> file_type image -> WAHA /api/sendImage
+     *   video/*                    -> file_type video -> WAHA /api/sendVideo
+     *   anything else              -> file_type file  -> WAHA /api/sendFile (document)
+     *
+     * Callers that want an audio file delivered as a document instead of a
+     * voice note must pass a non-audio MIME type (see WhatsAppCampaign's
+     * sendAudioAsVoice flag).
+     *
+     * A conversation is created first so the caller still gets the Chatwoot
+     * conversation/message ids synchronously — media sends stay fully
+     * trackable by the delivery webhook and Opportunity attribution.
+     *
+     * @param string $content Caption; may be empty for a bare voice note.
+     * @return array{message_id: int|null, conversation_id: int|string}
+     * @throws Error
+     */
+    public function sendOutgoingMessageWithAttachment(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $contactId,
+        int $inboxId,
+        string $content,
+        string $filePath,
+        string $mimeType,
+        string $fileName
+    ): array {
+        if (!is_file($filePath)) {
+            throw new Error("Attachment file not found at {$filePath}.");
+        }
+
+        $conversation = $this->createConversation($platformUrl, $accountApiKey, $accountId, $contactId, $inboxId);
+        $conversationId = $conversation['id'] ?? $conversation['display_id'] ?? null;
+
+        if (!$conversationId) {
+            throw new Error('Failed to get conversation ID after creation.');
+        }
+
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/conversations/' . $conversationId . '/messages';
+
+        $cfile = new \CURLFile($filePath, $mimeType, $fileName);
+
+        // Rails parses a repeated `attachments[]` part as an array. PHP's
+        // array-form POSTFIELDS cannot repeat a key, so exactly one media file
+        // is supported per message — which is also WhatsApp's own model
+        // (one media + caption per message).
+        $postFields = [
+            'content' => $content,
+            'message_type' => 'outgoing',
+            'attachments[]' => $cfile,
+        ];
+
+        $ch = curl_init($url);
+
+        if ($ch === false) {
+            throw new Error("Could not initialize cURL for URL: {$url}");
+        }
+
+        $timeout = $this->config->get('chatwootAttachmentApiTimeout')
+            ?? $this->config->get('chatwootApiTimeout', self::DEFAULT_TIMEOUT);
+        $connectTimeout = $this->config->get('chatwootApiConnectTimeout', self::CONNECT_TIMEOUT);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, (int) $timeout);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS | CURLPROTO_HTTP);
+        // Intentionally omit Content-Type — cURL sets it with the correct
+        // multipart boundary when POSTFIELDS is an array containing a CURLFile.
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'api_access_token: ' . $accountApiKey,
+            'Accept: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+
+        $result = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+
+        curl_close($ch);
+
+        if ($result === false) {
+            throw new Error("cURL Error (sendOutgoingMessageWithAttachment): {$curlError}");
+        }
+
+        $body = json_decode((string) $result, true);
+
+        if (!is_array($body)) {
+            $body = [];
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $errorMsg = 'Failed to send attachment message via Chatwoot: HTTP ' . $httpCode;
+
+            if (isset($body['message'])) {
+                $errorMsg .= ' - ' . $body['message'];
+            } elseif (isset($body['error'])) {
+                $errorMsg .= ' - ' . $body['error'];
+            }
+
+            $this->log->error(
+                'Chatwoot API Error (sendOutgoingMessageWithAttachment): ' . (string) $result
+            );
+
+            throw new Error($errorMsg);
+        }
+
+        $messageId = $body['id'] ?? null;
+
+        $this->log->info(sprintf(
+            'Chatwoot: Sent attachment message (%s, %s) to contact %d in conversation %s, account %d',
+            $fileName,
+            $mimeType,
+            $contactId,
+            (string) $conversationId,
+            $accountId
+        ));
+
+        return [
+            'message_id' => $messageId,
+            'conversation_id' => $conversationId,
+        ];
+    }
+
+    /**
      * Sync WhatsApp message templates for a Chatwoot inbox.
      *
      * Triggers an on-demand template sync from Meta so that Chatwoot's

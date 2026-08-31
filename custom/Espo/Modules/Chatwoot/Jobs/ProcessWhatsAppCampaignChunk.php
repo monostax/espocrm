@@ -12,13 +12,17 @@
 namespace Espo\Modules\Chatwoot\Jobs;
 
 use Espo\Core\Exceptions\Error;
+use Espo\Core\FileStorage\Manager as FileStorageManager;
 use Espo\Core\Htmlizer\TemplateRendererFactory;
 use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
 use Espo\Core\Utils\Log;
+use Espo\Entities\Attachment;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\WhatsAppCampaignOpportunityService;
 use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
+use Espo\Modules\Chatwoot\Tools\WhatsAppMedia;
 use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -55,6 +59,7 @@ class ProcessWhatsAppCampaignChunk implements Job
         private WhatsAppOptOutService $optOutService,
         private WhatsAppCampaignOpportunityService $opportunityService,
         private TemplateBridge $templateBridge,
+        private FileStorageManager $fileStorageManager,
         private Log $log,
     ) {}
 
@@ -136,12 +141,13 @@ class ProcessWhatsAppCampaignChunk implements Job
         }
 
         if (!$whatsappInbox) {
-            // Legacy campaigns without an explicit inbox: first active Cloud API inbox.
+            // Legacy campaigns without an explicit inbox are always Meta
+            // template campaigns; never silently fall back to a QR inbox.
             $whatsappInbox = $this->entityManager
                 ->getRDBRepository('ChatwootInbox')
                 ->where([
                     'chatwootAccountId' => $chatwootAccountId,
-                    'channelType' => ['whatsappCloudApi', 'whatsappCoexistence'],
+                    'channelType' => WhatsAppChannel::TEMPLATE_CAPABLE,
                 ])
                 ->findOne();
         }
@@ -151,8 +157,20 @@ class ProcessWhatsAppCampaignChunk implements Job
         if (!$inboxId) {
             $this->failCampaign(
                 $campaignId,
-                "No WhatsApp Cloud API inbox found for campaign (select an active Meta Cloud API inbox)."
+                'No sendable WhatsApp inbox found for campaign (select an active WhatsApp inbox).'
             );
+            return;
+        }
+
+        $channelType = $whatsappInbox->get('channelType') ?: $campaign->get('channelType');
+        $messageMode = WhatsAppChannel::normalizeMode($campaign->get('messageMode'));
+
+        if (!WhatsAppChannel::supportsMode($channelType, $messageMode)) {
+            $this->failCampaign($campaignId, sprintf(
+                'Campaign is in %s mode, which a %s inbox cannot send.',
+                $messageMode,
+                WhatsAppChannel::label($channelType),
+            ));
             return;
         }
 
@@ -162,6 +180,17 @@ class ProcessWhatsAppCampaignChunk implements Job
         $templateBody = $campaign->get('templateBody') ?: '';
         $headerMediaUrl = $campaign->get('headerMediaUrl') ?: null;
         $headerMediaType = $campaign->get('headerMediaType') ?: null;
+        $messageBody = (string) ($campaign->get('messageBody') ?: '');
+
+        if ($messageMode === WhatsAppChannel::MODE_TEMPLATE && !$templateName) {
+            $this->failCampaign($campaignId, 'Campaign has no WhatsApp template selected.');
+            return;
+        }
+
+        if ($messageMode === WhatsAppChannel::MODE_FREE_TEXT && trim($messageBody) === '' && !$campaign->get('attachmentId')) {
+            $this->failCampaign($campaignId, 'Campaign has neither a message body nor an attachment.');
+            return;
+        }
 
         $parameterMapping = $campaign->get('parameterMapping');
         if ($parameterMapping instanceof \stdClass) {
@@ -173,12 +202,32 @@ class ProcessWhatsAppCampaignChunk implements Job
             $parameterMapping = [];
         }
 
+        [$delayMinMs, $delayMaxMs] = WhatsAppChannel::sendDelayWindowMs($channelType);
+
+        // Materialize campaign media once per chunk, not once per recipient:
+        // every recipient gets the same bytes, and re-reading them from object
+        // storage for each send would dominate the job's runtime.
+        $media = null;
+
+        if ($messageMode === WhatsAppChannel::MODE_FREE_TEXT) {
+            try {
+                $media = $this->materializeAttachment($campaign);
+            } catch (\Throwable $e) {
+                $this->failCampaign($campaignId, 'Could not read campaign attachment: ' . $e->getMessage());
+                return;
+            }
+        }
+
         $sendContext = [
             'campaignId' => $campaignId,
             'platformUrl' => $platformUrl,
             'accountApiKey' => $accountApiKey,
             'chatwootAccountIdExternal' => $chatwootAccountIdExternal,
             'inboxId' => $inboxId,
+            'channelType' => $channelType,
+            'messageMode' => $messageMode,
+            'messageBody' => $messageBody,
+            'media' => $media,
             'templateName' => $templateName,
             'templateLanguage' => $templateLanguage,
             'templateCategory' => $templateCategory,
@@ -187,46 +236,154 @@ class ProcessWhatsAppCampaignChunk implements Job
             'headerMediaType' => $headerMediaType,
             'parameterMapping' => $parameterMapping,
             'createOpportunity' => (bool) $campaign->get('createOpportunity'),
+            'delayMinMs' => $delayMinMs,
+            'delayMaxMs' => $delayMaxMs,
         ];
 
-        // --- First pass: process all Pending contacts in this chunk ---
-        $contacts = $this->findChunkContacts($campaignId, 'Pending', $campaignContactIds, $chunkOffset, $chunkSize);
+        try {
+            // --- First pass: process all Pending contacts in this chunk ---
+            $contacts = $this->findChunkContacts($campaignId, 'Pending', $campaignContactIds, $chunkOffset, $chunkSize);
 
-        $processedCount = $this->processContacts($contacts, $sendContext);
+            $processedCount = $this->processContacts($contacts, $sendContext);
 
-        $this->log->info("ProcessWhatsAppCampaignChunk: First pass ({$chunkLabel}) for campaign {$campaignId} ({$processedCount} contacts).");
+            $this->log->info("ProcessWhatsAppCampaignChunk: First pass ({$chunkLabel}) for campaign {$campaignId} ({$processedCount} contacts).");
 
-        // --- Retry passes: re-process contacts marked as Retry ---
-        for ($retryPass = 1; $retryPass <= self::MAX_RETRIES; $retryPass++) {
-            $retryContacts = $this->findChunkContacts($campaignId, 'Retry', $campaignContactIds, $chunkOffset, $chunkSize);
+            // --- Retry passes: re-process contacts marked as Retry ---
+            for ($retryPass = 1; $retryPass <= self::MAX_RETRIES; $retryPass++) {
+                $retryContacts = $this->findChunkContacts($campaignId, 'Retry', $campaignContactIds, $chunkOffset, $chunkSize);
 
-            $retryCount = count($retryContacts);
+                $retryCount = count($retryContacts);
 
-            if ($retryCount === 0) {
-                break;
+                if ($retryCount === 0) {
+                    break;
+                }
+
+                $this->log->info("ProcessWhatsAppCampaignChunk: Retry pass {$retryPass} for campaign {$campaignId} ({$retryCount} contacts).");
+
+                sleep(self::RETRY_BACKOFF_SECONDS);
+
+                $this->processContacts($retryContacts, $sendContext);
             }
 
-            $this->log->info("ProcessWhatsAppCampaignChunk: Retry pass {$retryPass} for campaign {$campaignId} ({$retryCount} contacts).");
+            // --- Finalize any contacts still in Retry after all passes ---
+            $this->finalizeRemainingRetries($campaignId, $campaignContactIds, $chunkOffset, $chunkSize);
 
-            sleep(self::RETRY_BACKOFF_SECONDS);
+            $this->log->info("ProcessWhatsAppCampaignChunk: Completed chunk ({$chunkLabel}) for campaign {$campaignId}.");
 
-            $this->processContacts($retryContacts, $sendContext);
+            $this->verifyMessageStatuses(
+                $campaignId,
+                $platformUrl,
+                $accountApiKey,
+                $chatwootAccountIdExternal,
+                $campaignContactIds
+            );
+
+            $this->checkCampaignCompletion($campaignId);
+        } finally {
+            if ($media !== null) {
+                $this->discardMedia($media);
+            }
+        }
+    }
+
+    /**
+     * Copy the campaign's attachment to a local temp file for upload.
+     *
+     * Attachment bytes may live in object storage, so a local path is not
+     * guaranteed; contents are streamed to a temp file with the original
+     * extension preserved so Chatwoot's MIME sniffing agrees with the type we
+     * advertise.
+     *
+     * @return array{path: string, mimeType: string, fileName: string}|null
+     * @throws Error
+     */
+    private function materializeAttachment(Entity $campaign): ?array
+    {
+        $attachmentId = $campaign->get('attachmentId');
+
+        if (!$attachmentId) {
+            return null;
         }
 
-        // --- Finalize any contacts still in Retry after all passes ---
-        $this->finalizeRemainingRetries($campaignId, $campaignContactIds, $chunkOffset, $chunkSize);
+        /** @var ?Attachment $attachment */
+        $attachment = $this->entityManager->getEntityById(Attachment::ENTITY_TYPE, $attachmentId);
 
-        $this->log->info("ProcessWhatsAppCampaignChunk: Completed chunk ({$chunkLabel}) for campaign {$campaignId}.");
+        if (!$attachment) {
+            throw new Error("Attachment {$attachmentId} not found.");
+        }
 
-        $this->verifyMessageStatuses(
-            $campaignId,
-            $platformUrl,
-            $accountApiKey,
-            $chatwootAccountIdExternal,
-            $campaignContactIds
+        $size = (int) $this->fileStorageManager->getSize($attachment);
+
+        if ($size > WhatsAppMedia::MAX_BYTES) {
+            throw new Error(sprintf(
+                'Attachment is %.1f MB; WhatsApp media is limited to %d MB.',
+                $size / 1048576,
+                (int) (WhatsAppMedia::MAX_BYTES / 1048576)
+            ));
+        }
+
+        $fileName = (string) ($attachment->get('name') ?: 'attachment');
+
+        $mimeType = WhatsAppMedia::effectiveMimeType(
+            $attachment->get('type'),
+            (bool) $campaign->get('sendAudioAsVoice')
         );
 
-        $this->checkCampaignCompletion($campaignId);
+        $tempPath = tempnam(sys_get_temp_dir(), 'wa-campaign-');
+
+        if ($tempPath === false) {
+            throw new Error('Could not create temp file for campaign attachment.');
+        }
+
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+
+        if ($extension !== '') {
+            $withExtension = $tempPath . '.' . $extension;
+
+            if (@rename($tempPath, $withExtension)) {
+                $tempPath = $withExtension;
+            }
+        }
+
+        try {
+            $contents = $this->fileStorageManager->getContents($attachment);
+
+            if (file_put_contents($tempPath, $contents) === false) {
+                throw new Error('Could not write campaign attachment to temp file.');
+            }
+        } catch (\Throwable $e) {
+            @unlink($tempPath);
+
+            throw $e instanceof Error ? $e : new Error($e->getMessage());
+        }
+
+        $this->log->info(sprintf(
+            'ProcessWhatsAppCampaignChunk: Campaign %s media ready (%s, %s, %d bytes) — will send as %s.',
+            $campaign->getId(),
+            $fileName,
+            $mimeType,
+            $size,
+            WhatsAppMedia::describe(
+                $attachment->get('type'),
+                (bool) $campaign->get('sendAudioAsVoice')
+            )
+        ));
+
+        return [
+            'path' => $tempPath,
+            'mimeType' => $mimeType,
+            'fileName' => $fileName,
+        ];
+    }
+
+    /**
+     * @param array{path: string, mimeType: string, fileName: string} $media
+     */
+    private function discardMedia(array $media): void
+    {
+        if (is_file($media['path'])) {
+            @unlink($media['path']);
+        }
     }
 
     /**
@@ -299,7 +456,7 @@ class ProcessWhatsAppCampaignChunk implements Job
 
             try {
                 if ($processedCount > 0) {
-                    usleep(self::RATE_LIMIT_DELAY_MS * 1000);
+                    $this->pauseBetweenSends($ctx);
                 }
 
                 $phoneNumber = $campaignContact->get('phoneNumber');
@@ -320,27 +477,11 @@ class ProcessWhatsAppCampaignChunk implements Job
                     throw new Error("Failed to get Chatwoot contact ID for phone {$phoneNumber}.");
                 }
 
-                $params = $this->resolveParameterMapping(
-                    $ctx['parameterMapping'],
-                    $campaignContact->get('contactId')
-                );
-
-                $content = $this->renderTemplateContent($ctx['templateBody'], $params);
-
-                $result = $this->chatwootApiClient->sendTemplateMessage(
-                    $ctx['platformUrl'],
-                    $ctx['accountApiKey'],
-                    $ctx['chatwootAccountIdExternal'],
-                    $chatwootContactId,
-                    $ctx['inboxId'],
-                    $ctx['templateName'],
-                    $ctx['templateLanguage'],
-                    $params,
-                    $ctx['templateCategory'],
-                    $content,
-                    $ctx['headerMediaUrl'],
-                    $ctx['headerMediaType']
-                );
+                if ($ctx['messageMode'] === WhatsAppChannel::MODE_FREE_TEXT) {
+                    [$result, $params] = $this->sendFreeText($ctx, $chatwootContactId, $campaignContact);
+                } else {
+                    [$result, $params] = $this->sendTemplate($ctx, $chatwootContactId, $campaignContact);
+                }
 
                 $messageId = trim((string) ($result['message_id'] ?? ''));
                 $conversationId = trim((string) ($result['conversation_id'] ?? ''));
@@ -418,6 +559,124 @@ class ProcessWhatsAppCampaignChunk implements Job
         }
 
         return $processedCount;
+    }
+
+    /**
+     * Sleep between two consecutive sends on the same inbox.
+     *
+     * Cloud API uses a flat delay; QR (WAHA) uses a randomized window so the
+     * traffic pattern on a real handset number does not look machine-generated.
+     *
+     * @param array<string, mixed> $ctx
+     */
+    private function pauseBetweenSends(array $ctx): void
+    {
+        $minMs = (int) ($ctx['delayMinMs'] ?? self::RATE_LIMIT_DELAY_MS);
+        $maxMs = (int) ($ctx['delayMaxMs'] ?? $minMs);
+
+        if ($maxMs < $minMs) {
+            $maxMs = $minMs;
+        }
+
+        $delayMs = $minMs === $maxMs ? $minMs : random_int($minMs, $maxMs);
+
+        usleep($delayMs * 1000);
+    }
+
+    /**
+     * Send a Meta message template (Cloud API / Coexistence).
+     *
+     * @param array<string, mixed> $ctx
+     * @return array{0: array<string, mixed>, 1: array<string, string>} [sendResult, resolvedParams]
+     * @throws Error
+     */
+    private function sendTemplate(array $ctx, int|string $chatwootContactId, Entity $campaignContact): array
+    {
+        $params = $this->resolveParameterMapping(
+            $ctx['parameterMapping'],
+            $campaignContact->get('contactId')
+        );
+
+        $content = $this->renderTemplateContent($ctx['templateBody'], $params);
+
+        $result = $this->chatwootApiClient->sendTemplateMessage(
+            $ctx['platformUrl'],
+            $ctx['accountApiKey'],
+            $ctx['chatwootAccountIdExternal'],
+            $chatwootContactId,
+            $ctx['inboxId'],
+            $ctx['templateName'],
+            $ctx['templateLanguage'],
+            $params,
+            $ctx['templateCategory'],
+            $content,
+            $ctx['headerMediaUrl'],
+            $ctx['headerMediaType']
+        );
+
+        return [$result, $params];
+    }
+
+    /**
+     * Send a free-text message (QR / WAHA, or Cloud inside the 24h window),
+     * optionally carrying the campaign's media attachment.
+     *
+     * The whole body is a Handlebars template rendered against the recipient's
+     * Contact, so `{{firstName}}` style personalization works without the
+     * numbered-parameter indirection Meta templates require. When media is
+     * attached the body becomes its caption, and may be empty (a bare voice
+     * note is a legitimate send).
+     *
+     * @param array<string, mixed> $ctx
+     * @return array{0: array<string, mixed>, 1: array<string, string>} [sendResult, resolvedParams]
+     * @throws Error
+     */
+    private function sendFreeText(array $ctx, int|string $chatwootContactId, Entity $campaignContact): array
+    {
+        $body = $this->renderBodyForContact(
+            (string) $ctx['messageBody'],
+            $campaignContact->get('contactId')
+        );
+
+        $media = $ctx['media'] ?? null;
+
+        if ($media === null) {
+            if (trim($body) === '') {
+                throw new Error('Rendered message body is empty; refusing to send a blank WhatsApp message.');
+            }
+
+            $result = $this->chatwootApiClient->sendOutgoingMessage(
+                $ctx['platformUrl'],
+                $ctx['accountApiKey'],
+                $ctx['chatwootAccountIdExternal'],
+                $chatwootContactId,
+                $ctx['inboxId'],
+                $body
+            );
+
+            return [$result, ['body' => $body]];
+        }
+
+        $result = $this->chatwootApiClient->sendOutgoingMessageWithAttachment(
+            $ctx['platformUrl'],
+            $ctx['accountApiKey'],
+            $ctx['chatwootAccountIdExternal'],
+            $chatwootContactId,
+            $ctx['inboxId'],
+            $body,
+            $media['path'],
+            $media['mimeType'],
+            $media['fileName']
+        );
+
+        // Persisted on the recipient row for auditability: free-text campaigns
+        // have no numbered params, so the rendered caption plus the media
+        // identity is the record of what was actually sent.
+        return [$result, [
+            'body' => $body,
+            'attachment' => $media['fileName'],
+            'attachmentMimeType' => $media['mimeType'],
+        ]];
     }
 
     /**
@@ -781,6 +1040,41 @@ class ProcessWhatsAppCampaignChunk implements Job
         ]);
 
         $this->entityManager->saveEntity($campaign);
+    }
+
+    /**
+     * Render a free-text message body against the recipient's Contact.
+     *
+     * Reuses the Meta-template parameter resolver (custom-field expansion,
+     * `{{account.*}}` link handling) by treating the whole body as a single
+     * named expression.
+     *
+     * Handlebars HTML-escapes `{{token}}` output, which is correct for the
+     * email/PDF templates the renderer was built for but always wrong on a
+     * plain-text channel: a contact named "Tom & Jerry" must not arrive as
+     * "Tom &amp; Jerry". Entities are decoded back after rendering.
+     */
+    private function renderBodyForContact(string $body, ?string $contactId): string
+    {
+        if (trim($body) === '') {
+            return '';
+        }
+
+        // Static body: nothing to resolve, and no reason to require a
+        // loadable Contact before sending.
+        if (!str_contains($body, '{{')) {
+            return $body;
+        }
+
+        $resolved = $this->resolveParameterMapping(['body' => $body], $contactId);
+
+        $rendered = $resolved['body'] ?? '';
+
+        if ($rendered === '') {
+            return '';
+        }
+
+        return html_entity_decode($rendered, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**

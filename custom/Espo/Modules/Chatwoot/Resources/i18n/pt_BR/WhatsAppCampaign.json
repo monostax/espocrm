@@ -37,7 +37,12 @@
         "teams": "Times",
         "abWeightOriginal": "% da Audiência — Original (A)",
         "abWeight": "% da Audiência",
-        "abActivate": "Iniciar imediatamente"
+        "abActivate": "Iniciar imediatamente",
+        "messageMode": "Tipo de Mensagem",
+        "messageBody": "Mensagem",
+        "channelType": "Canal",
+        "attachment": "Anexo",
+        "sendAudioAsVoice": "Enviar áudio como mensagem de voz"
     },
     "links": {
         "chatwootInbox": "Caixa de Entrada WhatsApp",
@@ -65,7 +70,8 @@
         "Variant": "Variante",
         "Recipients": "Destinatários",
         "Opportunity Creation": "Criação de Oportunidades",
-        "Opportunities": "Oportunidades"
+        "Opportunities": "Oportunidades",
+        "Message": "Mensagem"
     },
     "options": {
         "status": {
@@ -75,6 +81,10 @@
             "Completed": "Concluída",
             "Cancelled": "Cancelada",
             "Paused": "Pausada"
+        },
+        "messageMode": {
+            "Template": "Template Meta",
+            "FreeText": "Texto Livre"
         }
     },
     "messages": {
@@ -95,10 +105,11 @@
         "abTestCreated": "Teste A/B criado.",
         "abTestCreatedActivationFailed": "Teste A/B criado, mas a ativação falhou: {error} Revise a distribuição e ative-a manualmente.",
         "failedToCreateAbTest": "Falha ao criar o teste A/B",
-        "weightsMustSumTo100": "Os percentuais da audiência devem somar 100 (soma atual: {sum})."
+        "weightsMustSumTo100": "Os percentuais da audiência devem somar 100 (soma atual: {sum}).",
+        "insertToken": "Clique para inserir um campo na mensagem:"
     },
     "tooltips": {
-        "chatwootInbox": "Selecione uma caixa de entrada Meta Cloud API ativa. A conta de Chat e as credenciais Meta usadas para carregar templates e enviar são derivadas da conexão de canal dessa caixa.",
+        "chatwootInbox": "Selecione uma caixa de entrada de WhatsApp ativa. A conta de Chat e (para canais Meta) as credenciais usadas para carregar templates e enviar são derivadas da conexão de canal dessa caixa. Caixas QR Code só enviam Texto Livre.",
         "templateName": "Selecione o template de mensagem WhatsApp para usar nesta campanha. Os templates são obtidos da Conta Business do WhatsApp na Meta vinculada à caixa de entrada selecionada.",
         "parameterMapping": "Mapeia os parâmetros do template para campos do contato. Define quais dados do contato preenche cada placeholder no template.",
         "processedParams": "Os valores dos parâmetros resolvidos após processar o mapeamento com os dados reais dos contatos.",
@@ -107,6 +118,10 @@
         "funnel": "O funil usado para localizar uma Oportunidade aberta existente ou criar uma nova após um envio bem-sucedido.",
         "opportunityStage": "Estágio aberto obrigatório para novas Oportunidades. Oportunidades reutilizadas mantêm o estágio atual.",
         "opportunityAssignedUser": "Responsável pelas novas Oportunidades. O usuário deve pertencer a um time do funil.",
-        "tenant": "Ambiente denormalizado da conta Chatwoot pai da campanha. Definido automaticamente; usado para relatórios por ambiente e agregações sem ACL."
+        "tenant": "Ambiente denormalizado da conta Chatwoot pai da campanha. Definido automaticamente; usado para relatórios por ambiente e agregações sem ACL.",
+        "messageMode": "Template Meta envia um template aprovado do WhatsApp e exige uma caixa de entrada Meta Cloud API ou Coexistência. Texto Livre envia uma mensagem simples e também funciona com caixas de entrada QR Code (WAHA); no Cloud API só alcança contatos dentro da janela de 24h.",
+        "messageBody": "A mensagem enviada para cada contato. Aceita expressões Handlebars resolvidas no Contato, ex.: {{firstName}} ou {{account.name}}.",
+        "attachment": "Mídia opcional enviada com a mensagem. A forma como o WhatsApp exibe depende do tipo do arquivo: áudio vira mensagem de voz, imagens e vídeos aparecem embutidos, e qualquer outro tipo é enviado como documento. O corpo da mensagem vira a legenda e pode ficar vazio. Máx. 16 MB.",
+        "sendAudioAsVoice": "Ativado (padrão): o arquivo de áudio é entregue como mensagem de voz do WhatsApp (a bolha de microfone). Desativado: é entregue como documento de áudio para download. Não afeta anexos que não sejam áudio."
     }
 }

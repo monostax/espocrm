@@ -13,18 +13,26 @@ namespace Espo\Modules\Chatwoot\Hooks\WhatsAppCampaign;
 
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Derives chatwootAccount / credential / wabaId from the selected ChatwootInbox.
+ * Derives chatwootAccount / channelType (and Meta credential / wabaId when the
+ * channel is template-capable) from the selected ChatwootInbox.
  *
  * Server-side counterpart of the campaign form inbox picker: storybook/UI may
  * prefill, but save path re-derives so API clients and race conditions cannot
  * leave account/auth out of sync with the inbox.
  *
- * Order = 0 so it runs before CascadeTenantFromAccount (order = 1).
+ * WAHA QR inboxes have no Meta identity: credential/wabaId derivation is
+ * skipped for them and any stale Meta attributes are cleared, so a campaign
+ * switched from Cloud API to QR cannot keep sending with the old WABA.
+ *
+ * Order = 0 so it runs before CascadeTenantFromAccount (order = 1) and
+ * ValidateMessageConfiguration (order = 2), which reads the channelType
+ * this hook resolves.
  */
 class DeriveFromInbox
 {
@@ -49,18 +57,24 @@ class DeriveFromInbox
         if (!$inboxId) {
             if ($entity->isNew() || $entity->isAttributeChanged('chatwootInboxId')) {
                 throw new BadRequest(
-                    'Select a WhatsApp Inbox (Meta Cloud API) for the campaign.'
+                    'Select a WhatsApp Inbox (Meta Cloud API, Coexistence, or QR Code) for the campaign.'
                 );
             }
 
             return;
         }
 
+        // Nothing to re-derive: inbox unchanged and the channel snapshot is
+        // already consistent with what this hook would produce.
         if (
             !$entity->isNew() &&
             !$entity->isAttributeChanged('chatwootInboxId') &&
             $entity->get('chatwootAccountId') &&
-            $entity->get('wabaId')
+            $entity->get('channelType') &&
+            (
+                !WhatsAppChannel::requiresMetaAuth($entity->get('channelType')) ||
+                $entity->get('wabaId')
+            )
         ) {
             return;
         }
@@ -82,7 +96,7 @@ class DeriveFromInbox
         $integrationId = $inbox->get('chatwootInboxIntegrationId');
 
         if (!$integrationId) {
-            throw new BadRequest('Selected inbox has no Meta channel connection.');
+            throw new BadRequest('Selected inbox has no WhatsApp channel connection.');
         }
 
         $integration = $this->entityManager
@@ -93,16 +107,28 @@ class DeriveFromInbox
         }
 
         $channelType = $integration->get('channelType');
-        $allowedTypes = ['whatsappCloudApi', 'whatsappCoexistence'];
 
-        if (!in_array($channelType, $allowedTypes, true)) {
+        if (!WhatsAppChannel::isSendable($channelType)) {
             throw new BadRequest(
-                'Selected inbox must be a Meta Cloud API (or Coexistence) channel connection.'
+                'Selected inbox must be a Meta Cloud API, Coexistence, or QR Code channel connection.'
             );
         }
 
         if ($integration->get('status') !== 'ACTIVE') {
             throw new BadRequest('Selected inbox channel connection is not ACTIVE.');
+        }
+
+        $entity->set('channelType', $channelType);
+
+        if (!WhatsAppChannel::requiresMetaAuth($channelType)) {
+            // QR sessions send through Chatwoot with no Meta auth. Clear any
+            // Meta attributes inherited from a previously selected inbox.
+            $entity->set([
+                'credentialId' => null,
+                'wabaId' => null,
+            ]);
+
+            return;
         }
 
         $credentialId = $integration->get('credentialId');

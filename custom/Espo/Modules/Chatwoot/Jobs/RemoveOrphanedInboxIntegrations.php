@@ -6,6 +6,7 @@ use Espo\Core\Job\JobDataLess;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Entities\ChatwootInboxIntegration;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ChatwootInboxIdResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -51,6 +52,7 @@ class RemoveOrphanedInboxIntegrations implements JobDataLess
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
+        private ChatwootInboxIdResolver $chatwootInboxIdResolver,
         private Log $log
     ) {}
 
@@ -84,7 +86,15 @@ class RemoveOrphanedInboxIntegrations implements JobDataLess
                 }
 
                 try {
-                    $this->entityManager->removeEntity($integration, ['cascadeParent' => true]);
+                    // This job is the top-level initiator, so it must NOT pass
+                    // `cascadeParent` — that would make CleanupOnRemove skip WAHA
+                    // teardown and leave a live, authenticated session behind.
+                    // Remote inbox state was already established by
+                    // confirmRemoteState() above (gone, or never provisioned),
+                    // so remote inbox deletion is skipped as redundant.
+                    $this->entityManager->removeEntity($integration, [
+                        'skipChatwootInboxCleanup' => true,
+                    ]);
                     $removed++;
                     $this->log->info(
                         "RemoveOrphanedInboxIntegrations: Removed orphaned integration {$integrationId}"
@@ -130,7 +140,9 @@ class RemoveOrphanedInboxIntegrations implements JobDataLess
             return 'skip';
         }
 
-        $chatwootInboxId = $integration->get('chatwootInboxId');
+        // Resolved rather than read directly — see ChatwootInboxIdResolver for
+        // why the raw `chatwootInboxId` attribute is not the numeric id.
+        $chatwootInboxId = $this->chatwootInboxIdResolver->resolve($integration, true);
         $chatwootInboxIdentifier = $integration->get('chatwootInboxIdentifier');
 
         $hasRemoteHandles = !empty($chatwootInboxId) || !empty($chatwootInboxIdentifier);
@@ -191,7 +203,11 @@ class RemoveOrphanedInboxIntegrations implements JobDataLess
     private function confirmRemoteState(Entity $integration): string
     {
         $integrationId = $integration->getId();
-        $chatwootInboxId = $integration->get('chatwootInboxId');
+        // Resolved, not read directly: the integration's `chatwootInboxId`
+        // attribute is the linked inbox's Espo row id, so `(int)` on it yields a
+        // bogus id. Include soft-deleted inboxes — an orphan's inbox is gone by
+        // definition, which is the only reason this job is looking at it.
+        $chatwootInboxId = $this->chatwootInboxIdResolver->resolve($integration, true);
         $chatwootInboxIdentifier = $integration->get('chatwootInboxIdentifier');
 
         $accountId = $integration->get('chatwootAccountId');

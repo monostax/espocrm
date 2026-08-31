@@ -35,6 +35,13 @@ define("chatwoot:handlers/whatsapp-campaign/detail-actions", [], function () {
 
         isCreateAbTestAvailable() {
             const status = this.view.model.get("status");
+
+            // A/B arms are differentiated by Meta template, so there is
+            // nothing to split on for free-text (QR / WAHA) campaigns.
+            if (this.view.model.get("messageMode") === "FreeText") {
+                return false;
+            }
+
             return status === "Draft";
         }
 

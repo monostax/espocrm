@@ -16,6 +16,8 @@ use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ChatwootInboxIdResolver;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 
 /**
  * Hook to clean up external WAHA session and Chatwoot inbox resources
@@ -33,6 +35,7 @@ class CleanupOnRemove
         private EntityManager $entityManager,
         private WahaApiClient $wahaApiClient,
         private ChatwootApiClient $chatwootApiClient,
+        private ChatwootInboxIdResolver $chatwootInboxIdResolver,
         private Log $log
     ) {}
 
@@ -50,7 +53,15 @@ class CleanupOnRemove
             return;
         }
 
-        // Skip if this is a cascade delete from parent (external cleanup already handled)
+        // Skip when this record is a *child* being removed as part of a real
+        // parent cascade (see Global\Hooks\Common\CascadeDelete), where the
+        // top-level entity is responsible for external teardown.
+        //
+        // WARNING: `cascadeParent` must never be passed by a top-level caller
+        // that is itself initiating the delete — doing so silently skips WAHA
+        // and Chatwoot teardown and leaks a live, authenticated WhatsApp
+        // session. Callers who merely want to suppress remote inbox deletion
+        // should pass `skipChatwootInboxCleanup` instead.
         if (!empty($options['cascadeParent'])) {
             return;
         }
@@ -61,10 +72,12 @@ class CleanupOnRemove
         $channelType = $entity->get('channelType');
         $this->log->info("ChatwootInboxIntegration cleanup: Starting external API cleanup for channel {$channelId} (type: {$channelType})");
 
-        // Clean up WAHA Session only for QR code channels.
-        // (Cloud API, Coexistence, and Instagram channels never create
-        // a WAHA session.)
-        if ($channelType === 'whatsappQrcode') {
+        // Clean up the WAHA session for every channel type that owns one.
+        // Both QR code and Coexistence channels store a session name in
+        // `wahaSessionName` (Coexistence provisions a send-only companion via
+        // provisionWahaSendOnlySession()). Cloud API is the only sendable
+        // channel with no WAHA session.
+        if (WhatsAppChannel::usesWahaSession($channelType)) {
             $this->cleanupWahaSession($entity);
         }
 
@@ -117,6 +130,20 @@ class CleanupOnRemove
                 }
             }
 
+            // Stop the session before deleting it. A WORKING session can refuse
+            // deletion while the WhatsApp socket is still connected, which is how
+            // live sessions used to survive channel deletion. Mirrors the proven
+            // sequence in ChatwootInboxIntegration::provisionWahaSendOnlySession().
+            try {
+                $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
+            } catch (\Exception $e) {
+                // Already stopped or unknown to WAHA — deletion below still applies.
+                $this->log->debug(
+                    "ChatwootInboxIntegration cleanup: stopSession({$sessionName}) failed, " .
+                    "continuing to delete: " . $e->getMessage()
+                );
+            }
+
             // Then, delete the WAHA Session
             // Note: This also cleans up the label webhook since webhooks are part of session config
             $this->log->info("ChatwootInboxIntegration cleanup: Deleting WAHA session {$sessionName}");
@@ -136,7 +163,11 @@ class CleanupOnRemove
      */
     private function cleanupChatwootInbox(Entity $entity): void
     {
-        $chatwootInboxId = $entity->get('chatwootInboxId');
+        // Must be resolved through the resolver: the integration's own
+        // `chatwootInboxId` attribute is the linked ChatwootInbox's Espo row id,
+        // so casting it to int used to send a bogus id (always 6) to Chatwoot,
+        // which 404s and silently left the remote inbox in place.
+        $chatwootInboxId = $this->chatwootInboxIdResolver->resolve($entity, true);
         $chatwootAccountId = $entity->get('chatwootAccountId');
 
         if (!$chatwootInboxId || !$chatwootAccountId) {

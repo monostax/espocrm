@@ -19,8 +19,8 @@ use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\ORM\Entity;
 
 /**
- * Auto-derive entity.tenantId from team membership (teams linkMultiple
- * and/or preferred team ids such as Funnel.teamId).
+ * Auto-derive entity.tenantId from team membership (the `teams` linkMultiple,
+ * optionally preceded by explicitly preferred team ids).
  *
  * Tenant is the multi-tenancy boundary; teams are RBAC permissions.
  */
@@ -70,11 +70,12 @@ class TenantFromTeamsSync
             return;
         }
 
-        // Resolve tier by tier so an explicit ownership team (e.g. Funnel.teamId)
-        // still decides the tenant even when the broader `teams` ACL list spans
-        // more. Within a tier, ambiguity is refused rather than guessed:
-        // stamping an arbitrary one of several tenants silently misfiles the
-        // record and is unrecoverable afterwards. Mirrors
+        // Resolve tier by tier so an explicitly preferred ownership team still
+        // decides the tenant even when the broader `teams` ACL list spans
+        // more. No caller currently passes a preferred tier; it is retained as
+        // an extension point. Within a tier, ambiguity is refused rather than
+        // guessed: stamping an arbitrary one of several tenants silently
+        // misfiles the record and is unrecoverable afterwards. Mirrors
         // TeamTenantAccess::deriveTenantId(), the other derivation path.
         foreach ([$preferred, $entityTeamIds] as $tier) {
             if ($tier === []) {

@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /************************************************************************
  * This file is part of Monostax.
  *
@@ -14,16 +17,21 @@ namespace Espo\Modules\Global\Classes\Acl\Funnel;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\Core\Acl\OwnershipTeamChecker;
+use Espo\Modules\Global\Tools\Acl\TeamsAccess;
 
 /**
  * Custom Ownership Checker for Funnel.
  *
- * Checks if a user belongs to the Funnel's team.
+ * Checks whether a user shares one of the Funnel's `teams`.
  *
  * @implements OwnershipTeamChecker<Entity>
  */
 class OwnershipChecker implements OwnershipTeamChecker
 {
+    public function __construct(
+        private TeamsAccess $teamsAccess,
+    ) {}
+
     /**
      * Check if the user is considered an "owner" of the entity.
      * For Funnel, we don't use the concept of ownership.
@@ -34,19 +42,11 @@ class OwnershipChecker implements OwnershipTeamChecker
     }
 
     /**
-     * Check if the entity belongs to a user's team.
+     * Check if the entity belongs to one of the user's teams.
      */
     public function checkTeam(User $user, Entity $entity): bool
     {
-        $funnelTeamId = $entity->get('teamId');
-
-        if (!$funnelTeamId) {
-            return false;
-        }
-
-        $userTeamIds = $user->getTeamIdList();
-
-        return in_array($funnelTeamId, $userTeamIds);
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 }
 

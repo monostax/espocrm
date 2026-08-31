@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /************************************************************************
  * This file is part of Monostax.
  *
@@ -11,22 +14,23 @@
 
 namespace Espo\Modules\Global\Classes\Acl\OpportunityStage;
 
-use Espo\Entities\User;
-use Espo\ORM\Entity;
-use Espo\ORM\EntityManager;
 use Espo\Core\Acl\OwnershipTeamChecker;
+use Espo\Entities\User;
+use Espo\Modules\Global\Tools\Acl\TeamsAccess;
+use Espo\ORM\Entity;
 
 /**
  * Custom Ownership Checker for OpportunityStage.
  *
- * Checks if a user belongs to the OpportunityStage's Funnel's team.
+ * Checks whether a user shares one of the stage's `teams`, which mirror the
+ * parent Funnel's.
  *
  * @implements OwnershipTeamChecker<Entity>
  */
 class OwnershipChecker implements OwnershipTeamChecker
 {
     public function __construct(
-        private EntityManager $entityManager,
+        private TeamsAccess $teamsAccess,
     ) {}
 
     /**
@@ -39,31 +43,10 @@ class OwnershipChecker implements OwnershipTeamChecker
     }
 
     /**
-     * Check if the entity belongs to a user's team (via funnel).
+     * Check if the entity belongs to one of the user's teams.
      */
     public function checkTeam(User $user, Entity $entity): bool
     {
-        $funnelId = $entity->get('funnelId');
-
-        if (!$funnelId) {
-            return false;
-        }
-
-        // Get the funnel to check its team
-        $funnel = $this->entityManager->getEntityById('Funnel', $funnelId);
-
-        if (!$funnel) {
-            return false;
-        }
-
-        $funnelTeamId = $funnel->get('teamId');
-
-        if (!$funnelTeamId) {
-            return false;
-        }
-
-        $userTeamIds = $user->getTeamIdList();
-
-        return in_array($funnelTeamId, $userTeamIds);
+        return $this->teamsAccess->userSharesTeam($user, $entity);
     }
 }

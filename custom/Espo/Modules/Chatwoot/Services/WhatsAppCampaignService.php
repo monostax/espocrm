@@ -17,6 +17,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Log;
 use Espo\Entities\PhoneNumber;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\MetaGraphApiClient;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -30,8 +31,6 @@ use Espo\Repositories\PhoneNumber as PhoneNumberRepository;
  */
 class WhatsAppCampaignService
 {
-    private const CHUNK_SIZE = 50;
-
     public function __construct(
         private EntityManager $entityManager,
         private MetaGraphApiClient $metaGraphApiClient,
@@ -478,7 +477,7 @@ class WhatsAppCampaignService
 
         // Prefer explicit inbox; account is derived from it (or set for legacy rows).
         if (!$campaign->get('chatwootInboxId') && !$campaign->get('chatwootAccountId')) {
-            throw new Error('Campaign must have a WhatsApp Inbox selected (Meta Cloud API).');
+            throw new Error('Campaign must have a WhatsApp Inbox selected.');
         }
 
         $chatwootAccountId = $campaign->get('chatwootAccountId');
@@ -486,6 +485,7 @@ class WhatsAppCampaignService
             throw new Error('Campaign must have a Chatwoot Account linked (select a WhatsApp Inbox).');
         }
 
+        $this->assertSendableConfiguration($campaign);
         $this->opportunityService->assertConfiguration($campaign);
 
         // Resolve audience
@@ -501,21 +501,7 @@ class WhatsAppCampaignService
             throw new Error('Linked Chatwoot Account not found.');
         }
 
-        // Sync WhatsApp templates from Meta so Chatwoot has the latest versions
-        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $chatwootAccount->get('platformId'));
-
-        if ($platform) {
-            $whatsappInbox = $this->resolveCampaignInbox($campaign, $chatwootAccountId);
-
-            if ($whatsappInbox) {
-                $this->chatwootApiClient->syncInboxTemplates(
-                    $platform->get('backendUrl'),
-                    $chatwootAccount->get('apiKey'),
-                    (int) $chatwootAccount->get('chatwootAccountId'),
-                    (int) $whatsappInbox->get('chatwootInboxId')
-                );
-            }
-        }
+        $this->syncTemplatesIfSupported($campaign, $chatwootAccount, $chatwootAccountId);
 
         $createdIds = $this->createCampaignContacts($campaign, $audience);
 
@@ -794,7 +780,7 @@ class WhatsAppCampaignService
         }
 
         if (!$campaign->get('chatwootInboxId') && !$campaign->get('chatwootAccountId')) {
-            throw new Error("Campaign {$campaignId} must have a WhatsApp Inbox selected (Meta Cloud API).");
+            throw new Error("Campaign {$campaignId} must have a WhatsApp Inbox selected.");
         }
 
         $chatwootAccountId = $campaign->get('chatwootAccountId');
@@ -802,6 +788,7 @@ class WhatsAppCampaignService
             throw new Error("Campaign {$campaignId} must have a Chatwoot Account linked (select a WhatsApp Inbox).");
         }
 
+        $this->assertSendableConfiguration($campaign);
         $this->opportunityService->assertConfiguration($campaign);
 
         $chatwootAccount = $this->entityManager->getEntityById('ChatwootAccount', $chatwootAccountId);
@@ -838,21 +825,7 @@ class WhatsAppCampaignService
             throw new Error("Linked Chatwoot Account not found for campaign {$campaignId}.");
         }
 
-        // Sync WhatsApp templates from Meta so Chatwoot has the latest versions
-        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $chatwootAccount->get('platformId'));
-
-        if ($platform) {
-            $whatsappInbox = $this->resolveCampaignInbox($campaign, $chatwootAccountId);
-
-            if ($whatsappInbox) {
-                $this->chatwootApiClient->syncInboxTemplates(
-                    $platform->get('backendUrl'),
-                    $chatwootAccount->get('apiKey'),
-                    (int) $chatwootAccount->get('chatwootAccountId'),
-                    (int) $whatsappInbox->get('chatwootInboxId')
-                );
-            }
-        }
+        $this->syncTemplatesIfSupported($campaign, $chatwootAccount, $chatwootAccountId);
 
         $campaign->set([
             'status' => 'Sending',
@@ -961,13 +934,21 @@ class WhatsAppCampaignService
      * Each job receives an explicit ID list (not offset paging), so jobs
      * scheduled by later enrollments cannot interfere with earlier ones.
      *
+     * Chunk size is channel-derived: QR (WAHA) sends are paced tens of seconds
+     * apart, so those chunks stay small to bound how long a single job holds a
+     * worker.
+     *
      * @param string $campaignId Campaign entity ID
      * @param string[] $campaignContactIds WhatsAppCampaignContact IDs
      * @return int Number of scheduled chunks
      */
     private function scheduleChunkJobs(string $campaignId, array $campaignContactIds): int
     {
-        $chunks = array_chunk($campaignContactIds, self::CHUNK_SIZE);
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+
+        $chunkSize = WhatsAppChannel::chunkSize($campaign?->get('channelType'));
+
+        $chunks = array_chunk($campaignContactIds, $chunkSize);
 
         foreach ($chunks as $chunk) {
             $this->jobSchedulerFactory
@@ -984,10 +965,98 @@ class WhatsAppCampaignService
     }
 
     /**
+     * Re-assert that the campaign's message mode, channel and content agree
+     * before anything is enqueued.
+     *
+     * ValidateMessageConfiguration already enforces this on save, but launch is
+     * the last gate before real sends: rows created before the field existed,
+     * or saved with the silent option, would otherwise reach the send job and
+     * fail per-recipient instead of failing the launch once.
+     *
+     * @throws Error
+     */
+    private function assertSendableConfiguration(\Espo\ORM\Entity $campaign): void
+    {
+        $mode = WhatsAppChannel::normalizeMode($campaign->get('messageMode'));
+        $channelType = $campaign->get('channelType');
+
+        if (!$channelType) {
+            // Not yet derived (legacy row saved before channelType existed).
+            $inbox = $campaign->get('chatwootInboxId')
+                ? $this->entityManager->getEntityById('ChatwootInbox', $campaign->get('chatwootInboxId'))
+                : null;
+
+            $channelType = $inbox?->get('channelType');
+        }
+
+        if ($channelType && !WhatsAppChannel::supportsMode($channelType, $mode)) {
+            throw new Error(sprintf(
+                'Campaign %s uses %s mode, which a %s inbox cannot send.',
+                $campaign->getId(),
+                $mode,
+                WhatsAppChannel::label($channelType),
+            ));
+        }
+
+        if ($mode === WhatsAppChannel::MODE_TEMPLATE) {
+            if (trim((string) $campaign->get('templateName')) === '') {
+                throw new Error("Campaign {$campaign->getId()} must have a WhatsApp template selected.");
+            }
+
+            return;
+        }
+
+        if (trim((string) $campaign->get('messageBody')) === '' && !$campaign->get('attachmentId')) {
+            throw new Error("Campaign {$campaign->getId()} must have a message body or an attachment.");
+        }
+    }
+
+    /**
+     * Pull the latest Meta templates into Chatwoot's cache before sending.
+     *
+     * No-op for free-text campaigns and for QR (WAHA) channels, which have no
+     * Meta WABA to sync from — calling the Chatwoot template sync endpoint for
+     * a QR inbox would fail on every launch.
+     */
+    private function syncTemplatesIfSupported(
+        \Espo\ORM\Entity $campaign,
+        \Espo\ORM\Entity $chatwootAccount,
+        string $chatwootAccountId
+    ): void {
+        if (WhatsAppChannel::normalizeMode($campaign->get('messageMode')) !== WhatsAppChannel::MODE_TEMPLATE) {
+            return;
+        }
+
+        $platform = $this->entityManager
+            ->getEntityById('ChatwootPlatform', $chatwootAccount->get('platformId'));
+
+        if (!$platform) {
+            return;
+        }
+
+        $whatsappInbox = $this->resolveCampaignInbox($campaign, $chatwootAccountId);
+
+        if (!$whatsappInbox) {
+            return;
+        }
+
+        if (!WhatsAppChannel::supportsTemplates($whatsappInbox->get('channelType'))) {
+            return;
+        }
+
+        $this->chatwootApiClient->syncInboxTemplates(
+            $platform->get('backendUrl'),
+            $chatwootAccount->get('apiKey'),
+            (int) $chatwootAccount->get('chatwootAccountId'),
+            (int) $whatsappInbox->get('chatwootInboxId')
+        );
+    }
+
+    /**
      * Resolve the ChatwootInbox used for a campaign send path.
      *
-     * Prefers the explicitly selected inbox; falls back to first Cloud API /
-     * Coexistence Integration inbox on the account for legacy campaigns.
+     * Prefers the explicitly selected inbox; falls back to the first sendable
+     * WhatsApp Integration inbox on the account for legacy campaigns.
      *
      * @return \Espo\ORM\Entity|null ChatwootInbox entity
      */
@@ -1003,11 +1072,15 @@ class WhatsAppCampaignService
             }
         }
 
+        // Legacy campaigns predate the inbox picker and are always Meta
+        // template campaigns, so the fallback stays template-capable only:
+        // silently falling back to a QR inbox would send through the wrong
+        // number.
         return $this->entityManager
             ->getRDBRepository('ChatwootInbox')
             ->where([
                 'chatwootAccountId' => $chatwootAccountId,
-                'channelType' => ['whatsappCloudApi', 'whatsappCoexistence'],
+                'channelType' => WhatsAppChannel::TEMPLATE_CAPABLE,
             ])
             ->findOne();
     }

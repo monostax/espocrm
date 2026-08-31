@@ -10,7 +10,6 @@
         "wahaSessionId": "ID da Sessão WAHA",
         "wahaAppId": "ID do App WAHA",
         "wahaChatwootInboxId": "ID do Canal de Envio WAHA",
-        "chatwootInboxId": "ID do Canal de Chat",
         "chatwootInboxIdentifier": "Identificador do Canal de Chat",
         "chatwootInbox": "Chat / Conta / Caixa de Entrada",
         "whatsappId": "ID WhatsApp",

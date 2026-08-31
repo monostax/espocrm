@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /************************************************************************
  * This file is part of Monostax.
  *
@@ -12,13 +15,19 @@
 namespace Espo\Modules\Global\Classes\Select\Funnel\AccessControlFilters;
 
 use Espo\Core\Select\AccessControl\Filter;
+use Espo\Entities\Team;
 use Espo\Entities\User;
+use Espo\ORM\Name\Attribute;
 use Espo\ORM\Query\SelectBuilder as QueryBuilder;
 
 /**
  * Custom OnlyTeam filter for Funnel.
  *
- * Filters funnels to only show those belonging to user's teams.
+ * Restricts funnels to those sharing a Team with the user, via the polymorphic
+ * `entity_team` table. Funnel has no assignedUser/collaborators fields, so the
+ * teams subquery is the only clause needed.
+ *
+ * Mirrors Espo\Core\Select\AccessControl\Filters\OnlyTeam.
  *
  * @noinspection PhpUnused
  */
@@ -32,16 +41,23 @@ class OnlyTeam implements Filter
     {
         $teamIdList = $this->user->getTeamIdList();
 
-        if (empty($teamIdList)) {
-            // User has no teams, show nothing
-            $queryBuilder->where(['id' => null]);
+        if ($teamIdList === []) {
+            // User has no teams, show nothing.
+            $queryBuilder->where([Attribute::ID => null]);
+
             return;
         }
 
-        // Filter by teamId (single team relationship)
-        $queryBuilder->where(['teamId' => $teamIdList]);
+        $teamSubQuery = QueryBuilder::create()
+            ->select('entityId')
+            ->from(Team::RELATIONSHIP_ENTITY_TEAM)
+            ->where([
+                'teamId' => $teamIdList,
+                'entityType' => 'Funnel',
+                'deleted' => false,
+            ])
+            ->build();
+
+        $queryBuilder->where([Attribute::ID . '=s' => $teamSubQuery]);
     }
 }
-
-
-

@@ -10,6 +10,8 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\EmailChannelBridge;
 use Espo\Modules\Chatwoot\Services\SyncEmailOAuthCredentials;
 use Espo\Modules\Chatwoot\Services\SyncTwilioCredentials;
+use Espo\Modules\Chatwoot\Services\WahaInboxAdoption;
+use Espo\Modules\Chatwoot\Entities\ChatwootInboxIntegration;
 
 /**
  * Scheduled job to sync inboxes from Chatwoot to EspoCRM.
@@ -24,7 +26,8 @@ class SyncInboxesFromChatwoot implements JobDataLess
         private Log $log,
         private SyncTwilioCredentials $syncTwilioCredentials,
         private EmailChannelBridge $emailChannelBridge,
-        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials
+        private SyncEmailOAuthCredentials $syncEmailOAuthCredentials,
+        private WahaInboxAdoption $wahaInboxAdoption
     ) {}
 
     public function run(): void
@@ -411,11 +414,15 @@ class SyncInboxesFromChatwoot implements JobDataLess
         $inbox->set('inboxIdentifier', $chatwootInbox['inbox_identifier'] ?? null);
         $inbox->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
-        // Auto-link to ChatwootInboxIntegration if not already linked
-        if (!$inbox->get('chatwootInboxIntegrationId')) {
+        // Auto-link to ChatwootInboxIntegration when the inbox has no usable
+        // channel. A dangling link counts as unlinked: the referenced channel
+        // may have been hard-deleted, which leaves the inbox permanently
+        // unusable for sending ("inbox has no WhatsApp channel connection")
+        // because a non-empty id used to be treated as already linked.
+        if ($this->needsIntegrationLink($inbox)) {
             $integration = $this->findIntegrationForInbox($chatwootInbox, $inbox->get('chatwootAccountId'));
             if ($integration) {
-                $this->linkInboxToIntegration($inbox, $integration, $chatwootInbox['id']);
+                $this->linkInboxToIntegration($inbox, $integration);
             }
         }
 
@@ -455,7 +462,6 @@ class SyncInboxesFromChatwoot implements JobDataLess
         $integration = $this->findIntegrationForInbox($chatwootInbox, $espoAccountId);
         if ($integration) {
             $data['chatwootInboxIntegrationId'] = $integration->getId();
-            $this->updateIntegrationInboxId($integration, $chatwootInbox['id']);
         }
 
         // Assign teams from ChatwootAccount
@@ -470,7 +476,9 @@ class SyncInboxesFromChatwoot implements JobDataLess
     /**
      * Find a matching ChatwootInboxIntegration for a Chatwoot inbox.
      * Uses inbox_identifier for QRCode/API inboxes, falls back to phone number
-     * matching for WhatsApp Cloud API (Channel::Whatsapp) inboxes.
+     * matching for WhatsApp Cloud API (Channel::Whatsapp) inboxes, and finally
+     * adopts WAHA-backed inboxes that were created in Chatwoot rather than
+     * through the CRM's Channel wizard.
      */
     private function findIntegrationForInbox(array $chatwootInbox, string $espoAccountId): ?Entity
     {
@@ -503,7 +511,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
                 ])
                 ->find();
 
-            foreach ($integrations as $integration) {
+                foreach ($integrations as $integration) {
                 $integrationPhone = preg_replace('/[^0-9]/', '', $integration->get('phoneNumber') ?? '');
                 if ($normalizedInboxPhone && $integrationPhone && $normalizedInboxPhone === $integrationPhone) {
                     $this->log->info(
@@ -514,33 +522,59 @@ class SyncInboxesFromChatwoot implements JobDataLess
             }
         }
 
-        return null;
+        // Strategy 3: adopt a WAHA-backed inbox created in Chatwoot instead of
+        // the CRM wizard. No integration exists to find, so one is created from
+        // the WAHA session that declares it owns this inbox.
+        return $this->wahaInboxAdoption->adoptIfWahaBacked($chatwootInbox, $espoAccountId);
     }
 
     /**
      * Link a ChatwootInbox to a ChatwootInboxIntegration and update the
      * integration's chatwootInboxId if not already set.
      */
-    private function linkInboxToIntegration(Entity $inbox, Entity $integration, int $chatwootInboxId): void
+    /**
+     * Whether the inbox still needs a channel link.
+     *
+     * True when the link is empty, or when it points at a channel row that no
+     * longer exists (hard-deleted or soft-deleted). Treating a dangling link as
+     * "already linked" strands the inbox forever, since nothing else ever
+     * revisits it.
+     */
+    private function needsIntegrationLink(Entity $inbox): bool
+    {
+        $integrationId = $inbox->get('chatwootInboxIntegrationId');
+
+        if (empty($integrationId)) {
+            return true;
+        }
+
+        $existing = $this->entityManager->getEntityById(
+            ChatwootInboxIntegration::ENTITY_TYPE,
+            $integrationId
+        );
+
+        if ($existing !== null) {
+            return false;
+        }
+
+        $this->log->warning(sprintf(
+            'SyncInboxesFromChatwoot: inbox %s points at missing channel %s; treating as unlinked.',
+            $inbox->getId(),
+            (string) $integrationId
+        ));
+
+        return true;
+    }
+
+    private function linkInboxToIntegration(Entity $inbox, Entity $integration): void
     {
         $inbox->set('chatwootInboxIntegrationId', $integration->getId());
-        $this->updateIntegrationInboxId($integration, $chatwootInboxId);
 
         $this->log->info(
             "SyncInboxesFromChatwoot: Linked inbox {$inbox->getId()} to integration {$integration->getId()}"
         );
     }
 
-    /**
-     * Update the integration's chatwootInboxId if not already populated.
-     */
-    private function updateIntegrationInboxId(Entity $integration, int $chatwootInboxId): void
-    {
-        if (!$integration->get('chatwootInboxId')) {
-            $integration->set('chatwootInboxId', $chatwootInboxId);
-            $this->entityManager->saveEntity($integration, ['silent' => true]);
-        }
-    }
 
     /**
      * Get team IDs from a ChatwootAccount.

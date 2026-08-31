@@ -15,7 +15,6 @@
         "wahaSessionId": "WAHA Session ID",
         "wahaAppId": "WAHA App ID",
         "wahaChatwootInboxId": "WAHA Send Inbox ID",
-        "chatwootInboxId": "Chat / Inbox ID",
         "chatwootInboxIdentifier": "Chat / Inbox Identifier",
         "chatwootInbox": "Chat / Account / Channel",
         "whatsappId": "WhatsApp ID",

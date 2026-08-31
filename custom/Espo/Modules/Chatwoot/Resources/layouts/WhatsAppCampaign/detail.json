@@ -21,7 +21,7 @@
         ]
     },
     {
-        "label": "Template",
+        "label": "Message",
         "rows": [
             [
                 {
@@ -31,9 +31,33 @@
             ],
             [
                 {
+                    "name": "messageMode",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
                     "name": "templateName",
                     "fullWidth": true
                 }
+            ],
+            [
+                {
+                    "name": "messageBody",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "attachment",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "sendAudioAsVoice"
+                },
+                false
             ]
         ]
     },

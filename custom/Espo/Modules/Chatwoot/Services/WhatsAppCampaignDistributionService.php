@@ -15,6 +15,7 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -309,6 +310,18 @@ class WhatsAppCampaignDistributionService
             );
         }
 
+        // A/B arms are differentiated by Meta template, so free-text campaigns
+        // (QR / WAHA) have nothing to split on. Fail with an explicit reason
+        // rather than the generic "variant has no template selected".
+        if (
+            WhatsAppChannel::normalizeMode($campaign->get('messageMode'))
+            !== WhatsAppChannel::MODE_TEMPLATE
+        ) {
+            throw new Error(
+                'A/B tests compare Meta message templates and are not available for free-text campaigns.'
+            );
+        }
+
         $existingEntry = $this->entityManager
             ->getRDBRepository('WhatsAppCampaignDistributionEntry')
             ->where(['campaignId' => $campaignId])
@@ -393,6 +406,8 @@ class WhatsAppCampaignDistributionService
                 'chatwootAccountId' => $campaign->get('chatwootAccountId'),
                 'tenantId' => $campaign->get('tenantId'),
                 'wabaId' => $campaign->get('wabaId'),
+                'channelType' => $campaign->get('channelType'),
+                'messageMode' => WhatsAppChannel::MODE_TEMPLATE,
                 'templateName' => trim((string) $variantData->templateName),
                 'templateLanguage' => $variantData->templateLanguage ?? $campaign->get('templateLanguage'),
                 'templateCategory' => $variantData->templateCategory ?? null,
