@@ -102,6 +102,8 @@ class MirrorCurrentOntoTenant
             'aiBillingExtraUnitPrice' => $current->get('extraUnitPrice'),
             'aiBillingExtraIncludedTurns' => $current->get('extraIncludedTurns'),
             'aiBillingPlanIncludedUsage' => $current->get('planIncludedUsage'),
+            'aiBillingCreditUnitPrice' => $current->get('creditUnitPrice'),
+            'aiBillingPlanIncludedCredits' => $current->get('planIncludedCredits'),
         ]);
 
         $this->entityManager->saveEntity($tenant, ['silent' => true]);

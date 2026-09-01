@@ -11,6 +11,8 @@
 
 namespace Espo\Modules\Chatwoot\Reports;
 
+use Espo\Modules\Chatwoot\Tools\Billing\PlanIncludedApplier;
+
 /**
  * Pack model — totals per calendar day.
  * Every AI run kind counts as one turn; packs = ceil(turns / packSize).
@@ -20,7 +22,7 @@ class BillingPacksPerDay extends AbstractBillingGrid
 {
     protected function pricingModel(): string
     {
-        return 'pack199';
+        return PlanIncludedApplier::MODEL_PACK;
     }
 
     protected function byTenant(): bool

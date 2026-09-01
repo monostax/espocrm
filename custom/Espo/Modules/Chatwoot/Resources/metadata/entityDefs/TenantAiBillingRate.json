@@ -54,6 +54,18 @@
             "tooltip": true,
             "comment": "Monthly franchise of billable units (packs or bases). 0 = pay-as-you-go."
         },
+        "creditUnitPrice": {
+            "type": "float",
+            "min": 0,
+            "tooltip": true,
+            "comment": "Credit model: price of one AI engagement credit."
+        },
+        "planIncludedCredits": {
+            "type": "int",
+            "min": 0,
+            "tooltip": true,
+            "comment": "Credit model: monthly franchise of engagement credits. 0 = pay-as-you-go."
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

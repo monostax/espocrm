@@ -14,23 +14,21 @@ namespace Espo\Modules\Chatwoot\Reports;
 use Espo\Modules\Chatwoot\Tools\Billing\PlanIncludedApplier;
 
 /**
- * Negotiation model — base + extra unit — totals per calendar day.
+ * Credit model — pure linear credits — per Ambiente per calendar day.
  *
- * Base: one per conversation-day with any AI engagement.
- * Included: up to N customer-message turns (Tenant AI Billing).
- * Extras (unit price each): customer-message turns beyond N + every
- * non-customer-message run (mention, follow-up, scheduled, …).
- * Rates come from each Tenant's AI Billing fields (platform defaults if unset).
+ * Same math as {@see BillingCreditsPerDay}, split by Tenant so each deal
+ * currency and credit franchise is read out separately (day rollups only
+ * sum the FX-normalised `amount`).
  */
-class BillingExtra049PerDay extends AbstractBillingGrid
+class BillingCreditsByTenantPerDay extends AbstractBillingGrid
 {
     protected function pricingModel(): string
     {
-        return PlanIncludedApplier::MODEL_EXTRA;
+        return PlanIncludedApplier::MODEL_CREDIT;
     }
 
     protected function byTenant(): bool
     {
-        return false;
+        return true;
     }
 }

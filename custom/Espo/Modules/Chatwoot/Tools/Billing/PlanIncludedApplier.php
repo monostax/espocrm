@@ -12,21 +12,54 @@
 namespace Espo\Modules\Chatwoot\Tools\Billing;
 
 /**
- * Applies monthly plan franchise (planIncludedUsage) to per-grain billable metrics.
+ * Applies monthly plan franchise to per-grain billable metrics.
  *
  * Commercial match to Pricing.html:
  *   - package unit = 1 "conversa IA" (typically pack of packSize turns)
  *   - monthly included 200 / 600 / 1000 depending on plan
  *   - overage charged at unit price
  *
- * Units: pack model → packs; extra model → bases (conversation-days).
+ * Units and franchise source per model:
+ *   - pack199  → packs,   RateCard::planIncludedUsage
+ *   - extra049 → bases,   RateCard::planIncludedUsage
+ *   - credit   → credits, RateCard::planIncludedCredits
+ *
  * Free units is FIFO chronological per Tenant × calendar month within the
  * grain set (run full-month report windows for correct franchise consumption).
  */
 final class PlanIncludedApplier
 {
-    public const COL_PLAN_INCLUDED_USED = 'planIncludedUsed';
-    public const COL_BILLABLE_USAGE = 'billableUsage';
+    public const MODEL_PACK = 'pack199';
+    public const MODEL_EXTRA = 'extra049';
+    public const MODEL_CREDIT = 'credit';
+
+    // Each model gets its own franchise / billed column keys so the label can
+    // name the actual unit ("pacotes", "conversas", "créditos") instead of a
+    // generic "uso" the customer has to decode.
+    public const COL_PACKS_INCLUDED = 'packsIncluded';
+    public const COL_PACKS_BILLABLE = 'packsBillable';
+    public const COL_CONVERSATIONS_INCLUDED = 'conversationsIncluded';
+    public const COL_CONVERSATIONS_BILLABLE = 'conversationsBillable';
+    public const COL_CREDITS_INCLUDED = 'creditsIncluded';
+    public const COL_CREDITS_BILLABLE = 'creditsBillable';
+
+    /**
+     * Franchise / billed column keys emitted by {@see apply()} for a model.
+     *
+     * @param 'pack199'|'extra049'|'credit' $pricingModel
+     * @return array{0: string, 1: string} [includedColumn, billedColumn]
+     */
+    public static function outputColumns(string $pricingModel): array
+    {
+        return match ($pricingModel) {
+            self::MODEL_PACK => [self::COL_PACKS_INCLUDED, self::COL_PACKS_BILLABLE],
+            self::MODEL_CREDIT => [self::COL_CREDITS_INCLUDED, self::COL_CREDITS_BILLABLE],
+            default => [
+                self::COL_CONVERSATIONS_INCLUDED,
+                self::COL_CONVERSATIONS_BILLABLE,
+            ],
+        };
+    }
 
     /**
      * @param list<array{
@@ -35,7 +68,7 @@ final class PlanIncludedApplier
      *     rates: RateCard,
      *     metrics: array<string, int|float>
      * }> $rows
-     * @param 'pack199'|'extra049' $pricingModel
+     * @param 'pack199'|'extra049'|'credit' $pricingModel
      * @return list<array{dayBucket: string, tenantId: string, metrics: array<string, int|float>}>
      */
     public static function apply(array $rows, string $pricingModel): array
@@ -43,6 +76,8 @@ final class PlanIncludedApplier
         if ($rows === []) {
             return [];
         }
+
+        [$includedColumn, $billableColumn] = self::outputColumns($pricingModel);
 
         $indexed = [];
 
@@ -75,7 +110,7 @@ final class PlanIncludedApplier
             $monthKey = (string) $row['tenantId'] . '|' . substr($day, 0, 7);
 
             if (!isset($remaining[$monthKey])) {
-                $remaining[$monthKey] = max(0, $rates->planIncludedUsage);
+                $remaining[$monthKey] = max(0, self::monthlyFranchise($rates, $pricingModel));
             }
 
             $usage = self::usageUnits($metrics, $pricingModel);
@@ -83,8 +118,8 @@ final class PlanIncludedApplier
             $remaining[$monthKey] -= $free;
             $billable = $usage - $free;
 
-            $metrics[self::COL_PLAN_INCLUDED_USED] = $free;
-            $metrics[self::COL_BILLABLE_USAGE] = $billable;
+            $metrics[$includedColumn] = $free;
+            $metrics[$billableColumn] = $billable;
 
             $deal = self::billableAmountDeal($metrics, $rates, $pricingModel, $billable, $usage);
             $metrics['amountDeal'] = $deal;
@@ -104,16 +139,25 @@ final class PlanIncludedApplier
         return array_values($out);
     }
 
+    private static function monthlyFranchise(RateCard $rates, string $pricingModel): int
+    {
+        return $pricingModel === self::MODEL_CREDIT
+            ? $rates->planIncludedCredits
+            : $rates->planIncludedUsage;
+    }
+
     /**
      * @param array<string, int|float> $metrics
      */
     private static function usageUnits(array $metrics, string $pricingModel): int
     {
-        if ($pricingModel === 'pack199') {
-            return max(0, (int) ($metrics['packs'] ?? 0));
-        }
+        $key = match ($pricingModel) {
+            self::MODEL_PACK => 'packs',
+            self::MODEL_CREDIT => 'credits',
+            default => 'bases',
+        };
 
-        return max(0, (int) ($metrics['bases'] ?? 0));
+        return max(0, (int) ($metrics[$key] ?? 0));
     }
 
     /**
@@ -130,8 +174,12 @@ final class PlanIncludedApplier
             return 0.0;
         }
 
-        if ($pricingModel === 'pack199') {
+        if ($pricingModel === self::MODEL_PACK) {
             return Pricing::roundMoney($billable * $rates->packUnitPrice);
+        }
+
+        if ($pricingModel === self::MODEL_CREDIT) {
+            return Pricing::roundMoney($billable * $rates->creditUnitPrice);
         }
 
         // Extra: whole conversation-day is free or fully charged (bases is 0/1 per grain).

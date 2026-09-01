@@ -111,12 +111,12 @@ class DailyAiDigest implements GridReport
             self::COL_WON_AMT => 'Ganhas (R$)',
             self::COL_OPEN_AMT => 'Abertas (R$)',
             self::COL_LOST_AMT => 'Perdidas (R$)',
-            self::COL_CONV => 'Conversas atendidas',
+            self::COL_CONV => 'Conversas Atendidas',
             self::COL_AFTER => 'Fora do horário',
             self::COL_AFTER_WEEKEND => 'Fora do horário (fim de semana)',
             self::COL_AFTER_WEEKDAY => 'Fora do horário (dia útil)',
             self::COL_LEAD => 'Lead time (ms)',
-            self::COL_TURNS => 'Engajamentos (turnos)',
+            self::COL_TURNS => 'Total de Engajamentos',
         ];
 
         $columnTypeMap = [

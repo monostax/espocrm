@@ -158,6 +158,8 @@ class PricingTest extends TestCase
             $rates->extraIncludedCustomerTurns
         );
         $this->assertSame(RateCard::DEFAULT_CURRENCY, $rates->currency);
+        $this->assertSame(RateCard::DEFAULT_CREDIT_UNIT_PRICE, $rates->creditUnitPrice);
+        $this->assertSame(RateCard::DEFAULT_PLAN_INCLUDED_CREDITS, $rates->planIncludedCredits);
     }
 
     public function testRateCardFromNullableKeepsZeroAsFree(): void
@@ -264,22 +266,22 @@ class PricingTest extends TestCase
             ],
         ];
 
-        $out = PlanIncludedApplier::apply($rows, 'pack199');
+        $out = PlanIncludedApplier::apply($rows, PlanIncludedApplier::MODEL_PACK);
 
         // original order preserved
         $this->assertSame('2026-07-02', $out[0]['dayBucket']);
-        $this->assertSame(1, $out[0]['metrics']['planIncludedUsed']);
-        $this->assertSame(1, $out[0]['metrics']['billableUsage']);
+        $this->assertSame(1, $out[0]['metrics']['packsIncluded']);
+        $this->assertSame(1, $out[0]['metrics']['packsBillable']);
         $this->assertSame(0.99, $out[0]['metrics']['amountDeal']);
 
         $this->assertSame('2026-07-01', $out[1]['dayBucket']);
-        $this->assertSame(2, $out[1]['metrics']['planIncludedUsed']);
-        $this->assertSame(0, $out[1]['metrics']['billableUsage']);
+        $this->assertSame(2, $out[1]['metrics']['packsIncluded']);
+        $this->assertSame(0, $out[1]['metrics']['packsBillable']);
         $this->assertSame(0.0, $out[1]['metrics']['amountDeal']);
 
         $this->assertSame('2026-08-01', $out[2]['dayBucket']);
-        $this->assertSame(1, $out[2]['metrics']['planIncludedUsed']);
-        $this->assertSame(0, $out[2]['metrics']['billableUsage']);
+        $this->assertSame(1, $out[2]['metrics']['packsIncluded']);
+        $this->assertSame(0, $out[2]['metrics']['packsBillable']);
         $this->assertSame(0.0, $out[2]['metrics']['amountDeal']);
     }
 
@@ -325,18 +327,210 @@ class PricingTest extends TestCase
             ],
         ];
 
-        $out = PlanIncludedApplier::apply($rows, 'extra049');
+        $out = PlanIncludedApplier::apply($rows, PlanIncludedApplier::MODEL_EXTRA);
 
-        $this->assertSame(1, $out[0]['metrics']['planIncludedUsed']);
-        $this->assertSame(0, $out[0]['metrics']['billableUsage']);
+        $this->assertSame(1, $out[0]['metrics']['conversationsIncluded']);
+        $this->assertSame(0, $out[0]['metrics']['conversationsBillable']);
         $this->assertSame(0.0, $out[0]['metrics']['amountDeal']);
 
-        $this->assertSame(0, $out[1]['metrics']['planIncludedUsed']);
-        $this->assertSame(1, $out[1]['metrics']['billableUsage']);
+        $this->assertSame(0, $out[1]['metrics']['conversationsIncluded']);
+        $this->assertSame(1, $out[1]['metrics']['conversationsBillable']);
         $this->assertSame(0.99, $out[1]['metrics']['amountDeal']);
 
-        $this->assertSame(0, $out[2]['metrics']['planIncludedUsed']);
-        $this->assertSame(1, $out[2]['metrics']['billableUsage']);
+        $this->assertSame(0, $out[2]['metrics']['conversationsIncluded']);
+        $this->assertSame(1, $out[2]['metrics']['conversationsBillable']);
         $this->assertSame(0.99, $out[2]['metrics']['amountDeal']);
+    }
+
+    public function testCreditEmpty(): void
+    {
+        $this->assertSame(
+            [
+                'credits' => 0,
+                'replyCredits' => 0,
+                'mentionCredits' => 0,
+                'amount' => 0.0,
+            ],
+            Pricing::credit(0, 0)
+        );
+    }
+
+    public function testCreditIsLinearAcrossKinds(): void
+    {
+        // 6 customer replies + 4 mention/follow-up runs = 10 credits × 0.49
+        $result = Pricing::credit(6, 4);
+
+        $this->assertSame(10, $result['credits']);
+        $this->assertSame(6, $result['replyCredits']);
+        $this->assertSame(4, $result['mentionCredits']);
+        $this->assertSame(4.9, $result['amount']);
+    }
+
+    public function testCreditHasNoIncludedBundleInsideTheDay(): void
+    {
+        // Unlike extra049, there is no free pack per conversation-day:
+        // the 4th reply already costs its own credit.
+        $this->assertSame(1.96, Pricing::credit(4, 0)['amount']);
+        $this->assertSame(0.49, Pricing::credit(1, 0)['amount']);
+    }
+
+    public function testCreditWithCustomUnitPrice(): void
+    {
+        $rates = new RateCard(creditUnitPrice: 0.25);
+
+        $this->assertSame(1.5, Pricing::credit(4, 2, $rates)['amount']);
+    }
+
+    public function testRateCardFromNullableCreditOverrides(): void
+    {
+        $set = RateCard::fromNullable(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0.29,
+            1000
+        );
+
+        $this->assertSame(0.29, $set->creditUnitPrice);
+        $this->assertSame(1000, $set->planIncludedCredits);
+
+        // Explicit 0 = complimentary credits; negative / null = platform default.
+        $free = RateCard::fromNullable(null, null, null, null, null, null, null, null, 0.0, 0);
+        $this->assertSame(0.0, $free->creditUnitPrice);
+        $this->assertSame(0, $free->planIncludedCredits);
+
+        $neg = RateCard::fromNullable(null, null, null, null, null, null, null, null, -1.0, -5);
+        $this->assertSame(RateCard::DEFAULT_CREDIT_UNIT_PRICE, $neg->creditUnitPrice);
+        $this->assertSame(RateCard::DEFAULT_PLAN_INCLUDED_CREDITS, $neg->planIncludedCredits);
+    }
+
+    public function testPlanIncludedCreditColumnsAreCreditSpecific(): void
+    {
+        $this->assertSame(
+            [PlanIncludedApplier::COL_CREDITS_INCLUDED, PlanIncludedApplier::COL_CREDITS_BILLABLE],
+            PlanIncludedApplier::outputColumns(PlanIncludedApplier::MODEL_CREDIT)
+        );
+        $this->assertSame(
+            [
+                PlanIncludedApplier::COL_CONVERSATIONS_INCLUDED,
+                PlanIncludedApplier::COL_CONVERSATIONS_BILLABLE,
+            ],
+            PlanIncludedApplier::outputColumns(PlanIncludedApplier::MODEL_EXTRA)
+        );
+        $this->assertSame(
+            [PlanIncludedApplier::COL_PACKS_INCLUDED, PlanIncludedApplier::COL_PACKS_BILLABLE],
+            PlanIncludedApplier::outputColumns(PlanIncludedApplier::MODEL_PACK)
+        );
+    }
+
+    public function testPlanIncludedCreditFranchiseFifoWithinMonth(): void
+    {
+        // 10 free credits/month at 0.49 each.
+        $rates = new RateCard(
+            currency: 'BRL',
+            creditUnitPrice: 0.49,
+            planIncludedCredits: 10,
+        );
+
+        $rows = [
+            // Fed out of chronological order on purpose — the applier sorts.
+            $this->creditRow('2026-07-02', 't1', $rates, 6),
+            $this->creditRow('2026-07-01', 't1', $rates, 6),
+            $this->creditRow('2026-08-01', 't1', $rates, 3),
+        ];
+
+        $out = PlanIncludedApplier::apply($rows, PlanIncludedApplier::MODEL_CREDIT);
+
+        // Original row order is preserved.
+        // 07-01 eats 6 of 10 free; 07-02 gets the last 4 free + 2 billed.
+        $this->assertSame('2026-07-02', $out[0]['dayBucket']);
+        $this->assertSame(4, $out[0]['metrics']['creditsIncluded']);
+        $this->assertSame(2, $out[0]['metrics']['creditsBillable']);
+        $this->assertSame(0.98, $out[0]['metrics']['amountDeal']);
+
+        $this->assertSame('2026-07-01', $out[1]['dayBucket']);
+        $this->assertSame(6, $out[1]['metrics']['creditsIncluded']);
+        $this->assertSame(0, $out[1]['metrics']['creditsBillable']);
+        $this->assertSame(0.0, $out[1]['metrics']['amountDeal']);
+
+        // New calendar month resets the franchise.
+        $this->assertSame('2026-08-01', $out[2]['dayBucket']);
+        $this->assertSame(3, $out[2]['metrics']['creditsIncluded']);
+        $this->assertSame(0, $out[2]['metrics']['creditsBillable']);
+        $this->assertSame(0.0, $out[2]['metrics']['amountDeal']);
+
+        // Credit model must not leak the pack/extra franchise column keys.
+        $this->assertArrayNotHasKey('conversationsIncluded', $out[0]['metrics']);
+        $this->assertArrayNotHasKey('packsIncluded', $out[0]['metrics']);
+    }
+
+    public function testPlanIncludedCreditPayAsYouGoBillsEveryCredit(): void
+    {
+        $payg = new RateCard(currency: 'BRL', creditUnitPrice: 0.49, planIncludedCredits: 0);
+
+        $out = PlanIncludedApplier::apply(
+            [$this->creditRow('2026-07-01', 't1', $payg, 5)],
+            PlanIncludedApplier::MODEL_CREDIT
+        );
+
+        $this->assertSame(0, $out[0]['metrics']['creditsIncluded']);
+        $this->assertSame(5, $out[0]['metrics']['creditsBillable']);
+        $this->assertSame(2.45, $out[0]['metrics']['amountDeal']);
+    }
+
+    public function testPlanIncludedCreditIgnoresConversationFranchise(): void
+    {
+        // planIncludedUsage (conversation/pack franchise) must not be used
+        // as a credit franchise — the two units are different magnitudes.
+        $rates = new RateCard(
+            planIncludedUsage: 500,
+            currency: 'BRL',
+            creditUnitPrice: 0.49,
+            planIncludedCredits: 0,
+        );
+
+        $out = PlanIncludedApplier::apply(
+            [$this->creditRow('2026-07-01', 't1', $rates, 2)],
+            PlanIncludedApplier::MODEL_CREDIT
+        );
+
+        $this->assertSame(0, $out[0]['metrics']['creditsIncluded']);
+        $this->assertSame(2, $out[0]['metrics']['creditsBillable']);
+        $this->assertSame(0.98, $out[0]['metrics']['amountDeal']);
+    }
+
+    /**
+     * @return array{
+     *     dayBucket: string,
+     *     tenantId: string,
+     *     rates: RateCard,
+     *     metrics: array<string, int|float>
+     * }
+     */
+    private function creditRow(
+        string $dayBucket,
+        string $tenantId,
+        RateCard $rates,
+        int $credits
+    ): array {
+        $priced = Pricing::credit($credits, 0, $rates);
+
+        return [
+            'dayBucket' => $dayBucket,
+            'tenantId' => $tenantId,
+            'rates' => $rates,
+            'metrics' => [
+                'credits' => $priced['credits'],
+                'replyCredits' => $priced['replyCredits'],
+                'mentionCredits' => $priced['mentionCredits'],
+                'amountDeal' => $priced['amount'],
+                'amount' => $priced['amount'],
+            ],
+        ];
     }
 }

@@ -6,11 +6,13 @@
         "effectiveTo": "Vigência Fim",
         "currency": "Moeda",
         "packUnitPrice": "Preço Unitário do Pacote",
-        "packSize": "Tamanho do Pacote (turnos)",
+        "packSize": "Tamanho do Pacote (engajamentos)",
         "extraBasePrice": "Preço Base Extra",
         "extraUnitPrice": "Preço Unitário Extra",
-        "extraIncludedTurns": "Turnos de Cliente Incluídos na Base",
-        "planIncludedUsage": "Uso Incluído no Plano / Mês"
+        "extraIncludedTurns": "Respostas Incluídas na Base",
+        "planIncludedUsage": "Uso Incluído no Plano / Mês",
+        "creditUnitPrice": "Preço do Crédito",
+        "planIncludedCredits": "Créditos Incluídos no Plano / Mês"
     },
     "links": {
         "tenant": "Ambiente",
@@ -21,18 +23,21 @@
         "Create TenantAiBillingRate": "Criar Tarifa Faturamento IA",
         "Plan franchise": "Franquia do plano",
         "Pack model": "Modelo pacote",
-        "Extra model": "Modelo extra"
+        "Extra model": "Modelo extra",
+        "Credit model": "Modelo crédito"
     },
     "tooltips": {
         "name": "Rótulo opcional. Vazio = auto \"AAAA-MM-DD → AAAA-MM-DD|∞\".",
         "effectiveFrom": "Primeiro dia de calendário (fuso do app) em que esta tarifa vale para conversa-dia.",
         "effectiveTo": "Último dia inclusive. Vazio = acordo atual aberto. Criar um novo período aberto encerra o anterior no dia anterior ao início.",
         "currency": "Moeda do acordo para os preços unitários (Administração → Moeda). Vazio = padrão do sistema.",
-        "packUnitPrice": "Modelo pacote: preço por bloco de N turnos. Vazio = padrão (1,99).",
-        "packSize": "Modelo pacote: turnos por pacote. Vazio = 4.",
-        "extraBasePrice": "Modelo extra: cobrança fixa por conversa-dia. Vazio = 0,99.",
+        "packUnitPrice": "Modelo pacote: preço por bloco de N engajamentos da IA. Vazio = padrão (1,99).",
+        "packSize": "Modelo pacote: engajamentos da IA por pacote. Vazio = 4.",
+        "extraBasePrice": "Modelo extra: cobrança fixa por conversa atendida no dia. Vazio = 0,99.",
         "extraUnitPrice": "Modelo extra: preço por engajamento adicional. Vazio = 0,49.",
-        "extraIncludedTurns": "Modelo extra: turnos de mensagem do cliente na base. Vazio = 4.",
-        "planIncludedUsage": "Unidades gratuitas mensais do plano (pacotes no modelo pack, bases/conversas-dia no modelo extra). Alinhado ao Pricing.html — Lite 200 / Essential 600 / Pro 1000. 0 = paga-tudo (sem franquia). Use filtros de mês cheio no relatório para consumo FIFO correto."
+        "extraIncludedTurns": "Modelo extra: Engajamentos de Resposta (respostas da IA ao cliente) já inclusos na base de cada conversa atendida. Vazio = 4.",
+        "planIncludedUsage": "Unidades gratuitas mensais do plano (pacotes no modelo pacote, conversas atendidas no modelo extra). Alinhado ao Pricing.html — Lite 200 / Essential 600 / Pro 1000. 0 = paga-tudo (sem franquia). Use filtros de mês cheio no relatório para consumo FIFO correto.",
+        "creditUnitPrice": "Modelo crédito: preço de 1 crédito de engajamento da IA. Todo engajamento vale 1 crédito — resposta ao cliente, @menção da equipe, follow-up ou mensagem agendada. Vazio = 0,49.",
+        "planIncludedCredits": "Modelo crédito: créditos gratuitos por mês civil, consumidos em ordem cronológica. O que passar é cobrado pelo Preço do Crédito. 0 = paga-tudo (sem franquia). Não confundir com Uso Incluído no Plano, que conta conversas/pacotes. Use filtros de mês cheio no relatório."
     }
 }

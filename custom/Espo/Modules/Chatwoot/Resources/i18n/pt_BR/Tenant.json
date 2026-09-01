@@ -5,8 +5,10 @@
         "aiBillingExtraBasePrice": "Preço Base Extra IA (atual)",
         "aiBillingExtraUnitPrice": "Preço Unitário Extra IA (atual)",
         "aiBillingPackSize": "Tamanho Pacote IA (atual)",
-        "aiBillingExtraIncludedTurns": "Turnos Incluídos Extra IA (atual)",
-        "aiBillingPlanIncludedUsage": "Uso Incluído Plano IA / Mês (atual)"
+        "aiBillingExtraIncludedTurns": "Respostas Incluídas Extra IA (atual)",
+        "aiBillingPlanIncludedUsage": "Uso Incluído Plano IA / Mês (atual)",
+        "aiBillingCreditUnitPrice": "Preço do Crédito IA (atual)",
+        "aiBillingPlanIncludedCredits": "Créditos Incluídos Plano IA / Mês (atual)"
     },
     "tooltips": {
         "aiBillingCurrency": "Snapshot somente-leitura do período de tarifa IA aberto. Gerencie o histórico no painel Tarifas Faturamento IA — cada período tem Vigência Início/Fim para que faturas passadas não mudem quando o preço atual muda.",
@@ -15,7 +17,9 @@
         "aiBillingExtraUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
         "aiBillingPackSize": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
         "aiBillingExtraIncludedTurns": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingPlanIncludedUsage": "Snapshot somente-leitura do período aberto. Franquia mensal de pacotes (modelo pack) ou bases (extra). Edite em Tarifas Faturamento IA."
+        "aiBillingPlanIncludedUsage": "Snapshot somente-leitura do período aberto. Franquia mensal de pacotes (modelo pacote) ou conversas atendidas (extra). Edite em Tarifas Faturamento IA.",
+        "aiBillingCreditUnitPrice": "Snapshot somente-leitura do período aberto. Preço de 1 crédito de engajamento da IA (modelo crédito). Edite em Tarifas Faturamento IA.",
+        "aiBillingPlanIncludedCredits": "Snapshot somente-leitura do período aberto. Franquia mensal de créditos de engajamento (modelo crédito). Edite em Tarifas Faturamento IA."
     },
     "links": {
         "chatwootAccounts": "Contas de Chat",

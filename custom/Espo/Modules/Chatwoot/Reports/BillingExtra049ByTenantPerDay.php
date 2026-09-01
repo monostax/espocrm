@@ -11,6 +11,8 @@
 
 namespace Espo\Modules\Chatwoot\Reports;
 
+use Espo\Modules\Chatwoot\Tools\Billing\PlanIncludedApplier;
+
 /**
  * Negotiation model — base + extra unit — per Ambiente per calendar day.
  * Rates come from each Tenant's AI Billing fields (platform defaults if unset).
@@ -19,7 +21,7 @@ class BillingExtra049ByTenantPerDay extends AbstractBillingGrid
 {
     protected function pricingModel(): string
     {
-        return 'extra049';
+        return PlanIncludedApplier::MODEL_EXTRA;
     }
 
     protected function byTenant(): bool

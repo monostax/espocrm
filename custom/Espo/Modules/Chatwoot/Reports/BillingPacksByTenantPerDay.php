@@ -11,6 +11,8 @@
 
 namespace Espo\Modules\Chatwoot\Reports;
 
+use Espo\Modules\Chatwoot\Tools\Billing\PlanIncludedApplier;
+
 /**
  * Pack model — per Ambiente per calendar day.
  * Rates come from each Tenant's AI Billing fields (platform defaults if unset).
@@ -19,7 +21,7 @@ class BillingPacksByTenantPerDay extends AbstractBillingGrid
 {
     protected function pricingModel(): string
     {
-        return 'pack199';
+        return PlanIncludedApplier::MODEL_PACK;
     }
 
     protected function byTenant(): bool

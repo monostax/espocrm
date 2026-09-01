@@ -41,7 +41,9 @@ use stdClass;
  * Concrete subclasses only declare pricing model + whether to split by tenant.
  *
  * Chart / primary numeric column is always `amount` (system default currency).
- * Secondary columns document the composition so Ops and customers can reconcile.
+ * Secondary columns document the composition so Ops and customers can reconcile
+ * — except in the `credit` model, which is deliberately reduced to
+ * consumed / included / billed credits (no conversation-day arithmetic).
  * Per-Tenant dated AI Billing rate periods ({@see TenantAiBillingRate})
  * override platform defaults; Tenant flat fields remain a legacy fallback.
  */
@@ -56,8 +58,10 @@ abstract class AbstractBillingGrid implements GridReport
 
     protected const COL_AMOUNT = 'amount';
     protected const COL_AMOUNT_DEAL = 'amountDeal';
+    /** Label-only key: same `amount` column, customer-facing wording. */
+    protected const COL_AMOUNT_CREDIT_LABEL = 'amountCredit';
 
-    /** @var 'pack199'|'extra049' */
+    /** @var 'pack199'|'extra049'|'credit' */
     abstract protected function pricingModel(): string;
 
     abstract protected function byTenant(): bool;
@@ -200,7 +204,7 @@ abstract class AbstractBillingGrid implements GridReport
      */
     private function priceGrain(ConversationDayGrain $grain, RateCard $rates): array
     {
-        if ($this->pricingModel() === 'pack199') {
+        if ($this->pricingModel() === PlanIncludedApplier::MODEL_PACK) {
             $priced = $grain->pricePack199($rates);
             $deal = (float) $priced['amount'];
 
@@ -210,6 +214,19 @@ abstract class AbstractBillingGrid implements GridReport
                 'packs' => $priced['packs'],
                 'turns' => $priced['turns'],
                 'conversationDays' => $priced['packs'] > 0 ? 1 : 0,
+            ];
+        }
+
+        if ($this->pricingModel() === PlanIncludedApplier::MODEL_CREDIT) {
+            $priced = $grain->priceCredit($rates);
+            $deal = (float) $priced['amount'];
+
+            return [
+                self::COL_AMOUNT => $this->billingCurrency->toDefault($deal, $rates->currency),
+                self::COL_AMOUNT_DEAL => $deal,
+                'credits' => $priced['credits'],
+                'replyCredits' => $priced['replyCredits'],
+                'mentionCredits' => $priced['mentionCredits'],
             ];
         }
 
@@ -225,7 +242,6 @@ abstract class AbstractBillingGrid implements GridReport
             'extras' => $priced['extras'],
             'customerTurns' => $priced['customerTurns'],
             'turns' => $grain->totalTurns(),
-            'conversationDays' => $priced['bases'],
         ];
     }
 
@@ -236,29 +252,44 @@ abstract class AbstractBillingGrid implements GridReport
     {
         // `amount` = summable system-default currency (Administration → Currency).
         // `amountDeal` = contract currency; only meaningful per-tenant (single currency).
-        if ($this->pricingModel() === 'pack199') {
-            $cols = [
+        [$includedColumn, $billableColumn] = PlanIncludedApplier::outputColumns(
+            $this->pricingModel()
+        );
+
+        $cols = match ($this->pricingModel()) {
+            PlanIncludedApplier::MODEL_PACK => [
                 self::COL_AMOUNT,
                 'packs',
-                PlanIncludedApplier::COL_PLAN_INCLUDED_USED,
-                PlanIncludedApplier::COL_BILLABLE_USAGE,
+                $includedColumn,
+                $billableColumn,
                 'turns',
                 'conversationDays',
-            ];
-        } else {
-            $cols = [
+            ],
+            // Pure linear credits: consumed → covered by plan → billed.
+            // No conversation/base/pack columns on purpose.
+            PlanIncludedApplier::MODEL_CREDIT => [
+                self::COL_AMOUNT,
+                'credits',
+                $includedColumn,
+                $billableColumn,
+                'replyCredits',
+                'mentionCredits',
+            ],
+            // `conversationDays` is intentionally absent: in this model it is
+            // always equal to `bases`, and two labels for one number is
+            // exactly what made the old readout hard to reconcile.
+            default => [
                 self::COL_AMOUNT,
                 'bases',
-                PlanIncludedApplier::COL_PLAN_INCLUDED_USED,
-                PlanIncludedApplier::COL_BILLABLE_USAGE,
+                $includedColumn,
+                $billableColumn,
                 'turnOverages',
                 'kindExtras',
                 'extras',
                 'customerTurns',
                 'turns',
-                'conversationDays',
-            ];
-        }
+            ],
+        };
 
         if ($this->byTenant()) {
             array_splice($cols, 1, 0, [self::COL_AMOUNT_DEAL]);
@@ -300,20 +331,35 @@ abstract class AbstractBillingGrid implements GridReport
         $baseCode = $this->billingCurrency->defaultCode();
 
         foreach ($this->columnList() as $col) {
-            $label = $this->language->translateLabel(
-                $col,
-                'columnLabels',
-                'ChatwootAiAgentRun'
-            );
-
             if ($col === self::COL_AMOUNT) {
-                $label = str_replace('{currency}', $baseCode, $label);
+                // Credit model is the customer-facing one — it gets the
+                // plain-language "total due" wording instead of "amount".
+                $map[$col] = str_replace(
+                    '{currency}',
+                    $baseCode,
+                    $this->translateColumn(
+                        $this->pricingModel() === PlanIncludedApplier::MODEL_CREDIT
+                            ? self::COL_AMOUNT_CREDIT_LABEL
+                            : self::COL_AMOUNT
+                    )
+                );
+
+                continue;
             }
 
-            $map[$col] = $label;
+            $map[$col] = $this->translateColumn($col);
         }
 
         return $map;
+    }
+
+    private function translateColumn(string $labelKey): string
+    {
+        return $this->language->translateLabel(
+            $labelKey,
+            'columnLabels',
+            'ChatwootAiAgentRun'
+        );
     }
 
     /**

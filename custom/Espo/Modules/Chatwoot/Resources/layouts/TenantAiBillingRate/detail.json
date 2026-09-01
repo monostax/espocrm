@@ -27,6 +27,19 @@
         ]
     },
     {
+        "label": "Credit model",
+        "rows": [
+            [
+                {
+                    "name": "creditUnitPrice"
+                },
+                {
+                    "name": "planIncludedCredits"
+                }
+            ]
+        ]
+    },
+    {
         "label": "Plan franchise",
         "rows": [
             [

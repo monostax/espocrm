@@ -29,6 +29,13 @@ namespace Espo\Modules\Chatwoot\Tools\Billing;
  *   every run counts as one turn
  *   packs  = ceil(turns / packSize)
  *   amount = packs × packUnitPrice
+ *
+ * Model C — Credit (pure linear, customer-facing):
+ *   every run = 1 credit, whatever its kind
+ *   amount = credits × creditUnitPrice (gross; the monthly credit franchise
+ *            is applied later by {@see PlanIncludedApplier})
+ *   No conversation/base/pack concept at all — the invoice reads
+ *   "credits consumed − credits included = credits billed".
  */
 final class Pricing
 {
@@ -112,6 +119,42 @@ final class Pricing
             'turns' => $turns,
             'packs' => $packs,
             'amount' => self::roundMoney($packs * $rates->packUnitPrice),
+        ];
+    }
+
+    /**
+     * Pure linear credits: 1 AI engagement = 1 credit, no bundling.
+     *
+     * `replyCredits` / `mentionCredits` are a breakdown for the invoice
+     * detail only — both cost the same and both are already inside
+     * `credits`. Amount here is gross; the monthly credit franchise is
+     * applied by {@see PlanIncludedApplier}.
+     *
+     * @param int $customerMessageTurns Runs with kind = customer-message.
+     * @param int $nonCustomerTurns     Runs with any other kind
+     *                                  (mention, follow-up, scheduled, …).
+     * @return array{
+     *     credits: int,
+     *     replyCredits: int,
+     *     mentionCredits: int,
+     *     amount: float
+     * }
+     */
+    public static function credit(
+        int $customerMessageTurns,
+        int $nonCustomerTurns,
+        ?RateCard $rates = null,
+    ): array {
+        $rates ??= RateCard::defaults();
+        $replyCredits = max(0, $customerMessageTurns);
+        $mentionCredits = max(0, $nonCustomerTurns);
+        $credits = $replyCredits + $mentionCredits;
+
+        return [
+            'credits' => $credits,
+            'replyCredits' => $replyCredits,
+            'mentionCredits' => $mentionCredits,
+            'amount' => self::roundMoney($credits * $rates->creditUnitPrice),
         ];
     }
 

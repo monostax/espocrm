@@ -55,4 +55,21 @@ final class ConversationDayGrain
     {
         return Pricing::pack199($this->totalTurns(), $rates);
     }
+
+    /**
+     * @return array{
+     *     credits: int,
+     *     replyCredits: int,
+     *     mentionCredits: int,
+     *     amount: float
+     * }
+     */
+    public function priceCredit(?RateCard $rates = null): array
+    {
+        return Pricing::credit(
+            $this->customerMessageTurns,
+            $this->nonCustomerTurns,
+            $rates
+        );
+    }
 }

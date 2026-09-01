@@ -1,31 +1,39 @@
 [
     {
         "name": "name",
-        "width": 18
+        "width": 14
     },
     {
         "name": "tenant",
-        "width": 16
+        "width": 12
     },
     {
         "name": "effectiveFrom",
-        "width": 12
+        "width": 9
     },
     {
         "name": "effectiveTo",
-        "width": 12
+        "width": 9
     },
     {
         "name": "currency",
-        "width": 8
+        "width": 6
+    },
+    {
+        "name": "creditUnitPrice",
+        "width": 9
+    },
+    {
+        "name": "planIncludedCredits",
+        "width": 9
     },
     {
         "name": "packUnitPrice",
-        "width": 10
+        "width": 8
     },
     {
         "name": "packSize",
-        "width": 8
+        "width": 6
     },
     {
         "name": "planIncludedUsage",
@@ -33,10 +41,10 @@
     },
     {
         "name": "extraBasePrice",
-        "width": 10
+        "width": 8
     },
     {
         "name": "extraUnitPrice",
-        "width": 10
+        "width": 8
     }
 ]

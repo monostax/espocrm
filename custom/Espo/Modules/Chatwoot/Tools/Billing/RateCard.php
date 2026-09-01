@@ -21,6 +21,10 @@ namespace Espo\Modules\Chatwoot\Tools\Billing;
  * {@see $planIncludedUsage} is the monthly franchise of billable units
  * (packs for pack model, bases for extra) — see Pricing.html plans
  * (200 / 600 / 1000 AI conversations/month). 0 = no franchise (all usage billed).
+ *
+ * The credit model has its own pair ({@see $creditUnitPrice} /
+ * {@see $planIncludedCredits}) because its unit is a single AI engagement,
+ * not a conversation-day — mixing the franchises would misprice both.
  */
 final class RateCard
 {
@@ -30,6 +34,8 @@ final class RateCard
     public const DEFAULT_PACK_SIZE = 4;
     public const DEFAULT_EXTRA_INCLUDED_CUSTOMER_TURNS = 4;
     public const DEFAULT_PLAN_INCLUDED_USAGE = 0;
+    public const DEFAULT_CREDIT_UNIT_PRICE = 0.49;
+    public const DEFAULT_PLAN_INCLUDED_CREDITS = 0;
     /** Product default when no system defaultCurrency is configured. */
     public const DEFAULT_CURRENCY = 'BRL';
 
@@ -41,6 +47,8 @@ final class RateCard
         public readonly int $extraIncludedCustomerTurns = self::DEFAULT_EXTRA_INCLUDED_CUSTOMER_TURNS,
         public readonly int $planIncludedUsage = self::DEFAULT_PLAN_INCLUDED_USAGE,
         public readonly string $currency = self::DEFAULT_CURRENCY,
+        public readonly float $creditUnitPrice = self::DEFAULT_CREDIT_UNIT_PRICE,
+        public readonly int $planIncludedCredits = self::DEFAULT_PLAN_INCLUDED_CREDITS,
     ) {}
 
     public static function defaults(?string $currency = null): self
@@ -53,8 +61,8 @@ final class RateCard
      *
      * Prices and included-turn counts: null / negative → platform default;
      * 0 is valid (free rate / no included turns). Pack size still requires
-     * a positive integer (0/null → default). Plan included usage: null → 0
-     * (pay-as-you-go).
+     * a positive integer (0/null → default). Plan included usage and plan
+     * included credits: null → 0 (pay-as-you-go).
      *
      * @param string|null $fallbackCurrency Used when $currency is empty
      *                                      (usually system defaultCurrency).
@@ -68,6 +76,8 @@ final class RateCard
         ?string $currency = null,
         ?string $fallbackCurrency = null,
         ?int $planIncludedUsage = null,
+        ?float $creditUnitPrice = null,
+        ?int $planIncludedCredits = null,
     ): self {
         $resolvedCurrency = self::normalizeCurrency($currency)
             ?? self::normalizeCurrency($fallbackCurrency)
@@ -84,6 +94,8 @@ final class RateCard
             ),
             self::nonNegativeIntOr($planIncludedUsage, self::DEFAULT_PLAN_INCLUDED_USAGE),
             $resolvedCurrency,
+            self::nonNegativeOr($creditUnitPrice, self::DEFAULT_CREDIT_UNIT_PRICE),
+            self::nonNegativeIntOr($planIncludedCredits, self::DEFAULT_PLAN_INCLUDED_CREDITS),
         );
     }
 

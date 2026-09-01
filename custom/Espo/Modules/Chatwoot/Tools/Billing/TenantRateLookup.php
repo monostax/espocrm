@@ -107,6 +107,8 @@ final class TenantRateLookup
                 'extraUnitPrice',
                 'extraIncludedTurns',
                 'planIncludedUsage',
+                'creditUnitPrice',
+                'planIncludedCredits',
             ])
             ->order('effectiveFrom', 'DESC')
             ->find();
@@ -135,6 +137,8 @@ final class TenantRateLookup
                     is_string($currencyRaw) ? $currencyRaw : null,
                     $fallbackCurrency,
                     $this->asInt($row->get('planIncludedUsage')),
+                    $this->asFloat($row->get('creditUnitPrice')),
+                    $this->asInt($row->get('planIncludedCredits')),
                 ),
             ];
         }
@@ -160,6 +164,8 @@ final class TenantRateLookup
                 'aiBillingExtraIncludedTurns',
                 'aiBillingPlanIncludedUsage',
                 'aiBillingCurrency',
+                'aiBillingCreditUnitPrice',
+                'aiBillingPlanIncludedCredits',
             ])
             ->find();
 
@@ -178,6 +184,8 @@ final class TenantRateLookup
                 is_string($currencyRaw) ? $currencyRaw : null,
                 $fallbackCurrency,
                 $this->asInt($row->get('aiBillingPlanIncludedUsage')),
+                $this->asFloat($row->get('aiBillingCreditUnitPrice')),
+                $this->asInt($row->get('aiBillingPlanIncludedCredits')),
             );
         }
 

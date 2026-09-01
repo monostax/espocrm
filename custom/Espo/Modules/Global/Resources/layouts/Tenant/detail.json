@@ -37,6 +37,14 @@
             ],
             [
                 {
+                    "name": "aiBillingCreditUnitPrice"
+                },
+                {
+                    "name": "aiBillingPlanIncludedCredits"
+                }
+            ],
+            [
+                {
                     "name": "aiBillingPackUnitPrice"
                 },
                 {

@@ -53,6 +53,8 @@ class MigrateTenantAiBillingRates implements RebuildAction
                 'aiBillingExtraUnitPrice',
                 'aiBillingExtraIncludedTurns',
                 'aiBillingPlanIncludedUsage',
+                'aiBillingCreditUnitPrice',
+                'aiBillingPlanIncludedCredits',
             ])
             ->find();
 
@@ -92,6 +94,8 @@ class MigrateTenantAiBillingRates implements RebuildAction
                 'extraUnitPrice' => $tenant->get('aiBillingExtraUnitPrice'),
                 'extraIncludedTurns' => $tenant->get('aiBillingExtraIncludedTurns'),
                 'planIncludedUsage' => $tenant->get('aiBillingPlanIncludedUsage'),
+                'creditUnitPrice' => $tenant->get('aiBillingCreditUnitPrice'),
+                'planIncludedCredits' => $tenant->get('aiBillingPlanIncludedCredits'),
             ]);
 
             // silent: avoid expire/mirror side-effects during bulk migrate
@@ -114,6 +118,8 @@ class MigrateTenantAiBillingRates implements RebuildAction
             'aiBillingExtraUnitPrice',
             'aiBillingExtraIncludedTurns',
             'aiBillingPlanIncludedUsage',
+            'aiBillingCreditUnitPrice',
+            'aiBillingPlanIncludedCredits',
         ] as $field) {
             $v = $tenant->get($field);
 

@@ -5,8 +5,10 @@
         "aiBillingExtraBasePrice": "AI Extra Base Price (current)",
         "aiBillingExtraUnitPrice": "AI Extra Unit Price (current)",
         "aiBillingPackSize": "AI Pack Size (current)",
-        "aiBillingExtraIncludedTurns": "AI Extra Included Turns (current)",
-        "aiBillingPlanIncludedUsage": "AI Plan Included Usage / Month (current)"
+        "aiBillingExtraIncludedTurns": "AI Extra Included Replies (current)",
+        "aiBillingPlanIncludedUsage": "AI Plan Included Usage / Month (current)",
+        "aiBillingCreditUnitPrice": "AI Credit Unit Price (current)",
+        "aiBillingPlanIncludedCredits": "AI Plan Included Credits / Month (current)"
     },
     "tooltips": {
         "aiBillingCurrency": "Read-only snapshot of the open-ended AI billing rate period. Manage history under the AI Billing Rates panel — each period has Effective From / Effective To so past invoices stay stable when prices change.",
@@ -15,7 +17,9 @@
         "aiBillingExtraUnitPrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
         "aiBillingPackSize": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
         "aiBillingExtraIncludedTurns": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
-        "aiBillingPlanIncludedUsage": "Read-only snapshot from the current open rate period. Monthly free packs (pack model) or bases (extra). Edit under AI Billing Rates."
+        "aiBillingPlanIncludedUsage": "Read-only snapshot from the current open rate period. Monthly free packs (pack model) or engaged conversations (extra). Edit under AI Billing Rates.",
+        "aiBillingCreditUnitPrice": "Read-only snapshot from the current open rate period. Price of one AI engagement credit (credit model). Edit under AI Billing Rates.",
+        "aiBillingPlanIncludedCredits": "Read-only snapshot from the current open rate period. Monthly free engagement credits (credit model). Edit under AI Billing Rates."
     },
     "links": {
         "chatwootAccounts": "Chatwoot Accounts",

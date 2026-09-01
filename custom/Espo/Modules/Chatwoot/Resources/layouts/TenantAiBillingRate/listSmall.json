@@ -1,34 +1,38 @@
 [
     {
         "name": "effectiveFrom",
-        "width": 16
-    },
-    {
-        "name": "effectiveTo",
-        "width": 16
-    },
-    {
-        "name": "currency",
-        "width": 10
-    },
-    {
-        "name": "packUnitPrice",
         "width": 14
     },
     {
-        "name": "packSize",
+        "name": "effectiveTo",
+        "width": 14
+    },
+    {
+        "name": "currency",
+        "width": 8
+    },
+    {
+        "name": "creditUnitPrice",
+        "width": 12
+    },
+    {
+        "name": "planIncludedCredits",
+        "width": 12
+    },
+    {
+        "name": "packUnitPrice",
         "width": 10
     },
     {
         "name": "planIncludedUsage",
-        "width": 12
+        "width": 10
     },
     {
         "name": "extraBasePrice",
-        "width": 14
+        "width": 10
     },
     {
         "name": "extraUnitPrice",
-        "width": 14
+        "width": 10
     }
 ]

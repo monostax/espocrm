@@ -286,7 +286,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptCvTnDay',
-                'name' => 'AI Agent Run (Conversas Engajadas por Ambiente / Por Dia)',
+                'name' => 'AI Agent Run (Conversas Atendidas por Ambiente / Por Dia)',
                 'description' =>
                     'Distinct ChatwootConversation count engaged by the AI agent ' .
                     'per Tenant (Ambiente) per day. ACL-strict: each viewer only ' .
@@ -307,7 +307,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptCvDay',
-                'name' => 'AI Agent Run (Conversas Engajadas / Por Dia)',
+                'name' => 'AI Agent Run (Conversas Atendidas / Por Dia)',
                 'description' =>
                     'Distinct ChatwootConversation count engaged by the AI agent ' .
                     'per day. Tenancy is not a grouping dimension — each viewer ' .
@@ -336,14 +336,16 @@ class SeedChatwootReports implements RebuildAction
                 'staticId' => 'chwRptBillPkDay',
                 'name' => 'IA Faturamento · Pacotes / Por Dia',
                 'description' =>
-                    'Modelo pacote: preço por bloco de N turnos de IA por ' .
-                    'conversa e por dia civil (fuso do sistema). Todo tipo ' .
-                    'de execução conta como turno (mensagem do cliente, ' .
-                    'menção, follow-up, agendada). Valores e tamanho do ' .
-                    'bloco vêm do Faturamento IA de cada Ambiente (Tenant); ' .
-                    'sem override usa o padrão da plataforma. Colunas: ' .
-                    'Valor, Pacotes, Turnos, Conversas-dia. ACL-strict em ' .
-                    'ChatwootAiAgentRun. Drill-down lista as conversas do balde.',
+                    'Modelo pacote: preço por bloco de N engajamentos da IA ' .
+                    'por conversa e por dia civil (fuso do sistema). Todo ' .
+                    'engajamento conta — resposta ao cliente, @menção da ' .
+                    'equipe, follow-up e mensagem agendada. Preço e tamanho ' .
+                    'do bloco vêm do Faturamento IA de cada Ambiente ' .
+                    '(Tenant); sem override usa o padrão da plataforma. ' .
+                    'Colunas: Valor Total, Pacotes, Pacotes na Franquia, ' .
+                    'Pacotes Faturáveis, Total de Engajamentos, Conversas ' .
+                    'Atendidas. ACL-strict em ChatwootAiAgentRun. ' .
+                    'Drill-down lista as conversas do balde.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -363,10 +365,14 @@ class SeedChatwootReports implements RebuildAction
                 'name' => 'IA Faturamento · Pacotes / Ambiente / Por Dia',
                 'description' =>
                     'Modelo pacote agrupado por Ambiente e dia civil. Preço ' .
-                    'do pacote e turnos por bloco são por Ambiente (Tenant → ' .
-                    'Faturamento IA); label do Ambiente inclui a moeda do ' .
-                    'acordo. Use para faturar multi-tenant ou comparar ' .
-                    'receita estimada entre ambientes. ACL-strict.',
+                    'do pacote e engajamentos por bloco são por Ambiente ' .
+                    '(Tenant → Faturamento IA); o label do Ambiente inclui a ' .
+                    'moeda do acordo e a linha do dia soma apenas o valor ' .
+                    'convertido. Mesmas colunas do relatório por dia (Valor ' .
+                    'Total, Pacotes, Pacotes na Franquia, Pacotes Faturáveis, ' .
+                    'Total de Engajamentos, Conversas Atendidas) mais Valor ' .
+                    'Total na moeda do acordo. Use para faturar multi-tenant ' .
+                    'ou comparar receita estimada entre ambientes. ACL-strict.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -383,22 +389,27 @@ class SeedChatwootReports implements RebuildAction
             ],
             // ------------------------------------------------------------------
             // Billing — Extra model (negotiation flavour).
-            // base once per conversation-day + unit × (customer overages
-            // + non-customer runs). Rates from Tenant AI Billing.
+            // base once per conversation-day + unit × (reply overages
+            // + mention engagements). Rates from Tenant AI Billing.
             // ------------------------------------------------------------------
             [
                 'staticId' => 'chwRptBillE49Day',
                 'name' => 'IA Faturamento · Base + Extra / Por Dia',
                 'description' =>
-                    'Modelo de negociação: base por conversa engajada no dia ' .
-                    'civil (inclui até N turnos de mensagem do cliente) + ' .
-                    'preço unitário por engajamento extra (turnos de cliente ' .
-                    'além do incluído e cada execução que não seja mensagem ' .
-                    'do cliente: menção, follow-up, agendada, etc.). Valores ' .
-                    'e N vêm do Faturamento IA de cada Ambiente; sem override ' .
-                    'usa o padrão da plataforma. Colunas: Valor, Bases, ' .
-                    'Extras de turno, Extras de tipo, Extras totais. ' .
-                    'ACL-strict. Para comparar side-by-side com o modelo pacote.',
+                    'Modelo de negociação: cada conversa atendida no dia ' .
+                    'civil cobra uma base que já inclui até N Engajamentos ' .
+                    'de Resposta (respostas da IA ao cliente). Acima disso, ' .
+                    'preço unitário por engajamento adicional: Respostas ' .
+                    'Excedentes + Engajamentos de Menção (acionamentos por ' .
+                    '@menção da equipe, follow-up ou mensagem agendada). ' .
+                    'Valores e N vêm do Faturamento IA de cada Ambiente; ' .
+                    'sem override usa o padrão da plataforma. Colunas: Valor ' .
+                    'Total, Conversas Atendidas, Conversas na Franquia, ' .
+                    'Conversas Faturáveis, Respostas Excedentes, ' .
+                    'Engajamentos de Menção, Engajamentos Adicionais, Total ' .
+                    'de Respostas, Total de Engajamentos. Rode com filtro de ' .
+                    'mês cheio para a franquia fechar. ACL-strict. Para ' .
+                    'comparar side-by-side com o modelo pacote e o de crédito.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -417,10 +428,15 @@ class SeedChatwootReports implements RebuildAction
                 'staticId' => 'chwRptBillE49TnD',
                 'name' => 'IA Faturamento · Base + Extra / Ambiente / Por Dia',
                 'description' =>
-                    'Modelo de negociação (base + extra) por Ambiente e dia ' .
-                    'civil. Tarifas por Ambiente (Tenant → Faturamento IA). ' .
-                    'Ideal para propostas comerciais e comparativo de fatura ' .
-                    'estimada com o modelo pacote. ACL-strict.',
+                    'Modelo de negociação (base por conversa atendida + ' .
+                    'engajamentos adicionais) por Ambiente e dia civil. ' .
+                    'Tarifas, respostas incluídas e franquia mensal são por ' .
+                    'Ambiente (Tenant → Faturamento IA); o label do Ambiente ' .
+                    'inclui a moeda do acordo e a linha do dia soma apenas o ' .
+                    'valor convertido. Mesmas colunas do relatório por dia ' .
+                    'mais Valor Total na moeda do acordo. Ideal para ' .
+                    'propostas comerciais e comparativo de fatura estimada ' .
+                    'com os modelos pacote e crédito. ACL-strict.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -432,6 +448,67 @@ class SeedChatwootReports implements RebuildAction
                 'fillEmptyDateBuckets' => true,
                 'isInternal' => true,
                 'internalClassName' => 'Chatwoot:BillingExtra049ByTenantPerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            // ------------------------------------------------------------------
+            // Billing — Credit model (pure linear; the customer-facing one).
+            // 1 AI engagement = 1 credit, regardless of kind. Monthly credit
+            // franchise consumed FIFO; the excess × creditUnitPrice is the bill.
+            // No conversation / base / pack arithmetic on the readout.
+            // ------------------------------------------------------------------
+            [
+                'staticId' => 'chwRptBillCrDay',
+                'name' => 'IA Créditos · Consumo e Fatura / Por Dia',
+                'description' =>
+                    'Modelo de crédito linear (extrato do cliente): cada ' .
+                    'engajamento da IA consome 1 crédito — respostas ao ' .
+                    'cliente e acionamentos por @menção da equipe, follow-up ' .
+                    'ou mensagem agendada valem o mesmo. A franquia mensal do ' .
+                    'plano cobre os primeiros créditos do mês (consumo ' .
+                    'cronológico); o que passar é cobrado pelo preço unitário ' .
+                    'do crédito. Franquia e preço vêm do Faturamento IA de ' .
+                    'cada Ambiente; sem override usa o padrão da plataforma ' .
+                    '(R$ 0,49 e sem franquia). Colunas: Total a Pagar, ' .
+                    'Créditos Consumidos, Cobertos na Franquia, Créditos ' .
+                    'Excedentes, Engajamentos de Resposta, Engajamentos de ' .
+                    'Menção. Rode com filtro de mês cheio para a franquia ' .
+                    'fechar. ACL-strict; drill-down lista as conversas do dia.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt'],
+                'runtimeFilters' => ['runAt'],
+                'orderBy' => [],
+                'depth' => 1,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:BillingCreditsPerDay',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptBillCrTnD',
+                'name' => 'IA Créditos · Consumo e Fatura / Ambiente / Por Dia',
+                'description' =>
+                    'Modelo de crédito linear por Ambiente e dia civil. ' .
+                    'Franquia mensal de créditos e preço unitário são por ' .
+                    'Ambiente (Tenant → Faturamento IA); o label do Ambiente ' .
+                    'inclui a moeda do acordo e a linha do dia soma apenas o ' .
+                    'valor convertido. Use para faturar multi-tenant ou ' .
+                    'dimensionar planos de crédito. ACL-strict.',
+                'entityType' => 'ChatwootAiAgentRun',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'groupBy' => ['DAY:runAt', 'tenant'],
+                'runtimeFilters' => ['runAt', 'tenant'],
+                'orderBy' => [],
+                'depth' => 2,
+                'chartType' => 'BarVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => true,
+                'internalClassName' => 'Chatwoot:BillingCreditsByTenantPerDay',
                 'isGloballyShared' => true,
                 'applyAcl' => true,
             ],

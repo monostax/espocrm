@@ -48,6 +48,20 @@
             "readOnly": true,
             "tooltip": true,
             "comment": "Mirrored from the current open TenantAiBillingRate period. Monthly free packs/bases."
+        },
+        "aiBillingCreditUnitPrice": {
+            "type": "float",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period. Credit model unit price."
+        },
+        "aiBillingPlanIncludedCredits": {
+            "type": "int",
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true,
+            "comment": "Mirrored from the current open TenantAiBillingRate period. Monthly free engagement credits."
         }
     },
     "links": {

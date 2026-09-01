@@ -38,6 +38,14 @@
                     "name": "planIncludedUsage"
                 },
                 false
+            ],
+            [
+                {
+                    "name": "creditUnitPrice"
+                },
+                {
+                    "name": "planIncludedCredits"
+                }
             ]
         ]
     }
