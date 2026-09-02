@@ -71,5 +71,15 @@
         "Launch": "Launch",
         "Abort": "Abort",
         "launchStarted": "Campaign launched. The dialer queue is being seeded into Chatwoot."
+    },
+    "messages": {
+        "confirmLaunchCampaign": "Are you sure you want to launch this campaign? The audience will be enrolled and the dialer queue will be seeded into Chatwoot.",
+        "launchingCampaign": "Launching campaign...",
+        "campaignLaunched": "Campaign launched successfully.",
+        "failedToLaunchCampaign": "Failed to launch campaign",
+        "confirmAbortCampaign": "Are you sure you want to abort this campaign? The Chatwoot dialer campaign will be closed and the campaign cancelled.",
+        "abortingCampaign": "Aborting campaign...",
+        "campaignAborted": "Campaign aborted.",
+        "failedToAbortCampaign": "Failed to abort campaign"
     }
 }

@@ -71,5 +71,15 @@
         "Launch": "Lançar",
         "Abort": "Abortar",
         "launchStarted": "Campanha lançada. A fila do discador está sendo enviada ao Chatwoot."
+    },
+    "messages": {
+        "confirmLaunchCampaign": "Tem certeza de que deseja lançar esta campanha? O público será inscrito e a fila do discador será enviada ao Chatwoot.",
+        "launchingCampaign": "Lançando campanha...",
+        "campaignLaunched": "Campanha lançada com sucesso.",
+        "failedToLaunchCampaign": "Falha ao lançar a campanha",
+        "confirmAbortCampaign": "Tem certeza de que deseja abortar esta campanha? A campanha do discador no Chatwoot será encerrada e a campanha cancelada.",
+        "abortingCampaign": "Abortando campanha...",
+        "campaignAborted": "Campanha abortada.",
+        "failedToAbortCampaign": "Falha ao abortar a campanha"
     }
 }

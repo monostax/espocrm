@@ -68,5 +68,23 @@
                 }
             }
         }
-    }
+    },
+    "detailActionList": [
+        {
+            "name": "launchCampaign",
+            "label": "Launch",
+            "handler": "chatwoot:handlers/call-campaign/detail-actions",
+            "actionFunction": "launchCampaign",
+            "checkVisibilityFunction": "isLaunchAvailable",
+            "groupIndex": 0
+        },
+        {
+            "name": "abortCampaign",
+            "label": "Abort",
+            "handler": "chatwoot:handlers/call-campaign/detail-actions",
+            "actionFunction": "abortCampaign",
+            "checkVisibilityFunction": "isAbortAvailable",
+            "groupIndex": 1
+        }
+    ]
 }

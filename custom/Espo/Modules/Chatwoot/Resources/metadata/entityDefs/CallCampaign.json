@@ -16,6 +16,7 @@
                 "Cancelled"
             ],
             "default": "Draft",
+            "readOnly": true,
             "style": {
                 "Draft": null,
                 "Active": "primary",

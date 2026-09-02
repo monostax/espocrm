@@ -1,5 +1,9 @@
 {
     "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 255
+        },
         "callCampaign": {
             "type": "link",
             "required": true

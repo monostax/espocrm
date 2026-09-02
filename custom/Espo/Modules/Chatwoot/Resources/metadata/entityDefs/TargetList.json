@@ -37,6 +37,18 @@
             "foreign": "whatsAppCampaignTargetLists",
             "relationName": "whatsAppCampaignOpportunityTargetList",
             "layoutRelationshipsDisabled": true
+        },
+        "callCampaigns": {
+            "type": "hasMany",
+            "entity": "CallCampaign",
+            "foreign": "targetLists",
+            "layoutRelationshipsDisabled": true
+        },
+        "callCampaignsExcluding": {
+            "type": "hasMany",
+            "entity": "CallCampaign",
+            "foreign": "excludingTargetLists",
+            "layoutRelationshipsDisabled": true
         }
     }
 }
