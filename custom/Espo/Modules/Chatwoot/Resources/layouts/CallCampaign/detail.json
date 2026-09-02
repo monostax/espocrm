@@ -1,0 +1,108 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "chatwootInbox"
+                },
+                {
+                    "name": "chatwootAccount"
+                }
+            ],
+            [
+                {
+                    "name": "maxAttempts"
+                },
+                {
+                    "name": "retryDelayMinutes"
+                }
+            ],
+            [
+                {
+                    "name": "dialerCampaignId"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Audience",
+        "rows": [
+            [
+                {
+                    "name": "targetLists",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "manualContacts",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "excludeCampaigns",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "excludingTargetLists",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Opportunity Attribution",
+        "rows": [
+            [
+                {
+                    "name": "createOpportunity"
+                },
+                {
+                    "name": "attributionDispositions"
+                }
+            ],
+            [
+                {
+                    "name": "funnel"
+                },
+                {
+                    "name": "opportunityStage"
+                }
+            ],
+            [
+                {
+                    "name": "opportunityAssignedUser"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Enrollment",
+        "rows": [
+            [
+                {
+                    "name": "campaignContacts",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "opportunities",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

@@ -21,7 +21,9 @@
         "WhatsAppCampaignContact": "Contato da Campanha WhatsApp",
         "WhatsAppCampaignDistribution": "Distribuição de Campanha",
         "WhatsAppCampaignDistributionEntry": "Entrada de Distribuição de Campanha",
-        "ChatwootAccountUserMembership": "Chat / Conta / Agente"
+        "ChatwootAccountUserMembership": "Chat / Conta / Agente",
+        "CallCampaign": "Campanha de Ligações",
+        "CallCampaignContact": "Contato da Campanha de Ligações"
     },
     "scopeNamesPlural": {
         "ChatwootAccount": "Chat / Contas",
@@ -45,7 +47,9 @@
         "WhatsAppCampaignContact": "Contatos da Campanha WhatsApp",
         "WhatsAppCampaignDistribution": "Distribuições de Campanha",
         "WhatsAppCampaignDistributionEntry": "Entradas de Distribuição de Campanha",
-        "ChatwootAccountUserMembership": "Chat / Conta / Agentes"
+        "ChatwootAccountUserMembership": "Chat / Conta / Agentes",
+        "CallCampaign": "Campanhas de Ligações",
+        "CallCampaignContact": "Contatos das Campanhas de Ligações"
     },
     "labels": {
         "Chat / Conversations": "Chat / Conversas",

@@ -5,7 +5,8 @@
         "whatsappNumber2": "WhatsApp Number 2",
         "whatsappNumber3": "WhatsApp Number 3",
         "whatsappNumber4": "WhatsApp Number 4",
-        "instagramHandle": "Instagram Handle"
+        "instagramHandle": "Instagram Handle",
+        "callOptedOut": "Do Not Call (Opted Out)"
     },
     "messages": {
         "channelIdentityConflict": "The {channelType} identity \"{sourceId}\" already belongs to another contact.",

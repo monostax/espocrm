@@ -153,6 +153,24 @@
         }
     },
     {
+        "route": "/CallCampaign/:id/launch",
+        "method": "post",
+        "params": {
+            "controller": "CallCampaign",
+            "action": "launch",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/CallCampaign/:id/abort",
+        "method": "post",
+        "params": {
+            "controller": "CallCampaign",
+            "action": "abort",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/WhatsAppCampaignDistribution/:id/activate",
         "method": "post",
         "params": {

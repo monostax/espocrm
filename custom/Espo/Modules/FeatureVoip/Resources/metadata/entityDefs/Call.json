@@ -34,6 +34,10 @@
             "view": "views/fields/link",
             "readOnly": true,
             "tooltip": true
+        },
+        "callCampaignContact": {
+            "type": "link",
+            "readOnly": true
         }
     },
     "links": {
@@ -46,6 +50,11 @@
             "type": "belongsTo",
             "entity": "ChatwootConversation",
             "foreign": "voipCalls"
+        },
+        "callCampaignContact": {
+            "type": "belongsTo",
+            "entity": "CallCampaignContact",
+            "foreign": "calls"
         }
     },
     "indexes": {

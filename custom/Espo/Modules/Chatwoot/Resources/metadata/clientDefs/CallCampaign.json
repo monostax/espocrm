@@ -1,0 +1,72 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-phone",
+    "dynamicLogic": {
+        "fields": {
+            "funnel": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            },
+            "opportunityStage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            },
+            "opportunityAssignedUser": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            },
+            "attributionDispositions": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "createOpportunity"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

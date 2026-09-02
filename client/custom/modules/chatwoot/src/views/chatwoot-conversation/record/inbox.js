@@ -45,14 +45,35 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
         // Mobile state - track if detail view is active on mobile
         mobileDetailActive: false,
 
+        // Base width of the conversation list panel (see inbox.tpl)
+        listPanelWidth: 380,
+
+        // Chatwoot's dashboard swaps to its own narrow composer below 640px,
+        // which drops desktop-only affordances. Never hand the iframe less.
+        minIframeWidth: 640,
+
         /**
-         * Check if we're on mobile viewport (< 768px)
-         * Following EspoCRM's Bootstrap 3 breakpoint pattern
+         * Whether the conversation must render as a full-width overlay instead
+         * of a side-by-side split. True on mobile viewports and on any width
+         * where the split would starve the Chatwoot iframe. Measured from the
+         * container, so it is independent of theme chrome and sidebar state.
          */
-        isMobile: function () {
-            const screenWidthXs =
-                this.getThemeManager().getParam("screenWidthXs");
-            return window.innerWidth < screenWidthXs; // < 768px
+        isOverlayLayout: function () {
+            const $container = this.$el.find(".inbox-container");
+            const containerWidth =
+                ($container.length && $container.outerWidth()) ||
+                window.innerWidth;
+
+            return containerWidth - this.listPanelWidth < this.minIframeWidth;
+        },
+
+        /**
+         * Apply the current layout mode to the container
+         */
+        updateLayoutMode: function () {
+            this.$el
+                .find(".inbox-container")
+                .toggleClass("is-overlay", this.isOverlayLayout());
         },
 
         /**
@@ -690,14 +711,40 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
             $(window).on("resize.inboxMobile" + this.cid, () =>
                 this.handleMobileResize(),
             );
+
+            // The container also changes width without a window resize (e.g.
+            // collapsing the EspoCRM side menu), so observe it directly.
+            this.observeContainerWidth();
         },
 
         /**
-         * Handle window resize to reset mobile state when transitioning to desktop
+         * Track container width changes so the layout mode stays correct
+         * regardless of what caused the resize
+         */
+        observeContainerWidth: function () {
+            if (this.layoutObserver) {
+                this.layoutObserver.disconnect();
+                this.layoutObserver = null;
+            }
+
+            const container = this.$el.find(".inbox-container").get(0);
+            if (!container || !window.ResizeObserver) return;
+
+            this.layoutObserver = new ResizeObserver(() =>
+                this.handleMobileResize(),
+            );
+            this.layoutObserver.observe(container);
+        },
+
+        /**
+         * Keep the layout mode in sync with the available width, and drop the
+         * detail overlay when the split view becomes viable again
          */
         handleMobileResize: function () {
-            if (!this.isMobile() && this.mobileDetailActive) {
-                // Reset mobile state when transitioning to desktop
+            this.updateLayoutMode();
+
+            if (!this.isOverlayLayout() && this.mobileDetailActive) {
+                // Reset overlay state when transitioning to the split view
                 this.showMobileList();
             }
         },
@@ -779,8 +826,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
          */
         selectConversation: function (id) {
             if (this.selectedConversationId === id) {
-                // If already selected on mobile, show the detail view
-                if (this.isMobile()) {
+                // If already selected, re-open the overlay
+                if (this.isOverlayLayout()) {
                     this.showMobileDetail();
                 }
                 return;
@@ -827,8 +874,8 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
                     this.renderEntityListView("cases", "Case");
                 }
 
-                // On mobile, slide in the detail view
-                if (this.isMobile()) {
+                // In overlay layout, slide in the detail view
+                if (this.isOverlayLayout()) {
                     this.showMobileDetail();
                     // Update mobile header title
                     this.updateMobileHeaderTitle(model);
@@ -1668,6 +1715,11 @@ define("chatwoot:views/chatwoot-conversation/record/inbox", [
 
             $(window).off("resize.inboxView" + this.cid);
             $(window).off("resize.inboxMobile" + this.cid);
+
+            if (this.layoutObserver) {
+                this.layoutObserver.disconnect();
+                this.layoutObserver = null;
+            }
 
             // Reset mobile state
             this.mobileDetailActive = false;

@@ -1,0 +1,30 @@
+[
+    {
+        "name": "name",
+        "width": 22
+    },
+    {
+        "name": "status",
+        "width": 10
+    },
+    {
+        "name": "chatwootInbox",
+        "width": 16
+    },
+    {
+        "name": "maxAttempts",
+        "width": 8
+    },
+    {
+        "name": "campaignContacts",
+        "width": 10
+    },
+    {
+        "name": "createOpportunity",
+        "width": 8
+    },
+    {
+        "name": "createdAt",
+        "width": 12
+    }
+]

@@ -268,7 +268,7 @@ class SeedChatwootAccount implements RebuildAction
             $account,
             'VoIP Call Mirror',
             $this->buildVoipWebhookUrl($chatwootAccountId),
-            ['message_created', 'message_updated']
+            ['message_created', 'message_updated', 'dialer_lead_dispositioned']
         );
     }
 

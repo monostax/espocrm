@@ -1,0 +1,49 @@
+{
+    "fields": {
+        "callCampaign": "Campanha",
+        "contact": "Contato",
+        "chatwootAccount": "Chat / Conta",
+        "chatwootContact": "Contato do Chat",
+        "phoneNumber": "Telefone",
+        "contactName": "Nome do Contato",
+        "status": "Status",
+        "disposition": "Disposição",
+        "attempts": "Tentativas",
+        "lastOutcomeAt": "Último Resultado Em",
+        "notes": "Observações",
+        "opportunity": "Oportunidade",
+        "opportunityAttributionStatus": "Atribuição de Oportunidade",
+        "opportunityAttributionAction": "Ação de Atribuição",
+        "opportunityAttributionError": "Erro de Atribuição",
+        "opportunityAttributionStage": "Estágio na Atribuição",
+        "targetLists": "Listas de Alvos",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em"
+    },
+    "links": {
+        "callCampaign": "Campanha",
+        "contact": "Contato",
+        "chatwootContact": "Contato do Chat",
+        "opportunity": "Oportunidade",
+        "targetLists": "Listas de Alvos"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pendente",
+            "Done": "Concluído",
+            "Blocked": "Bloqueado"
+        },
+        "disposition": {
+            "": "",
+            "connected_interested": "Atendeu — Com Interesse",
+            "connected_not_interested": "Atendeu — Sem Interesse",
+            "callback": "Pediu Retorno",
+            "voicemail": "Caixa Postal",
+            "no_answer": "Sem Resposta",
+            "busy": "Ocupado",
+            "wrong_number": "Número Errado",
+            "dnc": "Não Perturbe",
+            "skipped": "Ignorado"
+        }
+    }
+}

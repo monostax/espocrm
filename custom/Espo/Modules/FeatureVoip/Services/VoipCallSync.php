@@ -107,6 +107,14 @@ class VoipCallSync
             $callDataArray['teamsIds'] = $teamsIds;
         }
 
+        // Dialer-originated calls carry their campaign/lead refs in the call
+        // data (stamped by Chatwoot's Dialer::NextLeadService onto the
+        // conversation); link the mirrored Call to its campaign enrollment.
+        $callCampaignContactId = $this->resolveCallCampaignContactId($callData);
+        if ($callCampaignContactId) {
+            $callDataArray['callCampaignContactId'] = $callCampaignContactId;
+        }
+
         if ($duration) {
             $callDataArray['duration'] = (float) $duration;
         }
@@ -158,6 +166,33 @@ class VoipCallSync
             ->getRDBRepository('Call')
             ->where(['twilioCallSid' => $callSid])
             ->findOne();
+    }
+
+    /**
+     * Resolve the CallCampaignContact enrollment for a dialer-originated
+     * call. Chatwoot stamps {campaign_ref, lead_ref} into the voice_call
+     * data; lead_ref is the enrollment id.
+     */
+    private function resolveCallCampaignContactId(object $callData): ?string
+    {
+        $leadRef = $callData->dialer->lead_ref ?? null;
+
+        if (!$leadRef) {
+            return null;
+        }
+
+        $enrollment = $this->entityManager
+            ->getRDBRepository('CallCampaignContact')
+            ->where(['id' => $leadRef])
+            ->findOne();
+
+        if (!$enrollment) {
+            $this->log->warning("VoipCallSync: Dialer lead ref {$leadRef} has no CallCampaignContact.");
+
+            return null;
+        }
+
+        return $enrollment->getId();
     }
 
     private function resolveContact(object $callData, Entity $account, object $message): ?string

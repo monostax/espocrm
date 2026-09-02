@@ -3,6 +3,7 @@
         "chatwootConversations": { "type": "linkMultiple" },
         "whatsAppCampaigns": { "type": "linkMultiple", "readOnly": true },
         "whatsAppCampaignTargetLists": { "type": "linkMultiple", "readOnly": true },
+        "callCampaigns": { "type": "linkMultiple", "readOnly": true },
         "createdByAIAgent": { "type": "bool", "default": false }
     },
     "links": {
@@ -27,6 +28,18 @@
         "whatsAppCampaignContacts": {
             "type": "hasMany",
             "entity": "WhatsAppCampaignContact",
+            "foreign": "opportunity",
+            "layoutRelationshipsDisabled": true
+        },
+        "callCampaigns": {
+            "type": "hasMany",
+            "entity": "CallCampaign",
+            "foreign": "opportunities",
+            "relationName": "callCampaignOpportunity"
+        },
+        "callCampaignContacts": {
+            "type": "hasMany",
+            "entity": "CallCampaignContact",
             "foreign": "opportunity",
             "layoutRelationshipsDisabled": true
         }

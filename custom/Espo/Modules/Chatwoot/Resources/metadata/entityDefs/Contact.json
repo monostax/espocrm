@@ -5,6 +5,10 @@
             "type": "bool",
             "default": false
         },
+        "callOptedOut": {
+            "type": "bool",
+            "default": false
+        },
         "channelIdentitiesData": {
             "type": "jsonArray",
             "notStorable": true,
@@ -106,6 +110,13 @@
             "entity": "WhatsAppCampaign",
             "foreign": "manualContacts",
             "relationName": "whatsAppCampaignManualContact",
+            "layoutRelationshipsDisabled": true
+        },
+        "callCampaignsManual": {
+            "type": "hasMany",
+            "entity": "CallCampaign",
+            "foreign": "manualContacts",
+            "relationName": "callCampaignManualContact",
             "layoutRelationshipsDisabled": true
         },
         "channelIdentities": {

@@ -168,6 +168,12 @@
             "foreign": "chatwootContact",
             "layoutRelationshipsDisabled": true
         },
+        "callCampaignContacts": {
+            "type": "hasMany",
+            "entity": "CallCampaignContact",
+            "foreign": "chatwootContact",
+            "layoutRelationshipsDisabled": true
+        },
         "teams": {
             "type": "hasMany",
             "entity": "Team",

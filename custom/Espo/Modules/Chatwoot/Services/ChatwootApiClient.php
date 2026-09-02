@@ -3905,4 +3905,125 @@ public function deleteConversation(
 
         return null;
     }
+
+    /**
+     * Create a power-dialer campaign in a Chatwoot account.
+     *
+     * POST /api/v1/accounts/{accountId}/dialer_campaigns
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param array<string, mixed> $payload {name, inbox_id, source_ref, config, leads[]}
+     * @return array<string, mixed> The created dialer campaign payload
+     * @throws Error
+     */
+    public function createDialerCampaign(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        array $payload
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/dialer_campaigns';
+
+        return $this->postJson($url, $accountApiKey, $payload, 'createDialerCampaign');
+    }
+
+    /**
+     * Push a batch of leads into an existing Chatwoot dialer campaign.
+     *
+     * POST /api/v1/accounts/{accountId}/dialer_campaigns/{campaignId}/leads
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $dialerCampaignId The Chatwoot dialer campaign ID
+     * @param array<int, array{source_ref: string, phone_number: string, contact_name?: string}> $leads
+     * @return array<string, mixed> Response payload
+     * @throws Error
+     */
+    public function addDialerLeads(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $dialerCampaignId,
+        array $leads
+    ): array {
+        $url = rtrim($platformUrl, '/')
+            . '/api/v1/accounts/' . $accountId
+            . '/dialer_campaigns/' . $dialerCampaignId . '/leads';
+
+        return $this->postJson($url, $accountApiKey, ['leads' => $leads], 'addDialerLeads');
+    }
+
+    /**
+     * Update a Chatwoot dialer campaign (status transitions).
+     *
+     * PUT /api/v1/accounts/{accountId}/dialer_campaigns/{campaignId}
+     *
+     * @param string $platformUrl The base URL of the Chatwoot platform
+     * @param string $accountApiKey The account-level API key
+     * @param int $accountId The Chatwoot account ID
+     * @param int $dialerCampaignId The Chatwoot dialer campaign ID
+     * @param array<string, mixed> $payload e.g. {status: "paused"}
+     * @return array<string, mixed> Response payload
+     * @throws Error
+     */
+    public function updateDialerCampaign(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $dialerCampaignId,
+        array $payload
+    ): array {
+        $url = rtrim($platformUrl, '/')
+            . '/api/v1/accounts/' . $accountId
+            . '/dialer_campaigns/' . $dialerCampaignId;
+
+        return $this->postJson($url, $accountApiKey, $payload, 'updateDialerCampaign', 'PUT');
+    }
+
+    /**
+     * POST/PUT a JSON payload with the account API key and normalize errors.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    private function postJson(
+        string $url,
+        string $accountApiKey,
+        array $payload,
+        string $context,
+        string $method = 'POST'
+    ): array {
+        $encoded = json_encode($payload);
+
+        if ($encoded === false) {
+            throw new Error("Chatwoot API ({$context}): Failed to encode payload to JSON.");
+        }
+
+        $headers = [
+            'api_access_token: ' . $accountApiKey,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($encoded),
+        ];
+
+        $response = $this->executeRequest($url, $method, $encoded, $headers);
+
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            $errorMsg = "Chatwoot API error ({$context}): HTTP {$response['code']}";
+
+            if (isset($response['body']['message'])) {
+                $errorMsg .= ' - ' . $response['body']['message'];
+            } elseif (isset($response['body']['error'])) {
+                $errorMsg .= ' - ' . $response['body']['error'];
+            }
+
+            $this->log->error("Chatwoot API Error ({$context}): " . json_encode($response));
+            throw new Error($errorMsg);
+        }
+
+        return $response['body'];
+    }
 }

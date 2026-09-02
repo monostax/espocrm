@@ -5,7 +5,8 @@
         "chatwootConversationRecord": "Chatwoot Conversation",
         "chatwootConversationId": "Chatwoot Conversation ID",
         "chatwootAccountId": "Chatwoot Account ID",
-        "voipProvider": "VoIP Provider"
+        "voipProvider": "VoIP Provider",
+        "callCampaignContact": "Call Campaign Enrollment"
     },
     "labels": {
         "Conversations": "Conversations",

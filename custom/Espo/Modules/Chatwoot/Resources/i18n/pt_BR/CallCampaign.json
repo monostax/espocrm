@@ -1,0 +1,75 @@
+{
+    "fields": {
+        "name": "Nome",
+        "status": "Status",
+        "chatwootInbox": "Caixa de Entrada",
+        "chatwootAccount": "Chat / Conta",
+        "dialerCampaignId": "ID da Campanha do Discador (Chatwoot)",
+        "maxAttempts": "Tentativas por Contato",
+        "retryDelayMinutes": "Intervalo entre Tentativas (minutos)",
+        "createOpportunity": "Criar Oportunidades em Disposição Positiva",
+        "attributionDispositions": "Disposições com Atribuição",
+        "funnel": "Funil da Oportunidade",
+        "opportunityStage": "Estágio Inicial da Oportunidade",
+        "opportunityAssignedUser": "Responsável pela Oportunidade",
+        "targetLists": "Listas de Alvos",
+        "manualContacts": "Contatos Manuais",
+        "excludeCampaigns": "Excluir Contatos de Campanhas",
+        "excludedByCampaigns": "Excluído por Campanhas",
+        "excludingTargetLists": "Listas de Exclusão",
+        "campaignContacts": "Inscrições",
+        "opportunities": "Oportunidades",
+        "tenant": "Tenant",
+        "createdAt": "Criado Em",
+        "modifiedAt": "Modificado Em",
+        "createdBy": "Criado Por",
+        "modifiedBy": "Modificado Por",
+        "teams": "Times"
+    },
+    "links": {
+        "chatwootInbox": "Caixa de Entrada",
+        "chatwootAccount": "Chat / Conta",
+        "targetLists": "Listas de Alvos",
+        "manualContacts": "Contatos Manuais",
+        "excludeCampaigns": "Excluir Contatos de Campanhas",
+        "excludedByCampaigns": "Excluído por Campanhas",
+        "excludingTargetLists": "Listas de Exclusão",
+        "campaignContacts": "Inscrições",
+        "opportunities": "Oportunidades",
+        "funnel": "Funil da Oportunidade",
+        "opportunityStage": "Estágio Inicial da Oportunidade",
+        "opportunityAssignedUser": "Responsável pela Oportunidade"
+    },
+    "options": {
+        "status": {
+            "Draft": "Rascunho",
+            "Active": "Ativa",
+            "Paused": "Pausada",
+            "Completed": "Concluída",
+            "Cancelled": "Cancelada"
+        },
+        "attributionDispositions": {
+            "connected_interested": "Atendeu — Com Interesse",
+            "connected_not_interested": "Atendeu — Sem Interesse",
+            "callback": "Pediu Retorno",
+            "voicemail": "Caixa Postal",
+            "no_answer": "Sem Resposta",
+            "busy": "Ocupado",
+            "wrong_number": "Número Errado",
+            "dnc": "Não Perturbe",
+            "skipped": "Ignorado"
+        }
+    },
+    "tooltips": {
+        "maxAttempts": "Quantas vezes o discador pode tentar um contato antes de concluí-lo.",
+        "retryDelayMinutes": "Espera mínima antes de discar novamente um contato com disposição repetível (sem resposta, ocupado, caixa postal).",
+        "createOpportunity": "Cria ou reutiliza uma Oportunidade quando a ligação recebe uma das disposições de atribuição.",
+        "attributionDispositions": "Quais resultados de ligação disparam a criação/reuso de Oportunidade.",
+        "dialerCampaignId": "ID interno da campanha do discador criada no Chatwoot."
+    },
+    "labels": {
+        "Launch": "Lançar",
+        "Abort": "Abortar",
+        "launchStarted": "Campanha lançada. A fila do discador está sendo enviada ao Chatwoot."
+    }
+}

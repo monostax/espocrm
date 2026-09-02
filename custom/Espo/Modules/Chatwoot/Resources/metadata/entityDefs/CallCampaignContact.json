@@ -1,0 +1,171 @@
+{
+    "fields": {
+        "callCampaign": {
+            "type": "link",
+            "required": true
+        },
+        "contact": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootAccount": {
+            "type": "link",
+            "required": true
+        },
+        "chatwootContact": {
+            "type": "link"
+        },
+        "phoneNumber": {
+            "type": "varchar",
+            "maxLength": 50,
+            "required": true
+        },
+        "contactName": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Pending",
+                "Done",
+                "Blocked"
+            ],
+            "default": "Pending",
+            "style": {
+                "Pending": null,
+                "Done": "success",
+                "Blocked": "danger"
+            }
+        },
+        "disposition": {
+            "type": "enum",
+            "options": [
+                "",
+                "connected_interested",
+                "connected_not_interested",
+                "callback",
+                "voicemail",
+                "no_answer",
+                "busy",
+                "wrong_number",
+                "dnc",
+                "skipped"
+            ],
+            "default": "",
+            "readOnly": true
+        },
+        "attempts": {
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "readOnly": true
+        },
+        "lastOutcomeAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "notes": {
+            "type": "text",
+            "readOnly": true
+        },
+        "opportunity": {
+            "type": "link",
+            "readOnly": true
+        },
+        "opportunityAttributionStatus": {
+            "type": "enum",
+            "options": ["NotRequested", "Pending", "Linked", "Failed"],
+            "default": "NotRequested",
+            "readOnly": true,
+            "style": {
+                "NotRequested": null,
+                "Pending": "warning",
+                "Linked": "success",
+                "Failed": "danger"
+            }
+        },
+        "opportunityAttributionAction": {
+            "type": "enum",
+            "options": ["", "Created", "Reused"],
+            "default": "",
+            "readOnly": true
+        },
+        "opportunityAttributionError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "opportunityAttributionStage": {
+            "type": "link",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "targetLists": {
+            "type": "linkMultiple",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "callCampaign": {
+            "type": "belongsTo",
+            "entity": "CallCampaign",
+            "foreign": "campaignContacts"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "entity": "Contact"
+        },
+        "chatwootContact": {
+            "type": "belongsTo",
+            "entity": "ChatwootContact",
+            "foreign": "callCampaignContacts"
+        },
+        "chatwootAccount": {
+            "type": "belongsTo",
+            "entity": "ChatwootAccount",
+            "foreign": "callCampaignContacts"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity",
+            "foreign": "callCampaignContacts"
+        },
+        "opportunityAttributionStage": {
+            "type": "belongsTo",
+            "entity": "OpportunityStage"
+        },
+        "targetLists": {
+            "type": "hasMany",
+            "entity": "TargetList",
+            "foreign": "callCampaignContacts",
+            "relationName": "callCampaignContactTargetList"
+        }
+    },
+    "indexes": {
+        "campaignStatus": {
+            "columns": ["callCampaignId", "status"]
+        },
+        "contactCampaign": {
+            "columns": ["contactId", "callCampaignId"]
+        },
+        "campaignPhone": {
+            "columns": ["callCampaignId", "phoneNumber"],
+            "unique": true
+        },
+        "opportunityId": {
+            "columns": ["opportunityId"]
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "asc"
+    }
+}

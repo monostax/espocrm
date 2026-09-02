@@ -1,0 +1,49 @@
+{
+    "fields": {
+        "callCampaign": "Campaign",
+        "contact": "Contact",
+        "chatwootAccount": "Chat / Account",
+        "chatwootContact": "Chat Contact",
+        "phoneNumber": "Phone Number",
+        "contactName": "Contact Name",
+        "status": "Status",
+        "disposition": "Disposition",
+        "attempts": "Attempts",
+        "lastOutcomeAt": "Last Outcome At",
+        "notes": "Notes",
+        "opportunity": "Opportunity",
+        "opportunityAttributionStatus": "Opportunity Attribution",
+        "opportunityAttributionAction": "Attribution Action",
+        "opportunityAttributionError": "Attribution Error",
+        "opportunityAttributionStage": "Attribution Stage",
+        "targetLists": "Target Lists",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At"
+    },
+    "links": {
+        "callCampaign": "Campaign",
+        "contact": "Contact",
+        "chatwootContact": "Chat Contact",
+        "opportunity": "Opportunity",
+        "targetLists": "Target Lists"
+    },
+    "options": {
+        "status": {
+            "Pending": "Pending",
+            "Done": "Done",
+            "Blocked": "Blocked"
+        },
+        "disposition": {
+            "": "",
+            "connected_interested": "Connected — Interested",
+            "connected_not_interested": "Connected — Not Interested",
+            "callback": "Callback Requested",
+            "voicemail": "Voicemail",
+            "no_answer": "No Answer",
+            "busy": "Busy",
+            "wrong_number": "Wrong Number",
+            "dnc": "Do Not Call",
+            "skipped": "Skipped"
+        }
+    }
+}

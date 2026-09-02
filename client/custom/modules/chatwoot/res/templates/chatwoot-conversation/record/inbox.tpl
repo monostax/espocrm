@@ -557,39 +557,43 @@
     flex: 1;
 }
 
+/* Overlay layout: list takes the full width and the conversation slides in
+   on top of it. Toggled from JS (is-overlay) whenever the split view cannot
+   give the Chatwoot iframe enough room to render its desktop UI, which
+   includes every real mobile viewport. */
+.inbox-container.is-overlay .inbox-list-panel {
+    width: 100%;
+    min-width: auto;
+    border-right: none;
+    display: flex;
+}
+
+.inbox-container.is-overlay .inbox-iframe-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    display: flex;
+}
+
+.inbox-container.is-overlay .inbox-iframe-panel.mobile-active {
+    transform: translateX(0);
+}
+
+.inbox-container.is-overlay .inbox-mobile-header {
+    display: flex;
+}
+
 /* Mobile Adaptations */
 @media screen and (max-width: 767px) {
     .inbox-container {
         height: calc(100vh - 100px);
         border-radius: 0;
         border: none;
-    }
-
-    .inbox-list-panel {
-        width: 100%;
-        min-width: auto;
-        border-right: none;
-        display: flex;
-    }
-
-    .inbox-iframe-panel {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 1050;
-        transform: translateX(100%);
-        transition: transform 0.25s ease;
-        display: flex;
-    }
-
-    .inbox-iframe-panel.mobile-active {
-        transform: translateX(0);
-    }
-
-    .inbox-mobile-header {
-        display: flex;
     }
 
     .inbox-tabs {

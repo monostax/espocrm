@@ -17,6 +17,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Services\CallCampaignOutcomeSync;
 use Espo\Modules\FeatureVoip\Services\VoipCallSync;
 use Espo\ORM\EntityManager;
 use stdClass;
@@ -26,7 +27,9 @@ use stdClass;
  *
  * Listens for `message_created` / `message_updated` events from Chatwoot
  * where the message content_type is `voice_call`, and delegates to
- * VoipCallSync to upsert a CRM Call record.
+ * VoipCallSync to upsert a CRM Call record. Also routes
+ * `dialer_lead_dispositioned` power-dialer outcomes to
+ * CallCampaignOutcomeSync.
  *
  * POST /api/v1/VoipWebhook/:accountId
  */
@@ -35,6 +38,7 @@ class VoipWebhook
     public function __construct(
         private EntityManager $entityManager,
         private VoipCallSync $voipCallSync,
+        private CallCampaignOutcomeSync $callCampaignOutcomeSync,
         private Log $log
     ) {}
 
@@ -56,6 +60,10 @@ class VoipWebhook
         $event = $data->event ?? 'unknown';
 
         $this->log->debug("VoipWebhook: Received '{$event}' for account {$accountId}");
+
+        if ($event === 'dialer_lead_dispositioned') {
+            return $this->callCampaignOutcomeSync->applyOutcome($data, $account);
+        }
 
         if (!in_array($event, ['message_created', 'message_updated'], true)) {
             return (object) ['success' => true, 'message' => "Event '{$event}' ignored."];

@@ -1,0 +1,75 @@
+{
+    "fields": {
+        "name": "Name",
+        "status": "Status",
+        "chatwootInbox": "Inbox",
+        "chatwootAccount": "Chat / Account",
+        "dialerCampaignId": "Dialer Campaign ID (Chatwoot)",
+        "maxAttempts": "Max Attempts per Contact",
+        "retryDelayMinutes": "Retry Delay (minutes)",
+        "createOpportunity": "Create Opportunities on Positive Disposition",
+        "attributionDispositions": "Attribution Dispositions",
+        "funnel": "Opportunity Funnel",
+        "opportunityStage": "Initial Opportunity Stage",
+        "opportunityAssignedUser": "Opportunity Assigned User",
+        "targetLists": "Target Lists",
+        "manualContacts": "Manual Contacts",
+        "excludeCampaigns": "Exclude Contacts From Campaigns",
+        "excludedByCampaigns": "Excluded By Campaigns",
+        "excludingTargetLists": "Excluding Target Lists",
+        "campaignContacts": "Enrollments",
+        "opportunities": "Opportunities",
+        "tenant": "Tenant",
+        "createdAt": "Created At",
+        "modifiedAt": "Modified At",
+        "createdBy": "Created By",
+        "modifiedBy": "Modified By",
+        "teams": "Teams"
+    },
+    "links": {
+        "chatwootInbox": "Inbox",
+        "chatwootAccount": "Chat / Account",
+        "targetLists": "Target Lists",
+        "manualContacts": "Manual Contacts",
+        "excludeCampaigns": "Exclude Contacts From Campaigns",
+        "excludedByCampaigns": "Excluded By Campaigns",
+        "excludingTargetLists": "Excluding Target Lists",
+        "campaignContacts": "Enrollments",
+        "opportunities": "Opportunities",
+        "funnel": "Opportunity Funnel",
+        "opportunityStage": "Initial Opportunity Stage",
+        "opportunityAssignedUser": "Opportunity Assigned User"
+    },
+    "options": {
+        "status": {
+            "Draft": "Draft",
+            "Active": "Active",
+            "Paused": "Paused",
+            "Completed": "Completed",
+            "Cancelled": "Cancelled"
+        },
+        "attributionDispositions": {
+            "connected_interested": "Connected — Interested",
+            "connected_not_interested": "Connected — Not Interested",
+            "callback": "Callback Requested",
+            "voicemail": "Voicemail",
+            "no_answer": "No Answer",
+            "busy": "Busy",
+            "wrong_number": "Wrong Number",
+            "dnc": "Do Not Call",
+            "skipped": "Skipped"
+        }
+    },
+    "tooltips": {
+        "maxAttempts": "How many times the dialer may attempt a contact before marking it done.",
+        "retryDelayMinutes": "Minimum wait before a retryable disposition (no answer, busy, voicemail) is dialed again.",
+        "createOpportunity": "Create or reuse an Opportunity when a call is dispositioned with one of the attribution dispositions.",
+        "attributionDispositions": "Which call outcomes trigger Opportunity creation/reuse.",
+        "dialerCampaignId": "Internal Chatwoot dialer campaign id created on launch."
+    },
+    "labels": {
+        "Launch": "Launch",
+        "Abort": "Abort",
+        "launchStarted": "Campaign launched. The dialer queue is being seeded into Chatwoot."
+    }
+}

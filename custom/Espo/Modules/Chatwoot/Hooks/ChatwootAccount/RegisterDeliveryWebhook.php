@@ -147,7 +147,7 @@ class RegisterDeliveryWebhook
 
         $webhookUrl = rtrim($crmBackendUrl, '/') . '/api/v1/VoipWebhook/' . $chatwootAccountId;
 
-        $subscriptions = ['message_created', 'message_updated'];
+        $subscriptions = ['message_created', 'message_updated', 'dialer_lead_dispositioned'];
 
         // Idempotent on BOTH name and URL: a webhook with this URL may already
         // exist on Chatwoot (e.g. created manually or under a different name).
