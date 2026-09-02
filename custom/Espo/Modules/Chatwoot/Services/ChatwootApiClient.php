@@ -3951,7 +3951,7 @@ public function deleteConversation(
     ): array {
         $url = rtrim($platformUrl, '/')
             . '/api/v1/accounts/' . $accountId
-            . '/dialer_campaigns/' . $dialerCampaignId . '/leads';
+            . '/dialer_campaigns/' . $dialerCampaignId . '/add_leads';
 
         return $this->postJson($url, $accountApiKey, ['leads' => $leads], 'addDialerLeads');
     }
