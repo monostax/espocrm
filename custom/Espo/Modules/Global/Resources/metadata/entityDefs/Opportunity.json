@@ -50,6 +50,17 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true
         },
+        "funnelIsDefault": {
+            "type": "foreign",
+            "link": "funnel",
+            "field": "isDefault",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "stageName": {
             "type": "varchar",
             "notStorable": true,
