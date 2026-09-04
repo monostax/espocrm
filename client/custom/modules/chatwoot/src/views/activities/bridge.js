@@ -10,11 +10,15 @@ import View from "view";
 import ViewRecordHelper from "view-record-helper";
 
 /**
- * Bridge view for the "Agendamentos" (Activities) dashboard app tab.
+ * Bridge view for the "Atividades" (Activities) dashboard app tab.
  *
- * Listens for Chatwoot appContext, resolves the ChatwootConversation
- * entity by chatwootConversationId, loads the model, and renders the
- * Appointment / Meeting / Task relationship panels inline.
+ * Listens for Chatwoot appContext and renders the "Atividades (Planejadas)"
+ * / "Atividades (Realizadas)" panels inline for the record the context
+ * points to:
+ *
+ *   - `appContext.opportunity.id`  -> Opportunity (Chatwoot opportunity view)
+ *   - `appContext.conversation.id` -> ChatwootConversation, resolved by
+ *                                      chatwootConversationId (conversation view)
  */
 class ActivitiesBridgeView extends View {
     template = "chatwoot:chatwoot-conversation/bridge";
@@ -22,7 +26,7 @@ class ActivitiesBridgeView extends View {
     /** Dashboard app id this bridge reports its count for. */
     dashboardAppId = "fixed-activities";
 
-    /** Related links whose totals are summed into the tab count. */
+    /** ChatwootConversation links whose totals are summed into the tab count. */
     countLinkList = ["appointments", "meetings", "tasks"];
 
     /** @type {'loading'|'not-found'|'error'|'ready'} */
@@ -31,8 +35,8 @@ class ActivitiesBridgeView extends View {
     /** @type {string} */
     errorMessage = "";
 
-    /** @type {number|null} */
-    lastChatwootConversationId = null;
+    /** Last rendered context, e.g. "Opportunity:abc" or "conversation:123". */
+    lastContextKey = null;
 
     setup() {
         this._boundMessageHandler = this._onMessage.bind(this);
@@ -42,7 +46,7 @@ class ActivitiesBridgeView extends View {
     }
 
     onRemove() {
-        // Keep global listener alive for conversation changes
+        // Keep global listener alive for context changes
     }
 
     data() {
@@ -53,7 +57,7 @@ class ActivitiesBridgeView extends View {
     }
 
     /**
-     * Request conversation context from Chatwoot parent window.
+     * Request context from Chatwoot parent window.
      */
     _requestContext() {
         try {
@@ -86,6 +90,16 @@ class ActivitiesBridgeView extends View {
             return;
         }
 
+        const opportunityId = parsed.data.opportunity?.id;
+
+        if (opportunityId) {
+            this._handleContext(`Opportunity:${opportunityId}`, () =>
+                this._renderPanels("Opportunity", opportunityId),
+            );
+
+            return;
+        }
+
         const conversationId = parsed.data.conversation?.id;
         const accountId = parsed.data.conversation?.account_id;
 
@@ -94,13 +108,31 @@ class ActivitiesBridgeView extends View {
             return;
         }
 
-        // Avoid re-fetching if same conversation
-        if (conversationId === this.lastChatwootConversationId) {
+        this._handleContext(`conversation:${conversationId}`, () =>
+            this._lookupConversationAndRender(conversationId, accountId),
+        );
+    }
+
+    /**
+     * Run `render` unless the same context is already displayed.
+     * @param {string} key
+     * @param {function(): Promise<void>} render
+     */
+    async _handleContext(key, render) {
+        if (key === this.lastContextKey) {
             return;
         }
 
-        this.lastChatwootConversationId = conversationId;
-        this._lookupAndRender(conversationId, accountId);
+        this.lastContextKey = key;
+
+        this._setState("loading");
+
+        try {
+            await render();
+        } catch (e) {
+            console.error("ActivitiesBridge: Failed to load record:", e);
+            this._setState("error", "Failed to load record from CRM.");
+        }
     }
 
     /**
@@ -118,57 +150,47 @@ class ActivitiesBridgeView extends View {
     }
 
     /**
-     * Look up the ChatwootConversation, load the model, and render the
-     * activity relationship panels.
+     * Look up the ChatwootConversation by its Chatwoot ids and render its
+     * activity panels.
      * @param {number} chatwootConversationId
      * @param {number|undefined} chatwootAccountId
      */
-    async _lookupAndRender(chatwootConversationId, chatwootAccountId) {
-        this._setState("loading");
+    async _lookupConversationAndRender(chatwootConversationId, chatwootAccountId) {
+        const where = [
+            {
+                type: "equals",
+                attribute: "chatwootConversationId",
+                value: chatwootConversationId,
+            },
+        ];
 
-        try {
-            const where = [
-                {
-                    type: "equals",
-                    attribute: "chatwootConversationId",
-                    value: chatwootConversationId,
-                },
-            ];
-
-            if (chatwootAccountId) {
-                where.push({
-                    type: "equals",
-                    attribute: "chatwootAccountIdExternal",
-                    value: chatwootAccountId,
-                });
-            }
-
-            const response = await Espo.Ajax.getRequest("ChatwootConversation", {
-                where,
-                maxSize: 1,
-                select: "id",
+        if (chatwootAccountId) {
+            where.push({
+                type: "equals",
+                attribute: "chatwootAccountIdExternal",
+                value: chatwootAccountId,
             });
-
-            if (!response.list || response.list.length === 0) {
-                this._setState(
-                    "not-found",
-                    `Conversation #${chatwootConversationId} not found in CRM.`,
-                );
-                return;
-            }
-
-            const entityId = response.list[0].id;
-
-            this._postCount(entityId);
-
-            await this._renderPanels(entityId);
-        } catch (e) {
-            console.error(
-                "ActivitiesBridge: Failed to look up conversation:",
-                e,
-            );
-            this._setState("error", "Failed to load conversation from CRM.");
         }
+
+        const response = await Espo.Ajax.getRequest("ChatwootConversation", {
+            where,
+            maxSize: 1,
+            select: "id",
+        });
+
+        if (!response.list || response.list.length === 0) {
+            this._setState(
+                "not-found",
+                `Conversation #${chatwootConversationId} not found in CRM.`,
+            );
+            return;
+        }
+
+        const entityId = response.list[0].id;
+
+        this._postCount(entityId);
+
+        await this._renderPanels("ChatwootConversation", entityId);
     }
 
     /**
@@ -205,11 +227,12 @@ class ActivitiesBridgeView extends View {
     }
 
     /**
-     * Load the ChatwootConversation model and render the activity panels.
+     * Load the record and render its activity panels.
+     * @param {string} entityType
      * @param {string} entityId
      */
-    async _renderPanels(entityId) {
-        const model = await this.getModelFactory().create("ChatwootConversation");
+    async _renderPanels(entityType, entityId) {
+        const model = await this.getModelFactory().create(entityType);
 
         model.id = entityId;
 
@@ -219,7 +242,7 @@ class ActivitiesBridgeView extends View {
 
         await this.createView("panels", "chatwoot:views/activities/panels", {
             model,
-            scope: "ChatwootConversation",
+            scope: entityType,
             selector: ".bridge-detail-container",
             type: "detail",
             readOnly: false,

@@ -247,7 +247,12 @@ export interface ColumnDefs {
     customLabel?: string;
 }
 
-export interface ListRecordViewOptions extends ListBaseRecordViewOptions<ColumnDefs[]> {}
+export interface ListRecordViewOptions extends ListBaseRecordViewOptions<ColumnDefs[]> {
+    /**
+     * Disable inline edit of field cells.
+     */
+    inlineEditDisabled?: boolean;
+}
 
 export interface ListRecordViewSchema extends ListBaseRecordViewSchema<ColumnDefs[]> {
     options: ListRecordViewOptions
@@ -260,8 +265,66 @@ class ListRecordView<
     S extends ListRecordViewSchema = ListRecordViewSchema
 > extends ListBaseRecordView<ColumnDefs[], S> {
 
+    /**
+     * Disable inline edit of field cells. Can be overridden by an option parameter
+     * or by the `listInlineEditDisabled` clientDefs parameter.
+     */
+    protected inlineEditDisabled: boolean = false
+
     protected setup() {
         super.setup();
+
+        this.inlineEditDisabled = this.options.inlineEditDisabled ||
+            this.inlineEditDisabled ||
+            this.editDisabled ||
+            this.selectable ||
+            !!this.getMetadata().get(['clientDefs', this.scope ?? '_', 'listInlineEditDisabled']) ||
+            !!this.getMetadata().get(['clientDefs', this.scope ?? '_', 'inlineEditDisabled']);
+    }
+
+    /**
+     * Whether a field cell of a specific record can be inline-edited.
+     *
+     * @param model A record model.
+     * @param field A field name.
+     */
+    protected isInlineEditEnabledForField(model: Model, field: string): boolean {
+        if (this.inlineEditDisabled) {
+            return false;
+        }
+
+        if (!this.getAcl().checkModel(model, 'edit')) {
+            return false;
+        }
+
+        const scope = model.entityType || this.scope;
+
+        if (!scope) {
+            return false;
+        }
+
+        return this.getAcl().checkField(scope, field, 'edit');
+    }
+
+    /**
+     * @internal
+     */
+    protected prepareInternalLayout(internalLayout: any, model: Model) {
+        super.prepareInternalLayout(internalLayout, model);
+
+        if (this.inlineEditDisabled) {
+            return;
+        }
+
+        (internalLayout as any[]).forEach(item => {
+            const field = item.options?.defs?.name as string | undefined;
+
+            if (!field || !item.options) {
+                return;
+            }
+
+            item.options.inlineEditEnabled = this.isInlineEditEnabledForField(model, field);
+        });
     }
 
     /**

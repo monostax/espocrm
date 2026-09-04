@@ -9,18 +9,32 @@
 import DetailBottomRecordView from "views/record/detail-bottom";
 
 /**
- * Renders only the "Agendamentos" relationship panels (Appointment,
- * Meeting, Task) for a ChatwootConversation, without the record
- * header/fields or the stream panel.
+ * Renders the "Atividades (Planejadas)" and "Atividades (Realizadas)"
+ * panels for a record, without the record header/fields or the stream
+ * panel — same layout as the Opportunity side panels.
  *
- * Used by the Chatwoot "Agendamentos" dashboard app tab.
+ * The panel views are taken from the scope's `sidePanels.detail` clientDefs
+ * (falling back to `app.clientRecord.panels`), so e.g. Opportunity uses
+ * `crm:views/opportunity/record/panels/activities` exactly as its detail
+ * view does. ChatwootConversation needs dedicated views (its activities are
+ * related through many-to-many links), which are set in `panelViewMap`.
+ *
+ * Used by the Chatwoot "Atividades" dashboard app tab.
  */
 class ActivitiesPanelsView extends DetailBottomRecordView {
     // No stream panel for this embedded, focused view.
     streamPanel = false;
 
     // Panels to show, in display order.
-    activityLinkList = ["appointments", "meetings", "tasks"];
+    activityPanelNameList = ["activities", "history"];
+
+    // Per-scope panel view overrides.
+    panelViewMap = {
+        ChatwootConversation: {
+            activities: "chatwoot:views/activities/activities-panel",
+            history: "chatwoot:views/activities/history-panel",
+        },
+    };
 
     setup() {
         this.type = this.mode;
@@ -33,16 +47,14 @@ class ActivitiesPanelsView extends DetailBottomRecordView {
 
         this.setupInitial();
 
-        const linkDefs = (this.model.defs || {}).links || {};
+        this.activityPanelNameList.forEach((name) => {
+            const p = this.getActivityPanelDefs(name);
 
-        this.activityLinkList.forEach((name) => {
-            if (!linkDefs[name]) {
+            if (p.aclScope && !this.getAcl().checkScope(p.aclScope)) {
                 return;
             }
 
-            this.addRelationshipPanel(name, {
-                view: "chatwoot:views/activities/relationship-panel",
-            });
+            this.panelList.push(p);
         });
 
         this.panelList = this.panelList.map((p) => {
@@ -71,6 +83,41 @@ class ActivitiesPanelsView extends DetailBottomRecordView {
         this.alterPanels();
         this.setupPanelsFinal();
         this.setupPanelViews();
+    }
+
+    /**
+     * Build the panel defs for `name` the same way `views/record/detail-side`
+     * does: `app.clientRecord.panels.<name>` defaults, overlaid with the
+     * scope's `sidePanels.detail` item of that name, then the per-scope
+     * view override.
+     *
+     * @param {string} name
+     * @return {Object.<string, *>}
+     */
+    getActivityPanelDefs(name) {
+        const defaults =
+            this.getMetadata().get(["app", "clientRecord", "panels", name]) ||
+            {};
+
+        const sideItem =
+            (
+                this.getMetadata().get([
+                    "clientDefs",
+                    this.scope,
+                    "sidePanels",
+                    "detail",
+                ]) || []
+            ).find((item) => item.name === name) || {};
+
+        const p = Espo.Utils.cloneDeep({ ...defaults, ...sideItem, name });
+
+        const view = (this.panelViewMap[this.scope] || {})[name];
+
+        if (view) {
+            p.view = view;
+        }
+
+        return p;
     }
 }
 

@@ -11,6 +11,7 @@
         "Espo\\Modules\\Global\\Rebuild\\BackfillOpportunityCloseDate",
         "Espo\\Modules\\Global\\Rebuild\\SeedRole",
         "Espo\\Modules\\Global\\Rebuild\\BackfillTenantAdminTeams",
-        "Espo\\Modules\\Global\\Rebuild\\EnforceReportApplyAcl"
+        "Espo\\Modules\\Global\\Rebuild\\EnforceReportApplyAcl",
+        "Espo\\Modules\\Global\\Rebuild\\ConfigureActivitiesEntityList"
     ]
 }

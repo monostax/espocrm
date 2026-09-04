@@ -31,6 +31,8 @@
     "labels": {
         "Create Appointment": "Create Appointment",
         "Conversations": "Conversations",
-        "No Contact linked": "No Contact linked"
+        "No Contact linked": "No Contact linked",
+        "Schedule Appointment": "Schedule Appointment",
+        "Log Appointment": "Log Appointment"
     }
 }

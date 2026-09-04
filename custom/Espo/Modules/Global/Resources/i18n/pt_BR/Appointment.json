@@ -26,10 +26,12 @@
             "Not Held": "Não Comparecimento",
             "Canceled": "Cancelado"
         }
-        },
-        "labels": {
-            "Create Appointment": "Cadastrar Agendamento",
-            "Conversations": "Conversas",
-            "No Contact linked": "Nenhum Contato vinculado"
-        }
+    },
+    "labels": {
+        "Create Appointment": "Cadastrar Agendamento",
+        "Conversations": "Conversas",
+        "No Contact linked": "Nenhum Contato vinculado",
+        "Schedule Appointment": "Marcar Agendamento",
+        "Log Appointment": "Logar Agendamento"
+    }
 }

@@ -9,7 +9,7 @@
 import RelationshipPanelView from "views/record/panels/relationship";
 
 /**
- * Relationship panel used by the Chatwoot "Agendamentos" dashboard app tab.
+ * Relationship panel used by the ChatwootConversation detail side panels.
  *
  * Overrides the panel title so its icon matches the standard detail panel
  * style (`panel-icon`, single space before the label) instead of the default

@@ -54,6 +54,11 @@ export interface BaseOptions {
      */
     inlineEditDisabled?: boolean;
     /**
+     * Enable inline edit in the list mode. Inline edit in the detail mode is enabled
+     * by default; in the list mode it must be explicitly enabled by the record list view.
+     */
+    inlineEditEnabled?: boolean;
+    /**
      * Is read-only.
      */
     readOnly?: boolean;
@@ -344,6 +349,11 @@ export default class BaseFieldView<
     protected dataObject: Record<string, any>
 
     private _isInlineEditMode: boolean = false
+
+    /**
+     * A read mode to be restored when the inline-edit mode is closed.
+     */
+    private _inlineEditReadMode: Mode | null = null
 
     /**
      * @internal
@@ -876,7 +886,7 @@ export default class BaseFieldView<
             this.initTooltip();
         }
 
-        if (this.isDetailMode()) {
+        if (this.isDetailMode() || (this.isListMode() && this.options.inlineEditEnabled)) {
             if (!this.inlineEditDisabled) {
                 this.listenToOnce(this, 'after:render', () => this.initInlineEdit());
             }
@@ -1119,7 +1129,7 @@ export default class BaseFieldView<
                 return;
             }
 
-            if (this.isDetailMode()) {
+            if (this.isReadMode()) {
                 edit.classList.remove('hidden');
             }
         });
@@ -1127,13 +1137,13 @@ export default class BaseFieldView<
         cell.addEventListener('mouseleave', e => {
             e.stopPropagation();
 
-            if (this.isDetailMode()) {
+            if (this.isReadMode()) {
                 edit.classList.add('hidden');
             }
         });
 
         this.on('after:render', () => {
-            if (!this.isDetailMode()) {
+            if (!this.isReadMode()) {
                 edit.classList.add('hidden');
             }
         });
@@ -1247,7 +1257,7 @@ export default class BaseFieldView<
             return;
         }
 
-        // Code below supposed not to be executed.
+        // Executed when there's no record helper (e.g. inline edit in a list view).
 
         let data = this.fetch();
 
@@ -1270,7 +1280,11 @@ export default class BaseFieldView<
         }
 
         if (!attrs) {
-            this.inlineEditClose();
+            if (!options.bypassClose) {
+                this.inlineEditClose();
+            }
+
+            return;
         }
 
         const isInvalid = this.validateCallback ? this.validateCallback() : this.validate();
@@ -1293,6 +1307,10 @@ export default class BaseFieldView<
                 this.trigger('after:save');
 
                 model.trigger('after:save');
+
+                if (options.bypassClose) {
+                    this.initialAttributes = model.getClonedAttributes();
+                }
 
                 Ui.success(this.translate('Saved'));
             })
@@ -1367,6 +1385,10 @@ export default class BaseFieldView<
 
         this._isInlineEditMode = false;
 
+        const readMode = this._inlineEditReadMode ?? this.MODE_DETAIL;
+
+        this._inlineEditReadMode = null;
+
         if (!this.isEditMode()) {
             return Promise.resolve();
         }
@@ -1378,7 +1400,7 @@ export default class BaseFieldView<
             });
         }
 
-        const promise = this.setDetailMode()
+        const promise = this.setMode(readMode)
             .then(() => this.reRender(true))
             .then(() => this.removeInlineEditLinks());
 
@@ -1403,6 +1425,7 @@ export default class BaseFieldView<
         this.initialAttributes = this.model.getClonedAttributes();
 
         this._isInlineEditMode = true;
+        this._inlineEditReadMode = this.isReadMode() ? this.mode ?? this.MODE_DETAIL : this.MODE_DETAIL;
 
         this.trigger('inline-edit-on');
 
