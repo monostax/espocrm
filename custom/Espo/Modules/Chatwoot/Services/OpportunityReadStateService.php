@@ -136,6 +136,22 @@ class OpportunityReadStateService
         return $this->getReadState($id);
     }
 
+    /** One-time migration baseline; never move a newer read cutoff backwards. */
+    public function initializeReadBaseline(
+        string $id,
+        string $userId,
+        string $timestamp,
+        int $number,
+        bool $isParticipant,
+    ): void {
+        $this->withState($id, $userId, function (Entity $state) use ($timestamp, $number, $isParticipant): void {
+            if ($isParticipant) {
+                $state->set('isParticipant', true);
+            }
+            $this->advance($state, $timestamp, $number);
+        });
+    }
+
     /** Participation is explicit. Neither viewing nor marking unread sets this flag. */
     public function addParticipant(
         string $id,

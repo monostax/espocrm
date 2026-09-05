@@ -4,23 +4,28 @@ declare(strict_types=1);
 
 namespace Espo\Modules\Chatwoot\Rebuild;
 
+use Espo\Core\Acl;
+use Espo\Core\InjectableFactory;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Config\ConfigWriter;
+use Espo\Core\Utils\SystemUser;
 use Espo\Entities\Note;
+use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityPostMentions;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
 use Espo\ORM\EntityManager;
+use RuntimeException;
 
 /** Runs after the normal metadata schema rebuild, never during an API request. */
 class BackfillOpportunityReadStates implements RebuildAction
 {
     private const FLAG = 'opportunityReadStatesBackfilledAt';
+    private const CUTOFF = 'opportunityReadStatesBackfillCutoff';
 
     public function __construct(
         private EntityManager $entityManager,
-        private OpportunityReadStateService $service,
-        private OpportunityPostMentions $mentions,
+        private InjectableFactory $injectableFactory,
         private Config $config,
         private ConfigWriter $configWriter,
     ) {}
@@ -30,9 +35,37 @@ class BackfillOpportunityReadStates implements RebuildAction
         if ($this->config->get(self::FLAG)) {
             return;
         }
+
+        // Rebuild runs with noSystemUser=true and constructs every action before
+        // processing any of them. Resolve these user-dependent helpers only now,
+        // after the core AddSystemUser action, with an explicit local context.
+        // Do not replace the application's current user or its cached ACL service.
+        $user = $this->entityManager->getRDBRepositoryByClass(User::class)
+            ->where(['userName' => SystemUser::NAME])->findOne();
+        if (!$user) {
+            throw new RuntimeException('System user is not found.');
+        }
+        $user->setType(User::TYPE_SYSTEM);
+        $acl = $this->injectableFactory->createWith(Acl::class, ['user' => $user]);
+        $service = $this->injectableFactory->createWith(OpportunityReadStateService::class, [
+            'user' => $user, 'acl' => $acl,
+        ]);
+        $mentions = $this->injectableFactory->createWith(OpportunityPostMentions::class, ['acl' => $acl]);
+
         $this->removeLegacyIndexes();
-        $timestamp = gmdate('Y-m-d H:i:s');
-        $number = (int) $this->entityManager->getRDBRepository('Note')->max('number');
+        // Persist the boundary before touching personal state. A retry must not
+        // consume posts created after this migration first started.
+        $cutoff = $this->config->get(self::CUTOFF);
+        if (!$cutoff) {
+            $cutoff = [
+                'timestamp' => gmdate('Y-m-d H:i:s'),
+                'number' => (int) $this->entityManager->getRDBRepository('Note')->max('number'),
+            ];
+            $this->configWriter->set(self::CUTOFF, $cutoff);
+            $this->configWriter->save();
+        }
+        $timestamp = $cutoff['timestamp'];
+        $number = $cutoff['number'];
         $afterId = '';
         do {
             $opportunities = $this->entityManager->getRDBRepository('Opportunity')
@@ -55,7 +88,7 @@ class BackfillOpportunityReadStates implements RebuildAction
                     ])->order('number')->limit(0, 200)->find();
                     foreach ($posts as $post) {
                         $afterNumber = (int) $post->get('number');
-                        $mentionedIds = $this->mentions->resolve($post);
+                        $mentionedIds = $mentions->resolve($post);
                         $post->set('opportunityMentionUserIds', $mentionedIds);
                         // Do not touch modifiedAt or replay author/notification hooks for old posts.
                         $this->entityManager->saveEntity($post, ['skipAll' => true]);
@@ -63,14 +96,22 @@ class BackfillOpportunityReadStates implements RebuildAction
                     }
                 } while (count($posts) === 200);
 
+                $participantIds = array_fill_keys(array_filter($users), true);
+                // Include existing personal rows even for viewers who are not
+                // participants. Clear historical unread without enrolling them.
+                foreach ($this->entityManager->getRDBRepository('OpportunityReadState')
+                    ->where(['opportunityId' => $id])->find() as $state) {
+                    $users[] = $state->get('userId');
+                }
                 $users = array_values(array_unique(array_filter($users)));
                 if (!$users) {
                     continue;
                 }
                 foreach ($this->entityManager->getRDBRepository('User')->where(['id' => $users])->find() as $user) {
                     if ($user->isRegular() || $user->isAdmin()) {
-                        // Existing read/unread cutoffs survive repeated/partially completed rebuilds.
-                        $this->service->addParticipant($id, $user->getId(), $timestamp, $number, true);
+                        $service->initializeReadBaseline(
+                            $id, $user->getId(), $timestamp, $number, isset($participantIds[$user->getId()]),
+                        );
                     }
                 }
             }

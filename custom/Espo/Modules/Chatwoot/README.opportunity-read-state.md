@@ -9,10 +9,19 @@ is intentionally no schema creation or silent fallback in API requests.
 
 `BackfillOpportunityReadStates` then normalizes existing mentions and initializes
 assignees, stream subscribers, Post authors and mentioned users at the deployment
-cutoff. It processes history in pages and preserves existing personal cutoffs.
+cutoff. All historical posts start as read, including for existing personal
+rows; viewers are not enrolled as participants just to initialize their state.
+It processes history in pages and never moves a newer personal cutoff backwards.
+The cutoff is persisted before processing so retries cannot mark later posts as
+read. Only posts after that fixed boundary contribute new unread counts.
 The `opportunityReadStatesBackfilledAt` config flag makes this a one-time action;
 a partially completed run can safely be retried. Do not delete the flag to reset
-users' read state.
+users' read state. Subsequent deployments do not reset personal read/unread choices.
+
+The rebuild CLI deliberately has no current user. The backfill resolves its
+user-dependent helpers lazily, after the core system-user action, and supplies
+an explicit system user and ACL only to those helpers. It does not change the
+application's current user or the authorization context used by API requests.
 
 ## Semantics
 
