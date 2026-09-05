@@ -1,0 +1,4 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\FeatureSimpleJourney\\Classes\\Acl\\AccessChecker",
+    "ownershipCheckerClassName": "Espo\\Modules\\FeatureSimpleJourney\\Classes\\Acl\\OwnershipChecker"
+}

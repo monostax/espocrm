@@ -1,0 +1,29 @@
+{
+    "fields": { "isActive": "Active", "tenant": "Tenant" },
+    "links": { "stages": "Stages", "records": "Records" },
+    "labels": { "Create SimpleJourney": "Create Journey" },
+    "presetFilters": { "active": "Active" },
+    "messages": {
+        "cannotChangeRecord": "A parent link cannot be moved to another journey record.",
+        "recordRequired": "Select an existing journey record.",
+        "linkJourneyMismatch": "The link must belong to the record's journey.",
+        "selfParent": "A journey record cannot be its own parent.",
+        "duplicateParent": "This related record is already linked to the journey record.",
+        "cannotReparent": "A stage or record cannot be reassigned to another journey.",
+        "journeyRequired": "Select an existing journey with an owning tenant.",
+        "tenantMismatch": "The tenant must match the journey tenant.",
+        "notAccessible": "The selected record is not accessible.",
+        "teamsRequired": "Select teams belonging to one tenant.",
+        "teamsMismatch": "Every journey team must belong to the same tenant.",
+        "cannotChangeTenant": "A journey cannot be moved to another tenant.",
+        "stageMismatch": "The selected stage must belong to the selected journey.",
+        "inactiveEntry": "Records can only enter active journeys and stages.",
+        "invalidStatus": "Status must be On Hold, To Do, Doing or Done.",
+        "unsupportedTarget": "Unsupported related record type.",
+        "targetTenantMismatch": "The related record must belong to the journey tenant.",
+        "assigneeTenantMismatch": "The assigned user must belong to the journey tenant.",
+        "journeyInUse": "This journey has stages or records. Deactivate it instead of deleting it.",
+        "stageInUse": "This stage has records. Deactivate it instead of deleting it.",
+        "useRecordFields": "Update the record fields instead of linking or unlinking this relationship."
+    }
+}

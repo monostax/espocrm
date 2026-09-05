@@ -1,0 +1,8 @@
+{
+    "fields": { "journey": "Jornada", "stage": "Etapa", "status": "Status na Etapa", "tenant": "Workspace" },
+    "links": { "journey": "Jornada", "stage": "Etapa", "parents": "Registros Relacionados" },
+    "labels": { "Create SimpleJourneyRecord": "Criar Registro de Jornada" },
+    "options": { "status": { "On Hold": "Pausado", "To Do": "Pendente", "Doing": "Em Andamento", "Done": "Concluído" } },
+    "messages": { "selectJourneyFirst": "Selecione uma jornada antes de escolher uma etapa." },
+    "tooltips": { "status": "Progresso na etapa atual. Ao mudar de etapa, o status volta para Pendente. Concluído não move o registro." }
+}

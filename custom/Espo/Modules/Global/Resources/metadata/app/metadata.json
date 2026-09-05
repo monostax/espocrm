@@ -1,6 +1,7 @@
 {
     "additionalBuilderClassNameList": [
-        "Espo\\Modules\\Global\\Core\\Utils\\Metadata\\AdditionalBuilder\\AdminForUserPanel"
+        "Espo\\Modules\\Global\\Core\\Utils\\Metadata\\AdditionalBuilder\\AdminForUserPanel",
+        "Espo\\Modules\\Global\\Core\\Utils\\Metadata\\AdditionalBuilder\\UserAssignedOpportunities"
     ]
 }
 

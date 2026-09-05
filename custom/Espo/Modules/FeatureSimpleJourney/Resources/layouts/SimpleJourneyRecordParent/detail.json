@@ -1,0 +1,9 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "record"}, {"name": "parent"}],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    }
+]

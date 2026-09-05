@@ -1,0 +1,6 @@
+{
+    "fields": { "journey": "Jornada", "order": "Ordem", "isActive": "Ativa", "tenant": "Workspace" },
+    "links": { "journey": "Jornada", "records": "Registros" },
+    "labels": { "Create SimpleJourneyStage": "Criar Etapa" },
+    "presetFilters": { "active": "Ativas" }
+}

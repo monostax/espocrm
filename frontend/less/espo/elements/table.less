@@ -187,28 +187,10 @@ table td {
     }
 }
 
-// Inline edit in list rows.
+// Inline edit link in list rows. The field view element is the cell itself.
 .table > tbody > tr.list-row > td.cell {
     > .inline-edit-link {
         margin-left: var(--6px);
         line-height: inherit;
-    }
-
-    > .inline-save-link,
-    > .inline-cancel-link {
-        line-height: var(--input-height-base);
-    }
-
-    > .inline-cancel-link {
-        margin-left: var(--8px);
-    }
-
-    &:has(> .inline-save-link) {
-        // Keep inputs from being squeezed by the floated action links.
-        min-width: calc(var(--26px) * 5);
-
-        > .field {
-            overflow: hidden;
-        }
     }
 }

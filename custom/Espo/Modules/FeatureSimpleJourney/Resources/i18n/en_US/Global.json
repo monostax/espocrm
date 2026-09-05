@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "SimpleJourney": "Simple Journey",
+        "SimpleJourneyStage": "Simple Journey Stage",
+        "SimpleJourneyRecord": "Simple Journey Record",
+        "SimpleJourneyRecordParent": "Journey Record Link"
+    },
+    "scopeNamesPlural": {
+        "SimpleJourney": "Simple Journeys",
+        "SimpleJourneyStage": "Simple Journey Stages",
+        "SimpleJourneyRecord": "Simple Journey Records",
+        "SimpleJourneyRecordParent": "Journey Record Links"
+    },
+    "labels": { "Simple Journeys": "Simple Journeys" }
+}

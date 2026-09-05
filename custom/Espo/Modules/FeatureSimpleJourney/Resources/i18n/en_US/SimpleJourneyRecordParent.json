@@ -1,0 +1,5 @@
+{
+    "fields": { "record": "Journey Record", "parent": "Related Record", "journey": "Journey", "tenant": "Tenant" },
+    "links": { "record": "Journey Record", "parent": "Related Record", "journey": "Journey", "tenant": "Tenant" },
+    "labels": { "Create SimpleJourneyRecordParent": "Add Related Record" }
+}

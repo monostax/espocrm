@@ -1,0 +1,13 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-tasks",
+    "boolFilterList": ["onlyMy"],
+    "kanbanViewMode": true,
+    "relationshipPanels": {
+        "parents": {
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": { "recordId": "id", "recordName": "name" }
+        }
+    }
+}

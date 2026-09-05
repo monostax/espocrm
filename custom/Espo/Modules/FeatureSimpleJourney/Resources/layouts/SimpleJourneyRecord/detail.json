@@ -1,0 +1,11 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "journey"}],
+            [{"name": "stage"}, {"name": "status"}],
+            [{"name": "assignedUser"}, false],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    }
+]

@@ -1,0 +1,15 @@
+{
+    "entity": true,
+    "object": true,
+    "layouts": true,
+    "tab": true,
+    "acl": "team",
+    "aclPortal": false,
+    "customizable": true,
+    "importable": true,
+    "stream": true,
+    "statusField": "status",
+    "kanbanOrderDisabled": true,
+    "type": "Base",
+    "module": "FeatureSimpleJourney"
+}

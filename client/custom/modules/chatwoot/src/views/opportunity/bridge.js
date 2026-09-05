@@ -7,13 +7,16 @@
  ************************************************************************/
 
 import View from "view";
+import ViewRecordHelper from "view-record-helper";
 
 /**
- * Bridge view for the Opportunity dashboard app tab.
+ * Bridge view for the "Oportunidades" (Opportunity) dashboard app tab.
  *
  * Listens for Chatwoot appContext, resolves the ChatwootConversation
- * entity by chatwootConversationId, and navigates to the related
- * Opportunity list for that conversation.
+ * entity by chatwootConversationId, and renders its "Opportunities"
+ * relationship panel inline (same panel as the ChatwootConversation
+ * detail view: create / select / unlink row actions, `listSmallChatwoot`
+ * layout).
  */
 class OpportunityBridgeView extends View {
     template = "chatwoot:chatwoot-conversation/bridge";
@@ -21,17 +24,17 @@ class OpportunityBridgeView extends View {
     /** Dashboard app id this bridge reports its count for. */
     dashboardAppId = "fixed-opportunity";
 
-    /** Related links whose totals are summed into the tab count. */
-    countLinkList = ["opportunities"];
+    /** Panel (= ChatwootConversation link) rendered inline and used for the tab count. */
+    panelName = "opportunities";
 
-    /** @type {'loading'|'not-found'|'error'} */
+    /** @type {'loading'|'not-found'|'error'|'ready'} */
     bridgeState = "loading";
 
     /** @type {string} */
     errorMessage = "";
 
-    /** @type {number|null} */
-    lastChatwootConversationId = null;
+    /** Last rendered context, e.g. "conversation:123". */
+    lastContextKey = null;
 
     setup() {
         this._boundMessageHandler = this._onMessage.bind(this);
@@ -89,120 +92,173 @@ class OpportunityBridgeView extends View {
         const accountId = parsed.data.conversation?.account_id;
 
         if (!conversationId) {
-            this.bridgeState = "not-found";
-            this.errorMessage = "No conversation ID received from Chatwoot.";
-            if (this.isRendered()) {
-                this.reRender();
-            }
+            this._setState("not-found", "No conversation ID received from Chatwoot.");
             return;
         }
 
-        // Avoid re-fetching if same conversation
-        if (conversationId === this.lastChatwootConversationId) {
-            return;
-        }
-
-        this.lastChatwootConversationId = conversationId;
-        this._lookupAndNavigate(conversationId, accountId);
+        this._handleContext(`conversation:${conversationId}`, () =>
+            this._lookupConversationAndRender(conversationId, accountId),
+        );
     }
 
     /**
-     * Look up the ChatwootConversation entity and navigate to its
-     * related Opportunity list.
-     * @param {number} chatwootConversationId
-     * @param {number|undefined} chatwootAccountId
+     * Run `render` unless the same context is already displayed.
+     * @param {string} key
+     * @param {function(): Promise<void>} render
      */
-    async _lookupAndNavigate(chatwootConversationId, chatwootAccountId) {
-        this.bridgeState = "loading";
+    async _handleContext(key, render) {
+        if (key === this.lastContextKey) {
+            return;
+        }
+
+        this.lastContextKey = key;
+
+        this._setState("loading");
+
+        try {
+            await render();
+        } catch (e) {
+            console.error("OpportunityBridge: Failed to load record:", e);
+            this._setState("error", "Failed to load conversation from CRM.");
+        }
+    }
+
+    /**
+     * Update the bridge state and re-render the shell.
+     * @param {'loading'|'not-found'|'error'|'ready'} state
+     * @param {string} [message]
+     */
+    _setState(state, message) {
+        this.bridgeState = state;
+        this.errorMessage = message || "";
+
         if (this.isRendered()) {
             this.reRender();
         }
-
-        try {
-            const where = [
-                {
-                    type: "equals",
-                    attribute: "chatwootConversationId",
-                    value: chatwootConversationId,
-                },
-            ];
-
-            if (chatwootAccountId) {
-                where.push({
-                    type: "equals",
-                    attribute: "chatwootAccountIdExternal",
-                    value: chatwootAccountId,
-                });
-            }
-
-            const response = await Espo.Ajax.getRequest("ChatwootConversation", {
-                where,
-                maxSize: 1,
-                select: "id",
-            });
-
-            if (!response.list || response.list.length === 0) {
-                this.bridgeState = "not-found";
-                this.errorMessage = `Conversation #${chatwootConversationId} not found in CRM.`;
-                if (this.isRendered()) {
-                    this.reRender();
-                }
-                return;
-            }
-
-            const entityId = response.list[0].id;
-
-            this._postCount(entityId);
-
-            // Navigate to the related Opportunity list for this conversation
-            this.getRouter().navigate(
-                `#ChatwootConversation/related/${entityId}/opportunities`,
-                { trigger: true },
-            );
-        } catch (e) {
-            console.error(
-                "OpportunityBridge: Failed to look up conversation:",
-                e,
-            );
-            this.bridgeState = "error";
-            this.errorMessage = "Failed to load conversation from CRM.";
-            if (this.isRendered()) {
-                this.reRender();
-            }
-        }
     }
 
     /**
-     * Fetch the total of each related link, sum them, and post the
-     * result to the Chatwoot parent window so it can render a tab badge.
-     * @param {string} entityId
+     * Look up the ChatwootConversation by its Chatwoot ids and render its
+     * Opportunities panel.
+     * @param {number} chatwootConversationId
+     * @param {number|undefined} chatwootAccountId
      */
-    async _postCount(entityId) {
-        try {
-            const totals = await Promise.all(
-                this.countLinkList.map(async (link) => {
-                    const res = await Espo.Ajax.getRequest(
-                        `ChatwootConversation/${entityId}/${link}`,
-                        { maxSize: 1, select: "id" },
-                    );
+    async _lookupConversationAndRender(chatwootConversationId, chatwootAccountId) {
+        const where = [
+            {
+                type: "equals",
+                attribute: "chatwootConversationId",
+                value: chatwootConversationId,
+            },
+        ];
 
-                    return res.total > 0 ? res.total : 0;
-                }),
+        if (chatwootAccountId) {
+            where.push({
+                type: "equals",
+                attribute: "chatwootAccountIdExternal",
+                value: chatwootAccountId,
+            });
+        }
+
+        const response = await Espo.Ajax.getRequest("ChatwootConversation", {
+            where,
+            maxSize: 1,
+            select: "id",
+        });
+
+        if (!response.list || response.list.length === 0) {
+            this._setState(
+                "not-found",
+                `Conversation #${chatwootConversationId} not found in CRM.`,
             );
+            return;
+        }
 
-            const count = totals.reduce((sum, total) => sum + total, 0);
+        await this._renderPanels("ChatwootConversation", response.list[0].id);
+    }
 
+    /**
+     * Post the related-records total to the Chatwoot parent window so it
+     * can render a tab badge.
+     * @param {number} count
+     */
+    _postCount(count) {
+        try {
             window.parent.postMessage(
                 JSON.stringify({
                     event: "dashboardAppCount",
                     appId: this.dashboardAppId,
-                    count,
+                    count: count > 0 ? count : 0,
                 }),
                 "*",
             );
         } catch (e) {
             console.error("OpportunityBridge: Failed to post count:", e);
         }
+    }
+
+    /**
+     * Load the record and render its Opportunities panel.
+     * @param {string} entityType
+     * @param {string} entityId
+     */
+    async _renderPanels(entityType, entityId) {
+        const model = await this.getModelFactory().create(entityType);
+
+        model.id = entityId;
+
+        await model.fetch();
+
+        this._setState("ready");
+
+        const panelsView = await this.createView(
+            "panels",
+            "chatwoot:views/opportunity/panels",
+            {
+                model,
+                scope: entityType,
+                selector: ".bridge-detail-container",
+                type: "detail",
+                readOnly: false,
+                recordHelper: new ViewRecordHelper(),
+                recordViewObject: this,
+            },
+        );
+
+        await panelsView.render();
+
+        this._syncCount(panelsView);
+    }
+
+    /**
+     * Keep the tab badge in sync with the panel's collection: the panel
+     * re-fetches after create / select / unlink, and every fetch carries
+     * the related total.
+     * @param {import('views/record/panels-container').default} panelsView
+     */
+    _syncCount(panelsView) {
+        if (this._countCollection) {
+            this.stopListening(this._countCollection);
+            this._countCollection = null;
+        }
+
+        const panelView = panelsView.getPanelView(this.panelName);
+        const collection = panelView?.collection;
+
+        if (!collection) {
+            return;
+        }
+
+        this._countCollection = collection;
+
+        const post = () => this._postCount(collection.total);
+
+        // Already fetched (unlikely race with the panel's first fetch).
+        if (collection.lastSyncPromise?.getReadyState() === 4) {
+            post();
+        }
+
+        this.listenTo(collection, "sync", post);
     }
 }
 

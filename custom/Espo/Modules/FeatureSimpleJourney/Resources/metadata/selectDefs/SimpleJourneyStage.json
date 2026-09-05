@@ -1,0 +1,10 @@
+{
+    "primaryFilterClassNameMap": {
+        "active": "Espo\\Modules\\FeatureSimpleJourney\\Classes\\Select\\Active"
+    },
+    "accessControlFilterClassNameMap": {
+        "mandatory": "Espo\\Modules\\FeatureSimpleJourney\\Classes\\Select\\AccessibleJourney",
+        "onlyTeam": "Espo\\Core\\Select\\AccessControl\\Filters\\Mandatory",
+        "onlyOwn": "Espo\\Core\\Select\\AccessControl\\Filters\\OnlyOwn"
+    }
+}

@@ -9,9 +9,13 @@
 import DetailBottomRecordView from "views/record/detail-bottom";
 
 /**
- * Renders the "Atividades (Planejadas)" and "Atividades (Realizadas)"
- * panels for a record, without the record header/fields or the stream
- * panel — same layout as the Opportunity side panels.
+ * Renders a fixed subset of a record's `sidePanels.detail` panels, without
+ * the record header/fields or the stream panel — same layout as the record
+ * detail side panels.
+ *
+ * By default it shows the "Atividades (Planejadas)" / "Atividades (Realizadas)"
+ * panels. Subclasses (or the `panelNameList` option) pick other panels,
+ * e.g. `chatwoot:views/opportunity/panels` shows only `opportunities`.
  *
  * The panel views are taken from the scope's `sidePanels.detail` clientDefs
  * (falling back to `app.clientRecord.panels`), so e.g. Opportunity uses
@@ -25,8 +29,8 @@ class ActivitiesPanelsView extends DetailBottomRecordView {
     // No stream panel for this embedded, focused view.
     streamPanel = false;
 
-    // Panels to show, in display order.
-    activityPanelNameList = ["activities", "history"];
+    // Panels to show, in display order. Overridable via `options.panelNameList`.
+    panelNameList = ["activities", "history"];
 
     // Per-scope panel view overrides.
     panelViewMap = {
@@ -47,7 +51,9 @@ class ActivitiesPanelsView extends DetailBottomRecordView {
 
         this.setupInitial();
 
-        this.activityPanelNameList.forEach((name) => {
+        const panelNameList = this.options.panelNameList || this.panelNameList;
+
+        panelNameList.forEach((name) => {
             const p = this.getActivityPanelDefs(name);
 
             if (p.aclScope && !this.getAcl().checkScope(p.aclScope)) {

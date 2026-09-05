@@ -1,0 +1,29 @@
+{
+    "fields": { "isActive": "Ativa", "tenant": "Workspace" },
+    "links": { "stages": "Etapas", "records": "Registros" },
+    "labels": { "Create SimpleJourney": "Criar Jornada" },
+    "presetFilters": { "active": "Ativas" },
+    "messages": {
+        "cannotChangeRecord": "Um vínculo não pode ser transferido para outro registro de jornada.",
+        "recordRequired": "Selecione um registro de jornada existente.",
+        "linkJourneyMismatch": "O vínculo deve pertencer à jornada do registro.",
+        "selfParent": "Um registro de jornada não pode ser relacionado a si mesmo.",
+        "duplicateParent": "Este registro relacionado já está vinculado ao registro da jornada.",
+        "cannotReparent": "Uma etapa ou registro não pode ser transferido para outra jornada.",
+        "journeyRequired": "Selecione uma jornada existente vinculada a um workspace.",
+        "tenantMismatch": "O workspace deve ser o mesmo da jornada.",
+        "notAccessible": "Você não tem acesso ao registro selecionado.",
+        "teamsRequired": "Selecione equipes pertencentes a um único workspace.",
+        "teamsMismatch": "Todas as equipes da jornada devem pertencer ao mesmo workspace.",
+        "cannotChangeTenant": "Uma jornada não pode ser transferida para outro workspace.",
+        "stageMismatch": "A etapa selecionada deve pertencer à jornada selecionada.",
+        "inactiveEntry": "Registros só podem entrar em jornadas e etapas ativas.",
+        "invalidStatus": "O status deve ser Pausado, Pendente, Em Andamento ou Concluído.",
+        "unsupportedTarget": "Tipo de registro relacionado não suportado.",
+        "targetTenantMismatch": "O registro relacionado deve pertencer ao workspace da jornada.",
+        "assigneeTenantMismatch": "O usuário responsável deve pertencer ao workspace da jornada.",
+        "journeyInUse": "Esta jornada possui etapas ou registros. Desative-a em vez de excluí-la.",
+        "stageInUse": "Esta etapa possui registros. Desative-a em vez de excluí-la.",
+        "useRecordFields": "Edite os campos do registro em vez de vincular ou desvincular este relacionamento."
+    }
+}

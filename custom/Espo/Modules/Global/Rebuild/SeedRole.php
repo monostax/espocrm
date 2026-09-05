@@ -297,6 +297,32 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // Simple journeys: operators work records; tenant admins configure stages.
+                'SimpleJourneyRecordParent' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
+                'SimpleJourney' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'SimpleJourneyStage' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
+                'SimpleJourneyRecord' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'no',
+                    'stream' => 'team',
+                ],
                 // FeatureJourney — agents can view journeys/records; authoring
                 // is tenant-admin (override below). Record/Log ACL delegates
                 // to parent Journey via AccessChecker.
@@ -1010,6 +1036,10 @@ class SeedRole implements RebuildAction
                 'TrackingSource' => (object)[],
                 'TrackingLink' => (object)[],
                 'Journey' => (object)[],
+                'SimpleJourney' => (object)[],
+                'SimpleJourneyStage' => (object)[],
+                'SimpleJourneyRecord' => (object)[],
+                'SimpleJourneyRecordParent' => (object)[],
                 'JourneyStage' => (object)[],
                 'JourneyStageAction' => (object)[],
                 'JourneyTransition' => (object)[],
@@ -1457,6 +1487,26 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
+                    ],
+
+                    'SimpleJourney' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'SimpleJourneyStage' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                    ],
+                    'SimpleJourneyRecord' => [
+                        'create' => 'yes',
+                        'read' => 'team',
+                        'edit' => 'team',
+                        'delete' => 'team',
+                        'stream' => 'team',
                     ],
 
                     // FeatureJourney — tenant-admin authors journeys/stages/

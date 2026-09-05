@@ -1,0 +1,19 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "fas fa-list-ol",
+    "filterList": ["active"],
+    "relationshipPanels": {
+        "records": {
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": {
+                "journeyId": "journeyId",
+                "journeyName": "journeyName",
+                "tenantId": "tenantId",
+                "tenantName": "tenantName",
+                "stageId": "id",
+                "stageName": "name"
+            }
+        }
+    }
+}

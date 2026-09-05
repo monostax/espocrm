@@ -1,0 +1,5 @@
+{
+    "earlyBeforeCreateHookClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Services\\Defaults"],
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Classes\\RecordHooks\\BlockRelationshipMutation"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Classes\\RecordHooks\\BlockRelationshipMutation"]
+}

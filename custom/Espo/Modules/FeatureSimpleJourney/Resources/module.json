@@ -1,0 +1,7 @@
+{
+    "order": 30,
+    "version": "1.0.0",
+    "name": "FeatureSimpleJourney",
+    "description": "Tenant-defined manual journeys with ordered stages and per-record stage progress.",
+    "jsTranspiled": true
+}

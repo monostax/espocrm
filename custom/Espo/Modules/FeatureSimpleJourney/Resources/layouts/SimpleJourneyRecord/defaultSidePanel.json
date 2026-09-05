@@ -1,0 +1,7 @@
+[
+    {"name": "tenant"},
+    {"name": "createdAt"},
+    {"name": "createdBy"},
+    {"name": "modifiedAt"},
+    {"name": "modifiedBy"}
+]

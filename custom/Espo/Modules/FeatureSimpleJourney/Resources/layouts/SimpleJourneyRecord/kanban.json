@@ -1,0 +1,6 @@
+[
+    {"name": "name", "link": true},
+    {"name": "journey", "link": true},
+    {"name": "stage", "link": true},
+    {"name": "assignedUser"}
+]

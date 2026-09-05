@@ -1,0 +1,6 @@
+{
+    "fields": { "journey": "Journey", "order": "Order", "isActive": "Active", "tenant": "Tenant" },
+    "links": { "journey": "Journey", "records": "Records" },
+    "labels": { "Create SimpleJourneyStage": "Create Stage" },
+    "presetFilters": { "active": "Active" }
+}

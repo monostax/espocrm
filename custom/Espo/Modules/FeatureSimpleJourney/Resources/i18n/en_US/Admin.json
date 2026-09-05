@@ -1,0 +1,11 @@
+{
+    "labels": { "Simple Journeys": "Simple Journeys", "Simple Journey Records": "Simple Journey Records" },
+    "descriptions": {
+        "simpleJourneys": "Configure custom stages for onboarding, payments and other manual processes.",
+        "simpleJourneyRecords": "Track records and their progress in the current stage."
+    },
+    "keywords": {
+        "simpleJourneys": "journey,onboarding,payment,process,stage",
+        "simpleJourneyRecords": "journey,record,progress,status"
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "labels": { "Simple Journeys": "Jornadas Simples", "Simple Journey Records": "Registros de Jornadas Simples" },
+    "descriptions": {
+        "simpleJourneys": "Configure etapas personalizadas para onboarding, pagamentos e outros processos manuais.",
+        "simpleJourneyRecords": "Acompanhe os registros e seu progresso na etapa atual."
+    },
+    "keywords": {
+        "simpleJourneys": "jornada,onboarding,pagamento,processo,etapa",
+        "simpleJourneyRecords": "jornada,registro,progresso,status"
+    }
+}

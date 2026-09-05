@@ -28,6 +28,7 @@
 
 import ListBaseRecordView, {ListBaseRecordViewOptions, ListBaseRecordViewSchema} from 'views/record/list-base';
 import Model from 'model';
+import Ui from 'ui';
 
 /**
  * Mass-action definitions.
@@ -266,8 +267,8 @@ class ListRecordView<
 > extends ListBaseRecordView<ColumnDefs[], S> {
 
     /**
-     * Disable inline edit of field cells. Can be overridden by an option parameter
-     * or by the `listInlineEditDisabled` clientDefs parameter.
+     * Disable editing of field cells (a pencil icon on hover opening an edit modal).
+     * Can be overridden by an option parameter or by the `listInlineEditDisabled` clientDefs parameter.
      */
     protected inlineEditDisabled: boolean = false
 
@@ -323,8 +324,60 @@ class ListRecordView<
                 return;
             }
 
-            item.options.inlineEditEnabled = this.isInlineEditEnabledForField(model, field);
+            if (!this.isInlineEditEnabledForField(model, field)) {
+                return;
+            }
+
+            item.options.inlineEditEnabled = true;
+            item.options.onInlineEdit = () => this.editField(model, field);
         });
+    }
+
+    /**
+     * Edit a field of a record in a modal. Only the changed attributes are saved.
+     *
+     * @param model A record model (from the collection).
+     * @param field A field name.
+     */
+    protected async editField(model: Model, field: string): Promise<void> {
+        const entityType = model.entityType || this.scope;
+        const id = model.id;
+
+        if (!entityType || !id) {
+            return;
+        }
+
+        Ui.notifyWait();
+
+        const viewName = this.getMetadata().get(['clientDefs', entityType, 'modalViews', 'editField']) ||
+            'views/modals/edit-field';
+
+        const view = await this.createView('editFieldModal', viewName, {
+            entityType: entityType,
+            id: id,
+            model: model,
+            field: field,
+        });
+
+        this.listenToOnce(view, 'remove', () => this.clearView('editFieldModal'));
+
+        this.listenTo(view, 'before:save', (m: Model) => {
+            this.trigger('before:save', m);
+        });
+
+        this.listenTo(view, 'after:save', (m: Model) => {
+            const rowModel = this.collection.get(m.id!);
+
+            if (rowModel) {
+                rowModel.setMultiple(m.getClonedAttributes(), {sync: true});
+            }
+
+            this.trigger('after:save', m);
+        });
+
+        await view.render();
+
+        Ui.notify(false);
     }
 
     /**

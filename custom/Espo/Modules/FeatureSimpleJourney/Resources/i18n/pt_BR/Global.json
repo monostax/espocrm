@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "SimpleJourney": "Jornada Simples",
+        "SimpleJourneyStage": "Etapa de Jornada Simples",
+        "SimpleJourneyRecord": "Registro de Jornada Simples",
+        "SimpleJourneyRecordParent": "Vínculo de Registro de Jornada"
+    },
+    "scopeNamesPlural": {
+        "SimpleJourney": "Jornadas Simples",
+        "SimpleJourneyStage": "Etapas de Jornadas Simples",
+        "SimpleJourneyRecord": "Registros de Jornadas Simples",
+        "SimpleJourneyRecordParent": "Vínculos de Registros de Jornada"
+    },
+    "labels": { "Simple Journeys": "Jornadas Simples" }
+}

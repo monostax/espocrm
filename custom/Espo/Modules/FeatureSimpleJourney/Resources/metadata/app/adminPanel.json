@@ -1,0 +1,20 @@
+{
+    "simpleJourneys": {
+        "label": "Simple Journeys",
+        "order": 29,
+        "itemList": [
+            {
+                "url": "#SimpleJourney",
+                "label": "Simple Journeys",
+                "iconClass": "fas fa-route",
+                "description": "simpleJourneys"
+            },
+            {
+                "url": "#SimpleJourneyRecord",
+                "label": "Simple Journey Records",
+                "iconClass": "fas fa-tasks",
+                "description": "simpleJourneyRecords"
+            }
+        ]
+    }
+}

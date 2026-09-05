@@ -1,0 +1,34 @@
+{
+    "deleteId": true,
+    "fields": {
+        "deleteId": { "type": "varchar", "maxLength": 17, "default": "0", "readOnly": true },
+        "name": { "type": "varchar", "readOnly": true },
+        "record": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "parent": {
+            "type": "linkParent",
+            "required": true,
+            "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "SimpleJourneyRecord"]
+        },
+        "description": { "type": "text" },
+        "journey": { "type": "link", "readOnly": true },
+        "tenant": { "type": "link", "readOnly": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
+    },
+    "links": {
+        "record": { "type": "belongsTo", "entity": "SimpleJourneyRecord", "foreign": "parents" },
+        "parent": { "type": "belongsToParent", "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "SimpleJourneyRecord"] },
+        "journey": { "type": "belongsTo", "entity": "SimpleJourney" },
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "createdAt", "order": "asc" },
+    "indexes": {
+        "uniqueParent": { "unique": true, "columns": ["recordId", "parentType", "parentId", "deleteId"] },
+        "parent": { "columns": ["parentType", "parentId", "deleted"] },
+        "journey": { "columns": ["journeyId", "deleted"] }
+    }
+}

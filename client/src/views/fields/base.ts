@@ -59,6 +59,11 @@ export interface BaseOptions {
      */
     inlineEditEnabled?: boolean;
     /**
+     * Called when the inline-edit action is invoked. If defined, the field does not switch
+     * to the inline-edit mode itself; the callback is responsible for the editing (e.g. in a modal).
+     */
+    onInlineEdit?: (view: BaseFieldView) => void;
+    /**
      * Is read-only.
      */
     readOnly?: boolean;
@@ -387,8 +392,15 @@ export default class BaseFieldView<
 
     /**
      * Get a cell element. Available only after the view is  rendered.
+     *
+     * In detail mode, the view element (`.field`) is nested in the cell.
+     * In list mode, the view element is the cell itself (`td.cell`).
      */
     private get$cell(): JQuery {
+        if (this.$el.hasClass('cell')) {
+            return this.$el;
+        }
+
         return this.$el.parent();
     }
 
@@ -1120,7 +1132,15 @@ export default class BaseFieldView<
 
         cell.prepend(edit);
 
-        edit.addEventListener('click', () => this.inlineEdit());
+        edit.addEventListener('click', () => {
+            if (this.options.onInlineEdit) {
+                this.options.onInlineEdit(this);
+
+                return;
+            }
+
+            this.inlineEdit();
+        });
 
         cell.addEventListener('mouseenter', e => {
             e.stopPropagation();
@@ -1143,6 +1163,16 @@ export default class BaseFieldView<
         });
 
         this.on('after:render', () => {
+            if (!cell.contains(edit)) {
+                // The cell is the view element itself (list mode). Re-rendering
+                // wipes its content, so the link has to be re-attached.
+                cell.prepend(edit);
+
+                const isHovered = cell.matches(':hover') && !this.disabled && !this.readOnly;
+
+                edit.classList.toggle('hidden', !isHovered);
+            }
+
             if (!this.isReadMode()) {
                 edit.classList.add('hidden');
             }

@@ -1,0 +1,8 @@
+{
+    "fields": { "journey": "Journey", "stage": "Stage", "status": "Stage Status", "tenant": "Tenant" },
+    "links": { "journey": "Journey", "stage": "Stage", "parents": "Related Records" },
+    "labels": { "Create SimpleJourneyRecord": "Create Journey Record" },
+    "options": { "status": { "On Hold": "On Hold", "To Do": "To Do", "Doing": "Doing", "Done": "Done" } },
+    "messages": { "selectJourneyFirst": "Select a journey before choosing a stage." },
+    "tooltips": { "status": "Progress in the current stage. Changing stage resets this to To Do; Done does not move the record." }
+}

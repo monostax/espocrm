@@ -1,0 +1,52 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "pattern": "$noBadCharacters",
+            "maxLength": 255,
+            "trim": true
+        },
+        "journey": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "stage": {
+            "type": "link",
+            "required": true,
+            "audited": true,
+            "view": "feature-simple-journey:views/fields/stage",
+            "layoutMassUpdateDisabled": true
+        },
+        "status": {
+            "type": "enum",
+            "options": ["On Hold", "To Do", "Doing", "Done"],
+            "default": "To Do",
+            "required": true,
+            "audited": true,
+            "displayAsLabel": true,
+            "tooltip": true,
+            "style": { "On Hold": "warning", "To Do": "default", "Doing": "primary", "Done": "success" }
+        },
+        "assignedUser": { "type": "link", "view": "views/fields/assigned-user", "audited": true },
+        "description": { "type": "text" },
+        "tenant": { "type": "link", "readOnly": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "journey": { "type": "belongsTo", "entity": "SimpleJourney", "foreign": "records" },
+        "stage": { "type": "belongsTo", "entity": "SimpleJourneyStage", "foreign": "records" },
+        "parents": { "type": "hasMany", "entity": "SimpleJourneyRecordParent", "foreign": "record" },
+        "assignedUser": { "type": "belongsTo", "entity": "User" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "createdAt", "order": "desc" },
+    "indexes": {
+        "journeyStageStatus": { "columns": ["journeyId", "stageId", "status", "deleted"] },
+        "stage": { "columns": ["stageId", "deleted"] },
+        "tenant": { "columns": ["tenantId", "deleted"] }
+    },
+    "cascadeDelete": { "links": ["parents"] }
+}

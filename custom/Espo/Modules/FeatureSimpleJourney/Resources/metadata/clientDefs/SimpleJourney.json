@@ -1,0 +1,20 @@
+{
+    "controller": "controllers/record",
+    "modelDefaultsPreparator": "global:handlers/tenant/defaults-preparator",
+    "iconClass": "fas fa-route",
+    "filterList": ["active"],
+    "relationshipPanels": {
+        "stages": {
+            "orderBy": "order",
+            "orderDirection": "asc",
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": { "journeyId": "id", "journeyName": "name", "tenantId": "tenantId", "tenantName": "tenantName" }
+        },
+        "records": {
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": { "journeyId": "id", "journeyName": "name", "tenantId": "tenantId", "tenantName": "tenantName" }
+        }
+    }
+}

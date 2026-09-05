@@ -1,0 +1,10 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "name"}, {"name": "journey"}],
+            [{"name": "order"}, {"name": "isActive"}],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    }
+]

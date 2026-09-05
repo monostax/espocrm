@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "pattern": "$noBadCharacters",
+            "maxLength": 100,
+            "trim": true
+        },
+        "description": { "type": "text" },
+        "isActive": { "type": "bool", "default": true },
+        "tenant": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "teams": { "type": "linkMultiple", "required": true, "view": "views/fields/teams" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "teams": { "type": "hasMany", "entity": "Team", "relationName": "entityTeam", "layoutRelationshipsDisabled": true },
+        "stages": { "type": "hasMany", "entity": "SimpleJourneyStage", "foreign": "journey" },
+        "records": { "type": "hasMany", "entity": "SimpleJourneyRecord", "foreign": "journey" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "name", "order": "asc" },
+    "indexes": {
+        "tenantActive": { "columns": ["tenantId", "isActive", "deleted"] }
+    }
+}
