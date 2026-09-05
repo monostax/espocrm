@@ -1,0 +1,7 @@
+{
+    "entity": true,
+    "object": false,
+    "acl": false,
+    "module": "Chatwoot",
+    "type": "Base"
+}

@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "opportunityChatwootAccountId": {
+            "type": "int",
+            "min": 1,
+            "readOnlyAfterCreate": true,
+            "utility": true
+        },
+        "opportunityMentionUserIds": {
+            "type": "jsonArray",
+            "readOnly": true,
+            "utility": true
+        }
+    },
+    "indexes": {
+        "opportunityUnread": {
+            "columns": ["parentType", "parentId", "type", "deleted", "number"]
+        }
+    }
+}

@@ -1,4 +1,5 @@
 {
+    "aclAttributeList": ["createdById", "createdAt", "tenantId"],
     "primaryFilterClassNameMap": {
         "active": "Espo\\Modules\\FeatureSimpleJourney\\Classes\\Select\\Active"
     },

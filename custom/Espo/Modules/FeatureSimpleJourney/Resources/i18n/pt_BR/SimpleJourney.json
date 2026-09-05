@@ -4,6 +4,7 @@
     "labels": { "Create SimpleJourney": "Criar Jornada" },
     "presetFilters": { "active": "Ativas" },
     "messages": {
+        "relationshipStubsDisabled": "Crie ou edite os registros vinculados pelos campos de jornada, etapa ou registro, e não por listas de IDs de relacionamentos.",
         "cannotChangeRecord": "Um vínculo não pode ser transferido para outro registro de jornada.",
         "recordRequired": "Selecione um registro de jornada existente.",
         "linkJourneyMismatch": "O vínculo deve pertencer à jornada do registro.",

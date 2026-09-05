@@ -1,5 +1,6 @@
 {
     "controller": "controllers/record",
+    "acl": "feature-simple-journey:acl",
     "modelDefaultsPreparator": "global:handlers/tenant/defaults-preparator",
     "iconClass": "fas fa-route",
     "filterList": ["active"],
@@ -9,12 +10,12 @@
             "orderDirection": "asc",
             "selectDisabled": true,
             "unlinkDisabled": true,
-            "createAttributeMap": { "journeyId": "id", "journeyName": "name", "tenantId": "tenantId", "tenantName": "tenantName" }
+            "createAttributeMap": { "id": "journeyId", "name": "journeyName", "tenantId": "tenantId", "tenantName": "tenantName" }
         },
         "records": {
             "selectDisabled": true,
             "unlinkDisabled": true,
-            "createAttributeMap": { "journeyId": "id", "journeyName": "name", "tenantId": "tenantId", "tenantName": "tenantName" }
+            "createAttributeMap": { "id": "journeyId", "name": "journeyName", "tenantId": "tenantId", "tenantName": "tenantName" }
         }
     }
 }

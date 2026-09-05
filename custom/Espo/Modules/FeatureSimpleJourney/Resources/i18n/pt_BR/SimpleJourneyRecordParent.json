@@ -1,5 +1,6 @@
 {
     "fields": { "record": "Registro da Jornada", "parent": "Registro Relacionado", "journey": "Jornada", "tenant": "Workspace" },
     "links": { "record": "Registro da Jornada", "parent": "Registro Relacionado", "journey": "Jornada", "tenant": "Workspace" },
-    "labels": { "Create SimpleJourneyRecordParent": "Adicionar Registro Relacionado" }
+    "labels": { "Create SimpleJourneyRecordParent": "Adicionar Registro Relacionado", "Remove Link": "Remover Vínculo" },
+    "messages": { "removeRecordConfirmation": "Remover este vínculo? O registro relacionado não será excluído." }
 }

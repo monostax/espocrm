@@ -1,0 +1,57 @@
+{
+    "fields": {
+        "id": {
+            "type": "id"
+        },
+        "user": {
+            "type": "link",
+            "required": true
+        },
+        "opportunity": {
+            "type": "link",
+            "required": true
+        },
+        "lastSeenAt": {
+            "type": "datetime"
+        },
+        "lastSeenNumber": {
+            "type": "int",
+            "dbType": "bigint"
+        },
+        "version": {
+            "type": "int",
+            "default": 0
+        },
+        "isParticipant": {
+            "type": "bool",
+            "default": false
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "opportunity": {
+            "type": "belongsTo",
+            "entity": "Opportunity"
+        }
+    },
+    "indexes": {
+        "userOpportunity": {
+            "columns": ["userId", "opportunityId", "deleted"],
+            "unique": true
+        },
+        "opportunity": {
+            "columns": ["opportunityId", "deleted"]
+        }
+    }
+}

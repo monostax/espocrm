@@ -1,4 +1,5 @@
 {
     "controller": "controllers/record",
+    "acl": "feature-simple-journey:acl",
     "iconClass": "fas fa-link"
 }

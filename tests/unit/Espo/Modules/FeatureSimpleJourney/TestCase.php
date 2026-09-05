@@ -16,6 +16,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         ], ['type' => 'varchar']);
         $attributes['isActive'] = ['type' => 'bool'];
         $attributes['teamsIds'] = ['type' => 'jsonArray'];
+        $attributes['simpleJourneyAccess'] = ['type' => 'jsonObject', 'notStorable' => true];
 
         $entity = new BaseEntity($type, ['attributes' => $attributes]);
         $entity->set($values);

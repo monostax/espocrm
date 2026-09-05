@@ -1,6 +1,16 @@
 {
     "deleteId": true,
     "fields": {
+        "simpleJourneyAccess": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "notStorable": true,
+            "utility": true,
+            "customizationDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": []
+        },
         "deleteId": { "type": "varchar", "maxLength": 17, "default": "0", "readOnly": true },
         "name": { "type": "varchar", "readOnly": true },
         "record": { "type": "link", "required": true, "readOnlyAfterCreate": true },

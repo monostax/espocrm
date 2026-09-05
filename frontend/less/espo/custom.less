@@ -4878,6 +4878,41 @@ html.is-chatwoot-opportunity {
     }
 }
 
+.chatwoot-activities-table {
+    overflow: visible;
+
+    // Override the shared list minimum width on narrow embedded panels.
+    > table,
+    > table + .show-more {
+        min-width: 0;
+    }
+
+    > table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    // Allow the native name/participant flex links to truncate within their cells.
+    td.cell a {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    td.cell {
+        position: relative;
+
+        // Keep the edit control above badges and links, even in narrow cells.
+        > .inline-edit-link {
+            position: absolute;
+            top: var(--table-cell-padding);
+            right: var(--table-cell-padding);
+            z-index: 1;
+            background-color: var(--table-bg);
+        }
+    }
+}
+
 /* End Iframe Embedding Styles */
 
 /* Chatwoot Avatar Styles */

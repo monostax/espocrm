@@ -233,6 +233,49 @@
             "action": "initiateConversation",
             "id": ":id"
         }
+    },
+    {
+        "route": "/Opportunity/action/readStates",
+        "method": "post",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "readStates"
+        }
+    },
+    {
+        "route": "/Opportunity/action/readStates",
+        "method": "get",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "readStates"
+        }
+    },
+    {
+        "route": "/Opportunity/:id/readState",
+        "method": "get",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "readState",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Opportunity/:id/readState",
+        "method": "post",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "markRead",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/Opportunity/:id/unread",
+        "method": "post",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "markUnread",
+            "id": ":id"
+        }
     }
 ]
 

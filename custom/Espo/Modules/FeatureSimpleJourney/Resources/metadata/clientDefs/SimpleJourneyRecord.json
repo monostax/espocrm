@@ -1,13 +1,15 @@
 {
     "controller": "controllers/record",
+    "acl": "feature-simple-journey:acl",
     "iconClass": "fas fa-tasks",
     "boolFilterList": ["onlyMy"],
     "kanbanViewMode": true,
     "relationshipPanels": {
         "parents": {
+            "rowActionsView": "feature-simple-journey:views/record-parent/row-actions",
             "selectDisabled": true,
             "unlinkDisabled": true,
-            "createAttributeMap": { "recordId": "id", "recordName": "name" }
+            "createAttributeMap": { "id": "recordId", "name": "recordName" }
         }
     }
 }

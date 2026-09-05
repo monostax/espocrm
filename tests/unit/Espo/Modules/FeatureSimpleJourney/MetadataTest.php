@@ -88,4 +88,16 @@ class MetadataTest extends TestCase
         $this->assertSame(['recordId', 'parentType', 'parentId', 'deleteId'], $parent['indexes']['uniqueParent']['columns']);
         $this->assertSame(['parents'], $record['cascadeDelete']['links']);
     }
+
+    public function testClientAccessFlagsAreServerOwnedAndRegisteredForEveryScope(): void
+    {
+        foreach (['SimpleJourney', 'SimpleJourneyStage', 'SimpleJourneyRecord', 'SimpleJourneyRecordParent'] as $type) {
+            $field = $this->json("metadata/entityDefs/$type.json")['fields']['simpleJourneyAccess'];
+            $this->assertTrue($field['readOnly']);
+            $this->assertTrue($field['notStorable']);
+            $this->assertTrue($field['importDisabled']);
+            $this->assertSame([], $field['layoutAvailabilityList']);
+            $this->assertSame('feature-simple-journey:acl', $this->json("metadata/clientDefs/$type.json")['acl']);
+        }
+    }
 }

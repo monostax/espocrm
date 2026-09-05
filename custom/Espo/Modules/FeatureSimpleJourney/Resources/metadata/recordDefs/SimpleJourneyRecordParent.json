@@ -1,5 +1,8 @@
 {
     "earlyBeforeCreateHookClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Hooks\\SimpleJourneyRecordParent\\ValidateParent"],
+    "readLoaderClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Classes\\FieldProcessing\\AccessLoader"],
+    "listLoaderClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Classes\\FieldProcessing\\AccessLoader"],
+    "loadAdditionalFieldsAfterUpdate": true,
     "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Classes\\RecordHooks\\BlockRelationshipMutation"],
     "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureSimpleJourney\\Classes\\RecordHooks\\BlockRelationshipMutation"]
 }

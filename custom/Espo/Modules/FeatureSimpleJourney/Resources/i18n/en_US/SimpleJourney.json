@@ -4,6 +4,7 @@
     "labels": { "Create SimpleJourney": "Create Journey" },
     "presetFilters": { "active": "Active" },
     "messages": {
+        "relationshipStubsDisabled": "Create or update children through their journey, stage or record fields, not relationship ID lists.",
         "cannotChangeRecord": "A parent link cannot be moved to another journey record.",
         "recordRequired": "Select an existing journey record.",
         "linkJourneyMismatch": "The link must belong to the record's journey.",

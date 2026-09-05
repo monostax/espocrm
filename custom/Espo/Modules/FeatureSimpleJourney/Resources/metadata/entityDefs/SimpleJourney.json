@@ -1,5 +1,15 @@
 {
     "fields": {
+        "simpleJourneyAccess": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "notStorable": true,
+            "utility": true,
+            "customizationDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": []
+        },
         "name": {
             "type": "varchar",
             "required": true,

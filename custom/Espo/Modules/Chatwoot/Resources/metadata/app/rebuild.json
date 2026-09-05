@@ -6,6 +6,7 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootAccount",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootUserEmailAddress",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillOpportunityVersionNumber",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillOpportunityReadStates",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootTenant",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChannelIdentities",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChannelIdentityTeams",

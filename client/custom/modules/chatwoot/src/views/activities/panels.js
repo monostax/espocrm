@@ -123,6 +123,10 @@ class ActivitiesPanelsView extends DetailBottomRecordView {
             p.view = view;
         }
 
+        if (["activities", "history"].includes(name)) {
+            p.recordListView = "chatwoot:views/activities/table";
+        }
+
         return p;
     }
 }

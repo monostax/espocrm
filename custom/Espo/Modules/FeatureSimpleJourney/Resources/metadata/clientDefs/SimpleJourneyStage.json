@@ -1,5 +1,6 @@
 {
     "controller": "controllers/record",
+    "acl": "feature-simple-journey:acl",
     "iconClass": "fas fa-list-ol",
     "filterList": ["active"],
     "relationshipPanels": {
@@ -11,8 +12,8 @@
                 "journeyName": "journeyName",
                 "tenantId": "tenantId",
                 "tenantName": "tenantName",
-                "stageId": "id",
-                "stageName": "name"
+                "id": "stageId",
+                "name": "stageName"
             }
         }
     }

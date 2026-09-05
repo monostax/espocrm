@@ -330,7 +330,9 @@ class ActivitiesPanelView extends RelationshipPanelView {
 
     afterRender() {
         const afterFetch = () => {
-            this.createView('list', 'views/record/list-expanded', {
+            const viewName = this.defs.recordListView || 'views/record/list-expanded';
+
+            this.createView('list', viewName, {
                 selector: '> .list-container',
                 pagination: false,
                 type: 'listRelationship',

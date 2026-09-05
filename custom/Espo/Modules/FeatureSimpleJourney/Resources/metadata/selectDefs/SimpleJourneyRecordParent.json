@@ -1,4 +1,5 @@
 {
+    "aclAttributeList": ["createdById", "createdAt", "recordId", "journeyId", "tenantId"],
     "accessControlFilterClassNameMap": {
         "mandatory": "Espo\\Modules\\FeatureSimpleJourney\\Classes\\Select\\AccessibleRecord",
         "onlyTeam": "Espo\\Core\\Select\\AccessControl\\Filters\\Mandatory",
