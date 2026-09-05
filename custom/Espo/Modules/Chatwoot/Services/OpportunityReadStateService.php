@@ -13,6 +13,8 @@ use Espo\Entities\User;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Condition as Cond;
+use Espo\ORM\Query\SelectBuilder;
 use Closure;
 
 class OpportunityReadStateService
@@ -23,6 +25,63 @@ class OpportunityReadStateService
         private Acl $acl,
         private UserTenantResolver $tenantResolver,
     ) {}
+
+    /** Filter before pagination, using the same personal cutoff as getReadStates. */
+    public function applyListFilter(SelectBuilder $queryBuilder, bool $onlyUnread): void
+    {
+        if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
+            !$this->acl->checkScope('Opportunity', 'stream')) {
+            throw new Forbidden();
+        }
+
+        // The record list applies read ACL; stream access and tenant membership
+        // must also hold, just as they do for the read-state endpoints.
+        if (!$this->user->isAdmin()) {
+            $queryBuilder->where(['tenantId' => $this->tenantResolver->resolveTenantIds($this->user)]);
+        }
+
+        $userId = $this->user->getId();
+        $mention = ['opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+        $posts = SelectBuilder::create()
+            ->from('Note', 'streamPost')
+            ->select('id')
+            ->where([
+                'parentType' => 'Opportunity',
+                'parentId:' => 'opportunity.id',
+                'type' => Note::TYPE_POST,
+                'OR' => [['createdById!=' => $userId], ['createdById' => null]],
+            ]);
+
+        if ($onlyUnread) {
+            $posts->join('OpportunityReadState', 'readState', [
+                'readState.opportunityId:' => 'streamPost.parentId',
+                'readState.userId' => $userId,
+                'readState.deleted' => false,
+            ])->where(['readState.lastSeenAt!=' => null])->where([
+                'OR' => [
+                    ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
+                    ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
+                ],
+            ])->where([
+                'OR' => [
+                    $mention,
+                    [
+                        'opportunity.status!=' => ['Won', 'Lost'],
+                        'OR' => [
+                            ['opportunity.assignedUserId' => null],
+                            ['opportunity.assignedUserId' => $userId],
+                            ['readState.isParticipant' => true],
+                        ],
+                    ],
+                ],
+            ]);
+        } else {
+            // Like the conversation Mentions inbox, retain read mentions too.
+            $posts->where($mention);
+        }
+
+        $queryBuilder->where(Cond::exists($posts->build()));
+    }
 
     /** @return array<string, array<string, mixed>> */
     public function getReadStates(array $ids): array

@@ -45,6 +45,12 @@ application's current user or the authorization context used by API requests.
   Only a successfully loaded, rendered Board tab can automatically mark posts
   read. Merely refreshing unchanged posts does not clear a manual unread from
   another device. Manual unread returns to the Opportunity list.
+- The Opportunity list accepts the `chatwootUnread` and `chatwootMentions`
+  primary filters. Filtering happens before pagination and respects read/stream
+  access and tenant membership. Unread uses the same personal cutoff and attention
+  rules as the cards; Mentions includes verified mentions of the current CRM user,
+  including already-read mentions. Rebuild CRM metadata before deploying the
+  corresponding Chatwoot sidebar links. No additional backfill is required.
 
 ## Verification
 

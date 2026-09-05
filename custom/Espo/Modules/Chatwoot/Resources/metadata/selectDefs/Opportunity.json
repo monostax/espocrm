@@ -1,0 +1,6 @@
+{
+    "primaryFilterClassNameMap": {
+        "chatwootUnread": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\PrimaryFilters\\Unread",
+        "chatwootMentions": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\PrimaryFilters\\Mentions"
+    }
+}
