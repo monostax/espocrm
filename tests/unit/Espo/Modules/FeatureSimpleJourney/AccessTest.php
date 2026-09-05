@@ -8,10 +8,13 @@ use Espo\Core\Acl;
 use Espo\Core\Acl\DefaultAccessChecker;
 use Espo\Core\Acl\ScopeData;
 use Espo\Core\AclManager;
+use Espo\Core\Select\SelectBuilder as RecordSelectBuilder;
+use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\FeatureSimpleJourney\Classes\Acl\AccessChecker;
 use Espo\Modules\FeatureSimpleJourney\Classes\Acl\OwnershipChecker;
 use Espo\Modules\FeatureSimpleJourney\Classes\Select\AccessibleJourney;
+use Espo\Modules\FeatureSimpleJourney\Classes\Select\AccessibleRecord;
 use Espo\Modules\Global\Tools\Acl\TeamsAccess;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\SelectBuilder;
@@ -123,5 +126,41 @@ class AccessTest extends TestCase
         $query = SelectBuilder::create()->from('SimpleJourney');
         (new AccessibleJourney('SimpleJourney', $user, $this->createMock(Acl::class)))->apply($query);
         $this->assertNull($query->build()->getWhere());
+    }
+
+    public function testParentLinksListUsesStrictSourceRecordAcl(): void
+    {
+        $user = $this->createMock(User::class);
+        $builder = $this->createMock(RecordSelectBuilder::class);
+        $builder->expects($this->once())->method('from')->with('SimpleJourneyRecord')->willReturnSelf();
+        $builder->expects($this->once())->method('forUser')->with($user)->willReturnSelf();
+        $builder->expects($this->once())->method('withStrictAccessControl')->willReturnSelf();
+        $builder->method('buildQueryBuilder')->willReturn(
+            SelectBuilder::create()->from('SimpleJourneyRecord')->where(['id' => ['readable-record']]),
+        );
+        $factory = $this->createMock(SelectBuilderFactory::class);
+        $factory->method('create')->willReturn($builder);
+        $query = SelectBuilder::create()->from('SimpleJourneyRecordParent');
+        (new AccessibleRecord($user, $factory))->apply($query);
+        $sourceQuery = $query->build()->getRaw()['whereClause']['recordId=s']->getRaw();
+        $this->assertSame(['readable-record'], $sourceQuery['whereClause']['id']);
+        $this->assertSame(['id'], $sourceQuery['select']);
+    }
+
+    public function testDeletingParentLinkRequiresEditAccessToSourceRecord(): void
+    {
+        $base = $this->createMock(DefaultAccessChecker::class);
+        $base->method('checkEntityDelete')->willReturn(true);
+        $source = $this->entity('SimpleJourneyRecord', ['id' => 'source']);
+        $em = $this->createMock(EntityManager::class);
+        $em->method('getEntityById')->with('SimpleJourneyRecord', 'source')->willReturn($source);
+        $user = $this->createMock(User::class);
+        $manager = $this->createMock(AclManager::class);
+        $manager->expects($this->once())->method('checkEntity')->with($user, $source, 'edit')->willReturn(false);
+        $checker = new AccessChecker($base, $this->createMock(TeamsAccess::class), $em, $manager);
+        $this->assertFalse($checker->checkEntityDelete(
+            $user, $this->entity('SimpleJourneyRecordParent', ['recordId' => 'source']),
+            ScopeData::fromRaw((object) ['delete' => 'all']),
+        ));
     }
 }

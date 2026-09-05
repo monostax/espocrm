@@ -22,9 +22,10 @@ class AccessibleRecord implements Filter
 
         $records = $this->selectBuilderFactory->create()
             ->from('SimpleJourneyRecord')
-            ->select(['id'])
             ->forUser($this->user)
             ->withStrictAccessControl()
+            ->buildQueryBuilder()
+            ->select(['id'])
             ->build();
 
         $queryBuilder->where(['recordId=s' => $records]);
