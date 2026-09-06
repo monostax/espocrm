@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\WhatsAppOptOutService;
+use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
 use Espo\ORM\EntityManager;
 use stdClass;
 
@@ -106,6 +107,12 @@ class DeliveryWebhook
         }
 
         if ($event === 'message_created') {
+            // Only authenticated webhooks may create timeline events. Unlike campaign
+            // reply tracking, every incoming public message is an independent event.
+            if ($webhookSecrets !== []) {
+                $this->injectableFactory->create(OpportunityMessageEvents::class)
+                    ->recordWebhook($data, $account->getId());
+            }
             return $this->handleMessageCreated($data, $accountId, $account->getId());
         }
 

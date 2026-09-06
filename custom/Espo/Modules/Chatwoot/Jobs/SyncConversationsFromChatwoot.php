@@ -1201,7 +1201,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     if ($teamId) {
                         $data['teamsIds'] = [$teamId];
                     }
-                    $this->entityManager->createEntity('ChatwootMessage', $data);
+                    $existingMessage = $this->entityManager->createEntity('ChatwootMessage', $data);
 
                     // New incoming message carrying a zero-width attribution
                     // marker: candidate for the WhatsApp attribution linker
@@ -1218,6 +1218,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
                         ];
                     }
                 }
+                // Run for updates too: a webhook may beat conversation/link sync,
+                // or a previous event write may have failed after message creation.
+                $this->injectableFactory->create(\Espo\Modules\Chatwoot\Services\OpportunityMessageEvents::class)
+                    ->recordSyncedMessage($existingMessage, $conversation);
             } catch (\Exception $e) {
                 $this->log->debug(
                     "SyncConversationsFromChatwoot: Failed to sync message {$chatwootMessageId}: " . $e->getMessage()

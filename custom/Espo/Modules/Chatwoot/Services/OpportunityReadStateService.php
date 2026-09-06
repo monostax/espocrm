@@ -14,6 +14,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
+use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Condition as Cond;
@@ -29,6 +30,7 @@ class OpportunityReadStateService
         private UserTenantResolver $tenantResolver,
         private ?SelectBuilderFactory $selectBuilderFactory = null,
         private ?SearchParamsFetcher $searchParamsFetcher = null,
+        private ?OpportunityEventAccess $eventAccess = null,
     ) {}
 
     /** Filter before pagination, using the same personal cutoff as getReadStates. */
@@ -53,9 +55,8 @@ class OpportunityReadStateService
             ->where([
                 'parentType' => 'Opportunity',
                 'parentId:' => 'opportunity.id',
-                'type' => Note::TYPE_POST,
                 'OR' => [['createdById!=' => $userId], ['createdById' => null]],
-            ]);
+            ])->where($this->streamWhere());
 
         if ($onlyUnread) {
             $posts->join('OpportunityReadState', 'readState', [
@@ -101,6 +102,46 @@ class OpportunityReadStateService
         }
 
         $queryBuilder->where($condition);
+    }
+
+    public function applyMentionFilter(SelectBuilder $queryBuilder, bool $onlyUnread): void
+    {
+        if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
+            !$this->acl->checkScope('Opportunity', 'stream')) {
+            throw new Forbidden();
+        }
+
+        if (!$this->user->isAdmin()) {
+            $queryBuilder->where(['tenantId' => $this->tenantResolver->resolveTenantIds($this->user)]);
+        }
+
+        $userId = $this->user->getId();
+        $mention = ['opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+        $posts = SelectBuilder::create()
+            ->from('Note', 'streamPost')
+            ->select('id')
+            ->where([
+                'parentType' => 'Opportunity',
+                'parentId:' => 'opportunity.id',
+                'type' => Note::TYPE_POST,
+                'OR' => [['createdById!=' => $userId], ['createdById' => null]],
+            ])
+            ->where($mention);
+
+        if ($onlyUnread) {
+            $posts->join('OpportunityReadState', 'readState', [
+                'readState.opportunityId:' => 'streamPost.parentId',
+                'readState.userId' => $userId,
+                'readState.deleted' => false,
+            ])->where(['readState.lastSeenAt!=' => null])->where([
+                'OR' => [
+                    ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
+                    ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
+                ],
+            ]);
+        }
+
+        $queryBuilder->where(Cond::exists($posts->build()));
     }
 
     /** @return array<string, mixed> */
@@ -161,11 +202,18 @@ class OpportunityReadStateService
 
         // 3. Mentions (personal across all assignees)
         $mentions = 0;
+        $unreadMentions = 0;
         if ($this->acl->checkScope('Opportunity', 'stream')) {
             $mentionsQb = SelectBuilder::create()->clone($baseQb->build());
             $this->applyListFilter($mentionsQb, onlyUnread: false);
             $mentions = $this->entityManager->getRDBRepository('Opportunity')
                 ->clone($mentionsQb->build())
+                ->count();
+
+            $unreadMentionsQb = SelectBuilder::create()->clone($baseQb->build());
+            $this->applyMentionFilter($unreadMentionsQb, onlyUnread: true);
+            $unreadMentions = $this->entityManager->getRDBRepository('Opportunity')
+                ->clone($unreadMentionsQb->build())
                 ->count();
         }
 
@@ -242,6 +290,7 @@ class OpportunityReadStateService
             'all' => $all,
             'unread' => $unread,
             'mentions' => $mentions,
+            'unreadMentions' => $unreadMentions,
             'status' => $statusCounts,
             'statusUnread' => $statusUnreadCounts,
             'stages' => $stageCounts,
@@ -310,6 +359,7 @@ class OpportunityReadStateService
                 $result[$id]['unreadCount'] = $count;
             }
             // This column contains ONLY verified CRM user IDs, not arbitrary Note data.
+            $where['type'] = Note::TYPE_POST;
             $where['opportunityMentionUserIds*'] = '%"' . $userId . '"%';
             foreach ($this->countPosts($where) as $id => $count) {
                 $result[$id]['hasUnreadMention'] = $count > 0;
@@ -328,11 +378,12 @@ class OpportunityReadStateService
     {
         $this->readableOpportunities([$id]);
         $post = $this->entityManager->getRDBRepository('Note')->where([
-            'parentType' => 'Opportunity', 'parentId' => $id, 'type' => Note::TYPE_POST,
-        ] + ($lastPostId !== null ? ['id' => $lastPostId] : []))->order('number', 'DESC')->findOne();
+            'parentType' => 'Opportunity', 'parentId' => $id,
+        ] + ($lastPostId !== null ? ['id' => $lastPostId] : []))
+            ->where($this->streamWhere())->order('number', 'DESC')->findOne();
 
         if ($lastPostId !== null && !$post) {
-            throw new BadRequest('The read cutoff must reference a post on this Opportunity.');
+            throw new BadRequest('The read cutoff must reference an accessible stream entry on this Opportunity.');
         }
 
         $this->withState($id, $this->user->getId(), function (Entity $state) use ($post, $expectedVersion): void {
@@ -506,8 +557,17 @@ class OpportunityReadStateService
     private function otherPostsWhere(array $ids, string $userId): array
     {
         return [
-            'parentType' => 'Opportunity', 'parentId' => $ids, 'type' => Note::TYPE_POST,
+            'parentType' => 'Opportunity', 'parentId' => $ids,
             'OR' => [['createdById!=' => $userId], ['createdById' => null]],
+            $this->streamWhere(),
+        ];
+    }
+
+    private function streamWhere(): array
+    {
+        return [
+            'type' => OpportunityStreamEvents::TYPES,
+            $this->eventAccess?->where($this->user) ?? ['type' => Note::TYPE_POST],
         ];
     }
 

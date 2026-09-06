@@ -1,5 +1,14 @@
 {
     "fields": {
+        "type": {
+            "options": ["__APPEND__", "ChatwootMessageReceived", "ActivityOverdue"]
+        },
+        "opportunityStreamEventKey": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "utility": true
+        },
         "opportunityChatwootAccountId": {
             "type": "int",
             "min": 1,
@@ -13,6 +22,10 @@
         }
     },
     "indexes": {
+        "opportunityStreamEvent": {
+            "columns": ["opportunityStreamEventKey"],
+            "unique": true
+        },
         "opportunityUnread": {
             "columns": ["parentType", "parentId", "type", "deleted", "number"]
         }

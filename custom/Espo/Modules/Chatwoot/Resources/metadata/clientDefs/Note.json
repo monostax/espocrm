@@ -1,0 +1,6 @@
+{
+    "itemViews": {
+        "ChatwootMessageReceived": "chatwoot:views/stream/notes/message-received",
+        "ActivityOverdue": "chatwoot:views/stream/notes/activity-overdue"
+    }
+}

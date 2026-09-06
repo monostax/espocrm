@@ -1,4 +1,10 @@
 {
+    "PostOverdueOpportunityActivities": {
+        "name": "Post Overdue Opportunity Activities",
+        "isSystem": false,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\PostOverdueOpportunityActivities"
+    },
     "SyncInboxesFromChatwoot": {
         "name": "Sync Inboxes from Chatwoot",
         "isSystem": false,

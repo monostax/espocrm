@@ -1,0 +1,9 @@
+{
+    "primaryFilterClassNameMap": {
+        "latestOpportunityEntry": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Note\\LatestOpportunityEntry"
+    },
+    "additionalApplierClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Chatwoot\\Classes\\Select\\Note\\OpportunityEventAccess"
+    ]
+}

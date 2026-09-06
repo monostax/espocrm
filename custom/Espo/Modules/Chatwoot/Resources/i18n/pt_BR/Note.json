@@ -1,0 +1,12 @@
+{
+    "labels": {
+        "messageReceivedInConversation": "Mensagem recebida na conversa #{conversationId}",
+        "activityBecameOverdue": "Atividade ficou atrasada: {name}"
+    },
+    "options": {
+        "type": {
+            "ChatwootMessageReceived": "Mensagem recebida na conversa",
+            "ActivityOverdue": "Atividade ficou atrasada"
+        }
+    }
+}
