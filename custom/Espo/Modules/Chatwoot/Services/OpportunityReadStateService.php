@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Acl;
+use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Record\SearchParamsFetcher;
+use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
@@ -24,6 +27,8 @@ class OpportunityReadStateService
         private User $user,
         private Acl $acl,
         private UserTenantResolver $tenantResolver,
+        private ?SelectBuilderFactory $selectBuilderFactory = null,
+        private ?SearchParamsFetcher $searchParamsFetcher = null,
     ) {}
 
     /** Filter before pagination, using the same personal cutoff as getReadStates. */
@@ -81,6 +86,136 @@ class OpportunityReadStateService
         }
 
         $queryBuilder->where(Cond::exists($posts->build()));
+    }
+
+    /** @return array<string, mixed> */
+    public function getNavigationCounts(Request $request): array
+    {
+        if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
+            !$this->acl->checkScope('Opportunity', 'read')) {
+            throw new Forbidden();
+        }
+
+        $baseQb = SelectBuilder::create()->from('Opportunity', 'opportunity')->where(['opportunity.deleted' => false]);
+
+        if ($this->searchParamsFetcher !== null) {
+            $searchParams = $this->searchParamsFetcher->fetch($request);
+            if ($this->selectBuilderFactory !== null) {
+                $baseQb = $this->selectBuilderFactory
+                    ->create()
+                    ->from('Opportunity')
+                    ->withSearchParams($searchParams)
+                    ->withStrictAccessControl()
+                    ->buildQueryBuilder();
+            }
+        }
+
+        if (!$this->user->isAdmin()) {
+            $tenantIds = $this->tenantResolver->resolveTenantIds($this->user);
+            $baseQb->where(['opportunity.tenantId' => $tenantIds]);
+        }
+
+        $userId = $this->user->getId();
+        $assigneeTab = $request->getQueryParam('assigneeTab');
+        if ($assigneeTab === null) {
+            $body = $request->getParsedBody();
+            $assigneeTab = is_object($body) && isset($body->assigneeTab) ? $body->assigneeTab : 'all';
+        }
+
+        $scopedQb = SelectBuilder::create()->clone($baseQb->build());
+        if ($assigneeTab === 'me') {
+            $scopedQb->where(['opportunity.assignedUserId' => $userId]);
+        } elseif ($assigneeTab === 'unassigned') {
+            $scopedQb->where(['opportunity.assignedUserId' => null]);
+        }
+
+        // 1. Total (All)
+        $all = $this->entityManager->getRDBRepository('Opportunity')
+            ->clone($scopedQb->build())
+            ->count();
+
+        // 2. Unread
+        $unread = 0;
+        if ($this->acl->checkScope('Opportunity', 'stream')) {
+            $unreadQb = SelectBuilder::create()->clone($scopedQb->build());
+            $this->applyListFilter($unreadQb, onlyUnread: true);
+            $unread = $this->entityManager->getRDBRepository('Opportunity')
+                ->clone($unreadQb->build())
+                ->count();
+        }
+
+        // 3. Mentions (personal across all assignees)
+        $mentions = 0;
+        if ($this->acl->checkScope('Opportunity', 'stream')) {
+            $mentionsQb = SelectBuilder::create()->clone($baseQb->build());
+            $this->applyListFilter($mentionsQb, onlyUnread: false);
+            $mentions = $this->entityManager->getRDBRepository('Opportunity')
+                ->clone($mentionsQb->build())
+                ->count();
+        }
+
+        // 4. By Status (Open, Won, Lost)
+        $statusQb = SelectBuilder::create()
+            ->clone($scopedQb->build())
+            ->order([])
+            ->select(['status', ['COUNT:id', 'count']])
+            ->group('status');
+        $statusCounts = ['Open' => 0, 'Won' => 0, 'Lost' => 0];
+        $sth = $this->entityManager->getQueryExecutor()->execute($statusQb->build());
+        while ($row = $sth->fetch()) {
+            if ($row['status']) {
+                $statusCounts[$row['status']] = (int) $row['count'];
+            }
+        }
+
+        // 5. By Stage
+        $stageQb = SelectBuilder::create()
+            ->clone($scopedQb->build())
+            ->order([])
+            ->select(['opportunityStageId', ['COUNT:id', 'count']])
+            ->group('opportunityStageId')
+            ->where(['opportunityStageId!=' => null]);
+        $stageCounts = [];
+        $sth = $this->entityManager->getQueryExecutor()->execute($stageQb->build());
+        while ($row = $sth->fetch()) {
+            $stageCounts[$row['opportunityStageId']] = (int) $row['count'];
+        }
+
+        // 6. By Funnel
+        $funnelQb = SelectBuilder::create()
+            ->clone($scopedQb->build())
+            ->order([])
+            ->select(['funnelId', ['COUNT:id', 'count']])
+            ->group('funnelId')
+            ->where(['funnelId!=' => null]);
+        $funnelCounts = [];
+        $sth = $this->entityManager->getQueryExecutor()->execute($funnelQb->build());
+        while ($row = $sth->fetch()) {
+            $funnelCounts[$row['funnelId']] = (int) $row['count'];
+        }
+
+        // 7. By Owner (unscoped by assigneeTab)
+        $userQb = SelectBuilder::create()
+            ->clone($baseQb->build())
+            ->order([])
+            ->select(['assignedUserId', ['COUNT:id', 'count']])
+            ->group('assignedUserId')
+            ->where(['assignedUserId!=' => null]);
+        $userCounts = [];
+        $sth = $this->entityManager->getQueryExecutor()->execute($userQb->build());
+        while ($row = $sth->fetch()) {
+            $userCounts[$row['assignedUserId']] = (int) $row['count'];
+        }
+
+        return [
+            'all' => $all,
+            'unread' => $unread,
+            'mentions' => $mentions,
+            'status' => $statusCounts,
+            'stages' => $stageCounts,
+            'funnels' => $funnelCounts,
+            'users' => $userCounts,
+        ];
     }
 
     /** @return array<string, array<string, mixed>> */

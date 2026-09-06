@@ -235,6 +235,22 @@
         }
     },
     {
+        "route": "/Opportunity/action/navigationCounts",
+        "method": "get",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "navigationCounts"
+        }
+    },
+    {
+        "route": "/Opportunity/action/navigationCounts",
+        "method": "post",
+        "params": {
+            "controller": "OpportunityReadState",
+            "action": "navigationCounts"
+        }
+    },
+    {
         "route": "/Opportunity/action/readStates",
         "method": "post",
         "params": {

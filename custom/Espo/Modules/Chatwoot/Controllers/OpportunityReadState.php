@@ -35,6 +35,16 @@ class OpportunityReadState
         return (object) $this->service->markUnread($this->id($request));
     }
 
+    public function getActionNavigationCounts(Request $request): object
+    {
+        return (object) $this->service->getNavigationCounts($request);
+    }
+
+    public function postActionNavigationCounts(Request $request): object
+    {
+        return (object) $this->service->getNavigationCounts($request);
+    }
+
     public function postActionReadStates(Request $request): object
     {
         $ids = $request->getParsedBody()->ids ?? [];
