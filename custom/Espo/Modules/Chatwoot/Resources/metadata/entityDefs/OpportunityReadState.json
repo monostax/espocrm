@@ -26,6 +26,10 @@
             "type": "bool",
             "default": false
         },
+        "isMarkedUnread": {
+            "type": "bool",
+            "default": false
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

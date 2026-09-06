@@ -85,7 +85,22 @@ class OpportunityReadStateService
             $posts->where($mention);
         }
 
-        $queryBuilder->where(Cond::exists($posts->build()));
+        $condition = Cond::exists($posts->build());
+        if ($onlyUnread) {
+            // Manual reminders also apply to closed, unrelated, and empty streams.
+            $markedUnread = SelectBuilder::create()
+                ->from('OpportunityReadState', 'markedUnreadState')
+                ->select('id')
+                ->where([
+                    'opportunityId:' => 'opportunity.id',
+                    'userId' => $userId,
+                    'isMarkedUnread' => true,
+                    'deleted' => false,
+                ]);
+            $condition = Cond::or($condition, Cond::exists($markedUnread->build()));
+        }
+
+        $queryBuilder->where($condition);
     }
 
     /** @return array<string, mixed> */
@@ -258,6 +273,7 @@ class OpportunityReadStateService
                 'lastSeenNumber' => $lastSeenNumber,
                 'version' => (int) ($state?->get('version') ?? 0),
                 'isParticipant' => (bool) $state?->get('isParticipant'),
+                'isMarkedUnread' => (bool) $state?->get('isMarkedUnread'),
                 'unreadCount' => 0,
                 'hasUnreadMention' => false,
             ];
@@ -306,6 +322,7 @@ class OpportunityReadStateService
             if ($expectedVersion !== null && (int) $state->get('version') !== $expectedVersion) {
                 return; // A newer read/unread action won. Never overwrite it with a stale view.
             }
+            $state->set('isMarkedUnread', false);
             $this->advance($state, $post?->get('createdAt') ?? gmdate('Y-m-d H:i:s'), (int) ($post?->get('number') ?? 0));
         });
 
@@ -314,19 +331,16 @@ class OpportunityReadStateService
 
     public function markUnread(string $id): array
     {
-        $opportunity = $this->readableOpportunities([$id])[$id];
-        $state = $this->getReadState($id);
-        if (in_array($opportunity->get('status'), ['Won', 'Lost'], true) || !$state['isParticipant']) {
-            throw new Forbidden('Only an assignee or participant can mark an open Opportunity unread.');
-        }
+        $this->readableOpportunities([$id]);
 
         $this->withState($id, $this->user->getId(), function (Entity $state) use ($id): void {
+            $state->set('isMarkedUnread', true);
             $post = $this->latestOtherPost($id, $this->user->getId());
             $state->set('lastSeenAt', $post ? $this->before($post->get('createdAt')) : null);
             $state->set('lastSeenNumber', $post ? (int) $post->get('number') - 1 : null);
         }, true);
 
-        // Calculate the real count/mentions/participation; never invent a successful state.
+        // Keep real post counts and participation separate from the manual unread mark.
         return $this->getReadState($id);
     }
 
@@ -381,6 +395,7 @@ class OpportunityReadStateService
         if ($author && ($author->isRegular() || $author->isAdmin())) {
             $this->withState($id, $authorId, function (Entity $state) use ($post): void {
                 $state->set('isParticipant', true);
+                $state->set('isMarkedUnread', false);
                 $this->advance($state, $post->get('createdAt'), (int) $post->get('number'));
             });
         }
@@ -429,9 +444,9 @@ class OpportunityReadStateService
                 $state = $this->entityManager->getNewEntity('OpportunityReadState');
                 $state->set(['opportunityId' => $id, 'userId' => $userId, 'version' => 0, 'isParticipant' => false]);
             }
-            $before = [$state->get('lastSeenAt'), $state->get('lastSeenNumber'), $state->get('isParticipant')];
+            $before = [$state->get('lastSeenAt'), $state->get('lastSeenNumber'), $state->get('isParticipant'), $state->get('isMarkedUnread')];
             $update($state);
-            $after = [$state->get('lastSeenAt'), $state->get('lastSeenNumber'), $state->get('isParticipant')];
+            $after = [$state->get('lastSeenAt'), $state->get('lastSeenNumber'), $state->get('isParticipant'), $state->get('isMarkedUnread')];
             if ($forceVersion || $before !== $after) {
                 $state->set('version', (int) $state->get('version') + 1);
                 $this->entityManager->saveEntity($state);
