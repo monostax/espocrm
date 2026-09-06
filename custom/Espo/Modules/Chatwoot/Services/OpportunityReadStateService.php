@@ -183,6 +183,22 @@ class OpportunityReadStateService
             }
         }
 
+        $statusUnreadCounts = ['Open' => 0, 'Won' => 0, 'Lost' => 0];
+        if ($this->acl->checkScope('Opportunity', 'stream')) {
+            $statusUnreadQb = SelectBuilder::create()
+                ->clone($scopedQb->build())
+                ->order([])
+                ->select(['status', ['COUNT:id', 'count']])
+                ->group('status');
+            $this->applyListFilter($statusUnreadQb, onlyUnread: true);
+            $sth = $this->entityManager->getQueryExecutor()->execute($statusUnreadQb->build());
+            while ($row = $sth->fetch()) {
+                if ($row['status']) {
+                    $statusUnreadCounts[$row['status']] = (int) $row['count'];
+                }
+            }
+        }
+
         // 5. By Stage
         $stageQb = SelectBuilder::create()
             ->clone($scopedQb->build())
@@ -227,6 +243,7 @@ class OpportunityReadStateService
             'unread' => $unread,
             'mentions' => $mentions,
             'status' => $statusCounts,
+            'statusUnread' => $statusUnreadCounts,
             'stages' => $stageCounts,
             'funnels' => $funnelCounts,
             'users' => $userCounts,
