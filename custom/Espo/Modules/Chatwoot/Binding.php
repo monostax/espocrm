@@ -19,5 +19,9 @@ class Binding implements BindingProcessor
             \Espo\Tools\Stream\RecordService\QueryHelper::class,
             \Espo\Modules\Chatwoot\Tools\Stream\QueryHelper::class,
         );
+        $binder->bindImplementation(
+            \Espo\Tools\Stream\MassNotePreparator::class,
+            \Espo\Modules\Chatwoot\Tools\Stream\MassNotePreparator::class,
+        );
     }
 }

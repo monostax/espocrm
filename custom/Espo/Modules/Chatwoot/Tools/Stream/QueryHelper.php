@@ -20,12 +20,15 @@ class QueryHelper extends \Espo\Tools\Stream\RecordService\QueryHelper
         AclManager $aclManager,
         private User $user,
         private OpportunityEventAccess $access,
+        private OpportunityAccess $parents,
     ) {
         parent::__construct($entityManager, $selectBuilderFactory, $aclManager);
     }
 
     public function buildBaseQueryBuilder(SearchParams $searchParams): SelectBuilder
     {
-        return parent::buildBaseQueryBuilder($searchParams)->where($this->access->where($this->user));
+        return parent::buildBaseQueryBuilder($searchParams)
+            ->where($this->access->where($this->user))
+            ->where($this->parents->where($this->user));
     }
 }

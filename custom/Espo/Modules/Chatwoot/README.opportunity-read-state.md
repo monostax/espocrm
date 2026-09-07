@@ -41,7 +41,8 @@ application's current user or the authorization context used by API requests.
   are mapped through that tenant's integration memberships to CRM users with
   stream access. Ambiguous integrations are not guessed. Native CRM mentions
   remain supported; unrelated Note data is never treated as a mention.
-- Chatwoot refreshes posts/read state every 15 seconds while the page is visible.
+- CRM changes invalidate Chatwoot cards, stream and sidebar counts over ActionCable.
+  A 60-second visible-page poll is only a recovery fallback.
   Only a successfully loaded, rendered Board tab can automatically mark posts
   read. Merely refreshing unchanged posts does not clear a manual unread from
   another device. Manual unread returns to the Opportunity list.
@@ -52,6 +53,29 @@ application's current user or the authorization context used by API requests.
   including already-read mentions. Rebuild CRM metadata before deploying the
   corresponding Chatwoot sidebar links. No additional backfill is required.
 
+## Real-time delivery
+
+- `PublishOpportunityUpdate` records a `BroadcastOpportunityUpdate` job when an
+  Opportunity, its Post/message/overdue Note, or a personal read-state row is
+  saved or removed. The job is committed with the change, so rolled-back writes
+  cannot send notifications. The `q0` queue runs as soon as possible and retries
+  failed delivery up to three times. Keep the CRM daemon running.
+- The job publishes to Espo's existing ACL-checked record/stream websocket topics
+  and calls `POST /api/v1/accounts/:account_id/opportunity_events` for Chatwoot
+  accounts belonging to the opportunity's tenant. It uses the existing
+  `ChatwootPlatform.backendUrl` and `ChatwootAccount.apiKey` (account admin).
+- Chatwoot authenticates the account/admin, then queues an `opportunity.updated`
+  ActionCable broadcast on its agent-only account stream. The payload is only
+  `account_id`: no opportunity IDs, Note content or personal counts are broadcast.
+  Each browser refetches through its own CRM session/ACL and current sidebar scope.
+- Event bursts are debounced; events received during refresh trigger another pass.
+  Reconnect and returning to a visible tab also refresh. The active stream retains
+  the rendered-post cutoff/version safeguards for automatic marking as read.
+- Deploy the Chatwoot endpoint, frontend and critical Sidekiq worker before
+  enabling the CRM hooks. Run the normal CRM rebuild to discover the hooks and
+  restart long-running CRM workers/websocket processes. No new secrets, routes
+  exposed without authentication, or database tables are required for this bridge.
+
 ## Verification
 
 Before production rollout, exercise two users in a staging tenant: posting,
@@ -59,3 +83,10 @@ mentions, switching tabs during loading, manual unread, and access revocation.
 Also verify the normal rebuild on the deployed database engine. The isolated
 development checks exercise the service with real ORM SQL/mapper and disposable
 SQLite storage, but do not replace a live MySQL/PostgreSQL concurrency test.
+
+For the real-time bridge, use two browser sessions in one tenant: send a linked
+conversation message, post/mention in CRM, and mark read/unread on the other
+device. Confirm `opportunity.updated` arrives on `/cable` and the list, stream and
+sidebar update without waiting for the fallback poll. Also check reconnect,
+burst traffic, an inaccessible opportunity and a different tenant/account; the
+event must never expose record data or bypass CRM ACL.

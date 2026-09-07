@@ -1,0 +1,4 @@
+{
+    "accessCheckerClassName": "Espo\\Modules\\Chatwoot\\Classes\\Acl\\Opportunity\\AccessChecker",
+    "portalAccessCheckerClassName": "Espo\\Modules\\Chatwoot\\Classes\\AclPortal\\Opportunity\\AccessChecker"
+}

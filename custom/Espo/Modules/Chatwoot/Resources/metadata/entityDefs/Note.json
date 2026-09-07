@@ -19,6 +19,20 @@
             "type": "jsonArray",
             "readOnly": true,
             "utility": true
+        },
+        "opportunityCanEdit": {
+            "type": "bool",
+            "notStorable": true,
+            "readOnly": true,
+            "customizationDisabled": true,
+            "utility": true
+        },
+        "opportunityCanDelete": {
+            "type": "bool",
+            "notStorable": true,
+            "readOnly": true,
+            "customizationDisabled": true,
+            "utility": true
         }
     },
     "indexes": {

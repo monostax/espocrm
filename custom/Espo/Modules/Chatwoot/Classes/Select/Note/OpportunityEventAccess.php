@@ -8,14 +8,16 @@ use Espo\Core\Select\Applier\AdditionalApplier;
 use Espo\Core\Select\SearchParams;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess as Access;
+use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
 use Espo\ORM\Query\SelectBuilder;
 
 class OpportunityEventAccess implements AdditionalApplier
 {
-    public function __construct(private User $user, private Access $access) {}
+    public function __construct(private User $user, private Access $access, private OpportunityAccess $parents) {}
 
     public function apply(SelectBuilder $queryBuilder, SearchParams $searchParams): void
     {
         $queryBuilder->where($this->access->where($this->user));
+        $queryBuilder->where($this->parents->where($this->user));
     }
 }
