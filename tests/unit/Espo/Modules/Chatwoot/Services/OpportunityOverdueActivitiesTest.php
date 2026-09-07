@@ -14,13 +14,21 @@ use Espo\Modules\Chatwoot\Services\OpportunityOverdueActivities;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Tools\Stream\NoteHookProcessor;
 use Espo\ORM\Entity;
+use Espo\ORM\BaseEntity;
+use Espo\ORM\EntityFactory;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Metadata as OrmMetadata;
+use Espo\ORM\MetadataDataProvider;
+use Espo\ORM\Query\SelectBuilder;
+use Espo\ORM\QueryComposer\MysqlQueryComposer;
+use Espo\ORM\QueryComposer\PostgresqlQueryComposer;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\RDBSelectBuilder;
 use Espo\ORM\TransactionManager;
 use Espo\Tools\Notification\HookProcessor\Params;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use PDO;
 use ReflectionClass;
 use ReflectionMethod;
 use tests\unit\Espo\Modules\Chatwoot\Support\EntityDouble;
@@ -40,6 +48,7 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $this->attributes = [
             'id' => 'task', 'name' => 'Enviar proposta', 'parentId' => 'opp',
             'dateEnd' => '2026-09-06 14:00:00', 'dateEndDate' => null, 'tenantId' => 'tenant',
+            'createdAt' => '2026-09-01 14:00:00',
         ];
         $em = $this->createMock(EntityManager::class);
         $config = $this->createMock(Config::class);
@@ -125,6 +134,84 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $this->attributes['tenantId'] = 'foreign';
         $this->tick('2026-09-06T14:01:00Z');
         self::assertCount(0, $this->writes);
+    }
+
+    public function testNewAlreadyOverdueTaskPostsAtCreationWithoutChangingItsDeadlineKey(): void
+    {
+        $this->attributes['dateEnd'] = '2026-09-03 03:00:00';
+        $this->attributes['dateEndDate'] = '2026-09-02';
+        $this->attributes['createdAt'] = '2026-09-06 20:22:29';
+        $this->tick('2026-09-07T12:00:00Z');
+        $this->tick('2026-09-07T12:01:00Z');
+        self::assertCount(1, $this->writes);
+        $event = array_values($this->writes)[0];
+        self::assertSame('2026-09-03 03:00:00', $event['data']['dueAt']);
+        self::assertSame('2026-09-06 20:22:29', $event['data']['occurredAt']);
+        self::assertSame(hash('sha256', implode(':', [
+            OpportunityStreamEvents::ACTIVITY_OVERDUE, 'opp', 'Task', 'task', '2026-09-03 03:00:00',
+        ])), array_key_first($this->writes));
+    }
+
+    public function testNewAlreadyOverdueTimedTaskPostsButOldBacklogWithRecentEditsDoesNot(): void
+    {
+        $this->attributes['dateEnd'] = '2026-09-02 14:00:00';
+        $this->attributes['modifiedAt'] = '2026-09-06 20:22:29';
+        $this->tick('2026-09-07T12:00:00Z');
+        self::assertCount(0, $this->writes);
+        $this->attributes['createdAt'] = '2026-09-06 20:22:29';
+        $this->tick('2026-09-07T12:00:00Z');
+        self::assertCount(1, $this->writes);
+        self::assertSame('2026-09-06 20:22:29', array_values($this->writes)[0]['data']['occurredAt']);
+    }
+
+    public static function activityTypes(): array
+    {
+        return [['Task'], ['Meeting'], ['Call']];
+    }
+
+    #[DataProvider('activityTypes')]
+    public function testScheduledScanIncludesNewPastDeadlinesButNotHistoricalBacklogOrFutureDeadlines(string $type): void
+    {
+        if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+            self::markTestSkipped('PDO SQLite is required for the disposable query dataset.');
+        }
+        $pdo = new PDO('sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $table = strtolower($type);
+        $pdo->exec("CREATE TABLE \"$table\" (id TEXT, date_end TEXT, date_end_date TEXT, created_at TEXT, deleted INTEGER DEFAULT 0)");
+        $fields = ['id', 'dateEnd', 'dateEndDate', 'createdAt', 'deleted'];
+        $defs = [];
+        foreach ($fields as $field) {
+            $defs['attributes'][$field] = ['type' => $field === 'deleted' ? 'bool' : 'varchar'];
+        }
+        $provider = $this->createMock(MetadataDataProvider::class);
+        $provider->method('get')->willReturn([$type => $defs]);
+        $metadata = new OrmMetadata($provider);
+        $entityFactory = $this->createMock(EntityFactory::class);
+        $entityFactory->method('create')->willReturn(new BaseEntity($type, $defs));
+        $rows = [
+            ['new-past', '2026-09-03 03:00:00', null, '2026-09-06 20:22:29'],
+            ['old-past', '2026-09-03 03:00:00', null, '2026-09-01 14:00:00'],
+            ['new-future', '2026-09-08 14:00:00', null, '2026-09-06 20:22:29'],
+            ['old-new-deadline', '2026-09-07 11:00:00', null, '2026-09-01 14:00:00'],
+        ];
+        $expected = ['new-past', 'old-new-deadline'];
+        if ($type === 'Task') {
+            $rows[] = ['new-date-only', '2026-09-03 03:00:00', '2026-09-02', '2026-09-06 20:22:29'];
+            $rows[] = ['old-date-only', '2026-09-03 03:00:00', '2026-09-02', '2026-09-01 14:00:00'];
+            $rows[] = ['new-future-date', null, '2026-10-01', '2026-09-06 20:22:29'];
+            array_unshift($expected, 'new-date-only');
+        }
+        foreach ($rows as $row) {
+            $pdo->prepare("INSERT INTO \"$table\" (id, date_end, date_end_date, created_at) VALUES (?, ?, ?, ?)")->execute($row);
+        }
+        $where = (new ReflectionMethod($this->service, 'dueWhere'))->invoke(
+            $this->service, $type, new DateTimeImmutable('2026-09-07T12:00:00Z'), '2026-09-06 19:50:51',
+        );
+        $query = SelectBuilder::create()->from($type)->select('id')->where($where)->order('id')->build();
+        foreach ([MysqlQueryComposer::class, PostgresqlQueryComposer::class] as $class) {
+            $sql = (new $class($pdo, $entityFactory, $metadata))->composeSelect($query);
+            self::assertSame($expected, $pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN), $sql);
+        }
     }
 
     public function testDateOnlyDeadlineHonorsDaylightSavingTime(): void

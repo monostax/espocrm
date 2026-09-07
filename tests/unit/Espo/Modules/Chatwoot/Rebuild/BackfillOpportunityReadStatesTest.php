@@ -9,6 +9,7 @@ use Espo\Core\AclManager;
 use Espo\Core\Container;
 use Espo\Core\InjectableFactory;
 use Espo\Core\ORM\Helper;
+use Espo\Core\Select\Text\MetadataProvider as TextMetadataProvider;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Core\Utils\SystemUser;
@@ -58,12 +59,14 @@ class BackfillOpportunityReadStatesTest extends TestCase
         $container = $this->createMock(Container::class);
         $factory = new InjectableFactory($container);
         $services = [
+            'container' => $container,
             'entityManager' => $this->entityManager,
             'injectableFactory' => $factory,
             'config' => $this->config,
             'configWriter' => $this->configWriter,
             'aclManager' => $this->aclManager,
             'tenantResolver' => $this->tenantResolver,
+            'textMetadataProvider' => $this->createMock(TextMetadataProvider::class),
         ];
         if ($currentUser) {
             $services['user'] = $currentUser;

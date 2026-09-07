@@ -28,9 +28,10 @@ class OpportunityReadStateService
         private User $user,
         private Acl $acl,
         private UserTenantResolver $tenantResolver,
-        private ?SelectBuilderFactory $selectBuilderFactory = null,
-        private ?SearchParamsFetcher $searchParamsFetcher = null,
-        private ?OpportunityEventAccess $eventAccess = null,
+        // Espo injects null for unbound nullable dependencies instead of constructing them.
+        private SelectBuilderFactory $selectBuilderFactory,
+        private SearchParamsFetcher $searchParamsFetcher,
+        private OpportunityEventAccess $eventAccess,
     ) {}
 
     /** Filter before pagination, using the same personal cutoff as getReadStates. */
@@ -152,19 +153,13 @@ class OpportunityReadStateService
             throw new Forbidden();
         }
 
-        $baseQb = SelectBuilder::create()->from('Opportunity', 'opportunity')->where(['opportunity.deleted' => false]);
-
-        if ($this->searchParamsFetcher !== null) {
-            $searchParams = $this->searchParamsFetcher->fetch($request);
-            if ($this->selectBuilderFactory !== null) {
-                $baseQb = $this->selectBuilderFactory
-                    ->create()
-                    ->from('Opportunity')
-                    ->withSearchParams($searchParams)
-                    ->withStrictAccessControl()
-                    ->buildQueryBuilder();
-            }
-        }
+        $searchParams = $this->searchParamsFetcher->fetch($request);
+        $baseQb = $this->selectBuilderFactory
+            ->create()
+            ->from('Opportunity')
+            ->withSearchParams($searchParams)
+            ->withStrictAccessControl()
+            ->buildQueryBuilder();
 
         if (!$this->user->isAdmin()) {
             $tenantIds = $this->tenantResolver->resolveTenantIds($this->user);
@@ -567,7 +562,7 @@ class OpportunityReadStateService
     {
         return [
             'type' => OpportunityStreamEvents::TYPES,
-            $this->eventAccess?->where($this->user) ?? ['type' => Note::TYPE_POST],
+            $this->eventAccess->where($this->user),
         ];
     }
 

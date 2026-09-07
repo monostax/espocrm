@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\Chatwoot\Rebuild;
 
 use Espo\Core\Acl;
+use Espo\Core\Binding\BindingContainerBuilder;
 use Espo\Core\InjectableFactory;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Config;
@@ -47,9 +48,11 @@ class BackfillOpportunityReadStates implements RebuildAction
         }
         $user->setType(User::TYPE_SYSTEM);
         $acl = $this->injectableFactory->createWith(Acl::class, ['user' => $user]);
-        $service = $this->injectableFactory->createWith(OpportunityReadStateService::class, [
-            'user' => $user, 'acl' => $acl,
-        ]);
+        // Carry the scoped user into nested dependencies too (e.g. SelectBuilderFactory).
+        $service = $this->injectableFactory->createWithBinding(
+            OpportunityReadStateService::class,
+            BindingContainerBuilder::create()->bindInstance(User::class, $user)->bindInstance(Acl::class, $acl)->build(),
+        );
         $mentions = $this->injectableFactory->createWith(OpportunityPostMentions::class, ['acl' => $acl]);
 
         $this->removeLegacyIndexes();

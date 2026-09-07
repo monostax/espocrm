@@ -7,6 +7,12 @@ namespace tests\unit\Espo\Modules\Chatwoot\Services;
 use Espo\Core\Acl;
 use Espo\Core\AclManager;
 use Espo\Core\InjectableFactory;
+use Espo\Core\Binding\BindingContainerBuilder;
+use Espo\Core\Container;
+use Espo\Core\Record\SearchParamsFetcher;
+use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Core\Select\Text\MetadataProvider as TextMetadataProvider;
+use Espo\Core\Utils\Config;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Classes\Select\Note\LatestOpportunityEntry;
 use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
@@ -25,6 +31,7 @@ use Espo\ORM\QueryComposer\PostgresqlQueryComposer;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use ReflectionProperty;
 
 /** Execute the real ORM predicates on a disposable in-memory dataset, not a CRM database. */
 class OpportunityStreamQueriesTest extends TestCase
@@ -85,7 +92,7 @@ class OpportunityStreamQueriesTest extends TestCase
         ]]);
         $this->service = new OpportunityReadStateService(
             $this->createMock(EntityManager::class), $this->user, $acl, $tenants,
-            eventAccess: $this->access,
+            $this->createMock(SelectBuilderFactory::class), $this->createMock(SearchParamsFetcher::class), $this->access,
         );
 
         $this->pdo->exec("INSERT INTO opportunity (id, status, assigned_user_id, tenant_id) VALUES ('opp', 'Open', 'agent', 'tenant')");
@@ -117,6 +124,31 @@ class OpportunityStreamQueriesTest extends TestCase
         $query = SelectBuilder::create()->from('Note')->select([['COUNT:id', 'count']])
             ->where($where)->where(['number>' => 1])->build();
         self::assertSame(10, (int) $this->pdo->query($this->composer->composeSelect($query))->fetchColumn());
+    }
+
+    public function testEspoFactoryConstructsRequiredAccessDependenciesWithoutExplicitOverrides(): void
+    {
+        $factory = new InjectableFactory($this->createMock(Container::class));
+        $bindings = BindingContainerBuilder::create()
+            ->bindInstance(EntityManager::class, $this->createMock(EntityManager::class))
+            ->bindInstance(User::class, $this->user)
+            ->bindInstance(Acl::class, $this->createMock(Acl::class))
+            ->bindInstance(UserTenantResolver::class, $this->createMock(UserTenantResolver::class))
+            ->bindInstance(InjectableFactory::class, $factory)
+            ->bindInstance(AclManager::class, $this->createMock(AclManager::class))
+            ->bindInstance(Config::class, $this->createMock(Config::class))
+            ->bindInstance(TextMetadataProvider::class, $this->createMock(TextMetadataProvider::class))
+            ->build();
+
+        // Do NOT bind these three dependencies: nullable params made the real factory skip them.
+        $service = $factory->createWithBinding(OpportunityReadStateService::class, $bindings);
+        foreach ([
+            'eventAccess' => OpportunityEventAccess::class,
+            'selectBuilderFactory' => SelectBuilderFactory::class,
+            'searchParamsFetcher' => SearchParamsFetcher::class,
+        ] as $property => $class) {
+            self::assertInstanceOf($class, (new ReflectionProperty($service, $property))->getValue($service));
+        }
     }
 
     public function testNavigationUnreadAndReadCutoffUseTheSameSequenceDespiteEqualTimestamps(): void

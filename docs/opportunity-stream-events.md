@@ -17,6 +17,10 @@ checks every minute, including when nobody is viewing the opportunity. The event
 key includes the activity type/ID, opportunity, and deadline: repeated ticks do
 not duplicate it, while a new overdue deadline after rescheduling can create a
 new event. Completion and rescheduling are rechecked under an activity row lock.
+An activity created after activation with an already-past deadline is also eligible.
+Its event occurs at creation (not before the activity existed), while the original
+deadline remains in the Note data and deduplication key. Activities both created
+and due before activation remain excluded, even if an unrelated field is edited.
 
 ## Rollout
 
@@ -35,6 +39,12 @@ The frontend uses `/Opportunity/{id}/stream`, restricted to `Post`,
 `ChatwootMessageReceived` and `ActivityOverdue`. `/posts` intentionally remains Post-only for other
 consumers. The existing `lastPostId` API parameter now also accepts an accessible
 event Note; existing clients remain compatible.
+
+The read-state service requires its event-access, select-builder and request-filter
+dependencies. Do not make them nullable: Espo's injectable factory returns `null`
+for unbound nullable dependencies, silently excluding event Notes and bypassing
+navigation search/record-access filtering. The regression tests exercise the real
+factory in addition to the stream SQL predicates.
 
 ## Presentation and unread behavior
 
@@ -80,3 +90,8 @@ activity as the latest preview. Further ticks must not duplicate the event.
 Complete another activity before its deadline and verify no event is posted.
 Reschedule an overdue activity into the future, let the new deadline pass, and
 verify one new event. Check a date-only Task near local midnight too.
+Create a new pending activity with a deadline before feature activation: it must
+produce one event on the next scheduler tick. An old pre-activation overdue task
+must still produce none. No message replay or read-cursor reset is needed when
+fixing dependency injection: existing event Notes are counted automatically for
+users who can access their sources.

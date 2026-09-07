@@ -34,16 +34,7 @@ class OpportunityOverdueActivities
         }
         $now = ($now ?? new DateTimeImmutable())->setTimezone(new DateTimeZone('UTC'));
         foreach (['Task', 'Meeting', 'Call'] as $type) {
-            $dueWhere = ['dateEnd>=' => $startedAt, 'dateEnd<' => $now->format('Y-m-d H:i:s')];
-            if ($type === 'Task') {
-                $dueWhere = ['OR' => [
-                    ['dateEndDate' => null] + $dueWhere,
-                    [
-                        'dateEndDate>=' => (new DateTimeImmutable($startedAt))->modify('-1 day')->format('Y-m-d'),
-                        'dateEndDate<=' => $now->modify('+1 day')->format('Y-m-d'),
-                    ],
-                ]];
-            }
+            $dueWhere = $this->dueWhere($type, $now, $startedAt);
             $afterId = '';
             do {
                 $activities = $this->entityManager->getRDBRepository($type)->where([
@@ -60,6 +51,30 @@ class OpportunityOverdueActivities
                 }
             } while (count($activities) === 200);
         }
+    }
+
+    /** Include newly created, already-overdue activities without replaying the pre-rollout backlog. */
+    private function dueWhere(string $type, DateTimeImmutable $now, string $startedAt): array
+    {
+        $dueWhere = [
+            'dateEnd<' => $now->format('Y-m-d H:i:s'),
+            'OR' => [['dateEnd>=' => $startedAt], ['createdAt>=' => $startedAt]],
+        ];
+        if ($type !== 'Task') {
+            return $dueWhere;
+        }
+        // Date-only candidates are deliberately broad; record() checks the tenant's exact midnight.
+        return ['OR' => [
+            ['dateEndDate' => null] + $dueWhere,
+            [
+                'dateEndDate<=' => $now->modify('+1 day')->format('Y-m-d'),
+                'OR' => [
+                    ['dateEndDate>=' => (new DateTimeImmutable($startedAt, new DateTimeZone('UTC')))
+                        ->modify('-1 day')->format('Y-m-d')],
+                    ['createdAt>=' => $startedAt],
+                ],
+            ],
+        ]];
     }
 
     /** A shared event needs a shared calendar: tenant timezone, then instance timezone. */
@@ -100,7 +115,13 @@ class OpportunityOverdueActivities
             }
             $timeZone = $this->timeZones[$tenantId];
             $dueAt = $this->deadline($activity, $timeZone);
-            if (!$dueAt || $dueAt < $startedAt || $dueAt >= $now->format('Y-m-d H:i:s')) {
+            if (!$dueAt || $dueAt >= $now->format('Y-m-d H:i:s')) {
+                return;
+            }
+            // A newly created activity with a past deadline becomes overdue when it is created,
+            // not before it existed. Keep the original deadline in the data and deduplication key.
+            $occurredAt = max($dueAt, $activity->get('createdAt') ?? $dueAt);
+            if ($occurredAt < $startedAt) {
                 return;
             }
 
@@ -113,7 +134,7 @@ class OpportunityOverdueActivities
                 'dueAt' => $dueAt,
                 'dueDate' => $activity->get('dateEndDate'),
                 'timeZone' => $timeZone,
-                'occurredAt' => $dueAt,
+                'occurredAt' => $occurredAt,
             ], $key, $activity->getLinkMultipleIdList('teams'));
         });
     }
