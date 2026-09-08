@@ -327,14 +327,32 @@ class ChatwootAccountMembershipOrchestrator
 
     private function findChatwootUser(string $platformId, string $userId): ?Entity
     {
-        return $this->entityManager
+        // Legacy integration identities can carry an incorrect assignedUserId.
+        // Never use an account's concierge identity as a CRM user's login.
+        $users = $this->entityManager
             ->getRDBRepository('ChatwootUser')
+            ->leftJoin('conciergeForAccount')
             ->where([
                 'platformId' => $platformId,
                 'assignedUserId' => $userId,
+                'conciergeForAccount.id' => null,
             ])
-            ->order('createdAt', 'DESC')
-            ->findOne();
+            ->distinct()
+            ->limit(0, 2)
+            ->find();
+
+        if (count($users) > 1) {
+            throw new BadRequest(
+                'Selected CRM user is linked to multiple Chatwoot users on this platform. ' .
+                'Correct the identity links before adding an account membership.'
+            );
+        }
+
+        foreach ($users as $user) {
+            return $user;
+        }
+
+        return null;
     }
 
     /**
