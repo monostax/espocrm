@@ -1271,13 +1271,9 @@ class ChatwootInboxIntegration
      */
     private function patchInboxAccessToken(Entity $channel): bool
     {
-        // The NUMERIC Chatwoot inbox id (what the Chatwoot REST API expects)
-        // lives on the linked ChatwootInbox entity, NOT on this integration:
-        // the integration's own `chatwootInboxId` attribute has no backing
-        // column and resolves to the link's entity-id string. Resolve the real
-        // numeric id via the link (same pattern as reconnectInstagram).
-        $chatwootInbox = $channel->get('chatwootInbox');
-        $chatwootInboxId = $chatwootInbox ? $chatwootInbox->get('chatwootInboxId') : null;
+        // Reloaded integrations carry the linked inbox's CRM id without hydrating
+        // the relation. Use the shared resolver to obtain its numeric Chatwoot id.
+        $chatwootInboxId = $this->getNumericChatwootInboxId($channel);
         if (!$chatwootInboxId) {
             return false;
         }
