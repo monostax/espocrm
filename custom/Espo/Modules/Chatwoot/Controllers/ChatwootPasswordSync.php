@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\PasswordHash;
 use Espo\Entities\User;
+use Espo\Modules\Chatwoot\Services\ChatwootAgentIdentity;
 use Espo\ORM\EntityManager;
 use stdClass;
 
@@ -46,7 +47,8 @@ class ChatwootPasswordSync
     public function __construct(
         private EntityManager $entityManager,
         private PasswordHash $passwordHash,
-        private Log $log
+        private Log $log,
+        private ChatwootAgentIdentity $agentIdentity
     ) {}
 
     public function postActionReceive(Request $request, Response $response): stdClass
@@ -86,6 +88,11 @@ class ChatwootPasswordSync
         }
 
         $userIds = $this->resolveCrmUserIds((int) $chatwootUserId, $email, $installationUrl);
+
+        if ($userIds === []) {
+            $this->agentIdentity->importForPasswordSync((int) $chatwootUserId, $email, $installationUrl);
+            $userIds = $this->resolveCrmUserIds((int) $chatwootUserId, $email, $installationUrl);
+        }
 
         if ($userIds === []) {
             $this->log->warning(

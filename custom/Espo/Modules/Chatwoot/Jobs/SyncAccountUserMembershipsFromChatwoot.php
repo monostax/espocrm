@@ -29,6 +29,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountUserMembershipService;
+use Espo\Modules\Chatwoot\Services\ChatwootAgentIdentity;
 
 /**
  * Consolidated scheduled job to sync account user memberships from Chatwoot.
@@ -78,7 +79,8 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
         private Log $log,
-        private ChatwootAccountUserMembershipService $membershipService
+        private ChatwootAccountUserMembershipService $membershipService,
+        private ChatwootAgentIdentity $agentIdentity
     ) {}
 
     public function run(): void
@@ -272,6 +274,10 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
                         'platformId' => $platformId,
                     ])
                     ->findOne();
+
+                if (!$localUser && isset($agentsByPlatformUserId[$remoteUserId])) {
+                    $localUser = $this->agentIdentity->importForAccount($account, $agentsByPlatformUserId[$remoteUserId]);
+                }
 
                 if (!$localUser) {
                     $this->log->debug(
