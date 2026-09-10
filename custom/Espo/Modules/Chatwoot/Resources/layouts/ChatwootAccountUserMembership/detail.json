@@ -144,6 +144,23 @@
             ],
             [
                 {
+                    "name": "tasksEnabled"
+                }
+            ],
+            [
+                {
+                    "name": "taskManagementPrompt",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "taskAssignees",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
                     "name": "aiPrompt",
                     "fullWidth": true
                 }

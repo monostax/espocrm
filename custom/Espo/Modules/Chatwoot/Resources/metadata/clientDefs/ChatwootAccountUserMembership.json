@@ -57,6 +57,33 @@
                     ]
                 }
             },
+            "tasksEnabled": {
+                "visible": {
+                    "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]
+                }
+            },
+            "taskManagementPrompt": {
+                "visible": {
+                    "conditionGroup": [
+                        { "type": "isTrue", "attribute": "isAI" },
+                        { "type": "isTrue", "attribute": "tasksEnabled" }
+                    ]
+                }
+            },
+            "taskAssignees": {
+                "visible": {
+                    "conditionGroup": [
+                        { "type": "isTrue", "attribute": "isAI" },
+                        { "type": "isTrue", "attribute": "tasksEnabled" }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        { "type": "isTrue", "attribute": "isAI" },
+                        { "type": "isTrue", "attribute": "tasksEnabled" }
+                    ]
+                }
+            },
             "timeZone": {
                 "visible": {
                     "conditionGroup": [

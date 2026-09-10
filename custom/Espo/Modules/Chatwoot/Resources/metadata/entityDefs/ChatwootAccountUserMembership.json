@@ -146,6 +146,24 @@
             },
             "additionalAttributeList": ["columns"]
         },
+        "tasksEnabled": {
+            "type": "bool",
+            "default": false,
+            "audited": true,
+            "tooltip": true
+        },
+        "taskManagementPrompt": {
+            "type": "wysiwyg",
+            "audited": true,
+            "tooltip": true
+        },
+        "taskAssignees": {
+            "type": "linkMultiple",
+            "view": "chatwoot:views/account-user-membership/fields/task-assignees",
+            "tooltip": true,
+            "columns": { "description": "taskAssignmentDescription" },
+            "additionalAttributeList": ["columns"]
+        },
         "funnelsToManage": {
             "type": "linkMultiple",
             "view": "chatwoot:views/account-user-membership/fields/funnels-to-manage",
@@ -267,6 +285,16 @@
                 "description": "description"
             }
         },
+        "taskAssignees": {
+            "type": "hasMany",
+            "entity": "User",
+            "relationName": "chatwootAccountUserMembershipTaskUser",
+            "foreign": "accountUserMembershipsWithTaskAccess",
+            "additionalColumns": {
+                "description": { "type": "text" }
+            },
+            "columnAttributeMap": { "description": "description" }
+        },
         "wahaSessionLabels": {
             "type": "hasMany",
             "entity": "WahaSessionLabel",
@@ -322,7 +350,8 @@
             {"table": "ChatwootAccountUserMembershipChatwootTeam", "column": "chatwootAccountUserMembershipId"},
             {"table": "ChatwootAccountUserMembershipKnowledgeBaseCategory", "column": "chatwootAccountUserMembershipId"},
             {"table": "ChatwootAccountUserMembershipCalendarUser", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipFunnel", "column": "chatwootAccountUserMembershipId"}
+            {"table": "ChatwootAccountUserMembershipFunnel", "column": "chatwootAccountUserMembershipId"},
+            {"table": "ChatwootAccountUserMembershipTaskUser", "column": "chatwootAccountUserMembershipId"}
         ]
     }
 }

@@ -27,6 +27,10 @@
         "knowledgeBaseCategories": "Knowledge Base Categories",
         "calendarsToManage": "Managed Calendars",
         "calendarDescription": "Internal Notes",
+        "tasksEnabled": "Enable Task Management",
+        "taskManagementPrompt": "Task Management Instructions",
+        "taskAssignees": "Managed Task Assignees",
+        "taskAssignmentDescription": "Assignment Instructions",
         "funnelsToManage": "Managed Funnels",
         "description": "Internal Notes",
         "calendarEventType": "Event Type",
@@ -39,6 +43,7 @@
         "chatwootInboxes": "Chat Inboxes"
     },
     "links": {
+        "taskAssignees": "Managed Task Assignees",
         "chatwootAccount": "Chat / Account",
         "chatwootUser": "Chat / User",
         "knowledgeBaseCategories": "Knowledge Base Categories",
@@ -104,6 +109,9 @@
         }
     },
     "tooltips": {
+        "tasksEnabled": "Allow this AI to manage conversation tasks assigned to the configured human users. Requires CRM API access and at least one eligible assignee.",
+        "taskManagementPrompt": "Internal instructions for when to create, update, complete or cancel tasks, deadlines, and fallback assignment. Never quoted to the customer.",
+        "taskAssignees": "Select active human CRM users in this account's tenant and teams. Edit Internal Notes beside each user to explain when this AI should assign work to them.",
         "followupsEnabled": "When disabled, this AI agent never runs automated follow-ups: new opportunities it creates are NOT armed with a follow-up loop, scheduled follow-ups for opportunities it drives stop firing, and any opportunities currently in 'Follow-up Active' driven by this agent are reset to 'Action Needed' the moment you disable it. The agent can still create and update opportunities normally.",
         "followupBreakoutLimit": "Agent-level default for the maximum number of consecutive follow-ups before a deal is auto-Ended. Leave empty for non-deterministic behaviour (the AI chooses per deal; deals without an explicit value fall back to 3). When set, this default applies deterministically to every deal driven by this agent — unless the deal carries its own explicit Follow-up Breakout Limit (set by the AI or via mass-update), which always wins.",
         "aiDebounceSeconds": "How long the AI waits (in seconds) after the customer's last message before it starts processing a reply. New messages arriving during this window reset the wait, so rapid message bursts are answered once. Defaults to 1 second when the agent cannot be resolved yet (e.g. first message before assignment).",

@@ -1,5 +1,9 @@
 {
     "fields": {
+        "tasksEnabled": "Habilitar gestão de tarefas",
+        "taskManagementPrompt": "Instruções para gestão de tarefas",
+        "taskAssignees": "Responsáveis por tarefas gerenciadas",
+        "taskAssignmentDescription": "Instruções de atribuição",
         "name": "Nome",
         "chatwootAccount": "Chat / Conta",
         "chatwootUser": "Chat / Usuário",
@@ -39,6 +43,7 @@
         "chatwootInboxes": "Chat / Conta / Caixas de Entrada"
     },
     "links": {
+        "taskAssignees": "Responsáveis por tarefas gerenciadas",
         "chatwootAccount": "Chat / Conta",
         "chatwootUser": "Chat / Usuário",
         "knowledgeBaseCategories": "Categorias da Base de Conhecimento",
@@ -106,6 +111,9 @@
         }
     },
     "tooltips": {
+        "tasksEnabled": "Permite à IA gerenciar tarefas da conversa atribuídas aos usuários humanos configurados. Requer acesso à API do CRM e pelo menos um responsável elegível.",
+        "taskManagementPrompt": "Instruções internas sobre quando criar, atualizar, concluir ou cancelar tarefas, prazos e responsável para triagem. Nunca citadas ao cliente.",
+        "taskAssignees": "Selecione usuários humanos ativos do CRM no tenant e nas equipes desta conta. Edite as notas internas de cada usuário para orientar quando atribuir trabalho a ele.",
         "followupsEnabled": "Quando desativado, este funcionário digital nunca executa follow-ups automáticos: novas oportunidades criadas por ele NÃO são armadas com o loop de follow-up, follow-ups agendados de oportunidades conduzidas por ele deixam de disparar, e oportunidades atualmente em 'Follow-up Ativo' conduzidas por este funcionário digital são redefinidas para 'Ação Necessária' no momento em que você desativa. O funcionário digital continua criando e atualizando oportunidades normalmente.",
         "followupBreakoutLimit": "Padrão no nível do funcionário digital para o número máximo de follow-ups consecutivos antes de a oportunidade ser encerrada automaticamente. Deixe vazio para comportamento não determinístico (o funcionário escolhe por negociação; negociações sem valor explícito caem no padrão 3). Quando definido, este padrão se aplica de forma determinística a todas as negociações conduzidas por este funcionário — exceto quando a própria negociação tiver um Limite de Follow-up explícito (definido pelo funcionário digital ou via atualização em massa), que sempre prevalece.",
         "aiDebounceSeconds": "Quanto tempo o funcionário digital aguarda (em segundos) após a última mensagem do cliente antes de começar a processar a resposta. Novas mensagens que chegam durante essa janela reiniciam a espera, para que rajadas de mensagens sejam respondidas uma única vez. Padrão de 1 segundo quando o funcionário ainda não pode ser resolvido (ex.: primeira mensagem antes da atribuição).",

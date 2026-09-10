@@ -7,6 +7,14 @@
                 "Espo\\Modules\\Global\\Classes\\FieldValidators\\User\\UserName\\Valid"
             ]
         },
+        "taskAssignmentDescription": {
+            "type": "wysiwyg",
+            "notStorable": true,
+            "orderDisabled": true,
+            "exportDisabled": true,
+            "utility": true,
+            "fieldManagerParamList": []
+        },
         "calendarDescription": {
             "type": "wysiwyg",
             "notStorable": true,
@@ -67,6 +75,14 @@
                 "description": "description",
                 "eventType": "eventType"
             }
+        },
+        "accountUserMembershipsWithTaskAccess": {
+            "type": "hasMany",
+            "entity": "ChatwootAccountUserMembership",
+            "foreign": "taskAssignees",
+            "relationName": "chatwootAccountUserMembershipTaskUser",
+            "additionalColumns": { "description": { "type": "text" } },
+            "columnAttributeMap": { "description": "description" }
         },
         "tenants": {
             "type": "hasMany",

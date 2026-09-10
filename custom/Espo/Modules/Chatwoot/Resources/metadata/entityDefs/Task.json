@@ -3,7 +3,14 @@
         "parent": {
             "entityList": ["Account", "Contact", "Lead", "Opportunity", "Case", "ChatwootConversation"]
         },
-        "chatwootConversations": { "type": "linkMultiple" }
+        "chatwootConversations": { "type": "linkMultiple" },
+        "aiTaskKey": {
+            "type": "varchar",
+            "maxLength": 180,
+            "readOnlyAfterCreate": true,
+            "duplicateIgnore": true,
+            "comment": "Server-scoped conversation + action key. Unique even after soft deletion to prevent replayed AI creates."
+        }
     },
     "links": {
         "chatwootConversations": {
@@ -12,5 +19,8 @@
             "foreign": "tasks",
             "relationName": "chatwootConversationTask"
         }
+    },
+    "indexes": {
+        "aiTaskKey": { "columns": ["aiTaskKey"], "unique": true }
     }
 }
