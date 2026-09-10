@@ -1,5 +1,6 @@
 {
     "actionClassNameList": [
+        "Espo\\Modules\\Global\\Rebuild\\BackfillUserEmailIdentity",
         "Espo\\Modules\\Global\\Rebuild\\SeedSidenavConfig",
         "Espo\\Modules\\Global\\Rebuild\\BackfillContactTenant",
         "Espo\\Modules\\Global\\Rebuild\\BackfillFunnelAclTeams",

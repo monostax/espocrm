@@ -96,7 +96,7 @@ class ChatwootAccountMembershipOrchestrator
     public function ensureUserMembership(
         Entity $account,
         Entity $user,
-        string $role = 'agent'
+        ?string $role = 'agent'
     ): Entity {
         $this->assertUserBelongsToAccountTeam($account, $user);
 
@@ -144,6 +144,26 @@ class ChatwootAccountMembershipOrchestrator
         $roleResyncExternalUserId = null;
 
         try {
+            // Multiple team/tenant hooks can enqueue the same user. Serialize
+            // identity creation across workers before looking for existing links.
+            // Select only the base row: PostgreSQL cannot FOR UPDATE nullable
+            // email/other foreign-field joins in the default User projection.
+            $lockedUser = $this->entityManager->getRDBRepository('User')
+                ->where(['id' => $userId])->select(['id'])->forUpdate()->findOne();
+            if (!$lockedUser) {
+                throw new NotFound('CRM User not found.');
+            }
+            $lockedUser = $this->entityManager->getEntityById('User', $userId);
+            if (!$lockedUser) {
+                throw new NotFound('CRM User not found.');
+            }
+            $this->assertUserBelongsToAccountTeam($account, $lockedUser);
+            $email = $this->extractCrmUserEmail($lockedUser);
+            if (!$email) {
+                throw new BadRequest('selectedUserMustHaveEmail');
+            }
+            $name = $lockedUser->get('name') ?: $lockedUser->get('userName') ?: $email;
+
             $chatwootUser = $this->findChatwootUser($platformId, $userId);
 
             if (!$chatwootUser) {
@@ -174,6 +194,13 @@ class ChatwootAccountMembershipOrchestrator
                 $userAccessToken = $userResponse['access_token'] ?? null;
 
                 if ($existingRemoteUser) {
+                    if ($this->entityManager->getRDBRepository('ChatwootUser')->where([
+                        'platformId' => $platformId,
+                        'chatwootUserId' => $remoteUserId,
+                    ])->findOne()) {
+                        throw new BadRequest('The remote Chatwoot user is already linked to another CRM identity.');
+                    }
+
                     $this->log->info(
                         "Reusing existing Chatwoot user {$remoteUserId} for CRM user {$userId}."
                     );
@@ -188,7 +215,7 @@ class ChatwootAccountMembershipOrchestrator
                 $chatwootUser = $this->entityManager->createEntity('ChatwootUser', [
                     'name' => $name,
                     'emailAddress' => $email,
-                    'password' => $generatedPassword,
+                    'password' => $existingRemoteUser ? null : $generatedPassword,
                     'platformId' => $platformId,
                     'assignedUserId' => $userId,
                     'chatwootUserId' => $remoteUserId,
@@ -205,6 +232,12 @@ class ChatwootAccountMembershipOrchestrator
             }
 
             if ($chatwootUser->get('emailAddress') !== $email) {
+                $this->apiClient->updateUser(
+                    $platformUrl,
+                    $accessToken,
+                    (int) $chatwootUser->get('chatwootUserId'),
+                    ['email' => $email]
+                );
                 $chatwootUser->set('emailAddress', $email);
                 $this->entityManager->saveEntity($chatwootUser, ['silent' => true]);
             }
@@ -223,6 +256,8 @@ class ChatwootAccountMembershipOrchestrator
                     'chatwootUserId' => $chatwootUserId,
                 ])
                 ->findOne();
+
+            $role ??= $membership?->get('role') ?: 'agent';
 
             if (!$membership) {
                 $this->apiClient->attachUserToAccount(
@@ -272,6 +307,10 @@ class ChatwootAccountMembershipOrchestrator
             return $membership;
         } catch (\Throwable $e) {
             $tm->rollback();
+            $this->log->error(
+                "Chatwoot membership provisioning failed for User {$userId}, account {$accountId}: " .
+                $e->getMessage()
+            );
 
             if ($attachedToAccount && isset($externalUserId)) {
                 try {

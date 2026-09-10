@@ -1,5 +1,16 @@
 {
     "iconClass": "ti ti-users",
+    "dynamicLogic": {
+        "fields": {
+            "emailAddress": {
+                "required": {
+                    "conditionGroup": [
+                        {"type": "notIn", "attribute": "type", "value": ["api", "system"]}
+                    ]
+                }
+            }
+        }
+    },
     "relationshipPanels": {
         "userApiKeys": {
             "layout": "listForUser",

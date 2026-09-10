@@ -145,3 +145,48 @@ login; a Chatwoot password reset currently does not set that CRM password. Their
 Chatwoot SSO still requires the identity and platform-permission repair above.
 For new invitations, create the CRM User with the correct primary email and
 account team before inviting the agent in Chatwoot.
+
+## Follow-up: email identity and automatic CRM provisioning
+
+The CRM User lifecycle now owns the identity and provisioning flow:
+
+- Human users use their normalized primary email (`trim` + lowercase) as
+  `userName`. This runs before record validation and on direct ORM saves.
+  `emailAddressData` uses its marked primary address, or its first address when
+  none is marked, matching Espo's email saver. Email changes also change the login.
+- The username field is derived/read-only in the UI. The server accepts valid
+  email usernames up to 254 characters, including `+` addresses, and rejects
+  collisions with another username or human user's primary email, including
+  inactive users. API/system users retain machine usernames.
+- `BackfillUserEmailIdentity` runs during rebuild and migrates existing human
+  usernames with valid, unambiguous primary emails. Missing-email users are
+  skipped; invalid/conflicting identities are logged for correction. Passwords,
+  active flags, roles and teams are preserved. After migration, the email replaces
+  the former username; users may need to sign in again.
+- Active regular/admin User creation queues `ProvisionUserMemberships` in `q0`
+  with five attempts. The job creates/reuses a platform-level `ChatwootUser` and
+  ensures a `ChatwootAccountUserMembership` on each active account sharing the
+  user's current teams. `Tenant.users` supplies its base team through the existing
+  `SyncUserTeams` hook. Tenant membership does not bypass account-team boundaries.
+- Provisioning also runs after email/team changes, activation, and team relation
+  additions from either side. It is asynchronous: the CRM job runner must be
+  running. Failed attempts remain visible in Jobs and log the user/account IDs;
+  retry the job after correcting persistent configuration or identity conflicts.
+- New memberships default to `agent`. Existing roles are preserved, and concurrent
+  jobs serialize identity creation on the CRM User row. Existing remote users
+  retain their chosen passwords; a new random password is only stored for a
+  newly created remote identity. Email changes update the linked remote identity.
+- Inactive users are provisioned when activated. Portal, API and system users
+  are not provisioned as Chatwoot agents. A user without a matching account is
+  provisioned after their account team is assigned.
+
+Deployment requires the normal CRM build/rebuild (metadata, the expanded username
+column and the username backfill), followed by a running CRM job worker. The
+reported legacy Chatwoot platform-ownership/password recovery steps above still
+apply; the username migration does not repair those remote grants or replay
+failed password callbacks.
+
+Validation for this follow-up: 480 Chatwoot/Global/core-authentication unit tests,
+1,684 assertions passed, including canonical email login before provisioning,
+token passthrough, primary-email selection, duplicate identities, migration,
+automatic job scheduling, role-preserving retries and remote-create compensation.

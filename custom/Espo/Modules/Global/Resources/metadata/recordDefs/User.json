@@ -1,4 +1,12 @@
 {
+    "earlyBeforeCreateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Hooks\\User\\EmailIdentity"
+    ],
+    "earlyBeforeUpdateHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Hooks\\User\\EmailIdentity"
+    ],
     "readLoaderClassNameList": [
         "__APPEND__",
         "Espo\\Modules\\Global\\Classes\\FieldProcessing\\User\\RoleNameLoader"

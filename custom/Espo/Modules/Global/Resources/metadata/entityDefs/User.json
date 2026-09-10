@@ -1,5 +1,12 @@
 {
     "fields": {
+        "userName": {
+            "maxLength": 254,
+            "view": "global:views/user/fields/user-name",
+            "validatorClassNameList": [
+                "Espo\\Modules\\Global\\Classes\\FieldValidators\\User\\UserName\\Valid"
+            ]
+        },
         "calendarDescription": {
             "type": "wysiwyg",
             "notStorable": true,

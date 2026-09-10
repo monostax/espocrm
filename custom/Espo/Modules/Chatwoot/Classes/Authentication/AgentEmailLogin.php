@@ -35,6 +35,16 @@ class AgentEmailLogin implements Login
     {
         $username = $data->getUsername();
 
+        // Canonical email logins do not depend on Chatwoot provisioning having
+        // completed. Leave token data untouched for password-version checks.
+        if (!$data->getAuthToken() && $username && $data->getPassword() &&
+            filter_var(trim($username), FILTER_VALIDATE_EMAIL)) {
+            $normalized = strtolower(trim($username));
+            if ($this->userFinder->find($normalized)) {
+                return $this->login->login(new Data($normalized, $data->getPassword()), $request);
+            }
+        }
+
         // Preserve explicit usernames, portal login and token/password-version
         // validation. The SPA uses the canonical username after initial login.
         if ($this->isPortal || $data->getAuthToken() || !$username || !$data->getPassword() ||
