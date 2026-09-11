@@ -17,6 +17,7 @@
         "avatarUrl": "URL do Avatar",
         "customRoleId": "ID da Função Personalizada",
         "isAI": "Agente de IA",
+        "aiMessageVisibility": "Permissões de Envio de Mensagens",
         "aiPrompt": "Prompt",
         "timeZone": "Fuso Horário",
         "ignoreGroups": "Ignorar Grupos",
@@ -90,6 +91,10 @@
         "whatsappTemplatesLoadTemplatesFailed": "Falha ao carregar templates."
     },
     "options": {
+        "aiMessageVisibility": {
+            "publicAndPrivate": "Públicas e privadas",
+            "privateOnly": "Somente privadas"
+        },
         "role": {
             "agent": "Agente",
             "administrator": "Administrador"
@@ -111,6 +116,7 @@
         }
     },
     "tooltips": {
+        "aiMessageVisibility": "Públicas e privadas permite mensagens ao cliente e notas internas. Somente privadas restringe esta IA a notas internas, inclusive nas respostas a mensagens do cliente e menções. Templates WhatsApp e envios de follow-up automático ficam desabilitados enquanto Somente privadas estiver selecionado.",
         "tasksEnabled": "Permite à IA gerenciar tarefas da conversa atribuídas aos usuários humanos configurados. Requer acesso à API do CRM e pelo menos um responsável elegível.",
         "taskManagementPrompt": "Instruções internas sobre quando criar, atualizar, concluir ou cancelar tarefas, prazos e responsável para triagem. Nunca citadas ao cliente.",
         "taskAssignees": "Selecione usuários humanos ativos do CRM no tenant e nas equipes desta conta. Edite as notas internas de cada usuário para orientar quando atribuir trabalho a ele.",

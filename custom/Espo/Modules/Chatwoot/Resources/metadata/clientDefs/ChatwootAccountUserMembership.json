@@ -47,6 +47,11 @@
                     ]
                 }
             },
+            "aiMessageVisibility": {
+                "visible": {
+                    "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]
+                }
+            },
             "aiPrompt": {
                 "visible": {
                     "conditionGroup": [

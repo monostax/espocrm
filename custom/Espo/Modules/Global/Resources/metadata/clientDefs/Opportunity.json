@@ -1,6 +1,7 @@
 {
     "kanbanStatusField": "opportunityStageId",
     "kanbanViewMode": true,
+    "modelDefaultsPreparator": "global:handlers/tenant/defaults-preparator",
     "filterList": [
         {
             "name": "open"

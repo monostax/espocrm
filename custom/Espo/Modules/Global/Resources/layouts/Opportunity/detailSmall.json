@@ -8,12 +8,6 @@
             ],
             [
                 {
-                    "name": "tenant"
-                },
-                false
-            ],
-            [
-                {
                     "name": "funnel"
                 },
                 {

@@ -105,7 +105,7 @@
   "messages": {
     "testEmailSent": "O e-mail de teste enviado",
     "emailSent": "O e-mail foi enviado",
-    "savedAsDraft": "Salvar como rascunho",
+    "savedAsDraft": "Salvar rascunho",
     "confirmInsertTemplate": "O corpo do e-mail será perdido. Tem certeza de que deseja inserir o modelo?",
     "noSmtpSetup": "SMTP não está configurado: {link}",
     "confirmSend": "Enviar o e-mail?",

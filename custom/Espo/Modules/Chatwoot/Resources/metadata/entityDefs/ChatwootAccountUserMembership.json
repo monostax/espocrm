@@ -72,6 +72,15 @@
             "readOnly": true,
             "tooltip": true
         },
+        "aiMessageVisibility": {
+            "type": "enum",
+            "options": ["publicAndPrivate", "privateOnly"],
+            "default": "publicAndPrivate",
+            "required": true,
+            "notNull": true,
+            "tooltip": true,
+            "audited": true
+        },
         "aiPrompt": {
             "type": "wysiwyg",
             "tooltip": true,

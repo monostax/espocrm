@@ -13,6 +13,7 @@
         "avatarUrl": "Avatar URL",
         "customRoleId": "Custom Role ID",
         "isAI": "AI Agent",
+        "aiMessageVisibility": "Message Sending Capabilities",
         "aiPrompt": "Prompt",
         "timeZone": "Time Zone",
         "ignoreGroups": "Ignore Groups",
@@ -88,6 +89,10 @@
         "whatsappTemplatesLoadTemplatesFailed": "Failed to load templates."
     },
     "options": {
+        "aiMessageVisibility": {
+            "publicAndPrivate": "Public & Private",
+            "privateOnly": "Private only"
+        },
         "role": {
             "agent": "Agent",
             "administrator": "Administrator"
@@ -109,6 +114,7 @@
         }
     },
     "tooltips": {
+        "aiMessageVisibility": "Public & Private allows customer-facing messages and internal notes. Private only restricts this AI to internal notes, including replies to customer messages and mentions. WhatsApp templates and automated follow-up outreach are disabled while Private only is selected.",
         "tasksEnabled": "Allow this AI to manage conversation tasks assigned to the configured human users. Requires CRM API access and at least one eligible assignee.",
         "taskManagementPrompt": "Internal instructions for when to create, update, complete or cancel tasks, deadlines, and fallback assignment. Never quoted to the customer.",
         "taskAssignees": "Select active human CRM users in this account's tenant and teams. Edit Internal Notes beside each user to explain when this AI should assign work to them.",
