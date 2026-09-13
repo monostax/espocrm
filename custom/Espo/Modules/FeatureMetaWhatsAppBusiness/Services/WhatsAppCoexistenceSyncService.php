@@ -51,6 +51,56 @@ class WhatsAppCoexistenceSyncService
     ) {}
 
     /**
+     * A connected phone does not imply webhook delivery. Re-establish the
+     * OAuth provider's app subscription after reauthorization or unsubscription.
+     * Existing subscriptions (including callback overrides) are left intact.
+     */
+    public function ensureWebhookSubscription(string $oAuthAccountId, ?string $businessAccountId = null): void
+    {
+        $account = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
+
+        if (!$account) {
+            throw new Error("OAuthAccount not found: {$oAuthAccountId}");
+        }
+
+        $businessAccountId = $businessAccountId ?: $account->get('whatsappBusinessAccountId');
+        $provider = $this->entityManager->getEntityById('OAuthProvider', (string) $account->get('providerId'));
+        $appId = (string) ($provider?->get('clientId') ?? '');
+
+        if (!$businessAccountId || !$appId) {
+            throw new Error('WhatsApp Business Account ID and Meta App ID are required for webhook subscription.');
+        }
+
+        $accessToken = $this->tokensProvider->get($oAuthAccountId)->getAccessToken();
+
+        if (!$accessToken) {
+            throw new Error("Unable to obtain access token for OAuthAccount {$oAuthAccountId}.");
+        }
+
+        $isSubscribed = static function (array $apps) use ($appId): bool {
+            foreach ($apps as $app) {
+                if ((string) ($app['whatsapp_business_api_data']['id'] ?? '') === $appId) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        if ($isSubscribed($this->metaGraphApiClient->getSubscribedApps($accessToken, $businessAccountId))) {
+            return;
+        }
+
+        $this->metaGraphApiClient->subscribeApp($accessToken, $businessAccountId);
+
+        if (!$isSubscribed($this->metaGraphApiClient->getSubscribedApps($accessToken, $businessAccountId))) {
+            throw new Error("Meta App {$appId} webhook subscription could not be confirmed for WABA {$businessAccountId}.");
+        }
+
+        $this->log->info("WhatsAppCoexistenceSyncService: restored Meta App {$appId} webhook subscription for WABA {$businessAccountId}.");
+    }
+
+    /**
      * Run the full Coexistence sync for a single OAuthAccount.
      *
      * Steps:
@@ -115,6 +165,10 @@ class WhatsAppCoexistenceSyncService
                 'platformType' => $platformType,
             ];
         }
+
+        // Subscribe before requesting data; successful SMB sync alone does not
+        // guarantee Meta will deliver its events to this app.
+        $this->ensureWebhookSubscription($oAuthAccountId);
 
         // Step 2: required state sync.
         try {

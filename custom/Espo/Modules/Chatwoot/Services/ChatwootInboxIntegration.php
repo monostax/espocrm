@@ -1985,10 +1985,9 @@ class ChatwootInboxIntegration
             'is_coexistence' => $isCoexistence,
         ];
 
-        // embedded_signup skips Chatwoot's create-time webhook auto-setup
-        // (Channel::Whatsapp#should_auto_setup_webhooks?). Coexistence paths
-        // top up subscribed_apps via MetaGraphApiClient themselves; cloud API
-        // keeps auto-setup by omitting source.
+        // embedded_signup skips Chatwoot's create-time webhook auto-setup.
+        // Coexistence activation verifies the Meta subscription before creating
+        // the inbox; cloud API keeps auto-setup by omitting source.
         if ($isCoexistence) {
             $providerConfig['source'] = 'embedded_signup';
         }
@@ -2542,10 +2541,8 @@ class ChatwootInboxIntegration
     // So `activateWhatsappCoexistence`:
     //   1. Resolves token + waba + phone_number_id from the OAuthAccount
     //      (set there by WhatsAppEmbeddedSignup::finish from session_info).
-    //   2. Creates the Chatwoot WhatsApp Cloud inbox (same as Cloud API).
-    //   3. Explicitly subscribes the Meta App to the Coexistence webhook
-    //      fields on the WABA (idempotent — Chatwoot's own subscribe call
-    //      uses a narrower field list, so we top it up).
+    //   2. Ensures the Meta App is subscribed to the WABA before creating an inbox.
+    //   3. Creates the Chatwoot WhatsApp Cloud inbox (same as Cloud API).
     //   4. Probes platform_type. If `CLOUD_API + is_on_biz_app`, marks ACTIVE.
     //      Otherwise marks PENDING_COEXISTENCE_CONFIRMATION and leaves the
     //      WhatsAppCoexistenceSyncService job to do the rest async.
@@ -2614,6 +2611,10 @@ class ChatwootInboxIntegration
 
             $normalizedPhoneNumber = '+' . preg_replace('/[^0-9]/', '', $phoneNumber);
 
+            // source=embedded_signup disables Chatwoot's automatic subscription.
+            // Fail before creating an inbox if webhook delivery cannot be enabled.
+            $this->whatsAppCoexistenceSyncService->ensureWebhookSubscription($oAuthAccountId, $businessAccountId);
+
             // Chatwoot connection details.
             $chatwootPlatform = $this->loadChatwootPlatform($chatwootAccount);
 
@@ -2647,23 +2648,6 @@ class ChatwootInboxIntegration
             $channel->set('chatwootInboxId', $inboxResult['id']);
             $channel->set('chatwootInboxIdentifier', $inboxResult['inbox_identifier'] ?? null);
             $channel->set('chatwootInboxRecordId', $this->upsertLocalChatwootInbox($channel, $inboxResult));
-
-            // Subscribe the Meta App to Coexistence webhook fields on the WABA.
-            // Chatwoot's `Channel::Whatsapp` already calls subscribed_apps with
-            // a narrower set; this is a redundant-safe top-up.
-            try {
-                $this->metaGraphApiClient->subscribeApp(
-                    $accessToken,
-                    $businessAccountId,
-                );
-            } catch (\Exception $e) {
-                // Non-fatal: Chatwoot's own subscription will still work for
-                // the base events. Log + continue.
-                $this->log->warning(
-                    "ChatwootInboxIntegration: Coexistence webhook top-up subscription failed for WABA {$businessAccountId}: " .
-                    $e->getMessage()
-                );
-            }
 
             // Persist Coexistence-specific metadata on the integration.
             $channel->set('businessAccountId', $businessAccountId);
@@ -2746,7 +2730,7 @@ class ChatwootInboxIntegration
     private function reconnectWhatsappCoexistence(Entity $channel): Entity
     {
         $channelId = $channel->getId();
-        $chatwootInboxId = $channel->get('chatwootInboxId');
+        $chatwootInboxId = $this->getNumericChatwootInboxId($channel);
 
         if (!$chatwootInboxId) {
             return $this->activate($channelId);
@@ -2930,6 +2914,13 @@ class ChatwootInboxIntegration
             $currentStatus = $channel->get('status');
 
             if ($platformType === 'CLOUD_API' && $isOnBizApp) {
+                // Meta can report a connected phone while subscribed_apps is
+                // empty. Repair and verify delivery before reporting ACTIVE.
+                $this->whatsAppCoexistenceSyncService->ensureWebhookSubscription(
+                    $oAuthAccountId,
+                    $channel->get('businessAccountId'),
+                );
+
                 // Coexistence-ready. If we haven't synced yet on the OAuthAccount,
                 // run it now (still within the 24h window).
                 $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
@@ -2985,6 +2976,9 @@ class ChatwootInboxIntegration
             }
         } catch (\Exception $e) {
             $this->log->warning("Failed to check channel status (Coexistence): " . $e->getMessage());
+            $channel->set('status', 'DISCONNECTED');
+            $channel->set('errorMessage', 'Unable to verify WhatsApp Coexistence connection: ' . $e->getMessage());
+            $this->entityManager->saveEntity($channel);
         }
 
         return $channel;
