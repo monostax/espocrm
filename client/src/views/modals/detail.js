@@ -32,6 +32,7 @@ import ModalView from 'views/modal';
 import ActionItemSetup from 'helpers/action-item-setup';
 import Backbone from 'backbone';
 import RecordModal from 'helpers/record-modal';
+import RecordIcon from 'helpers/record-icon';
 import Utils from 'utils';
 import _ from 'underscore';
 
@@ -145,6 +146,15 @@ class DetailModalView extends ModalView {
             this.removeDisabled;
 
         this.nameAttribute = this.getMetadata().get(`clientDefs.${this.entityType}.nameAttribute`) || 'name';
+
+        if (RecordIcon.attribute(this, this.entityType)) {
+            RecordIcon.listen(this, (scope, record) => {
+                if (scope === this.entityType && record.id === this.model?.id) {
+                    this.$el.find('.record-icon-modal').html(RecordIcon.html(record.icon,
+                        this.getMetadata(), RecordIcon.fallback(this, scope)));
+                }
+            });
+        }
 
         this.fullFormDisabled = this.options.fullFormDisabled || this.fullFormDisabled;
         this.layoutName = this.options.layoutName || this.layoutName;
@@ -388,6 +398,10 @@ class DetailModalView extends ModalView {
             this.headerHtml += ' ' +
                 $('<span>')
                     .text(model.attributes[this.nameAttribute])
+                    .prepend(RecordIcon.attribute(this, this.entityType) ?
+                        $('<span>').addClass('record-icon-modal record-icon-slot').html(
+                            RecordIcon.html(model.get(RecordIcon.attribute(this, this.entityType)),
+                                this.getMetadata(), RecordIcon.fallback(this, this.entityType))) : '')
                     .get(0).outerHTML;
         }
 

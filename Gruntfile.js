@@ -555,7 +555,12 @@ return '${version}';
     grunt.loadNpmTasks("grunt-contrib-copy");
     grunt.loadNpmTasks("grunt-replace");
 
+    grunt.registerTask("record-icons", () => {
+        cp.execFileSync(process.execPath, ["js/scripts/build-record-icons.js"], {stdio: "inherit"});
+    });
+
     grunt.registerTask("internal", [
+        "record-icons",
         "less",
         "cssmin",
         "prepare-lib-original",

@@ -2,10 +2,17 @@
     "fields": {
         "name": {
             "type": "varchar",
+            "view": "global:views/fields/record-icon-name",
             "required": true,
             "pattern": "$noBadCharacters",
             "maxLength": 100,
             "trim": true
+        },
+        "icon": {
+            "type": "jsonObject",
+            "view": "global:views/fields/record-icon",
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true
         },
         "description": {
             "type": "text"

@@ -1,0 +1,51 @@
+.record-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2em;
+    height: 1.2em;
+    font-size: inherit;
+    line-height: 1;
+    vertical-align: -0.1em;
+    flex-shrink: 0;
+}
+.record-icon-emoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.record-icon-slot { display: inline-block; margin-inline-end: 0.35em; }
+.record-icon-button { padding: 4px 6px; border: 0; background: transparent; color: inherit; border-radius: 4px; }
+.record-icon-button:hover { background: var(--gray-lighter, #eee); }
+.record-icon-button:focus-visible { outline: 2px solid var(--brand-primary, #5262c5); outline-offset: 1px; }
+.record-icon-name-edit { display: flex; align-items: center; gap: 4px; }
+.record-icon-name-edit > input { min-width: 0; }
+.record-icon-input { position: absolute; top: 50%; left: 9px; transform: translateY(-50%); z-index: 3; pointer-events: none; }
+.record-icon-input-value { padding-left: 32px !important; }
+.record-icon-input-value.being-typed ~ .record-icon-input { visibility: hidden; }
+.record-icon-picker-popup {
+    position: fixed;
+    z-index: 1100;
+    width: 326px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    border: 1px solid var(--panel-default-border, #ddd);
+    border-radius: 8px;
+    background: var(--panel-bg, #fff);
+    color: var(--text-color, #333);
+    box-shadow: 0 6px 24px #0002;
+}
+.record-icon-picker-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--panel-default-border, #ddd); padding-bottom: 6px; }
+.record-icon-picker-tabs > [role="tab"] { background: transparent; border: 0; border-radius: 4px; padding: 6px 10px; color: inherit; }
+.record-icon-picker-tabs > [role="tab"].active { background: var(--gray-lighter, #eee); box-shadow: 0 2px currentColor; }
+.record-icon-picker-tabs > [data-action="clear"] { margin-left: auto; }
+.record-icon-picker-controls { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; }
+.record-icon-picker-controls > input { width: 100%; }
+.record-icon-picker-controls > select { width: auto; }
+.record-icon-picker-controls > [hidden] { display: none; }
+.record-icon-picker-results { height: 258px; min-height: 80px; overflow-y: auto; overscroll-behavior: contain; }
+.record-icon-picker-heading { text-transform: uppercase; font-size: 11px; letter-spacing: .04em; padding: 8px 4px; }
+.record-icon-picker-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.record-icon-picker-grid button { border: 0; background: transparent; color: inherit; height: 32px; border-radius: 4px; font-size: 20px; padding: 3px; }
+.record-icon-picker-grid button:hover, .record-icon-picker-grid button[aria-pressed="true"] { background: var(--gray-lighter, #eee); }
+.record-icon-picker-grid button:focus-visible { outline: 2px solid var(--brand-primary, #5262c5); outline-offset: -2px; }
+.record-icon-picker-status { padding: 4px; }

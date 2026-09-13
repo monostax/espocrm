@@ -33,6 +33,7 @@ import GridStack from 'gridstack';
 import _ from 'underscore';
 import moment from 'moment';
 import Datepicker from 'ui/datepicker';
+import RecordIcon from 'helpers/record-icon';
 
 class DashboardView extends View {
 
@@ -195,6 +196,7 @@ class DashboardView extends View {
             dateRangeLabel: this.formatDateRangeLabel(this.dateRange),
             showFunnelFilter: showFunnelFilter,
             funnelLabel: this.formatFunnelLabel(this.funnel),
+            funnelIconHtml: RecordIcon.html(this.funnel?.icon, this.getMetadata(), 'fas fa-filter'),
             hasFunnel: !!this.funnel,
             currentTab: this.currentTab,
             tabCount: this.dashboardLayout.length,
@@ -589,8 +591,22 @@ class DashboardView extends View {
         const stored = this.getStorage().get('state', 'dashboardFunnel');
 
         this.funnel = stored && typeof stored === 'object' && stored.id
-            ? {id: stored.id, name: stored.name || ''}
+            ? {id: stored.id, name: stored.name || '', icon: stored.icon || null}
             : null;
+
+        RecordIcon.listen(this, (scope, record) => {
+            if (scope === 'Funnel' && this.funnel?.id === record.id) {
+                this.setFunnel(record);
+            }
+        });
+        if (this.funnel && this.isFunnelFilterAvailable()) {
+            const id = this.funnel.id;
+            RecordIcon.load(this, 'Funnel', id).then(record => {
+                if (this.funnel?.id === id && record) {
+                    this.setFunnel(record);
+                }
+            });
+        }
     }
 
     /**
@@ -639,7 +655,7 @@ class DashboardView extends View {
         }
 
         return this.funnel
-            ? {id: this.funnel.id, name: this.funnel.name}
+            ? {id: this.funnel.id, name: this.funnel.name, icon: this.funnel.icon}
             : null;
     }
 
@@ -663,6 +679,7 @@ class DashboardView extends View {
      * @param {{id: string, name: string}|null} funnel
      */
     setFunnel(funnel) {
+        const previousId = this.funnel?.id || null;
         this.funnel = funnel || null;
 
         if (this.funnel) {
@@ -672,9 +689,13 @@ class DashboardView extends View {
         }
 
         this.$el.find('.dashboard-funnel-filter-label').text(this.formatFunnelLabel(this.funnel));
+        this.$el.find('.dashboard-funnel-filter-icon').html(
+            RecordIcon.html(this.funnel?.icon, this.getMetadata(), 'fas fa-filter'));
         this.$el.find('.dashboard-funnel-filter-clear').toggleClass('hidden', !this.funnel);
 
-        this.trigger('dashboard-funnel-change', this.getFunnel());
+        if (previousId !== (this.funnel?.id || null)) {
+            this.trigger('dashboard-funnel-change', this.getFunnel());
+        }
     }
 
     /**
@@ -698,7 +719,8 @@ class DashboardView extends View {
             view.render();
 
             this.listenToOnce(view, 'select', model => {
-                this.setFunnel({id: model.id, name: model.get('name') || ''});
+                RecordIcon.remember(this, 'Funnel', model.attributes);
+                this.setFunnel({id: model.id, name: model.get('name') || '', icon: model.get('icon') || null});
 
                 view.close();
             });

@@ -12,6 +12,7 @@
         "tenant": "Ambiente"
     },
     "fields": {
+        "icon": "Emoji / Ícone",
         "name": "Nome",
         "description": "Descrição",
         "tenant": "Ambiente",

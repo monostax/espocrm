@@ -10,7 +10,8 @@
 
 define("global:views/opportunity/record/kanban", [
     "crm:views/opportunity/record/kanban",
-], function (Dep) {
+    "helpers/record-icon",
+], function (Dep, RecordIcon) {
     return Dep.extend({
         statusField: "opportunityStageId",
         itemViewName: "global:views/opportunity/record/kanban-item",
@@ -23,6 +24,7 @@ define("global:views/opportunity/record/kanban", [
 
         currentFunnelId: null,
         currentFunnelName: null,
+        currentFunnelIcon: null,
         _isFetching: false,
 
         template: "global:opportunity/record/kanban",
@@ -32,6 +34,7 @@ define("global:views/opportunity/record/kanban", [
                 ...Dep.prototype.data.call(this),
                 currentFunnelId: this.currentFunnelId,
                 currentFunnelName: this.currentFunnelName,
+                currentFunnelIconHtml: RecordIcon.html(this.currentFunnelIcon, this.getMetadata(), 'fas fa-filter'),
                 hasFunnelSelector: true,
             };
         },
@@ -47,6 +50,20 @@ define("global:views/opportunity/record/kanban", [
                 null;
 
             Dep.prototype.setup.call(this);
+
+            RecordIcon.listen(this, (scope, record) => {
+                if (scope === 'Funnel' && record.id === this.currentFunnelId) {
+                    this.setFunnel(record.id, record.name, record.icon);
+                }
+            });
+            if (this.currentFunnelId) {
+                const id = this.currentFunnelId;
+                RecordIcon.load(this, 'Funnel', id).then(record => {
+                    if (record && id === this.currentFunnelId) {
+                        this.setFunnel(record.id, record.name, record.icon);
+                    }
+                });
+            }
 
             this.statusField = "opportunityStageId";
 
@@ -65,7 +82,7 @@ define("global:views/opportunity/record/kanban", [
 
         loadDefaultFunnel: function () {
             Espo.Ajax.getRequest("Funnel", {
-                select: "id,name,isDefault",
+                select: "id,name,icon,isDefault",
                 where: [
                     {
                         type: "isTrue",
@@ -79,19 +96,21 @@ define("global:views/opportunity/record/kanban", [
                 .then((response) => {
                     if (response.list && response.list.length > 0) {
                         const funnel = response.list[0];
-                        this.setFunnel(funnel.id, funnel.name);
+                        if (!this.currentFunnelId) {
+                            RecordIcon.remember(this, 'Funnel', funnel);
+                            this.setFunnel(funnel.id, funnel.name, funnel.icon);
+                        }
                     }
                 })
                 .catch(() => {});
         },
 
-        setFunnel: function (funnelId, funnelName) {
-            if (this.currentFunnelId === funnelId) {
-                return;
-            }
+        setFunnel: function (funnelId, funnelName, icon = null) {
+            const changed = this.currentFunnelId !== funnelId;
 
             this.currentFunnelId = funnelId;
             this.currentFunnelName = funnelName;
+            this.currentFunnelIcon = icon;
 
             this.getStorage().set(
                 "state",
@@ -105,7 +124,9 @@ define("global:views/opportunity/record/kanban", [
             );
 
             this.updateFunnelSelectorDisplay();
-            this.applyFunnelFilter();
+            if (changed) {
+                this.applyFunnelFilter();
+            }
         },
 
         applyFunnelFilter: function () {
@@ -165,7 +186,8 @@ define("global:views/opportunity/record/kanban", [
                 view.render();
 
                 this.listenToOnce(view, "select", (model) => {
-                    this.setFunnel(model.id, model.get("name"));
+                    RecordIcon.remember(this, 'Funnel', model.attributes);
+                    this.setFunnel(model.id, model.get("name"), model.get('icon'));
                     view.close();
                 });
             });
@@ -467,6 +489,8 @@ define("global:views/opportunity/record/kanban", [
             }
 
             const $selector = this.$el.find(".funnel-selector-name");
+            this.$el.find('.funnel-selector-icon').html(
+                RecordIcon.html(this.currentFunnelIcon, this.getMetadata(), 'fas fa-filter'));
 
             if ($selector.length) {
                 $selector.text(

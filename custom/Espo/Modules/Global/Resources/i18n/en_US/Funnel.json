@@ -1,6 +1,7 @@
 {
     "fields": {
         "name": "Name",
+        "icon": "Emoji / Icon",
         "description": "Description",
         "tenant": "Tenant",
         "isActive": "Is Active",

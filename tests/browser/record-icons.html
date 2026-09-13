@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<base href="/">
+<script type="application/json" data-name="loader-params">{}</script>
+<link rel="stylesheet" href="/client/css/espo/light.css">
+<link rel="stylesheet" href="/client/css/tabler-icons.min.css">
+<link rel="stylesheet" href="/client/custom/modules/global/css/record-icons.css">
+<button id="trigger" style="margin: 24px" type="button">Funnel icon</button>
+<div class="cell"><div id="name-field" class="field"></div></div>
+<pre id="result">RUNNING</pre>
+<script>
+window.addEventListener('error', event => {
+    document.getElementById('result').textContent = 'FAIL: ' + (event.error?.stack || event.message);
+});
+window.addEventListener('unhandledrejection', event => {
+    document.getElementById('result').textContent = 'FAIL: ' + (event.reason?.stack || event.reason);
+});
+</script>
+<script src="/client/lib/espo.js"></script>
+<script src="/client/lib/espo-main.js"></script>
+<script src="/client/custom/modules/global/lib/transpiled/src/views/record-icon-picker.js"></script>
+<script src="/client/custom/modules/global/lib/transpiled/src/helpers/record-icon-picker.js"></script>
+<script src="/client/custom/modules/global/lib/transpiled/src/views/fields/record-icon-name.js"></script>
+<script>
+(async () => {
+    const assert = (value, message) => { if (!value) { throw new Error(message); } };
+    const until = async condition => {
+        for (let i = 0; i < 200; i++) {
+            if (condition()) { return; }
+            await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        throw new Error('Timed out waiting for browser state');
+    };
+    try {
+        const [Bull, Picker, View, pickerModule, iconMetadata, tablerMetadata, labels] = await Promise.all([
+            Espo.loader.requirePromise('bullbone'),
+            Espo.loader.requirePromise('global:views/record-icon-picker'),
+            Espo.loader.requirePromise('view'),
+            Espo.loader.requirePromise('global:helpers/record-icon-picker'),
+            fetch('/custom/Espo/Modules/Global/Resources/metadata/app/recordIcons.json').then(r => r.json()),
+            fetch('/application/Espo/Resources/metadata/app/clientIcons.json').then(r => r.json()),
+            fetch('/custom/Espo/Modules/Global/Resources/i18n/en_US/RecordIcon.json').then(r => r.json()),
+        ]);
+        const values = new Map();
+        const metadata = {
+            get(key, fallback) {
+                return {
+                    'clientDefs.Funnel.recordIconAttribute': 'icon',
+                    'clientDefs.Funnel.iconClass': 'fas fa-filter',
+                    'app.recordIcons.fontAwesomeClassList': iconMetadata.fontAwesomeClassList,
+                    'app.clientIcons.classList': tablerMetadata.classList,
+                }[key] ?? fallback;
+            },
+        };
+        const helper = {
+            basePath: '/', metadata,
+            preferences: {get: () => 'en_US'}, settings: {get: () => 'en_US'},
+            storage: {get: (category, key) => values.get(key), set: (category, key, value) => values.set(key, value)},
+            language: {translate: key => labels.labels[key] || key},
+        };
+        const factory = new Bull.Factory({helper,
+            viewLoader: (name, callback) => Espo.loader.requirePromise(name).then(callback)});
+        const trigger = document.getElementById('trigger');
+        const create = async value => {
+            const view = await new Promise(resolve => factory.prepare(new Picker({triggerElement: trigger, value}), resolve));
+            view.on('close', () => view.remove());
+            await view.render();
+            await until(() => view.emojiData);
+            return view;
+        };
+        const search = (view, query) => {
+            const input = view.element.querySelector('[data-name="search"]');
+            input.value = query;
+            input.dispatchEvent(new Event('input', {bubbles: true}));
+        };
+        let view = await create(null);
+        assert(view.element.isConnected, 'picker must attach to the DOM');
+        assert(view.scroller.querySelectorAll('button').length === 144, 'initial grid must be bounded');
+        search(view, 'rocket');
+        assert(view.results.some(item => item.value === '🚀'), 'emoji search');
+        let selected;
+        view.on('select', icon => { selected = icon; });
+        view.element.querySelector(`[data-icon-index="${view.results.findIndex(item => item.value === '🚀')}"]`).click();
+        assert(selected.value === '🚀', 'emoji selection');
+        view.close();
+        assert(!document.querySelector('.record-icon-picker-popup'), 'close must clean up the portal');
+        assert(document.activeElement === trigger, 'focus must return to trigger');
+        assert(values.get('recordIconRecent')[0].value === '🚀', 'recent selection must persist');
+
+        view = await create({type: 'icon', value: 'ti ti-rocket'});
+        search(view, 'rocket');
+        const family = view.element.querySelector('[data-name="family"]');
+        for (const value of ['tabler', 'fontAwesome']) {
+            family.value = value;
+            family.dispatchEvent(new Event('change', {bubbles: true}));
+            assert(view.results.length > 0 && view.results.every(item => item.family === value), 'family filter ' + value);
+            const glyph = view.scroller.querySelector('.record-icon');
+            assert(getComputedStyle(glyph, '::before').content !== 'none', 'icon font must render ' + value);
+        }
+        view.element.querySelector('[data-tab="emoji"]').click();
+        search(view, 'thumbs up');
+        const tone = view.element.querySelector('[data-name="tone"]');
+        tone.value = '3';
+        tone.dispatchEvent(new Event('change', {bubbles: true}));
+        assert(view.results.some(item => item.value === '👍🏽'), 'skin tone selection');
+        search(view, 'not-an-emoji-xyz');
+        assert(view.results.length === 0, 'empty search');
+        let removed = false;
+        view.on('select', icon => { removed = icon === null; });
+        view.element.querySelector('[data-action="clear"]').click();
+        assert(removed, 'remove action');
+        document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+        assert(!view.host.isConnected, 'Escape dismisses');
+
+        view = await create(null);
+        const first = view.scroller.querySelector('button');
+        first.focus();
+        first.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}));
+        assert(document.activeElement.dataset.iconIndex === '1', 'arrow-key navigation');
+        document.body.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
+        assert(!view.host.isConnected, 'outside click dismisses');
+
+        // Exercise the real owner/createView lifecycle and failed-then-successful persistence callback.
+        const owner = await new Promise(resolve => factory.prepare(new View(), resolve));
+        const openPicker = pickerModule.open;
+        let attempts = 0;
+        await openPicker(owner, trigger, null, async () => {
+            attempts++;
+            if (attempts === 1) { throw new Error('simulated save failure'); }
+        });
+        view = owner.recordIconPicker;
+        await until(() => view.emojiData);
+        search(view, 'rocket');
+        view.scroller.querySelector('button').click();
+        await until(() => !view.busy);
+        assert(view.host.isConnected && !view.closed, 'failed save keeps picker open');
+        view.scroller.querySelector('button').click();
+        await until(() => !view.host.isConnected);
+        assert(attempts === 2 && owner.recordIconPicker === null, 'successful save closes and clears owner');
+        await Promise.all([
+            openPicker(owner, trigger, null, async () => {}),
+            openPicker(owner, trigger, null, async () => {}),
+        ]);
+        assert(document.querySelectorAll('.record-icon-picker-popup').length === 1, 'rapid clicks open only one picker');
+        owner.remove();
+        assert(!document.querySelector('.record-icon-picker-popup'), 'owner removal cleans up picker');
+
+        const [NameField, Model, FieldManager] = await Promise.all([
+            Espo.loader.requirePromise('global:views/fields/record-icon-name'),
+            Espo.loader.requirePromise('model'),
+            Espo.loader.requirePromise('field-manager'),
+        ]);
+        helper.acl = {checkScope: () => true, check: () => true, getScopeForbiddenFieldList: () => []};
+        helper.fieldManager = new FieldManager({}, metadata, helper.acl);
+        const model = new Model({name: 'Sales', icon: null}, {
+            entityType: 'Funnel', defs: {fields: {name: {type: 'varchar'}, icon: {type: 'jsonObject'}}},
+        });
+        const field = await new Promise(resolve => factory.prepare(new NameField({
+            model, name: 'name', mode: 'edit', fullSelector: '#name-field', inlineEditDisabled: true,
+            templateContent: '<input class="form-control main-element" data-name="name" value="{{value}}">',
+        }), resolve));
+        await field.render();
+        field.element.querySelector('.record-icon-button').click();
+        await until(() => field.recordIconPicker?.emojiData);
+        view = field.recordIconPicker;
+        search(view, '🚀');
+        assert(view.results[0].value === '🚀', 'exact emoji match ranks first');
+        view.scroller.querySelector('button').click();
+        await until(() => !field.recordIconPicker);
+        assert(field.fetch().icon.value === '🚀' && field.fetch().name === 'Sales',
+            'form fetch includes separate name and icon: ' + JSON.stringify(field.fetch()));
+        assert(field.getAttributeList().includes('icon'), 'icon participates in field change/cancel tracking');
+        model.set('icon', null, {action: 'cancel-edit'});
+        await until(() => field.element.querySelector('.fa-filter'));
+        assert(field.fetch().icon === null, 'cancel restores icon preview');
+        helper.acl.getScopeForbiddenFieldList = () => ['icon'];
+        await field.reRender();
+        assert(!field.element.querySelector('.record-icon-button'), 'field-level permissions hide editor');
+        helper.acl.getScopeForbiddenFieldList = () => [];
+        helper.acl.checkScope = () => false;
+        await field.reRender();
+        assert(!field.element.querySelector('.record-icon-button'), 'create permissions hide editor');
+        field.remove();
+        document.getElementById('result').textContent = 'PASS: picker search, families, glyphs, skin tones, selection, removal, recent choices, keyboard, focus, save failure/retry, lifecycle, name field, cancellation, ACL';
+    } catch (error) {
+        document.getElementById('result').textContent = 'FAIL: ' + (error?.stack || error);
+    }
+})();
+</script>
+</html>

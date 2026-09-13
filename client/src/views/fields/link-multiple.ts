@@ -29,6 +29,7 @@
 import BaseFieldView, {BaseOptions, BaseParams, BaseViewSchema, FieldValidator} from 'views/fields/base';
 import RecordModal from 'helpers/record-modal';
 import Autocomplete from 'ui/autocomplete';
+import RecordIcon from 'helpers/record-icon';
 import CascadeLinksHelper from 'helpers/field/cascade-links';
 import {AdvancedFilter} from 'search-manager';
 import Model from 'model';
@@ -341,6 +342,7 @@ class LinkMultipleFieldView<
         this.sortable = this.sortable || this.params.sortable || false;
 
         this.iconHtml = this.getHelper().getScopeColorIconHtml(this.foreignScope);
+        RecordIcon.bindLink(this, true);
 
         if (!this.isListMode()) {
             this.addActionHandler('selectLink', () => this.actionSelect());
@@ -436,6 +438,11 @@ class LinkMultipleFieldView<
 
             let select = ['id', 'name'];
 
+            const iconAttribute = RecordIcon.attribute(this, this.foreignScope);
+            if (iconAttribute) {
+                select.push(iconAttribute);
+            }
+
             if (mandatorySelectAttributeList) {
                 select = select.concat(mandatorySelectAttributeList);
             }
@@ -496,6 +503,8 @@ class LinkMultipleFieldView<
                 let lastAjaxPromise: AjaxPromise;
 
                 const autocomplete = new Autocomplete(this.$element?.get(0) as HTMLInputElement, {
+                    formatResult: RecordIcon.attribute(this, this.foreignScope) ?
+                        item => RecordIcon.suggestion(this, this.foreignScope, item) : undefined,
                     focusOnSelect: true,
                     handleFocusMode: 3,
                     autoSelectFirst: true,
@@ -716,6 +725,10 @@ class LinkMultipleFieldView<
                 span.classList.add('text');
                 span.textContent = name;
 
+                if (RecordIcon.attribute(this, this.foreignScope)) {
+                    span.insertAdjacentHTML('afterbegin', this.getIconHtml(id));
+                }
+
                 return span;
             })()
         );
@@ -727,6 +740,9 @@ class LinkMultipleFieldView<
      * @param id An ID.
      */
     getIconHtml(id: string): string {
+        if (RecordIcon.attribute(this, this.foreignScope)) {
+            return RecordIcon.slot(this, this.foreignScope, id);
+        }
         // noinspection BadExpressionStatementJS
         id;
 
@@ -748,7 +764,7 @@ class LinkMultipleFieldView<
             name = this.translate(this.foreignScope, 'scopeNames');
         }
 
-        const iconHtml = this.isDetailMode() ?
+        const iconHtml = this.isDetailMode() || RecordIcon.attribute(this, this.foreignScope) ?
             this.getIconHtml(id) : '';
 
         const $a = $('<a>')
@@ -1067,6 +1083,7 @@ class LinkMultipleFieldView<
      */
     protected select(models: Model[]) {
         models.forEach(model => {
+            RecordIcon.remember(this, this.foreignScope, model.attributes);
             this.addLink(model.id as any, model.attributes.name);
         });
     }

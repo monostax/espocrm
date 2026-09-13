@@ -353,7 +353,7 @@
         data-action="selectFunnel"
         title="{{translate 'Funnel' scope='Opportunity'}}"
     >
-        <span class="fas fa-filter"></span>
+        <span class="funnel-selector-icon">{{{currentFunnelIconHtml}}}</span>
         <span class="funnel-selector-name">{{#if currentFunnelName}}{{currentFunnelName}}{{else}}{{translate 'Select Funnel' scope='Opportunity'}}{{/if}}</span>
         <span class="caret"></span>
     </button>

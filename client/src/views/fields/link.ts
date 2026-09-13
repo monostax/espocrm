@@ -28,6 +28,7 @@
 
 import BaseFieldView, {BaseOptions, BaseParams, BaseViewSchema} from 'views/fields/base';
 import RecordModal from 'helpers/record-modal';
+import RecordIcon from 'helpers/record-icon';
 import Autocomplete from 'ui/autocomplete';
 import CascadeLinksHelper from 'helpers/field/cascade-links';
 import Ajax from 'ajax';
@@ -237,6 +238,10 @@ class LinkFieldView<
 
         if (this.isDetailMode() || this.isListMode()) {
             iconHtml = this.getHelper().getScopeColorIconHtml(this.foreignScope);
+
+            if (RecordIcon.attribute(this, this.foreignScope) && this.model.get(this.idName)) {
+                iconHtml = RecordIcon.slot(this, this.foreignScope, this.model.get(this.idName));
+            }
         }
 
         const createButton = this.createButton && (!this.createDisabled || this.forceCreateButton);
@@ -344,6 +349,8 @@ class LinkFieldView<
             this.getMetadata().get(`clientDefs.${this.foreignScope}.nameAttribute`) ??
             'name';
 
+        RecordIcon.bindLink(this);
+
         if ('createDisabled' in this.options) {
             this.createDisabled = this.options.createDisabled as boolean;
         }
@@ -405,6 +412,7 @@ class LinkFieldView<
      * @param model A model.
      */
     protected select(model: Model): Promise<void> {
+        RecordIcon.remember(this, this.foreignScope, model.attributes);
         this.$elementName.val(model.get(this.foreignNameAttribute) ?? model.id);
         this.$elementId.val(model.id as string);
 
@@ -545,7 +553,9 @@ class LinkFieldView<
 
         const map = this.getDependantForeignMap();
 
-        return [...list, ...Object.keys(map)];
+        const iconAttribute = RecordIcon.attribute(this, this.foreignScope);
+
+        return [...list, ...Object.keys(map), ...(iconAttribute ? [iconAttribute] : [])];
     }
 
     private getDependantForeignMap(): Record<string, string> {
@@ -656,6 +666,8 @@ class LinkFieldView<
 
                 const autocomplete = new Autocomplete(this.$elementName?.get(0) as HTMLInputElement, {
                     name: this.name,
+                    formatResult: RecordIcon.attribute(this, this.foreignScope) ?
+                        item => RecordIcon.suggestion(this, this.foreignScope, item) : undefined,
                     handleFocusMode: 2,
                     autoSelectFirst: true,
                     forceHide: true,
@@ -703,6 +715,8 @@ class LinkFieldView<
                     let lastAjaxPromise: AjaxPromise;
 
                     const autocomplete = new Autocomplete($elementOneOf.get(0), {
+                        formatResult: RecordIcon.attribute(this, this.foreignScope) ?
+                            item => RecordIcon.suggestion(this, this.foreignScope, item) : undefined,
                         minChars: 1,
                         focusOnSelect: true,
                         handleFocusMode: 3,

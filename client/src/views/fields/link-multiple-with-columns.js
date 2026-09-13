@@ -412,6 +412,10 @@ class LinkMultipleWithColumnsFieldView extends LinkMultipleFieldView {
             .text(name)
             .append('&nbsp;');
 
+        if (this.getMetadata().get(`clientDefs.${this.foreignScope}.recordIconAttribute`)) {
+            $name.prepend(this.getIconHtml(id));
+        }
+
         const $columnList = [];
         const $liList = [];
 

@@ -1,6 +1,10 @@
 {
     "controller": "controllers/record",
     "iconClass": "fas fa-filter",
+    "recordIconAttribute": "icon",
+    "views": {
+        "detail": "global:views/record-icon-detail"
+    },
     "boolFilterList": ["onlyMy", "onlyActive"],
     "filterList": ["active", "all"],
     "defaultFilterData": {

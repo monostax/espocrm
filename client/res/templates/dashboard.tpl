@@ -17,7 +17,7 @@
                 tabindex="0"
                 title="{{translate 'Funnel' category='scopeNames' scope='Global'}}"
             >
-                <span class="fas fa-filter"></span>
+                <span class="dashboard-funnel-filter-icon">{{{funnelIconHtml}}}</span>
                 <span class="dashboard-funnel-filter-label">{{funnelLabel}}</span>
                 <a
                     role="button"

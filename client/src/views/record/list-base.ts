@@ -2617,6 +2617,11 @@ abstract class ListBaseRecordView<
 
         const attributeList = this.fetchAttributeListFromLayout();
 
+        const recordIconAttribute = this.getMetadata().get(`clientDefs.${this.entityType}.recordIconAttribute`);
+        if (recordIconAttribute) {
+            attributeList.push(recordIconAttribute);
+        }
+
         if (this.mandatorySelectAttributeList) {
             attributeList.push(...this.mandatorySelectAttributeList);
         }

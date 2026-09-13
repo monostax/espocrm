@@ -1,0 +1,17 @@
+{
+    "labels": {
+        "title": "Emoji / Ícone",
+        "emojis": "Emojis",
+        "icons": "Ícones",
+        "remove": "Remover",
+        "search": "Buscar emoji ou ícones…",
+        "family": "Família de ícones",
+        "allFamilies": "Todas as famílias",
+        "skinTone": "Tom de pele",
+        "recent": "Usados recentemente",
+        "empty": "Nenhum resultado encontrado",
+        "loading": "Carregando emojis…",
+        "loadError": "Não foi possível carregar os emojis. Feche e abra para tentar novamente.",
+        "saveError": "Não foi possível salvar o ícone. Tente novamente."
+    }
+}

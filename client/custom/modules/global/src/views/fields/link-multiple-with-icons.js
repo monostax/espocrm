@@ -27,6 +27,7 @@
  ************************************************************************/
 
 import LinkMultipleFieldView from 'views/fields/link-multiple';
+import RecordIcon from 'helpers/record-icon';
 
 class LinkMultipleWithIconsFieldView extends LinkMultipleFieldView {
     
@@ -37,6 +38,10 @@ class LinkMultipleWithIconsFieldView extends LinkMultipleFieldView {
      */
     getIconHtml(id) {
         const entityType = this.foreignScope;
+
+        if (RecordIcon.attribute(this, entityType)) {
+            return super.getIconHtml(id);
+        }
         
         // For User entities, show avatar
         if (entityType === 'User') {
