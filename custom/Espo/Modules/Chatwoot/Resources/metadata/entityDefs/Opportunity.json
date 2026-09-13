@@ -1,5 +1,7 @@
 {
     "fields": {
+        "followupDraftBatchId": { "type": "varchar", "maxLength": 255, "readOnly": true, "utility": true },
+        "followupDraftCountedBatchId": { "type": "varchar", "maxLength": 255, "readOnly": true, "utility": true },
         "chatwootConversations": { "type": "linkMultiple" },
         "whatsAppCampaigns": { "type": "linkMultiple", "readOnly": true },
         "whatsAppCampaignTargetLists": { "type": "linkMultiple", "readOnly": true },

@@ -93,6 +93,7 @@
     "options": {
         "aiMessageVisibility": {
             "publicAndPrivate": "Públicas e privadas",
+            "publicDraftAndPrivate": "Públicas (somente rascunhos) e notas privadas",
             "privateOnly": "Somente privadas"
         },
         "role": {
@@ -116,7 +117,7 @@
         }
     },
     "tooltips": {
-        "aiMessageVisibility": "Públicas e privadas permite mensagens ao cliente e notas internas. Somente privadas restringe esta IA a notas internas, inclusive nas respostas a mensagens do cliente e menções. Templates WhatsApp e envios de follow-up automático ficam desabilitados enquanto Somente privadas estiver selecionado.",
+        "aiMessageVisibility": "Públicas e privadas permite mensagens ao cliente e notas internas. Públicas (somente rascunhos) e notas privadas salva respostas, templates WhatsApp e follow-ups como sugestões da IA para envio humano; notas internas são publicadas imediatamente. Novas mensagens do cliente ou respostas públicas descartam sugestões antigas; enviar uma sugestão preserva as outras do mesmo lote. Somente privadas restringe a IA a notas internas e desabilita follow-ups automáticos e templates WhatsApp.",
         "tasksEnabled": "Permite à IA gerenciar tarefas da conversa atribuídas aos usuários humanos configurados. Requer acesso à API do CRM e pelo menos um responsável elegível.",
         "taskManagementPrompt": "Instruções internas sobre quando criar, atualizar, concluir ou cancelar tarefas, prazos e responsável para triagem. Nunca citadas ao cliente.",
         "taskAssignees": "Selecione usuários humanos ativos do CRM no tenant e nas equipes desta conta. Edite as notas internas de cada usuário para orientar quando atribuir trabalho a ele.",

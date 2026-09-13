@@ -74,7 +74,7 @@
         },
         "aiMessageVisibility": {
             "type": "enum",
-            "options": ["publicAndPrivate", "privateOnly"],
+            "options": ["publicAndPrivate", "publicDraftAndPrivate", "privateOnly"],
             "default": "publicAndPrivate",
             "required": true,
             "notNull": true,
