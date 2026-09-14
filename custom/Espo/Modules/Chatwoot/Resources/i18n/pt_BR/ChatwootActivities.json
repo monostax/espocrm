@@ -1,5 +1,12 @@
 {
     "fields": {
         "_scope": "Tipo Entidade"
+    },
+    "labels": {
+        "selectAllLoaded": "Selecionar todas as atividades carregadas",
+        "selectedCount": "{count} selecionado(s)"
+    },
+    "messages": {
+        "bulkRemoveIncomplete": "{count} de {total} registros selecionados foram removidos. Alguns registros não puderam ser removidos. Atualize a lista antes de tentar novamente."
     }
 }

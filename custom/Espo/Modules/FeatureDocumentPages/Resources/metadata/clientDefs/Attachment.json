@@ -1,0 +1,7 @@
+{
+    "sourceDefs": {
+        "Document": {
+            "insertModalView": "feature-document-pages:views/document/modals/select-files"
+        }
+    }
+}

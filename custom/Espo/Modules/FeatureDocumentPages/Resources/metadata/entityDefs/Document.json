@@ -1,0 +1,54 @@
+{
+    "fields": {
+        "contentType": {
+            "type": "enum",
+            "options": ["File", "Page"],
+            "default": "File",
+            "required": true,
+            "audited": true,
+            "displayAsLabel": true,
+            "style": {"Page": "primary", "File": "default"}
+        },
+        "file": {
+            "required": false
+        },
+        "body": {
+            "type": "wysiwyg",
+            "view": "feature-document-pages:views/document/fields/body",
+            "attachmentField": "attachments",
+            "minHeight": 360
+        },
+        "bodyFormat": {
+            "type": "enum",
+            "options": ["Html", "Markdown"],
+            "default": "Html",
+            "audited": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "bodyEditorState": {
+            "type": "text",
+            "utility": true,
+            "layoutDetailDisabled": true,
+            "layoutDetailSmallDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "textFilterDisabled": true,
+            "viewFieldListDisabled": true
+        },
+        "bodyPlain": {
+            "type": "text",
+            "readOnly": true,
+            "directUpdateDisabled": true,
+            "utility": true
+        },
+        "attachments": {
+            "type": "attachmentMultiple"
+        }
+    },
+    "collection": {
+        "textFilterFields": ["name", "bodyPlain"],
+        "fullTextSearch": true
+    },
+    "optimisticConcurrencyControl": true
+}

@@ -1,0 +1,10 @@
+{
+    "createInputFilterClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureDocumentPages\\Classes\\Record\\NormalizeContentInput"
+    ],
+    "updateInputFilterClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureDocumentPages\\Classes\\Record\\NormalizeContentInput"
+    ]
+}

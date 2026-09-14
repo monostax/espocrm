@@ -1,0 +1,8 @@
+{
+    "order": 30,
+    "version": "1.0.0",
+    "name": "FeatureDocumentPages",
+    "description": "Editable Lexical pages and uploaded files in Documents, using the shared FeatureKnowledgeBaseEditor editor.",
+    "author": "Monostax",
+    "jsTranspiled": true
+}

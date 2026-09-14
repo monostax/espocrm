@@ -1,0 +1,20 @@
+[
+    {
+        "label": "",
+        "rows": [
+            [{"name": "name"}, {"name": "contentType"}],
+            [{"name": "folder"}, {"name": "status"}],
+            [{"name": "file", "fullWidth": true}],
+            [{"name": "body", "fullWidth": true}]
+        ]
+    },
+    {
+        "label": "Details",
+        "rows": [
+            [{"name": "type"}, {"name": "publishDate"}],
+            [{"name": "expirationDate"}, false],
+            [{"name": "description", "fullWidth": true}],
+            [{"name": "attachments", "fullWidth": true}]
+        ]
+    }
+]

@@ -1,0 +1,33 @@
+{
+    "views": {
+        "list": "feature-document-pages:views/document/list"
+    },
+    "forcePatchAttributeDependencyMap": {
+        "body": ["bodyEditorState", "bodyFormat"],
+        "bodyEditorState": ["body", "bodyFormat"],
+        "bodyFormat": ["body", "bodyEditorState"]
+    },
+    "dynamicLogic": {
+        "fields": {
+            "file": {
+                "required": {
+                    "conditionGroup": [{"type": "notEquals", "attribute": "contentType", "value": "Page"}]
+                },
+                "visible": {
+                    "conditionGroup": [{"type": "or", "value": [
+                        {"type": "notEquals", "attribute": "contentType", "value": "Page"},
+                        {"type": "isNotEmpty", "attribute": "fileId"}
+                    ]}]
+                }
+            },
+            "body": {
+                "visible": {
+                    "conditionGroup": [{"type": "or", "value": [
+                        {"type": "equals", "attribute": "contentType", "value": "Page"},
+                        {"type": "isNotEmpty", "attribute": "body"}
+                    ]}]
+                }
+            }
+        }
+    }
+}

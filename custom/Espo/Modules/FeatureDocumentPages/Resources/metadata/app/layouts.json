@@ -1,0 +1,16 @@
+{
+    "Document": {
+        "detail": {
+            "module": "FeatureDocumentPages"
+        },
+        "detailSmall": {
+            "module": "FeatureDocumentPages"
+        },
+        "list": {
+            "module": "FeatureDocumentPages"
+        },
+        "filters": {
+            "module": "FeatureDocumentPages"
+        }
+    }
+}

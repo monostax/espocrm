@@ -1,7 +1,44 @@
+{{#if topBar}}
+    <div class="list-buttons-container clearfix">
+        <div class="btn-group actions fix-position">
+            <button
+                type="button"
+                class="btn btn-default btn-xs-wide dropdown-toggle actions-button hidden"
+                data-toggle="dropdown"
+            >{{translate 'Actions'}} <span class="caret"></span></button>
+            <ul class="dropdown-menu actions-menu">
+                {{#each massActionDataList}}
+                    {{#if this}}
+                        <li {{#if hidden}}class="hidden"{{/if}}>
+                            <a role="button" tabindex="0" data-action="{{name}}" class="mass-action">
+                                {{#if iconClass}}<span class="item-icon {{iconClass}}"></span>{{/if}}
+                                <span class="item-text">{{translate name category="massActions"}}</span>
+                            </a>
+                        </li>
+                    {{/if}}
+                {{/each}}
+            </ul>
+        </div>
+        <span class="selected-count text-muted pull-right" role="status" aria-live="polite"></span>
+    </div>
+{{/if}}
+
 <div class="list chatwoot-activities-table {{#if showMoreActive}}has-show-more{{/if}}" tabindex="-1">
     <table class="table">
         <thead>
             <tr>
+                {{#if checkboxes}}
+                    <th scope="col" class="checkbox-cell" data-name="r-checkbox" style="width: {{checkboxColumnWidth}};">
+                        <span class="select-all-container">
+                            <input
+                                type="checkbox"
+                                class="select-all form-checkbox form-checkbox-small"
+                                aria-label="{{translate 'selectAllLoaded' scope='ChatwootActivities'}}"
+                                {{#unless collectionLength}}disabled{{/unless}}
+                            >
+                        </span>
+                    </th>
+                {{/if}}
                 {{#each headerDefs}}
                     <th
                         scope="col"

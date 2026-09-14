@@ -1,5 +1,12 @@
 {
     "fields": {
         "_scope": "Entity Type"
+    },
+    "labels": {
+        "selectAllLoaded": "Select all loaded activities",
+        "selectedCount": "{count} selected"
+    },
+    "messages": {
+        "bulkRemoveIncomplete": "Removed {count} of {total} selected records. Some records could not be removed. Refresh the list before trying again."
     }
 }

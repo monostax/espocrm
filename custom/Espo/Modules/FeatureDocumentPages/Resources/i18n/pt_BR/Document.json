@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "contentType": "Tipo de Conteúdo",
+        "body": "Conteúdo",
+        "bodyFormat": "Formato do Conteúdo",
+        "bodyEditorState": "Estado do Editor",
+        "bodyPlain": "Conteúdo (Texto Simples)",
+        "attachments": "Anexos"
+    },
+    "labels": {
+        "New Page": "Nova Página",
+        "Upload File": "Enviar Arquivo"
+    },
+    "options": {
+        "contentType": {"Page": "Página", "File": "Arquivo"},
+        "bodyFormat": {"Html": "HTML", "Markdown": "Markdown"}
+    },
+    "messages": {
+        "bodyFormatSwitchConfirm": "Alterar o formato do conteúdo? O editor mantém o conteúdo estruturado; o HTML ou Markdown exportado pode representar algumas formatações de maneira diferente.",
+        "insertTablePrompt": "Tamanho da tabela (linhas x colunas), ex.: 3x3"
+    }
+}

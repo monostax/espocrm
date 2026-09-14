@@ -1,0 +1,13 @@
+[
+    {
+        "label": "",
+        "rows": [
+            [{"name": "name", "fullWidth": true}],
+            [{"name": "contentType"}, {"name": "folder"}],
+            [{"name": "file", "fullWidth": true}],
+            [{"name": "body", "fullWidth": true}],
+            [{"name": "status"}, false],
+            [{"name": "attachments", "fullWidth": true}]
+        ]
+    }
+]

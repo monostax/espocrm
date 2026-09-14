@@ -343,7 +343,7 @@ class ActivitiesPanelView extends RelationshipPanelView {
             }, (view) => {
                 view.render();
 
-                this.listenTo(view, 'after:save', () => {
+                this.listenTo(view, 'after:save after:delete after:mass-update after:mass-remove', () => {
                     this.model.trigger('update-related:activities')
                 });
             });

@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "contentType": "Content Type",
+        "body": "Content",
+        "bodyFormat": "Content Format",
+        "bodyEditorState": "Editor State",
+        "bodyPlain": "Content (Plain Text)",
+        "attachments": "Attachments"
+    },
+    "labels": {
+        "New Page": "New Page",
+        "Upload File": "Upload File"
+    },
+    "options": {
+        "contentType": {"Page": "Page", "File": "File"},
+        "bodyFormat": {"Html": "HTML", "Markdown": "Markdown"}
+    },
+    "messages": {
+        "bodyFormatSwitchConfirm": "Switch the content format? The editor keeps its structured content; the exported HTML or Markdown may represent some formatting differently.",
+        "insertTablePrompt": "Table size (rows x columns), e.g. 3x3"
+    }
+}
