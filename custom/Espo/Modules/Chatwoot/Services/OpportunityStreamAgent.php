@@ -40,6 +40,7 @@ class OpportunityStreamAgent
             'opportunityId' => $note->getParentId(),
             'crmTenantId' => $target->crmTenantId,
             'chatwootAccountCrmId' => $target->chatwootAccountCrmId,
+            'executionRunId' => $note->getData()->opportunityAiExecutions->{$membershipId} ?? null,
             'trigger' => (object) [
                 'id' => $note->getId(),
                 'post' => $note->getPost(),
@@ -63,6 +64,10 @@ class OpportunityStreamAgent
             }
             if ($existing = $this->existingReply($noteId, $membershipId)) {
                 return (object) ['published' => false, 'noteId' => $existing->getId(), 'reason' => 'Already replied'];
+            }
+            $owner = $source->getData()->opportunityAiExecutions->{$membershipId} ?? null;
+            if ($owner !== null && $owner !== $runId) {
+                throw new Forbidden('Another workflow owns this request.');
             }
             $reply = $this->entityManager->getNewEntity('Note');
             assert($reply instanceof Note);
@@ -90,6 +95,36 @@ class OpportunityStreamAgent
             // Normal ORM hooks update read state, mentions and the ActionCable invalidation job.
             $this->entityManager->saveEntity($reply);
             return (object) ['published' => true, 'noteId' => $reply->getId(), 'reason' => 'Replied'];
+        });
+    }
+
+    /** One execution per mention, before any external side effects. No lease expiry/replay. */
+    public function claim(string $noteId, string $membershipId, string $postHash, string $runId): object
+    {
+        return $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $postHash, $runId): object {
+            $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
+            if (!$source instanceof Note || !$this->validate($source, $membershipId, $postHash) ||
+                $this->existingReply($noteId, $membershipId)) {
+                return (object) ['claimed' => false];
+            }
+            $data = $source->getData();
+            if (isset($data->opportunityAiExecutions->{$membershipId})) {
+                return (object) ['claimed' => false];
+            }
+            $reply = $this->entityManager->getNewEntity('Note');
+            $reply->set([
+                'type' => Note::TYPE_POST, 'parentType' => 'Opportunity',
+                'parentId' => $source->getParentId(), 'isInternal' => true,
+                'createdById' => $this->user->getId(),
+            ]);
+            if (!$this->acl->check($reply, 'create')) {
+                throw new Forbidden('No permission to report results in this opportunity stream.');
+            }
+            $data->opportunityAiExecutions ??= (object) [];
+            $data->opportunityAiExecutions->{$membershipId} = $runId;
+            $source->setData($data);
+            $this->entityManager->saveEntity($source);
+            return (object) ['claimed' => true];
         });
     }
 

@@ -39,6 +39,19 @@ class OpportunityStreamAgent
         );
     }
 
+    public function postActionClaim(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        $runId = $body->workflowRunId ?? null;
+        if (!is_string($runId) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $runId)) {
+            throw new BadRequest('A workflow run ID is required.');
+        }
+        return $this->service->claim(
+            $this->id($request, 'id'), $this->id($request, 'membershipId'),
+            $this->postHash($body->postHash ?? null), $runId,
+        );
+    }
+
     private function id(Request $request, string $key): string
     {
         $id = $request->getRouteParam($key);

@@ -74,6 +74,7 @@ class OpportunityStreamAgentTest extends TestCase
         $em->method('getNewEntity')->with('Note')->willReturnCallback(fn () => $this->note());
         $em->method('saveEntity')->willReturnCallback(function (Note $note): void {
             self::assertTrue($this->locked, 'Publication must hold the source row lock.');
+            if ($note === $this->source) return; // Persisting the execution claim, not a reply.
             (new KeepOpportunityEventsInternal())->beforeSave($note, []);
             $note->set('id', 'reply-' . count($this->replies));
             $this->replies[$note->get('opportunityStreamEventKey')] = $note;
@@ -180,5 +181,28 @@ class OpportunityStreamAgentTest extends TestCase
         $this->source->setData($data);
         self::assertFalse($this->service->context('source', 'ai', $this->postHash)->shouldRespond);
         self::assertSame([], $this->replies);
+    }
+
+    public function testOnlyOneExecutionCanClaimAMentionIncludingSameRunRedelivery(): void
+    {
+        self::assertTrue($this->service->claim('source', 'ai', $this->postHash, 'run-1')->claimed);
+        self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run-2')->claimed);
+        self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run-1')->claimed);
+        self::assertSame('run-1', $this->service->context('source', 'ai', $this->postHash)->executionRunId);
+        self::assertTrue($this->service->reply('source', 'ai', $this->postHash, 'Done', 'run-1')->published);
+    }
+
+    public function testAnotherExecutionCannotPublishForTheClaimOwner(): void
+    {
+        $this->service->claim('source', 'ai', $this->postHash, 'run-1');
+        $this->expectException(Forbidden::class);
+        $this->service->reply('source', 'ai', $this->postHash, 'False result', 'run-2');
+    }
+
+    public function testStaleSourcesAndCompletedRequestsCannotBeClaimed(): void
+    {
+        self::assertFalse($this->service->claim('source', 'ai', str_repeat('0', 64), 'run-1')->claimed);
+        $this->service->reply('source', 'ai', $this->postHash, 'Done', 'run-1');
+        self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run-2')->claimed);
     }
 }

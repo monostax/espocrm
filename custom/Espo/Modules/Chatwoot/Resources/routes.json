@@ -1,5 +1,15 @@
 [
     {
+        "route": "/Note/:id/opportunityAiClaim/:membershipId",
+        "method": "post",
+        "params": {
+            "controller": "OpportunityStreamAgent",
+            "action": "claim",
+            "id": ":id",
+            "membershipId": ":membershipId"
+        }
+    },
+    {
         "route": "/Note/:id/opportunityAiContext/:membershipId",
         "method": "get",
         "params": {
