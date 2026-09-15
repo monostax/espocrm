@@ -1,5 +1,25 @@
 [
     {
+        "route": "/Note/:id/opportunityAiContext/:membershipId",
+        "method": "get",
+        "params": {
+            "controller": "OpportunityStreamAgent",
+            "action": "context",
+            "id": ":id",
+            "membershipId": ":membershipId"
+        }
+    },
+    {
+        "route": "/Note/:id/opportunityAiReply/:membershipId",
+        "method": "post",
+        "params": {
+            "controller": "OpportunityStreamAgent",
+            "action": "reply",
+            "id": ":id",
+            "membershipId": ":membershipId"
+        }
+    },
+    {
         "route": "/ChatwootSso/freshUrl",
         "method": "get",
         "params": {

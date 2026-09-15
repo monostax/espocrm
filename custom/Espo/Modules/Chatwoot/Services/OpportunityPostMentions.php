@@ -20,7 +20,7 @@ class OpportunityPostMentions
         private UserTenantResolver $tenantResolver,
     ) {}
 
-    public function resolve(Note $note): array
+    public function resolve(Note $note, bool $includeTeams = true): array
     {
         $opportunity = $this->entityManager->getEntityById('Opportunity', $note->getParentId());
         if (!$opportunity) {
@@ -65,7 +65,7 @@ class OpportunityPostMentions
                         ])->select([['chatwootUser.assignedUserId', 'crmUserId']])->build();
                     $ids = array_merge($ids, $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_COLUMN));
                 }
-                if ($teams) {
+                if ($teams && $includeTeams) {
                     $query = $this->entityManager->getQueryBuilder()->select()->from('ChatwootAccountUserMembership')
                         ->join('chatwootUser')->join('chatwootTeams', 'mentionTeam')->distinct()->where([
                             'chatwootAccountId' => $account->getId(),
@@ -93,5 +93,67 @@ class OpportunityPostMentions
         }
         sort($result);
         return $result;
+    }
+
+    /** Capture explicit, authorized AI targets while the human author is the API actor. */
+    public function resolveAiTargets(Note $note): array
+    {
+        if ($note->getData()->opportunityStreamAgent ?? null) {
+            return [];
+        }
+        $opportunity = $this->entityManager->getEntityById('Opportunity', $note->getParentId());
+        if (!$opportunity?->get('tenantId') || !$note->get('opportunityMentionUserIds')) {
+            return [];
+        }
+        $where = ['tenantId' => $opportunity->get('tenantId')];
+        if ($note->get('opportunityChatwootAccountId')) {
+            $where['chatwootAccountId'] = $note->get('opportunityChatwootAccountId');
+        }
+        $accounts = $this->entityManager->getRDBRepository('ChatwootAccount')->where($where)->limit(0, 2)->find();
+        if (count($accounts) !== 1) {
+            return [];
+        }
+        $account = $accounts[0];
+        $userIds = $this->resolve($note, includeTeams: false);
+        if (!$userIds) {
+            return [];
+        }
+        // A CRM user can own multiple Chatwoot identities. Retain the exact selected
+        // platform ID rather than waking every AI linked to the same CRM user.
+        preg_match_all('~\(mention://user/(\d+)/[^)]*\)~', $note->getPost() ?? '', $directMatches);
+        $platformUserIds = array_map('intval', $directMatches[1]);
+        $nativeUserIds = [];
+        $nativeText = preg_replace('~\[[^\]]*\]\(mention://[^)]*\)~', '', $note->getPost() ?? '');
+        foreach ($note->getData()->mentions ?? (object) [] as $token => $mention) {
+            if (($mention->_scope ?? null) === 'User' && isset($mention->id) &&
+                preg_match('/(?<![\w@.-])' . preg_quote($token, '/') . '(?![\w@.-])/u', $nativeText)) {
+                $nativeUserIds[] = $mention->id;
+            }
+        }
+        $memberships = $this->entityManager->getRDBRepository('ChatwootAccountUserMembership')
+            ->join('chatwootUser')->where([
+                'chatwootAccountId' => $account->getId(),
+                'chatwootUser.platformId' => $account->get('platformId'),
+                'isAI' => true,
+            ])->find();
+        $targets = [];
+        foreach ($memberships as $membership) {
+            $chatwootUser = $this->entityManager->getEntityById('ChatwootUser', $membership->get('chatwootUserId'));
+            $userId = $chatwootUser?->get('assignedUserId');
+            // Includes cross-AI replies, not just the selected AI's own posts.
+            if ($userId && $userId === $note->getCreatedById()) {
+                return [];
+            }
+            if ($userId && in_array($userId, $userIds, true) &&
+                (in_array((int) $chatwootUser->get('chatwootUserId'), $platformUserIds, true) ||
+                    in_array($userId, $nativeUserIds, true))) {
+                $targets[] = (object) [
+                    'aiAgentMembershipId' => $membership->getId(),
+                    'chatwootAccountCrmId' => $account->getId(),
+                    'crmTenantId' => $opportunity->get('tenantId'),
+                ];
+            }
+        }
+        return $targets;
     }
 }
