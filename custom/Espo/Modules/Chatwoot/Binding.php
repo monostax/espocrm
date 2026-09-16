@@ -23,5 +23,9 @@ class Binding implements BindingProcessor
             \Espo\Tools\Stream\MassNotePreparator::class,
             \Espo\Modules\Chatwoot\Tools\Stream\MassNotePreparator::class,
         );
+        $binder->bindImplementation(
+            \Espo\Tools\Stream\MyReactionsService::class,
+            \Espo\Modules\Chatwoot\Tools\Stream\MyReactionsService::class,
+        );
     }
 }

@@ -113,7 +113,7 @@ class OpportunityThreadState
         return $result;
     }
 
-    /** One aggregate query and one participant query for the entire stream page. */
+    /** Batch reply counts, participants, names, and unread counts for the entire stream page. */
     public function summaries(array $rootIds): array
     {
         if (!$rootIds) {
@@ -131,14 +131,34 @@ class OpportunityThreadState
             $result[$row['opportunityThreadRootId']]['lastReplyAt'] = $row['lastReplyAt'];
         }
         $query = (clone $base)->select([
-            'opportunityThreadRootId', 'createdById', 'createdByName', ['MAX:number', 'lastNumber'],
-        ])->group(['opportunityThreadRootId', 'createdById', 'createdByName'])->order('MAX:number', 'DESC')->build();
+            'opportunityThreadRootId', 'createdById', ['MAX:number', 'lastNumber'],
+        ])->group(['opportunityThreadRootId', 'createdById'])->order('MAX:number', 'DESC')->build();
+        $participantIds = [];
         foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $participants = &$result[$row['opportunityThreadRootId']]['participants'];
             if (count($participants) < 3) {
-                $participants[] = ['id' => $row['createdById'], 'name' => $row['createdByName']];
+                $participants[] = ['id' => $row['createdById'], 'name' => null];
+                if ($row['createdById'] !== null) {
+                    $participantIds[$row['createdById']] = true;
+                }
             }
             unset($participants);
+        }
+        // Link names are computed attributes, not columns usable in GROUP BY.
+        if ($participantIds) {
+            $query = SelectBuilder::create()->from('User')->select(['id', 'name'])
+                ->where(['id' => array_keys($participantIds)])->build();
+            $names = [];
+            foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $names[$row['id']] = $row['name'];
+            }
+            foreach ($result as &$summary) {
+                foreach ($summary['participants'] as &$participant) {
+                    $participant['name'] = $names[$participant['id']] ?? null;
+                }
+                unset($participant);
+            }
+            unset($summary);
         }
         $query = (clone $base)->select(['opportunityThreadRootId', ['COUNT:id', 'count']])
             ->where(self::unreadWhere($this->user->getId()))->group('opportunityThreadRootId')->build();

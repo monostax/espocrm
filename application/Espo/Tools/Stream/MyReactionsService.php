@@ -54,7 +54,7 @@ class MyReactionsService
      */
     public function react(Note $note, string $type): void
     {
-        if (!$this->isReactionAllowed($type)) {
+        if (!$this->isReactionAllowed($type, $note)) {
             throw new Forbidden("Not allowed reaction '$type'.");
         }
 
@@ -79,8 +79,10 @@ class MyReactionsService
                 return;
             }
 
-            $this->deleteAll($note);
-            $this->notificationService->removeNoteUnread($note, $this->user);
+            if (!$this->allowsMultipleReactions($note)) {
+                $this->deleteAll($note);
+                $this->notificationService->removeNoteUnread($note, $this->user);
+            }
 
             $reaction = $repository->getNew();
 
@@ -120,7 +122,12 @@ class MyReactionsService
         $this->webSocketSubmit($note);
     }
 
-    private function isReactionAllowed(string $type): bool
+    protected function allowsMultipleReactions(Note $note): bool
+    {
+        return false;
+    }
+
+    protected function isReactionAllowed(string $type, Note $note): bool
     {
         /** @var string[] $allowedReactions */
         $allowedReactions = $this->config->get('availableReactions') ?? [];

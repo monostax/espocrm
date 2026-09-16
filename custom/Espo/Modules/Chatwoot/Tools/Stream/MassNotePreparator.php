@@ -24,6 +24,18 @@ class MassNotePreparator extends \Espo\Tools\Stream\MassNotePreparator
         parent::__construct($entityManager, $user, $config);
     }
 
+    /** @param iterable<Note> $notes */
+    protected function noAvailableReactions(iterable $notes): bool
+    {
+        foreach ($notes as $note) {
+            if ($note->getParentType() === 'Opportunity') {
+                return false;
+            }
+        }
+
+        return parent::noAvailableReactions($notes);
+    }
+
     /**
      * @param iterable<Note> $notes
      */

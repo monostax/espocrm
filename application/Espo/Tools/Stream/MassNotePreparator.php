@@ -54,7 +54,7 @@ class MassNotePreparator
      */
     public function prepare(iterable $notes): void
     {
-        if ($this->noAvailableReactions()) {
+        if ($this->noAvailableReactions($notes)) {
             return;
         }
 
@@ -158,7 +158,8 @@ class MassNotePreparator
         }
     }
 
-    private function noAvailableReactions(): bool
+    /** @param iterable<Note> $notes */
+    protected function noAvailableReactions(iterable $notes): bool
     {
         return $this->config->get('availableReactions', []) === [];
     }
