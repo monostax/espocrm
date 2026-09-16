@@ -27,7 +27,7 @@ class OpportunityReadState
             ($version !== null && (!is_int($version) || $version < 0)) || isset($body->lastSeenAt)) {
             throw new BadRequest('Use a post ID and a non-negative read-state version, not a client timestamp.');
         }
-        return (object) $this->service->markRead($this->id($request), $postId, $version);
+        return (object) $this->service->markRead($this->id($request), $postId, $version, ($body->includeThreads ?? false) === true);
     }
 
     public function postActionMarkUnread(Request $request): object

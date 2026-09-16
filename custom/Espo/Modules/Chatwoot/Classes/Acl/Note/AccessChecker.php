@@ -75,14 +75,15 @@ class AccessChecker implements AccessEntityCREDChecker
 
     public function checkEntityEdit(User $user, Entity $entity, ScopeData $data): bool
     {
-        return !in_array($entity->get('type'), OpportunityStreamEvents::EVENT_TYPES, true) &&
+        return !$entity->get('opportunityPostDeleted') &&
+            !in_array($entity->get('type'), OpportunityStreamEvents::EVENT_TYPES, true) &&
             $this->opportunityAccess->canReadNote($user, $entity) &&
             $this->base->checkEntityEdit($user, $entity, $data);
     }
 
     public function checkEntityDelete(User $user, Entity $entity, ScopeData $data): bool
     {
-        return $this->checkEntityRead($user, $entity, $data) &&
+        return !$entity->get('opportunityPostDeleted') && $this->checkEntityRead($user, $entity, $data) &&
             $this->base->checkEntityDelete($user, $entity, $data);
     }
 }

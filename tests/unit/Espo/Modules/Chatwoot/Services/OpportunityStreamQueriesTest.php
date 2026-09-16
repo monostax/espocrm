@@ -18,6 +18,7 @@ use Espo\Modules\Chatwoot\Classes\Select\Note\LatestOpportunityEntry;
 use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
+use Espo\Modules\Chatwoot\Services\OpportunityThreadState;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\BaseEntity;
@@ -53,10 +54,11 @@ class OpportunityStreamQueriesTest extends TestCase
         $defs = [];
         $tables = [
             'Note' => ['id', 'parentId', 'parentType', 'type', 'relatedType', 'relatedId', 'createdById',
-                'createdAt', 'opportunityMentionUserIds', 'number', 'deleted'],
+                'createdAt', 'opportunityMentionUserIds', 'opportunityThreadRootId', 'number', 'deleted'],
             'Opportunity' => ['id', 'status', 'assignedUserId', 'tenantId', 'deleted'],
             'OpportunityReadState' => ['id', 'opportunityId', 'userId', 'lastSeenAt', 'lastSeenNumber',
                 'isParticipant', 'isMarkedUnread', 'deleted'],
+            'OpportunityThreadReadState' => ['id', 'rootNoteId', 'opportunityId', 'userId', 'lastSeenNumber', 'deleted'],
         ];
         foreach ($tables as $type => $fields) {
             $columns = [];
@@ -93,6 +95,7 @@ class OpportunityStreamQueriesTest extends TestCase
         $this->service = new OpportunityReadStateService(
             $this->createMock(EntityManager::class), $this->user, $acl, $tenants,
             $this->createMock(SelectBuilderFactory::class), $this->createMock(SearchParamsFetcher::class), $this->access,
+            $this->createMock(OpportunityThreadState::class),
         );
 
         $this->pdo->exec("INSERT INTO opportunity (id, status, assigned_user_id, tenant_id) VALUES ('opp', 'Open', 'agent', 'tenant')");

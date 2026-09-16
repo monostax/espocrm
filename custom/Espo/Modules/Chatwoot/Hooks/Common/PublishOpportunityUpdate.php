@@ -81,7 +81,7 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
         $type = $entity->getEntityType();
         if ($type === 'Opportunity') {
             $opportunity = $entity;
-        } elseif ($type === 'OpportunityReadState') {
+        } elseif (in_array($type, ['OpportunityReadState', 'OpportunityThreadReadState'], true)) {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $entity->get('opportunityId'));
         } elseif ($type === 'Note' && $entity->get('parentType') === 'Opportunity' &&
             in_array($entity->get('type'), OpportunityStreamEvents::TYPES, true)) {
@@ -110,7 +110,7 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
             'data' => (object) [
                 'opportunityId' => $opportunity->getId(),
                 'tenantIds' => $tenantIds,
-                'userId' => $type === 'OpportunityReadState' ? $entity->get('userId') : null,
+                'userId' => in_array($type, ['OpportunityReadState', 'OpportunityThreadReadState'], true) ? $entity->get('userId') : null,
             ],
         ]);
     }

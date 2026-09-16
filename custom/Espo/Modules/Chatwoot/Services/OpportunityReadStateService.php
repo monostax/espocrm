@@ -32,6 +32,7 @@ class OpportunityReadStateService
         private SelectBuilderFactory $selectBuilderFactory,
         private SearchParamsFetcher $searchParamsFetcher,
         private OpportunityEventAccess $eventAccess,
+        private OpportunityThreadState $threads,
     ) {}
 
     /** Filter before pagination, using the same personal cutoff as getReadStates. */
@@ -57,19 +58,14 @@ class OpportunityReadStateService
                 'parentType' => 'Opportunity',
                 'parentId:' => 'opportunity.id',
                 'OR' => [['createdById!=' => $userId], ['createdById' => null]],
-            ])->where($this->streamWhere());
+            ])->where(['type' => OpportunityStreamEvents::TYPES])->where($this->eventAccess->where($this->user));
 
         if ($onlyUnread) {
-            $posts->join('OpportunityReadState', 'readState', [
+            $posts->leftJoin('OpportunityReadState', 'readState', [
                 'readState.opportunityId:' => 'streamPost.parentId',
                 'readState.userId' => $userId,
                 'readState.deleted' => false,
-            ])->where(['readState.lastSeenAt!=' => null])->where([
-                'OR' => [
-                    ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
-                    ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
-                ],
-            ])->where([
+            ])->where($this->personalUnreadWhere($userId))->where([
                 'OR' => [
                     $mention,
                     [
@@ -130,16 +126,11 @@ class OpportunityReadStateService
             ->where($mention);
 
         if ($onlyUnread) {
-            $posts->join('OpportunityReadState', 'readState', [
+            $posts->leftJoin('OpportunityReadState', 'readState', [
                 'readState.opportunityId:' => 'streamPost.parentId',
                 'readState.userId' => $userId,
                 'readState.deleted' => false,
-            ])->where(['readState.lastSeenAt!=' => null])->where([
-                'OR' => [
-                    ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
-                    ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
-                ],
-            ]);
+            ])->where($this->personalUnreadWhere($userId));
         }
 
         $queryBuilder->where(Cond::exists($posts->build()));
@@ -361,6 +352,16 @@ class OpportunityReadStateService
             }
         }
 
+        $threadUnread = $this->threads->unreadByOpportunity(array_keys($opportunities));
+        foreach ($result as $id => &$row) {
+            $row['streamUnreadCount'] = $row['unreadCount'];
+            $row['threadUnreadCount'] = $threadUnread[$id]['count'] ?? 0;
+            $row['unreadThreadIds'] = $threadUnread[$id]['rootIds'] ?? [];
+            $row['unreadCount'] += $row['threadUnreadCount'];
+            $row['hasUnreadMention'] = $row['hasUnreadMention'] || ($threadUnread[$id]['hasMention'] ?? false);
+        }
+        unset($row);
+
         return $result;
     }
 
@@ -369,7 +370,7 @@ class OpportunityReadStateService
         return $this->getReadStates([$id])[$id];
     }
 
-    public function markRead(string $id, ?string $lastPostId = null, ?int $expectedVersion = null): array
+    public function markRead(string $id, ?string $lastPostId = null, ?int $expectedVersion = null, bool $includeThreads = false): array
     {
         $this->readableOpportunities([$id]);
         $post = $this->entityManager->getRDBRepository('Note')->where([
@@ -381,12 +382,15 @@ class OpportunityReadStateService
             throw new BadRequest('The read cutoff must reference an accessible stream entry on this Opportunity.');
         }
 
-        $this->withState($id, $this->user->getId(), function (Entity $state) use ($post, $expectedVersion): void {
+        $this->withState($id, $this->user->getId(), function (Entity $state) use ($id, $post, $expectedVersion, $includeThreads): void {
             if ($expectedVersion !== null && (int) $state->get('version') !== $expectedVersion) {
                 return; // A newer read/unread action won. Never overwrite it with a stale view.
             }
             $state->set('isMarkedUnread', false);
             $this->advance($state, $post?->get('createdAt') ?? gmdate('Y-m-d H:i:s'), (int) ($post?->get('number') ?? 0));
+            if ($includeThreads) {
+                $this->threads->markAllRead($id);
+            }
         });
 
         return $this->getReadState($id);
@@ -459,12 +463,22 @@ class OpportunityReadStateService
             $this->withState($id, $authorId, function (Entity $state) use ($post): void {
                 $state->set('isParticipant', true);
                 $state->set('isMarkedUnread', false);
-                $this->advance($state, $post->get('createdAt'), (int) $post->get('number'));
+                if (!$post->get('opportunityThreadRootId')) {
+                    $this->advance($state, $post->get('createdAt'), (int) $post->get('number'));
+                }
             });
+            if ($post->get('opportunityThreadRootId')) {
+                $root = $this->entityManager->getEntityById('Note', $post->get('opportunityThreadRootId'));
+                $this->threads->markRead($root, (int) $post->get('number'), userId: $authorId);
+            }
         }
         foreach ($post->get('opportunityMentionUserIds') ?? [] as $userId) {
             if ($userId !== $authorId) {
-                $this->addParticipant($id, $userId, $this->before($post->get('createdAt')), (int) $post->get('number') - 1);
+                if ($post->get('opportunityThreadRootId')) {
+                    $this->addParticipant($id, $userId, preserveExistingCutoff: true);
+                } else {
+                    $this->addParticipant($id, $userId, $this->before($post->get('createdAt')), (int) $post->get('number') - 1);
+                }
             }
         }
     }
@@ -562,8 +576,24 @@ class OpportunityReadStateService
     {
         return [
             'type' => OpportunityStreamEvents::TYPES,
+            'opportunityThreadRootId' => null,
             $this->eventAccess->where($this->user),
         ];
+    }
+
+    private function personalUnreadWhere(string $userId): array
+    {
+        return ['OR' => [
+            [
+                'opportunityThreadRootId' => null,
+                'readState.lastSeenAt!=' => null,
+                'OR' => [
+                    ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
+                    ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
+                ],
+            ],
+            OpportunityThreadState::unreadWhere($userId, 'streamPost'),
+        ]];
     }
 
     private function latestOtherPost(string $id, string $userId): ?Entity

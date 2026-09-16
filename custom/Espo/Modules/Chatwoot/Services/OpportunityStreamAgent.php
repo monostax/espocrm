@@ -38,6 +38,7 @@ class OpportunityStreamAgent
         return (object) [
             'shouldRespond' => true,
             'opportunityId' => $note->getParentId(),
+            'threadRootId' => $note->get('opportunityThreadRootId'),
             'crmTenantId' => $target->crmTenantId,
             'chatwootAccountCrmId' => $target->chatwootAccountCrmId,
             'executionRunId' => $note->getData()->opportunityAiExecutions->{$membershipId} ?? null,
@@ -75,6 +76,7 @@ class OpportunityStreamAgent
                 'type' => Note::TYPE_POST,
                 'parentType' => 'Opportunity',
                 'parentId' => $source->getParentId(),
+                'opportunityThreadRootId' => $source->get('opportunityThreadRootId'),
                 'post' => $post,
                 'isInternal' => true,
                 'createdById' => $this->user->getId(),

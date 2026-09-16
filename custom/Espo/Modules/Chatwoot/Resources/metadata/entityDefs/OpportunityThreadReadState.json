@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "user": { "type": "link", "required": true },
+        "opportunity": { "type": "link", "required": true },
+        "rootNote": { "type": "link", "required": true },
+        "lastSeenNumber": { "type": "int", "dbType": "bigint", "default": 0 },
+        "version": { "type": "int", "default": 0 },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "user": { "type": "belongsTo", "entity": "User" },
+        "opportunity": { "type": "belongsTo", "entity": "Opportunity" },
+        "rootNote": { "type": "belongsTo", "entity": "Note", "noForeignName": true }
+    },
+    "indexes": {
+        "userThread": { "columns": ["userId", "rootNoteId", "deleted"], "unique": true },
+        "opportunityUser": { "columns": ["opportunityId", "userId", "deleted"] }
+    }
+}

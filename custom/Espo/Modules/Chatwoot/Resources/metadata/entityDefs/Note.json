@@ -1,5 +1,24 @@
 {
+    "transactionalSave": true,
     "fields": {
+        "opportunityThreadRoot": {
+            "type": "link",
+            "readOnlyAfterCreate": true,
+            "utility": true,
+            "customizationDisabled": true
+        },
+        "opportunityThreadSummary": {
+            "type": "jsonObject",
+            "notStorable": true,
+            "readOnly": true,
+            "utility": true
+        },
+        "opportunityPostDeleted": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "utility": true
+        },
         "type": {
             "options": ["__APPEND__", "ChatwootMessageReceived", "ActivityOverdue"]
         },
@@ -35,7 +54,17 @@
             "utility": true
         }
     },
+    "links": {
+        "opportunityThreadRoot": {
+            "type": "belongsTo",
+            "entity": "Note",
+            "noForeignName": true
+        }
+    },
     "indexes": {
+        "opportunityThread": {
+            "columns": ["opportunityThreadRootId", "deleted", "number"]
+        },
         "opportunityStreamEvent": {
             "columns": ["opportunityStreamEventKey"],
             "unique": true
