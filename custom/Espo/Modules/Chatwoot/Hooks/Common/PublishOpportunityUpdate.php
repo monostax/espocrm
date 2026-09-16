@@ -6,6 +6,7 @@ namespace Espo\Modules\Chatwoot\Hooks\Common;
 
 use Espo\Core\Hook\Hook\AfterRemove;
 use Espo\Core\Hook\Hook\AfterSave;
+use Espo\Core\Hook\Hook\BeforeRemove;
 use Espo\Core\Job\QueueName;
 use Espo\Modules\Chatwoot\Jobs\BroadcastOpportunityUpdate;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
@@ -15,7 +16,7 @@ use Espo\ORM\Repository\Option\RemoveOptions;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /** Persist the notification in the same transaction as the opportunity change. */
-class PublishOpportunityUpdate implements AfterSave, AfterRemove
+class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
 {
     public static int $order = 99;
 
@@ -31,6 +32,48 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove
     public function afterRemove(Entity $entity, RemoveOptions $options): void
     {
         $this->schedule($entity);
+    }
+
+    public function beforeRemove(Entity $entity, RemoveOptions $options): void
+    {
+        if ($entity->getEntityType() !== 'Contact') {
+            return;
+        }
+
+        // Capture linked opportunities before deleting the contact and its relations.
+        $opportunities = $this->entityManager->getRDBRepository('Contact')
+            ->getRelation($entity, 'opportunities')->find();
+
+        foreach ($opportunities as $opportunity) {
+            $this->schedule($opportunity);
+        }
+    }
+
+    public function afterRelate(Entity $entity, array $options, array $relationParams): void
+    {
+        $type = $entity->getEntityType();
+        $link = $relationParams['relationName'] ?? null;
+
+        if ($type === 'Opportunity' && $link === 'contacts') {
+            $this->schedule($entity);
+        } elseif ($type === 'Contact' && $link === 'opportunities') {
+            $opportunity = $this->entityManager->getEntityById('Opportunity', $relationParams['foreignId']);
+            if ($opportunity) {
+                $this->schedule($opportunity);
+            }
+        }
+    }
+
+    public function afterUnrelate(Entity $entity, array $options, array $relationParams): void
+    {
+        $this->afterRelate($entity, $options, $relationParams);
+    }
+
+    public function afterMassRelate(Entity $entity, array $options, array $relationParams): void
+    {
+        if ($entity->getEntityType() === 'Opportunity' && ($relationParams['relationName'] ?? null) === 'contacts') {
+            $this->schedule($entity);
+        }
     }
 
     private function schedule(Entity $entity): void

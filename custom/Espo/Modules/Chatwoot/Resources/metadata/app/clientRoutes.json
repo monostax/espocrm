@@ -27,6 +27,13 @@
         },
         "order": 0
     },
+    "OpportunityContactsBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/opportunity-contacts-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
     "ChatwootInbox": {
         "params": {
             "controller": "chatwoot:controllers/chatwoot",
