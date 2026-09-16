@@ -1,5 +1,14 @@
 [
     {
+        "route": "/Opportunity/:id/chatwootConversationsForUser",
+        "method": "get",
+        "params": {
+            "controller": "OpportunityConversations",
+            "action": "list",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/Note/:id/opportunityAiClaim/:membershipId",
         "method": "post",
         "params": {
