@@ -108,6 +108,7 @@ class OpportunityConversations
                 'filter_operator' => 'equal_to',
                 'values' => $ids,
             ]],
+            $request->getQueryParam('countOnly') === 'true',
         );
 
         $meta = $response['meta'];

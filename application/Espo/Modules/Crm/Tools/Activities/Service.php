@@ -703,6 +703,10 @@ class Service
             $totalCount = $row['count'];
         }
 
+        if ($params->isCountOnly() && $scope !== User::ENTITY_TYPE) {
+            return new RecordCollection(new EntityCollection(), (int) $totalCount);
+        }
+
         $builder->order('dateStart', 'DESC');
 
         if ($scope === User::ENTITY_TYPE) {

@@ -348,6 +348,11 @@
 
             console.log("EspoCRM: Origin verified, processing message");
 
+            if (event.source === window.parent && event.data.type === "PARENT_VISIBILITY") {
+                window.monostaxWorkspaceVisible = event.data.visible === true;
+                window.dispatchEvent(new Event("monostax:workspace-visibility"));
+            }
+
             // Handle parent navigation commands
             if (event.data.type === "PARENT_NAVIGATE") {
                 const path = event.data.path || "";

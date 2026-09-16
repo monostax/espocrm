@@ -1737,10 +1737,14 @@ public function filterConversations(
     string $accountApiKey,
     int $accountId,
     int $page = 1,
-    array $filters = []
+    array $filters = [],
+    bool $countOnly = false
 ): array {
     $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/filter';
     $url .= '?page=' . $page;
+    if ($countOnly) {
+        $url .= '&count_only=true';
+    }
 
     $payload = json_encode(['payload' => $filters]);
 

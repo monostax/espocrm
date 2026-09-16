@@ -64,9 +64,20 @@ class ConversationBadgesView extends View {
         // Get WebSocket manager
         this.webSocketManager = this.getHelper().webSocketManager;
 
+        this.onVisibilityChange = () => {
+            if (!this.isVisible()) {
+                this.stopPolling();
+                return;
+            }
+            this.updateBadges();
+            this.startPolling();
+        };
+        document.addEventListener('visibilitychange', this.onVisibilityChange);
+        window.addEventListener('monostax:workspace-visibility', this.onVisibilityChange);
+
         // Wait for navbar to render, then start badge updates
         this.listenToOnce(this, 'after:render', () => {
-            setTimeout(() => {
+            this.startTimeout = setTimeout(() => {
                 this.updateBadges();
                 this.startPolling();
                 this.setupOptimisticListener();
@@ -217,7 +228,7 @@ class ConversationBadgesView extends View {
      * Start polling for badge updates.
      */
     startPolling() {
-        if (this.intervalId) {
+        if (this.intervalId || !this.isVisible()) {
             return;
         }
 
@@ -241,10 +252,11 @@ class ConversationBadgesView extends View {
      * Also caches counts for optimistic updates.
      */
     async updateBadges() {
-        if (!this.getAcl().check('ChatwootConversation', 'read')) {
+        if (!this.isVisible() || this.fetchPending || !this.getAcl().check('ChatwootConversation', 'read')) {
             return;
         }
 
+        this.fetchPending = true;
         try {
             const counts = await Espo.Ajax.getRequest('ChatwootConversation/action/statusCounts');
             
@@ -254,7 +266,13 @@ class ConversationBadgesView extends View {
             this.renderBadgesFromCache();
         } catch (e) {
             // Silently fail if API call fails
+        } finally {
+            this.fetchPending = false;
         }
+    }
+
+    isVisible() {
+        return !document.hidden && window.monostaxWorkspaceVisible !== false;
     }
 
     /**
@@ -320,7 +338,10 @@ class ConversationBadgesView extends View {
     }
 
     onRemove() {
+        clearTimeout(this.startTimeout);
         this.stopPolling();
+        document.removeEventListener('visibilitychange', this.onVisibilityChange);
+        window.removeEventListener('monostax:workspace-visibility', this.onVisibilityChange);
         
         // Unsubscribe from WebSocket
         if (this.isWebSocketSubscribed && this.webSocketManager) {

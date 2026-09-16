@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
+use Espo\Core\Api\Response;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
 
@@ -35,14 +36,17 @@ class OpportunityReadState
         return (object) $this->service->markUnread($this->id($request));
     }
 
-    public function getActionNavigationCounts(Request $request): object
+    public function getActionNavigationCounts(Request $request, Response $response): object
     {
-        return (object) $this->service->getNavigationCounts($request);
+        $started = hrtime(true);
+        $counts = $this->service->getNavigationCounts($request);
+        $response->setHeader('Server-Timing', 'navigationCounts;dur=' . round((hrtime(true) - $started) / 1e6, 2));
+        return (object) $counts;
     }
 
-    public function postActionNavigationCounts(Request $request): object
+    public function postActionNavigationCounts(Request $request, Response $response): object
     {
-        return (object) $this->service->getNavigationCounts($request);
+        return $this->getActionNavigationCounts($request, $response);
     }
 
     public function postActionReadStates(Request $request): object

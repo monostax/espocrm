@@ -1,5 +1,15 @@
 [
     {
+        "route": "/Opportunity/action/activitySummary",
+        "method": "get",
+        "params": { "controller": "OpportunityActivitySummary", "action": "summary" }
+    },
+    {
+        "route": "/Opportunity/:id/activityCount",
+        "method": "get",
+        "params": { "controller": "OpportunityActivitySummary", "action": "count", "id": ":id" }
+    },
+    {
         "route": "/Opportunity/:id/threads/:rootId",
         "method": "get",
         "params": { "controller": "OpportunityThread", "action": "thread", "id": ":id", "rootId": ":rootId" }

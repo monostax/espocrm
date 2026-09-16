@@ -38,7 +38,8 @@ class FetchParams
     public function __construct(
         ?int $maxSize,
         ?int $offset,
-        ?string $entityType
+        ?string $entityType,
+        private bool $countOnly = false,
     ) {
         $this->maxSize = $maxSize;
         $this->offset = $offset;
@@ -48,6 +49,11 @@ class FetchParams
     public function getMaxSize(): ?int
     {
         return $this->maxSize;
+    }
+
+    public function isCountOnly(): bool
+    {
+        return $this->countOnly;
     }
 
     public function getOffset(): ?int
