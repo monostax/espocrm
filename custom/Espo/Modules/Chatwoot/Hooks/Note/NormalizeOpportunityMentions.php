@@ -7,6 +7,7 @@ use Espo\Entities\Note;
 use Espo\ORM\Entity;
 use Espo\ORM\Repository\Option\SaveOptions;
 use Espo\Modules\Chatwoot\Services\OpportunityPostMentions;
+use Espo\Modules\Chatwoot\Tools\Activities\Access;
 
 class NormalizeOpportunityMentions implements BeforeSave
 {
@@ -17,11 +18,11 @@ class NormalizeOpportunityMentions implements BeforeSave
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        if ($entity->get('parentType') === 'Opportunity' && $entity->get('type') === Note::TYPE_POST &&
+        if (in_array($entity->get('parentType'), ['Opportunity', ...Access::TYPES], true) && $entity->get('type') === Note::TYPE_POST &&
             ($entity->isNew() || $entity->isAttributeChanged('post'))) {
             assert($entity instanceof Note);
             $entity->set('opportunityMentionUserIds', $this->mentions->resolve($entity));
-            if ($entity->isNew()) {
+            if ($entity->isNew() && $entity->get('parentType') === 'Opportunity') {
                 // Note.data is server-owned. Keep the author-authorized targets for the async worker.
                 $data = $entity->getData();
                 $data->opportunityAiMentionTargets = $this->mentions->resolveAiTargets($entity);

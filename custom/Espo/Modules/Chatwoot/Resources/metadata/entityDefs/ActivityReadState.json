@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "user": { "type": "link", "required": true },
+        "parentType": { "type": "varchar", "maxLength": 32, "required": true },
+        "parentId": { "type": "varchar", "maxLength": 24, "required": true },
+        "threadKey": { "type": "varchar", "maxLength": 24, "default": "main", "required": true },
+        "lastSeenNumber": { "type": "int", "dbType": "bigint", "default": 0 },
+        "lastSeenAt": { "type": "datetime" },
+        "version": { "type": "int", "default": 0 },
+        "isMarkedUnread": { "type": "bool", "default": false }
+    },
+    "links": { "user": { "type": "belongsTo", "entity": "User" } },
+    "indexes": {
+        "userActivityThread": { "columns": ["userId", "parentType", "parentId", "threadKey", "deleted"], "unique": true },
+        "activity": { "columns": ["parentType", "parentId", "deleted"] }
+    }
+}
