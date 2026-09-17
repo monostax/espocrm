@@ -26,6 +26,7 @@ use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\EntityFactory;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Executor\QueryExecutor;
 use Espo\ORM\Metadata;
 use Espo\ORM\MetadataDataProvider;
 use Espo\ORM\Query\SelectBuilder;
@@ -53,6 +54,7 @@ class OpportunityStreamQueriesTest extends TestCase
         }
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->pdo->sqliteCreateFunction('CONCAT', fn (...$parts) => implode('', $parts));
         $defs = [];
         $tables = [
             'Note' => ['id', 'parentId', 'parentType', 'type', 'relatedType', 'relatedId', 'createdById',
@@ -62,6 +64,7 @@ class OpportunityStreamQueriesTest extends TestCase
             'OpportunityReadState' => ['id', 'opportunityId', 'userId', 'lastSeenAt', 'lastSeenNumber',
                 'isParticipant', 'isMarkedUnread', 'deleted'],
             'OpportunityThreadReadState' => ['id', 'rootNoteId', 'opportunityId', 'userId', 'lastSeenNumber', 'deleted'],
+            'User' => ['id', 'firstName', 'lastName', 'deleted'],
         ];
         foreach ($tables as $type => $fields) {
             $columns = [];
@@ -75,6 +78,11 @@ class OpportunityStreamQueriesTest extends TestCase
             $this->pdo->exec("CREATE TABLE $table (" . implode(', ', $columns) . ')');
         }
         $defs['Opportunity']['attributes']['chatwootStreamUpdatedAt'] = ['type' => 'datetime', 'notStorable' => true];
+        $defs['User']['attributes']['name'] = [
+            'type' => 'varchar',
+            'notStorable' => true,
+            'select' => ['select' => "CONCAT:(firstName, ' ', lastName)"],
+        ];
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($defs);
         $metadata = new Metadata($provider);
@@ -131,6 +139,56 @@ class OpportunityStreamQueriesTest extends TestCase
         $query = SelectBuilder::create()->from('Note')->select([['COUNT:id', 'count']])
             ->where($where)->where(['number>' => 1])->build();
         self::assertSame(10, (int) $this->pdo->query($this->composer->composeSelect($query))->fetchColumn());
+    }
+
+    public function testCardParticipantsIncludeThreadAuthorsAndExcludeEventsDeletedUsersAndOtherStreams(): void
+    {
+        $this->pdo->exec("INSERT INTO user (id, first_name, last_name, deleted) VALUES
+            ('alice', 'Same', 'Name', 0), ('bob', 'Same', 'Name', 0), ('carol', 'Carol', 'Example', 0),
+            ('removed', 'Deleted', 'User', 1), ('automation', 'Event', 'Author', 0)");
+        $this->insert(14, 'Post', author: 'alice');
+        $this->insert(15, 'Post', author: 'bob');
+        $this->insert(16, 'Post', author: 'alice');
+        $this->pdo->exec("UPDATE note SET opportunity_thread_root_id = 'note-14' WHERE id = 'note-16'");
+        $this->insert(17, 'Post', author: 'removed');
+        $this->insert(18, 'Post', author: 'missing-user');
+        $this->insert(19, 'Post', author: 'carol');
+        $this->pdo->exec("UPDATE note SET deleted = 1 WHERE id = 'note-19'");
+        $this->insert(20, OpportunityStreamEvents::MESSAGE_RECEIVED, author: 'automation');
+        $this->insert(21, 'Post', author: 'carol');
+        $this->pdo->exec("UPDATE note SET parent_id = 'second' WHERE id = 'note-21'");
+        $this->insert(22, 'Post', author: 'bob');
+        $this->pdo->exec("UPDATE note SET parent_type = 'Case', parent_id = 'second' WHERE id = 'note-22'");
+        $this->insert(23, 'Post', author: 'bob');
+        $this->pdo->exec("UPDATE note SET parent_id = 'outside-batch' WHERE id = 'note-23'");
+        $this->insert(24, 'Post');
+        $this->pdo->exec("UPDATE note SET created_by_id = NULL WHERE id = 'note-24'");
+
+        $method = new ReflectionMethod($this->service, 'discussionParticipants');
+        $composer = $this->composer;
+        $queryCount = 0;
+        $executor = $this->createMock(QueryExecutor::class);
+        $executor->method('execute')->willReturnCallback(function ($query) use (&$composer, &$queryCount) {
+            $queryCount++;
+            return $this->pdo->query($composer->composeSelect($query));
+        });
+        $entityManager = (new ReflectionProperty($this->service, 'entityManager'))->getValue($this->service);
+        $entityManager->method('getQueryExecutor')->willReturn($executor);
+
+        foreach ([$this->composer, $this->pgComposer] as $composer) {
+            $queryCount = 0;
+            $participants = $method->invoke($this->service, ['opp', 'second', 'empty']);
+            self::assertSame([
+                ['id' => 'alice', 'name' => 'Same Name'],
+                ['id' => 'bob', 'name' => 'Same Name'],
+            ], $participants['opp']);
+            self::assertSame([['id' => 'carol', 'name' => 'Carol Example']], $participants['second']);
+            self::assertArrayNotHasKey('empty', $participants);
+            self::assertArrayNotHasKey('outside-batch', $participants);
+            self::assertSame(2, $queryCount, 'Participant data must be batched, not queried per card.');
+            self::assertSame([], $method->invoke($this->service, ['empty']));
+            self::assertSame(3, $queryCount);
+        }
     }
 
     public function testEspoFactoryConstructsRequiredAccessDependenciesWithoutExplicitOverrides(): void

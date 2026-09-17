@@ -81,10 +81,9 @@ class ConversationEpisodeSync
                 throw new RuntimeException('Transcript count mismatch; revision remains pending');
             }
         }
-        $latest = $this->api->episodeRequest(...[...$connection, "/{$sourceId}"]);
-        if ((int) $latest['revision'] !== $revision) {
-            throw new RuntimeException('Episode changed during transcript download; retrying next run');
-        }
+        // Every transcript page is revision-qualified; the conditional source
+        // acknowledgement catches changes after the last page. Another GET here
+        // cannot close that race and adds one request per historical episode.
 
         $conversation = $this->parentConversation($account, $connection, $source);
         $inbox = $this->entityManager->getRDBRepository('ChatwootInbox')->where([
@@ -98,7 +97,7 @@ class ConversationEpisodeSync
         foreach ($teams as $team) {
             $teamIds[] = $team->getId();
         }
-        $this->entityManager->getTransactionManager()->run(function () use (
+        $this->persistWithRetry(function () use (
             $account, $source, $sourceId, $revision, $superseded, $messages, $conversation, $inbox, $teamIds
         ): void {
             $repo = $this->entityManager->getRDBRepository('ChatwootConversationEpisode');
@@ -108,6 +107,9 @@ class ConversationEpisodeSync
             $episode = $repo->clone($query)->forUpdate()->findOne();
             if ($episode && (int) $episode->get('sourceRevision') > $revision) {
                 return;
+            }
+            if ($episode && $episode->get('deleted') && !$superseded) {
+                $repo->restoreDeleted($episode->getId());
             }
             $episode ??= $this->entityManager->getNewEntity('ChatwootConversationEpisode');
             if ($episode->isNew()) {
@@ -170,7 +172,7 @@ class ConversationEpisodeSync
     {
         $message = $this->entityManager->getRDBRepository('ChatwootMessage')->where([
             'chatwootAccountId' => $account->getId(), 'chatwootMessageId' => (int) $source['id'],
-        ])->findOne() ?? $this->entityManager->getNewEntity('ChatwootMessage');
+        ])->forUpdate()->findOne() ?? $this->entityManager->getNewEntity('ChatwootMessage');
         $message->set([
             'name' => mb_substr(strip_tags($source['content'] ?? ''), 0, 100) ?: 'Message #' . $source['id'],
             'chatwootAccountId' => $account->getId(), 'chatwootMessageId' => (int) $source['id'],
@@ -188,6 +190,24 @@ class ConversationEpisodeSync
             'teamsIds' => $teamIds, 'lastSyncedAt' => gmdate('Y-m-d H:i:s'),
         ]);
         $this->entityManager->saveEntity($message, ['silent' => true]);
+    }
+
+    private function persistWithRetry(\Closure $work): void
+    {
+        for ($attempt = 0; ; $attempt++) {
+            try {
+                $this->entityManager->getTransactionManager()->run($work);
+                return;
+            } catch (\PDOException $e) {
+                // MariaDB can invalidate a read when the regular conversation
+                // importer updates the same message. Retry the whole local
+                // transaction; never acknowledge a partially imported revision.
+                if ($attempt >= 2 || !in_array((int) ($e->errorInfo[1] ?? 0), [1020, 1205, 1213], true)) {
+                    throw $e;
+                }
+                usleep(100_000 * ($attempt + 1));
+            }
+        }
     }
 
     private function timestamp(?string $value): ?string

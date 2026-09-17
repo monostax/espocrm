@@ -353,7 +353,9 @@ class OpportunityReadStateService
         }
 
         $threadUnread = $this->threads->unreadByOpportunity(array_keys($opportunities));
+        $participants = $this->discussionParticipants(array_keys($opportunities));
         foreach ($result as $id => &$row) {
+            $row['participants'] = $participants[$id] ?? [];
             $row['streamUnreadCount'] = $row['unreadCount'];
             $row['threadUnreadCount'] = $threadUnread[$id]['count'] ?? 0;
             $row['unreadThreadIds'] = $threadUnread[$id]['rootIds'] ?? [];
@@ -559,6 +561,37 @@ class OpportunityReadStateService
         }
         if (count($result) !== count(array_unique($ids))) {
             throw new NotFound('Opportunity not found.');
+        }
+        return $result;
+    }
+
+    /** Batch authors of posts and thread replies for already-authorized opportunities. */
+    private function discussionParticipants(array $ids): array
+    {
+        $query = SelectBuilder::create()->from('Note')->select([
+            'parentId', 'createdById', ['MAX:number', 'lastNumber'],
+        ])->where([
+            'parentType' => 'Opportunity', 'parentId' => $ids,
+            'type' => Note::TYPE_POST, 'createdById!=' => null,
+        ])->group(['parentId', 'createdById'])->order('MAX:number', 'DESC')->build();
+        $rows = $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$rows) {
+            return [];
+        }
+
+        // User names are virtual attributes; resolve them separately from GROUP BY.
+        $query = SelectBuilder::create()->from('User')->select(['id', 'name'])
+            ->where(['id' => array_values(array_unique(array_column($rows, 'createdById')))])->build();
+        $users = [];
+        foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $user) {
+            $users[$user['id']] = ['id' => $user['id'], 'name' => $user['name'] ?? ''];
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            if (isset($users[$row['createdById']])) {
+                $result[$row['parentId']][] = $users[$row['createdById']];
+            }
         }
         return $result;
     }
