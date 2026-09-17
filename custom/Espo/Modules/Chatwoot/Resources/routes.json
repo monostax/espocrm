@@ -16,6 +16,16 @@
         "params": { "controller": "OpportunityActivitySummary", "action": "summary" }
     },
     {
+        "route": "/Opportunity/:id/nextAction",
+        "method": "post",
+        "params": { "controller": "OpportunityNextAction", "action": "select", "id": ":id" }
+    },
+    {
+        "route": "/Opportunity/:id/nextAction/complete",
+        "method": "post",
+        "params": { "controller": "OpportunityNextAction", "action": "complete", "id": ":id" }
+    },
+    {
         "route": "/Opportunity/:id/activityCount",
         "method": "get",
         "params": { "controller": "OpportunityActivitySummary", "action": "count", "id": ":id" }
