@@ -1,6 +1,7 @@
 [
     {
         "rows": [
+            [{"name": "stageTiming", "fullWidth": true}],
             [
                 {
                     "name": "name"

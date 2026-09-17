@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "targetTimeSeconds": "Tempo Alvo"
+    },
+    "labels": {
+        "Days": "Dias",
+        "Hours": "Horas",
+        "Minutes": "Minutos",
+        "Empty means no target": "Deixe os três campos vazios para não definir um tempo alvo."
+    },
+    "tooltips": {
+        "targetTimeSeconds": "Tempo corrido permitido por visita. Alterações valem apenas para novas entradas. Estágios ganhos/perdidos não são cronometrados. Deixe vazio para não definir um alvo."
+    },
+    "messages": {
+        "Invalid target time": "Informe pelo menos um minuto com números inteiros não negativos ou limpe todos os campos. Máximo: 24.855 dias."
+    }
+}

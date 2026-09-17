@@ -1,0 +1,12 @@
+{
+    "entity": true,
+    "object": false,
+    "tab": false,
+    "acl": false,
+    "layouts": false,
+    "customizable": false,
+    "importable": false,
+    "stream": false,
+    "module": "Global",
+    "type": "Base"
+}

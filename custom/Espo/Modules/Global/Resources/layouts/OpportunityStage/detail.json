@@ -28,6 +28,12 @@
             ],
             [
                 {
+                    "name": "targetTimeSeconds",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
                     "name": "description",
                     "fullWidth": true
                 }

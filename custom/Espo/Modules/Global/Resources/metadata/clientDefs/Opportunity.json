@@ -15,7 +15,7 @@
             "style": "danger"
         }
     ],
-    "boolFilterList": ["onlyMy", "followupActionNeeded", "followupActive"],
+    "boolFilterList": ["onlyMy", "followupActionNeeded", "followupActive", "stageOverdue"],
     "recordViews": {
         "detail": "global:views/opportunity/record/detail",
         "detailSmall": "global:views/opportunity/record/detail",

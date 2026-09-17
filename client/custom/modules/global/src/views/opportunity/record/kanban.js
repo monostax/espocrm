@@ -17,6 +17,12 @@ define("global:views/opportunity/record/kanban", [
         itemViewName: "global:views/opportunity/record/kanban-item",
         
         mandatorySelectAttributeList: [
+            "status",
+            "currentStageVisitId",
+            "stageEnteredAt",
+            "stageTargetTimeSeconds",
+            "stageDueAt",
+            "stageTimingIsPartial",
             "chatwootConversationsIds",
             "chatwootConversationsNames",
             "chatwootConversationsColumns",

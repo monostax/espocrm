@@ -26,6 +26,18 @@ use stdClass;
  */
 class Opportunity extends CrmOpportunity
 {
+    public function getActionStageHistory(Request $request): stdClass
+    {
+        $id = $request->getQueryParam('id');
+        $offset = $request->getQueryParam('offset') ?? '0';
+        if (!is_string($id) || !preg_match('/^[a-zA-Z0-9_-]{1,24}$/D', $id) ||
+            !is_string($offset) || !ctype_digit($offset) || strlen($offset) > 7) {
+            throw new BadRequest('An opportunity ID and a non-negative offset are required.');
+        }
+
+        return $this->injectableFactory->create(\Espo\Modules\Global\Tools\Opportunity\StageHistory::class)
+            ->get($id, (int) $offset);
+    }
 
     /**
      * GET Opportunity/action/reportByStage

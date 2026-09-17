@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "sequence": {"type": "int", "readOnly": true},
+        "opportunity": {"type": "link", "readOnly": true},
+        "stageId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "funnelId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "stageName": {"type": "varchar", "maxLength": 100, "readOnly": true},
+        "funnelName": {"type": "varchar", "readOnly": true},
+        "enteredAt": {"type": "datetime", "readOnly": true},
+        "exitedAt": {"type": "datetime", "readOnly": true},
+        "durationSeconds": {"type": "int", "readOnly": true},
+        "targetTimeSeconds": {"type": "int", "readOnly": true},
+        "dueAt": {"type": "datetime", "readOnly": true},
+        "isPartial": {"type": "bool", "default": false, "readOnly": true},
+        "kind": {"type": "enum", "options": ["Visit", "Won", "Lost"], "readOnly": true}
+    },
+    "links": {
+        "opportunity": {"type": "belongsTo", "entity": "Opportunity"}
+    },
+    "indexes": {
+        "opportunitySequence": {"columns": ["opportunityId", "sequence"], "unique": true},
+        "opportunityEntered": {"columns": ["opportunityId", "enteredAt", "deleted"]},
+        "opportunityStage": {"columns": ["opportunityId", "stageId", "deleted"]}
+    },
+    "collection": {"orderBy": "enteredAt", "order": "desc"}
+}

@@ -5,6 +5,7 @@
         "lost": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\PrimaryFilters\\Lost"
     },
     "boolFilterClassNameMap": {
+        "stageOverdue": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\BoolFilters\\StageOverdue",
         "followupActionNeeded": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\BoolFilters\\FollowupActionNeeded",
         "followupActive": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\BoolFilters\\FollowupActive"
     }

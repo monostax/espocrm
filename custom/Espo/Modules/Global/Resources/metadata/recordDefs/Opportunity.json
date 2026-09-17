@@ -1,6 +1,12 @@
 {
     "kanbanClassName": "Espo\\Modules\\Global\\Tools\\Kanban\\OpportunityKanban",
     "mandatoryAttributeList": [
+        "status",
+        "currentStageVisitId",
+        "stageEnteredAt",
+        "stageTargetTimeSeconds",
+        "stageDueAt",
+        "stageTimingIsPartial",
         "opportunityStageName",
         "opportunityStageStyle",
         "funnelIsDefault"

@@ -12,6 +12,11 @@
         "width": 15
     },
     {
+        "name": "stageTiming",
+        "width": 18,
+        "notSortable": true
+    },
+    {
         "name": "followupStatus",
         "width": 12
     },

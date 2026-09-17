@@ -1,5 +1,12 @@
 {
     "fields": {
+        "stageTiming": "Tempo no Estágio",
+        "stageHistory": "Histórico de Estágios",
+        "stageEnteredAt": "Entrada no Estágio",
+        "stageDueAt": "Prazo Alvo do Estágio",
+        "stageTargetTimeSeconds": "Tempo Alvo do Estágio",
+        "stageTrackingStartedAt": "Início do Rastreamento de Estágios",
+        "stageTimingIsPartial": "Histórico de Estágio Parcial",
         "stage": "Estágio (Obsoleto)",
         "status": "Status",
         "followupStatus": "Status de Follow-up",
@@ -27,6 +34,28 @@
         "Documents": "Documentos"
     },
     "labels": {
+        "Stage History": "Histórico de Estágios",
+        "Timing stopped": "Cronômetro parado — oportunidade encerrada",
+        "Timing unavailable": "Rastreamento não iniciado",
+        "Overdue by": "Atrasado em",
+        "Remaining": "Restante",
+        "Partial history": "Histórico parcial",
+        "Partial history explanation": "Inclui apenas o tempo observado desde o início do rastreamento. O tempo anterior é desconhecido; visitas parciais representam um mínimo observado.",
+        "Ongoing": "Em andamento",
+        "Within target": "Dentro do alvo",
+        "Observed within target": "Tempo observado dentro do alvo (parcial)",
+        "Tracking since": "Rastreamento desde",
+        "History unavailable": "Não foi possível carregar o histórico. Use Atualizar para tentar novamente.",
+        "No stage history": "Nenhuma visita registrada. O tempo anterior ao rastreamento é desconhecido.",
+        "Entered": "Entrada",
+        "Exited": "Saída",
+        "Time spent": "Tempo decorrido",
+        "Target": "Alvo",
+        "Result": "Resultado",
+        "Previous": "Anterior",
+        "Next": "Próximo",
+        "Total time per stage": "Tempo total por estágio",
+        "visits": "visitas",
         "Select Funnel": "Selecionar Funil",
         "Total Value": "Valor Total",
         "Drop here": "Solte aqui",
@@ -82,6 +111,7 @@
         "lost": "Perdidas"
     },
     "boolFilters": {
+        "stageOverdue": "Prazo do estágio excedido",
         "followupActionNeeded": "Follow-up: Inativo",
         "followupActive": "Follow-up: Ativo"
     }

@@ -1,5 +1,15 @@
 {
     "fields": {
+        "targetTimeSeconds": {
+            "type": "int",
+            "min": 60,
+            "max": 2147483640,
+            "default": null,
+            "view": "global:views/fields/time-budget",
+            "layoutFiltersDisabled": true,
+            "tooltip": true,
+            "audited": true
+        },
         "name": {
             "type": "varchar",
             "required": true,

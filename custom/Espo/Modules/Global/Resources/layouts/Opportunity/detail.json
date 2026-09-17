@@ -77,8 +77,21 @@
                 {
                     "name": "opportunityStage"
                 }
+            ],
+            [
+                {"name": "stageTiming", "fullWidth": true}
+            ],
+            [
+                {"name": "stageEnteredAt"},
+                {"name": "stageDueAt"}
             ]
         ]
+    },
+    {
+        "name": "stageHistoryPanel",
+        "label": "Stage History",
+        "panelIconClass": "fas fa-history",
+        "rows": [[{"name": "stageHistory", "fullWidth": true, "noLabel": true}]]
     },
     {
         "name": "followupPanel",

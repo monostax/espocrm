@@ -8,7 +8,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item'], function (Dep) {
+define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item', 'global:helpers/stage-time'], function (Dep, StageTime) {
     return Dep.extend({
         template: 'global:opportunity/record/kanban-item',
 
@@ -33,6 +33,7 @@ define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item
             
             return {
                 ...data,
+                stageTiming: this.getStageTiming(),
                 id: this.model.id,
                 name: name,
                 accountName: accountName,
@@ -60,6 +61,9 @@ define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item
 
         setup: function () {
             Dep.prototype.setup.call(this);
+            const stageTimer = setInterval(() => this.updateStageTiming(), 30000);
+            this.on('remove', () => clearInterval(stageTimer));
+            this.listenTo(this.model, 'sync', () => this.updateStageTiming());
             
             const hasTasksLoaded = this.model.get('_tasksLoaded');
             const hasTasks = this.model.get('_tasks');
@@ -71,6 +75,18 @@ define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item
             this.listenTo(this.model, 'sync', () => {
                 this.model.unset('_tasksLoaded', {silent: true});
             });
+        },
+
+        getStageTiming: function () {
+            return StageTime.describe(this.model.attributes, label => this.translate(label, 'labels', 'Opportunity'));
+        },
+
+        updateStageTiming: function () {
+            if (!this.isRendered()) return;
+            const timing = this.getStageTiming();
+            const $visualItem = $(`.kanban-board .group-column-list-visual .item[data-id="${this.model.id}"]`);
+            this.$el.find('[data-role="stage-timing"]').add($visualItem.find('[data-role="stage-timing"]')).text(timing.text)
+                .toggleClass('text-danger', timing.overdue).toggleClass('text-muted', !timing.overdue);
         },
 
         loadTasks: function () {

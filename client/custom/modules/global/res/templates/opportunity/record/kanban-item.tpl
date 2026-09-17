@@ -425,6 +425,8 @@
         {{/if}}
     </div>
     
+    <div class="small {{#if stageTiming.overdue}}text-danger{{else}}text-muted{{/if}}" data-role="stage-timing">{{stageTiming.text}}</div>
+
     {{#if contactName}}
     <div class="opportunity-contact">
         <i class="ti ti-user"></i>

@@ -1,6 +1,7 @@
 [
     {
         "rows": [
+            [{"name": "targetTimeSeconds", "fullWidth": true}],
             [
                 {
                     "name": "name"

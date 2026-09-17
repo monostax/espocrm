@@ -1,5 +1,61 @@
 {
+    "transactionalSave": true,
     "fields": {
+        "stageTrackingStartedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "utility": true,
+            "importDisabled": true
+        },
+        "currentStageVisitId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "readOnly": true,
+            "utility": true,
+            "importDisabled": true
+        },
+        "stageEnteredAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "importDisabled": true
+        },
+        "stageTargetTimeSeconds": {
+            "type": "int",
+            "layoutFiltersDisabled": true,
+            "readOnly": true,
+            "importDisabled": true,
+            "view": "global:views/fields/time-budget"
+        },
+        "stageDueAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "importDisabled": true
+        },
+        "stageTimingIsPartial": {
+            "type": "bool",
+            "readOnly": true,
+            "utility": true,
+            "importDisabled": true
+        },
+        "stageTiming": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "view": "global:views/opportunity/fields/stage-timing",
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
+        "stageHistory": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "view": "global:views/opportunity/fields/stage-history",
+            "layoutListDisabled": true,
+            "layoutFiltersDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
         },
@@ -225,6 +281,9 @@
         }
     },
     "indexes": {
+        "stageDueAt": {
+            "columns": ["status", "stageDueAt", "deleted"]
+        },
         "funnelId": {
             "columns": [
                 "funnelId"

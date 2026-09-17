@@ -1,5 +1,12 @@
 {
     "fields": {
+        "stageTiming": "Time in Stage",
+        "stageHistory": "Stage History",
+        "stageEnteredAt": "Stage Entered At",
+        "stageDueAt": "Stage Target Due At",
+        "stageTargetTimeSeconds": "Stage Target Time",
+        "stageTrackingStartedAt": "Stage Tracking Started At",
+        "stageTimingIsPartial": "Partial Stage History",
         "stage": "Stage (Deprecated)",
         "status": "Status",
         "followupStatus": "Follow-up Status",
@@ -27,6 +34,28 @@
         "Documents": "Documents"
     },
     "labels": {
+        "Stage History": "Stage History",
+        "Timing stopped": "Timing stopped — opportunity closed",
+        "Timing unavailable": "Timing not started",
+        "Overdue by": "Overdue by",
+        "Remaining": "Remaining",
+        "Partial history": "Partial history",
+        "Partial history explanation": "Only time observed since tracking started is included. Earlier time is unknown; partial visits are lower bounds.",
+        "Ongoing": "Ongoing",
+        "Within target": "Within target",
+        "Observed within target": "Observed time within target (partial)",
+        "Tracking since": "Tracking since",
+        "History unavailable": "Could not load stage history. Use Refresh to try again.",
+        "No stage history": "No stage visits recorded. Time before tracking started is unknown.",
+        "Entered": "Entered",
+        "Exited": "Exited",
+        "Time spent": "Time spent",
+        "Target": "Target",
+        "Result": "Result",
+        "Previous": "Previous",
+        "Next": "Next",
+        "Total time per stage": "Total time per stage",
+        "visits": "visits",
         "Select Funnel": "Select Funnel",
         "Total Value": "Total Value",
         "Drop here": "Drop here",
@@ -82,6 +111,7 @@
         "lost": "Lost"
     },
     "boolFilters": {
+        "stageOverdue": "Overdue in stage",
         "followupActionNeeded": "Follow-up: Inactive",
         "followupActive": "Follow-up: Active"
     }
