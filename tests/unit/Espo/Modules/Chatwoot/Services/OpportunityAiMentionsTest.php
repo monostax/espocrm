@@ -9,6 +9,7 @@ use Espo\Core\AclManager;
 use Espo\Entities\Note;
 use Espo\Modules\Chatwoot\Services\OpportunityPostMentions;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\RDBRepository;
@@ -58,7 +59,7 @@ class OpportunityAiMentionsTest extends TestCase
         });
         $this->mentions = $this->getMockBuilder(OpportunityPostMentions::class)
             ->setConstructorArgs([$em, $this->createMock(Acl::class), $this->createMock(AclManager::class),
-                $this->createMock(UserTenantResolver::class)])
+                $this->createMock(UserTenantResolver::class), $this->createMock(TenantResolver::class)])
             ->onlyMethods(['resolve'])->getMock();
         // Author/ACL normalization is already covered separately. Here it deliberately
         // accepts the shared user so only exact mention selection can disambiguate AIs.

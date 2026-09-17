@@ -40,6 +40,15 @@ class ChatwootApiClient
         private Log $log
     ) {}
 
+    public function notifyActivityUpdate(string $platformUrl, string $apiKey, int $accountId): void
+    {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/activity_events';
+        $response = $this->executeRequest($url, 'POST', '{}', ['api_access_token: ' . $apiKey, 'Content-Type: application/json'], false);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Activity notification failed: HTTP ' . $response['code']);
+        }
+    }
+
     /** Ask Chatwoot to invalidate opportunity UI over its authenticated ActionCable account stream. */
     public function notifyOpportunityUpdate(string $platformUrl, string $apiKey, int $accountId): void
     {

@@ -9,6 +9,8 @@ use Espo\Core\AclManager;
 use Espo\Entities\Note;
 use Espo\ORM\EntityManager;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
+use Espo\Modules\Global\Tools\Tenant\TenantResolver;
+use Espo\Modules\Chatwoot\Tools\Activities\Access;
 
 /** Resolve the editor's Chatwoot IDs once, at write time, into verified CRM IDs. */
 class OpportunityPostMentions
@@ -18,13 +20,21 @@ class OpportunityPostMentions
         private Acl $acl,
         private AclManager $aclManager,
         private UserTenantResolver $tenantResolver,
+        private TenantResolver $teamTenants,
     ) {}
 
     public function resolve(Note $note, bool $includeTeams = true): array
     {
-        $opportunity = $this->entityManager->getEntityById('Opportunity', $note->getParentId());
+        $type = $note->getParentType();
+        if (!in_array($type, ['Opportunity', ...Access::TYPES], true)) return [];
+        $opportunity = $this->entityManager->getEntityById($type, $note->getParentId());
         if (!$opportunity) {
             return [];
+        }
+        // Activity posts share mention normalization, including posts written in Espo itself.
+        if (!$opportunity->get('tenantId') && in_array($type, Access::TYPES, true)) {
+            $teams = $this->entityManager->getRDBRepository($type)->getRelation($opportunity, 'teams')->find();
+            $opportunity->set('tenantId', $this->teamTenants->resolveUniqueFromTeamIds(array_map(fn ($team) => $team->getId(), [...$teams])));
         }
         $ids = [];
         $nativeText = preg_replace('~\[[^\]]*\]\(mention://[^)]*\)~', '', $note->getPost() ?? '');

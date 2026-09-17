@@ -11,6 +11,7 @@ use Espo\Core\Hook\Hook\BeforeSave;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
+use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
@@ -37,10 +38,10 @@ class ValidateOpportunityThread implements BeforeSave
             return;
         }
         $root = $this->entityManager->getRDBRepository('Note')->where(['id' => $rootId])->forUpdate()->findOne();
-        if (!$root instanceof Note || $root->getType() !== Note::TYPE_POST || $root->getParentType() !== 'Opportunity' ||
-            $entity->get('parentType') !== 'Opportunity' || $entity->get('type') !== Note::TYPE_POST ||
+        if (!$root instanceof Note || $root->getType() !== Note::TYPE_POST || !in_array($root->getParentType(), ['Opportunity', ...Access::TYPES], true) ||
+            $entity->get('parentType') !== $root->getParentType() || $entity->get('type') !== Note::TYPE_POST ||
             $entity->get('parentId') !== $root->getParentId() || $root->get('opportunityThreadRootId')) {
-            throw new BadRequest('The thread root must be a top-level post on the same opportunity.');
+            throw new BadRequest('The thread root must be a top-level post on the same record.');
         }
         if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
             !$this->access->canReadNote($this->user, $root) || !$this->acl->checkEntityRead($root)) {

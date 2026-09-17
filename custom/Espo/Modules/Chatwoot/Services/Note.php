@@ -8,6 +8,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\DeleteParams;
 use Espo\Core\Record\DeleteResult;
 use Espo\Core\Record\Service;
+use Espo\Modules\Chatwoot\Tools\Activities\Access;
 
 /** Preserve the thread anchor when deleting a post that has replies. */
 class Note extends Service
@@ -16,7 +17,7 @@ class Note extends Service
     {
         return $this->entityManager->getTransactionManager()->run(function () use ($id, $params): DeleteResult {
             $note = $this->getRepository()->where(['id' => $id])->forUpdate()->findOne();
-            if (!$note || $note->get('parentType') !== 'Opportunity' || $note->get('type') !== 'Post' ||
+            if (!$note || !in_array($note->get('parentType'), ['Opportunity', ...Access::TYPES], true) || $note->get('type') !== 'Post' ||
                 $note->get('opportunityThreadRootId') ||
                 !$this->getRepository()->where(['opportunityThreadRootId' => $id])->findOne()) {
                 return parent::delete($id, $params);

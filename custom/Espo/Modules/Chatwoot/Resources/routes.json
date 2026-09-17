@@ -1,4 +1,15 @@
 [
+    { "route": "/ActivityInbox", "method": "get", "params": { "controller": "ActivityInbox", "action": "list" } },
+    { "route": "/ActivityInbox/counts", "method": "get", "params": { "controller": "ActivityInbox", "action": "counts" } },
+    { "route": "/ActivityInbox/metadata", "method": "get", "params": { "controller": "ActivityInbox", "action": "metadata" } },
+    { "route": "/ActivityInbox/options", "method": "get", "params": { "controller": "ActivityInbox", "action": "options" } },
+    { "route": "/ActivityInbox/:type", "method": "post", "params": { "controller": "ActivityInbox", "action": "create", "type": ":type" } },
+    { "route": "/ActivityInbox/:type/:id", "method": "get", "params": { "controller": "ActivityInbox", "action": "read", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id", "method": "put", "params": { "controller": "ActivityInbox", "action": "update", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id", "method": "delete", "params": { "controller": "ActivityInbox", "action": "delete", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id/stream", "method": "get", "params": { "controller": "ActivityInbox", "action": "stream", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id/posts", "method": "post", "params": { "controller": "ActivityInbox", "action": "post", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id/readState", "method": "post", "params": { "controller": "ActivityInbox", "action": "readState", "type": ":type", "id": ":id" } },
     {
         "route": "/Opportunity/action/activitySummary",
         "method": "get",
