@@ -1,5 +1,6 @@
 {
     "scopeNames": {
+        "ChatwootConversationEpisode": "Chat / Service episode",
         "ChatwootAccount": "Chat / Account",
         "ChatwootContact": "Chat / Contact",
         "ChatwootPlatform": "Chat / Platform",
@@ -24,6 +25,7 @@
         "CallCampaignContact": "Call Campaign Contact"
     },
     "scopeNamesPlural": {
+        "ChatwootConversationEpisode": "Chat / Service episodes",
         "ChatwootAccount": "Chat / Accounts",
         "ChatwootContact": "Chat / Contacts",
         "ChatwootPlatform": "Chat / Platforms",

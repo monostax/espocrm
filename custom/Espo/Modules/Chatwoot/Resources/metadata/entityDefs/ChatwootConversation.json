@@ -153,6 +153,7 @@
         }
     },
     "links": {
+        "episodes": {"type": "hasMany", "entity": "ChatwootConversationEpisode", "foreign": "conversation"},
         "contactInbox": {
             "type": "belongsTo",
             "entity": "ChatwootContactInbox",

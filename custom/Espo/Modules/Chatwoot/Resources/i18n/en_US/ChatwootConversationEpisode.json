@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "name": "Episode", "chatwootAccount": "Chatwoot account", "conversation": "Conversation", "inbox": "Inbox",
+        "chatwootEpisodeId": "Source episode ID", "chatwootInboxId": "Source inbox ID", "chatwootConversationId": "Conversation number",
+        "boundaryPolicy": "Boundary policy", "inactivityTimeoutSeconds": "Inactivity timeout (seconds)", "policyVersion": "Policy version",
+        "startedAt": "Started at", "lastInteractionAt": "Last interaction", "expiresAt": "Inactivity deadline", "closedAt": "Closed at",
+        "closeReason": "Close reason", "communicationSpanSeconds": "Communication span (seconds)", "elapsedSeconds": "Elapsed duration (seconds)",
+        "origin": "Origin", "sourceRevision": "Source revision", "sourceMessageCount": "Source messages", "syncedMessageCount": "Synced messages",
+        "transcriptComplete": "Transcript complete", "lastSyncedAt": "Last synced at", "messages": "Messages"
+    },
+    "links": {"messages": "Messages", "conversation": "Conversation", "chatwootAccount": "Chatwoot account", "inbox": "Inbox"},
+    "options": {
+        "boundaryPolicy": {"lifecycle": "Conversation lifecycle", "inactivity": "Inactivity"},
+        "closeReason": {"resolved": "Resolved", "inactivity": "Inactivity", "policy_changed": "Policy changed"},
+        "origin": {"live": "Live", "backfill": "Reconstructed"}
+    }
+}

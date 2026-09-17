@@ -1,5 +1,6 @@
 {
     "fields": {
+        "episodeSyncEnabled": "Sincronizar episódios de atendimento",
         "name": "Nome",
         "platform": "Plataforma",
         "chatwootAccountId": "ID da Conta de Chat",

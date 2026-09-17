@@ -1,4 +1,10 @@
 {
+    "SyncConversationEpisodesFromChatwoot": {
+        "name": "Sync Conversation Episodes from Chatwoot",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncConversationEpisodesFromChatwoot"
+    },
     "PostOverdueOpportunityActivities": {
         "name": "Post Overdue Opportunity Activities",
         "isSystem": false,

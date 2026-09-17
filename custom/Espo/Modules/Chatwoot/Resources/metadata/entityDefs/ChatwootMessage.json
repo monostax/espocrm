@@ -1,6 +1,11 @@
 {
     "deleteId": true,
     "fields": {
+        "conversationEpisode": {"type": "link", "readOnly": true},
+        "isEpisodeInteraction": {"type": "bool", "default": false, "readOnly": true},
+        "episodeInteractionAt": {"type": "datetime", "readOnly": true},
+        "episodeContentAttributes": {"type": "jsonObject", "readOnly": true},
+        "episodeAttachments": {"type": "jsonArray", "readOnly": true},
         "deleteId": {
             "type": "varchar",
             "maxLength": 17,
@@ -101,6 +106,7 @@
         }
     },
     "links": {
+        "conversationEpisode": {"type": "belongsTo", "entity": "ChatwootConversationEpisode", "foreign": "messages"},
         "conversation": {
             "type": "belongsTo",
             "entity": "ChatwootConversation",
@@ -127,6 +133,7 @@
         }
     },
     "indexes": {
+        "episodeInteraction": {"columns": ["conversationEpisodeId", "episodeInteractionAt", "deleted"]},
         "uniqueMessage": {
             "unique": true,
             "columns": ["chatwootMessageId", "chatwootAccountId", "deleteId"]

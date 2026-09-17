@@ -1,5 +1,6 @@
 {
     "fields": {
+        "episodeSyncEnabled": "Synchronize conversation episodes",
         "apiKey": "API Key",
         "conciergeUser": "Chat / User (Concierge)",
         "teams": "Chat / Account / Teams",

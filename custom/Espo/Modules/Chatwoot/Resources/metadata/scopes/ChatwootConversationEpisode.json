@@ -1,0 +1,5 @@
+{
+    "entity": true, "layouts": true, "tab": true, "acl": true, "aclPortal": false,
+    "customizable": true, "importable": false, "stream": false, "notifications": false,
+    "type": "Base", "module": "Chatwoot", "object": true
+}

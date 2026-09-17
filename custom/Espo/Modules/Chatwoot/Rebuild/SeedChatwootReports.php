@@ -29,8 +29,8 @@ use Espo\Core\Utils\Metadata;
 use Espo\ORM\EntityManager;
 
 /**
- * Rebuild action that seeds (creates or updates) Chatwoot's internal-class
- * reports with deterministic IDs.
+ * Rebuild action that seeds (creates or updates) Chatwoot's native and
+ * internal-class reports with deterministic IDs.
  *
      * Modelled on Espo\Modules\Global\Rebuild\SeedRole — same lifecycle:
      *
@@ -96,6 +96,8 @@ class SeedChatwootReports implements RebuildAction
     protected function getReportDefinitions(): array
     {
         return [
+            ...$this->getConversationReportDefinitions(),
+            ...$this->getEpisodeReportDefinitions(),
             [
                 // LLM token consumption per Tenant (Ambiente) per day —
                 // the cost-drilldown counterpart to the conversations
@@ -738,6 +740,269 @@ class SeedChatwootReports implements RebuildAction
                 'fillEmptyDateBuckets' => false,
                 'isInternal' => true,
                 'internalClassName' => 'Chatwoot:DailyAiDigest',
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Operational reports use the native engine, including its list/grid
+     * exports, runtime filters, drill-down and row-level access control.
+     * These definitions deliberately describe the CRM's synchronized data:
+     * ChatwootMessage is not guaranteed to contain the complete source history.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function getEpisodeReportDefinitions(): array
+    {
+        $common = [
+            'entityType' => 'ChatwootConversationEpisode',
+            'isInternal' => false, 'isGloballyShared' => true, 'applyAcl' => true,
+        ];
+        $grid = $common + [
+            'type' => 'Grid', 'columns' => ['COUNT:id'], 'orderBy' => [],
+            'depth' => 2, 'chartType' => 'BarGroupedVertical', 'fillEmptyDateBuckets' => true,
+        ];
+
+        return [
+            $grid + [
+                'staticId' => 'chwRptEpStart',
+                'name' => 'Chatwoot · Atendimentos Iniciados / Mês e Caixa',
+                'description' => 'Volume de atendimentos: episódios iniciados no período, inclusive os ainda ativos. '
+                    . 'Cada episódio conta uma vez no mês de início, no fuso do sistema. '
+                    . 'Retornos após encerramento iniciam novos episódios segundo a política registrada na origem.',
+                'groupBy' => ['MONTH:startedAt', 'inbox'],
+                'runtimeFilters' => ['startedAt', 'chatwootAccount', 'inbox', 'boundaryPolicy', 'origin'],
+            ],
+            $grid + [
+                'staticId' => 'chwRptEpClose',
+                'name' => 'Chatwoot · Atendimentos Encerrados / Mês e Motivo',
+                'description' => 'Episódios encerrados no período, separando resolução, inatividade e mudança de política. '
+                    . 'O prazo de inatividade é registrado mesmo quando o processamento ocorre depois.',
+                'groupBy' => ['MONTH:closedAt', 'closeReason'],
+                'runtimeFilters' => ['closedAt', 'chatwootAccount', 'inbox', 'closeReason'],
+                'filtersDataList' => [[
+                    'id' => 'closedEpisodes', 'name' => 'closedAt',
+                    'params' => ['type' => 'isNotNull', 'data' => ['type' => 'isNotEmpty'], 'field' => 'closedAt', 'attribute' => 'closedAt'],
+                ]],
+            ],
+            $common + [
+                'staticId' => 'chwRptEpList', 'type' => 'List',
+                'name' => 'Chatwoot · Atendimentos / Base para Exportação',
+                'description' => 'Uma linha por episódio, com política histórica, início, última interação, encerramento e cobertura das mensagens.',
+                'columns' => ['name', 'chatwootAccount', 'inbox', 'conversation', 'boundaryPolicy', 'policyVersion',
+                    'startedAt', 'lastInteractionAt', 'closedAt', 'closeReason', 'communicationSpanSeconds', 'elapsedSeconds',
+                    'origin', 'sourceMessageCount', 'syncedMessageCount', 'transcriptComplete'],
+                'runtimeFilters' => ['startedAt', 'chatwootAccount', 'inbox', 'boundaryPolicy', 'closeReason', 'transcriptComplete'],
+                'orderByList' => 'ASC:startedAt',
+            ],
+            [
+                'staticId' => 'chwRptEpActive',
+                'name' => 'Chatwoot · Atendimentos com Interação / Mês e Caixa',
+                'description' => 'Episódios distintos com interação válida no mês. Exclui notas, CSAT, mensagens de encerramento e recibos. '
+                    . 'Um episódio pode contar em mais de um mês; o total mensal não representa episódios únicos no intervalo inteiro.',
+                'entityType' => 'ChatwootMessage', 'type' => 'Grid',
+                'columns' => ['COUNT_DISTINCT:conversationEpisodeId'],
+                'columnsData' => (object) ['COUNT_DISTINCT:conversationEpisodeId' => (object) [
+                    'type' => 'Summary', 'fieldType' => 'int', 'label' => 'Atendimentos-mês com interação',
+                ]],
+                'groupBy' => ['MONTH:episodeInteractionAt', 'conversationEpisode.inbox'],
+                'runtimeFilters' => ['episodeInteractionAt', 'chatwootAccount', 'conversationEpisode.inbox'],
+                'filtersDataList' => [[
+                    'id' => 'qualifyingInteraction', 'name' => 'isEpisodeInteraction',
+                    'params' => ['type' => 'isTrue', 'data' => ['type' => 'isTrue'], 'field' => 'isEpisodeInteraction', 'attribute' => 'isEpisodeInteraction'],
+                ]],
+                'orderBy' => [], 'depth' => 2, 'chartType' => 'BarGroupedVertical', 'fillEmptyDateBuckets' => true,
+                'isInternal' => false, 'isGloballyShared' => true, 'applyAcl' => true,
+            ],
+        ];
+    }
+
+    protected function getConversationReportDefinitions(): array
+    {
+        $incomingCount = "SUM:IF:(EQUAL:(messageType, 'incoming'), 1, 0)";
+        $outgoingCount = "SUM:IF:(EQUAL:(messageType, 'outgoing'), 1, 0)";
+        $openedCount = "SUM:IF:(EQUAL:(eventName, 'conversation_opened'), 1, 0)";
+        $resolvedCount = "SUM:IF:(EQUAL:(eventName, 'conversation_resolved'), 1, 0)";
+
+        return [
+            [
+                'staticId' => 'chwRptCvList',
+                'name' => 'Chatwoot · Conversas / Base para Exportação',
+                'description' =>
+                    'Uma linha por conversa sincronizada, com conta, caixa, ' .
+                    'identificador, datas e estado atual. O filtro de período ' .
+                    'usa a criação no Chatwoot, não a criação no CRM. A contagem ' .
+                    'de mensagens é a do histórico sincronizado e pode ser parcial. ' .
+                    'Selecione as caixas de produção para excluir sandbox. ' .
+                    'Caixa de entrada não determina marca (ex.: Eco/Sanclin). ' .
+                    'Cada usuário vê apenas as conversas permitidas pela sua ACL.',
+                'entityType' => 'ChatwootConversation',
+                'type' => 'List',
+                'columns' => [
+                    'name', 'chatwootAccount', 'inbox', 'chatwootConversationId',
+                    'chatwootCreatedAt', 'status', 'assigneeName',
+                    'lastActivityAt', 'lastMessageReceivedAt', 'lastMessageSentAt',
+                    'messagesCount', 'lastSyncedAt',
+                ],
+                'columnsData' => (object) [
+                    'messagesCount' => (object) ['label' => 'Mensagens sincronizadas (estado atual)'],
+                ],
+                'runtimeFilters' => ['chatwootCreatedAt', 'chatwootAccount', 'inbox', 'status'],
+                'orderByList' => 'ASC:chatwootCreatedAt',
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptCvInboxMo',
+                'name' => 'Chatwoot · Conversas Criadas / Mês e Caixa',
+                'description' =>
+                    'Novas conversas sincronizadas, agrupadas pelo mês de criação ' .
+                    'no Chatwoot e pela caixa de entrada, no fuso do sistema. ' .
+                    'Retornos na mesma conversa não são novas conversas. ' .
+                    'Use os filtros de conta, caixas de produção e período. ' .
+                    'Cada usuário vê apenas as conversas permitidas pela sua ACL.',
+                'entityType' => 'ChatwootConversation',
+                'type' => 'Grid',
+                'columns' => ['COUNT:id'],
+                'columnsData' => (object) [
+                    'COUNT:id' => (object) ['label' => 'Conversas criadas'],
+                ],
+                'groupBy' => ['MONTH:chatwootCreatedAt', 'inbox'],
+                'runtimeFilters' => ['chatwootCreatedAt', 'chatwootAccount', 'inbox'],
+                'orderBy' => [],
+                'depth' => 2,
+                'chartType' => 'BarGroupedVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptActInboxMo',
+                'name' => 'Chatwoot · Movimento Sincronizado / Mês e Caixa',
+                'description' =>
+                    'Conversas distintas com mensagens públicas recebidas ou ' .
+                    'enviadas no mês, inclusive IA e automações. Exclui notas ' .
+                    'privadas e atividades do sistema. O período filtra a data ' .
+                    'da mensagem, incluindo retornos de conversas antigas. ' .
+                    'Fonte: mensagens sincronizadas no CRM; histórico incompleto ' .
+                    'pode subestimar o Chatwoot. O total soma conversas-mês, ' .
+                    'não clientes nem conversas únicas de todo o período. ' .
+                    'Cada usuário vê apenas as mensagens permitidas pela sua ACL.',
+                'entityType' => 'ChatwootMessage',
+                'type' => 'Grid',
+                'columns' => ['COUNT_DISTINCT:conversationId', $incomingCount, $outgoingCount],
+                'columnsData' => (object) [
+                    // COUNT_DISTINCT is an ORM function. The native report
+                    // engine needs an explicit Summary type to aggregate it.
+                    'COUNT_DISTINCT:conversationId' => (object) [
+                        'type' => 'Summary',
+                        'fieldType' => 'int',
+                        'label' => 'Conversas-mês com movimento',
+                    ],
+                    $incomingCount => (object) ['fieldType' => 'int', 'label' => 'Mensagens recebidas'],
+                    $outgoingCount => (object) ['fieldType' => 'int', 'label' => 'Mensagens enviadas'],
+                ],
+                'groupBy' => ['MONTH:chatwootCreatedAt', 'conversation.inbox'],
+                'runtimeFilters' => ['chatwootCreatedAt', 'chatwootAccount', 'conversation.inbox'],
+                'orderBy' => [],
+                'filtersDataList' => [
+                    [
+                        'id' => 'publicMessages',
+                        'name' => 'isPrivate',
+                        'params' => [
+                            'type' => 'isFalse',
+                            'data' => ['type' => 'isFalse'],
+                            'field' => 'isPrivate',
+                            'attribute' => 'isPrivate',
+                        ],
+                    ],
+                    [
+                        'id' => 'messageDirections',
+                        'name' => 'messageType',
+                        'params' => [
+                            'type' => 'in',
+                            'value' => ['incoming', 'outgoing'],
+                            'data' => ['type' => 'anyOf', 'value' => ['incoming', 'outgoing']],
+                            'field' => 'messageType',
+                            'attribute' => 'messageType',
+                        ],
+                    ],
+                ],
+                'depth' => 2,
+                'chartType' => 'BarGroupedVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptEvtInboxMo',
+                'name' => 'Chatwoot · Reaberturas e Encerramentos / Mês e Caixa',
+                'description' =>
+                    'Eventos registrados no mês, no fuso do sistema: reaberturas ' .
+                    'e encerramentos, inclusive automáticos. Uma conversa pode ' .
+                    'gerar vários eventos; estes valores não são conversas únicas ' .
+                    'nem o status atual. Selecione uma conta e os IDs das caixas ' .
+                    'de produção. O ID original da caixa preserva eventos de ' .
+                    'conversas/caixas já removidas. Fonte: eventos sincronizados ' .
+                    'no CRM, restritos pela ACL do usuário.',
+                'entityType' => 'ChatwootReportingEvent',
+                'type' => 'Grid',
+                'columns' => [$openedCount, $resolvedCount],
+                'columnsData' => (object) [
+                    $openedCount => (object) ['fieldType' => 'int', 'label' => 'Reaberturas'],
+                    $resolvedCount => (object) ['fieldType' => 'int', 'label' => 'Encerramentos'],
+                ],
+                'groupBy' => ['MONTH:happenedAt', 'chatwootInboxId'],
+                'runtimeFilters' => ['happenedAt', 'chatwootAccount', 'chatwootInboxId'],
+                'orderBy' => [],
+                'filtersDataList' => [
+                    [
+                        'id' => 'lifecycleEvents',
+                        'name' => 'eventName',
+                        'params' => [
+                            'type' => 'in',
+                            'value' => ['conversation_opened', 'conversation_resolved'],
+                            'data' => [
+                                'type' => 'anyOf',
+                                'value' => ['conversation_opened', 'conversation_resolved'],
+                            ],
+                            'field' => 'eventName',
+                            'attribute' => 'eventName',
+                        ],
+                    ],
+                ],
+                'depth' => 2,
+                'chartType' => 'BarGroupedVertical',
+                'fillEmptyDateBuckets' => true,
+                'isInternal' => false,
+                'isGloballyShared' => true,
+                'applyAcl' => true,
+            ],
+            [
+                'staticId' => 'chwRptEvtList',
+                'name' => 'Chatwoot · Eventos / Base para Exportação',
+                'description' =>
+                    'Uma linha por evento sincronizado, com conta, conversa, ' .
+                    'ID original da caixa, data e tipo. Use eventName para ' .
+                    'selecionar reaberturas ou encerramentos. conversation_created ' .
+                    'é um evento sintético; eventos podem permanecer após a ' .
+                    'remoção da conversa na origem. O período usa happenedAt. ' .
+                    'Cada usuário vê apenas os eventos permitidos pela sua ACL.',
+                'entityType' => 'ChatwootReportingEvent',
+                'type' => 'List',
+                'columns' => [
+                    'chatwootAccount', 'conversation', 'chatwootConversationId',
+                    'chatwootInboxId', 'happenedAt', 'eventName', 'kind',
+                    'chatwootReportingEventId', 'chatwootUserId',
+                ],
+                'runtimeFilters' => ['happenedAt', 'chatwootAccount', 'chatwootInboxId', 'eventName'],
+                'orderByList' => 'ASC:happenedAt',
+                'isInternal' => false,
                 'isGloballyShared' => true,
                 'applyAcl' => true,
             ],

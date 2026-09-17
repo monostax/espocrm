@@ -1,0 +1,47 @@
+{
+    "fields": {
+        "name": {"type": "varchar", "readOnly": true},
+        "chatwootEpisodeId": {"type": "int", "required": true, "readOnly": true},
+        "chatwootAccount": {"type": "link", "required": true, "readOnly": true},
+        "conversation": {"type": "link", "readOnly": true},
+        "inbox": {"type": "link", "readOnly": true},
+        "chatwootInboxId": {"type": "int", "readOnly": true},
+        "chatwootConversationId": {"type": "int", "readOnly": true},
+        "tenant": {"type": "link", "readOnly": true},
+        "boundaryPolicy": {"type": "enum", "options": ["lifecycle", "inactivity"], "readOnly": true},
+        "inactivityTimeoutSeconds": {"type": "int", "readOnly": true},
+        "policyVersion": {"type": "int", "readOnly": true},
+        "startedAt": {"type": "datetime", "readOnly": true},
+        "lastInteractionAt": {"type": "datetime", "readOnly": true},
+        "expiresAt": {"type": "datetime", "readOnly": true},
+        "closedAt": {"type": "datetime", "readOnly": true},
+        "closeReason": {"type": "enum", "options": ["", "resolved", "inactivity", "policy_changed"], "readOnly": true},
+        "communicationSpanSeconds": {"type": "int", "readOnly": true},
+        "elapsedSeconds": {"type": "int", "readOnly": true},
+        "origin": {"type": "enum", "options": ["live", "backfill"], "readOnly": true},
+        "sourceRevision": {"type": "int", "readOnly": true},
+        "sourceMessageCount": {"type": "int", "readOnly": true},
+        "syncedMessageCount": {"type": "int", "readOnly": true},
+        "transcriptComplete": {"type": "bool", "default": false, "readOnly": true},
+        "lastSyncedAt": {"type": "datetime", "readOnly": true},
+        "messages": {"type": "linkMultiple", "readOnly": true},
+        "teams": {"type": "linkMultiple", "view": "views/fields/teams", "readOnly": true},
+        "createdAt": {"type": "datetime", "readOnly": true},
+        "modifiedAt": {"type": "datetime", "readOnly": true}
+    },
+    "links": {
+        "chatwootAccount": {"type": "belongsTo", "entity": "ChatwootAccount"},
+        "conversation": {"type": "belongsTo", "entity": "ChatwootConversation", "foreign": "episodes"},
+        "inbox": {"type": "belongsTo", "entity": "ChatwootInbox"},
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "messages": {"type": "hasMany", "entity": "ChatwootMessage", "foreign": "conversationEpisode"},
+        "teams": {"type": "hasMany", "entity": "Team", "relationName": "entityTeam", "layoutRelationshipsDisabled": true}
+    },
+    "indexes": {
+        "sourceEpisode": {"unique": true, "columns": ["chatwootAccountId", "chatwootEpisodeId"]},
+        "accountStarted": {"columns": ["chatwootAccountId", "startedAt", "deleted"]},
+        "accountClosed": {"columns": ["chatwootAccountId", "closedAt", "deleted"]},
+        "conversation": {"columns": ["conversationId", "deleted"]}
+    },
+    "collection": {"orderBy": "startedAt", "order": "desc"}
+}

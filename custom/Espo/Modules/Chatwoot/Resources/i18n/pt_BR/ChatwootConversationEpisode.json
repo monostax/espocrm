@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "name": "Atendimento", "chatwootAccount": "Conta Chatwoot", "conversation": "Conversa", "inbox": "Caixa de entrada",
+        "chatwootEpisodeId": "ID do episódio na origem", "chatwootInboxId": "ID da caixa na origem", "chatwootConversationId": "Número da conversa",
+        "boundaryPolicy": "Política de delimitação", "inactivityTimeoutSeconds": "Limite de inatividade (segundos)", "policyVersion": "Versão da política",
+        "startedAt": "Iniciado em", "lastInteractionAt": "Última interação", "expiresAt": "Prazo de inatividade", "closedAt": "Encerrado em",
+        "closeReason": "Motivo do encerramento", "communicationSpanSeconds": "Intervalo de comunicação (segundos)", "elapsedSeconds": "Duração decorrida (segundos)",
+        "origin": "Origem", "sourceRevision": "Revisão na origem", "sourceMessageCount": "Mensagens na origem", "syncedMessageCount": "Mensagens sincronizadas",
+        "transcriptComplete": "Histórico completo", "lastSyncedAt": "Última sincronização", "messages": "Mensagens"
+    },
+    "links": {"messages": "Mensagens", "conversation": "Conversa", "chatwootAccount": "Conta Chatwoot", "inbox": "Caixa de entrada"},
+    "options": {
+        "boundaryPolicy": {"lifecycle": "Ciclo de vida da conversa", "inactivity": "Inatividade"},
+        "closeReason": {"resolved": "Resolvido", "inactivity": "Inatividade", "policy_changed": "Mudança de política"},
+        "origin": {"live": "Tempo real", "backfill": "Reconstruído"}
+    }
+}

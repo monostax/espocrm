@@ -1,5 +1,6 @@
 {
     "fields": {
+        "episodeSyncEnabled": {"type": "bool", "default": false},
         "name": {
             "type": "varchar",
             "required": true,

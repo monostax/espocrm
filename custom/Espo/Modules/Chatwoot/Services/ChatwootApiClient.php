@@ -2984,6 +2984,27 @@ public function deleteConversation(
         return $response['body']['payload'] ?? $response['body'] ?? [];
     }
 
+    /** Episode changes are retained by Chatwoot until the matching revision is acknowledged. */
+    public function episodeRequest(
+        string $platformUrl,
+        string $apiKey,
+        int $accountId,
+        string $path = '',
+        string $method = 'GET',
+        ?array $data = null
+    ): array {
+        $url = rtrim($platformUrl, '/') . "/api/v1/accounts/{$accountId}/conversation_episodes" . $path;
+        $response = $this->executeRequest($url, $method, $data === null ? null : json_encode($data, JSON_THROW_ON_ERROR), [
+            'api_access_token: ' . $apiKey,
+            'Content-Type: application/json',
+        ]);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Chatwoot episode sync: HTTP ' . $response['code']);
+        }
+
+        return is_array($response['body'] ?? null) ? $response['body'] : [];
+    }
+
     /* -------------------------------------------------------------------------- */
     /*              WhatsApp Campaign API Methods (Account-level API)              */
     /* -------------------------------------------------------------------------- */

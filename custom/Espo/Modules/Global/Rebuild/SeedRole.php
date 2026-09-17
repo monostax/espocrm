@@ -310,6 +310,12 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                'ChatwootConversationEpisode' => [
+                    'create' => 'no',
+                    'read' => 'team',
+                    'edit' => 'no',
+                    'delete' => 'no',
+                ],
                 'SimpleJourneyStage' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -1027,6 +1033,7 @@ class SeedRole implements RebuildAction
                     'chatwootTeams' => (object)['read' => 'yes', 'edit' => 'no'],
                 ],
                 'ChatwootMessage' => (object)[],
+                'ChatwootConversationEpisode' => (object)[],
                 'ChatwootAiAgentRun' => (object)[],
                 'ChatwootReportingEvent' => (object)[],
                 'ChatwootSyncState' => (object)[],
@@ -1217,6 +1224,9 @@ class SeedRole implements RebuildAction
                 'staticId' => 'tenant-admin',
                 'name' => 'tenant-admin',
                 ...$tenantBase,
+                // Native list/report exports require this permission in addition
+                // to the existing entity, field and tenant read access checks.
+                'exportPermission' => 'yes',
                 'data' => [
                     ...$tenantBase['data'],
                     'MsxGoogleCalendarUser' => [

@@ -1,0 +1,8 @@
+{
+    "controller": "controllers/record",
+    "boolFilterList": [],
+    "createDisabled": true,
+    "editDisabled": true,
+    "removeDisabled": true,
+    "relationshipPanels": {"messages": {"createDisabled": true, "selectDisabled": true, "unlinkDisabled": true}}
+}

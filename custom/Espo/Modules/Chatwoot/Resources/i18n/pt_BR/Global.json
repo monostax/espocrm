@@ -1,5 +1,6 @@
 {
     "scopeNames": {
+        "ChatwootConversationEpisode": "Chat / Atendimento",
         "ChatwootAccount": "Chat / Conta",
         "ChatwootContact": "Chat / Contato",
         "ChatwootContactInbox": "Chat / Contato / Canal",
@@ -26,6 +27,7 @@
         "CallCampaignContact": "Contato da Campanha de Ligações"
     },
     "scopeNamesPlural": {
+        "ChatwootConversationEpisode": "Chat / Atendimentos",
         "ChatwootAccount": "Chat / Contas",
         "ChatwootContact": "Chat / Contatos",
         "ChatwootContactInbox": "Chat / Conta / Caixa de Entrada / Contato",

@@ -50,6 +50,11 @@ class SeedScheduledJobs implements RebuildAction
 
     private const JOBS = [
         [
+            'name' => 'Sync Conversation Episodes from Chatwoot',
+            'job' => 'SyncConversationEpisodesFromChatwoot',
+            'scheduling' => '* * * * *',
+        ],
+        [
             'name' => 'Post Overdue Opportunity Activities',
             'job' => 'PostOverdueOpportunityActivities',
             'scheduling' => '* * * * *',

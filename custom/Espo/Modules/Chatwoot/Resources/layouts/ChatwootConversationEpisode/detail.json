@@ -1,0 +1,13 @@
+[
+    {"rows": [
+        [{"name": "name"}, {"name": "conversation"}],
+        [{"name": "chatwootAccount"}, {"name": "inbox"}],
+        [{"name": "boundaryPolicy"}, {"name": "policyVersion"}],
+        [{"name": "startedAt"}, {"name": "lastInteractionAt"}],
+        [{"name": "closedAt"}, {"name": "closeReason"}],
+        [{"name": "communicationSpanSeconds"}, {"name": "elapsedSeconds"}],
+        [{"name": "sourceMessageCount"}, {"name": "syncedMessageCount"}],
+        [{"name": "transcriptComplete"}, {"name": "origin"}],
+        [{"name": "sourceRevision"}, {"name": "lastSyncedAt"}]
+    ]}
+]

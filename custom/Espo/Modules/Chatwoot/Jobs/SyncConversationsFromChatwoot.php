@@ -62,6 +62,19 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
     }
 
+    /** Ensure a historical episode's parent uses the same contact/inbox reconciliation as normal sync. */
+    public function syncEpisodeParent(Entity $account, array $payload): void
+    {
+        $teamsIds = $this->getAccountTeamsIds($account);
+        $this->syncSingleConversation(
+            $payload,
+            $account->getId(),
+            $teamsIds[0] ?? null,
+            $this->normalizeTenantId($account->get('tenantId')),
+            $teamsIds
+        );
+    }
+
     /**
      * Get all ChatwootAccounts with contact sync enabled.
      *
