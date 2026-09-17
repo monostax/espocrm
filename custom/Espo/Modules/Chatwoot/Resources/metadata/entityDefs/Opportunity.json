@@ -1,5 +1,7 @@
 {
     "fields": {
+        "nextActionId": { "type": "varchar", "maxLength": 24, "readOnly": true, "utility": true },
+        "nextActionType": { "type": "enum", "options": ["", "Task", "Call", "Meeting"], "readOnly": true, "utility": true },
         "chatwootStreamUpdatedAt": { "type": "datetime", "notStorable": true, "readOnly": true, "utility": true },
         "followupDraftBatchId": { "type": "varchar", "maxLength": 255, "readOnly": true, "utility": true },
         "followupDraftCountedBatchId": { "type": "varchar", "maxLength": 255, "readOnly": true, "utility": true },
