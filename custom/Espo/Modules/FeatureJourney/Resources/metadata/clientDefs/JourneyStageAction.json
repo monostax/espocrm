@@ -3,6 +3,28 @@
     "iconClass": "ti ti-player-play",
     "dynamicLogic": {
         "fields": {
+            "saveAs": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["createTask", "createRecord", "createRelatedRecord"]
+                        }
+                    ]
+                }
+            },
+            "targetReference": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "in",
+                            "attribute": "type",
+                            "value": ["createTask", "createRecord", "createRelatedRecord", "updateTarget", "updateRelatedRecord", "linkRecord", "unlinkRecord", "applyAssignmentRule", "makeFollowed", "notifyUser"]
+                        }
+                    ]
+                }
+            },
             "formula": {
                 "visible": {
                     "conditionGroup": [

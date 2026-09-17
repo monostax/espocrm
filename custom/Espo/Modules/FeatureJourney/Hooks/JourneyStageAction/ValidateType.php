@@ -12,6 +12,7 @@ use Espo\Entities\User;
 use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyStage;
 use Espo\Modules\FeatureJourney\Services\ActionConditionEvaluator;
+use Espo\Modules\FeatureJourney\Services\ActionRecordReferences;
 use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -29,10 +30,12 @@ class ValidateType implements BeforeSave
         private User $user,
         private RestrictedFormulaRunner $formulaRunner,
         private ActionConditionEvaluator $conditionEvaluator,
+        private ActionRecordReferences $recordReferences,
     ) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
+        $journey = null;
         $stageId = $entity->get('stageId');
         if ($stageId) {
             $stage = $this->entityManager->getEntityById(JourneyStage::ENTITY_TYPE, (string) $stageId);
@@ -68,6 +71,15 @@ class ValidateType implements BeforeSave
         $tier = $meta['tier'] ?? 'tenant';
         if ($tier === 'platform' && !$this->user->isAdmin()) {
             throw new Forbidden("Action type '{$type}' is platform-tier (superadmin only).");
+        }
+
+        try {
+            $this->recordReferences->validateAction($entity);
+            if ($journey) {
+                $this->recordReferences->assertUniqueName($entity, $journey);
+            }
+        } catch (Throwable $e) {
+            throw new BadRequest($e->getMessage());
         }
 
         $conditionFormula = $entity->get('conditionFormula');

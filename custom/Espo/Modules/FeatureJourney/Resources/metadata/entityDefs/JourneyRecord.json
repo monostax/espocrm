@@ -66,6 +66,14 @@
             "default": 0,
             "readOnly": true
         },
+        "recordReferences": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "readOnlyAfterCreate": true,
+            "copyToClipboard": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
         "exitReason": {
             "type": "varchar",
             "maxLength": 100,

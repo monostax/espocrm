@@ -27,6 +27,17 @@
             "view": "feature-journey:views/journey-stage-action/fields/params",
             "tooltip": true
         },
+        "targetReference": {
+            "type": "varchar",
+            "maxLength": 64,
+            "view": "feature-journey:views/journey-stage-action/fields/target-reference",
+            "tooltip": true
+        },
+        "saveAs": {
+            "type": "varchar",
+            "maxLength": 64,
+            "tooltip": true
+        },
         "formula": {
             "type": "text",
             "view": "views/fields/formula",

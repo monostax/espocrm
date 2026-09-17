@@ -56,7 +56,7 @@ define("feature-journey:views/fields/entity-where", [
 
             this.listenTo(
                 this.model,
-                "change:stageId change:journeyId change:targetEntityType change:tenantId",
+                "change:stageId change:journeyId change:targetEntityType change:tenantId change:targetReference",
                 () => this.loadOptions()
             );
             this.listenTo(this.model, "change:conditionFormula", () => {
@@ -209,6 +209,13 @@ define("feature-journey:views/fields/entity-where", [
                     this.renderTree();
 
                     return this._attrOptions;
+                })
+                .catch(() => {
+                    if (!this._removed && generation === this._loadGeneration) {
+                        this._attrOptions = [];
+                        this.renderTree();
+                    }
+                    return [];
                 });
         },
 

@@ -52,6 +52,21 @@ define("feature-journey:helpers/custom-fields", [], function () {
          * @return {Promise<{tenantId: ?string, entityType: ?string}>}
          */
         resolveContext: function () {
+            return this.resolveJourneyContext().then((context) => {
+                const reference = this.view.model.get("targetReference");
+                if (this.view.model.entityType !== "JourneyStageAction" || !reference || !context.journeyId) {
+                    return context;
+                }
+
+                return Espo.Ajax.getRequest("Journey/" + context.journeyId + "/recordReferences")
+                    .then((data) => {
+                        const definition = (data.list || []).find((item) => item.key === reference);
+                        return {...context, entityType: definition ? definition.entityType : null};
+                    });
+            });
+        },
+
+        resolveJourneyContext: function () {
             const base = this.getJourneyContext();
 
             if (base.entityType && base.tenantId) {

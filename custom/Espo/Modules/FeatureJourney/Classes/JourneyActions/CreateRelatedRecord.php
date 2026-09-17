@@ -74,6 +74,8 @@ class CreateRelatedRecord implements Action
         ]);
 
         $this->wireRelationAfterSave($target, $entity, $link);
+
+        $context->createdRecord = $entity;
     }
 
     private function wireRelationBeforeSave(Entity $target, Entity $entity, string $link): void

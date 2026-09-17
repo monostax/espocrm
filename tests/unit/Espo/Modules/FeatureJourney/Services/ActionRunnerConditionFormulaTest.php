@@ -265,6 +265,7 @@ class ActionRunnerConditionFormulaTest extends TestCase
             new RestrictedFormulaRunner($formulaManager),
             $conditionEvaluator,
             $this->createMock(Log::class),
+            $this->createMock(\Espo\Modules\FeatureJourney\Services\ActionRecordReferences::class),
         );
 
         $target = $this->createMock(Entity::class);

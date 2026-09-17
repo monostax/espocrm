@@ -40,6 +40,12 @@
                 {
                     "name": "runAsUser"
                 }
+            ],
+            [
+                {
+                    "name": "recordReferences",
+                    "fullWidth": true
+                }
             ]
         ]
     }

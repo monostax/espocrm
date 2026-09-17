@@ -27,6 +27,14 @@
             ],
             [
                 {
+                    "name": "targetReference"
+                },
+                {
+                    "name": "saveAs"
+                }
+            ],
+            [
+                {
                     "name": "conditionsGroup",
                     "fullWidth": true
                 }

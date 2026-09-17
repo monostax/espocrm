@@ -12,6 +12,9 @@ use Espo\ORM\Entity;
  */
 class ActionContext
 {
+    /** The record produced by a create action, persisted as a reference by ActionRunner. */
+    public ?Entity $createdRecord = null;
+
     /**
      * @param array<string, mixed> $params
       * @param User|null $actor User whose ACL/authorship apply (run-as identity).

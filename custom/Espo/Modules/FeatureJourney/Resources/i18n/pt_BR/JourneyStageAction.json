@@ -5,6 +5,8 @@
         "trigger": "Executar quando",
         "type": "Ação",
         "params": "Configurações",
+        "targetReference": "Alvo da ação",
+        "saveAs": "Salvar registro criado como",
         "formula": "Fórmula",
         "conditionFormula": "Condição avançada (fórmula)",
         "conditionsGroup": "Executar se",
@@ -17,6 +19,7 @@
         "paramFormulas": "Valores dinâmicos"
     },
     "labels": {
+        "enrolledRecord": "Registro inscrito",
         "Add Field": "Adicionar campo",
         "Add Formula Param": "Adicionar valor dinâmico",
         "advancedJson": "Avançado (JSON)",
@@ -70,6 +73,8 @@
         "emailTemplateMeta": "Template"
     },
     "tooltips": {
+        "targetReference": "Escolha o registro inscrito ou um registro salvo por uma ação anterior. Tarefas usam este registro como pai. Condições e valores dinâmicos leem o alvo selecionado. Uma referência ausente faz a ação falhar.",
+        "saveAs": "Nome único opcional, ex.: prospectingOpportunity. Guarda o registro para ações posteriores da mesma inscrição. Tentativas e retornos reutilizam a criação salva. Letras, números e sublinhados; comece com uma letra (máx. 64).",
         "params": "Como esta ação roda. Valores dinâmicos opcionais preenchem uma configuração na hora em que o passo executa.",
         "formula": "Script para ações “Rodar fórmula”. Pode atualizar a pessoa, mudar etapa ou enviar eventos — operações inseguras são bloqueadas.",
         "conditionFormula": "Fórmula avançada de verdadeiro ou falso. Quando preenchida, substitui as condições visuais de Executar se sem apagá-las.",
@@ -80,6 +85,7 @@
         "order": "Números menores rodam primeiro na mesma etapa."
     },
     "messages": {
+        "recordReferencesLoadFailed": "Não foi possível carregar os registros salvos. Confira as ações de criação e os nomes das referências da jornada.",
         "selectActionTypeFirst": "Escolha uma ação para configurar.",
         "useFormulaField": "Escreva o script no campo Fórmula acima. Configurações aqui são opcionais.",
         "paramFormulasHint": "Opcional: preencher uma configuração a partir do registro alvo quando a etapa rodar (por exemplo o responsável). O workspace nunca é sobrescrito.",

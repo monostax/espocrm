@@ -1,5 +1,14 @@
 [
     {
+        "route": "/Journey/:id/recordReferences",
+        "method": "get",
+        "params": {
+            "controller": "Journey",
+            "action": "recordReferences",
+            "id": ":id"
+        }
+    },
+    {
         "route": "/Journey/:id/review",
         "method": "get",
         "params": {

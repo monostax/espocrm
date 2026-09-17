@@ -46,6 +46,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             new RestrictedFormulaRunner($formulaManager),
             $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
+            $this->createMock(\Espo\Modules\FeatureJourney\Services\ActionRecordReferences::class),
         );
 
         $target = $this->createMock(Entity::class);
@@ -92,6 +93,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             new RestrictedFormulaRunner($formulaManager),
             $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
+            $this->createMock(\Espo\Modules\FeatureJourney\Services\ActionRecordReferences::class),
         );
 
         $entity = $this->createMock(Entity::class);
@@ -128,6 +130,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             new RestrictedFormulaRunner($formulaManager),
             $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
+            $this->createMock(\Espo\Modules\FeatureJourney\Services\ActionRecordReferences::class),
         );
 
         $entity = $this->createMock(Entity::class);
@@ -163,6 +166,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             new RestrictedFormulaRunner($formulaManager),
             $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
+            $this->createMock(\Espo\Modules\FeatureJourney\Services\ActionRecordReferences::class),
         );
 
         $entity = $this->createMock(Entity::class);
@@ -209,6 +213,7 @@ class ActionRunnerParamFormulasTest extends TestCase
             new RestrictedFormulaRunner($formulaManager),
             $this->createMock(ActionConditionEvaluator::class),
             $this->createMock(Log::class),
+            $this->createMock(\Espo\Modules\FeatureJourney\Services\ActionRecordReferences::class),
         );
 
         $entity = $this->createMock(Entity::class);

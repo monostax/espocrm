@@ -5,6 +5,8 @@
         "trigger": "Run when",
         "type": "Action",
         "params": "Settings",
+        "targetReference": "Action target",
+        "saveAs": "Save created record as",
         "formula": "Formula",
         "conditionFormula": "Advanced condition (formula)",
         "conditionsGroup": "Run if",
@@ -17,6 +19,7 @@
         "paramFormulas": "Dynamic values"
     },
     "labels": {
+        "enrolledRecord": "Enrolled record",
         "Add Field": "Add field",
         "Add Formula Param": "Add dynamic value",
         "advancedJson": "Advanced (JSON)",
@@ -70,6 +73,8 @@
         "emailTemplateMeta": "Template"
     },
     "tooltips": {
+        "targetReference": "Choose the enrolled record or a record saved by an earlier action. Tasks use it as their parent. Conditions and dynamic values read this selected record. A missing reference fails the action.",
+        "saveAs": "Optional unique name, e.g. prospectingOpportunity. Remembers this record for later actions in the same enrollment. Retries and revisits reuse the saved creation. Letters, digits and underscores; start with a letter (max 64).",
         "params": "How this action runs. Optional dynamic values fill a setting automatically when the step runs.",
         "formula": "Script for “Run formula” actions. You can update the target, move steps, or send events — unsafe operations are blocked.",
         "conditionFormula": "Advanced true/false formula. When filled, it replaces the visual Run if conditions without deleting them.",
@@ -80,6 +85,7 @@
         "order": "Lower numbers run first inside the same step."
     },
     "messages": {
+        "recordReferencesLoadFailed": "Could not load saved-record choices. Check the journey's create actions and reference names.",
         "selectActionTypeFirst": "Choose an action to configure.",
         "useFormulaField": "Write the script in the Formula field above. Settings here are optional.",
         "paramFormulasHint": "Optional: fill a setting from the target record when the step runs (for example the owner). Workspace is never overwritten.",

@@ -56,5 +56,7 @@ class CreateTask implements Action
             'skipJourneyDispatch' => true,
             SaveOption::CREATED_BY_ID => $createdById,
         ]);
+
+        $context->createdRecord = $task;
     }
 }

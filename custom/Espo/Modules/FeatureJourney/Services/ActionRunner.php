@@ -28,6 +28,7 @@ class ActionRunner
         private RestrictedFormulaRunner $formulaRunner,
         private ActionConditionEvaluator $conditionEvaluator,
         private Log $log,
+        private ActionRecordReferences $recordReferences,
     ) {}
 
     /**
@@ -133,11 +134,30 @@ class ActionRunner
             $continueOnError = (bool) $actionEntity->get('continueOnError');
             $conditionFormula = $actionEntity->get('conditionFormula');
 
+            try {
+                $actionTarget = $target;
+                if ($actionEntity->get('targetReference') || $actionEntity->get('saveAs')) {
+                    $actionTarget = $this->recordReferences->resolveTarget(
+                        $actionEntity, $target, $record, $journey, $actor,
+                    );
+                }
+            } catch (Throwable $e) {
+                $lastError = 'recordReference: ' . $e->getMessage();
+                $failed[] = "{$type}:{$lastError}";
+                $this->log->error("ActionRunner: action {$actionEntity->getId()} {$lastError}");
+                if ($continueOnError) {
+                    $skipped++;
+                    continue;
+                }
+
+                return ['ok' => false, 'error' => $lastError, 'failed' => $failed, 'skipped' => $skipped];
+            }
+
             if (is_string($conditionFormula) && trim($conditionFormula) !== '') {
                 try {
                     $shouldRun = (bool) $this->formulaRunner->run(
                         $conditionFormula,
-                        $target,
+                        $actionTarget,
                         (object) [
                             'journeyRecordId' => $record->getId(),
                             'journeyId' => $journey->getId(),
@@ -176,7 +196,7 @@ class ActionRunner
                 if (!$this->conditionEvaluator->isEmpty($conditionsGroup)) {
                     try {
                         $matches = $this->conditionEvaluator->matches(
-                            $target,
+                            $actionTarget,
                             $conditionsGroup,
                             (object) [
                                 'journeyRecordId' => $record->getId(),
@@ -223,17 +243,28 @@ class ActionRunner
             // Never let param tenantId override journey tenant.
             unset($params['tenantId']);
 
-            $params = $this->resolveParamFormulas(
-                $params,
-                $target,
-                $record,
-                $stage,
-                $journey,
-                $tenantId,
-            );
+            try {
+                $params = $this->resolveParamFormulas(
+                    $params,
+                    $actionTarget,
+                    $record,
+                    $stage,
+                    $journey,
+                    $tenantId,
+                );
+            } catch (Throwable $e) {
+                $lastError = 'paramFormulas: ' . $e->getMessage();
+                $failed[] = "{$type}:{$lastError}";
+                if ($continueOnError) {
+                    $skipped++;
+                    continue;
+                }
+
+                return ['ok' => false, 'error' => $lastError, 'failed' => $failed, 'skipped' => $skipped];
+            }
 
             $ctx = new ActionContext(
-                target: $target,
+                target: $actionTarget,
                 record: $record,
                 stage: $stage,
                 journey: $journey,
@@ -248,9 +279,16 @@ class ActionRunner
 
             for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
                 try {
+                    if ($actionEntity->get('targetReference') || $actionEntity->get('saveAs')) {
+                        $this->recordReferences->assertActionAccess($actionEntity, $ctx);
+                    }
                     /** @var Action $impl */
                     $impl = $this->injectableFactory->create($className);
-                    $impl->run($ctx);
+                    if ($actionEntity->get('saveAs')) {
+                        $this->recordReferences->runCreate($actionEntity, $ctx, fn () => $impl->run($ctx));
+                    } else {
+                        $impl->run($ctx);
+                    }
                     $succeeded = true;
                     break;
                 } catch (Throwable $e) {

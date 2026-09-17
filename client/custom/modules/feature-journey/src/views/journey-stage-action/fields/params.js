@@ -82,6 +82,17 @@ define("feature-journey:views/journey-stage-action/fields/params", [
             this._expressionInputs = {};
             this._snippets = null;
             this._targetEntityType = null;
+            this._renderGeneration = 0;
+
+            this.listenTo(this.model, "change:targetReference", () => {
+                // Keep unsaved settings when switching the record used by expressions.
+                if (this.isEditMode() && this._helperModel) {
+                    this.model.set(this.name, this.fetch()[this.name], {silent: true});
+                }
+                this._snippets = null;
+                this.clearParamViews();
+                this.reRender();
+            });
 
             // Param defs come from type — re-paint when user picks/changes action.
             this.listenTo(this.model, "change:type", () => {
@@ -414,10 +425,14 @@ define("feature-journey:views/journey-stage-action/fields/params", [
         },
 
         clearParamViews: function () {
+            this._renderGeneration++;
             (this._paramViews || []).forEach((name) => {
                 this.clearView(name);
             });
             this._paramViews = [];
+            if (this._helperModel) {
+                this.stopListening(this._helperModel);
+            }
             this._helperModel = null;
             this._fieldMapRows = [];
             this._fieldMapOptionsReady = null;
@@ -443,21 +458,24 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 return Promise.resolve(this._snippets);
             }
 
+            const generation = this._renderGeneration;
             return this.cfHelper
                 .resolveContext()
                 .then((ctx) => {
-                    this._targetEntityType = (ctx && ctx.entityType) || null;
-                    this._snippets = ExpressionInput.defaultSnippets(
-                        this,
-                        this._targetEntityType
-                    );
-
-                    return this._snippets;
+                    const entityType = (ctx && ctx.entityType) || null;
+                    const snippets = ExpressionInput.defaultSnippets(this, entityType);
+                    if (generation === this._renderGeneration) {
+                        this._targetEntityType = entityType;
+                        this._snippets = snippets;
+                    }
+                    return snippets;
                 })
                 .catch(() => {
-                    this._snippets = ExpressionInput.defaultSnippets(this, null);
-
-                    return this._snippets;
+                    const snippets = ExpressionInput.defaultSnippets(this, null);
+                    if (generation === this._renderGeneration) {
+                        this._snippets = snippets;
+                    }
+                    return snippets;
                 });
         },
 
@@ -479,6 +497,9 @@ define("feature-journey:views/journey-stage-action/fields/params", [
             this._helperModel = new Model();
             this._helperModel.name = "JourneyActionParams";
             this._helperModel.set(params);
+            this.listenTo(this._helperModel, "change:entityType change:link", () => {
+                this.refreshFieldMapOptions();
+            });
 
             if (!defs.length) {
                 this.syncRawFromModel();
@@ -486,7 +507,11 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 return;
             }
 
+            const generation = this._renderGeneration;
             this.resolveSnippets().then(() => {
+                if (generation !== this._renderGeneration) {
+                    return;
+                }
                 this.renderTypeHint();
 
                 defs.forEach((def) => {
@@ -537,7 +562,12 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                     {
                         paramKey: key,
                         snippets: this._snippets || [],
-                        onChange: () => this.markChanged(),
+                        onChange: () => {
+                            this.markChanged();
+                            if (key === "link") {
+                                this.refreshFieldMapOptions();
+                            }
+                        },
                     },
                     options || {}
                 )
@@ -1093,7 +1123,12 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 }
             };
 
-            this.loadFieldMapOptions().then(() => paint());
+            const generation = this._renderGeneration;
+            this.loadFieldMapOptions().then(() => {
+                if (generation === this._renderGeneration) {
+                    paint();
+                }
+            });
 
             $add.on("click", () => addRow("", "", null));
         },
@@ -1124,64 +1159,66 @@ define("feature-journey:views/journey-stage-action/fields/params", [
             }
         },
 
+        refreshFieldMapOptions: function () {
+            this._fieldMapOptionsReady = null;
+            return this.loadFieldMapOptions().then(() => {
+                this._fieldMapRows.forEach((row) => {
+                    this.populateFieldMapSelect(row.$select, row.$select.val());
+                });
+            });
+        },
+
         loadFieldMapOptions: function () {
             if (this._fieldMapOptionsReady) {
                 return this._fieldMapOptionsReady;
             }
 
+            const generation = this._renderGeneration;
+            this._fieldMapLoadGeneration = (this._fieldMapLoadGeneration || 0) + 1;
+            const optionGeneration = this._fieldMapLoadGeneration;
             this._fieldMapOptionsReady = this.cfHelper
                 .resolveContext()
                 .then((ctx) => {
-                    const stageId = this.model.get("stageId");
-
-                    if (ctx.entityType && ctx.tenantId) {
-                        return this.cfHelper.loadUpdateTargetOptions(
-                            ctx.entityType,
-                            ctx.tenantId
-                        );
+                    const type = this.model.get("type");
+                    let entityType = ctx.entityType;
+                    if (type === "createRecord") {
+                        entityType = this._helperModel && this._helperModel.get("entityType");
+                    } else if (type === "createRelatedRecord" || type === "updateRelatedRecord") {
+                        const input = this._expressionInputs && this._expressionInputs.link;
+                        const state = input && input.getState();
+                        const link = state && state.mode === "fixed"
+                            ? state.fixed
+                            : this._helperModel && this._helperModel.get("link");
+                        entityType = this.getMetadata().get(["entityDefs", ctx.entityType, "links", link, "entity"]);
+                    }
+                    if (!entityType) {
+                        return [];
+                    }
+                    if (type !== "createRecord" && type !== "createRelatedRecord") {
+                        return this.cfHelper.loadUpdateTargetOptions(entityType, ctx.tenantId);
                     }
 
-                    if (!stageId) {
-                        return this.cfHelper.loadUpdateTargetOptions(
-                            ctx.entityType,
-                            ctx.tenantId
-                        );
+                    const fields = this.getMetadata().get([
+                        "app", "journeyCreateRecord", "fieldsByEntityType", entityType,
+                    ]) || [];
+                    const native = fields.map((field) => ({value: field, label: field}));
+                    const allowBag = this.getMetadata().get(["app", "journeyCreateRecord", "allowCustomFieldsBag"]) !== false;
+                    if (!allowBag || !this.cfHelper.isEntityEnabled(entityType)) {
+                        return native;
                     }
-
-                    return Espo.Ajax.getRequest("JourneyStage/" + stageId, {
-                        select: "journeyId",
-                    })
-                        .then((stage) => {
-                            if (!stage || !stage.journeyId) {
-                                return ctx;
-                            }
-
-                            return Espo.Ajax.getRequest(
-                                "Journey/" + stage.journeyId,
-                                { select: "targetEntityType,tenantId" }
-                            ).then((journey) => ({
-                                entityType:
-                                    (journey && journey.targetEntityType) ||
-                                    ctx.entityType,
-                                tenantId:
-                                    (journey && journey.tenantId) || ctx.tenantId,
-                            }));
-                        })
-                        .catch(() => ctx)
-                        .then((resolved) =>
-                            this.cfHelper.loadUpdateTargetOptions(
-                                resolved.entityType,
-                                resolved.tenantId
-                            )
-                        );
+                    return this.cfHelper.loadCustomFieldOptions(entityType, ctx.tenantId)
+                        .then((custom) => native.concat(custom));
                 })
                 .then((opts) => {
-                    this._fieldMapOptions = opts || [];
-
-                    return this._fieldMapOptions;
+                    if (generation === this._renderGeneration && optionGeneration === this._fieldMapLoadGeneration) {
+                        this._fieldMapOptions = opts || [];
+                    }
+                    return opts || [];
                 })
                 .catch(() => {
-                    this._fieldMapOptions = [];
+                    if (generation === this._renderGeneration && optionGeneration === this._fieldMapLoadGeneration) {
+                        this._fieldMapOptions = [];
+                    }
 
                     return [];
                 });

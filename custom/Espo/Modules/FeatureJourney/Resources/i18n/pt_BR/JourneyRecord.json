@@ -11,6 +11,7 @@
         "claimedAt": "Último processamento em",
         "retryCount": "Tentativas",
         "cycleCount": "Execução nº",
+        "recordReferences": "Registros salvos",
         "exitReason": "Saiu porque",
         "tenant": "Workspace",
         "teams": "Equipes",

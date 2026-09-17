@@ -12,11 +12,26 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\FeatureJourney\Entities\Journey as JourneyEntity;
 use Espo\Modules\FeatureJourney\Services\JourneyPublishService;
+use Espo\Modules\FeatureJourney\Services\ActionRecordReferences;
 use stdClass;
 
 class Journey extends Record implements \Espo\Core\Di\EntityManagerAware
 {
     use \Espo\Core\Di\EntityManagerSetter;
+
+    public function getActionRecordReferences(Request $request, Response $response): stdClass
+    {
+        $journey = $this->requireReadableJourney($request);
+        $service = $this->injectableFactory->create(ActionRecordReferences::class);
+        $actions = $service->loadActions($journey);
+        foreach ($actions as $action) {
+            if (!$this->acl->check($action, 'read')) {
+                throw new Forbidden('No read access to Journey actions.');
+            }
+        }
+
+        return (object) ['list' => $service->definitions($journey, $actions, validateConsumers: false)];
+    }
 
     public function getActionReview(Request $request, Response $response): stdClass
     {

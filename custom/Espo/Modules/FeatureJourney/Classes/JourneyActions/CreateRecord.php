@@ -69,6 +69,8 @@ class CreateRecord implements Action
             'skipJourneyDispatch' => true,
             SaveOption::CREATED_BY_ID => $createdById,
         ]);
+
+        $context->createdRecord = $entity;
     }
 
     private function attachTargetLink(\Espo\ORM\Entity $entity, ActionContext $context, string $link): void
@@ -78,6 +80,9 @@ class CreateRecord implements Action
         if ($entity->hasRelation($link)) {
             $type = $entity->getRelationType($link);
             if ($type === $entity::BELONGS_TO) {
+                if ($entity->getRelationParam($link, 'entity') !== $target->getEntityType()) {
+                    throw new Error("CreateRecord: link '{$link}' does not accept {$target->getEntityType()}.");
+                }
                 $entity->set($link . 'Id', $target->getId());
 
                 return;

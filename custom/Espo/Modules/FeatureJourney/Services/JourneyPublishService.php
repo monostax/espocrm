@@ -36,6 +36,7 @@ class JourneyPublishService
         private Metadata $metadata,
         private RestrictedFormulaRunner $formulaRunner,
         private ActionConditionEvaluator $conditionEvaluator,
+        private ActionRecordReferences $recordReferences,
     ) {}
 
     /**
@@ -211,6 +212,15 @@ class JourneyPublishService
 
         foreach ($this->validateActions($actions, $stageMap) as $issue) {
             $issues[] = $issue;
+        }
+
+        try {
+            $this->recordReferences->definitions($journey, array_values(array_filter(
+                $actions,
+                static fn (Entity $action): bool => (bool) (($stageMap[$action->get('stageId')] ?? null)?->get('isActive')),
+            )));
+        } catch (\Throwable $e) {
+            $issues[] = $this->issue('error', 'invalid_record_reference', $e->getMessage());
         }
 
         $breakdown = $this->enrollmentService->resolveAudienceDetailed($journey);

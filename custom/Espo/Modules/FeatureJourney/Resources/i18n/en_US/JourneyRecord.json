@@ -11,6 +11,7 @@
         "claimedAt": "Last claimed at",
         "retryCount": "Retries",
         "cycleCount": "Run #",
+        "recordReferences": "Saved records",
         "exitReason": "Left because",
         "tenant": "Workspace",
         "teams": "Teams",

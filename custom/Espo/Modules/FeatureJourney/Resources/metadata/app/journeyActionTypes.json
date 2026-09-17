@@ -21,6 +21,8 @@
     ],
     "types": {
         "createTask": {
+            "producesRecord": true,
+            "referenceTargetAccess": "read",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateTask",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -66,6 +68,8 @@
             ]
         },
         "createRecord": {
+            "producesRecord": true,
+            "referenceTargetAccess": "read",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateRecord",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -91,6 +95,8 @@
             ]
         },
         "createRelatedRecord": {
+            "producesRecord": true,
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\CreateRelatedRecord",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -289,6 +295,7 @@
             ]
         },
         "notifyUser": {
+            "referenceTargetAccess": "read",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\NotifyUser",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -309,6 +316,7 @@
             ]
         },
         "makeFollowed": {
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\MakeFollowed",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -330,6 +338,7 @@
             "paramDefs": []
         },
         "updateTarget": {
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UpdateTarget",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -342,6 +351,7 @@
             ]
         },
         "updateRelatedRecord": {
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UpdateRelatedRecord",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -370,6 +380,7 @@
             ]
         },
         "linkRecord": {
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\LinkRecord",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -389,6 +400,7 @@
             ]
         },
         "unlinkRecord": {
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\UnlinkRecord",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",
@@ -407,6 +419,7 @@
             ]
         },
         "applyAssignmentRule": {
+            "referenceTargetAccess": "edit",
             "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\ApplyAssignmentRule",
             "paramsView": "feature-journey:views/journey-stage-action/fields/params",
             "tier": "tenant",

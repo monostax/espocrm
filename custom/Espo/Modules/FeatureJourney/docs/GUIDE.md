@@ -182,6 +182,8 @@ Time-in-step rules require a specific source stage and are not available on jour
 | maxRetries | 0–5 in-request retries (does **not** re-queue whole transition) |
 | continueOnError | If true, next actions still run after failure |
 | isActive | Skip when false |
+| targetReference | **Action target**: empty = enrolled record; otherwise a named record saved by an earlier create action. Conditions and dynamic values use this selected record. |
+| saveAs | **Save created record as**: optional unique reference name for `createTask`, `createRecord`, or `createRelatedRecord`. |
 
 Actions run **inline** inside the claimed transition (preserve OnExit → move → OnEnter order).
 
@@ -212,6 +214,69 @@ Missing optional modules → validate-on-save and/or runtime no-op with warning 
 Per-tenant **action rate limit** (best-effort).
 
 **Configure HTTP egress:** set `app.journeyHttpRequest.allowedUrlPrefixList` (e.g. `["https://hooks.n8n.example/"]`) via custom metadata before enabling `sendHttpRequest` for tenants.
+
+### 6.2 Account journeys with Opportunity-level work
+
+An enrollment stays attached to its original Account/Contact/Lead. Individual record
+actions can use a saved creation from the same enrollment as their target:
+
+1. In **D0 → Create record**, choose **Opportunity**, set **Link name to target**
+   to `account`, and **Save created record as** to `prospectingOpportunity`.
+2. Save that action. In **D+2 → Create task**, select
+   **Action target → prospectingOpportunity (Opportunity)**.
+3. For Account-level tasks, leave **Action target → Enrolled record**.
+4. To update the deal later, choose **Update target** with the same saved reference.
+
+`createTask` uses the selected record as `Task.parent`. Espo also copies the
+Opportunity's `accountId` onto the Task. `createRecord.linkToTarget` and the
+relation link in `createRelatedRecord` refer to the selected target too.
+
+API example (the reference settings are action fields, outside `params`):
+
+```json
+{
+  "type": "createRecord",
+  "saveAs": "prospectingOpportunity",
+  "params": {
+    "entityType": "Opportunity",
+    "fields": {"name": "Prospecting"},
+    "linkToTarget": "account"
+  }
+}
+```
+
+```json
+{
+  "type": "createTask",
+  "targetReference": "prospectingOpportunity",
+  "params": {"name": "Enviar Email D+2", "priority": "Normal"}
+}
+```
+
+- Supported consumers: create task/record/related record, update target/related
+  record, link/unlink record, assignment, followers, and user notification.
+- Names start with a letter and use letters, digits, and underscores (max 64).
+  Each name has one active producer. Save the producer before selecting it.
+- `JourneyRecord.recordReferences` stores type, ID, producer action, and cycle.
+  Timers and later jobs reload these references; re-enrollment starts a fresh map.
+- A named creation runs once per enrollment. Creation and reference storage share
+  a transaction and enrollment row lock. Retries/revisits reuse its record; use a
+  different name for another creation. Unnamed creations keep their usual behavior.
+- Missing, deleted, foreign-tenant, or inaccessible references fail the action
+  (honoring **Keep going if this fails**), never fall back to the enrolled record.
+- The run-as user needs read access to saved records, edit access for mutation
+  actions, and create access for new records. Conditions and `entity\attribute`
+  expressions read the selected action target; Journey transitions/goals still
+  evaluate the enrolled record.
+- Schedule consumers after their producer; conditional branches may leave a
+  reference unavailable. Review & Publish rejects missing, duplicate, or circular
+  reference definitions. Named creations require a fixed record type/link.
+- Existing enrollments are not backfilled by guessing a latest Opportunity, and
+  editing an already-executed action does not replay it. Use a new enrollment for
+  the configured flow, or an explicitly verified migration for existing records.
+
+After deploying, run the usual CRM clear-cache/rebuild to add the action fields
+and enrollment reference column, then reload the client.
 
 ---
 

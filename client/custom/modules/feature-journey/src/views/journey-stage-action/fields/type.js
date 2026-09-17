@@ -6,6 +6,21 @@ define("feature-journey:views/journey-stage-action/fields/type", [
      * Keeps the current value so detail/list still labels existing records.
      */
     return Dep.extend({
+        setup: function () {
+            Dep.prototype.setup.call(this);
+            this.listenTo(this.model, "change:" + this.name, () => {
+                const meta = this.getMetadata().get([
+                    "app", "journeyActionTypes", "types", this.model.get(this.name),
+                ]) || {};
+                if (!meta.producesRecord) {
+                    this.model.set("saveAs", null);
+                }
+                if (!meta.referenceTargetAccess) {
+                    this.model.set("targetReference", null);
+                }
+            });
+        },
+
         setupOptions: function () {
             const options = this.params.options || [];
             if (!options.length) {
