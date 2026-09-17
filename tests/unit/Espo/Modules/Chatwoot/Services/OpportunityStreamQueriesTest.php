@@ -11,10 +11,12 @@ use Espo\Core\Binding\BindingContainerBuilder;
 use Espo\Core\Container;
 use Espo\Core\Record\SearchParamsFetcher;
 use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\Text\MetadataProvider as TextMetadataProvider;
 use Espo\Core\Utils\Config;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Classes\Select\Note\LatestOpportunityEntry;
+use Espo\Modules\Chatwoot\Classes\Select\Opportunity\StreamActivity;
 use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
@@ -55,7 +57,8 @@ class OpportunityStreamQueriesTest extends TestCase
         $tables = [
             'Note' => ['id', 'parentId', 'parentType', 'type', 'relatedType', 'relatedId', 'createdById',
                 'createdAt', 'opportunityMentionUserIds', 'opportunityThreadRootId', 'number', 'deleted'],
-            'Opportunity' => ['id', 'status', 'assignedUserId', 'tenantId', 'deleted'],
+            'Opportunity' => ['id', 'status', 'assignedUserId', 'tenantId', 'deleted',
+                'createdAt', 'modifiedAt', 'streamUpdatedAt'],
             'OpportunityReadState' => ['id', 'opportunityId', 'userId', 'lastSeenAt', 'lastSeenNumber',
                 'isParticipant', 'isMarkedUnread', 'deleted'],
             'OpportunityThreadReadState' => ['id', 'rootNoteId', 'opportunityId', 'userId', 'lastSeenNumber', 'deleted'],
@@ -71,6 +74,7 @@ class OpportunityStreamQueriesTest extends TestCase
             $table = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $type));
             $this->pdo->exec("CREATE TABLE $table (" . implode(', ', $columns) . ')');
         }
+        $defs['Opportunity']['attributes']['chatwootStreamUpdatedAt'] = ['type' => 'datetime', 'notStorable' => true];
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($defs);
         $metadata = new Metadata($provider);
@@ -185,6 +189,64 @@ class OpportunityStreamQueriesTest extends TestCase
         $acl->method('checkScope')->willReturn(false);
         $access = new OpportunityEventAccess($factory, $acl);
         self::assertSame(['type!=' => OpportunityStreamEvents::EVENT_TYPES], $access->where($this->user));
+    }
+
+    public function testActivitySortUsesPreviewDatesBeforePaginationOnMysqlAndPostgresql(): void
+    {
+        // Native streamUpdatedAt puts Nowle first, but its visible preview is older.
+        $this->pdo->exec("INSERT INTO opportunity (id, created_at, modified_at, stream_updated_at) VALUES
+            ('nowle', '2026-09-16 14:21:35', '2026-09-16 19:54:25', '2026-09-16 21:50:19'),
+            ('drogapi', '2026-09-02 14:12:33', '2026-09-16 17:12:34', '2026-09-16 19:49:17'),
+            ('michele', '2026-08-31 14:38:43', '2026-09-15 18:56:55', '2026-09-16 21:20:36')");
+        $this->pdo->exec("INSERT INTO note (id, parent_id, parent_type, type, related_type, related_id, created_at, number) VALUES
+            ('nowle-visible', 'nowle', 'Opportunity', 'ChatwootMessageReceived', 'ChatwootConversation', 'visible-conversation', '2026-09-16 14:44:42', 33086),
+            ('nowle-hidden', 'nowle', 'Opportunity', 'ChatwootMessageReceived', 'ChatwootConversation', 'hidden-conversation', '2026-09-16 21:50:19', 34036),
+            ('nowle-update', 'nowle', 'Opportunity', 'Update', NULL, NULL, '2026-09-16 22:00:00', 34037),
+            ('drogapi-visible', 'drogapi', 'Opportunity', 'Post', NULL, NULL, '2026-09-16 19:49:17', 33804),
+            ('michele-visible', 'michele', 'Opportunity', 'Post', NULL, NULL, '2026-09-16 21:20:36', 34021)");
+        $applier = new StreamActivity(new LatestOpportunityEntry($this->user, $this->access));
+
+        foreach ([$this->composer, $this->pgComposer] as $composer) {
+            foreach (['desc' => ['michele', 'drogapi', 'nowle'], 'asc' => ['nowle', 'drogapi', 'michele']] as $order => $ids) {
+                $builder = SelectBuilder::create()->from('Opportunity')
+                    ->where(['id' => ['nowle', 'drogapi', 'michele']]);
+                $applier->apply($builder, SearchParams::fromRaw([
+                    'orderBy' => 'chatwootStreamUpdatedAt', 'order' => $order,
+                ]));
+                $sql = $composer->composeSelect($builder->build());
+                $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+                self::assertSame($ids, array_column($rows, 'id'), $sql);
+                $dates = array_column($rows, 'chatwootStreamUpdatedAt', 'id');
+                self::assertSame('2026-09-16 14:44:42', $dates['nowle']);
+                self::assertSame('2026-09-16 19:49:17', $dates['drogapi']);
+                foreach ($ids as $offset => $id) {
+                    $sql = $composer->composeSelect($builder->limit($offset, 1)->build());
+                    self::assertSame([$id], array_column($this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC), 'id'), $sql);
+                }
+            }
+        }
+    }
+
+    public function testActivitySortFallsBackAfterDeletionAndKeepsEqualDatesStable(): void
+    {
+        $this->pdo->exec("INSERT INTO opportunity (id, created_at, modified_at) VALUES
+            ('a', '2026-09-16 10:00:00', NULL),
+            ('b', '2026-09-15 10:00:00', '2026-09-16 10:00:00')");
+        $this->pdo->exec("INSERT INTO note (id, parent_id, parent_type, type, created_at, number, deleted) VALUES
+            ('deleted', 'a', 'Opportunity', 'Post', '2026-09-16 23:00:00', 40000, 1)");
+        $applier = new StreamActivity(new LatestOpportunityEntry($this->user, $this->access));
+        foreach ([$this->composer, $this->pgComposer] as $composer) {
+            foreach (['asc', 'desc'] as $order) {
+                $builder = SelectBuilder::create()->from('Opportunity')
+                    ->select(['id', 'chatwootStreamUpdatedAt'])->where(['id' => ['a', 'b']]);
+                $applier->apply($builder, SearchParams::fromRaw([
+                    'orderBy' => 'chatwootStreamUpdatedAt', 'order' => $order,
+                ]));
+                $rows = $this->pdo->query($composer->composeSelect($builder->build()))->fetchAll(PDO::FETCH_ASSOC);
+                self::assertSame(['a', 'b'], array_column($rows, 'id'));
+                self::assertSame(['2026-09-16 10:00:00', '2026-09-16 10:00:00'], array_column($rows, 'chatwootStreamUpdatedAt'));
+            }
+        }
     }
 
     public function testOverdueActivityCountsAsOneUnreadEntryAndBecomesThePreview(): void

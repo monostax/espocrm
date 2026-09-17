@@ -1,4 +1,8 @@
 {
+    "additionalApplierClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\StreamActivity"
+    ],
     "accessControlFilterClassNameMap": {
         "mandatory": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\AccessControlFilters\\Tenant"
     },

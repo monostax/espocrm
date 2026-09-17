@@ -8,6 +8,7 @@ use Espo\Core\Select\Primary\Filter;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
+use Espo\ORM\Query\Select;
 use Espo\ORM\Query\SelectBuilder;
 
 /** One preview per opportunity; a busy conversation must not starve other cards. */
@@ -17,13 +18,19 @@ class LatestOpportunityEntry implements Filter
 
     public function apply(SelectBuilder $queryBuilder): void
     {
-        $latest = SelectBuilder::create()->from('Note', 'latestEntry')
+        $queryBuilder->where([
+            'parentType' => 'Opportunity',
+            'number=s' => $this->latestNumber('note.parentId'),
+        ]);
+    }
+
+    public function latestNumber(string $parentIdColumn): Select
+    {
+        return SelectBuilder::create()->from('Note', 'latestEntry')
             ->select([['MAX:number', 'lastNumber']])->where([
                 'parentType' => 'Opportunity',
-                'parentId:' => 'note.parentId',
+                'parentId:' => $parentIdColumn,
                 'type' => OpportunityStreamEvents::TYPES,
             ])->where($this->access->where($this->user))->build();
-
-        $queryBuilder->where(['parentType' => 'Opportunity', 'number=s' => $latest]);
     }
 }
