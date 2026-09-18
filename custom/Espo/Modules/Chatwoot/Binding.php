@@ -11,6 +11,10 @@ class Binding implements BindingProcessor
 {
     public function process(Binder $binder): void
     {
+        $binder->bindService(
+            \Espo\Modules\Chatwoot\Tools\Stream\BulkPostContext::class,
+            'opportunityBulkPostContext',
+        );
         $binder->bindImplementation(
             \Espo\Tools\Notification\NoteHookProcessor::class,
             \Espo\Modules\Chatwoot\Tools\Stream\NoteHookProcessor::class,

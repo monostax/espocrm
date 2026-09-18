@@ -10,6 +10,7 @@ use Espo\Core\Hook\Hook\BeforeRemove;
 use Espo\Core\Job\QueueName;
 use Espo\Modules\Chatwoot\Jobs\BroadcastOpportunityUpdate;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
+use Espo\Modules\Chatwoot\Tools\Stream\BulkPostContext;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\RemoveOptions;
@@ -22,6 +23,7 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
 
     public function __construct(
         private EntityManager $entityManager,
+        private BulkPostContext $bulkPostContext,
     ) {}
 
     public function afterSave(Entity $entity, SaveOptions $options): void
@@ -111,6 +113,9 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
                 'opportunityId' => $opportunity->getId(),
                 'tenantIds' => $tenantIds,
                 'userId' => in_array($type, ['OpportunityReadState', 'OpportunityThreadReadState'], true) ? $entity->get('userId') : null,
+                // The bulk worker durably records one account invalidation per chunk.
+                // Native per-record/personal WebSocket topics still receive every update.
+                'skipChatwoot' => $this->bulkPostContext->opportunityId === $opportunity->getId(),
             ],
         ]);
     }

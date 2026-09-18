@@ -15,6 +15,10 @@ use Espo\Modules\Chatwoot\Tools\Activities\Access;
 /** Resolve the editor's Chatwoot IDs once, at write time, into verified CRM IDs. */
 class OpportunityPostMentions
 {
+    // Only identity mappings are cached for this request/chunk. Record ACL is evaluated on every post.
+    private array $accountCache = [];
+    private array $membershipCache = [];
+
     public function __construct(
         private EntityManager $entityManager,
         private Acl $acl,
@@ -53,7 +57,7 @@ class OpportunityPostMentions
             if ($note->get('opportunityChatwootAccountId')) {
                 $where['chatwootAccountId'] = $note->get('opportunityChatwootAccountId');
             }
-            $accounts = $this->entityManager->getRDBRepository('ChatwootAccount')->where($where)->limit(0, 2)->find();
+            $accounts = $this->accounts($where);
             // Numeric IDs are platform/account scoped. Never guess across integrations.
             if (count($accounts) === 1) {
                 $account = $accounts[0];
@@ -73,7 +77,8 @@ class OpportunityPostMentions
                             'chatwootUser.platformId' => $account->get('platformId'),
                             'chatwootUser.chatwootUserId' => $users,
                         ])->select([['chatwootUser.assignedUserId', 'crmUserId']])->build();
-                    $ids = array_merge($ids, $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_COLUMN));
+                    $key = json_encode([$account->getId(), 'users', $users]);
+                    $ids = array_merge($ids, $this->membershipCache[$key] ??= $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_COLUMN));
                 }
                 if ($teams && $includeTeams) {
                     $query = $this->entityManager->getQueryBuilder()->select()->from('ChatwootAccountUserMembership')
@@ -83,7 +88,8 @@ class OpportunityPostMentions
                             'mentionTeam.accountId' => $account->getId(),
                             'mentionTeam.chatwootTeamId' => $teams,
                         ])->select([['chatwootUser.assignedUserId', 'crmUserId']])->build();
-                    $ids = array_merge($ids, $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_COLUMN));
+                    $key = json_encode([$account->getId(), 'teams', $teams]);
+                    $ids = array_merge($ids, $this->membershipCache[$key] ??= $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_COLUMN));
                 }
             }
         }
@@ -119,7 +125,7 @@ class OpportunityPostMentions
         if ($note->get('opportunityChatwootAccountId')) {
             $where['chatwootAccountId'] = $note->get('opportunityChatwootAccountId');
         }
-        $accounts = $this->entityManager->getRDBRepository('ChatwootAccount')->where($where)->limit(0, 2)->find();
+        $accounts = $this->accounts($where);
         if (count($accounts) !== 1) {
             return [];
         }
@@ -165,5 +171,13 @@ class OpportunityPostMentions
             }
         }
         return $targets;
+    }
+
+    private function accounts(array $where): array
+    {
+        $key = json_encode($where);
+        return $this->accountCache[$key] ??= iterator_to_array(
+            $this->entityManager->getRDBRepository('ChatwootAccount')->where($where)->limit(0, 2)->find(), false,
+        );
     }
 }

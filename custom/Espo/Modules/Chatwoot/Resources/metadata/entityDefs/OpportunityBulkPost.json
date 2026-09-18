@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "requestKey": { "type": "varchar", "maxLength": 64, "required": true },
+        "payloadHash": { "type": "varchar", "maxLength": 64, "required": true },
+        "user": { "type": "link", "required": true },
+        "account": { "type": "link", "required": true },
+        "tenant": { "type": "link", "required": true },
+        "platformId": { "type": "varchar", "maxLength": 64 },
+        "chatwootAccountId": { "type": "int", "required": true },
+        "post": { "type": "text" },
+        "status": { "type": "enum", "options": ["Queued", "Running", "Completed", "Partial"], "default": "Queued" },
+        "total": { "type": "int", "default": 0 },
+        "succeeded": { "type": "int", "default": 0 },
+        "failed": { "type": "int", "default": 0 },
+        "generation": { "type": "int", "default": 0 },
+        "jobId": { "type": "varchar", "maxLength": 64 },
+        "broadcastPending": { "type": "bool", "default": false },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "user": { "type": "belongsTo", "entity": "User" },
+        "account": { "type": "belongsTo", "entity": "ChatwootAccount" },
+        "tenant": { "type": "belongsTo", "entity": "Tenant" }
+    },
+    "indexes": {
+        "requestKey": { "columns": ["requestKey"], "unique": true },
+        "ownerWorkspace": { "columns": ["userId", "accountId", "deleted", "createdAt"] }
+    }
+}

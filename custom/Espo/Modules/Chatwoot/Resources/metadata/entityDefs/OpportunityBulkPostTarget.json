@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "operation": { "type": "link", "required": true },
+        "opportunityId": { "type": "varchar", "maxLength": 64, "required": true },
+        "status": { "type": "enum", "options": ["Pending", "Succeeded", "Failed"], "default": "Pending" },
+        "noteId": { "type": "varchar", "maxLength": 64 },
+        "error": { "type": "varchar", "maxLength": 32 },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "operation": { "type": "belongsTo", "entity": "OpportunityBulkPost", "noForeignName": true }
+    },
+    "indexes": {
+        "operationOpportunity": { "columns": ["operationId", "opportunityId"], "unique": true },
+        "pending": { "columns": ["operationId", "status", "deleted", "id"] }
+    }
+}

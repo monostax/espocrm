@@ -513,12 +513,15 @@ class OpportunityReadStateService
         return $this->entityManager->getTransactionManager()->run(function () use ($id, $userId, $update, $forceVersion): Entity {
             // Serialize first creation as well as updates, without touching the Opportunity.
             $opportunity = $this->entityManager->getRDBRepository('Opportunity')
-                ->where(['id' => $id])->forUpdate()->findOne();
+                ->where(['id' => $id])->select('id')->forUpdate()->findOne();
             if (!$opportunity) {
                 throw new NotFound('Opportunity not found.');
             }
             $state = $this->entityManager->getRDBRepository('OpportunityReadState')
-                ->where(['opportunityId' => $id, 'userId' => $userId])->forUpdate()->findOne();
+                ->where(['opportunityId' => $id, 'userId' => $userId])
+                // Lock stored columns only: link display names add nullable joins on PostgreSQL.
+                ->select(['id', 'opportunityId', 'userId', 'lastSeenAt', 'lastSeenNumber', 'version', 'isParticipant', 'isMarkedUnread'])
+                ->forUpdate()->findOne();
             if (!$state) {
                 $state = $this->entityManager->getNewEntity('OpportunityReadState');
                 $state->set(['opportunityId' => $id, 'userId' => $userId, 'version' => 0, 'isParticipant' => false]);

@@ -1,4 +1,9 @@
 [
+    { "route": "/OpportunityBulkPost/workspaces/:accountId", "method": "post", "params": { "controller": "OpportunityBulkPost", "action": "submit", "accountId": ":accountId" } },
+    { "route": "/OpportunityBulkPost/workspaces/:accountId", "method": "get", "params": { "controller": "OpportunityBulkPost", "action": "recent", "accountId": ":accountId" } },
+    { "route": "/OpportunityBulkPost/workspaces/:accountId/:id", "method": "get", "params": { "controller": "OpportunityBulkPost", "action": "status", "accountId": ":accountId", "id": ":id" } },
+    { "route": "/OpportunityBulkPost/workspaces/:accountId/:id/results", "method": "get", "params": { "controller": "OpportunityBulkPost", "action": "results", "accountId": ":accountId", "id": ":id" } },
+    { "route": "/OpportunityBulkPost/workspaces/:accountId/:id/retry", "method": "post", "params": { "controller": "OpportunityBulkPost", "action": "retry", "accountId": ":accountId", "id": ":id" } },
     { "route": "/ActivityInbox", "method": "get", "params": { "controller": "ActivityInbox", "action": "list" } },
     { "route": "/ActivityInbox/counts", "method": "get", "params": { "controller": "ActivityInbox", "action": "counts" } },
     { "route": "/ActivityInbox/metadata", "method": "get", "params": { "controller": "ActivityInbox", "action": "metadata" } },

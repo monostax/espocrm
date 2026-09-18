@@ -24,13 +24,16 @@ class BroadcastOpportunityUpdate implements Job
     {
         $id = $data->get('opportunityId');
         $tenantIds = $data->get('tenantIds');
-        if (!$id || !$tenantIds) {
+        if (!$tenantIds) {
             return;
         }
 
         // Reuse Espo's ACL-checked record/stream topics. Read cutoffs are personal.
-        $this->webSocketSubmission->submit("recordUpdate.Opportunity.$id", $data->get('userId'));
-        $this->webSocketSubmission->submit("streamUpdate.Opportunity.$id", $data->get('userId'));
+        if ($id) {
+            $this->webSocketSubmission->submit("recordUpdate.Opportunity.$id", $data->get('userId'));
+            $this->webSocketSubmission->submit("streamUpdate.Opportunity.$id", $data->get('userId'));
+        }
+        if ($data->get('skipChatwoot')) return;
 
         $accounts = $this->entityManager->getRDBRepository('ChatwootAccount')
             ->where(['tenantId' => $tenantIds])->find();

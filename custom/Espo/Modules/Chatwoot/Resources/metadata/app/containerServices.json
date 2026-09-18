@@ -1,0 +1,5 @@
+{
+    "opportunityBulkPostContext": {
+        "className": "Espo\\Modules\\Chatwoot\\Tools\\Stream\\BulkPostContext"
+    }
+}
