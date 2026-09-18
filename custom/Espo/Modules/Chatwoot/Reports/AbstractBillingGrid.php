@@ -36,7 +36,7 @@ use RuntimeException;
 use stdClass;
 
 /**
- * Shared GridReport body for conversation-day AI billing aggregates.
+ * Shared GridReport body for conversation/opportunity-day AI billing aggregates.
  *
  * Concrete subclasses only declare pricing model + whether to split by tenant.
  *
@@ -50,7 +50,6 @@ use stdClass;
 abstract class AbstractBillingGrid implements GridReport
 {
     protected const ENTITY_TYPE = 'ChatwootAiAgentRun';
-    protected const CONVERSATION_ENTITY_TYPE = 'ChatwootConversation';
     protected const TENANT_ENTITY_TYPE = 'Tenant';
 
     protected const GROUP_DAY = 'DAY:runAt';
@@ -109,16 +108,16 @@ abstract class AbstractBillingGrid implements GridReport
                 : null;
         }
 
-        $conversationIds = $this->grainFetcher->fetchConversationIdsForBucket(
+        $runIds = $this->grainFetcher->fetchRunIdsForBucket(
             $searchParams,
             $user,
             $day,
             $tenantId,
         );
 
-        if (empty($conversationIds)) {
+        if (empty($runIds)) {
             return new ListResult(
-                $this->entityManager->getRDBRepository(self::CONVERSATION_ENTITY_TYPE)
+                $this->entityManager->getRDBRepository(self::ENTITY_TYPE)
                     ->where(['id' => '__none__'])
                     ->find(),
                 0
@@ -127,7 +126,7 @@ abstract class AbstractBillingGrid implements GridReport
 
         $listBuilder = $this->selectBuilderFactory
             ->create()
-            ->from(self::CONVERSATION_ENTITY_TYPE)
+            ->from(self::ENTITY_TYPE)
             ->withStrictAccessControl();
 
         if ($user) {
@@ -141,11 +140,11 @@ abstract class AbstractBillingGrid implements GridReport
         }
 
         $listQueryBuilder
-            ->where(['id' => $conversationIds])
-            ->order('chatwootCreatedAt', Order::DESC);
+            ->where(['id' => $runIds])
+            ->order('runAt', Order::DESC);
 
         $query = $listQueryBuilder->build();
-        $repository = $this->entityManager->getRDBRepository(self::CONVERSATION_ENTITY_TYPE);
+        $repository = $this->entityManager->getRDBRepository(self::ENTITY_TYPE);
 
         return new ListResult(
             $repository->clone($query)->find(),

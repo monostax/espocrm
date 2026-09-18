@@ -6,6 +6,8 @@
     "tenant",
     "chatwootAccount",
     "conversation",
+    "opportunity",
+    "sourceNote",
     "chatwootContact",
     "wasTransferred",
     "hadAppointment",

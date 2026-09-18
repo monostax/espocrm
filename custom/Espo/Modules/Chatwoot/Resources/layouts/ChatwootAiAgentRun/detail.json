@@ -30,7 +30,17 @@
                 {
                     "name": "conversation"
                 },
-                false
+                {
+                    "name": "opportunity"
+                }
+            ],
+            [
+                {
+                    "name": "sourceNote"
+                },
+                {
+                    "name": "tenant"
+                }
             ]
         ]
     },
@@ -85,6 +95,12 @@
                 {
                     "name": "outputTokens"
                 }
+            ],
+            [
+                {
+                    "name": "reasoningTokens"
+                },
+                false
             ]
         ]
     },
@@ -124,7 +140,9 @@
                 {
                     "name": "hatchetEventId"
                 },
-                false
+                {
+                    "name": "hatchetWorkflowRunId"
+                }
             ]
         ]
     }

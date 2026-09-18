@@ -262,7 +262,7 @@ class SeedChatwootReports implements RebuildAction
                     'Consumo de tokens LLM e execuções por dia, dividido ' .
                     'por tipo de gatilho: Mensagem do Cliente, @Menção em ' .
                     'Nota Privada, @Menção Pública, Mensagem Agendada e ' .
-                    'Disparador de Follow-up. Use para separar o gasto ' .
+                    'Disparador de Follow-up e @Menção na Oportunidade. Use para separar o gasto ' .
                     'gerado por clientes do uso interno (@menções de ' .
                     'agentes) e de follow-ups proativos — a base para ' .
                     'cobrança por tipo de uso. ACL-strict: cada usuário ' .
@@ -339,7 +339,7 @@ class SeedChatwootReports implements RebuildAction
                 'name' => 'IA Faturamento · Pacotes / Por Dia',
                 'description' =>
                     'Modelo pacote: preço por bloco de N engajamentos da IA ' .
-                    'por conversa e por dia civil (fuso do sistema). Todo ' .
+                    'por conversa ou oportunidade e por dia civil (fuso do sistema). Todo ' .
                     'engajamento conta — resposta ao cliente, @menção da ' .
                     'equipe, follow-up e mensagem agendada. Preço e tamanho ' .
                     'do bloco vêm do Faturamento IA de cada Ambiente ' .
@@ -347,7 +347,7 @@ class SeedChatwootReports implements RebuildAction
                     'Colunas: Valor Total, Pacotes, Pacotes na Franquia, ' .
                     'Pacotes Faturáveis, Total de Engajamentos, Conversas ' .
                     'Atendidas. ACL-strict em ChatwootAiAgentRun. ' .
-                    'Drill-down lista as conversas do balde.',
+                    'Drill-down lista as execuções, com links para conversa ou oportunidade.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],

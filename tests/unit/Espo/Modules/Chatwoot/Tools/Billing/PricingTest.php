@@ -16,6 +16,7 @@ use Espo\Modules\Chatwoot\Tools\Billing\Pricing;
 use Espo\Modules\Chatwoot\Tools\Billing\RateCard;
 use Espo\Modules\Chatwoot\Tools\Billing\TenantRateBook;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class PricingTest extends TestCase
 {
@@ -27,9 +28,7 @@ class PricingTest extends TestCase
         );
     }
 
-    /**
-     * @dataProvider packCases
-     */
+    #[DataProvider('packCases')]
     public function testPack199(int $turns, int $packs, float $amount): void
     {
         $result = Pricing::pack199($turns);

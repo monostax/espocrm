@@ -16,6 +16,10 @@
         "width": 16
     },
     {
+        "name": "opportunity",
+        "width": 16
+    },
+    {
         "name": "model",
         "width": 14
     },

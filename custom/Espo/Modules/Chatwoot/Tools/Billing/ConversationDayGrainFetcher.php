@@ -23,10 +23,10 @@ use Espo\ORM\Query\Part\Expression as Expr;
 use RuntimeException;
 
 /**
- * ACL-aware fetcher of conversation × calendar-day × kind counts.
+ * ACL-aware fetcher of conversation/opportunity × calendar-day × kind counts.
  *
- * Rows without a resolvable conversationId are excluded (nothing to invoice
- * against); they remain visible in the token/ops reports on ChatwootAiAgentRun.
+ * Opportunity mentions are billed against their opportunity even without a
+ * conversation. Other runs still require a resolvable conversation.
  */
 final class ConversationDayGrainFetcher
 {
@@ -45,6 +45,20 @@ final class ConversationDayGrainFetcher
     public static function noTenantKey(): string
     {
         return self::NO_TENANT_KEY;
+    }
+
+    private function scopeIdExpression(): Expr
+    {
+        return Expr::if(
+            Expr::equal(Expr::column('kind'), 'opportunity-mention'),
+            Expr::column('opportunityId'),
+            Expr::column('conversationId'),
+        );
+    }
+
+    private function scopeTypeExpression(): Expr
+    {
+        return Expr::if(Expr::equal(Expr::column('kind'), 'opportunity-mention'), 'opportunity', 'conversation');
     }
 
     /**
@@ -75,19 +89,21 @@ final class ConversationDayGrainFetcher
         }
 
         $dayExpr = Expr::create($this->dayExpression->build('runAt'));
-        $tenantExpr = Expr::ifNull(
-            Expr::column('tenantId'),
-            self::NO_TENANT_KEY
-        );
+        $tenantExpr = Expr::column('tenantId');
+        $scopeId = $this->scopeIdExpression();
+        $scopeType = $this->scopeTypeExpression();
 
         $queryBuilder
-            ->where(Expr::isNotNull(Expr::column('conversationId')))
-            ->select(Expr::column('conversationId'), 'conversationId')
+            ->where(Expr::isNotNull($scopeId))
+            ->where(Cond::notEqual($scopeId, ''))
+            ->select($scopeId, 'scopeId')
+            ->select($scopeType, 'scopeType')
             ->select($dayExpr, 'dayBucket')
             ->select($tenantExpr, 'tenantId')
             ->select(Expr::column('kind'), 'kind')
             ->select(Expr::create('COUNT:id'), 'cnt')
-            ->group(Expr::column('conversationId'))
+            ->group($scopeId)
+            ->group($scopeType)
             ->group($dayExpr)
             ->group($tenantExpr)
             ->group(Expr::column('kind'))
@@ -95,61 +111,16 @@ final class ConversationDayGrainFetcher
 
         $sth = $this->entityManager->getQueryExecutor()->execute($queryBuilder->build());
 
-        /** @var array<string, array{conversationId: string, dayBucket: string, tenantId: ?string, customer: int, nonCustomer: int}> $merged */
-        $merged = [];
-
-        foreach ($sth->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-            $conversationId = (string) ($row['conversationId'] ?? '');
-            $dayBucket = $row['dayBucket'] !== null ? (string) $row['dayBucket'] : '-';
-            $tenantRaw = $row['tenantId'] !== null ? (string) $row['tenantId'] : self::NO_TENANT_KEY;
-            $kind = (string) ($row['kind'] ?? '');
-            $cnt = (int) ($row['cnt'] ?? 0);
-
-            if ($conversationId === '' || $cnt <= 0) {
-                continue;
-            }
-
-            $key = $conversationId . "\0" . $dayBucket . "\0" . $tenantRaw;
-
-            if (!isset($merged[$key])) {
-                $merged[$key] = [
-                    'conversationId' => $conversationId,
-                    'dayBucket' => $dayBucket,
-                    'tenantId' => $tenantRaw,
-                    'customer' => 0,
-                    'nonCustomer' => 0,
-                ];
-            }
-
-            if ($kind === Pricing::CUSTOMER_MESSAGE_KIND) {
-                $merged[$key]['customer'] += $cnt;
-            } else {
-                $merged[$key]['nonCustomer'] += $cnt;
-            }
-        }
-
-        $grains = [];
-
-        foreach ($merged as $item) {
-            $grains[] = new ConversationDayGrain(
-                $item['conversationId'],
-                $item['dayBucket'],
-                $item['tenantId'],
-                $item['customer'],
-                $item['nonCustomer'],
-            );
-        }
-
-        return $grains;
+        return ConversationDayGrain::fromGroupedCounts($sth->fetchAll(\PDO::FETCH_ASSOC));
     }
 
     /**
-     * Distinct conversation ids for a (day[, tenant]) bucket under ACL —
-     * used by drill-down sub-reports.
+     * Billed run ids for a (day[, tenant]) bucket under ACL. Drill-downs show
+     * the actual engagements and their conversation/opportunity/source links.
      *
      * @return list<string>
      */
-    public function fetchConversationIdsForBucket(
+    public function fetchRunIdsForBucket(
         SearchParams $searchParams,
         ?User $user,
         ?string $day,
@@ -188,9 +159,10 @@ final class ConversationDayGrainFetcher
         }
 
         $queryBuilder
-            ->where(Expr::isNotNull(Expr::column('conversationId')))
-            ->select(Expr::column('conversationId'), 'conversationId')
-            ->group(Expr::column('conversationId'))
+            ->where(Expr::isNotNull($this->scopeIdExpression()))
+            ->where(Cond::notEqual($this->scopeIdExpression(), ''))
+            ->select(Expr::column('id'), 'id')
+            ->order('runAt', 'DESC')
             ->limit(0, $limit);
 
         $sth = $this->entityManager->getQueryExecutor()->execute($queryBuilder->build());
@@ -198,8 +170,8 @@ final class ConversationDayGrainFetcher
         $ids = [];
 
         foreach ($sth->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-            if (!empty($row['conversationId'])) {
-                $ids[] = (string) $row['conversationId'];
+            if (!empty($row['id'])) {
+                $ids[] = (string) $row['id'];
             }
         }
 

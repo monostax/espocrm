@@ -15,7 +15,7 @@ namespace Espo\Modules\Chatwoot\Tools\Billing;
  * Pure pricing math for AI agent run billing units.
  *
  * Two alternative commercial models. Both use a **calendar-day** window
- * (app timezone day bucket) and charge per conversation-day that had at
+ * (app timezone day bucket) and charge per conversation/opportunity-day that had at
  * least one AI run. Unit prices come from a {@see RateCard} (per-Tenant
  * deal, or platform defaults).
  *

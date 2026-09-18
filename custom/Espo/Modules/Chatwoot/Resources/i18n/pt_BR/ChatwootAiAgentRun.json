@@ -10,9 +10,9 @@
         "amount": "Valor Total ({currency})",
         "amountCredit": "Total a Pagar ({currency})",
         "amountDeal": "Valor Total (moeda do acordo)",
-        "bases": "Conversas Atendidas",
-        "conversationsIncluded": "Conversas na Franquia",
-        "conversationsBillable": "Conversas Faturáveis",
+        "bases": "Conversas / Oportunidades Atendidas",
+        "conversationsIncluded": "Conversas / Oportunidades na Franquia",
+        "conversationsBillable": "Conversas / Oportunidades Faturáveis",
         "turnOverages": "Respostas Excedentes",
         "kindExtras": "Engajamentos de Menção",
         "extras": "Engajamentos Adicionais",
@@ -21,7 +21,7 @@
         "packs": "Pacotes",
         "packsIncluded": "Pacotes na Franquia",
         "packsBillable": "Pacotes Faturáveis",
-        "conversationDays": "Conversas Atendidas",
+        "conversationDays": "Conversas / Oportunidades Atendidas",
         "credits": "Créditos Consumidos",
         "creditsIncluded": "Cobertos na Franquia",
         "creditsBillable": "Créditos Excedentes",
@@ -40,6 +40,9 @@
         "kind": "Tipo",
         "agent": "Agente de IA",
         "conversation": "Conversa",
+        "opportunity": "Oportunidade",
+        "sourceNote": "Postagem de Origem",
+        "hatchetWorkflowRunId": "ID da Execução Hatchet",
         "chatwootAccount": "Conta",
         "chatwootContact": "Contato",
         "tenant": "Ambiente",
@@ -54,6 +57,7 @@
         "outputTokens": "Tokens de Saída",
         "totalTokens": "Total de Tokens",
         "cachedInputTokens": "Tokens de Entrada em Cache",
+        "reasoningTokens": "Tokens de Pensamento (Incluídos na Saída)",
         "model": "Modelo",
         "wasTransferred": "Houve Transferência",
         "hadAppointment": "Houve Agendamento",
@@ -69,7 +73,8 @@
             "private-mention": "@Menção em Nota Privada",
             "public-mention": "@Menção Pública",
             "scheduled-message": "Mensagem Agendada",
-            "followup-trigger": "Disparador de Follow-up"
+            "followup-trigger": "Disparador de Follow-up",
+            "opportunity-mention": "@Menção no Histórico da Oportunidade"
         }
     }
 }
