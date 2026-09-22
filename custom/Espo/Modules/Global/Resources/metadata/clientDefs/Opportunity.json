@@ -56,6 +56,7 @@
                 "name": "contactConversations",
                 "label": "Conversations",
                 "view": "chatwoot:views/contact/panels/conversations",
+                "link": "chatwootConversations",
                 "order": 0
             }
         ],

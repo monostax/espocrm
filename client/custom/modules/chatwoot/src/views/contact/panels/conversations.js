@@ -9,14 +9,14 @@
  ************************************************************************/
 
 /**
- * Side panel that displays ChatwootConversation records belonging to the
- * Contact linked to the current entity.
+ * Side panel that displays ChatwootConversation records linked to the current
+ * entity or to its Contact.
  *
- * Designed for entities that do NOT have a direct link to ChatwootConversation
- * but DO have a contactId on the model (via a direct belongsTo link or a
- * ReadHook like PopulateContactFromPaciente).
+ * Set `link: "chatwootConversations"` in the panel defs for entities with a
+ * direct relationship (e.g. Opportunity). Both listing and selection then use:
+ *   {entityType}/{id}/chatwootConversations
  *
- * Fetches conversations via the Contact's relationship endpoint:
+ * Otherwise, uses contactId (or contactIdAttribute) on the model and fetches:
  *   GET Contact/{contactId}/chatwootConversations
  *
  * Clicking a row opens the Chatwoot conversation drawer (iframe).
@@ -81,8 +81,9 @@ define('chatwoot:views/contact/panels/conversations',
             this.contactIdAttribute = (this.options.defs || {}).contactIdAttribute || 'contactId';
             this.contactTypeAttribute = (this.options.defs || {}).contactTypeAttribute;
             this.requiredContactType = (this.options.defs || {}).requiredContactType;
+            this.link = (this.options.defs || {}).link;
 
-            this.hasAccess = this.getAcl().check('Contact', 'read')
+            this.hasAccess = this.getAcl().check(this.link ? this.model.entityType : 'Contact', 'read')
                 && this.getAcl().check('ChatwootConversation', 'read');
 
             // The contact id attribute may not be set yet when the panel is
@@ -91,12 +92,14 @@ define('chatwoot:views/contact/panels/conversations',
             // record arrives later via fetch). React to its arrival/changes.
             this.listenTo(
                 this.model,
-                'change:' + this.contactIdAttribute,
+                this.link
+                    ? 'change:id update-related:' + this.link + ' update-all'
+                    : 'change:' + this.contactIdAttribute,
                 this.controlContactChange,
                 this
             );
 
-            if (this.contactTypeAttribute) {
+            if (!this.link && this.contactTypeAttribute) {
                 this.listenTo(
                     this.model,
                     'change:' + this.contactTypeAttribute,
@@ -119,16 +122,33 @@ define('chatwoot:views/contact/panels/conversations',
         },
 
         /**
-         * Whether the panel has a linked contact to fetch conversations for.
+         * Whether the panel has an accessible relationship to fetch.
          *
          * @return {boolean}
          */
         checkHasData: function () {
+            return this.hasAccess && !!this.getConversationsUrl();
+        },
+
+        /**
+         * Resolve the same relationship for listing and linking conversations.
+         *
+         * @return {string|null}
+         */
+        getConversationsUrl: function () {
+            if (this.link) {
+                return this.model.id
+                    ? this.model.entityType + '/' + this.model.id + '/' + this.link
+                    : null;
+            }
+
             var contactId = this.model.get(this.contactIdAttribute);
             var contactTypeMatches = !this.requiredContactType ||
                 this.model.get(this.contactTypeAttribute) === this.requiredContactType;
 
-            return !!contactId && contactTypeMatches && this.hasAccess;
+            return contactId && contactTypeMatches
+                ? 'Contact/' + contactId + '/chatwootConversations'
+                : null;
         },
 
         /**
@@ -137,6 +157,7 @@ define('chatwoot:views/contact/panels/conversations',
         createCollection: function (callback) {
             this.getCollectionFactory().create('ChatwootConversation', function (collection) {
                 collection.maxSize = this.recordsPerPage;
+                collection.setOrder('lastActivityAt', 'desc', true);
                 this.collection = collection;
 
                 callback();
@@ -144,8 +165,7 @@ define('chatwoot:views/contact/panels/conversations',
         },
 
         /**
-         * Re-evaluate the linked contact after the model attributes changed
-         * (initial fetch completed or the contact link was changed/removed).
+         * Re-evaluate the source after model attributes or direct links change.
          */
         controlContactChange: function () {
             var hasData = this.checkHasData();
@@ -176,19 +196,21 @@ define('chatwoot:views/contact/panels/conversations',
         },
 
         loadConversations: function () {
-            var contactId = this.model.get(this.contactIdAttribute);
+            var url = this.getConversationsUrl();
 
-            if (!contactId) {
+            if (!url || !this.collection || !this.hasAccess) {
                 this.wait(false);
                 return;
             }
 
-            var url = 'Contact/' + contactId + '/chatwootConversations';
+            // Sorting and Show More use collection.fetch, so they must stay on
+            // the same relationship as the initial request.
+            this.collection.url = this.collection.urlRoot = url;
 
-            Espo.Ajax.getRequest(url, {
+            return Espo.Ajax.getRequest(url, {
                 maxSize: this.recordsPerPage,
-                orderBy: 'lastActivityAt',
-                order: 'desc',
+                orderBy: this.collection.orderBy,
+                order: this.collection.order,
             })
                 .then(function (response) {
                     this.collection.reset(response.list || []);
@@ -214,7 +236,9 @@ define('chatwoot:views/contact/panels/conversations',
             if (!this.hasData) {
                 this.$el.find('.list-container').html(
                     '<span class="text-muted small">' +
-                    this.translate('No Contact linked', 'labels', this.model.entityType) +
+                    (this.link
+                        ? this.translate('No Data')
+                        : this.translate('No Contact linked', 'labels', this.model.entityType)) +
                     '</span>'
                 );
                 return;
@@ -297,18 +321,24 @@ define('chatwoot:views/contact/panels/conversations',
         },
 
         actionRefreshConversations: function () {
-            this.loadConversations();
+            return this.loadConversations();
+        },
+
+        actionRefresh: function () {
+            return this.loadConversations();
         },
 
         /**
          * Open a select-records modal to link an existing ChatwootConversation
-         * to the Contact behind this panel.
+         * to the same entity whose conversations are displayed by this panel.
          */
         actionSelectConversation: function () {
-            var contactId = this.model.get(this.contactIdAttribute);
+            var url = this.getConversationsUrl();
 
-            if (!contactId) {
-                Espo.Ui.warning(this.translate('No Contact linked', 'labels', this.model.entityType));
+            if (!url) {
+                Espo.Ui.warning(this.link
+                    ? this.translate('No Data')
+                    : this.translate('No Contact linked', 'labels', this.model.entityType));
 
                 return;
             }
@@ -339,13 +369,17 @@ define('chatwoot:views/contact/panels/conversations',
                         return;
                     }
 
-                    var url = 'Contact/' + contactId + '/chatwootConversations';
-
                     Espo.Ajax.postRequest(url, {ids: ids})
                         .then(function () {
                             Espo.Ui.success(this.translate('Linked'));
 
-                            this.loadConversations();
+                            if (this.link) {
+                                this.model.trigger('update-related:' + this.link);
+                                this.model.trigger('after:relate');
+                                this.model.trigger('after:relate:' + this.link);
+                            } else {
+                                this.loadConversations();
+                            }
                         }.bind(this));
                 }.bind(this));
             }.bind(this));

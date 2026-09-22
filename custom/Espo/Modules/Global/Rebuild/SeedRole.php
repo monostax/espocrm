@@ -481,7 +481,7 @@ class SeedRole implements RebuildAction
                 'Task' => [
                     'create' => 'yes',
                     'read' => 'team',
-                    'edit' => 'own',
+                    'edit' => 'team',
                     'delete' => 'own',
                     'stream' => 'team',
                 ],

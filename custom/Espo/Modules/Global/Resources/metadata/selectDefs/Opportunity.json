@@ -1,4 +1,5 @@
 {
+    "textFilterUseContainsAttributeList": ["name"],
     "primaryFilterClassNameMap": {
         "open": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\PrimaryFilters\\Open",
         "won": "Espo\\Modules\\Global\\Classes\\Select\\Opportunity\\PrimaryFilters\\Won",

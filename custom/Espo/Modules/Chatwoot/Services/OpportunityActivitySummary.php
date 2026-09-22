@@ -48,7 +48,8 @@ class OpportunityActivitySummary
             $scope->where(['tenantId' => $this->tenants->resolveTenantIds($this->user)]);
         }
 
-        $summary = self::summarize([], $now, $includeIds);
+        $opportunityIds = $this->entityManager->getQueryExecutor()->execute($scope->build())->fetchAll(\PDO::FETCH_COLUMN);
+        $rows = [];
         foreach (['Meeting' => 'planned', 'Call' => 'planned', 'Task' => 'actual'] as $type => $filter) {
             if (!$this->acl->checkScope($type, 'read')) {
                 continue;
@@ -57,75 +58,60 @@ class OpportunityActivitySummary
                 ($type !== 'Call' && !$this->acl->checkField($type, 'dateEndDate'))) {
                 throw new Forbidden();
             }
-            $fields = ['dateEnd'];
+            $fields = ['parentId', 'dateEnd'];
             if ($type !== 'Call') {
                 $fields[] = 'dateEndDate';
-            }
-            if ($includeIds) {
-                $fields[] = 'parentId';
             }
             $query = $this->selectBuilderFactory->create()->from($type)
                 ->withPrimaryFilter($filter)->withStrictAccessControl()->buildQueryBuilder()
                 ->where(['parentType' => 'Opportunity', 'parentId=s' => $scope->build()])
-                ->select([...$fields, ['COUNT_DISTINCT:id', 'count']])->group($fields)->order([])->build();
-            $rows = $this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC);
-            foreach (self::summarize($rows, $now, $includeIds) as $key => $group) {
-                $summary[$key]['count'] += $group['count'];
-                if ($includeIds) {
-                    $summary[$key]['opportunityIds'] = array_values(array_unique([
-                        ...$summary[$key]['opportunityIds'], ...$group['opportunityIds'],
-                    ]));
-                }
-            }
+                ->select($fields)->distinct()->order([])->build();
+            array_push($rows, ...$this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC));
         }
-        return $summary;
+        return self::summarize($rows, $now, $includeIds, $opportunityIds);
     }
 
-    /** Calendar boundaries match the client: Monday weeks, exclusive ends, date-only deadlines until midnight. */
-    public static function summarize(array $rows, DateTimeImmutable $now, bool $includeIds): array
-    {
-        $day = $now->setTime(0, 0);
-        $week = $day->modify('-' . ((int) $day->format('N') - 1) . ' days');
-        $month = $day->modify('first day of this month');
-        $ranges = [
-            'today' => [$day, $day->modify('+1 day')],
-            'tomorrow' => [$day->modify('+1 day'), $day->modify('+2 days')],
-            'thisWeek' => [$week, $week->modify('+1 week')],
-            'nextWeek' => [$week->modify('+1 week'), $week->modify('+2 weeks')],
-            'thisMonth' => [$month, $month->modify('+1 month')],
-            'nextMonth' => [$month->modify('+1 month'), $month->modify('+2 months')],
-        ];
-        $groups = array_fill_keys(['overdue', ...array_keys($ranges), 'noDate'],
-            $includeIds ? ['count' => 0, 'opportunityIds' => []] : ['count' => 0]);
+    /** Exclusive opportunity buckets; date-only deadlines remain on time through the user's local day. */
+    public static function summarize(
+        array $rows,
+        DateTimeImmutable $now,
+        bool $includeIds,
+        array $opportunityIds = [],
+    ): array {
+        $today = $now->format('Y-m-d');
+        $tomorrow = $now->modify('+1 day')->format('Y-m-d');
+        $groups = array_fill_keys(['overdue', 'today', 'tomorrow', 'upcoming', 'noDate', 'noActivities'], []);
+        // Scoped opportunities without a pending activity remain in the last bucket.
+        $groups['noActivities'] = array_combine($opportunityIds, $opportunityIds);
         foreach ($rows as $row) {
             $timestamp = !empty($row['dateEnd'])
                 ? new DateTimeImmutable($row['dateEnd'], new DateTimeZone('UTC')) : null;
             $date = !empty($row['dateEndDate'])
                 ? $row['dateEndDate'] : $timestamp?->setTimezone($now->getTimezone())->format('Y-m-d');
             $overdue = !empty($row['dateEndDate'])
-                ? $date < $day->format('Y-m-d') : ($timestamp !== null && $timestamp < $now);
-            $keys = $overdue ? ['overdue'] : [];
-            if ($date === null) {
-                $keys[] = 'noDate';
-            } else {
-                foreach ($ranges as $key => [$start, $end]) {
-                    if ($date >= $start->format('Y-m-d') && $date < $end->format('Y-m-d')) {
-                        $keys[] = $key;
-                    }
-                }
-            }
-            foreach ($keys as $key) {
-                $groups[$key]['count'] += (int) $row['count'];
-                if ($includeIds) {
-                    $groups[$key]['opportunityIds'][$row['parentId']] = $row['parentId'];
-                }
+                ? $date < $today : ($timestamp !== null && $timestamp < $now);
+            $key = match (true) {
+                $overdue => 'overdue',
+                $date === null => 'noDate',
+                $date === $today => 'today',
+                $date === $tomorrow => 'tomorrow',
+                default => 'upcoming',
+            };
+            $groups[$key][$row['parentId']] = $row['parentId'];
+        }
+
+        // Prioritize the earliest pending deadline across all activity types.
+        // Undated activities only qualify when no dated activity takes priority.
+        $seen = [];
+        $summary = [];
+        foreach ($groups as $key => $ids) {
+            $ids = array_diff_key($ids, $seen);
+            $seen += $ids;
+            $summary[$key] = ['count' => count($ids)];
+            if ($includeIds) {
+                $summary[$key]['opportunityIds'] = array_values($ids);
             }
         }
-        if ($includeIds) {
-            foreach ($groups as &$group) {
-                $group['opportunityIds'] = array_values($group['opportunityIds']);
-            }
-        }
-        return $groups;
+        return $summary;
     }
 }
