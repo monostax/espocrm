@@ -320,6 +320,14 @@
         }
     },
     {
+        "route": "/Opportunity/action/groupSummary",
+        "method": "get",
+        "params": {
+            "controller": "OpportunityGroupSummary",
+            "action": "summary"
+        }
+    },
+    {
         "route": "/Opportunity/action/navigationCounts",
         "method": "get",
         "params": {
