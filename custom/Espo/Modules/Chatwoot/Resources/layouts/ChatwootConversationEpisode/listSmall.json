@@ -1,0 +1,12 @@
+[
+    {"name": "name", "link": true},
+    {"name": "chatwootAccount", "link": true},
+    {"name": "inbox", "link": true},
+    {"name": "startedAt"},
+    {"name": "closedAt"},
+    {"name": "closeReason"},
+    {"name": "lifecycleTags"},
+    {"name": "lifecycleAssignees"},
+    {"name": "lifecycleTeams"},
+    {"name": "transcriptComplete"}
+]

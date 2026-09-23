@@ -6,6 +6,9 @@
         [{"name": "startedAt"}, {"name": "lastInteractionAt"}],
         [{"name": "closedAt"}, {"name": "closeReason"}],
         [{"name": "communicationSpanSeconds"}, {"name": "elapsedSeconds"}],
+        [{"name": "lifecycleTags", "fullWidth": true}],
+        [{"name": "lifecycleAssignees", "fullWidth": true}],
+        [{"name": "lifecycleTeams", "fullWidth": true}],
         [{"name": "sourceMessageCount"}, {"name": "syncedMessageCount"}],
         [{"name": "transcriptComplete"}, {"name": "origin"}],
         [{"name": "sourceRevision"}, {"name": "lastSyncedAt"}]

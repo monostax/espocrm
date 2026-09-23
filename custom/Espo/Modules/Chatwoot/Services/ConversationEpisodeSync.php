@@ -136,6 +136,21 @@ class ConversationEpisodeSync
                 'syncedMessageCount' => count($messages), 'transcriptComplete' => !$superseded,
                 'lastSyncedAt' => gmdate('Y-m-d H:i:s'), 'deleted' => $superseded,
             ]);
+            // Optional while Chatwoot and CRM roll out independently. Do not
+            // erase a previously synchronized summary on an older API response.
+            foreach ([
+                'lifecycle_labels' => ['lifecycleTags', null],
+                'lifecycle_assignees' => ['lifecycleAssignees', 'lifecycleAssigneeNames'],
+                'lifecycle_teams' => ['lifecycleTeams', 'lifecycleTeamNames'],
+            ] as $key => [$field, $namesField]) {
+                if (array_key_exists($key, $source)) {
+                    $names = array_values(array_unique($source[$key]));
+                    $episode->set($field, implode(', ', $names));
+                    if ($namesField) {
+                        $episode->set($namesField, $names);
+                    }
+                }
+            }
             $this->entityManager->saveEntity($episode, ['silent' => true]);
             $clear = $this->entityManager->getPDO()->prepare(
                 'UPDATE chatwoot_message SET conversation_episode_id = NULL, is_episode_interaction = 0, episode_interaction_at = NULL '

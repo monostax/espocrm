@@ -14,7 +14,7 @@ gráficos e ACL do CRM. O seeder atualiza os mesmos registros a cada rebuild.
 
 ## Uso pelo cliente
 
-1. Acessar **Relatórios** e procurar os nomes com prefixo **Chatwoot ·**.
+1. Acessar **Relatórios** e procurar os nomes com prefixo **Chat ·**.
 2. Selecionar conta, período e caixas de entrada.
 3. Executar o relatório e usar **Exportar**.
 4. Nos resumos, o XLSX reúne as métricas em abas; a exportação CSV usa a métrica
@@ -61,8 +61,30 @@ eventos que sobreviveram à remoção da conversa ou da caixa na origem.
   nem conversas únicas do intervalo completo.
 - **Reaberturas e encerramentos:** contagem de eventos; uma conversa pode gerar
   vários, incluindo encerramentos automáticos. Não equivale ao status atual.
-- **Estado atual:** status, atendente e contagem de mensagens da base em lista
+- **Estado atual:** status, atendente, equipe, etiquetas e contagem de mensagens da base em lista
   representam o estado sincronizado no momento da consulta.
+
+### Etiquetas e equipe atuais na base de conversas
+
+`chwRptCvList` inclui `currentTags` (nomes sem repetição, separados por vírgulas)
+e `currentTeamName`, ao lado de `assigneeName`, rotulado no relatório como
+**Agente atribuído atual**. A origem é `labels` e `meta.team.name` do payload da
+conversa no Chatwoot. A equipe de atendimento não é a relação `teams` usada pela
+ACL do CRM.
+
+Os valores refletem a última sincronização da conversa; não representam o
+histórico dos atendimentos. Uma lista vazia de etiquetas limpa o campo. No
+payload completo de conversa, o Chatwoot omite `meta.team` quando não há equipe;
+essa omissão também limpa a equipe anterior. Labels ausentes preservam o valor
+anterior. Criação e atualização da conversa passam pelo mesmo mapeamento.
+
+Após o deploy e rebuild, a sincronização normal preenche esses campos nas
+conversas que processar. Conversas antigas sem atividade precisam ser
+ressincronizadas para preencher o snapshot; apenas reprocessar episódios não
+atualiza conversas-pai já existentes. O sync incremental limita páginas por
+execução, portanto zerar seu cursor isoladamente não garante um backfill completo.
+Para histórico por atendimento e participação de agentes/equipes, consulte
+`README.conversation-episodes.md` (`chwRptEpList`, `chwRptEpAgent`, `chwRptEpTeam`).
 
 Os agrupamentos mensais seguem o fuso do sistema, como os demais relatórios
 nativos do CRM. Na instalação principal: `America/Sao_Paulo`.

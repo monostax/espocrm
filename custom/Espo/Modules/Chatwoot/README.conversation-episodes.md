@@ -24,12 +24,83 @@ platform, and access checks follow account teams and inbox membership.
 | `chwRptEpActive` | Atendimentos com Interação / Mês e Caixa | Distinct episodes with qualifying communication in the month |
 | `chwRptEpClose` | Atendimentos Encerrados / Mês e Motivo | Episode closure month and reason |
 | `chwRptEpList` | Atendimentos / Base para Exportação | One row per episode |
+| `chwRptEpAgent` | Atendimentos por Agente / Participações | Distinct episodes per account and recorded agent/user name |
+| `chwRptEpTeam` | Atendimentos por Equipe / Participações | Distinct episodes per account and recorded team name |
 
 Reports use the system reporting timezone (`America/Sao_Paulo` in the main
 installation), runtime account/inbox/date filters, native CSV/XLSX export and
 row-level ACL. Policy-change closures are separate from resolutions/inactivity.
 The active-episode report sums episode-months; that sum is not unique episodes
 over a multi-month interval.
+
+### Lifecycle activity columns
+
+`chwRptEpList` also exports `lifecycleTags`, `lifecycleAssignees` and
+`lifecycleTeams`: distinct names, comma-separated, in first-observed order within
+the episode. The source replays activity pills before the start to establish
+carried-in state, then accumulates values during `[started_at, closed_at)` (or
+through the latest activity for active episodes). Removed tags and reassigned
+users/teams remain in that episode's summary. Later episodes inherit only the
+state still in effect, rather than every prior assignee/tag in the conversation.
+
+These are historical Chatwoot names, not the CRM `teams` access-control relation
+or the conversation's current assignee. Assignment actors are not assignees.
+Public transcript coverage does not imply activity-history coverage: missing
+pills cannot be recovered. Legacy English/Portuguese pills are supported; their
+identical agent/team assignment wording is resolved using account names and
+unambiguous historical pills. Unknown or ambiguous targets are not guessed.
+New pills carry typed change data and the original change timestamp, so delayed
+activity jobs and future name changes do not require text interpretation.
+
+Deploy CRM and run its usual rebuild to create the text fields and refresh the
+seeded report. Deploy the Chatwoot changes to both web and worker processes.
+Then requeue existing source episodes once (dry run first):
+
+```sh
+ACCOUNT_ID=9 bundle exec rake conversation_episodes:resync_activity_history
+ACCOUNT_ID=9 APPLY=true bundle exec rake conversation_episodes:resync_activity_history
+```
+
+The normal episode sync fills the new columns as pending revisions drain.
+Activity-only changes also queue affected episodes, without adding transcript
+messages or changing episode boundaries/counts. During rolling deployment, an
+API response without the new keys leaves existing CRM summaries untouched.
+
+### Drill-downs and participation reports
+
+`layouts/ChatwootConversationEpisode/listSmall.json` is the layout used by native
+report drill-down modals. It exposes tags, assigned agents/users and assigned
+teams for `chwRptEpStart`, `chwRptEpClose` and the two participation grids.
+These text fields are also available in drill-down CSV/XLSX exports. The monthly
+start/close summary groupings retain their original meanings.
+
+`chwRptEpAgent` and `chwRptEpTeam` use internal grid implementations, with the
+normal report UI and exports. Their queries always apply strict episode ACL
+(including account/inbox restrictions), and account labels are independently
+permission-checked. Runtime filters include episode start/close date, account,
+inbox, boundary policy and close reason.
+
+- **Period:** `startedAt` selects an episode cohort; it does not select the date
+  of an individual assignment. Active episodes can participate too.
+- **Grain:** once per episode, account and recorded participant name. Repeated
+  assignment to the same name does not increase its count. Names are distinct
+  within each account; equal names in different accounts stay separate.
+- **Totals:** sum of participation, not unique episodes across all participants.
+  A handoff episode can count under several names. Clicking an account total
+  lists its unique episodes, so the list can contain fewer rows than the sum.
+- **Historical identity:** grouping uses recorded names, not stable person/team
+  IDs. Same-name people within an account share a group; renames can form
+  separate groups. Missing/ambiguous activity history is omitted, not attributed
+  to an invented "unassigned" participant.
+- **Storage:** `lifecycleAssigneeNames` and `lifecycleTeamNames` preserve the source
+  arrays separately from display text. Names containing commas remain intact.
+  Older text-only rows are not split to infer participants. Requeue source
+  episodes using `conversation_episodes:resync_activity_history` after deploying
+  this importer to populate both arrays and display columns.
+
+The aggregation reads only distinct permitted episode IDs, account IDs and the
+relevant name array. Drill-down membership is evaluated before pagination, then
+records are fetched again under strict ACL with the requested fields/order/page.
 
 The existing conversation creation, public movement and reporting-event metrics
 have their original meanings. For the August 2026 Mousa pilot, independently

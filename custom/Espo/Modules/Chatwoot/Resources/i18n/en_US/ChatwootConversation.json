@@ -5,6 +5,8 @@
         "lastActivityAt": "Last Activity",
         "messagesCount": "Messages Count",
         "assigneeName": "Assignee",
+        "currentTags": "Current tags",
+        "currentTeamName": "Current assigned team",
         "inboxName": "Inbox Name",
         "chatwootCreatedAt": "Created at (Chat)",
         "chatwootConversationId": "Conversation ID",

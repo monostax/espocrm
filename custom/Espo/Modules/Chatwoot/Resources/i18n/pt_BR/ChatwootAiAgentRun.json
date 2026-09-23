@@ -1,6 +1,6 @@
 {
     "labels": {
-        "Create ChatwootAiAgentRun": "Criar Execução de Agente de IA",
+        "Create ChatwootAiAgentRun": "Criar IA / Execução",
         "noTenant": "(Sem Ambiente)",
         "restricted": "(Restrito)"
     },
@@ -29,11 +29,11 @@
         "mentionCredits": "Engajamentos de Menção"
     },
     "scopeNames": {
-        "ChatwootAiAgentRun": "Execução de Agente de IA",
-        "ChatwootAiAgentRunPlural": "Execuções de Agente de IA"
+        "ChatwootAiAgentRun": "IA / Execução",
+        "ChatwootAiAgentRunPlural": "IA / Execuções"
     },
     "scopeNamesSingular": {
-        "ChatwootAiAgentRun": "Execução de Agente de IA"
+        "ChatwootAiAgentRun": "IA / Execução"
     },
     "fields": {
         "name": "Nome",

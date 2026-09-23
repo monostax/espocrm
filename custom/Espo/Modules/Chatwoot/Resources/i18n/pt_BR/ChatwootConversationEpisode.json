@@ -6,9 +6,12 @@
         "startedAt": "Iniciado em", "lastInteractionAt": "Última interação", "expiresAt": "Prazo de inatividade", "closedAt": "Encerrado em",
         "closeReason": "Motivo do encerramento", "communicationSpanSeconds": "Intervalo de comunicação (segundos)", "elapsedSeconds": "Duração decorrida (segundos)",
         "origin": "Origem", "sourceRevision": "Revisão na origem", "sourceMessageCount": "Mensagens na origem", "syncedMessageCount": "Mensagens sincronizadas",
-        "transcriptComplete": "Histórico completo", "lastSyncedAt": "Última sincronização", "messages": "Mensagens"
+        "transcriptComplete": "Histórico completo", "lastSyncedAt": "Última sincronização", "messages": "Mensagens",
+        "lifecycleTags": "Etiquetas no atendimento", "lifecycleAssignees": "Agentes/usuários atribuídos no atendimento", "lifecycleTeams": "Equipes atribuídas no atendimento"
     },
     "links": {"messages": "Mensagens", "conversation": "Conversa", "chatwootAccount": "Conta Chatwoot", "inbox": "Caixa de entrada"},
+    "columnLabels": {"episodeParticipations": "Atendimentos (participações)"},
+    "labels": {"restrictedAccount": "Conta restrita"},
     "options": {
         "boundaryPolicy": {"lifecycle": "Ciclo de vida da conversa", "inactivity": "Inatividade"},
         "closeReason": {"resolved": "Resolvido", "inactivity": "Inatividade", "policy_changed": "Mudança de política"},

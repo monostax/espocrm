@@ -1,6 +1,6 @@
 {
     "labels": {
-        "Create ChatwootAiAgentRun": "Create AI Agent Run",
+        "Create ChatwootAiAgentRun": "Create AI / Run",
         "noTenant": "(No Ambiente)",
         "restricted": "(Restricted)"
     },
@@ -29,11 +29,11 @@
         "mentionCredits": "Mention Engagements"
     },
     "scopeNames": {
-        "ChatwootAiAgentRun": "AI Agent Run",
-        "ChatwootAiAgentRunPlural": "AI Agent Runs"
+        "ChatwootAiAgentRun": "AI / Run",
+        "ChatwootAiAgentRunPlural": "AI / Runs"
     },
     "scopeNamesSingular": {
-        "ChatwootAiAgentRun": "AI Agent Run"
+        "ChatwootAiAgentRun": "AI / Run"
     },
     "fields": {
         "name": "Name",

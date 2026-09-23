@@ -1,5 +1,7 @@
 {
     "scopeNames": {
+        "ChatwootAiAgentRun": "AI / Run",
+        "ChatwootReportingEvent": "Chat / Reporting Event",
         "ChatwootConversationEpisode": "Chat / Service episode",
         "ChatwootAccount": "Chat / Account",
         "ChatwootContact": "Chat / Contact",
@@ -25,6 +27,8 @@
         "CallCampaignContact": "Call Campaign Contact"
     },
     "scopeNamesPlural": {
+        "ChatwootAiAgentRun": "AI / Runs",
+        "ChatwootReportingEvent": "Chat / Reporting Events",
         "ChatwootConversationEpisode": "Chat / Service episodes",
         "ChatwootAccount": "Chat / Accounts",
         "ChatwootContact": "Chat / Contacts",

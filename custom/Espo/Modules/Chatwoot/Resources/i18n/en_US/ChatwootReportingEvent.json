@@ -1,15 +1,15 @@
 {
     "labels": {
-        "Create ChatwootReportingEvent": "Create Reporting Event",
+        "Create ChatwootReportingEvent": "Create Chat / Reporting Event",
         "noTenant": "(No Ambiente)",
         "restricted": "(Restricted)"
     },
     "scopeNames": {
-        "ChatwootReportingEvent": "Reporting Event",
-        "ChatwootReportingEventPlural": "Reporting Events"
+        "ChatwootReportingEvent": "Chat / Reporting Event",
+        "ChatwootReportingEventPlural": "Chat / Reporting Events"
     },
     "scopeNamesSingular": {
-        "ChatwootReportingEvent": "Reporting Event"
+        "ChatwootReportingEvent": "Chat / Reporting Event"
     },
     "fields": {
         "name": "Name",

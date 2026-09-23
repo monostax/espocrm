@@ -8,6 +8,7 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ConversationReportSnapshot;
 use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Tools\ContactReconciler;
 
@@ -920,6 +921,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $conversation->set('inboxName', $channel);
         $conversation->set('assigneeId', $newAssigneeId);
         $conversation->set('assigneeName', $assignee['name'] ?? $assignee['available_name'] ?? null);
+        $conversation->set(ConversationReportSnapshot::fromPayload($chatwootConversation));
         $conversation->set('lastActivityAt', $this->convertChatwootTimestamp($chatwootConversation['last_activity_at'] ?? null));
         $conversation->set('lastSyncedAt', date('Y-m-d H:i:s'));
 
@@ -1043,6 +1045,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             'inboxChannelType' => $chatwootInbox?->get('channelType'),
             'igUserId' => $this->resolveIgUserId($chatwootConversation, $contactInbox, $chatwootInbox),
         ];
+        $data = array_merge($data, ConversationReportSnapshot::fromPayload($chatwootConversation));
 
         // Assign teams from ChatwootAccount
         if ($teamId) {

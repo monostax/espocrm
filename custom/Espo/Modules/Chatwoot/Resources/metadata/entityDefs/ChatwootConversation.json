@@ -41,6 +41,8 @@
         "inboxName": { "type": "varchar", "maxLength": 255 },
         "assigneeId": { "type": "int" },
         "assigneeName": { "type": "varchar", "maxLength": 255 },
+        "currentTags": { "type": "text", "readOnly": true },
+        "currentTeamName": { "type": "varchar", "maxLength": 255, "readOnly": true },
         "lastActivityAt": { "type": "datetime" },
         "chatwootCreatedAt": { "type": "datetime" },
         "messagesCount": {

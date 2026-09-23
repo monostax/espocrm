@@ -766,9 +766,10 @@ class SeedChatwootReports implements RebuildAction
         ];
 
         return [
+            ...$this->getEpisodeParticipationReportDefinitions(),
             $grid + [
                 'staticId' => 'chwRptEpStart',
-                'name' => 'Chatwoot · Atendimentos Iniciados / Mês e Caixa',
+                'name' => 'Chat · Atendimentos Iniciados / Mês e Caixa',
                 'description' => 'Volume de atendimentos: episódios iniciados no período, inclusive os ainda ativos. '
                     . 'Cada episódio conta uma vez no mês de início, no fuso do sistema. '
                     . 'Retornos após encerramento iniciam novos episódios segundo a política registrada na origem.',
@@ -777,7 +778,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             $grid + [
                 'staticId' => 'chwRptEpClose',
-                'name' => 'Chatwoot · Atendimentos Encerrados / Mês e Motivo',
+                'name' => 'Chat · Atendimentos Encerrados / Mês e Motivo',
                 'description' => 'Episódios encerrados no período, separando resolução, inatividade e mudança de política. '
                     . 'O prazo de inatividade é registrado mesmo quando o processamento ocorre depois.',
                 'groupBy' => ['MONTH:closedAt', 'closeReason'],
@@ -789,17 +790,21 @@ class SeedChatwootReports implements RebuildAction
             ],
             $common + [
                 'staticId' => 'chwRptEpList', 'type' => 'List',
-                'name' => 'Chatwoot · Atendimentos / Base para Exportação',
-                'description' => 'Uma linha por episódio, com política histórica, início, última interação, encerramento e cobertura das mensagens.',
+                'name' => 'Chat · Atendimentos / Base para Exportação',
+                'description' => 'Uma linha por episódio, com política histórica, início, última interação, encerramento e cobertura das mensagens. '
+                    . 'Etiquetas, agentes/usuários e equipes atribuídos no atendimento, sem repetição e separados por vírgulas, '
+                    . 'reconstruídos a partir das atividades registradas, incluindo valores herdados no início. '
+                    . 'O histórico de atividades pode ser parcial; cobertura das mensagens não garante cobertura das atribuições.',
                 'columns' => ['name', 'chatwootAccount', 'inbox', 'conversation', 'boundaryPolicy', 'policyVersion',
                     'startedAt', 'lastInteractionAt', 'closedAt', 'closeReason', 'communicationSpanSeconds', 'elapsedSeconds',
+                    'lifecycleTags', 'lifecycleAssignees', 'lifecycleTeams',
                     'origin', 'sourceMessageCount', 'syncedMessageCount', 'transcriptComplete'],
                 'runtimeFilters' => ['startedAt', 'chatwootAccount', 'inbox', 'boundaryPolicy', 'closeReason', 'transcriptComplete'],
                 'orderByList' => 'ASC:startedAt',
             ],
             [
                 'staticId' => 'chwRptEpActive',
-                'name' => 'Chatwoot · Atendimentos com Interação / Mês e Caixa',
+                'name' => 'Chat · Atendimentos com Interação / Mês e Caixa',
                 'description' => 'Episódios distintos com interação válida no mês. Exclui notas, CSAT, mensagens de encerramento e recibos. '
                     . 'Um episódio pode contar em mais de um mês; o total mensal não representa episódios únicos no intervalo inteiro.',
                 'entityType' => 'ChatwootMessage', 'type' => 'Grid',
@@ -819,6 +824,38 @@ class SeedChatwootReports implements RebuildAction
         ];
     }
 
+    /** @return list<array<string, mixed>> */
+    protected function getEpisodeParticipationReportDefinitions(): array
+    {
+        $reports = [];
+        foreach ([
+            ['chwRptEpAgent', 'Agente', 'lifecycleAssignees', 'EpisodesByAgent'],
+            ['chwRptEpTeam', 'Equipe', 'lifecycleTeams', 'EpisodesByTeam'],
+        ] as [$id, $label, $group, $class]) {
+            $reports[] = [
+                'staticId' => $id,
+                'name' => 'Chat · Atendimentos por ' . $label . ' / Participações',
+                'description' => 'Atendimentos distintos por conta e nome histórico de ' . mb_strtolower($label) . '. '
+                    . 'Cada atendimento conta uma vez por participante, inclusive atribuições herdadas no início. '
+                    . 'O período filtra o início do atendimento, não a data de cada transferência. '
+                    . 'Os totais somam participações: um atendimento pode contar para mais de um agente/equipe. '
+                    . 'O drill-down lista os atendimentos únicos do grupo, com etiquetas e histórico de atribuições. '
+                    . 'Nomes idênticos dentro da mesma conta formam um grupo; contas permanecem separadas. '
+                    . 'Histórico ausente ou ambíguo não é contado. ACL de atendimentos aplicada a todas as consultas.',
+                'entityType' => 'ChatwootConversationEpisode',
+                'type' => 'Grid', 'columns' => ['COUNT:id'],
+                'groupBy' => ['chatwootAccount', $group],
+                'runtimeFilters' => ['startedAt', 'closedAt', 'chatwootAccount', 'inbox', 'boundaryPolicy', 'closeReason'],
+                'orderBy' => [], 'depth' => 2, 'chartType' => 'BarGroupedHorizontal',
+                'fillEmptyDateBuckets' => false,
+                'isInternal' => true, 'internalClassName' => 'Chatwoot:' . $class,
+                'isGloballyShared' => true, 'applyAcl' => true,
+            ];
+        }
+
+        return $reports;
+    }
+
     protected function getConversationReportDefinitions(): array
     {
         $incomingCount = "SUM:IF:(EQUAL:(messageType, 'incoming'), 1, 0)";
@@ -829,10 +866,10 @@ class SeedChatwootReports implements RebuildAction
         return [
             [
                 'staticId' => 'chwRptCvList',
-                'name' => 'Chatwoot · Conversas / Base para Exportação',
+                'name' => 'Chat · Conversas / Base para Exportação',
                 'description' =>
                     'Uma linha por conversa sincronizada, com conta, caixa, ' .
-                    'identificador, datas e estado atual. O filtro de período ' .
+                    'identificador, datas, etiquetas, agente e equipe atuais (na última sincronização). O filtro de período ' .
                     'usa a criação no Chatwoot, não a criação no CRM. A contagem ' .
                     'de mensagens é a do histórico sincronizado e pode ser parcial. ' .
                     'Selecione as caixas de produção para excluir sandbox. ' .
@@ -842,11 +879,12 @@ class SeedChatwootReports implements RebuildAction
                 'type' => 'List',
                 'columns' => [
                     'name', 'chatwootAccount', 'inbox', 'chatwootConversationId',
-                    'chatwootCreatedAt', 'status', 'assigneeName',
+                    'chatwootCreatedAt', 'status', 'assigneeName', 'currentTags', 'currentTeamName',
                     'lastActivityAt', 'lastMessageReceivedAt', 'lastMessageSentAt',
                     'messagesCount', 'lastSyncedAt',
                 ],
                 'columnsData' => (object) [
+                    'assigneeName' => (object) ['label' => 'Agente atribuído atual'],
                     'messagesCount' => (object) ['label' => 'Mensagens sincronizadas (estado atual)'],
                 ],
                 'runtimeFilters' => ['chatwootCreatedAt', 'chatwootAccount', 'inbox', 'status'],
@@ -857,7 +895,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptCvInboxMo',
-                'name' => 'Chatwoot · Conversas Criadas / Mês e Caixa',
+                'name' => 'Chat · Conversas Criadas / Mês e Caixa',
                 'description' =>
                     'Novas conversas sincronizadas, agrupadas pelo mês de criação ' .
                     'no Chatwoot e pela caixa de entrada, no fuso do sistema. ' .
@@ -882,7 +920,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptActInboxMo',
-                'name' => 'Chatwoot · Movimento Sincronizado / Mês e Caixa',
+                'name' => 'Chat · Movimento Sincronizado / Mês e Caixa',
                 'description' =>
                     'Conversas distintas com mensagens públicas recebidas ou ' .
                     'enviadas no mês, inclusive IA e automações. Exclui notas ' .
@@ -941,7 +979,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptEvtInboxMo',
-                'name' => 'Chatwoot · Reaberturas e Encerramentos / Mês e Caixa',
+                'name' => 'Chat · Reaberturas e Encerramentos / Mês e Caixa',
                 'description' =>
                     'Eventos registrados no mês, no fuso do sistema: reaberturas ' .
                     'e encerramentos, inclusive automáticos. Uma conversa pode ' .
@@ -985,7 +1023,7 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptEvtList',
-                'name' => 'Chatwoot · Eventos / Base para Exportação',
+                'name' => 'Chat · Eventos / Base para Exportação',
                 'description' =>
                     'Uma linha por evento sincronizado, com conta, conversa, ' .
                     'ID original da caixa, data e tipo. Use eventName para ' .
