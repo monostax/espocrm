@@ -69,6 +69,9 @@ class OpportunityGroupSummary
         // A semi-join prevents team/link filter joins from multiplying either COUNT or SUM.
         $query = SelectBuilder::create()->from('Opportunity')->where(['id=s' => $scope]);
         $activity = $request->getQueryParam('activity');
+        if ($activity === 'noActivities') {
+            $activity = 'noNextAction';
+        }
         $bucket = null;
         if ($groupBy === 'activity' || $activity) {
             if ($activity && !in_array($activity, OpportunityActivityBuckets::KEYS, true)) {

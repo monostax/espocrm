@@ -16,7 +16,7 @@ use Espo\ORM\Query\SelectBuilder;
 /** SQL equivalent of OpportunityActivitySummary::summarize, without exporting IDs or activity rows. */
 class OpportunityActivityBuckets
 {
-    public const KEYS = ['overdue', 'today', 'tomorrow', 'upcoming', 'noDate', 'noActivities'];
+    public const KEYS = ['overdue', 'noNextAction', 'today', 'tomorrow', 'upcoming', 'noDate'];
 
     public function __construct(private SelectBuilderFactory $selectBuilderFactory, private Acl $acl) {}
 
@@ -31,22 +31,26 @@ class OpportunityActivityBuckets
                 ($type !== 'Call' && !$this->acl->checkField($type, 'dateEndDate'))) {
                 throw new Forbidden();
             }
-            // One row per parent, irrespective of activity count or ACL join multiplicity.
+            // Only the selected pending step can contribute a deadline. Grouping
+            // keeps ACL join multiplicity from duplicating the opportunity.
             $activities = $this->selectBuilderFactory->create()->from($type)
                 ->withPrimaryFilter($filter)->withStrictAccessControl()->buildQueryBuilder()
                 ->where(['parentType' => 'Opportunity', 'parentId=s' => $scope])
+                ->join('Opportunity', 'nextActionOpportunity', ['nextActionOpportunity.id:' => 'parentId'])
+                ->where(Expr::and(
+                    Expr::equal(Expr::column('id'), Expr::column('nextActionOpportunity.nextActionId')),
+                    Expr::equal(Expr::column('nextActionOpportunity.nextActionType'), $type),
+                ))
                 ->select(['parentId'])->select(Expr::min($this->rank($type, $now)), 'bucketRank')
                 ->group('parentId')->order([])->limit(null, null)->build();
             $alias = 'summary' . $type;
             $query->leftJoin($activities, $alias,
                 Expr::equal(Expr::alias($alias . '.parentId'), Expr::column('id')));
-            $ranks[] = Expr::ifNull(Expr::alias($alias . '.bucketRank'), 5)->getValue();
+            $ranks[] = Expr::alias($alias . '.bucketRank');
         }
-        $rank = match (count($ranks)) {
-            0 => Expr::value(5),
-            1 => Expr::create($ranks[0]),
-            default => Expr::create('LEAST:(' . implode(', ', $ranks) . ')'),
-        };
+        // The ID/type reference selects at most one activity across all types.
+        // A missing or unreadable pending step belongs only to noNextAction.
+        $rank = $ranks ? Expr::coalesce(...[...$ranks, Expr::value(1)]) : Expr::value(1);
         $map = [];
         foreach (self::KEYS as $index => $key) {
             array_push($map, $index, $key);
@@ -61,11 +65,11 @@ class OpportunityActivityBuckets
         $dayAfter = $tomorrow->modify('+1 day');
         $timestamp = Expr::column('dateEnd');
         $rank = Expr::switch(
-            Expr::isNull($timestamp), 4,
+            Expr::isNull($timestamp), 5,
             Expr::less($timestamp, $now->setTimezone($utc)->format('Y-m-d H:i:s')), 0,
-            Expr::less($timestamp, $tomorrow->setTimezone($utc)->format('Y-m-d H:i:s')), 1,
-            Expr::less($timestamp, $dayAfter->setTimezone($utc)->format('Y-m-d H:i:s')), 2,
-            3,
+            Expr::less($timestamp, $tomorrow->setTimezone($utc)->format('Y-m-d H:i:s')), 2,
+            Expr::less($timestamp, $dayAfter->setTimezone($utc)->format('Y-m-d H:i:s')), 3,
+            4,
         );
         if ($type === 'Call') {
             return $rank;
@@ -75,9 +79,9 @@ class OpportunityActivityBuckets
         return Expr::switch(
             Expr::isNull($date), $rank,
             Expr::less($date, $now->format('Y-m-d')), 0,
-            Expr::equal($date, $now->format('Y-m-d')), 1,
-            Expr::equal($date, $tomorrow->format('Y-m-d')), 2,
-            3,
+            Expr::equal($date, $now->format('Y-m-d')), 2,
+            Expr::equal($date, $tomorrow->format('Y-m-d')), 3,
+            4,
         );
     }
 }

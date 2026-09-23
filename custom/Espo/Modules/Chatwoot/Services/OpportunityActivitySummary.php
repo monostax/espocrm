@@ -15,6 +15,8 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Expression as Expr;
+use Espo\ORM\Query\SelectBuilder;
 
 class OpportunityActivitySummary
 {
@@ -48,7 +50,10 @@ class OpportunityActivitySummary
             $scope->where(['tenantId' => $this->tenants->resolveTenantIds($this->user)]);
         }
 
-        $opportunityIds = $this->entityManager->getQueryExecutor()->execute($scope->build())->fetchAll(\PDO::FETCH_COLUMN);
+        $opportunities = $this->entityManager->getQueryExecutor()->execute(
+            SelectBuilder::create()->clone($scope->build())
+                ->select(['id', 'nextActionId', 'nextActionType'])->distinct()->build()
+        )->fetchAll(\PDO::FETCH_ASSOC);
         $rows = [];
         foreach (['Meeting' => 'planned', 'Call' => 'planned', 'Task' => 'actual'] as $type => $filter) {
             if (!$this->acl->checkScope($type, 'read')) {
@@ -58,32 +63,46 @@ class OpportunityActivitySummary
                 ($type !== 'Call' && !$this->acl->checkField($type, 'dateEndDate'))) {
                 throw new Forbidden();
             }
-            $fields = ['parentId', 'dateEnd'];
+            $fields = ['id', 'parentId', 'dateEnd'];
             if ($type !== 'Call') {
                 $fields[] = 'dateEndDate';
             }
             $query = $this->selectBuilderFactory->create()->from($type)
                 ->withPrimaryFilter($filter)->withStrictAccessControl()->buildQueryBuilder()
                 ->where(['parentType' => 'Opportunity', 'parentId=s' => $scope->build()])
+                ->join('Opportunity', 'nextActionOpportunity', ['nextActionOpportunity.id:' => 'parentId'])
+                ->where(Expr::and(
+                    Expr::equal(Expr::column('id'), Expr::column('nextActionOpportunity.nextActionId')),
+                    Expr::equal(Expr::column('nextActionOpportunity.nextActionType'), $type),
+                ))
                 ->select($fields)->distinct()->order([])->build();
-            array_push($rows, ...$this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC));
+            foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $rows[] = [...$row, 'entityType' => $type];
+            }
         }
-        return self::summarize($rows, $now, $includeIds, $opportunityIds);
+        return self::summarize($rows, $now, $includeIds, $opportunities);
     }
 
-    /** Exclusive opportunity buckets; date-only deadlines remain on time through the user's local day. */
+    /** Exclusive next-step buckets; date-only deadlines remain on time through the user's local day. */
     public static function summarize(
         array $rows,
         DateTimeImmutable $now,
         bool $includeIds,
-        array $opportunityIds = [],
+        array $opportunities = [],
     ): array {
         $today = $now->format('Y-m-d');
         $tomorrow = $now->modify('+1 day')->format('Y-m-d');
-        $groups = array_fill_keys(['overdue', 'today', 'tomorrow', 'upcoming', 'noDate', 'noActivities'], []);
-        // Scoped opportunities without a pending activity remain in the last bucket.
-        $groups['noActivities'] = array_combine($opportunityIds, $opportunityIds);
+        $opportunitiesById = array_column($opportunities, null, 'id');
+        $opportunityIds = array_keys($opportunitiesById);
+        $groups = array_fill_keys(OpportunityActivityBuckets::KEYS, []);
+        $groups['noNextAction'] = array_combine($opportunityIds, $opportunityIds);
         foreach ($rows as $row) {
+            $opportunity = $opportunitiesById[$row['parentId']] ?? null;
+            if (empty($row['id']) || $row['id'] !== ($opportunity['nextActionId'] ?? null) ||
+                ($row['entityType'] ?? null) !== ($opportunity['nextActionType'] ?? null)) {
+                continue;
+            }
+            unset($groups['noNextAction'][$row['parentId']]);
             $timestamp = !empty($row['dateEnd'])
                 ? new DateTimeImmutable($row['dateEnd'], new DateTimeZone('UTC')) : null;
             $date = !empty($row['dateEndDate'])
@@ -100,13 +119,8 @@ class OpportunityActivitySummary
             $groups[$key][$row['parentId']] = $row['parentId'];
         }
 
-        // Prioritize the earliest pending deadline across all activity types.
-        // Undated activities only qualify when no dated activity takes priority.
-        $seen = [];
         $summary = [];
         foreach ($groups as $key => $ids) {
-            $ids = array_diff_key($ids, $seen);
-            $seen += $ids;
             $summary[$key] = ['count' => count($ids)];
             if ($includeIds) {
                 $summary[$key]['opportunityIds'] = array_values($ids);
