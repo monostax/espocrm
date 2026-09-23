@@ -12,15 +12,15 @@
         "isPrimary": "Primary",
         "contact": "Contact",
         "tenant": "Tenant",
-        "chatwootAccount": "Chatwoot Account",
-        "chatwootInbox": "Chatwoot Inbox",
+        "chatwootAccount": "Chat / Account",
+        "chatwootInbox": "Chat / Account / Channel",
         "chatwootConversations": "Conversations"
     },
     "links": {
         "contact": "Contact",
         "tenant": "Tenant",
-        "chatwootAccount": "Chatwoot Account",
-        "chatwootInbox": "Chatwoot Inbox",
+        "chatwootAccount": "Chat / Account",
+        "chatwootInbox": "Chat / Account / Channel",
         "chatwootConversations": "Conversations"
     },
     "options": {
@@ -44,7 +44,7 @@
         "handle": "Human-readable username/handle (e.g. Instagram username, @-stripped, lowercased). Not routable — kept alongside the scoped-id Source ID so both observations merge into one identity.",
         "whatsappLid": "WhatsApp privacy identifier (LID) observed for this WhatsApp identity. Kept alongside the phone number so LID-keyed chats resolve to the same identity.",
         "label": "Optional human-readable label (e.g. Instagram username)",
-        "chatwootAccount": "Originating Chatwoot account where this identity was first observed",
-        "chatwootInbox": "Originating Chatwoot inbox (if applicable)"
+        "chatwootAccount": "Originating Chat account where this identity was first observed",
+        "chatwootInbox": "Originating Chat inbox (if applicable)"
     }
 }

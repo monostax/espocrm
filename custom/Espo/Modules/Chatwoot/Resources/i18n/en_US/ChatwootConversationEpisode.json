@@ -1,6 +1,6 @@
 {
     "fields": {
-        "name": "Episode", "chatwootAccount": "Chatwoot account", "conversation": "Conversation", "inbox": "Inbox",
+        "name": "Episode", "chatwootAccount": "Chat / Account", "conversation": "Conversation", "inbox": "Inbox",
         "chatwootEpisodeId": "Source episode ID", "chatwootInboxId": "Source inbox ID", "chatwootConversationId": "Conversation number",
         "boundaryPolicy": "Boundary policy", "inactivityTimeoutSeconds": "Inactivity timeout (seconds)", "policyVersion": "Policy version",
         "startedAt": "Started at", "lastInteractionAt": "Last interaction", "expiresAt": "Inactivity deadline", "closedAt": "Closed at",
@@ -9,7 +9,7 @@
         "transcriptComplete": "Transcript complete", "lastSyncedAt": "Last synced at", "messages": "Messages",
         "lifecycleTags": "Tags during episode", "lifecycleAssignees": "Assigned agents/users during episode", "lifecycleTeams": "Assigned teams during episode"
     },
-    "links": {"messages": "Messages", "conversation": "Conversation", "chatwootAccount": "Chatwoot account", "inbox": "Inbox"},
+    "links": {"messages": "Messages", "conversation": "Conversation", "chatwootAccount": "Chat / Account", "inbox": "Inbox"},
     "columnLabels": {"episodeParticipations": "Episodes (participations)"},
     "labels": {"restrictedAccount": "Restricted account"},
     "options": {

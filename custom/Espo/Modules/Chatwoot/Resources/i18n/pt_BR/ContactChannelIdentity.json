@@ -12,14 +12,14 @@
         "isPrimary": "Principal",
         "contact": "Contato",
         "tenant": "Inquilino",
-        "chatwootAccount": "Conta do Chatwoot",
-        "chatwootInbox": "Caixa de Entrada do Chatwoot"
+        "chatwootAccount": "Chat / Conta",
+        "chatwootInbox": "Chat / Conta / Caixa de Entrada"
     },
     "links": {
         "contact": "Contato",
         "tenant": "Inquilino",
-        "chatwootAccount": "Conta do Chatwoot",
-        "chatwootInbox": "Caixa de Entrada do Chatwoot"
+        "chatwootAccount": "Chat / Conta",
+        "chatwootInbox": "Chat / Conta / Caixa de Entrada"
     },
     "options": {
         "channelType": {
@@ -42,7 +42,7 @@
         "handle": "Nome de usuário legível (ex.: usuário do Instagram, sem @, em minúsculas). Não roteável — mantido junto ao Identificador escopado para que ambas as observações se fundam em uma única identidade.",
         "whatsappLid": "Identificador de privacidade do WhatsApp (LID) observado para esta identidade. Mantido junto ao telefone para que conversas chaveadas por LID resolvam para a mesma identidade.",
         "label": "Rótulo legível opcional (ex.: nome de usuário do Instagram)",
-        "chatwootAccount": "Conta do Chatwoot onde esta identidade foi observada pela primeira vez",
-        "chatwootInbox": "Caixa de entrada do Chatwoot de origem (se aplicável)"
+        "chatwootAccount": "Conta do Chat onde esta identidade foi observada pela primeira vez",
+        "chatwootInbox": "Caixa de entrada do Chat de origem (se aplicável)"
     }
 }
