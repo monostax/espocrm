@@ -158,7 +158,7 @@
     "selectExtensionPackage": "Válassza ki a bővítménycsomagot",
     "extensionInstalled": "A (z) {name} {version} bővítmény telepítve lett.",
     "installExtension": "A (z) {name} {version} bővítmény készen áll a telepítésre.",
-    "upgradeBackup": "Javasoljuk, hogy biztonsági másolatot készítsen az EspoCRM fájlokról és adatokról a frissítés előtt.",
+    "upgradeBackup": "Javasoljuk, hogy biztonsági másolatot készítsen az CRM fájlokról és adatokról a frissítés előtt.",
     "thousandSeparatorEqualsDecimalMark": "A több ezer elválasztó karakter nem lehet ugyanaz, mint a tizedespont karakter.",
     "userHasNoEmailAddress": "A felhasználónak nincs e-mail címe.",
     "uninstallConfirmation": "Biztosan eltávolítja a bővítményt?"
@@ -166,7 +166,7 @@
   "descriptions": {
     "settings": "Az alkalmazás rendszerbeállításai.",
     "scheduledJob": "A cron által végzett munkák.",
-    "upgrade": "Frissítés EspoCRM.",
+    "upgrade": "Frissítés CRM.",
     "clearCache": "Töröljön minden háttértárat.",
     "rebuild": "Rebuild backend és clear cache.",
     "users": "Felhasználók kezelése.",

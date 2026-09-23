@@ -11,7 +11,7 @@
     "noIntegrations": "Inga integrationer tillgängliga."
   },
   "help": {
-    "Google": "** Skaffa OAuth 2.0-uppgifter från Google Developers Console. **\n\nBesök [Google Developers Console] (https://console.developers.google.com/project) för att skaffa OAuth 2.0 uppgifter såsom ett klient-ID och klienthemlighet som är kända för både Google och EspoCRM-applikationen.",
+    "Google": "** Skaffa OAuth 2.0-uppgifter från Google Developers Console. **\n\nBesök [Google Developers Console] (https://console.developers.google.com/project) för att skaffa OAuth 2.0 uppgifter såsom ett klient-ID och klienthemlighet som är kända för både Google och CRM-applikationen.",
     "GoogleMaps": "Skaffa API-nyckel [här] (https://developers.google.com/maps/documentation/javascript/get-api-key)."
   }
 }

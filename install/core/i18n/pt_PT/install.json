@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Bem Vindo ao EspoCRM",
+    "Main page title": "Bem Vindo ao CRM",
     "Start page title": "Contrato de licença",
     "Step1 page title": "Contrato de licença",
     "License Agreement": "Contrato de licença",
@@ -11,16 +11,16 @@
     "Step5 page title": "Configurações SMTP para emails enviados",
     "Errors page title": "Erros",
     "Finish page title": "Instalação completa",
-    "Congratulation! Welcome to EspoCRM": "Parabéns! EspoCRM configurado corretamente",
+    "Congratulation! Welcome to EspoCRM": "Parabéns! CRM configurado corretamente",
     "More Information": "Para mais informações, visite o nosso {BLOG}, siga-nos no {TWITTER}. <br> <br> Se tiver alguma sugestão ou dúvida, por favor, pergunte no {FORUM}.",
-    "share": "Se gosta de EspoCRM, partilhe-a com os seus amigos. Deixe-os saber sobre este produto.",
+    "share": "Se gosta de CRM, partilhe-a com os seus amigos. Deixe-os saber sobre este produto.",
     "Installation Guide": "Guia de Instalação",
     "Locale": "Localidade",
     "Outbound Email Configuration": "Configuração de email de saída",
     "Start": "Começar",
     "Back": "Anterior",
     "Next": "Seguinte",
-    "Go to EspoCRM": "Ir para EspoCRM",
+    "Go to EspoCRM": "Ir para CRM",
     "Re-check": "Verificar",
     "Version": "Versão",
     "Test settings": "Testar conexão",
@@ -40,7 +40,7 @@
     "Fail": "Falha",
     "is recommended": "recomendado",
     "extension is missing": "Extensão em falta",
-    "headerTitle": "Instalação do EspoCRM",
+    "headerTitle": "Instalação do CRM",
     "Crontab setup instructions": "Sem executar e-mails de entrada de trabalhos agendados, notificações e lembretes não funcionarão. Aqui você pode ler {SETUP_INSTRUCTIONS}",
     "Setup instructions": "Intrições de configuração"
   },
@@ -79,8 +79,8 @@
     "1049": "Base de dados desconhecida",
     "2005": "Host do servidor MySQL desconhecido",
     "Some errors occurred!": "Ocorreram alguns erros!",
-    "phpVersion": "A sua versão de PHP não é suportada pelo EspoCRM, por favor atualize para PHP {minVersion}, pelo menos",
-    "requiredMysqlVersion": "A sua versão de MySQL não é suportada pelo EspoCRM, por favor atualize para MySQL {minVersion}, pelo menos",
+    "phpVersion": "A sua versão de PHP não é suportada pelo CRM, por favor atualize para PHP {minVersion}, pelo menos",
+    "requiredMysqlVersion": "A sua versão de MySQL não é suportada pelo CRM, por favor atualize para MySQL {minVersion}, pelo menos",
     "The PHP extension was not found...": "Erro PHP: Extensão <b>{exName}</b> não encontrada.",
     "All Settings correct": "Todas as configurações estão corretas",
     "Failed to connect to database": "Falha a conectar à base de dados",
@@ -101,8 +101,8 @@
     "Thousand Separator and Decimal Mark equal": "Separados dos mulheres e a marca das casas decimais não pode ser igual",
     "extension": "A extensão {0} está em falta",
     "option": "O valor recomendado é {0}",
-    "mysqlSettingError": "EspoCRM precisa que o valor MySQL \"{NAME}\" esteja configurado para {VALUE}",
-    "requiredMariadbVersion": "A sua versão MariaBD não é suportada pelo EspoCRM, por favor atualize para MariaDB {minVersion}, pelo menos",
+    "mysqlSettingError": "CRM precisa que o valor MySQL \"{NAME}\" esteja configurado para {VALUE}",
+    "requiredMariadbVersion": "A sua versão MariaBD não é suportada pelo CRM, por favor atualize para MariaDB {minVersion}, pelo menos",
     "Ajax failed": "Um erro inesperado aconteceu",
     "Bad init Permission": "Permissão negada para o diretório \"{*}\". Por favor, defina 775 para \"{*}\" ou apenas execute este comando no terminal <pre><b>{C}</b></pre> Operação não permitida? Experimente este: {CSU}",
     "permissionInstruction": "<br>Execute este comando no Terminal:<pre><b>\"{C}\"</b></pre>",
@@ -119,18 +119,18 @@
   },
   "options": {
     "modRewriteTitle": {
-      "apache": "<h3>Erro API: EspoCRM API está indisponível.</h3><br> Faça os passos necessários. Depois de cada passo, verifique se o problema está resolvido.",
-      "nginx": "<h3>Erro API: EspoCRM API está indisponível.</h3>",
-      "microsoft-iis": "<h3>Erro API: EspoCRM API está indisponível.</h3><br> Problema possível:  \"URL Rewrite\" desativado. Por favor verifique e ative o Módulo \"URL Rewrite\"no servidor IIS. ",
-      "default": "<h3>Erro API: EspoCRM API está indisponível.</h3><br> Problema possível: Módulo Rewrite desativado. Por favor verifique e ative o Módulo Rewrite no seu servidor (ex. mod_rewrite in Apache) e suporte .htaccess"
+      "apache": "<h3>Erro API: CRM API está indisponível.</h3><br> Faça os passos necessários. Depois de cada passo, verifique se o problema está resolvido.",
+      "nginx": "<h3>Erro API: CRM API está indisponível.</h3>",
+      "microsoft-iis": "<h3>Erro API: CRM API está indisponível.</h3><br> Problema possível:  \"URL Rewrite\" desativado. Por favor verifique e ative o Módulo \"URL Rewrite\"no servidor IIS. ",
+      "default": "<h3>Erro API: CRM API está indisponível.</h3><br> Problema possível: Módulo Rewrite desativado. Por favor verifique e ative o Módulo Rewrite no seu servidor (ex. mod_rewrite in Apache) e suporte .htaccess"
     },
     "modRewriteInstruction": {
       "apache": {
-        "linux": "<br><br><h4>1. Habilite \"mod_rewrite\".</h4>Para habilitar <i>mod_rewrite</i>, execute estes comandos em um terminal:<br><br><pre> {APACHE1}</pre><hr><h4>2. Se a etapa anterior não ajudar, tente ativar o suporte a .htaccess.</h4> Adicione/edite as configurações do servidor <code>{APACHE2_PATH1}</code > ou <code>{APACHE2_PATH2}</code> (ou <code>{APACHE2_PATH3}</code>):<br><br><pre>{APACHE2}</pre>\n Depois execute este comando em um terminal:<br><br><pre>{APACHE3}</pre><hr><h4>3. Se a etapa anterior não ajudou, tente adicionar o caminho RewriteBase.</h4>Abra um arquivo <code >{API_PATH}.htaccess</code> e substitua a seguinte linha:<br><br><pre>{APACHE4}</pre>To<br><br><pre>{APACHE5}</pre>< hr>Para obter mais informações, visite a diretriz <a href=\"{APACHE_LINK}\" target=\"_blank\">Configuração do servidor Apache para EspoCRM</a>.<br><br>",
+        "linux": "<br><br><h4>1. Habilite \"mod_rewrite\".</h4>Para habilitar <i>mod_rewrite</i>, execute estes comandos em um terminal:<br><br><pre> {APACHE1}</pre><hr><h4>2. Se a etapa anterior não ajudar, tente ativar o suporte a .htaccess.</h4> Adicione/edite as configurações do servidor <code>{APACHE2_PATH1}</code > ou <code>{APACHE2_PATH2}</code> (ou <code>{APACHE2_PATH3}</code>):<br><br><pre>{APACHE2}</pre>\n Depois execute este comando em um terminal:<br><br><pre>{APACHE3}</pre><hr><h4>3. Se a etapa anterior não ajudou, tente adicionar o caminho RewriteBase.</h4>Abra um arquivo <code >{API_PATH}.htaccess</code> e substitua a seguinte linha:<br><br><pre>{APACHE4}</pre>To<br><br><pre>{APACHE5}</pre>< hr>Para obter mais informações, visite a diretriz <a href=\"{APACHE_LINK}\" target=\"_blank\">Configuração do servidor Apache para CRM</a>.<br><br>",
         "windows": "<br><br> <h4>1. Encontre o arquivo httpd.conf.</h4>Geralmente ele pode ser encontrado em uma pasta chamada \"conf\", \"config\" ou algo parecido.< br><br><h4>2. Edite o arquivo httpd.conf.</h4> Dentro do arquivo httpd.conf, descomente a linha <code>{WINDOWS_APACHE1}</code> (remova o sinal de libra '#' de frente da linha).<br><br><h4>3. Verifique outros parâmetros.</h4>Verifique também se a linha <code>ClearModuleList</code> não está comentada e certifique-se de que a linha <code>AddModule mod_rewrite.c</code> não está comentado.\n"
       },
       "nginx": {
-        "linux": "<br> Adicione este código ao arquivo de configuração do servidor Nginx <code>{NGINX_PATH}</code> dentro da seção \"server\":<br><br><pre>{NGINX}</pre> <br> Para obter mais informações, visite a diretriz <a href=\"{NGINX_LINK}\" target=\"_blank\">configuração do servidor Nginx para EspoCRM</a>.<br><br>"
+        "linux": "<br> Adicione este código ao arquivo de configuração do servidor Nginx <code>{NGINX_PATH}</code> dentro da seção \"server\":<br><br><pre>{NGINX}</pre> <br> Para obter mais informações, visite a diretriz <a href=\"{NGINX_LINK}\" target=\"_blank\">configuração do servidor Nginx para CRM</a>.<br><br>"
       }
     }
   }

@@ -51,6 +51,11 @@ class OpportunityActivityBuckets
         // The ID/type reference selects at most one activity across all types.
         // A missing or unreadable pending step belongs only to noNextAction.
         $rank = $ranks ? Expr::coalesce(...[...$ranks, Expr::value(1)]) : Expr::value(1);
+        // Closed opportunities do not need a next step, but selected pending steps still count.
+        $query->where(Expr::or(
+            Expr::notEqual($rank, 1),
+            Expr::notIn(Expr::ifNull(Expr::column('status'), ''), ['Won', 'Lost']),
+        ));
         $map = [];
         foreach (self::KEYS as $index => $key) {
             array_push($map, $index, $key);

@@ -168,7 +168,7 @@
     "selectExtensionPackage": "Vælg udvidelsespakke",
     "extensionInstalled": "Udvidelse {name} {version} er blevet installeret",
     "installExtension": "Udvidelsen {name} {version} er klar til installation",
-    "newVersionIsAvailable": "Ny EspoCRM version {latestVersion} er tilgængelig",
+    "newVersionIsAvailable": "Ny CRM version {latestVersion} er tilgængelig",
     "uninstallConfirmation": "Er du sikker på du vil afinstallere denne udvidelse?",
     "cronIsNotConfigured": "Planlagte job kører ikke. Derfor virker indgående mails, notifikationer og påmindelser ikke. Følg venligst [instuctions] (https://www.espocrm.com/documentation/administration/server-configuration/#user-content-setup-a-crontab) for at konfigurere cron-job.",
     "newExtensionVersionIsAvailable": "Ny {extensionName} version {latestVersion} er tilgængelig"
@@ -176,7 +176,7 @@
   "descriptions": {
     "settings": "Applikationens systemindstillinger",
     "scheduledJob": "Opgaver som køres v.hj.a. et cronjob",
-    "upgrade": "Opgrader EspoCRM",
+    "upgrade": "Opgrader CRM",
     "clearCache": "Tøm backend cache",
     "rebuild": "Genopbyg backend og tøm cache",
     "users": "Administration af Brugere",
@@ -204,7 +204,7 @@
     "leadCapture": "API indgang for Web-to-lead",
     "attachments": "Alle vedhæftede filer er gemt i systemet",
     "templateManager": "Tilpas besked skabeloner",
-    "systemRequirements": "Systemkrav for EspoCRM",
+    "systemRequirements": "Systemkrav for CRM",
     "apiUsers": "Adskilte brugere til integration"
   },
   "options": {

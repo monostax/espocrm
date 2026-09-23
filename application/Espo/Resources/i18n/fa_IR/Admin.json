@@ -156,14 +156,14 @@
     "selectExtensionPackage": "بسته افزونه را انتخاب کنید",
     "extensionInstalled": "افزونه {نام} {ورژن} نصب شده است",
     "installExtension": "افزونه {نام} {ورژن} برای نصب آماده است",
-    "upgradeBackup": "توصیه می کنیم قبل از ارتقاء نسخه پشتیبان از فایل ها و داده های EspoCRM خود تهیه کنید.",
+    "upgradeBackup": "توصیه می کنیم قبل از ارتقاء نسخه پشتیبان از فایل ها و داده های CRM خود تهیه کنید.",
     "userHasNoEmailAddress": "کاربر هیچ آدرس ایمیل ندارد",
-    "newVersionIsAvailable": "جدید نسخه {آخرین نسخه}EspoCRM در دسترس است",
+    "newVersionIsAvailable": "جدید نسخه {آخرین نسخه}CRM در دسترس است",
     "uninstallConfirmation": "آیا مطمئن هستید که می خواهید افزونه را حذف کنید؟"
   },
   "descriptions": {
     "settings": "تنظیمات سیستم برنامه",
-    "upgrade": "ارتقا EspoCRM",
+    "upgrade": "ارتقا CRM",
     "clearCache": "پاک کردن تمام کش",
     "rebuild": "بازگرداندن backend و پاک کردن حافظه پنهان",
     "users": "مدیریت کاربران",

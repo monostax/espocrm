@@ -155,14 +155,14 @@
     "selectExtensionPackage": "Izaberi paket ekstenzije",
     "extensionInstalled": "Ekstenzija {name} {version} je instalirana.",
     "installExtension": "Ekstenzija {name} {version} je spremna za instalaciju.",
-    "upgradeBackup": "Preporučujemo pravljenje rezervne kopije EspoCRM datoteka i podataka pre nadogradnje.",
+    "upgradeBackup": "Preporučujemo pravljenje rezervne kopije CRM datoteka i podataka pre nadogradnje.",
     "thousandSeparatorEqualsDecimalMark": "Oznaka za hiljade ne može biti ista kao decimalna oznaka.",
     "userHasNoEmailAddress": "Korisnik nema e-mail adresu."
   },
   "descriptions": {
     "settings": "Sistemska podešavanja aplikacije.",
     "scheduledJob": "Poslovi koji se obavljaju putem cron-a.",
-    "upgrade": "Nadogradi EspoCRM.",
+    "upgrade": "Nadogradi CRM.",
     "clearCache": "Očistite sav backend keš.",
     "rebuild": "Obnovi backend i očisti keš.",
     "users": "Upravljanje korisnicima.",

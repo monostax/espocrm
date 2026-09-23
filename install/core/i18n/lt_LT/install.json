@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Sveiki prisijungę prie EspoCRM",
+    "Main page title": "Sveiki prisijungę prie CRM",
     "Start page title": "Licencijos sutartis",
     "Step1 page title": "Licencijos sutartis",
     "License Agreement": "Licencijos sutartis",
@@ -11,9 +11,9 @@
     "Step5 page title": "SMTP nustatymai išsiunčiamiems laiškams",
     "Errors page title": "Klaidos",
     "Finish page title": "Diegimas baigtas",
-    "Congratulation! Welcome to EspoCRM": "Sveikiname! EspoCRM buvo sėkmingai įdiegtas.",
+    "Congratulation! Welcome to EspoCRM": "Sveikiname! CRM buvo sėkmingai įdiegtas.",
     "More Information": "Jei reikia daugiau informacijos, apsilankykite mūsų {BLOG} svetainėje, Sekite mus {TWITTER}. <br> <br> Jei turite kokių nors pasiūlymų ar klausimų, kreipkitės į {FORUM}.",
-    "share": "Jei jums patiko EspoCRM, pasidalinkite tai su draugais. Praneškite jiems apie šį produktą.",
+    "share": "Jei jums patiko CRM, pasidalinkite tai su draugais. Praneškite jiems apie šį produktą.",
     "blog": "blogas",
     "twitter": "twitter ",
     "forum": "forumas",
@@ -22,7 +22,7 @@
     "Start": "Pradžia",
     "Back": "Atgal",
     "Next": "Kitas",
-    "Go to EspoCRM": "Eiti į EspoCRM",
+    "Go to EspoCRM": "Eiti į CRM",
     "Re-check": "Pakartotinai patikrinti",
     "Version": "Versija",
     "Test settings": "Patikrinti ryšį",
@@ -42,7 +42,7 @@
     "Fail": "Nepavyko",
     "is recommended": "rekomenduojama",
     "extension is missing": "trūksta plėtinio",
-    "headerTitle": "\"EspoCRM\" diegimas",
+    "headerTitle": "\"CRM\" diegimas",
     "Crontab setup instructions": "Nevykdant suplanuotų užduočių neveiks gaunamieji el. laiškai, pranešimai ir priminimai. Čia galite perskaityti {SETUP_INSTRUKCIJOS}.",
     "Setup instructions": "sąrankos instrukcijos",
     "requiredMysqlVersion": "\"MySQL\" versija",
@@ -85,8 +85,8 @@
     "1049": "Nežinoma duomenų bazė",
     "2005": "Nežinomas MySQL serverio kompiuteris",
     "Some errors occurred!": "Įvyko kelios klaidos!",
-    "phpVersion": "EspoCRM nepalaiko jūsų PHP versijos, bent jau atnaujinkite iki PHP {minVersion}",
-    "requiredMysqlVersion": "Jūsų \"MySQL\" versija nepalaikoma EspoCRM, prašome atnaujinti bent iki \"MySQL\" (minVersion)",
+    "phpVersion": "CRM nepalaiko jūsų PHP versijos, bent jau atnaujinkite iki PHP {minVersion}",
+    "requiredMysqlVersion": "Jūsų \"MySQL\" versija nepalaikoma CRM, prašome atnaujinti bent iki \"MySQL\" (minVersion)",
     "The PHP extension was not found...": "PHP klaida: plėtinys <b> {extName} </b> nerastas.",
     "All Settings correct": "Visi nustatymai yra teisingi",
     "Failed to connect to database": "Nepavyko prisijungti prie duomenų bazės",
@@ -107,8 +107,8 @@
     "Thousand Separator and Decimal Mark equal": "Tūkstančių atskyriklis ir dešimtainis ženklas negali būti vienodi",
     "extension": "Trūksta {0} plėtinio",
     "option": "Rekomenduojama vertė yra {0} ",
-    "mysqlSettingError": "EspoCRM reikalauja, kad MySQL nustatymas \"{NAME}\" būtų nustatytas į \"{VALUE}\"",
-    "requiredMariadbVersion": "EspoCRM nepalaiko jūsų MariaDB versijos, atnaujinkite ją bent iki MariaDB {minVersion}.",
+    "mysqlSettingError": "CRM reikalauja, kad MySQL nustatymas \"{NAME}\" būtų nustatytas į \"{VALUE}\"",
+    "requiredMariadbVersion": "CRM nepalaiko jūsų MariaDB versijos, atnaujinkite ją bent iki MariaDB {minVersion}.",
     "Ajax failed": "Įvyko netikėta klaida",
     "Bad init Permission": "Atsisakyta suteikti leidimą \"{*}\" katalogui. Prašome nustatyti 775 \"{*}\" arba tiesiog įvykdyti šią komandą terminale <pre><b>{C}</b></pre> Operacija neleidžiama? Išbandykite šią: {CSU}",
     "permissionInstruction": "<br>Paleiskite šią komandą terminale:<pre><b>\"{C}\"</b></pre>",
@@ -127,17 +127,17 @@
   "options": {
     "modRewriteTitle": {
       "apache": "<h3>API klaida: </h3><br>Darykite tik būtinus veiksmus. Po kiekvieno žingsnio patikrinkite, ar problema išspręsta.",
-      "nginx": "<h3>API klaida: </h3>: EspoCRM API nepasiekiama </h3>.",
+      "nginx": "<h3>API klaida: </h3>: CRM API nepasiekiama </h3>.",
       "microsoft-iis": "<h3>API klaida: </h3><br>Galima problema: išjungtas \"URL Rewrite\". Patikrinkite ir įjunkite \"URL Rewrite\" modulį IIS serveryje.",
       "default": "<h3>API klaida: </h3><br> Galimos problemos: išjungtas perrašymo modulis. Patikrinkite ir įjunkite Rewrite modulį savo serveryje (pvz., mod_rewrite \"Apache\") ir .htaccess palaikymą."
     },
     "modRewriteInstruction": {
       "apache": {
-        "linux": "<br><br><h4>1. Įjunkite \"mod_rewrite\".</h4>Kad įjungtumėte <i>mod_rewrite</i>, terminale paleiskite šias komandas:<br><br><pre>{APACHE1}</pre><hr><h4>2. Jei ankstesnis žingsnis nepadėjo, pabandykite įjungti .htaccess palaikymą.</h4> Pridėkite / redaguokite serverio konfigūracijos nustatymus <code>{{APACHE2_PATH1}</code> arba <code>{APACHE2_PATH2}</code> (arba <code>{APACHE2_PATH3}</code>):<br><br><pre>{APACHE2}</pre>\n Po to terminale paleiskite šią komandą:<br><br><pre>{APACHE3}</pre><hr><h4>3. Jei ankstesnis žingsnis nepadėjo, pabandykite pridėti RewriteBase kelią.</h4>Atidarykite failą <code>{{API_PATH}.htaccess</code> ir pakeiskite šią eilutę:<br><br><pre>{APACHE4}</pre>Į<br><pre>{APACHE5}</pre><hr>Daugiau informacijos rasite gairėse <a href=\"{APACHE_LINK}\" target=\"_blank\">\"EspoCRM\" \"Apache\" serverio konfigūracija</a>.<br><br>Daugiau informacijos rasite gairėse <a href=\"{APACHE_LINK}\" target=\"_blank\">\"EspoCRM\" \"Apache\" serverio konfigūracija</a>.",
+        "linux": "<br><br><h4>1. Įjunkite \"mod_rewrite\".</h4>Kad įjungtumėte <i>mod_rewrite</i>, terminale paleiskite šias komandas:<br><br><pre>{APACHE1}</pre><hr><h4>2. Jei ankstesnis žingsnis nepadėjo, pabandykite įjungti .htaccess palaikymą.</h4> Pridėkite / redaguokite serverio konfigūracijos nustatymus <code>{{APACHE2_PATH1}</code> arba <code>{APACHE2_PATH2}</code> (arba <code>{APACHE2_PATH3}</code>):<br><br><pre>{APACHE2}</pre>\n Po to terminale paleiskite šią komandą:<br><br><pre>{APACHE3}</pre><hr><h4>3. Jei ankstesnis žingsnis nepadėjo, pabandykite pridėti RewriteBase kelią.</h4>Atidarykite failą <code>{{API_PATH}.htaccess</code> ir pakeiskite šią eilutę:<br><br><pre>{APACHE4}</pre>Į<br><pre>{APACHE5}</pre><hr>Daugiau informacijos rasite gairėse <a href=\"{APACHE_LINK}\" target=\"_blank\">\"CRM\" \"Apache\" serverio konfigūracija</a>.<br><br>Daugiau informacijos rasite gairėse <a href=\"{APACHE_LINK}\" target=\"_blank\">\"CRM\" \"Apache\" serverio konfigūracija</a>.",
         "windows": "<br><br> <h4>1. Raskite httpd.conf failą.</h4>Įprastai jį rasite aplanke, kuris vadinasi \"conf\", \"config\" ar panašiai.<br><br><h4>2. Redaguokite httpd.conf failą.</h4> httpd.conf failo viduje iškomentuokite eilutę <code>{WINDOWS_APACHE1}</code> (pašalinkite prieš eilutę esantį ženklą '#').<br><br><h4>3. Patikrinkite kitus parametrus.</h4>Taip pat patikrinkite, ar eilutė <code>ClearModuleList</code> nekomentuojama, ir įsitikinkite, kad eilutė <code>AddModule mod_rewrite.c</code> nekomentuojama.\n"
       },
       "nginx": {
-        "linux": "<br> Į savo \"Nginx\" serverio konfigūracijos failą <code>{NGINX_PATH}</code> skiltyje \"serveris\" įtraukite šį kodą:<br><br><pre>{NGINX}</pre> <br> Daugiau informacijos rasite gairėse <a href=\"{NGINX_LINK}\" target=\"_blank\">\"Nginx\" serverio konfigūracija EspoCRM</a>.<br><br>"
+        "linux": "<br> Į savo \"Nginx\" serverio konfigūracijos failą <code>{NGINX_PATH}</code> skiltyje \"serveris\" įtraukite šį kodą:<br><br><pre>{NGINX}</pre> <br> Daugiau informacijos rasite gairėse <a href=\"{NGINX_LINK}\" target=\"_blank\">\"Nginx\" serverio konfigūracija CRM</a>.<br><br>"
       }
     }
   }

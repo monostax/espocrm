@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Velkommen til EspoCRM",
+    "Main page title": "Velkommen til CRM",
     "Start page title": "Lisensavtale",
     "Step1 page title": "Lisensavtale",
     "License Agreement": "Lisensavtale",
@@ -11,16 +11,16 @@
     "Step5 page title": "SMTP-innstillinger for utgående epost",
     "Errors page title": "Feilmeldinger",
     "Finish page title": "Installasjonen er fullført",
-    "Congratulation! Welcome to EspoCRM": "Gratulerer! EspoCRM har blitt installert uten problemer.",
+    "Congratulation! Welcome to EspoCRM": "Gratulerer! CRM har blitt installert uten problemer.",
     "More Information": "Besøk vår {BLOG} eller følg oss på {TWITTER} for mer informasjon.<br><br>Hvis du har forslag eller innspill kan du besøke vårt {FORUM}.",
-    "share": "Hvis du liker EspoCRM oppfordrer vi deg til å fortelle andre om applikasjonen.",
+    "share": "Hvis du liker CRM oppfordrer vi deg til å fortelle andre om applikasjonen.",
     "blog": "blogg",
     "Installation Guide": "Installasjonsveiledning",
     "Locale": "Språk og nasjonalitet",
     "Outbound Email Configuration": "Innstillinger for utgående epost",
     "Back": "Tilbake",
     "Next": "Neste",
-    "Go to EspoCRM": "Gå til EspoCRM",
+    "Go to EspoCRM": "Gå til CRM",
     "Re-check": "Sjekk på nytt",
     "Version": "Versjon",
     "Test settings": "Test tilkobling",
@@ -39,7 +39,7 @@
     "Fail": "Feil",
     "is recommended": "er anbefalt",
     "extension is missing": "utvidelse mangler",
-    "headerTitle": "EspoCRM Installasjon",
+    "headerTitle": "CRM Installasjon",
     "Crontab setup instructions": "Uten kjøring av planlagte jobber vil innkommende e-poster, varsler og påminnelser ikke fungere. Her kan du lese {SETUP_INSTRUCTIONS}.",
     "Setup instructions": "oppsettinstruksjoner",
     "requiredMysqlVersion": "MySQL-versjon",
@@ -81,8 +81,8 @@
     "1049": "Ukjent database",
     "2005": "Ukjent MySQL-tjener",
     "Some errors occurred!": "Det oppstod noen feil!",
-    "phpVersion": "Din PHP-versjon er ikke støtte av EspoCRM, Vennligst oppgrader til {minVersion} eller nyere.",
-    "requiredMysqlVersion": "Din MySQL-versjon er ikke støttet av EspoCRM. Vennligst oppgrader til {minVersion} eller nyere.",
+    "phpVersion": "Din PHP-versjon er ikke støtte av CRM, Vennligst oppgrader til {minVersion} eller nyere.",
+    "requiredMysqlVersion": "Din MySQL-versjon er ikke støttet av CRM. Vennligst oppgrader til {minVersion} eller nyere.",
     "The PHP extension was not found...": "PHP-feil: Utvidelsen <b>{extName}</b> ble ikke funnet.",
     "All Settings correct": "Alle innstillingene er riktig",
     "Failed to connect to database": "Klarte ikke å koble til databasen",
@@ -103,8 +103,8 @@
     "Thousand Separator and Decimal Mark equal": "Tusentallsdeler og desimaltegn kan ikke være det samme",
     "extension": "{0} utvidelser mangler",
     "option": "Anbefalt verdi er {0}",
-    "mysqlSettingError": "EspoCRM krever at MySQL-innstillingen \"{NAME}\" endres til {VALUE}",
-    "requiredMariadbVersion": "Din MariaDB-versjon er ikke støttet av EspoCRM. Vennligst oppgrader til {minVersion} eller nyere.",
+    "mysqlSettingError": "CRM krever at MySQL-innstillingen \"{NAME}\" endres til {VALUE}",
+    "requiredMariadbVersion": "Din MariaDB-versjon er ikke støttet av CRM. Vennligst oppgrader til {minVersion} eller nyere.",
     "Ajax failed": "Det oppstod en uventet feil",
     "Bad init Permission": "Tillatelse nektet for katalogen \"{*}\". Vennligst sett 775 for \"{*}\" eller kjør bare denne kommandoen i terminalen <pre><b>{C}</b></pre> Er operasjonen ikke tillatt? Prøv denne: {CSU}",
     "permissionInstruction": "<br>Kjør denne kommandoen i terminalen:<pre><b>\"{C}\"</b></pre>",
@@ -122,18 +122,18 @@
   },
   "options": {
     "modRewriteTitle": {
-      "apache": "<h3>API-feil: EspoCRM API er utilgjengelig.</h3><br>Utfør bare nødvendige trinn. Etter hvert trinn, sjekk om problemet er løst.",
-      "nginx": "<h3>API-feil: EspoCRM API er utilgjengelig.</h3>",
-      "microsoft-iis": "<h3>API-feil: EspoCRM API er utilgjengelig.</h3><br> Mulig problem: \"URL Rewrite\" er deaktivert. Vennligst sjekk og aktiver \"URL Rewrite\"-modulen i IIS-serveren",
-      "default": "<h3>API-feil: EspoCRM API er utilgjengelig.</h3><br> Mulige problemer: Rewrite-modulen er deaktivert. Vennligst sjekk og aktiver Rewrite-modulen på serveren din (f.eks. mod_rewrite i Apache) og .htaccess-støtte."
+      "apache": "<h3>API-feil: CRM API er utilgjengelig.</h3><br>Utfør bare nødvendige trinn. Etter hvert trinn, sjekk om problemet er løst.",
+      "nginx": "<h3>API-feil: CRM API er utilgjengelig.</h3>",
+      "microsoft-iis": "<h3>API-feil: CRM API er utilgjengelig.</h3><br> Mulig problem: \"URL Rewrite\" er deaktivert. Vennligst sjekk og aktiver \"URL Rewrite\"-modulen i IIS-serveren",
+      "default": "<h3>API-feil: CRM API er utilgjengelig.</h3><br> Mulige problemer: Rewrite-modulen er deaktivert. Vennligst sjekk og aktiver Rewrite-modulen på serveren din (f.eks. mod_rewrite i Apache) og .htaccess-støtte."
     },
     "modRewriteInstruction": {
       "apache": {
-        "linux": "<br><br><h4>1. Aktiver \"mod_rewrite\".</h4>For å aktivere <i>mod_rewrite</i>, kjør disse kommandoene i en terminal:<br><br><pre>{APACHE1}</pre><hr><h4>2. Hvis forrige trinn ikke hjalp, prøv å aktivere .htaccess-støtte.</h4> Legg til/rediger serverkonfigurasjonsinnstillingene <code>{APACHE2_PATH1}</code> eller <code>{APACHE2_PATH2}</code> (eller <code>{APACHE2_PATH3}</code>):<br><br><pre>{APACHE2}</pre>\n Kjør deretter denne kommandoen i en terminal:<br><br><pre>{APACHE3}</pre><hr><h4>3. Hvis forrige trinn ikke hjalp, prøv å legge til RewriteBase-stien.</h4>Åpne en fil <code>{API_PATH}.htaccess</code> og erstatt følgende linje:<br><br><pre>{APACHE4}</pre>Med<br><br><pre>{APACHE5}</pre><hr>For mer informasjon, se veiledningen <a href=\"{APACHE_LINK}\" target=\"_blank\">Apache-serverkonfigurasjon for EspoCRM</a>.<br><br>",
+        "linux": "<br><br><h4>1. Aktiver \"mod_rewrite\".</h4>For å aktivere <i>mod_rewrite</i>, kjør disse kommandoene i en terminal:<br><br><pre>{APACHE1}</pre><hr><h4>2. Hvis forrige trinn ikke hjalp, prøv å aktivere .htaccess-støtte.</h4> Legg til/rediger serverkonfigurasjonsinnstillingene <code>{APACHE2_PATH1}</code> eller <code>{APACHE2_PATH2}</code> (eller <code>{APACHE2_PATH3}</code>):<br><br><pre>{APACHE2}</pre>\n Kjør deretter denne kommandoen i en terminal:<br><br><pre>{APACHE3}</pre><hr><h4>3. Hvis forrige trinn ikke hjalp, prøv å legge til RewriteBase-stien.</h4>Åpne en fil <code>{API_PATH}.htaccess</code> og erstatt følgende linje:<br><br><pre>{APACHE4}</pre>Med<br><br><pre>{APACHE5}</pre><hr>For mer informasjon, se veiledningen <a href=\"{APACHE_LINK}\" target=\"_blank\">Apache-serverkonfigurasjon for CRM</a>.<br><br>",
         "windows": "<br><br> <h4>1. Finn httpd.conf-filen.</h4>Vanligvis kan den finnes i en mappe som heter \"conf\", \"config\" eller noe lignende.<br><br><h4>2. Rediger httpd.conf-filen.</h4> Inne i httpd.conf-filen, fjern kommentering av linjen <code>{WINDOWS_APACHE1}</code> (fjern grindtegnet '#' foran linjen).<br><br><h4>3. Sjekk andre parametere.</h4>Sjekk også om linjen <code>ClearModuleList</code> ikke er kommentert ut, og sørg for at linjen <code>AddModule mod_rewrite.c</code> ikke er kommentert ut.\n"
       },
       "nginx": {
-        "linux": "<br> Legg til denne koden i Nginx-serverkonfigurasjonsfilen <code>{NGINX_PATH}</code> i \"server\"-seksjonen:<br><br><pre>{NGINX}</pre> <br> For mer informasjon, se veiledningen <a href=\"{NGINX_LINK}\" target=\"_blank\">Nginx-serverkonfigurasjon for EspoCRM</a>.<br><br>"
+        "linux": "<br> Legg til denne koden i Nginx-serverkonfigurasjonsfilen <code>{NGINX_PATH}</code> i \"server\"-seksjonen:<br><br><pre>{NGINX}</pre> <br> For mer informasjon, se veiledningen <a href=\"{NGINX_LINK}\" target=\"_blank\">Nginx-serverkonfigurasjon for CRM</a>.<br><br>"
       }
     }
   }

@@ -145,7 +145,7 @@
     "selectExtensionPackage": "Selectează pachetul de extensii ",
     "extensionInstalled": " Extenisa {name} {version} a fost instalată. ",
     "installExtension": "Extenisa {name} {version} este gata pentru instalare.",
-    "upgradeBackup": "Vă rugăm să faceți o copie de rezervă a EspoCRM înainte de a face actualizarea.",
+    "upgradeBackup": "Vă rugăm să faceți o copie de rezervă a CRM înainte de a face actualizarea.",
     "thousandSeparatorEqualsDecimalMark": "Separatorul de mii nu poate fi același cu separatorul de zecimale.",
     "userHasNoEmailAddress": "Utilizatorul nu are adresă de email."
   },

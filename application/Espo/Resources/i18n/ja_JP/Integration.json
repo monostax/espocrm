@@ -17,7 +17,7 @@
     "GoogleMaps": "Googleマップ"
   },
   "help": {
-    "Google": " **Google Developers Console から OAuth 2.0 認証情報を取得します** [Google Developers Console](https://console.developers.google.com/project) にアクセスして、Google と EspoCRM アプリケーションの両方に知られているクライアント ID やクライアント シークレットなどの OAuth 2.0 認証情報を取得します",
+    "Google": " **Google Developers Console から OAuth 2.0 認証情報を取得します** [Google Developers Console](https://console.developers.google.com/project) にアクセスして、Google と CRM アプリケーションの両方に知られているクライアント ID やクライアント シークレットなどの OAuth 2.0 認証情報を取得します",
     "GoogleMaps": " API キーは [こちら](https://developers.google.com/maps/documentation/javascript/get-api-key) から取得します",
     "GoogleReCaptcha": " [Google](https://www.google.com/recaptcha/)からサイトキーとシークレットキーを取得します"
   }

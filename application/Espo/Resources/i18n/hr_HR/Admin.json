@@ -172,10 +172,10 @@
     "selectExtensionPackage": "Izaberi paket ekstenzije",
     "extensionInstalled": "Ekstenzija {name} {version} je instalirana.",
     "installExtension": "Ekstenzija {name} {version} je spremna za instalaciju.",
-    "upgradeBackup": "Preporučamo izradu rezervne kopije EspoCRM datoteka i podataka prije nadogradnje.",
+    "upgradeBackup": "Preporučamo izradu rezervne kopije CRM datoteka i podataka prije nadogradnje.",
     "thousandSeparatorEqualsDecimalMark": "Oznaka za tisuće ne može biti ista kao decimalna oznaka.",
     "userHasNoEmailAddress": "Korisnik nema e-mail adresu.",
-    "newVersionIsAvailable": "Nova EspoCRM verzija {latestVersion} je dostupna.",
+    "newVersionIsAvailable": "Nova CRM verzija {latestVersion} je dostupna.",
     "uninstallConfirmation": "Jeste li sigurni u deinstalaciju ekstenzije?",
     "cronIsNotConfigured": "Zakazane radnje se ne izvršavaju. Stoga dolazni mailovi, notifikacije i podsjetnici ne rade. Molimo slijedite [instructions](https://www.espocrm.com/documentation/administration/server-configuration/#user-content-setup-a-crontab) za postavljanje cron radnji.",
     "newExtensionVersionIsAvailable": "nova verzija {extensionName} {latestVersion} je dostupna."
@@ -183,7 +183,7 @@
   "descriptions": {
     "settings": "Sistemska podešavanja aplikacije.",
     "scheduledJob": "Poslovi koji se obavljaju putem cron-a.",
-    "upgrade": "Nadogradi EspoCRM.",
+    "upgrade": "Nadogradi CRM.",
     "clearCache": "Očistite sav backend cache.",
     "rebuild": "Obnovi backend i očisti cache.",
     "users": "Upravljanje korisnicima.",

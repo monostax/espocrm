@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Bienvenido a EspoCRM(México)",
+    "Main page title": "Bienvenido a CRM(México)",
     "Start page title": "Contrato de licencia",
     "Step1 page title": "Contrato de licencia",
     "License Agreement": "Contrato de licencia",
@@ -11,9 +11,9 @@
     "Step5 page title": "Configuración SMTP para los correos salientes",
     "Errors page title": "Errores",
     "Finish page title": "La instalación ha finalizado",
-    "Congratulation! Welcome to EspoCRM": "¡Felicitaciones! EspoCRM(México) se ha instalado correctamente.",
+    "Congratulation! Welcome to EspoCRM": "¡Felicitaciones! CRM(México) se ha instalado correctamente.",
     "More Information": "Para más información, por favor visite nuestro {BLOG} o síganos en {TWITTER}.<br><br>Si tiene alguna pregunta o sugerencia, por favor hágala en el {FORUM}. ",
-    "share": "Si te gusta EspoCRM, coméntalo con tus amigos, para que conozcan los beneficios que les ofrece este sistema.",
+    "share": "Si te gusta CRM, coméntalo con tus amigos, para que conozcan los beneficios que les ofrece este sistema.",
     "forum": "foro",
     "Installation Guide": "Guía de instalación",
     "Locale": "Localización",
@@ -21,7 +21,7 @@
     "Start": "Comenzar",
     "Back": "Anterior",
     "Next": "Siguiente",
-    "Go to EspoCRM": "Ir a EspoCRM(México)",
+    "Go to EspoCRM": "Ir a CRM(México)",
     "Re-check": "Revisar otra vez",
     "Test settings": "Probar conexión",
     "Database Settings Description": "Ingresa la información de conexión a tu Base de Datos MySQL (nombre del host, usuario y contraseña). Puedes especificar el puerto del servidor por ejemplo localhost:3306.",
@@ -78,8 +78,8 @@
     "2005": "Servidor MySQL Desconocido",
     "Bad init Permission": "Permiso denegado para directorio \"{*}\". Por favor establecer 775 para \"{*}\" o solo ejecute este comando en la terminal <pre><b>{C}</b></pre>\n\t¿Operacion no permitida? Intenta esta otra: {CSU}",
     "Some errors occurred!": "¡Hubo algún error!",
-    "phpVersion": "Su versión de PHP no está soportada por EspoCRM,por favor actualizar  a PHP{minVersion} por lo menos",
-    "requiredMysqlVersion": "Su versión de MySQL no está soportada por EspoCRM,por favor actualizar  a MySQL{minVersion} por lo menos",
+    "phpVersion": "Su versión de PHP no está soportada por CRM,por favor actualizar  a PHP{minVersion} por lo menos",
+    "requiredMysqlVersion": "Su versión de MySQL no está soportada por CRM,por favor actualizar  a MySQL{minVersion} por lo menos",
     "The PHP extension was not found...": "PHP Error: Extensión <b>{extName}</b> no encontrada.",
     "All Settings correct": "Todas las configuraciones son correctas",
     "Failed to connect to database": "Fallo al conectar a la base de datos",
@@ -102,24 +102,24 @@
     "Thousand Separator and Decimal Mark equal": "El separador de miles y el separador decimal no pueden ser iguales",
     "extension": "{0} la extensión se ha perdido",
     "option": "El valor recomendado es {0}",
-    "mysqlSettingError": "EspoCRM requiere que la configuración de MySQL \"{NAME}\" sea establecido a {VALUE}",
+    "mysqlSettingError": "CRM requiere que la configuración de MySQL \"{NAME}\" sea establecido a {VALUE}",
     "Ajax failed": "Ha ocurrido un error inesperado"
   },
   "options": {
     "modRewriteInstruction": {
       "apache": {
         "windows": "<br> <pre>1. Encontrar el archivo httpd.conf (generalmente lo encontrará en una carpeta llamada conf, config o o algo similar a esas dis líneas)<br>\n2. Dentro del archivo httpd.conf descomentamos la línea <code>{WINDOWS_APACHE1}</code> (eliminar el '#' que está al comienzo de la línea)<br>\n3. También encuentre que la línea ClearModuleList no esté comentada después busque y asegurese que la línea  AddModule mod_rewrite.c no está comentada tampoco.\n</pre>",
-        "linux": "<br><br>1. Permita \"mod_rewrite\". Para hacerlo, ejecute estos comandos en una sesión de Terminal:<pre>{APACHE1}</pre><br>2. Permita soporte .htaccess  Agregue/edite la configuración del servidor (<code>{APACHE2_PATH1}</code>, <code>{APACHE2_PATH2}</code>, <code>{APACHE2_PATH3}</code>):<pre>{APACHE2}</pre>\n Después de correr esto en una sesión de Terminal:<pre>{APACHE3}</pre><br>3. Trate de agregar la ruta RewriteBase, abra el archivo {API_PATH}.htaccess y reemplace la línea:<pre>{APACHE4}</pre> por <pre>{APACHE5}</pre><br> Para más información, vea la guía <a href=\"{APACHE_LINK}\" target=\"_blank\">Apache server configuration for EspoCRM (en inglés)</a>.<br><br>"
+        "linux": "<br><br>1. Permita \"mod_rewrite\". Para hacerlo, ejecute estos comandos en una sesión de Terminal:<pre>{APACHE1}</pre><br>2. Permita soporte .htaccess  Agregue/edite la configuración del servidor (<code>{APACHE2_PATH1}</code>, <code>{APACHE2_PATH2}</code>, <code>{APACHE2_PATH3}</code>):<pre>{APACHE2}</pre>\n Después de correr esto en una sesión de Terminal:<pre>{APACHE3}</pre><br>3. Trate de agregar la ruta RewriteBase, abra el archivo {API_PATH}.htaccess y reemplace la línea:<pre>{APACHE4}</pre> por <pre>{APACHE5}</pre><br> Para más información, vea la guía <a href=\"{APACHE_LINK}\" target=\"_blank\">Apache server configuration for CRM (en inglés)</a>.<br><br>"
       },
       "nginx": {
-        "linux": "<br> Añada este código al archivo de configuración de su servidor Nginx <code>{NGINX_PATH}</code> en la sección \"server\": \n<pre>\n{NGINX}\n</pre> <br> Para obtener más información, vea la guía <a href=\"{NGINX_LINK}\" target=\"_blank\">Nginx server configuration for EspoCRM (en inglés)</a>.<br><br>"
+        "linux": "<br> Añada este código al archivo de configuración de su servidor Nginx <code>{NGINX_PATH}</code> en la sección \"server\": \n<pre>\n{NGINX}\n</pre> <br> Para obtener más información, vea la guía <a href=\"{NGINX_LINK}\" target=\"_blank\">Nginx server configuration for CRM (en inglés)</a>.<br><br>"
       }
     },
     "modRewriteTitle": {
-      "apache": "<h3>API Error: EspoCRM API is unavailable.</h3><br>Avance paso por paso.  Después de cada paso, verifique si resolvió su problema. ",
-      "nginx": "<h3>API Error: EspoCRM API is unavailable.</h3>",
-      "microsoft-iis": "<h3>API Error: EspoCRM API is unavailable.</h3><br> Posible problema: \"URL Rewrite\" deshabilitado. Verifique y active el módulo \"URL Rewrite\" en su servidor IIS",
-      "default": "<h3>API Error: EspoCRM API is unavailable.</h3><br> Posible problema: Módulo Rewrite deshabilitado.  Verifique y Active el Módulo Rewrite en su servidor (e.g. mod_rewrite en Apache) y el soporte .htaccess. "
+      "apache": "<h3>API Error: CRM API is unavailable.</h3><br>Avance paso por paso.  Después de cada paso, verifique si resolvió su problema. ",
+      "nginx": "<h3>API Error: CRM API is unavailable.</h3>",
+      "microsoft-iis": "<h3>API Error: CRM API is unavailable.</h3><br> Posible problema: \"URL Rewrite\" deshabilitado. Verifique y active el módulo \"URL Rewrite\" en su servidor IIS",
+      "default": "<h3>API Error: CRM API is unavailable.</h3><br> Posible problema: Módulo Rewrite deshabilitado.  Verifique y Active el Módulo Rewrite en su servidor (e.g. mod_rewrite en Apache) y el soporte .htaccess. "
     }
   },
   "systemRequirements": {

@@ -116,7 +116,7 @@
     "verifyTotpCode": "Skann QR-koden med mobilens autentiseringsapp. Hvis du har problemer med å skanne, kan du skrive inn hemmeligheten manuelt. Etterpå vil du se en 6-sifret kode i applikasjonen. Skriv inn denne koden i feltet nedenfor.",
     "generateAndSendNewPassword": "Et nytt passord vil bli generert og sendt til brukerens e-postadresse.",
     "security2FaResetConfirmation": "Er du sikker på at du vil tilbakestille de gjeldende 2FA-innstillingene?",
-    "ldapUserInEspoNotFound": "Brukeren finnes ikke i EspoCRM. Kontakt administratoren din for å opprette brukeren.",
+    "ldapUserInEspoNotFound": "Brukeren finnes ikke i CRM. Kontakt administratoren din for å opprette brukeren.",
     "passwordRecoverySentIfMatched": "Forutsatt at de innskrevne dataene samsvarte med en brukerkonto.",
     "auth2FARequiredHeader": "Tofaktorautentisering kreves",
     "auth2FARequired": "Du må sette opp 2 faktor autentisering. Bruk en autentikator på din mobil (for eks. Google Authenticatio).",

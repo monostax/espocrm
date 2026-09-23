@@ -121,7 +121,7 @@
     "verifyTotpCode": "モバイル認証アプリでQRコードをスキャンしてくださいスキャンがうまくいかない場合は、手動でシークレットを入力してくださいその後、アプリに6桁のコードが表示されますので、下の欄に入力してください",
     "generateAndSendNewPassword": "新しいパスワードが生成され、ユーザーのメールアドレスに送信されます",
     "security2FaResetConfirmation": "現在の 2FA 設定をリセットしてもよろしいですか?",
-    "ldapUserInEspoNotFound": "EspoCRMにユーザーが見つかりません管理者に連絡してユーザーを作成してください",
+    "ldapUserInEspoNotFound": "CRMにユーザーが見つかりません管理者に連絡してユーザーを作成してください",
     "passwordRecoverySentIfMatched": "入力されたデータがいずれかのユーザー アカウントと一致すると仮定します",
     "auth2FARequiredHeader": " 2要素認証が必要です",
     "auth2FARequired": "2要素認証を設定する必要があります携帯電話の認証アプリ（例：Google Authenticator）をご利用ください",

@@ -117,7 +117,7 @@
     "selectExtensionPackage": "Pilih paket ekstensi",
     "extensionInstalled": "Ekstensi {name} {version} telah diinstal.",
     "installExtension": "Ekstensi {name} {version} siap untuk instalasi.",
-    "upgradeBackup": "Kami menyarankan untuk membuat cadangan berkas dan data EspoCRM Anda sebelum upgrade.",
+    "upgradeBackup": "Kami menyarankan untuk membuat cadangan berkas dan data CRM Anda sebelum upgrade.",
     "thousandSeparatorEqualsDecimalMark": "Pemisah ribuan, tidak bisa sama dengan tanda desimal",
     "userHasNoEmailAddress": "Pengguna tidak punya alamat email."
   },

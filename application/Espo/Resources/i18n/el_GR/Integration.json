@@ -14,6 +14,6 @@
     "GoogleMaps": "Χάρτες Google"
   },
   "help": {
-    "Google": "**Αποκτήστε τα OAuth 2.0 credentials απο την Developers Console της Google.**\n\nΕπισκεφθείτε την [Google Developers Console](https://console.developers.google.com/project) για να προμηθευτείτε τα OAuth 2.0 credentials , όπως το Client Secret και το Client ID που είναι γνωστά και στην Google και στην αφαρμογη του EspoCRM."
+    "Google": "**Αποκτήστε τα OAuth 2.0 credentials απο την Developers Console της Google.**\n\nΕπισκεφθείτε την [Google Developers Console](https://console.developers.google.com/project) για να προμηθευτείτε τα OAuth 2.0 credentials , όπως το Client Secret και το Client ID που είναι γνωστά και στην Google και στην αφαρμογη του CRM."
   }
 }

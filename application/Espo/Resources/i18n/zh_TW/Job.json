@@ -9,7 +9,7 @@
     "scheduledJob": "排定的工作",
     "data": "資料",
     "method": "排定作業名稱",
-    "scheduledJobJob": "當有新的EspoCRM版本時顯示通知",
+    "scheduledJobJob": "當有新的CRM版本時顯示通知",
     "executedAt": "開始於",
     "startedAt": "目標類型",
     "targetType": "目標編號",

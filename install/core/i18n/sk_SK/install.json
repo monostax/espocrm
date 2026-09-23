@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Vitajte v EspoCRM",
+    "Main page title": "Vitajte v CRM",
     "Start page title": "Licenčné podmienky",
     "Step1 page title": "Licenčné podmienky",
     "License Agreement": "Licenčné podmienky",
@@ -11,9 +11,9 @@
     "Step5 page title": "SMTP nastavenia pre odchádzajúcu poštu",
     "Errors page title": "Chyby",
     "Finish page title": "Inštalácia je ukončená",
-    "Congratulation! Welcome to EspoCRM": "Gratulujeme! EspoCRM bolo úspešne nainštalované.",
+    "Congratulation! Welcome to EspoCRM": "Gratulujeme! CRM bolo úspešne nainštalované.",
     "More Information": "Pre viac informácií, prosím navštívte náš  {BLOG}, sledujde nás na {TWITTER}.<br><br>Ak máte nejaké návrhy alebo otázky, pýtajte sa na {FORUM}.",
-    "share": "Ak sa Vám EspoCRM páči, povedzte to priateľom. Dajte im vediet o tomto produkte.",
+    "share": "Ak sa Vám CRM páči, povedzte to priateľom. Dajte im vediet o tomto produkte.",
     "forum": "fórum",
     "Installation Guide": "Inštalačný návod",
     "Locale": "Národné nastavenia",
@@ -21,7 +21,7 @@
     "Start": "Štart",
     "Back": "Späť",
     "Next": "Ďalej",
-    "Go to EspoCRM": "Choď na EspoCRM",
+    "Go to EspoCRM": "Choď na CRM",
     "Re-check": "Zopakovať kontrolu",
     "Version": "Verzia",
     "Test settings": "Test spojenia",
@@ -66,8 +66,8 @@
     "1049": "Neznáma databáza",
     "2005": "Neznámy MySQL server",
     "Some errors occurred!": "Vyskytli sa nejaké chyby!",
-    "phpVersion": "Vaša verzia PHP nie je podporovaná EspoCRM, prosím nainštalujte PHP minimálne verziu {minVersion} ",
-    "requiredMysqlVersion": "Vaša verzia MySQL nie je podporovaná EspoCRM, prosím nainštalujte minimálne verziu {minVersion}",
+    "phpVersion": "Vaša verzia PHP nie je podporovaná CRM, prosím nainštalujte PHP minimálne verziu {minVersion} ",
+    "requiredMysqlVersion": "Vaša verzia MySQL nie je podporovaná CRM, prosím nainštalujte minimálne verziu {minVersion}",
     "The PHP extension was not found...": "Chyba PHP: Rozširenie <b>{extName}</b> sa nenašlo.",
     "All Settings correct": "Všetky nastavenia sú správne",
     "Failed to connect to database": "Zlyhalo spojenie s databázou",
@@ -88,7 +88,7 @@
     "Thousand Separator and Decimal Mark equal": "Oddeľovač tisícov a desatinných miest nesmú byť rovnaké",
     "extension": "{0} rozšírenie chýba",
     "option": "Odporúčaná hodnota je {0}",
-    "mysqlSettingError": "EspoCRM vyžaduje aby nastavenie MySQL \"{NAME}\" bolo nastavené na {VALUE}"
+    "mysqlSettingError": "CRM vyžaduje aby nastavenie MySQL \"{NAME}\" bolo nastavené na {VALUE}"
   },
   "systemRequirements": {
     "requiredPhpVersion": "Verzia PHP",

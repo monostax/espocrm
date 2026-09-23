@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Velkommen til EspoCRM",
+    "Main page title": "Velkommen til CRM",
     "Start page title": "Licensaftale",
     "Step1 page title": "Licensaftale",
     "License Agreement": "Licensaftale",
@@ -10,15 +10,15 @@
     "Step5 page title": "SMTP indstillinger for udgående emails",
     "Errors page title": "Fejl",
     "Finish page title": "Installationen er fuldført",
-    "Congratulation! Welcome to EspoCRM": "Tillykke! EspoCRM er installeret succesfuldt.",
+    "Congratulation! Welcome to EspoCRM": "Tillykke! CRM er installeret succesfuldt.",
     "More Information": "Besøg venligst vores {BLOG} for mere information, følg os på {TWITTER}.<br><br>Henvend dig venligst i {FORUM} hvis du har forslag eller spørgsmål.",
-    "share": "Hvis du kan lide EspoCRM beder vi dig dele det med dine venner. Lad dem høre om dette produkt.",
+    "share": "Hvis du kan lide CRM beder vi dig dele det med dine venner. Lad dem høre om dette produkt.",
     "Installation Guide": "Installationsguide",
     "Locale": "Område",
     "Outbound Email Configuration": "Indstillinger for Udgående Email",
     "Back": "Tilbage",
     "Next": "Næste",
-    "Go to EspoCRM": "Gå til EspoCRM",
+    "Go to EspoCRM": "Gå til CRM",
     "Re-check": "Kontroller igen",
     "Test settings": "Test Forbindelse",
     "Database Settings Description": "Indtast forbindelses-information for din MySQL database (Hostnavn, brugernavn og kodeord). Du kan angive server port for hostnavn som localhost:3306.",
@@ -66,8 +66,8 @@
     "1049": "Ukendt database",
     "2005": "Ukendt MySQL server host",
     "Some errors occurred!": "Der opstod nogle fejl!",
-    "phpVersion": "Din PHP version er ikke supporteret af EspoCRM, venligst opdater som minimum til PHP {minVersion}",
-    "requiredMysqlVersion": "Din MySQL version er ikke supporteret af EspoCRM, venligst opdater som minimum til MySQL {minVersion}",
+    "phpVersion": "Din PHP version er ikke supporteret af CRM, venligst opdater som minimum til PHP {minVersion}",
+    "requiredMysqlVersion": "Din MySQL version er ikke supporteret af CRM, venligst opdater som minimum til MySQL {minVersion}",
     "The PHP extension was not found...": "PHP-fejl: Udvidelsen <b>{extName}</b> blev ikke fundet.",
     "All Settings correct": "Alle indstillinger er korrekte.",
     "Failed to connect to database": "Kunne ikke forbinde til database.",
@@ -87,25 +87,25 @@
     "Thousand Separator and Decimal Mark equal": "Tusindtalsseparator og decimaltegn kan ikke være det samme",
     "extension": "{0} udvidelse mangler",
     "option": "Anbefalet værdi er {0}",
-    "mysqlSettingError": "EspoCRM kræver MySQL-indstillingen \"{NAME}\" sat til {VALUE} ",
-    "requiredMariadbVersion": "Din MariaDB version er ikke understøttet af EspoCRM, opdater venligst til MariaDB {minVersion} i det mindste",
+    "mysqlSettingError": "CRM kræver MySQL-indstillingen \"{NAME}\" sat til {VALUE} ",
+    "requiredMariadbVersion": "Din MariaDB version er ikke understøttet af CRM, opdater venligst til MariaDB {minVersion} i det mindste",
     "Ajax failed": "En uventet fejl opstået"
   },
   "options": {
     "modRewriteInstruction": {
       "apache": {
         "windows": "<br> <pre>1. Find httpd.conf filen (den findes normalt i en mappe kaldet conf, config eller noget i den retning)<br>\n2. I httpd.conf file skal linjen <code>{WINDOWS_APACHE1}</code> aktiveres (fjern #-tegnet foran linjen)<br>\n3. Tjek at linjen ClearModuleList er uden #-tegn og linjen AddModule mod_rewrite.c må heller ikke have #-tegnet i begyndelsen.\n</pre>",
-        "linux": "<br><br>1.Aktiver \"mod_rewrite\". Kør disse kommandoer i et terminalvindue:<pre>{APACHE1}</pre><br>2. Aktiver .htaccess understøttelse. Tilføj/rediger Server konfigurationsindstillinger (<code>{APACHE2_PATH1}</code>, <code>{APACHE2_PATH2}</code>, <code>{APACHE2_PATH3}</code>):<pre>{APACHE2}</pre>\nKør derefter denne kommando i et terminalvindue:<pre>{APACHE3}</pre><br>3. Prøv at tilføje RewriteBase stien, åbn en fil {API_PATH}.htaccess og erstat den følgende linje:<pre>{APACHE4}</pre>Med<pre>{APACHE5}</pre><br> For mere information besøg venligst guiden <a href=\"{APACHE_LINK}\" target=\"_blank\">Apache server configuration for EspoCRM</a>.<br><br> "
+        "linux": "<br><br>1.Aktiver \"mod_rewrite\". Kør disse kommandoer i et terminalvindue:<pre>{APACHE1}</pre><br>2. Aktiver .htaccess understøttelse. Tilføj/rediger Server konfigurationsindstillinger (<code>{APACHE2_PATH1}</code>, <code>{APACHE2_PATH2}</code>, <code>{APACHE2_PATH3}</code>):<pre>{APACHE2}</pre>\nKør derefter denne kommando i et terminalvindue:<pre>{APACHE3}</pre><br>3. Prøv at tilføje RewriteBase stien, åbn en fil {API_PATH}.htaccess og erstat den følgende linje:<pre>{APACHE4}</pre>Med<pre>{APACHE5}</pre><br> For mere information besøg venligst guiden <a href=\"{APACHE_LINK}\" target=\"_blank\">Apache server configuration for CRM</a>.<br><br> "
       },
       "nginx": {
-        "linux": "<br> Tilføj denne kode til din Nginx servers config fil <code>{NGINX_PATH}</code> indenfor \"server\" sektionen:<pre>{NGINX}</pre> <br> For mere information besøg venligst guiden <a href=\"{NGINX_LINK}\" target=\"_blank\">Nginx server configuration for EspoCRM</a>.<br><br> "
+        "linux": "<br> Tilføj denne kode til din Nginx servers config fil <code>{NGINX_PATH}</code> indenfor \"server\" sektionen:<pre>{NGINX}</pre> <br> For mere information besøg venligst guiden <a href=\"{NGINX_LINK}\" target=\"_blank\">Nginx server configuration for CRM</a>.<br><br> "
       }
     },
     "modRewriteTitle": {
-      "apache": "<h3>API Fejl: EspoCRM API er utilgængelig.</h3><br>Foretag kun nødvendige skridt. Tjek efter hvert skridt om problemet er løst.",
-      "nginx": "<h3>API Fejl: EspoCRM API er utilgængelig.</h3>",
-      "microsoft-iis": "<h3>API Fejl: EspoCRM API er utilgængelig.</h3><br> Muligt problem: deaktiveret \"URL Rewrite\". Venligst tjek og aktiver \"URL Rewrite\" Modulet i IIS serveren.",
-      "default": "<h3>API Fejl: EspoCRM API er utilgængelig.</h3><br> Muligt problem: deaktiveret Rewrite Modul. Venligst tjek og aktiver Rewrite Modulet i din server (f.eks. mod_rewrite i Apache) og .htaccess understøttelse."
+      "apache": "<h3>API Fejl: CRM API er utilgængelig.</h3><br>Foretag kun nødvendige skridt. Tjek efter hvert skridt om problemet er løst.",
+      "nginx": "<h3>API Fejl: CRM API er utilgængelig.</h3>",
+      "microsoft-iis": "<h3>API Fejl: CRM API er utilgængelig.</h3><br> Muligt problem: deaktiveret \"URL Rewrite\". Venligst tjek og aktiver \"URL Rewrite\" Modulet i IIS serveren.",
+      "default": "<h3>API Fejl: CRM API er utilgængelig.</h3><br> Muligt problem: deaktiveret Rewrite Modul. Venligst tjek og aktiver Rewrite Modulet i din server (f.eks. mod_rewrite i Apache) og .htaccess understøttelse."
     }
   },
   "systemRequirements": {

@@ -22,9 +22,9 @@
       "CheckNewVersion": "Verificar Nueva Versión"
     },
     "cronSetup": {
-      "linux": "<b>Nota</b>: Agregue esta línea al archivo crontab de su servidor para que ejecute los trabajos agendados de EspoCRM:",
-      "mac": "<b>Nota</b>: Agregue esta línea al archivo crontab de su servidor para que ejecute los trabajos agendados de EspoCRM:",
-      "windows": "<b>Nota</b>: Genere un archivo por lotes con los siguientes comandos para ejecutar trabajos programados de EspoCRM mediante el Programador de Tareas de Windows:",
+      "linux": "<b>Nota</b>: Agregue esta línea al archivo crontab de su servidor para que ejecute los trabajos agendados de CRM:",
+      "mac": "<b>Nota</b>: Agregue esta línea al archivo crontab de su servidor para que ejecute los trabajos agendados de CRM:",
+      "windows": "<b>Nota</b>: Genere un archivo por lotes con los siguientes comandos para ejecutar trabajos programados de CRM mediante el Programador de Tareas de Windows:",
       "default": "Nota: Agregue este comando a su CronJob (Tarea Agendada):"
     },
     "status": {

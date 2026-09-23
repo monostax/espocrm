@@ -1,7 +1,7 @@
 {
   "labels": {
-    "headerTitle": "การติดตั้ง EspoCRM",
-    "Main page title": "ยินดีต้อนรับสู่ EspoCRM",
+    "headerTitle": "การติดตั้ง CRM",
+    "Main page title": "ยินดีต้อนรับสู่ CRM",
     "Start page title": "ข้อตกลง",
     "Step1 page title": "ข้อตกลง",
     "License Agreement": "ข้อตกลง",
@@ -12,9 +12,9 @@
     "Step5 page title": "การตั้งค่า SMTP สำหรับอีเมลขาออก",
     "Errors page title": "ข้อผิดพลาด",
     "Finish page title": "การติดตั้งเสร็จสมบูรณ์",
-    "Congratulation! Welcome to EspoCRM": "ยินดีด้วย! ติดตั้ง EspoCRM สำเร็จแล้ว",
+    "Congratulation! Welcome to EspoCRM": "ยินดีด้วย! ติดตั้ง CRM สำเร็จแล้ว",
     "More Information": "สำหรับข้อมูลเพิ่มเติมโปรดไปที่ {BLOG} ของเราติดตามเราได้ที่ {TWITTER} <br> <br> หากคุณมีข้อเสนอแนะหรือคำถามใด ๆ โปรดถามที่",
-    "share": "ถ้าคุณชอบ EspoCRM แบ่งปันกับเพื่อนของคุณ แจ้งให้พวกเขาทราบเกี่ยวกับผลิตภัณฑ์นี้",
+    "share": "ถ้าคุณชอบ CRM แบ่งปันกับเพื่อนของคุณ แจ้งให้พวกเขาทราบเกี่ยวกับผลิตภัณฑ์นี้",
     "blog": "บล็อก",
     "twitter": "ทวิตเตอร์",
     "forum": "ฟอรัม",
@@ -25,7 +25,7 @@
     "Start": "เริ่ม",
     "Back": "กลับ",
     "Next": "ต่อไป",
-    "Go to EspoCRM": "ไปที่ EspoCRM",
+    "Go to EspoCRM": "ไปที่ CRM",
     "Re-check": "ตรวจสอบอีกครั้ง",
     "Version": "เวอร์ชัน",
     "Test settings": "ทดสอบการเชื่อมต่อ",
@@ -85,9 +85,9 @@
     "2005": "ไม่รู้จักโฮสต์เซิร์ฟเวอร์ MySQL",
     "Bad init Permission": "ปฏิเสธการอนุญาตสำหรับไดเรกทอรี \\ \"{*} \" โปรดตั้งค่า 775 สำหรับ \\ \"{*} \" หรือเพียงเรียกใช้คำสั่งนี้ในเทอร์มินัล",
     "Some errors occurred!": "เกิดข้อผิดพลาดบางประการ!",
-    "phpVersion": "EspoCRM ไม่รองรับเวอร์ชัน PHP ของคุณโปรดอัปเดตเป็น PHP {minVersion} เป็นอย่างน้อย",
-    "requiredMysqlVersion": "EspoCRM ไม่รองรับเวอร์ชัน MySQL ของคุณโปรดอัปเดตเป็น MySQL {minVersion} เป็นอย่างน้อย",
-    "requiredMariadbVersion": "EspoCRM ไม่รองรับเวอร์ชัน MariaDB ของคุณโปรดอัปเดตเป็น MariaDB {minVersion} เป็นอย่างน้อย",
+    "phpVersion": "CRM ไม่รองรับเวอร์ชัน PHP ของคุณโปรดอัปเดตเป็น PHP {minVersion} เป็นอย่างน้อย",
+    "requiredMysqlVersion": "CRM ไม่รองรับเวอร์ชัน MySQL ของคุณโปรดอัปเดตเป็น MySQL {minVersion} เป็นอย่างน้อย",
+    "requiredMariadbVersion": "CRM ไม่รองรับเวอร์ชัน MariaDB ของคุณโปรดอัปเดตเป็น MariaDB {minVersion} เป็นอย่างน้อย",
     "The PHP extension was not found...": "ข้อผิดพลาด PHP: ไม่พบส่วนขยาย <b> {extName} </b>",
     "All Settings correct": "การตั้งค่าทั้งหมดถูกต้อง",
     "Failed to connect to database": "ไม่สามารถเชื่อมต่อกับฐานข้อมูล",
@@ -111,14 +111,14 @@
     "Thousand Separator and Decimal Mark equal": "ตัวคั่นหลักพันและเครื่องหมายทศนิยมไม่สามารถเท่ากันได้",
     "extension": "ส่วนขยาย {0} หายไป",
     "option": "ค่าที่แนะนำคือ {0}",
-    "mysqlSettingError": "EspoCRM ต้องการการตั้งค่า MySQL \\ \"{NAME} \" เพื่อตั้งค่าเป็น {VALUE}"
+    "mysqlSettingError": "CRM ต้องการการตั้งค่า MySQL \\ \"{NAME} \" เพื่อตั้งค่าเป็น {VALUE}"
   },
   "options": {
     "modRewriteTitle": {
-      "apache": "ข้อผิดพลาด API: EspoCRM API ไม่พร้อมใช้งาน <br> ปัญหาที่เป็นไปได้: ปิดใช้งาน \\ \"mod_rewrite \" ในเซิร์ฟเวอร์ Apache ปิดใช้งานการสนับสนุน. htaccess",
-      "nginx": "ข้อผิดพลาด API: EspoCRM API ไม่พร้อมใช้งาน <br> เพิ่มรหัสนี้ในไฟล์กำหนดค่าบล็อกเซิร์ฟเวอร์ Nginx ของคุณ (/ etc / nginx / sites-available",
-      "microsoft-iis": "ข้อผิดพลาด API: EspoCRM API ไม่พร้อมใช้งาน <br> ปัญหาที่เป็นไปได้: ปิดใช้งาน \\ \"URL Rewrite \" โปรดตรวจสอบและเปิดใช้งานโมดูล \\ \"URL Rewrite \"",
-      "default": "ข้อผิดพลาดของ API: EspoCRM API ไม่พร้อมใช้งาน <br> ปัญหาที่เป็นไปได้: ปิดใช้งานโมดูลการเขียนซ้ำ โปรดตรวจสอบและเปิดใช้งาน Rewrite Module ในไฟล์"
+      "apache": "ข้อผิดพลาด API: CRM API ไม่พร้อมใช้งาน <br> ปัญหาที่เป็นไปได้: ปิดใช้งาน \\ \"mod_rewrite \" ในเซิร์ฟเวอร์ Apache ปิดใช้งานการสนับสนุน. htaccess",
+      "nginx": "ข้อผิดพลาด API: CRM API ไม่พร้อมใช้งาน <br> เพิ่มรหัสนี้ในไฟล์กำหนดค่าบล็อกเซิร์ฟเวอร์ Nginx ของคุณ (/ etc / nginx / sites-available",
+      "microsoft-iis": "ข้อผิดพลาด API: CRM API ไม่พร้อมใช้งาน <br> ปัญหาที่เป็นไปได้: ปิดใช้งาน \\ \"URL Rewrite \" โปรดตรวจสอบและเปิดใช้งานโมดูล \\ \"URL Rewrite \"",
+      "default": "ข้อผิดพลาดของ API: CRM API ไม่พร้อมใช้งาน <br> ปัญหาที่เป็นไปได้: ปิดใช้งานโมดูลการเขียนซ้ำ โปรดตรวจสอบและเปิดใช้งาน Rewrite Module ในไฟล์"
     },
     "modRewriteInstruction": {
       "apache": {

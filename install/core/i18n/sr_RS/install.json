@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Dobrodošli u EspoCRM",
+    "Main page title": "Dobrodošli u CRM",
     "Start page title": "Ugovor o licenci",
     "Step1 page title": "Ugovor o licenci",
     "License Agreement": "Ugovor o licenci",
@@ -11,16 +11,16 @@
     "Step5 page title": "Podešavanja SMTP za odlazeću e-poštu",
     "Errors page title": "Greške",
     "Finish page title": "Instalacija je završena",
-    "Congratulation! Welcome to EspoCRM": "Čestitam! EspoCRM je uspešno instaliran.",
+    "Congratulation! Welcome to EspoCRM": "Čestitam! CRM je uspešno instaliran.",
     "More Information": "Za više informacija, posetite naš {BLOG}, pratite nas na {TWITTER}. <br><br> Ukoliko imate bilo kakve sugestije ili pitanja, obratite se na {FORUM}.",
-    "share": "Ako vam se dopada EspoCRM, podelite ga sa prijateljima. Neka znaju o ovom proizvodu.",
+    "share": "Ako vam se dopada CRM, podelite ga sa prijateljima. Neka znaju o ovom proizvodu.",
     "Installation Guide": "Uputstvo za instalaciju",
     "Locale": "Lokal",
     "Outbound Email Configuration": "Odlazna e-pošta konfiguracija",
     "Start": "Početak",
     "Back": "Nazad",
     "Next": "Sledeća",
-    "Go to EspoCRM": "Idi na EspoCRM",
+    "Go to EspoCRM": "Idi na CRM",
     "Re-check": "Re-provera",
     "Version": "Verzija",
     "Test settings": "Test veze",
@@ -67,8 +67,8 @@
     "1049": "Nepoznata baza podataka",
     "2005": "Nepoznat MySQL host servera",
     "Some errors occurred!": "Neke greške su se desile!",
-    "phpVersion": "Vaša PHP verzija nije podržana od strane EspoCRM, molimo nadogradite PHP na najmanje {minVersion}",
-    "requiredMysqlVersion": "Vaša MySQL verzija nije podržana od strane EspoCRM, molimo nadogradite na najmanje {minVersion}",
+    "phpVersion": "Vaša PHP verzija nije podržana od strane CRM, molimo nadogradite PHP na najmanje {minVersion}",
+    "requiredMysqlVersion": "Vaša MySQL verzija nije podržana od strane CRM, molimo nadogradite na najmanje {minVersion}",
     "The PHP extension was not found...": "PHP greška: Ekstenzija <b>{extName}</b> nije pronađena.",
     "All Settings correct": "Sva podešavanja su ispravna",
     "Failed to connect to database": "Nije uspeo da se poveže sa bazom podataka",
@@ -89,7 +89,7 @@
     "Thousand Separator and Decimal Mark equal": "Oznaka hiljada i decimalna oznaka ne mogu biti jednake",
     "extension": "{0} nedostaje ekstenzija",
     "option": "Preporučena vrednost je {0}",
-    "mysqlSettingError": "EspoCRM zahteva MySQL podešavanje \"{NAME}\" da se podesi na {VALUE}"
+    "mysqlSettingError": "CRM zahteva MySQL podešavanje \"{NAME}\" da se podesi na {VALUE}"
   },
   "systemRequirements": {
     "requiredPhpVersion": "PHP verzija",

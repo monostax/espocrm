@@ -42,7 +42,7 @@
   "tooltips": {
     "targetLists": "Adresaci, którzy powinni otrzymać wiadomości.",
     "excludingTargetLists": "Adresaci, którzy nie powinni otrzymać wiadomości.",
-    "storeSentEmails": "Wiadomości e-mail będą przechowywane w EspoCRM."
+    "storeSentEmails": "Wiadomości e-mail będą przechowywane w CRM."
   },
   "presetFilters": {
     "actual": "Obecne",

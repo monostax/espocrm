@@ -386,6 +386,59 @@ class OpportunityGroupSummaryTest extends TestCase
         }
     }
 
+    public function testNoNextActionExcludesWonAndLostFromIdsCountsAndAmounts(): void
+    {
+        $this->pdo->exec("UPDATE opportunity SET status = CASE id WHEN 'a' THEN 'Won' WHEN 'b' THEN 'Lost' ELSE 'Open' END");
+        // A stale selected step on a closed opportunity must not put it back in noNextAction.
+        $this->pdo->exec("UPDATE opportunity SET next_action_id = 'missing', next_action_type = 'Task' WHERE id = 'b'");
+        $opportunities = [
+            ['id' => 'a', 'status' => 'Won'],
+            ['id' => 'b', 'status' => 'Lost', 'nextActionId' => 'missing', 'nextActionType' => 'Task'],
+            ['id' => 'c', 'status' => 'Open'],
+            ['id' => 'null', 'status' => 'Open'],
+        ];
+        $summary = OpportunityActivitySummary::summarize([], new DateTimeImmutable('now'), true, $opportunities);
+        self::assertSame(['count' => 2, 'opportunityIds' => ['c', 'null']], $summary['noNextAction']);
+        $counts = OpportunityActivitySummary::summarize([], new DateTimeImmutable('now'), false, $opportunities);
+        self::assertSame(['count' => 2], $counts['noNextAction']);
+
+        foreach ([$this->mysql, $this->postgres] as $this->composer) {
+            foreach ([[], ['Meeting', 'Call', 'Task']] as $this->hiddenScopes) {
+                $this->queryCount = 0;
+                $groups = $this->summary(['groupBy' => 'activity'])['groups'];
+                self::assertSame(['activity:noNextAction' => ['count' => 2, 'amount' => 400.0]], (array) $groups);
+                self::assertSame(1, $this->queryCount);
+                foreach (['noNextAction', 'noActivities'] as $activity) {
+                    $filtered = $this->summary(['activity' => $activity, 'groupBy' => 'none']);
+                    self::assertSame(['count' => 2, 'amount' => 400.0], $filtered['groups']->all);
+                }
+            }
+            self::assertSame(['count' => 4, 'amount' => 1398.0], $this->summary(['groupBy' => 'none'])['groups']->all);
+        }
+    }
+
+    public function testClosedOpportunitiesWithPendingNextActionsKeepTheirActivityBuckets(): void
+    {
+        $this->pdo->exec("INSERT INTO task (id, parent_id, parent_type, date_end_date, readable) VALUES
+            ('selected', 'a', 'Opportunity', '2999-01-01', 1)");
+        $this->pdo->exec("UPDATE opportunity SET next_action_id = 'selected', next_action_type = 'Task' WHERE id = 'a'");
+        foreach (['Won', 'Lost'] as $status) {
+            $this->pdo->prepare('UPDATE opportunity SET status = ? WHERE id = ?')->execute([$status, 'a']);
+            $summary = OpportunityActivitySummary::summarize([
+                ['id' => 'selected', 'entityType' => 'Task', 'parentId' => 'a', 'dateEndDate' => '2999-01-01'],
+            ], new DateTimeImmutable('now'), true, [
+                ['id' => 'a', 'status' => $status, 'nextActionId' => 'selected', 'nextActionType' => 'Task'],
+            ]);
+            self::assertSame(['a'], $summary['upcoming']['opportunityIds']);
+            self::assertSame([], $summary['noNextAction']['opportunityIds']);
+            foreach ([$this->mysql, $this->postgres] as $this->composer) {
+                $groups = $this->summary(['groupBy' => 'activity'])['groups'];
+                self::assertSame(['count' => 1, 'amount' => 499.0], $groups->{'activity:upcoming'});
+                self::assertSame(['count' => 3, 'amount' => 899.0], $groups->{'activity:noNextAction'});
+            }
+        }
+    }
+
     public function testSelectedStepAloneDeterminesOneBucketAndAmountPerOpportunity(): void
     {
         $this->pdo->exec("INSERT INTO task (id, parent_id, parent_type, date_end_date, readable) VALUES

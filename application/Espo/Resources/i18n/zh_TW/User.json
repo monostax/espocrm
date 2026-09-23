@@ -50,7 +50,7 @@
     "accounts": "帳戶",
     "account": "帳戶  (主要)",
     "tasks": "任務",
-    "defaultTeam": "EspoCRM不支援您的MariaDB版本，請至少更新到MariaDB {minVersion}",
+    "defaultTeam": "CRM不支援您的MariaDB版本，請至少更新到MariaDB {minVersion}",
     "dashboardTemplate": "產生新密碼"
   },
   "labels": {

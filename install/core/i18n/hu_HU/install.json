@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Üdvözöljük az EspoCRM-en",
+    "Main page title": "Üdvözöljük az CRM-en",
     "Start page title": "Licencszerződés",
     "Step1 page title": "Licencszerződés",
     "License Agreement": "Licencszerződés",
@@ -11,9 +11,9 @@
     "Step5 page title": "SMTP-beállítások a kimenő e-mailekhez",
     "Errors page title": "hibák",
     "Finish page title": "A telepítés befejeződött",
-    "Congratulation! Welcome to EspoCRM": "Gratuláció! Az EspoCRM sikeresen telepítve lett.",
+    "Congratulation! Welcome to EspoCRM": "Gratuláció! Az CRM sikeresen telepítve lett.",
     "More Information": "További információért látogasson el a (z) {BLOG} webhelyre, kövesse velünk a (z) {TWITTER} webhelyet. <br> <br> Ha bármilyen javaslata vagy kérdése van, kérdezze meg a (z) {FORUM} fórumot.",
-    "share": "Ha tetszik az EspoCRM, ossza meg barátaival. Tájékoztasson erről a termékről.",
+    "share": "Ha tetszik az CRM, ossza meg barátaival. Tájékoztasson erről a termékről.",
     "forum": "fórum",
     "Installation Guide": "Telepítési útmutató",
     "localhost": "helyi kiszolgáló",
@@ -22,7 +22,7 @@
     "Start": "Rajt",
     "Back": "Hát",
     "Next": "Következő",
-    "Go to EspoCRM": "Menjen az EspoCRM-be",
+    "Go to EspoCRM": "Menjen az CRM-be",
     "Re-check": "Re-ellenőrzés",
     "Version": "Változat",
     "Test settings": "Vizsgálati kapcsolat",
@@ -71,8 +71,8 @@
     "1049": "Ismeretlen adatbázis",
     "2005": "Ismeretlen MySQL kiszolgáló állomás",
     "Some errors occurred!": "Néhány hiba történt!",
-    "phpVersion": "PHP-verzióját nem támogatja az EspoCRM, kérjük, frissítse legalább a PHP {minVersion} programot",
-    "requiredMysqlVersion": "A MySQL verzióját nem támogatja az EspoCRM, kérjük, frissítse legalább a MySQL {minVersion} programot",
+    "phpVersion": "PHP-verzióját nem támogatja az CRM, kérjük, frissítse legalább a PHP {minVersion} programot",
+    "requiredMysqlVersion": "A MySQL verzióját nem támogatja az CRM, kérjük, frissítse legalább a MySQL {minVersion} programot",
     "The PHP extension was not found...": "PHP hiba: A kiterjesztés <b> {extName} </b> nem található.",
     "All Settings correct": "Minden beállítás helyes",
     "Failed to connect to database": "Nem sikerült csatlakozni az adatbázishoz",
@@ -92,7 +92,7 @@
     "Thousand Separator and Decimal Mark equal": "Ezer elválasztó és decimális jelölés nem lehet egyenlő",
     "extension": "{0} kiterjesztés hiányzik",
     "option": "A javasolt érték {0}",
-    "mysqlSettingError": "Az EspoCRM-nek meg kell adnia a (z) \"{NAME}\" MySQL beállítását: {VALUE}"
+    "mysqlSettingError": "Az CRM-nek meg kell adnia a (z) \"{NAME}\" MySQL beállítását: {VALUE}"
   },
   "systemRequirements": {
     "requiredMysqlVersion": "MySQL verzió",

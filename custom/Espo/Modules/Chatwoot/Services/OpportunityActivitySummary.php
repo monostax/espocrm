@@ -52,7 +52,7 @@ class OpportunityActivitySummary
 
         $opportunities = $this->entityManager->getQueryExecutor()->execute(
             SelectBuilder::create()->clone($scope->build())
-                ->select(['id', 'nextActionId', 'nextActionType'])->distinct()->build()
+                ->select(['id', 'status', 'nextActionId', 'nextActionType'])->distinct()->build()
         )->fetchAll(\PDO::FETCH_ASSOC);
         $rows = [];
         foreach (['Meeting' => 'planned', 'Call' => 'planned', 'Task' => 'actual'] as $type => $filter) {
@@ -93,7 +93,10 @@ class OpportunityActivitySummary
         $today = $now->format('Y-m-d');
         $tomorrow = $now->modify('+1 day')->format('Y-m-d');
         $opportunitiesById = array_column($opportunities, null, 'id');
-        $opportunityIds = array_keys($opportunitiesById);
+        $opportunityIds = array_keys(array_filter(
+            $opportunitiesById,
+            fn (array $opportunity) => !in_array($opportunity['status'] ?? null, ['Won', 'Lost'], true),
+        ));
         $groups = array_fill_keys(OpportunityActivityBuckets::KEYS, []);
         $groups['noNextAction'] = array_combine($opportunityIds, $opportunityIds);
         foreach ($rows as $row) {

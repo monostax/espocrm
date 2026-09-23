@@ -183,12 +183,12 @@
     "selectExtensionPackage": "Seleccionar extensión del paquete",
     "extensionInstalled": "La Extensión {name} {version} ha sido instalada",
     "installExtension": "La Extensión {name} {version} está lista para instalar.",
-    "upgradeVersion": "EspoCRM se actualizará a la versión <strong>{version}</strong>.  Por favor espere unos minutos.",
-    "upgradeDone": "EspoCRM fué actualizado a la versión <strong>{version}</strong>.",
-    "upgradeBackup": "Le recomendamos hacer un respaldo de sus datos y sistema EspoCRM antes de actualizarlo.",
+    "upgradeVersion": "CRM se actualizará a la versión <strong>{version}</strong>.  Por favor espere unos minutos.",
+    "upgradeDone": "CRM fué actualizado a la versión <strong>{version}</strong>.",
+    "upgradeBackup": "Le recomendamos hacer un respaldo de sus datos y sistema CRM antes de actualizarlo.",
     "thousandSeparatorEqualsDecimalMark": "El caracter separador de miles no puede ser el mismo que el separador decimal.",
     "userHasNoEmailAddress": "Este usuario no tiene correo de contacto.",
-    "newVersionIsAvailable": "Hay una nueva versión disponible de EspoCRM. ({latestVersion}).",
+    "newVersionIsAvailable": "Hay una nueva versión disponible de CRM. ({latestVersion}).",
     "uninstallConfirmation": "¿Realmente quiere desinstalar esta extensión?",
     "cronIsNotConfigured": "No se están ejecutando las tareas programadas. Por lo cual los correos enviados, notificaciones y alarmas no están funcionando.  Por favor siga las {instructions}\n(https://www.espocrm.com/documentation/administration/server-configuration/#user-content-setup-a-crontab) para activar los cron jobs. ",
     "newExtensionVersionIsAvailable": "Nueva versión {latestVersion} disponible para {extensionName}. "
@@ -196,7 +196,7 @@
   "descriptions": {
     "settings": "Configuración del sistema de aplicación.",
     "scheduledJob": "Trabajos que se ejecutan automáticamente (cron Jobs).",
-    "upgrade": "Actualizar EspoCRM.",
+    "upgrade": "Actualizar CRM.",
     "clearCache": "Borrar Cache del Servidor.",
     "rebuild": "Borrar y regenerar el Cache del Servidor.",
     "users": "Administración de Usuarios.",
@@ -227,7 +227,7 @@
     "leadCapture": "Puntos de entrada de la API para Web-a-Ref",
     "attachments": "Todos los archivos adjuntos fueron guardados en el sistema. ",
     "templateManager": "Personalizar plantillas de mensajes.",
-    "systemRequirements": "Requerimientos del Sistema para EspoCRM.",
+    "systemRequirements": "Requerimientos del Sistema para CRM.",
     "apiUsers": "Separar usuarios para integración de grupos."
   },
   "options": {

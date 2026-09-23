@@ -14,7 +14,7 @@
     "GoogleMaps": "Google zemljevidi"
   },
   "help": {
-    "Google": "**Pridobite poverilnice OAuth 2.0 v konzoli Google Developers Console.** Obiščite [Konzolo Google Developers Console](https://console.developers.google.com/project), da pridobite poverilnice OAuth 2.0, kot sta ID odjemalca in skrivnost odjemalca, ki sta pozna tako Google kot aplikacija EspoCRM.",
+    "Google": "**Pridobite poverilnice OAuth 2.0 v konzoli Google Developers Console.** Obiščite [Konzolo Google Developers Console](https://console.developers.google.com/project), da pridobite poverilnice OAuth 2.0, kot sta ID odjemalca in skrivnost odjemalca, ki sta pozna tako Google kot aplikacija CRM.",
     "GoogleMaps": "Pridobite ključ API [tukaj](https://developers.google.com/maps/documentation/javascript/get-api-key)."
   }
 }

@@ -296,7 +296,7 @@
     "recalculateFormulaConfirmation": "Czy na pewno chcesz przeliczyć formułę dla wybranych rekordów?",
     "fieldExceedsMaxCount": "Liczba przekracza maksymalnie dozwolone {maxCount}",
     "notUpdated": "Nie zaaktualizowane",
-    "maintenanceMode": "EspoCRM obecnie jest w trybie konserwacji. Tylko użytkownicy z uprawnieniami administratora mają dostęp. \n\nTryb konserwacji może zostać wyłączony w sekcji Administracja → Ustawienia",
+    "maintenanceMode": "CRM obecnie jest w trybie konserwacji. Tylko użytkownicy z uprawnieniami administratora mają dostęp. \n\nTryb konserwacji może zostać wyłączony w sekcji Administracja → Ustawienia",
     "fieldInvalid": "{field} jest nieprawidłowy",
     "fieldPhoneInvalid": "{field} jest nieprawidłowy",
     "resolveSaveConflict": "Pozycja została zmodyfikowana. Zanim zapiszesz zmiany, musisz rozwiązać konflikt.",

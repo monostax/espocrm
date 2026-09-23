@@ -111,7 +111,7 @@
         "verifyTotpCode": "Digitalize o código QR com seu aplicativo autenticador móvel. Se você tiver problemas com a digitalização, poderá inserir o secret manualmente. Depois disso, você verá um código de 6 dígitos em seu aplicativo. Digite este código no campo abaixo.",
         "generateAndSendNewPassword": "Uma nova senha será gerada e enviada para o endereço de email do utilizador.",
         "security2FaResetConfirmation": "Tem a certeza que quer repor as configurações correntes da autenticação de 2 fatores?",
-        "ldapUserInEspoNotFound": "Utilizador não encontrado no EspoCRM. Contacte o seu administrador para criar o utilizador.",
+        "ldapUserInEspoNotFound": "Utilizador não encontrado no CRM. Contacte o seu administrador para criar o utilizador.",
         "passwordRecoverySentIfMatched": "Supondo que os dados inseridos correspondam a qualquer conta de utilizador.",
         "auth2FARequiredHeader": "Autenticação de 2 fatores obrigatória.",
         "auth2FARequired": "Precisa de configurar a autenticação de 2 fatores. Use uma aplicação de autenticação no seu telemóvel (ex. Google Authenticator).",

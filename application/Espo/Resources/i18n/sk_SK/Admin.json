@@ -161,7 +161,7 @@
     "selectExtensionPackage": "Vyber balíček s rozšírením",
     "extensionInstalled": "Rozšírenie {name} {version} bolo nainštalované.",
     "installExtension": "Rozšírenie {name} {version} je pripravené na inštaláciu.",
-    "upgradeBackup": "Pred aktualizáciou odporúčame urobiť zálohu súborov a dát EspoCRM.",
+    "upgradeBackup": "Pred aktualizáciou odporúčame urobiť zálohu súborov a dát CRM.",
     "thousandSeparatorEqualsDecimalMark": "Oddeľovač tisícov nemôže byť rovnaký ako oddeľovač desatinných miest.",
     "userHasNoEmailAddress": "Používateľ nemá emailovú adresu.",
     "uninstallConfirmation": "Ste si istý, že chcete rozšírenie odinštalovať?"
@@ -169,7 +169,7 @@
   "descriptions": {
     "settings": "Systémové nastavenia aplikácie.",
     "scheduledJob": "Behy, ktoré sú spúšťané cron-om.",
-    "upgrade": "Aktualizácia EspoCRM.",
+    "upgrade": "Aktualizácia CRM.",
     "clearCache": "Vymazať všetky vyrovnávacie pamate na serveri.",
     "rebuild": "Prekompilovat serverovú časť a vymazať vyrovnávaciu pamäť.",
     "users": "Správa používateľov.",

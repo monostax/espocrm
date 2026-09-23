@@ -118,7 +118,7 @@
     "verifyTotpCode": "Noskenējiet QR kodu, izmantojot mobilā autentifikatora lietotni. Ja jums rodas problēmas ar skenēšanu, varat ievadīt noslēpumu manuāli. Pēc tam savā lietojumprogrammā redzēsiet sešciparu kodu. Ievadiet šo kodu turpmāk norādītajā laukā.",
     "generateAndSendNewPassword": "Uz lietotāja e-pasta adresi tiks ģenerēta un nosūtīta jauna parole.",
     "security2FaResetConfirmation": "Vai esat pārliecināts, ka vēlaties atiestatīt pašreizējos 2FA iestatījumus?",
-    "ldapUserInEspoNotFound": "Lietotājs nav atrodams EspoCRM. Sazinieties ar administratoru, lai izveidotu lietotāju.",
+    "ldapUserInEspoNotFound": "Lietotājs nav atrodams CRM. Sazinieties ar administratoru, lai izveidotu lietotāju.",
     "passwordRecoverySentIfMatched": "Pieņemot, ka ievadītie dati atbilst kādam lietotāja kontam.",
     "auth2FARequiredHeader": "Nepieciešama 2 faktoru autentifikācija",
     "auth2FARequired": "Jums ir jāiestata 2 faktoru autentifikācija. Izmantojiet autentifikatora programmu savā mobilajā tālrunī (piemēram, Google Authenticator).",

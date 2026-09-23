@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "Bine ați venit pe EspoCRM",
+    "Main page title": "Bine ați venit pe CRM",
     "Start page title": "Acord de Licență",
     "Step1 page title": "Acord de Licență",
     "License Agreement": "Acord de Licență",
@@ -11,16 +11,16 @@
     "Step5 page title": "Setări SMTP pentru trimitere email-uri",
     "Errors page title": "Erori",
     "Finish page title": "Instalare finalizată",
-    "Congratulation! Welcome to EspoCRM": "Felicitări! EspoCRM a fost instalat cu succes.",
+    "Congratulation! Welcome to EspoCRM": "Felicitări! CRM a fost instalat cu succes.",
     "More Information": "Pentru mai multe informații, vizitați {BLOG}, urmați-ne pe {TWITTER}. <br><br> Dacă aveți sugestii sau întrebări, vă rugăm să întrebați pe {FORUM}.",
-    "share": "Dacă vă place EspoCRM, împărtășiți-l cu prietenii. Spuneți-le despre acest produs.",
+    "share": "Dacă vă place CRM, împărtășiți-l cu prietenii. Spuneți-le despre acest produs.",
     "twitter": "twiter",
     "Installation Guide": "Instrucțiuni de instalare",
     "Locale": "Localizare",
     "Outbound Email Configuration": "Configurări trimitere email",
     "Back": "Înapoi",
     "Next": "Înainte",
-    "Go to EspoCRM": "Mergi la EspoCRM",
+    "Go to EspoCRM": "Mergi la CRM",
     "Re-check": "Re-verificare",
     "Version": "Versiunea",
     "Test settings": "Testare Conexiune",
@@ -68,8 +68,8 @@
     "1049": "Baza de Date necunoscută",
     "2005": "Server MySQL necunoscut",
     "Some errors occurred!": "Am apărut erori!",
-    "phpVersion": "Versiunea dumneavoastră de PHP nu este acceptată de EspoCRM, vă rugăm să vă actualizați măcar la versiunea PHP {minVersion}",
-    "requiredMysqlVersion": "Versiunea dumneavoastră de MySQL nu este acceptată de EspoCRM, vă rugăm să vă actualizați măcar la versiunea MySQL {minVersion}",
+    "phpVersion": "Versiunea dumneavoastră de PHP nu este acceptată de CRM, vă rugăm să vă actualizați măcar la versiunea PHP {minVersion}",
+    "requiredMysqlVersion": "Versiunea dumneavoastră de MySQL nu este acceptată de CRM, vă rugăm să vă actualizați măcar la versiunea MySQL {minVersion}",
     "The PHP extension was not found...": "Eroare PHP: Extensie <b>{extName}</b> nu a fost găsit.",
     "All Settings correct": "Toate setarile sunt corecte",
     "Failed to connect to database": "Nu s-a reușit conectarea la Baza de Date",
@@ -90,7 +90,7 @@
     "Thousand Separator and Decimal Mark equal": "Separatoarele pentru mii și zecimale nu pot fi aceleași",
     "extension": "{0} lipsește extensia",
     "option": "Valoarea recomandată este {0}",
-    "mysqlSettingError": "EspoCRM cere ca setarea MySQL \\\\ \"{NAME} \" să fie setată la {VALUE}"
+    "mysqlSettingError": "CRM cere ca setarea MySQL \\\\ \"{NAME} \" să fie setată la {VALUE}"
   },
   "systemRequirements": {
     "requiredPhpVersion": "Versiune PHP",

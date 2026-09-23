@@ -25,9 +25,9 @@
       "SendScheduledEmails": "Enviar correos programados"
     },
     "cronSetup": {
-      "linux": "Nota: añada esta línea al archivo crontab para que EspoCRM pueda ejecutar las tareas programadas:",
-      "mac": "Nota: añada esta línea al archivo crontab para que EspoCRM pueda ejecutar las tareas programadas:",
-      "windows": "Nota: Crear un archivo por lotes con los siguientes comandos para ejecutar tareas programadas de EspoCRM usando tareas programadas de Windows:",
+      "linux": "Nota: añada esta línea al archivo crontab para que CRM pueda ejecutar las tareas programadas:",
+      "mac": "Nota: añada esta línea al archivo crontab para que CRM pueda ejecutar las tareas programadas:",
+      "windows": "Nota: Crear un archivo por lotes con los siguientes comandos para ejecutar tareas programadas de CRM usando tareas programadas de Windows:",
       "default": "Nota: Agregar este comando a Cron Job (Tarea Programada):"
     },
     "status": {

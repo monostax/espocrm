@@ -146,14 +146,14 @@
     "selectExtensionPackage": "Chọn gói tiện ích mở rộng",
     "extensionInstalled": "Tiện ích mở rộng {name} {version} đã được cài đặt",
     "installExtension": "Tiện ích mở rộng {name} {version} đã sẵn sàn để cài đặt",
-    "upgradeBackup": "We recommend you to make backup of your EspoCRM files and data before upgrade.",
+    "upgradeBackup": "We recommend you to make backup of your CRM files and data before upgrade.",
     "thousandSeparatorEqualsDecimalMark": "Dấu phân cách không thể giống nhau",
     "userHasNoEmailAddress": "Người dùng chưa có địa chỉ email"
   },
   "descriptions": {
     "settings": "Cài đặt hệ thống hoặc ứng dụng",
     "scheduledJob": "Công việc tự động tiến hành",
-    "upgrade": "Nâng cấp hệ thống EspoCRM",
+    "upgrade": "Nâng cấp hệ thống CRM",
     "clearCache": "Xóa dữ liệu cache.",
     "rebuild": "Xóa dữ liệu và tải lại hệ thống",
     "users": "Quản lý người dùng.",
@@ -175,7 +175,7 @@
     "inboundEmails": "Nhóm tài khoản email IMAP. Nhập email và Email-to-Case.",
     "actionHistory": "Nhật ký hoạt động thành viên",
     "authLog": "Lịch sử đăng nhập",
-    "systemRequirements": "Yêu cầu hệ thống cho EspoCRM",
+    "systemRequirements": "Yêu cầu hệ thống cho CRM",
     "webhooks": "Quản lý Webhooks"
   },
   "options": {

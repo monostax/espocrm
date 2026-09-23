@@ -10,7 +10,7 @@
         "calendarMonitoredCalendarsIds": "Monitored Calendar IDs",
         "calendarMonitoredCalendarsNames": "Monitored Calendar Names",
         "calendarDefaultEntity": "Default Entity",
-        "removeGCEventIfRemovedInEspo": "Remove Google Calendar Event upon removal in EspoCRM",
+        "removeGCEventIfRemovedInEspo": "Remove Google Calendar Event upon removal in CRM",
         "dontSyncEventAttendees": "Don't sync event attendees",
         "calendarAssignDefaultTeam": "Assign User's Default Team",
         "oAuthAccount": "OAuth Account",
@@ -29,8 +29,8 @@
     },
     "options": {
         "calendarDirection": {
-            "EspoToGC": "One-way: EspoCRM > Google Calendar",
-            "GCToEspo": "One-way: Google Calendar > EspoCRM",
+            "EspoToGC": "One-way: CRM > Google Calendar",
+            "GCToEspo": "One-way: Google Calendar > CRM",
             "Both": "Two-way"
         }
     },

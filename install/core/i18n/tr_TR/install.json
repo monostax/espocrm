@@ -1,6 +1,6 @@
 {
   "labels": {
-    "Main page title": "EspoCRM e Hoşgeldiniz",
+    "Main page title": "CRM e Hoşgeldiniz",
     "Start page title": "Lisans Sözleşmesi",
     "Step1 page title": "Lisans Sözleşmesi",
     "License Agreement": "Lisans Sözleşmesi",
@@ -11,9 +11,9 @@
     "Step5 page title": "Giden epostalar için SMTP ayarları",
     "Errors page title": "Hatalar",
     "Finish page title": "Yükleme tamamlandı",
-    "Congratulation! Welcome to EspoCRM": "Tebrikler! EspoCRM'i başarıyla yüklediniz.",
+    "Congratulation! Welcome to EspoCRM": "Tebrikler! CRM'i başarıyla yüklediniz.",
     "More Information": "Daha fazla bilgi için {BLOG} sayfamızı ziyaret edin, bizi {TWITTER} sayfasından takip edin. <br> <br> Herhangi bir öneri veya sorunuz varsa lütfen {FORUM} adresinden sorun.",
-    "share": "EspoCRM'i beğendiyseniz, arkadaşlarınıza önerin. Onlarında bu ürünü öğrenmelerini ve kullanmalarını sağlayın.",
+    "share": "CRM'i beğendiyseniz, arkadaşlarınıza önerin. Onlarında bu ürünü öğrenmelerini ve kullanmalarını sağlayın.",
     "blog": "Blog",
     "Installation Guide": "Kurulum Talimatları",
     "admin": "Yönetici",
@@ -22,7 +22,7 @@
     "Start": "Başla",
     "Back": "Geri",
     "Next": "Sonraki",
-    "Go to EspoCRM": "EspoCRM sayfama git",
+    "Go to EspoCRM": "CRM sayfama git",
     "Re-check": "Tekrar Kontrol Et",
     "Version": "Sürüm",
     "Test settings": "Bağlantıyı Kontrol Et",
@@ -42,7 +42,7 @@
     "Fail": "Başarısız",
     "is recommended": "taviye edilirmi",
     "extension is missing": "eksik Eklenti",
-    "headerTitle": "EspoCRM Kurulumu"
+    "headerTitle": "CRM Kurulumu"
   },
   "fields": {
     "Choose your language": "Dil seçin",
@@ -80,8 +80,8 @@
     "1049": "Bilinmeyen veritabanı",
     "2005": "Bilinmeyen MySQL sunucusu",
     "Some errors occurred!": "Bazı hatalar oluştu!",
-    "phpVersion": "PHP sürümünüz EspoCRM tarafından desteklenmiyor, en az PHP {minVersion} sürümü olmalı",
-    "requiredMysqlVersion": "MySQL sürümünüz EspoCRM tarafından desteklenmiyor, en az MySQL {minVersion} sürümü olmalı",
+    "phpVersion": "PHP sürümünüz CRM tarafından desteklenmiyor, en az PHP {minVersion} sürümü olmalı",
+    "requiredMysqlVersion": "MySQL sürümünüz CRM tarafından desteklenmiyor, en az MySQL {minVersion} sürümü olmalı",
     "The PHP extension was not found...": "<b>{extName}</b> PHP eklentisi bulunamadı...",
     "All Settings correct": "Tüm ayarlar doğru",
     "Failed to connect to database": "Veritabanına bağlanma başarısız oldu",
@@ -102,8 +102,8 @@
     "Thousand Separator and Decimal Mark equal": "Bindelik ayraç ve ondalık ayraç aynı olamaz",
     "extension": "{0} uzantı eksik",
     "option": "Önerilen değer {0}",
-    "mysqlSettingError": "EspoCRM, \"{NAME} \" ayarının {VALUE} olarak ayarlanmasını gerektiriyor",
-    "requiredMariadbVersion": "MariaDB sürümünüz EspoCRM tarafından desteklenmiyor, lütfen en az MariaDB {minVersion} sürümüne güncelleyin",
+    "mysqlSettingError": "CRM, \"{NAME} \" ayarının {VALUE} olarak ayarlanmasını gerektiriyor",
+    "requiredMariadbVersion": "MariaDB sürümünüz CRM tarafından desteklenmiyor, lütfen en az MariaDB {minVersion} sürümüne güncelleyin",
     "Ajax failed": "Beklenmeyen bir hata oluştu"
   },
   "systemRequirements": {
