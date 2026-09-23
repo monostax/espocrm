@@ -54,15 +54,34 @@ activity jobs and future name changes do not require text interpretation.
 
 Deploy CRM and run its usual rebuild to create the text fields and refresh the
 seeded report. Deploy the Chatwoot changes to both web and worker processes.
-Then requeue existing source episodes once (dry run first):
+Already-acknowledged historical episodes are not automatically redelivered when
+new report fields are deployed. Populate those fields using the CRM backfill:
 
 ```sh
-ACCOUNT_ID=9 bundle exec rake conversation_episodes:resync_activity_history
-ACCOUNT_ID=9 APPLY=true bundle exec rake conversation_episodes:resync_activity_history
+# Run in the CRM application directory; preview first.
+CRM_ACCOUNT_ID=69f887d1df9e9e80c MAX_PAGES=100 \
+php run-module-script.php \
+  custom/Espo/Modules/Chatwoot/Scripts/BackfillEpisodeActivityHistory.php \
+  'Espo\Modules\Chatwoot\Scripts\BackfillEpisodeActivityHistory'
+
+CRM_ACCOUNT_ID=69f887d1df9e9e80c MAX_PAGES=100 APPLY=true \
+php run-module-script.php \
+  custom/Espo/Modules/Chatwoot/Scripts/BackfillEpisodeActivityHistory.php \
+  'Espo\Modules\Chatwoot\Scripts\BackfillEpisodeActivityHistory'
 ```
 
-The normal episode sync fills the new columns as pending revisions drain.
-Activity-only changes also queue affected episodes, without adding transcript
+The command reads all source episodes, including acknowledged revisions, in
+100-record pages. It fills only the three summary strings and two name arrays.
+Each update locks the CRM row and requires an exact source-revision match;
+missing, superseded or different-revision records are deferred to normal sync.
+Transcript membership, coverage, boundaries, revision and source acknowledgements
+are preserved. Repeated runs skip unchanged summaries. Output includes counts
+and an `after` cursor; pass `AFTER=<last after>` to resume when `hasMore` is true.
+The default budget is 10 pages. Missing source activity keys abort with a rollout
+error rather than producing empty historical values.
+
+The normal episode sync maintains the new columns on later revisions.
+Activity-only changes queue affected episodes, without adding transcript
 messages or changing episode boundaries/counts. During rolling deployment, an
 API response without the new keys leaves existing CRM summaries untouched.
 
@@ -94,9 +113,8 @@ inbox, boundary policy and close reason.
   to an invented "unassigned" participant.
 - **Storage:** `lifecycleAssigneeNames` and `lifecycleTeamNames` preserve the source
   arrays separately from display text. Names containing commas remain intact.
-  Older text-only rows are not split to infer participants. Requeue source
-  episodes using `conversation_episodes:resync_activity_history` after deploying
-  this importer to populate both arrays and display columns.
+  Older text-only rows are not split to infer participants. Run the CRM activity
+  history backfill after deployment to populate both arrays and display columns.
 
 The aggregation reads only distinct permitted episode IDs, account IDs and the
 relevant name array. Drill-down membership is evaluated before pagination, then
@@ -152,3 +170,51 @@ The redundant per-episode source refresh was removed: transcript pages already
 check their revision, and acknowledgement conditionally verifies the same
 revision after commit. Normal deployment's cached image digest was also aligned
 with the fixed image so subsequent deployment applies retain the implementation.
+
+## Historical activity enrichment completed — 2026-09-23
+
+Account 9's new history columns initially existed only on recently synchronized
+episodes. The source still retained historical pills: episode 4369 (31 August)
+returned `consultas` plus three assigned agents while its acknowledged CRM
+revision still had null report fields.
+
+The summary backfill processed 5,376 existing episodes: 797 in July, 3,284 in
+August and 1,295 in September at verification time. It enriched 5,320 rows;
+55 were already current and one live revision was deferred and subsequently
+filled by the regular consumer. The final check found zero unprocessed summary
+strings/name arrays on current CRM episodes for this account.
+
+Native report/CSV verification used an existing non-global account administrator.
+The August `chwRptEpList` CSV contained exactly 3,284 data rows, with 3,211
+non-empty agent histories, 2,001 team histories and 51 tag histories. Legitimately
+empty or unavailable activity evidence remains empty. The August participation
+grids returned 5,421 agent participations and 2,079 team participations. The
+temporary verification export was removed after its values were checked.
+
+## Late-confirmation boundary correction — 2026-09-23
+
+Conversation #5882 exposed a separate source-accounting issue: an outgoing
+message created at 11:17:47 São Paulo time was confirmed at 11:18:57, after the
+agent resolved the conversation at 11:17:58. The confirmation reopened the
+conversation and created a second one-message episode, so that row showed the
+new automatic assignment to Regiane rather than the earlier IA/Connect Center
+history.
+
+Chatwoot's lifecycle/reconstruction correction uses the transactional resolution
+high-water mark to recognize replies already queued before closure. Their
+interaction time becomes the original message time; the recorded confirmation
+is retained in `additional_attributes.episode_confirmed_at`. Genuine post-close
+follow-ups, inactivity policy and policy-cutover cases retain their timing rules.
+
+The source repair was applied to 17 messages across 12 affected account-9
+conversations, and all resulting revisions/tombstones were synchronized to CRM.
+Some repaired conversations also recovered previously unsynchronized older
+episodes during full-history reconstruction. No crossing confirmations or pending
+CRM revisions remained at verification time.
+
+For #5882 on 23 September, episode 5281 now contains 10 messages, starts at 07:22
+and closes at 11:17 São Paulo time, with `IA - Grupo Mousa` and `Connect Center`.
+Episode 5341 is superseded and hidden from current reports. An actual native CSV
+export under a non-global account administrator was checked for the single
+corrected row, its histories and message count; the temporary export was removed.
+The preventive source-code guard requires deployment to Chatwoot web and workers.

@@ -20,11 +20,7 @@ class ConversationEpisodeSync
 
     public function syncAccount(Entity $account, int $limit = 100): int
     {
-        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $account->get('platformId'));
-        if (!$platform) {
-            throw new RuntimeException('Episode sync requires a Chatwoot platform');
-        }
-        $connection = [$platform->get('backendUrl'), $account->get('apiKey'), (int) $account->get('chatwootAccountId')];
+        $connection = $this->connection($account);
         $pdo = $this->entityManager->getPDO();
         // A single consumer per account also serializes message membership changes
         // when a reconstructed episode supersedes an earlier one.
@@ -60,6 +56,95 @@ class ConversationEpisodeSync
         }
 
         return $synced;
+    }
+
+    /**
+     * Enrich one page of already-synchronized episodes, including acknowledged
+     * historical revisions. No transcript writes or source acknowledgements.
+     * A stale/missing local revision is left to the regular episode consumer.
+     *
+     * @return array{after: int, hasMore: bool, scanned: int, updated: int, wouldUpdate: int, unchanged: int, deferred: int}
+     */
+    public function backfillActivityHistory(Entity $account, int $after = 0, bool $apply = false): array
+    {
+        $page = $this->api->episodeRequest(...[...$this->connection($account), "?after={$after}"]);
+        $rows = $page['payload'] ?? [];
+        $stats = [
+            'after' => $after, 'hasMore' => count($rows) === 100, 'scanned' => count($rows),
+            'updated' => 0, 'wouldUpdate' => 0, 'unchanged' => 0, 'deferred' => 0,
+        ];
+
+        foreach ($rows as $source) {
+            $stats['after'] = (int) $source['id'];
+            if (!empty($source['superseded_at'])) {
+                $stats['deferred']++;
+                continue;
+            }
+            foreach (['lifecycle_labels', 'lifecycle_assignees', 'lifecycle_teams'] as $key) {
+                if (!isset($source[$key]) || !is_array($source[$key])) {
+                    throw new RuntimeException('Deploy the Chatwoot activity-history payload before backfilling summaries');
+                }
+            }
+            $values = $this->activityHistoryValues($source);
+            $outcome = 'deferred';
+            $this->persistWithRetry(function () use ($account, $source, $values, $apply, &$outcome): void {
+                $episode = $this->entityManager->getRDBRepository('ChatwootConversationEpisode')->where([
+                    'chatwootAccountId' => $account->getId(), 'chatwootEpisodeId' => (int) $source['id'],
+                ])->forUpdate()->findOne();
+                if (!$episode || (int) $episode->get('sourceRevision') !== (int) $source['revision']) {
+                    $outcome = 'deferred';
+                    return;
+                }
+                $changed = false;
+                foreach ($values as $field => $value) {
+                    $changed = $changed || $episode->get($field) !== $value;
+                }
+                if (!$changed) {
+                    $outcome = 'unchanged';
+                    return;
+                }
+                if ($apply) {
+                    $episode->set($values);
+                    $this->entityManager->saveEntity($episode, ['silent' => true]);
+                }
+                $outcome = $apply ? 'updated' : 'wouldUpdate';
+            });
+            $stats[$outcome]++;
+        }
+
+        return $stats;
+    }
+
+    private function connection(Entity $account): array
+    {
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $account->get('platformId'));
+        if (!$platform) {
+            throw new RuntimeException('Episode sync requires a Chatwoot platform');
+        }
+
+        return [$platform->get('backendUrl'), $account->get('apiKey'), (int) $account->get('chatwootAccountId')];
+    }
+
+    private function activityHistoryValues(array $source): array
+    {
+        $values = [];
+        // Optional during rolling deployments. An older API response must not
+        // erase a previously synchronized summary or its structured name arrays.
+        foreach ([
+            'lifecycle_labels' => ['lifecycleTags', null],
+            'lifecycle_assignees' => ['lifecycleAssignees', 'lifecycleAssigneeNames'],
+            'lifecycle_teams' => ['lifecycleTeams', 'lifecycleTeamNames'],
+        ] as $key => [$field, $namesField]) {
+            if (array_key_exists($key, $source)) {
+                $names = array_values(array_unique($source[$key]));
+                $values[$field] = implode(', ', $names);
+                if ($namesField) {
+                    $values[$namesField] = $names;
+                }
+            }
+        }
+
+        return $values;
     }
 
     private function syncEpisode(Entity $account, array $connection, array $source): void
@@ -136,21 +221,7 @@ class ConversationEpisodeSync
                 'syncedMessageCount' => count($messages), 'transcriptComplete' => !$superseded,
                 'lastSyncedAt' => gmdate('Y-m-d H:i:s'), 'deleted' => $superseded,
             ]);
-            // Optional while Chatwoot and CRM roll out independently. Do not
-            // erase a previously synchronized summary on an older API response.
-            foreach ([
-                'lifecycle_labels' => ['lifecycleTags', null],
-                'lifecycle_assignees' => ['lifecycleAssignees', 'lifecycleAssigneeNames'],
-                'lifecycle_teams' => ['lifecycleTeams', 'lifecycleTeamNames'],
-            ] as $key => [$field, $namesField]) {
-                if (array_key_exists($key, $source)) {
-                    $names = array_values(array_unique($source[$key]));
-                    $episode->set($field, implode(', ', $names));
-                    if ($namesField) {
-                        $episode->set($namesField, $names);
-                    }
-                }
-            }
+            $episode->set($this->activityHistoryValues($source));
             $this->entityManager->saveEntity($episode, ['silent' => true]);
             $clear = $this->entityManager->getPDO()->prepare(
                 'UPDATE chatwoot_message SET conversation_episode_id = NULL, is_episode_interaction = 0, episode_interaction_at = NULL '

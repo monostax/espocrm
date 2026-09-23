@@ -19,6 +19,7 @@ use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Select\Where\Item as WhereItem;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Language;
 use Espo\Entities\User;
 use Espo\Modules\Advanced\Reports\GridReport;
 use Espo\Modules\Advanced\Tools\Report\GridType\Result;
@@ -79,6 +80,7 @@ class DailyAiDigest implements GridReport
         private SelectBuilderFactory $selectBuilderFactory,
         private Config $config,
         private ConversationDayGrainFetcher $grainFetcher,
+        private Language $language,
     ) {}
 
     public function run(?WhereItem $where, ?User $user): Result
@@ -116,7 +118,7 @@ class DailyAiDigest implements GridReport
             self::COL_AFTER_WEEKEND => 'Fora do horário (fim de semana)',
             self::COL_AFTER_WEEKDAY => 'Fora do horário (dia útil)',
             self::COL_LEAD => 'Lead time (ms)',
-            self::COL_TURNS => 'Total de Engajamentos',
+            self::COL_TURNS => $this->language->translateLabel('turns', 'columnLabels', self::RUN_ENTITY),
         ];
 
         $columnTypeMap = [

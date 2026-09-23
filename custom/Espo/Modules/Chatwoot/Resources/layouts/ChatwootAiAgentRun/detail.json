@@ -105,6 +105,20 @@
         ]
     },
     {
+        "label": "Model Requests and Cache",
+        "rows": [
+            [{"name": "usageMetricsVersion"}, {"name": "modelRequestCount"}],
+            [{"name": "mainRequestCount"}, {"name": "searchRequestCount"}],
+            [{"name": "mainUsageRequestCount"}, {"name": "searchUsageRequestCount"}],
+            [{"name": "mainCacheHitRequestCount"}, {"name": "searchCacheHitRequestCount"}],
+            [{"name": "mainInputTokens"}, {"name": "searchInputTokens"}],
+            [{"name": "mainCachedInputTokens"}, {"name": "searchCachedInputTokens"}],
+            [{"name": "mainOutputTokens"}, {"name": "searchOutputTokens"}],
+            [{"name": "mainMaxInputTokens"}, {"name": "searchMaxInputTokens"}],
+            [{"name": "modelUsage", "fullWidth": true}]
+        ]
+    },
+    {
         "label": "Outcomes",
         "rows": [
             [

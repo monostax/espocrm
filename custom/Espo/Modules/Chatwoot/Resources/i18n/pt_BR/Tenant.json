@@ -3,9 +3,9 @@
         "aiBillingCurrency": "Moeda Faturamento IA (atual)",
         "aiBillingPackUnitPrice": "Preço Pacote IA (atual)",
         "aiBillingExtraBasePrice": "Preço Base Extra IA (atual)",
-        "aiBillingExtraUnitPrice": "Preço Unitário Extra IA (atual)",
-        "aiBillingPackSize": "Tamanho Pacote IA (atual)",
-        "aiBillingExtraIncludedTurns": "Respostas Incluídas Extra IA (atual)",
+        "aiBillingExtraUnitPrice": "Preço por Execução Adicional IA (atual)",
+        "aiBillingPackSize": "Execuções por Pacote IA (atual)",
+        "aiBillingExtraIncludedTurns": "Execuções Incluídas na Base IA (atual)",
         "aiBillingPlanIncludedUsage": "Uso Incluído Plano IA / Mês (atual)",
         "aiBillingCreditUnitPrice": "Preço do Crédito IA (atual)",
         "aiBillingPlanIncludedCredits": "Créditos Incluídos Plano IA / Mês (atual)"
@@ -15,11 +15,11 @@
         "aiBillingPackUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
         "aiBillingExtraBasePrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
         "aiBillingExtraUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingPackSize": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingExtraIncludedTurns": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingPlanIncludedUsage": "Snapshot somente-leitura do período aberto. Franquia mensal de pacotes (modelo pacote) ou conversas atendidas (extra). Edite em Tarifas Faturamento IA.",
-        "aiBillingCreditUnitPrice": "Snapshot somente-leitura do período aberto. Preço de 1 crédito de engajamento da IA (modelo crédito). Edite em Tarifas Faturamento IA.",
-        "aiBillingPlanIncludedCredits": "Snapshot somente-leitura do período aberto. Franquia mensal de créditos de engajamento (modelo crédito). Edite em Tarifas Faturamento IA."
+        "aiBillingPackSize": "Valor atual, somente leitura. Número máximo de execuções do agente por pacote. Edite em Tarifas Faturamento IA.",
+        "aiBillingExtraIncludedTurns": "Valor atual, somente leitura. Número de execuções por mensagem do cliente incluídas na cobrança base por conversa e dia. Edite em Tarifas Faturamento IA.",
+        "aiBillingPlanIncludedUsage": "Valor atual, somente leitura. Franquia mensal de pacotes (modelo pacote) ou conversas e oportunidades atendidas (modelo extra). Edite em Tarifas Faturamento IA.",
+        "aiBillingCreditUnitPrice": "Valor atual, somente leitura. Preço por crédito no modelo crédito. Cada execução do agente consome 1 crédito, independentemente da quantidade de chamadas ao LLM ou tokens. Edite em Tarifas Faturamento IA.",
+        "aiBillingPlanIncludedCredits": "Valor atual, somente leitura. Franquia mensal de créditos no modelo crédito. Cada execução do agente consome 1 crédito. Edite em Tarifas Faturamento IA."
     },
     "links": {
         "chatwootAccounts": "Contas de Chat",

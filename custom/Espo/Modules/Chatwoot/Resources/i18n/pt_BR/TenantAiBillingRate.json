@@ -6,10 +6,10 @@
         "effectiveTo": "Vigência Fim",
         "currency": "Moeda",
         "packUnitPrice": "Preço Unitário do Pacote",
-        "packSize": "Tamanho do Pacote (engajamentos)",
+        "packSize": "Execuções por Pacote",
         "extraBasePrice": "Preço Base Extra",
-        "extraUnitPrice": "Preço Unitário Extra",
-        "extraIncludedTurns": "Respostas Incluídas na Base",
+        "extraUnitPrice": "Preço por Execução Adicional",
+        "extraIncludedTurns": "Execuções por Mensagem do Cliente Incluídas na Base",
         "planIncludedUsage": "Uso Incluído no Plano / Mês",
         "creditUnitPrice": "Preço do Crédito",
         "planIncludedCredits": "Créditos Incluídos no Plano / Mês"
@@ -31,13 +31,13 @@
         "effectiveFrom": "Primeiro dia de calendário (fuso do app) em que esta tarifa vale para conversa-dia.",
         "effectiveTo": "Último dia inclusive. Vazio = acordo atual aberto. Criar um novo período aberto encerra o anterior no dia anterior ao início.",
         "currency": "Moeda do acordo para os preços unitários (Administração → Moeda). Vazio = padrão do sistema.",
-        "packUnitPrice": "Modelo pacote: preço por bloco de N engajamentos da IA. Vazio = padrão (1,99).",
-        "packSize": "Modelo pacote: engajamentos da IA por pacote. Vazio = 4.",
-        "extraBasePrice": "Modelo extra: cobrança fixa por conversa atendida no dia. Vazio = 0,99.",
-        "extraUnitPrice": "Modelo extra: preço por engajamento adicional. Vazio = 0,49.",
-        "extraIncludedTurns": "Modelo extra: Engajamentos de Resposta (respostas da IA ao cliente) já inclusos na base de cada conversa atendida. Vazio = 4.",
-        "planIncludedUsage": "Unidades gratuitas mensais do plano (pacotes no modelo pacote, conversas atendidas no modelo extra). Alinhado ao Pricing.html — Lite 200 / Essential 600 / Pro 1000. 0 = paga-tudo (sem franquia). Use filtros de mês cheio no relatório para consumo FIFO correto.",
-        "creditUnitPrice": "Modelo crédito: preço de 1 crédito de engajamento da IA. Todo engajamento vale 1 crédito — resposta ao cliente, @menção da equipe, follow-up ou mensagem agendada. Vazio = 0,49.",
-        "planIncludedCredits": "Modelo crédito: créditos gratuitos por mês civil, consumidos em ordem cronológica. O que passar é cobrado pelo Preço do Crédito. 0 = paga-tudo (sem franquia). Não confundir com Uso Incluído no Plano, que conta conversas/pacotes. Use filtros de mês cheio no relatório."
+        "packUnitPrice": "Modelo pacote: preço por pacote de até N execuções do agente, por conversa ou oportunidade e por dia. Vazio = padrão (1,99).",
+        "packSize": "Modelo pacote: número máximo de execuções do agente por pacote. Cada execução conta uma vez, independentemente da quantidade de chamadas ao LLM ou tokens. Vazio = 4.",
+        "extraBasePrice": "Modelo extra: cobrança fixa por conversa ou oportunidade com execuções do agente no dia. Vazio = 0,99.",
+        "extraUnitPrice": "Modelo extra: preço por execução adicional. Aplica-se às execuções por mensagem do cliente que excederem a quantidade incluída na base e a todas as execuções por menção ou automação (@menção, follow-up ou mensagem agendada). Vazio = 0,49.",
+        "extraIncludedTurns": "Modelo extra: número de execuções por mensagem do cliente incluídas na cobrança base por conversa e dia. Execuções por menção ou automação são cobradas separadamente. Vazio = 4.",
+        "planIncludedUsage": "Franquia mensal do plano, medida em pacotes no modelo pacote e em conversas ou oportunidades atendidas no modelo extra. 0 = sem franquia. Use um mês completo no relatório para aplicar a franquia em ordem cronológica.",
+        "creditUnitPrice": "Modelo crédito: preço por crédito. Cada execução do agente consome 1 crédito, independentemente da quantidade de chamadas ao LLM ou tokens. Vale para execuções por mensagem do cliente, @menção, follow-up ou mensagem agendada. Vazio = 0,49.",
+        "planIncludedCredits": "Modelo crédito: créditos incluídos por mês civil, consumidos em ordem cronológica. Cada execução do agente consome 1 crédito. O excedente é cobrado pelo Preço do Crédito. 0 = sem franquia. Use um mês completo no relatório."
     }
 }

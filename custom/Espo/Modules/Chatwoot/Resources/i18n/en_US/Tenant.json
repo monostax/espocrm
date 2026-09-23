@@ -3,9 +3,9 @@
         "aiBillingCurrency": "AI Billing Currency (current)",
         "aiBillingPackUnitPrice": "AI Pack Unit Price (current)",
         "aiBillingExtraBasePrice": "AI Extra Base Price (current)",
-        "aiBillingExtraUnitPrice": "AI Extra Unit Price (current)",
-        "aiBillingPackSize": "AI Pack Size (current)",
-        "aiBillingExtraIncludedTurns": "AI Extra Included Replies (current)",
+        "aiBillingExtraUnitPrice": "AI Price per Additional Run (current)",
+        "aiBillingPackSize": "AI Agent Runs per Pack (current)",
+        "aiBillingExtraIncludedTurns": "AI Runs Included in Base (current)",
         "aiBillingPlanIncludedUsage": "AI Plan Included Usage / Month (current)",
         "aiBillingCreditUnitPrice": "AI Credit Unit Price (current)",
         "aiBillingPlanIncludedCredits": "AI Plan Included Credits / Month (current)"
@@ -15,14 +15,14 @@
         "aiBillingPackUnitPrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
         "aiBillingExtraBasePrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
         "aiBillingExtraUnitPrice": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
-        "aiBillingPackSize": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
-        "aiBillingExtraIncludedTurns": "Read-only snapshot from the current open rate period. Edit under AI Billing Rates.",
-        "aiBillingPlanIncludedUsage": "Read-only snapshot from the current open rate period. Monthly free packs (pack model) or engaged conversations (extra). Edit under AI Billing Rates.",
-        "aiBillingCreditUnitPrice": "Read-only snapshot from the current open rate period. Price of one AI engagement credit (credit model). Edit under AI Billing Rates.",
-        "aiBillingPlanIncludedCredits": "Read-only snapshot from the current open rate period. Monthly free engagement credits (credit model). Edit under AI Billing Rates."
+        "aiBillingPackSize": "Current read-only value. Maximum number of agent runs per pack. Edit under AI Billing Rates.",
+        "aiBillingExtraIncludedTurns": "Current read-only value. Number of customer message runs included in the base charge per conversation and day. Edit under AI Billing Rates.",
+        "aiBillingPlanIncludedUsage": "Current read-only value. Monthly allowance of packs (pack model) or conversations and opportunities handled (extra model). Edit under AI Billing Rates.",
+        "aiBillingCreditUnitPrice": "Current read-only value. Price per credit in the credit model. Each agent run consumes 1 credit, regardless of the number of LLM calls or tokens. Edit under AI Billing Rates.",
+        "aiBillingPlanIncludedCredits": "Current read-only value. Monthly credit allowance in the credit model. Each agent run consumes 1 credit. Edit under AI Billing Rates."
     },
     "links": {
-        "chatwootAccounts": "Chatwoot Accounts",
+        "chatwootAccounts": "Chat Accounts",
         "chatwootAiAgentRuns": "AI Agent Runs",
         "aiBillingRates": "AI Billing Rates"
     },
