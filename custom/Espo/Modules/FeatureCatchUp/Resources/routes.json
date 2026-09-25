@@ -1,0 +1,6 @@
+[
+    {"route": "/CatchUp", "method": "get", "params": {"controller": "CatchUp", "action": "list"}},
+    {"route": "/CatchUp/:id", "method": "get", "params": {"controller": "CatchUp", "action": "read", "id": ":id"}},
+    {"route": "/CatchUp/:id/review", "method": "post", "params": {"controller": "CatchUp", "action": "review", "id": ":id"}},
+    {"route": "/CatchUp/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "summary", "id": ":id"}}
+]

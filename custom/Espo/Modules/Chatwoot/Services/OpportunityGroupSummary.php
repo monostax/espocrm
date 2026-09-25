@@ -42,52 +42,18 @@ class OpportunityGroupSummary
 
     public function get(Request $request): array
     {
-        $accountId = filter_var($request->getQueryParam('chatwootAccountId'), FILTER_VALIDATE_INT);
         $groupBy = $request->getQueryParam('groupBy');
-        if (!$accountId || $accountId < 1 ||
-            !in_array($groupBy, [...array_keys(self::FIELDS), 'none', 'readStatus', 'activity'], true)) {
+        if (!in_array($groupBy, [...array_keys(self::FIELDS), 'none', 'readStatus', 'activity'], true)) {
             throw new BadRequest('A workspace and valid grouping are required.');
         }
-        // The existing workspace gate checks active user, account ACL, tenant membership,
-        // and ambiguous cross-platform IDs. It does not require permission to post.
-        $workspace = $this->workspaceAccess->workspace($accountId);
-        if (!$this->acl->checkScope('Opportunity', 'read')) {
-            throw new Forbidden();
-        }
+        $scope = $this->buildScope($request);
         if (isset(self::FIELDS[$groupBy]) && !$this->acl->checkField('Opportunity', self::FIELDS[$groupBy][1])) {
             throw new Forbidden();
         }
 
-        $params = $this->searchParamsFetcher->fetch($request)
-            ->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
-        $scope = $this->selectBuilderFactory->create()->from('Opportunity')
-            ->withSearchParams($params)->withStrictAccessControl()->buildQueryBuilder()
-            // A mandatory AND, independent of client filters and admin ACL bypass.
-            ->where(['tenantId' => $workspace->get('tenantId')])
-            ->select(['id'])->order([])->limit(null, null)->build();
-
         // A semi-join prevents team/link filter joins from multiplying either COUNT or SUM.
         $query = SelectBuilder::create()->from('Opportunity')->where(['id=s' => $scope]);
-        $activity = $request->getQueryParam('activity');
-        if ($activity === 'noActivities') {
-            $activity = 'noNextAction';
-        }
-        $bucket = null;
-        if ($groupBy === 'activity' || $activity) {
-            if ($activity && !in_array($activity, OpportunityActivityBuckets::KEYS, true)) {
-                throw new BadRequest('Invalid activity bucket.');
-            }
-            try {
-                $zone = new DateTimeZone($request->getQueryParam('timeZone') ?: 'UTC');
-            } catch (\Exception) {
-                throw new BadRequest('Invalid time zone.');
-            }
-            $bucket = $this->activityBuckets->apply($query, $scope, new DateTimeImmutable('now', $zone));
-            if ($activity) {
-                $query->where(Expr::equal($bucket, $activity));
-            }
-        }
-
+        $bucket = $this->applyActivityFilter($query, $scope, $request, $groupBy === 'activity');
         $key = match ($groupBy) {
             'none' => Expr::value('all'),
             'readStatus' => $this->readStatus($query, $scope),
@@ -114,6 +80,54 @@ class OpportunityGroupSummary
         ];
     }
 
+    /** Shared by group and spreadsheet summaries so both describe the same full view. */
+    public function buildScope(Request $request): Select
+    {
+        $accountId = filter_var($request->getQueryParam('chatwootAccountId'), FILTER_VALIDATE_INT);
+        if (!$accountId || $accountId < 1) {
+            throw new BadRequest('A workspace is required.');
+        }
+        // The existing workspace gate checks active user, account ACL, tenant membership,
+        // and ambiguous cross-platform IDs. It does not require permission to post.
+        $workspace = $this->workspaceAccess->workspace($accountId);
+        if (!$this->acl->checkScope('Opportunity', 'read')) {
+            throw new Forbidden();
+        }
+        $params = $this->searchParamsFetcher->fetch($request)
+            ->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
+        return $this->selectBuilderFactory->create()->from('Opportunity')
+            ->withSearchParams($params)->withStrictAccessControl()->buildQueryBuilder()
+            // A mandatory AND, independent of client filters and admin ACL bypass.
+            ->where(['tenantId' => $workspace->get('tenantId')])
+            ->select(['id'])->order([])->limit(null, null)->build();
+
+    }
+
+    public function applyActivityFilter(SelectBuilder $query, Select $scope, Request $request, bool $grouped = false): ?Expr
+    {
+        $activity = $request->getQueryParam('activity');
+        if ($activity === 'noActivities') {
+            $activity = 'noNextAction';
+        }
+        $bucket = null;
+        if ($grouped || $activity) {
+            if ($activity && !in_array($activity, OpportunityActivityBuckets::KEYS, true)) {
+                throw new BadRequest('Invalid activity bucket.');
+            }
+            try {
+                $zone = new DateTimeZone($request->getQueryParam('timeZone') ?: 'UTC');
+            } catch (\Exception) {
+                throw new BadRequest('Invalid time zone.');
+            }
+            $bucket = $this->activityBuckets->apply($query, $scope, new DateTimeImmutable('now', $zone));
+            if ($activity) {
+                $query->where(Expr::equal($bucket, $activity));
+            }
+        }
+
+        return $bucket;
+    }
+
     private function readStatus(SelectBuilder $query, Select $scope): Expr
     {
         $unread = SelectBuilder::create()->clone($scope);
@@ -123,7 +137,7 @@ class OpportunityGroupSummary
         return Expr::if(Expr::isNull(Expr::alias('summaryUnread.id')), 'read', 'unread');
     }
 
-    private function baseAmount(): Expr
+    public function baseAmount(): Expr
     {
         // amountConverted is in defaultCurrency, which can differ from baseCurrency.
         // Compile the configured currency->base rates into SQL constants: no rate/API

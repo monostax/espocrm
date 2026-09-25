@@ -4,6 +4,7 @@
     display: flex !important;
     justify-content: flex-end;
     padding: 0 !important;
+    overflow: hidden;
 }
 
 .modal.drawer-modal .modal-dialog {
@@ -11,6 +12,7 @@
     max-width: 500px;
     width: 100%;
     height: 100vh;
+    height: 100dvh;
     transform: translateX(0);
     animation: slideInRight 0.3s ease-out;
 }
@@ -26,6 +28,8 @@
 
 .modal.drawer-modal .modal-content {
     height: 100%;
+    min-height: 0;
+    overflow: hidden;
     border-radius: 0;
     border: none;
     display: flex;
@@ -37,7 +41,8 @@
 }
 
 .modal.drawer-modal .modal-body {
-    flex: 1;
+    flex: 1 1 0;
+    min-height: 0;
     padding: 0;
     overflow: hidden;
 }
@@ -58,6 +63,7 @@
 }
 
 .drawer-iframe-container iframe {
+    display: block;
     width: 100%;
     height: 100%;
     border: none;

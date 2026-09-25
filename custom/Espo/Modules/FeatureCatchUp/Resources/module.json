@@ -1,0 +1,6 @@
+{
+    "name": "FeatureCatchUp",
+    "description": "Personal catch-up feed, source-grounded summaries and snapshot-based review.",
+    "version": "1.0.0",
+    "order": 40
+}

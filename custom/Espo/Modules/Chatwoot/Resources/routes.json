@@ -1,4 +1,5 @@
 [
+    { "route": "/Opportunity/action/spreadsheetSummary", "method": "get", "params": { "controller": "OpportunitySpreadsheetSummary", "action": "summary" } },
     { "route": "/OpportunityBulkPost/workspaces/:accountId", "method": "post", "params": { "controller": "OpportunityBulkPost", "action": "submit", "accountId": ":accountId" } },
     { "route": "/OpportunityBulkPost/workspaces/:accountId", "method": "get", "params": { "controller": "OpportunityBulkPost", "action": "recent", "accountId": ":accountId" } },
     { "route": "/OpportunityBulkPost/workspaces/:accountId/:id", "method": "get", "params": { "controller": "OpportunityBulkPost", "action": "status", "accountId": ":accountId", "id": ":id" } },

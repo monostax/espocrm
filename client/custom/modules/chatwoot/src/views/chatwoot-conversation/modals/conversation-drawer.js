@@ -51,7 +51,7 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
 
     return Dep.extend({
         cssName: "conversation-drawer",
-        className: "dialog conversation-drawer-dialog",
+        className: "dialog conversation-drawer-dialog drawer-modal",
 
         template: "chatwoot:chatwoot-conversation/modals/conversation-drawer",
 
@@ -59,7 +59,9 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
 
         backdrop: true,
 
-        fitHeight: true,
+        // The drawer's flex layout owns its height, not Espo's modal body sizing.
+        fitHeight: false,
+        noFullHeight: true,
 
         data: function () {
             return {
@@ -130,33 +132,11 @@ define("chatwoot:views/chatwoot-conversation/modals/conversation-drawer", [
         afterRender: function () {
             Dep.prototype.afterRender.call(this);
 
-            // Add drawer-specific class to the modal backdrop and dialog
-            this.$el.closest(".modal").addClass("drawer-modal");
+            // Add drawer-specific styling to the modal backdrop.
             $(".modal-backdrop").last().addClass("drawer-backdrop");
-
-            // Handle iframe resizing
-            const $iframe = this.$el.find("iframe");
-            if ($iframe.length) {
-                const updateHeight = () => {
-                    const $modal = this.$el.closest(".modal");
-                    const footerHeight =
-                        $modal.find(".modal-footer").outerHeight() || 0;
-                    const windowHeight = $(window).height();
-                    const availableHeight = windowHeight - footerHeight;
-                    $iframe.css(
-                        "height",
-                        Math.max(300, availableHeight) + "px",
-                    );
-                };
-
-                // Delay to ensure modal is fully rendered
-                setTimeout(updateHeight, 50);
-                $(window).on("resize.conversationDrawer", updateHeight);
-            }
 
             // Clean up on close
             this.once("remove", () => {
-                $(window).off("resize.conversationDrawer");
                 $(".modal-backdrop").removeClass("drawer-backdrop");
             });
         },
