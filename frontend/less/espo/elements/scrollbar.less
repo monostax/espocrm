@@ -24,3 +24,64 @@
     border-radius: 0;
     border: var(--scroll-border-width) solid var(--scroll-bg);
 }
+
+// Match Chatwoot's conversation/opportunity list overlays. Enable only after
+// the UI helper is ready; standalone content iframes retain native scrollbars.
+html.vscode-scrollbars {
+    --scroll-width: 0px;
+
+    &,
+    * {
+        scrollbar-width: none !important;
+        scrollbar-gutter: auto !important;
+
+        &::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+    }
+}
+
+.vscode-scrollbar-layer {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 10003;
+    contain: strict;
+}
+
+.vscode-scrollbar-track {
+    position: absolute;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.vscode-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 3px;
+    background-color: rgba(128, 128, 128, 0.5);
+    pointer-events: none;
+
+    &-vertical {
+        left: auto;
+        right: 2px;
+        width: 6px;
+    }
+
+    &-horizontal {
+        top: auto;
+        bottom: 2px;
+        height: 6px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vscode-scrollbar-track {
+        transition: none;
+    }
+}

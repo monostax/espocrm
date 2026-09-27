@@ -2,7 +2,9 @@
 // and theme/colors.js. CRM builds independently, so it keeps a local palette.
 .monostax-palette() when (@monostax-color-mode = light) {
     @monostax-colors: {
-        brand: #2781f6;
+        brand: #191919;
+        brand-hover: #333333;
+        brand-foreground: #ffffff;
         background: rgb(247, 247, 247);
         surface-1: rgb(254, 254, 254);
         surface-2: rgb(255, 255, 255);
@@ -63,7 +65,9 @@
 
 .monostax-palette() when (@monostax-color-mode = dark) {
     @monostax-colors: {
-        brand: #2781f6;
+        brand: #fafafa;
+        brand-hover: #e4e4e7;
+        brand-foreground: #191919;
         background: rgb(28, 29, 32);
         surface-1: rgb(20, 21, 23);
         surface-2: rgb(22, 23, 26);

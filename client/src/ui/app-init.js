@@ -27,8 +27,11 @@
  ************************************************************************/
 
 import $ from 'jquery';
+import initOverlayScrollbars from 'ui/overlay-scrollbars';
 
 function uiAppInit() {
+    initOverlayScrollbars();
+
     const $document = $(document);
 
     const topSpaceHeight = 100;

@@ -20,7 +20,9 @@ CRM uses the same semantic palette as Chatwoot in light and dark modes.
 | Inputs and modal content | `n-solid-1` |
 | Primary text / secondary text | `n-slate-12` / `n-slate-11` |
 | Dividers / input borders | `n-weak` / `n-strong` |
-| Primary actions and focus | `n-brand` (`#2781f6`) |
+| Primary actions and focus | `n-brand` (`#191919` light / `#fafafa` dark) |
+| Primary action hover | `n-brand-hover` (`#333333` light / `#e4e4e7` dark) |
+| Text on primary actions | `n-brand-foreground` (white light / near-black dark) |
 | Success / danger / warning / info | Teal / ruby / amber / iris |
 
 Use the semantic variables for new styles rather than hardcoded colors. Color

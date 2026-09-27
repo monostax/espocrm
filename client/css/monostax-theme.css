@@ -1,6 +1,8 @@
 /* Values come from the active CRM theme's --n-* palette, including dark mode. */
 @theme inline {
     --color-n-brand: var(--n-brand);
+    --color-n-brand-hover: var(--n-brand-hover);
+    --color-n-brand-foreground: var(--n-brand-foreground);
     --color-n-background: var(--n-background);
     --color-n-surface-1: var(--n-surface-1);
     --color-n-surface-2: var(--n-surface-2);

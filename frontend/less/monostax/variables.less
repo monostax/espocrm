@@ -39,7 +39,7 @@
 @navbar-inverse-link-disabled-color-value: @monostax-colors[slate-9];
 
 @brand-primary-value: @monostax-colors[brand];
-@brand-primary-text-value: #fff;
+@brand-primary-text-value: @monostax-colors[brand-foreground];
 @brand-success-value: @monostax-colors[teal-9];
 @brand-danger-value: @monostax-colors[ruby-9];
 @brand-warning-value: @monostax-colors[amber-9];
@@ -47,9 +47,9 @@
 
 @state-default-bg-value: @monostax-colors[slate-3];
 @state-default-text-value: @text-color-value;
-@state-primary-bg-value: @monostax-colors[blue-3];
-@state-primary-text-value: @monostax-colors[blue-11];
-@state-primary-border-value: @monostax-colors[blue-7];
+@state-primary-bg-value: @monostax-colors[slate-3];
+@state-primary-text-value: @monostax-colors[slate-12];
+@state-primary-border-value: @monostax-colors[slate-7];
 @state-success-bg-value: @monostax-colors[teal-3];
 @state-success-text-value: @monostax-colors[teal-11];
 @state-success-border-value: @monostax-colors[teal-7];
@@ -89,8 +89,8 @@
 @input-border-focus-value: @brand-primary-value;
 @input-bg-disabled-value: @monostax-colors[slate-3];
 @input-color-disabled-value: @text-muted-color-value;
-@link-color-value: @monostax-colors[blue-11];
-@link-hover-color-value: @monostax-colors[blue-10];
+@link-color-value: @monostax-colors[brand];
+@link-hover-color-value: @monostax-colors[brand-hover];
 @text-link-color-value: @link-color-value;
 @text-link-hover-color-value: @link-hover-color-value;
 @link-record-color-value: @text-color-value;
@@ -105,7 +105,8 @@
 @btn-default-active-border-value: @monostax-colors[slate-8];
 @btn-text-color-value: @text-muted-color-value;
 
-@btn-primary-hover-bg-value: @monostax-colors[blue-10];
+@btn-primary-color-value: @monostax-colors[brand-foreground];
+@btn-primary-hover-bg-value: @monostax-colors[brand-hover];
 @btn-primary-active-bg-value: @btn-primary-hover-bg-value;
 @btn-primary-border-value: @brand-primary-value;
 @btn-primary-hover-border-value: @btn-primary-hover-bg-value;
@@ -146,13 +147,13 @@
 // Also used by date/time pickers and native selects, which inherit their text.
 @dropdown-link-hover-bg-value: @monostax-colors[slate-3];
 @dropdown-link-hover-color-value: @text-color-value;
-@dropdown-link-active-bg-value: @monostax-colors[blue-3];
+@dropdown-link-active-bg-value: @monostax-colors[slate-3];
 
 @select-item-bg-value: @monostax-colors[slate-3];
 @select-item-text-color-value: @text-color-value;
 @select-item-border-value: @monostax-colors[strong];
 @select-item-active-bg-value: @brand-primary-value;
-@select-item-active-text-color-value: #fff;
+@select-item-active-text-color-value: @monostax-colors[brand-foreground];
 @label-default-bg-value: @monostax-colors[slate-9];
 @label-color-value: #fff;
 @calendar-today-bg-value: @monostax-colors[blue-3];
