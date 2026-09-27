@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./monostax-theme.css";
 
 /* Specify content sources for class detection (paths relative to CSS file location) */
 @source "../res/templates";

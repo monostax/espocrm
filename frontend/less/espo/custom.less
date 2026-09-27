@@ -4814,15 +4814,33 @@ html[data-embedded="true"] {
     // Alternative selector using data attribute
 }
 
-// Remove navbar padding when embedded
+// Shared layout for all embedded CRM pages.
 html.is-embedded,
 html.is-iframe {
+    --top-bar-height: 48px;
 
-    // Remove padding from content container
-    // #content.container.content,
-    // .content.container {
-    //     padding: 0 !important;
-    // }
+    body > #content.content {
+        --container-padding: 8px;
+
+        width: 100%;
+        max-width: 100%;
+        margin-inline: 0;
+        // Preserve the native expanded/minimized navbar offset at inline-start.
+        padding-block: var(--container-padding);
+        padding-inline-end: var(--container-padding);
+    }
+
+    // A hidden navbar must not leave its saved minimized offset behind.
+    body:not(.has-navbar) > #content.content {
+        padding-inline: var(--container-padding);
+    }
+
+    body:not(.has-navbar) #content .list-sticky-bar {
+        inset-inline: 0;
+        top: 0;
+        width: 100%;
+        padding-inline: var(--container-padding);
+    }
 
     // Remove Chat Icon
     #navbar > div > div.navbar-collapse.navbar-body > div.navbar-right-container > ul > li.chat-icon-container {
@@ -4852,22 +4870,21 @@ html.is-chatwoot-activities {
         padding-top: 0 !important;
     }
 
-    // Remove side navbar padding for embedded mode
+    // These embeds hide the header, so no side navbar space is needed.
+    body > #content.content {
+        padding-inline: var(--container-padding);
+    }
+
+    #content .list-sticky-bar {
+        inset-inline: 0;
+        top: 0;
+        width: 100%;
+        padding-inline: var(--container-padding);
+    }
+
     body[data-navbar="side"] {
         // Remove top padding for header
         padding-top: 0 !important;
-
-        @media screen and (min-width: @screen-sm-min) {
-            &.has-navbar > .content {
-                padding-left: var(--container-padding);
-                max-width: 100% !important;
-            }
-
-            &.minimized #content {
-                padding-left: var(--container-padding);
-                max-width: 100% !important;
-            }
-        }
     }
 }
 
@@ -4877,6 +4894,94 @@ html.is-chatwoot-contacts,
 html.is-chatwoot-opportunity {
     .chatwoot-conversation-bridge .bridge-detail-container {
         padding: var(--container-padding);
+    }
+}
+
+.table-group-list > details.panel:not([open]) > .panel-heading {
+    border-radius: var(--panel-border-radius);
+}
+
+.table-group-list > .panel > .panel-heading {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--12px);
+
+    > .panel-title {
+        flex: 1;
+        min-width: 0;
+        align-items: center;
+        gap: var(--8px);
+
+        > .panel-collapse-chevron {
+            flex: none;
+            font-size: var(--10px);
+            opacity: 0.55;
+            width: 1.1em;
+            text-align: center;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        > .table-group-icon {
+            display: inline-flex;
+            flex: none;
+            align-items: center;
+            justify-content: center;
+            width: var(--16px);
+            height: var(--16px);
+            font-size: var(--16px);
+            line-height: 1;
+
+            > svg,
+            > .avatar {
+                width: 100%;
+                height: 100%;
+            }
+
+            > .avatar {
+                border-radius: 50%;
+                object-fit: cover;
+            }
+
+            > .record-icon {
+                margin: 0;
+            }
+
+            > .table-group-stage-indicator {
+                width: var(--8px);
+                height: var(--8px);
+                border-radius: var(--2px);
+                // Same Radix-9 colors as Chatwoot's getStageIndicatorClasses.
+                background-color: #8b8d98;
+                & when (lightness(@panel-bg-value) < 50%) {
+                    background-color: #696e77;
+                }
+                &[data-style="success"] { background-color: #12a594; }
+                &[data-style="danger"] { background-color: #e54666; }
+                &[data-style="warning"] { background-color: #ffc53d; }
+                &[data-style="primary"] { background-color: #5b5bd6; }
+                &[data-style="info"] { background-color: #0090ff; }
+            }
+        }
+    }
+
+    > .text-muted,
+    > .list-buttons-container {
+        flex: none;
+        white-space: nowrap;
+    }
+
+    > .list-buttons-container {
+        display: flex;
+        align-items: center;
+        gap: var(--4px);
+        margin-bottom: 0;
+        min-height: 0;
+
+        > .actions {
+            min-height: 0;
+        }
     }
 }
 
@@ -4899,19 +5004,6 @@ html.is-chatwoot-opportunity {
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
-    }
-
-    td.cell {
-        position: relative;
-
-        // Keep the edit control above badges and links, even in narrow cells.
-        > .inline-edit-link {
-            position: absolute;
-            top: var(--table-cell-padding);
-            right: var(--table-cell-padding);
-            z-index: 1;
-            background-color: var(--table-bg);
-        }
     }
 }
 

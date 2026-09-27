@@ -1,0 +1,131 @@
+// Keep these tokens aligned with Chatwoot's dashboard/assets/scss/_next-colors.scss
+// and theme/colors.js. CRM builds independently, so it keeps a local palette.
+.monostax-palette() when (@monostax-color-mode = light) {
+    @monostax-colors: {
+        brand: #2781f6;
+        background: rgb(247, 247, 247);
+        surface-1: rgb(254, 254, 254);
+        surface-2: rgb(255, 255, 255);
+        surface-active: rgb(255, 255, 255);
+        solid-1: rgb(255, 255, 255);
+        solid-2: rgb(255, 255, 255);
+        solid-3: rgb(255, 255, 255);
+        solid-active: rgb(255, 255, 255);
+        card: rgb(255, 255, 255);
+        button-color: rgb(255, 255, 255);
+        weak: rgb(234, 234, 234);
+        strong: rgb(226, 227, 231);
+        alpha-1: rgba(215, 215, 215, 0.22);
+        alpha-2: rgba(196, 197, 198, 0.22);
+        alpha-3: rgba(255, 255, 255, 0.96);
+        overlay: rgba(0, 0, 0, 0.12);
+        slate-1: rgb(252, 252, 253);
+        slate-2: rgb(249, 249, 251);
+        slate-3: rgb(240, 240, 243);
+        slate-4: rgb(232, 232, 236);
+        slate-5: rgb(224, 225, 230);
+        slate-6: rgb(217, 217, 224);
+        slate-7: rgb(205, 206, 214);
+        slate-8: rgb(185, 187, 198);
+        slate-9: rgb(139, 141, 152);
+        slate-10: rgb(128, 131, 141);
+        slate-11: rgb(96, 100, 108);
+        slate-12: rgb(28, 32, 36);
+        blue-3: rgb(233, 243, 255);
+        blue-4: rgb(218, 236, 255);
+        blue-7: rgb(155, 195, 252);
+        blue-9: rgb(39, 129, 246);
+        blue-10: rgb(16, 115, 233);
+        blue-11: rgb(8, 109, 224);
+        blue-12: rgb(11, 50, 101);
+        iris-3: rgb(240, 241, 254);
+        iris-7: rgb(184, 186, 248);
+        iris-9: rgb(91, 91, 214);
+        iris-10: rgb(81, 81, 205);
+        iris-11: rgb(87, 83, 198);
+        ruby-3: rgb(254, 234, 237);
+        ruby-7: rgb(239, 172, 184);
+        ruby-9: rgb(229, 70, 102);
+        ruby-10: rgb(220, 59, 93);
+        ruby-11: rgb(202, 36, 77);
+        amber-3: rgb(255, 247, 194);
+        amber-7: rgb(233, 193, 98);
+        amber-9: rgb(255, 197, 61);
+        amber-10: rgb(255, 186, 24);
+        amber-11: rgb(171, 100, 0);
+        teal-3: rgb(224, 248, 243);
+        teal-7: rgb(131, 205, 193);
+        teal-9: rgb(18, 165, 148);
+        teal-10: rgb(13, 155, 138);
+        teal-11: rgb(0, 133, 115);
+    };
+}
+
+.monostax-palette() when (@monostax-color-mode = dark) {
+    @monostax-colors: {
+        brand: #2781f6;
+        background: rgb(28, 29, 32);
+        surface-1: rgb(20, 21, 23);
+        surface-2: rgb(22, 23, 26);
+        surface-active: rgb(53, 57, 66);
+        solid-1: rgb(23, 23, 26);
+        solid-2: rgb(29, 30, 36);
+        solid-3: rgb(44, 45, 54);
+        solid-active: rgb(53, 57, 66);
+        card: rgb(28, 30, 34);
+        button-color: rgb(42, 43, 51);
+        weak: rgb(31, 31, 37);
+        strong: rgb(46, 45, 50);
+        alpha-1: rgba(35, 36, 42, 0.8);
+        alpha-2: rgba(147, 153, 176, 0.12);
+        alpha-3: rgba(33, 34, 38, 0.95);
+        overlay: rgba(0, 0, 0, 0.4);
+        slate-1: rgb(17, 17, 19);
+        slate-2: rgb(24, 25, 27);
+        slate-3: rgb(33, 34, 37);
+        slate-4: rgb(39, 42, 45);
+        slate-5: rgb(46, 49, 53);
+        slate-6: rgb(54, 58, 63);
+        slate-7: rgb(67, 72, 78);
+        slate-8: rgb(90, 97, 105);
+        slate-9: rgb(105, 110, 119);
+        slate-10: rgb(119, 123, 132);
+        slate-11: rgb(176, 180, 186);
+        slate-12: rgb(237, 238, 240);
+        blue-3: rgb(15, 39, 72);
+        blue-4: rgb(10, 49, 99);
+        blue-7: rgb(40, 89, 156);
+        blue-9: rgb(39, 129, 246);
+        blue-10: rgb(21, 116, 231);
+        blue-11: rgb(126, 182, 255);
+        blue-12: rgb(205, 227, 255);
+        iris-3: rgb(32, 34, 72);
+        iris-7: rgb(74, 74, 149);
+        iris-9: rgb(91, 91, 214);
+        iris-10: rgb(84, 114, 228);
+        iris-11: rgb(158, 177, 255);
+        ruby-3: rgb(58, 20, 30);
+        ruby-7: rgb(136, 52, 71);
+        ruby-9: rgb(229, 70, 102);
+        ruby-10: rgb(236, 90, 114);
+        ruby-11: rgb(255, 148, 157);
+        amber-3: rgb(48, 32, 8);
+        amber-7: rgb(113, 79, 25);
+        amber-9: rgb(255, 197, 61);
+        amber-10: rgb(255, 214, 10);
+        amber-11: rgb(255, 202, 22);
+        teal-3: rgb(13, 45, 42);
+        teal-7: rgb(28, 105, 97);
+        teal-9: rgb(18, 165, 148);
+        teal-10: rgb(14, 179, 158);
+        teal-11: rgb(11, 216, 182);
+    };
+}
+
+.monostax-palette();
+
+:root {
+    each(@monostax-colors, {
+        --n-@{key}: @value;
+    });
+}

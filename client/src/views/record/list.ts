@@ -29,6 +29,7 @@
 import ListBaseRecordView, {ListBaseRecordViewOptions, ListBaseRecordViewSchema} from 'views/record/list-base';
 import Model from 'model';
 import Ui from 'ui';
+import BaseFieldView from 'views/fields/base';
 
 /**
  * Mass-action definitions.
@@ -267,10 +268,14 @@ class ListRecordView<
 > extends ListBaseRecordView<ColumnDefs[], S> {
 
     /**
-     * Disable editing of field cells (a pencil icon on hover opening an edit modal).
+     * Disable editing of field cells (inline on desktop, in a modal on mobile).
      * Can be overridden by an option parameter or by the `listInlineEditDisabled` clientDefs parameter.
      */
     protected inlineEditDisabled: boolean = false
+
+    private inlineEditField: BaseFieldView | null = null
+    private inlineEditFieldViews = new WeakSet<BaseFieldView>()
+    private inlineEditOpening: boolean = false
 
     protected setup() {
         super.setup();
@@ -329,8 +334,52 @@ class ListRecordView<
             }
 
             item.options.inlineEditEnabled = true;
-            item.options.onInlineEdit = () => this.editField(model, field);
+            item.options.onInlineEdit = (view: BaseFieldView) => this.editListField(view);
         });
+    }
+
+    private async editListField(view: BaseFieldView): Promise<void> {
+        if (this.inlineEditOpening || this.inlineEditField === view) {
+            return;
+        }
+
+        this.inlineEditOpening = true;
+
+        try {
+            if (this.inlineEditField?.isInlineEditMode()) {
+                await this.inlineEditField.inlineEditClose();
+            }
+
+            if (window.innerWidth < this.getThemeManager().getParam('screenWidthXs')) {
+                await this.editField(view.model, view.name);
+
+                return;
+            }
+
+            if (!this.inlineEditFieldViews.has(view)) {
+                this.inlineEditFieldViews.add(view);
+
+                this.listenTo(view, 'before:save', () => this.trigger('before:save', view.model));
+                this.listenTo(view, 'after:save', () => this.trigger('after:save', view.model));
+                this.listenTo(view, 'inline-edit-off remove', () => {
+                    if (this.inlineEditField === view) {
+                        this.inlineEditField = null;
+                    }
+                });
+            }
+
+            this.inlineEditField = view;
+
+            await view.inlineEdit();
+        } catch (error) {
+            if (this.inlineEditField === view) {
+                this.inlineEditField = null;
+            }
+
+            throw error;
+        } finally {
+            this.inlineEditOpening = false;
+        }
     }
 
     /**

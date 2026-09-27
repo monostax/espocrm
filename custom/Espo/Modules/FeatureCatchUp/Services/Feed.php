@@ -41,6 +41,7 @@ class Feed
         private OpportunityEventAccess $events,
         private OpportunityActivityBuckets $buckets,
         private DataCache $cache,
+        private Rollout $rollout,
     ) {}
 
     public function list(Request $request): array
@@ -52,6 +53,7 @@ class Feed
             ->where(['chatwootAccountId' => (int) $accountId])->limit(0, 2)->build();
         $accounts = iterator_to_array($this->em->getRDBRepository('ChatwootAccount')->clone($accounts)->find());
         if (count($accounts) !== 1) throw new Forbidden('Workspace is unavailable.');
+        $this->rollout->forAccount(reset($accounts));
         $tenantId = reset($accounts)->get('tenantId');
         if (!$tenantId || (!$this->user->isAdmin() && !in_array($tenantId, $this->tenants->resolveTenantIds($this->user), true))) {
             throw new Forbidden();
@@ -98,6 +100,7 @@ class Feed
         $state = $this->states->getReadState($id);
         $record = $this->em->getEntityById('Opportunity', $id);
         if (!$record) throw new NotFound();
+        $policy = $this->rollout->forTenant((string) $record->get('tenantId'));
         $base = $this->em->getRDBRepository('Note')->where([
             'parentType' => 'Opportunity', 'parentId' => $id, 'type' => OpportunityStreamEvents::TYPES,
         ])->where($this->events->where($this->user));
@@ -131,7 +134,7 @@ class Feed
                 $lastPostId = $note->getId();
             }
             $evidence[] = [
-                'id' => $note->getId(), 'text' => mb_substr(strip_tags((string) $note->get('post')), 0, 4000),
+                'id' => $note->getId(), ...$this->sourceContent($note),
                 'kind' => $note->get('type'), 'at' => $note->get('createdAt'),
                 'context' => in_array($note->getId(), $contextIds, true), 'threadRootId' => $rootId,
             ];
@@ -142,6 +145,8 @@ class Feed
         }
         $result = [
             'id' => $id, 'type' => 'opportunity', 'name' => $record->get('name'),
+            'tenantId' => $record->get('tenantId'),
+            'catchUpPolicy' => $policy,
             'unreadCount' => $state['unreadCount'], 'evidence' => $evidence, 'facts' => $facts, 'hasMoreMessages' => $more,
         ];
         $review = ['lastPostId' => $lastPostId, 'version' => $state['version'], 'threads' => $threadCutoffs];
@@ -155,6 +160,7 @@ class Feed
         $this->authorize();
         $state = $this->states->getReadState($id);
         $snapshot = $this->cache->tryGet($this->snapshotKey($id));
+        $this->rollout->forOpportunity($id);
         if (!$snapshot || $snapshot['expires'] < time() || !hash_equals($snapshot['token'], $token) ||
             $state['version'] !== $snapshot['review']['version']) throw new Conflict('Refresh this card before reviewing it.');
         $review = $snapshot['review'];
@@ -174,6 +180,27 @@ class Feed
         if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
             !$this->acl->checkScope('Opportunity', 'read') || !$this->acl->checkScope('Opportunity', 'stream') ||
             !$this->acl->checkField('Opportunity', 'name')) throw new Forbidden();
+    }
+
+    private function sourceContent(Entity $note): array
+    {
+        $content = ['text' => mb_substr(strip_tags((string) $note->get('post')), 0, 4000)];
+        if ($note->get('opportunityPostDeleted')) return ['text' => ''];
+        if ($note->get('type') !== OpportunityStreamEvents::MESSAGE_RECEIVED ||
+            !$this->acl->checkScope('ChatwootMessage', 'read') || !$this->acl->checkField('ChatwootMessage', 'content')) return $content;
+        $data = (object) $note->get('data');
+        $messageId = $data->chatwootMessageId ?? null;
+        if (!$messageId) return $content;
+        $message = $this->em->getRDBRepository('ChatwootMessage')->where([
+            'conversationId' => $note->get('relatedId'), 'chatwootMessageId' => $messageId,
+        ])->findOne();
+        if (!$message || !$this->acl->checkEntityRead($message)) return $content;
+        return [
+            'text' => mb_substr(strip_tags((string) $message->get('content')), 0, 4000),
+            'conversationId' => $data->chatwootConversationId ?? null,
+            'accountId' => $data->chatwootAccountId ?? null,
+            'messageId' => $messageId,
+        ];
     }
 
     private function snapshotKey(string $id): string

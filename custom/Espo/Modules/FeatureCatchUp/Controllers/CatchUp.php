@@ -33,8 +33,12 @@ class CatchUp
     {
         $snapshot = $this->feed->snapshot((string) $request->getRouteParam('id'));
         $locale = $request->getParsedBody()->locale ?? 'en';
+        $requestId = $request->getParsedBody()->requestId ?? null;
+        if ($requestId !== null && (!is_string($requestId) || !preg_match('/^[a-f0-9]{64}$/D', $requestId))) {
+            throw new \Espo\Core\Exceptions\BadRequest('Invalid summary request ID.');
+        }
         return (object) [
-            'summary' => $this->summary->generate($snapshot, $locale === 'pt_BR' || $locale === 'pt' ? 'pt-BR' : 'en'),
+            ...$this->summary->request($snapshot, $locale === 'pt_BR' || $locale === 'pt' ? 'pt-BR' : 'en', $requestId),
             'snapshot' => $snapshot,
         ];
     }

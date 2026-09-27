@@ -42,6 +42,7 @@ const path = require("path");
 const buildUtils = require("./js/build-utils");
 const { TemplateBundler, Bundler } = require("espo-frontend-build-tools");
 const LayoutTypeBundler = require("./js/layout-template-bundler");
+const bundleOpportunityTable = require("./js/bundle-opportunity-table");
 
 const bundleConfig = require("./frontend/bundle-config.json");
 const libs = require("./frontend/libs.json");
@@ -58,6 +59,10 @@ module.exports = (grunt) => {
     ];
 
     const bundleFileMap = { "client/lib/espo.js": libsBundleFileList };
+
+    for (const name of ["espo-opportunity-table", "opportunity-table-init"]) {
+        bundleFileMap[`client/lib/${name}.js`] = `${originalLibDir}/${name}.js`;
+    }
 
     for (const name in bundleConfig.chunks) {
         const namePart = "espo-" + name;
@@ -340,6 +345,12 @@ module.exports = (grunt) => {
         templateBundler.process();
     });
 
+    grunt.registerTask("bundle-opportunity-table", () => {
+        const {bundle, init} = bundleOpportunityTable();
+        writeOriginalLib("espo-opportunity-table", bundle);
+        writeOriginalLib("opportunity-table-init", init);
+    });
+
     grunt.registerTask("prepare-lib-original", () => {
         // Even though `npm ci` runs the same script, 'clean:start' deletes files.
         cp.execSync("node js/scripts/prepare-lib-original");
@@ -568,6 +579,7 @@ return '${version}';
         "transpile",
         "transpile-custom-modules",
         "bundle",
+        "bundle-opportunity-table",
         "bundle-templates",
         "uglify:bundle",
         "copy:frontendLib",
@@ -640,7 +652,9 @@ return '${version}';
         "prepare-lib-original",
         "clean:transpiled",
         "transpile",
+        "transpile-custom-modules",
         "bundle",
+        "bundle-opportunity-table",
         "bundle-templates",
         "uglify:bundle",
         "copy:frontendLib",

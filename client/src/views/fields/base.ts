@@ -1132,7 +1132,10 @@ export default class BaseFieldView<
 
         cell.prepend(edit);
 
-        edit.addEventListener('click', () => {
+        edit.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+
             if (this.options.onInlineEdit) {
                 this.options.onInlineEdit(this);
 
@@ -1175,6 +1178,10 @@ export default class BaseFieldView<
 
             if (!this.isReadMode()) {
                 edit.classList.add('hidden');
+            }
+
+            if (this.isInlineEditMode()) {
+                this.addInlineEditLinks();
             }
         });
     }
@@ -1330,6 +1337,9 @@ export default class BaseFieldView<
 
         Ui.notify(this.translate('saving', 'messages'));
 
+        this.trigger('before:save');
+        model.trigger('before:save');
+
         model
             .save(attrs as Record<string, any>, {patch: true})
             .then(() => {
@@ -1369,6 +1379,8 @@ export default class BaseFieldView<
     private addInlineEditLinks() {
         const $cell = this.get$cell();
 
+        $cell.children('.inline-save-link, .inline-cancel-link').remove();
+
         const saveLink = document.createElement('a');
         saveLink.role = 'button';
         saveLink.tabIndex = -1;
@@ -1388,8 +1400,16 @@ export default class BaseFieldView<
 
         $cell.find('.inline-edit-link').addClass('hidden');
 
-        saveLink.onclick = () => this.inlineEditSave();
-        cancelLink.onclick = () => this.inlineEditClose();
+        saveLink.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.inlineEditSave();
+        };
+        cancelLink.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.inlineEditClose();
+        };
     }
 
     /**
@@ -1412,6 +1432,7 @@ export default class BaseFieldView<
         }
 
         this.$el.off('keydown.inline-edit');
+        this.get$cell().removeClass('list-inline-edit');
 
         this._isInlineEditMode = false;
 
@@ -1456,6 +1477,7 @@ export default class BaseFieldView<
 
         this._isInlineEditMode = true;
         this._inlineEditReadMode = this.isReadMode() ? this.mode ?? this.MODE_DETAIL : this.MODE_DETAIL;
+        this.get$cell().toggleClass('list-inline-edit', this.isListMode());
 
         this.trigger('inline-edit-on');
 

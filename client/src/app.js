@@ -350,6 +350,9 @@ class App {
     /** @private */
     started = false;
 
+    /** @private @type {module:app~UserData|null} */
+    initialUserData = null;
+
     /** @private */
     aclName = "acl";
 
@@ -436,7 +439,7 @@ class App {
         this.initBroadcastChannel();
 
         await Promise.all([
-            this.settings.load(),
+            this.loadInitialSettings(),
             this.language.loadDefault(),
             this.initTemplateBundles(),
         ]);
@@ -477,6 +480,49 @@ class App {
         this.initUtils();
         this.initView();
         this.initBaseController();
+    }
+
+    /**
+     * An authenticated bootstrap already includes the complete settings.
+     * Keep the public settings request for login and expired sessions only.
+     *
+     * @private
+     */
+    async loadInitialSettings() {
+        const auth = this.storage.get("user", "auth");
+        const anotherUser = this.storage.get("user", "anotherUser");
+
+        if (auth) {
+            // Scope credentials to bootstrap: concurrent public language loading
+            // must still succeed if this stored session has expired.
+            const headers = {
+                Authorization: "Basic " + auth,
+                "Espo-Authorization": auth,
+                "Espo-Authorization-By-Token": "true",
+            };
+            if (anotherUser) headers["X-Another-User"] = anotherUser;
+
+            try {
+                this.initialUserData = await this.requestUserData({login: true, headers});
+                this.settings.setMultiple(this.initialUserData.settings);
+                return;
+            } catch (xhr) {
+                if (xhr.status !== 401) {
+                    throw xhr;
+                }
+
+                // The app's models/router do not exist yet, so handle expiration
+                // here instead of invoking the normal post-start logout flow.
+                xhr.errorIsHandled = true;
+                this.auth = null;
+                this.anotherUser = null;
+                this.storage.clear("user", "auth");
+                this.storage.clear("user", "anotherUser");
+                this.unsetCookieAuth();
+            }
+        }
+
+        await this.settings.load();
     }
 
     /**
@@ -1275,8 +1321,10 @@ class App {
         }
 
         if (!data.user) {
-            data = await this.requestUserData();
+            data = this.initialUserData || await this.requestUserData();
         }
+
+        this.initialUserData = null;
 
         this.language.name = data.language;
 
@@ -1302,38 +1350,23 @@ class App {
             return;
         }
 
-        const xhr = new XMLHttpRequest();
+        // App/user (or the login response) has already authenticated this token.
+        const [username, token] = Base64.decode(this.auth).split(":");
+        this.setCookieAuth(username, token);
 
-        xhr.open("GET", `${this.basePath}${this.apiUrl}/`);
-        xhr.setRequestHeader("Authorization", `Basic ${this.auth}`);
+        if (this.redirectLegacyCrmRoute(callback)) {
+            return;
+        }
 
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                const arr = Base64.decode(this.auth).split(":");
-
-                this.setCookieAuth(arr[0], arr[1]);
-
-                if (this.redirectLegacyCrmRoute(callback)) {
-                    return;
-                }
-
-                callback();
-            }
-
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 401) {
-                Ui.error("Auth error");
-            }
-        };
-
-        xhr.send("");
+        callback();
     }
 
     /**
      * @private
      * @return {Promise<module:app~UserData>}
      */
-    async requestUserData() {
-        return Ajax.getRequest("App/user", {}, { appStart: true });
+    async requestUserData(options = {}) {
+        return Ajax.getRequest("App/user", {}, { appStart: true, ...options });
     }
 
     /**

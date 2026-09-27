@@ -41,6 +41,19 @@ class HeaderSiteView extends View {
     }
 
     setup() {
+        const params = new URLSearchParams(window.location.search);
+
+        // The opportunity workspace supplies navigation and notifications.
+        // Do not instantiate a hidden navbar and start its requests/pollers.
+        if (
+            window.self !== window.top &&
+            params.get('embed') === 'chatwoot-opportunity' &&
+            params.get('navbar') === 'none' &&
+            window.location.hash === '#OpportunityTableBridge'
+        ) {
+            return;
+        }
+
         const navbarView = this.getMetadata().get(this.customViewPath) || this.navbarView;
 
         this.createView('navbar', navbarView, {

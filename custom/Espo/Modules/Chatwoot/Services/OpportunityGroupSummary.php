@@ -100,7 +100,6 @@ class OpportunityGroupSummary
             // A mandatory AND, independent of client filters and admin ACL bypass.
             ->where(['tenantId' => $workspace->get('tenantId')])
             ->select(['id'])->order([])->limit(null, null)->build();
-
     }
 
     public function applyActivityFilter(SelectBuilder $query, Select $scope, Request $request, bool $grouped = false): ?Expr

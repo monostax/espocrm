@@ -292,7 +292,7 @@ class LinkParentFieldView<
             this.createDisabled = this.options.createDisabled as boolean;
         }
 
-        if (!this.isListMode()) {
+        if (!this.isListMode() || this.options.inlineEditEnabled) {
             this.addActionHandler('selectLink', () => this.actionSelect());
             this.addActionHandler('clearLink', () => this.actionClearLink());
 

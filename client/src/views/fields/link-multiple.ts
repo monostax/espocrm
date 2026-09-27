@@ -344,7 +344,7 @@ class LinkMultipleFieldView<
         this.iconHtml = this.getHelper().getScopeColorIconHtml(this.foreignScope);
         RecordIcon.bindLink(this, true);
 
-        if (!this.isListMode()) {
+        if (!this.isListMode() || this.options.inlineEditEnabled) {
             this.addActionHandler('selectLink', () => this.actionSelect());
             this.addActionHandler('clearLink', (_, target) => this.actionDeleteLink(target.dataset.id as string));
         }

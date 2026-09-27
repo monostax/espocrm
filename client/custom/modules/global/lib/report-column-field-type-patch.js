@@ -11,14 +11,13 @@
  * the system default currency symbol — no `CONCAT('R$ ', ...)` needed.
  *
  * Monkey patch (see https://docs.espocrm.com/development/frontend/monkey-patching/).
- * Loaded via `custom/Espo/Custom/Resources/metadata/app/client.json`.
+ * Registered globally, applied only when the report modules are loaded.
  */
-require([
-    'advanced:views/report/fields/columns',
-    'advanced:views/report/modals/edit-columns',
-    'advanced:views/report/fields/columns/item',
-    'model',
-], (ColumnsField, EditColumnsModal, ColumnItem, Model) => {    const FIELD_TYPE_OPTIONS = [
+let ReportColumnModel;
+Espo.loader.onDefine('model', Model => { ReportColumnModel = Model; });
+
+Espo.loader.onDefine('advanced:views/report/fields/columns/item', ColumnItem => {
+    const FIELD_TYPE_OPTIONS = [
         '',
         'currencyConverted',
         'int',
@@ -61,7 +60,7 @@ require([
         const entityType = this.options.entityType;
         const onChange = this.options.onChange;
 
-        const model = new Model();
+        const model = new ReportColumnModel();
 
         model.set({
             expression: this.options.expression || null,
@@ -137,8 +136,11 @@ require([
         });
     };
 
-    // ---------- 2. Edit-columns modal ----------
+});
 
+// ---------- 2. Edit-columns modal ----------
+
+Espo.loader.onDefine('advanced:views/report/modals/edit-columns', EditColumnsModal => {
     const originalModalSetup = EditColumnsModal.prototype.setup;
 
     EditColumnsModal.prototype.setup = function () {
@@ -236,8 +238,11 @@ require([
         this.createItemView(this.expressions.length - 1).then(() => this.reRender());
     };
 
-    // ---------- 3. Columns field view (entry point) ----------
+});
 
+// ---------- 3. Columns field view (entry point) ----------
+
+Espo.loader.onDefine('advanced:views/report/fields/columns', ColumnsField => {
     ColumnsField.prototype.actionEditColumns = function () {
         const expressions = this.model.get(this.name) || [];
         const columnsData = this.model.get('columnsData') || {};
@@ -349,9 +354,7 @@ const __formatDurationSeconds = (helper, value, expr, result) => {
 //
 // Also handles `columnTypeMap[col] === "duration"` (see helper above): the
 // raw ms value is converted to seconds and rendered as e.g. `73.2 s`.
-require(['advanced:views/report/reports/tables/grid2'], (Grid2View) => {
-    const originalFormatCellValue = Grid2View.prototype.formatCellValue;
-
+Espo.loader.onDefine('advanced:views/report/reports/tables/grid2', Grid2View => {
     Grid2View.prototype.formatCellValue = function (value, expr, hasValue) {
         if (!this.options.reportHelper.isColumnNumeric(expr, this.result)) {
             if (this.result.cellValueMaps && this.result.cellValueMaps[expr]) {
@@ -439,7 +442,7 @@ require(['advanced:views/report/reports/tables/grid2'], (Grid2View) => {
 // This patch makes the helper consult `result.columnTypeMap[expr]` so the
 // backend `columnsData[col].fieldType = 'currencyConverted'` override
 // reaches the dashlet/chart rendering path too.
-require(['advanced:report-helper'], (ReportHelper) => {
+Espo.loader.onDefine('advanced:report-helper', ReportHelper => {
     const proto = ReportHelper.prototype;
 
     proto.formatCellValue = function (value, expr, result, useSi) {

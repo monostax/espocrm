@@ -21,6 +21,8 @@ use Espo\Modules\Chatwoot\Services\OpportunityActivityBuckets;
 use Espo\Modules\Chatwoot\Services\OpportunityActivitySummary;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
 use Espo\Modules\Chatwoot\Services\OpportunityGroupSummary;
+use Espo\Modules\Chatwoot\Services\OpportunitySpreadsheetSummary;
+use Espo\Modules\Chatwoot\Classes\Select\Opportunity\StreamActivity;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\BaseEntity;
@@ -28,11 +30,13 @@ use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityFactory;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Executor\QueryExecutor;
+use Espo\ORM\Executor\SqlExecutor;
 use Espo\ORM\Metadata;
 use Espo\ORM\MetadataDataProvider;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\QueryComposer\MysqlQueryComposer;
 use Espo\ORM\QueryComposer\PostgresqlQueryComposer;
+use Espo\ORM\QueryComposer\QueryComposerWrapper;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\RDBSelectBuilder;
 use PDO;
@@ -46,6 +50,7 @@ class OpportunityGroupSummaryTest extends TestCase
     private PostgresqlQueryComposer $postgres;
     private MysqlQueryComposer|PostgresqlQueryComposer $composer;
     private OpportunityGroupSummary $service;
+    private OpportunitySpreadsheetSummary $spreadsheet;
     private OpportunityActivityBuckets $buckets;
     private array $accounts;
     private array $hiddenFields = [];
@@ -67,7 +72,8 @@ class OpportunityGroupSummaryTest extends TestCase
         $defs = [];
         $tables = [
             'Opportunity' => ['id', 'tenantId', 'opportunityStageId', 'funnelId', 'assignedUserId', 'status',
-                'amount', 'amountCurrency', 'nextActionId', 'nextActionType', 'readable', 'unread', 'deleted'],
+                'amount', 'amountCurrency', 'name', 'probability', 'accountId', 'nextActionId', 'nextActionType', 'readable', 'unread', 'deleted'],
+            'Account' => ['id', 'name', 'deleted'],
             'Visibility' => ['id', 'opportunityId', 'deleted'],
             'Meeting' => ['id', 'parentId', 'parentType', 'dateEnd', 'dateEndDate', 'pending', 'readable', 'deleted'],
             'Call' => ['id', 'parentId', 'parentType', 'dateEnd', 'pending', 'readable', 'deleted'],
@@ -77,12 +83,18 @@ class OpportunityGroupSummaryTest extends TestCase
             $columns = [];
             foreach ($fields as $field) {
                 $column = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $field));
-                $numeric = in_array($field, ['amount', 'pending', 'readable', 'unread', 'deleted']);
+                $numeric = in_array($field, ['amount', 'probability', 'pending', 'readable', 'unread', 'deleted']);
                 $columns[] = "$column " . ($numeric ? 'NUMERIC DEFAULT ' . ($field === 'pending' ? 1 : 0) : 'TEXT');
                 $defs[$type]['attributes'][$field] = ['type' => $numeric ? 'float' : 'varchar'];
             }
             $this->pdo->exec('CREATE TABLE ' . strtolower($type) . ' (' . implode(', ', $columns) . ')');
         }
+        $defs['Opportunity']['attributes']['accountName'] = [
+            'type' => 'foreign', 'notStorable' => true, 'relation' => 'account', 'foreign' => 'name',
+        ];
+        $defs['Opportunity']['relations']['account'] = [
+            'type' => 'belongsTo', 'entity' => 'Account', 'key' => 'accountId', 'foreignKey' => 'id',
+        ];
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($defs);
         $metadata = new Metadata($provider);
@@ -100,6 +112,14 @@ class OpportunityGroupSummaryTest extends TestCase
             return $this->pdo->query($this->lastSql);
         });
         $em->method('getQueryExecutor')->willReturn($executor);
+        $em->method('getQueryComposer')->willReturnCallback(fn () => new QueryComposerWrapper($this->composer));
+        $sqlExecutor = $this->createMock(SqlExecutor::class);
+        $sqlExecutor->method('execute')->willReturnCallback(function ($sql) {
+            $this->queryCount++;
+            $this->lastSql = $sql;
+            return $this->pdo->query($sql);
+        });
+        $em->method('getSqlExecutor')->willReturn($sqlExecutor);
         $acl = $this->createMock(Acl::class);
         $acl->method('checkScope')->willReturnCallback(fn ($type) => !in_array($type, $this->hiddenScopes));
         $acl->method('checkField')->willReturnCallback(fn ($type, $field) => !in_array("$type.$field", $this->hiddenFields));
@@ -169,6 +189,9 @@ class OpportunityGroupSummaryTest extends TestCase
         $currency->method('getCurrencyRates')->willReturn(Rates::fromAssoc(['BRL' => 1.0, 'USD' => 5.0], 'BRL'));
         $this->buckets = new OpportunityActivityBuckets($factory, $acl);
         $this->service = new OpportunityGroupSummary($em, $factory, $fetcher, $workspace, $readStates, $this->buckets, $currency, $acl);
+        $this->spreadsheet = new OpportunitySpreadsheetSummary(
+            $em, $this->service, $currency, $this->createMock(StreamActivity::class), $acl
+        );
         $this->pdo->exec("INSERT INTO opportunity (id, tenant_id, opportunity_stage_id, amount, amount_currency, readable, unread) VALUES
             ('a', 'tenant-a', 'stage', 499, 'BRL', 1, 1), ('b', 'tenant-a', 'stage', 499, 'BRL', 1, 0),
             ('c', 'tenant-a', 'stage', 80, 'USD', 1, 0), ('null', 'tenant-a', NULL, NULL, 'BRL', 1, 0),
@@ -183,6 +206,99 @@ class OpportunityGroupSummaryTest extends TestCase
         $request = $this->createMock(Request::class);
         $request->method('getQueryParam')->willReturnCallback(fn ($key) => $params[$key] ?? null);
         return $this->service->get($request);
+    }
+
+    private function spreadsheetSummary(array $calculations, array $params = []): array
+    {
+        $params += ['chatwootAccountId' => '1', 'calculations' => json_encode($calculations)];
+        $request = $this->createMock(Request::class);
+        $request->method('getQueryParam')->willReturnCallback(fn ($key) => $params[$key] ?? null);
+        return $this->spreadsheet->get($request);
+    }
+
+    public function testSpreadsheetSummariesCoverAllPagesWithoutDuplicateRows(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $this->composer) {
+            foreach (['sum' => 1398.0, 'avg' => 466.0, 'min' => 400.0, 'max' => 499.0,
+                'count' => 4, 'filled' => 3, 'empty' => 1, 'unique' => 2] as $operation => $expected) {
+                $this->queryCount = 0;
+                $result = $this->spreadsheetSummary(['name' => 'count', 'amount' => $operation]);
+                self::assertSame(4, $result['total']);
+                self::assertSame(4, $result['values']->name);
+                self::assertSame($expected, $result['values']->amount);
+                self::assertSame('BRL', $result['currency']);
+                self::assertSame(1, $this->queryCount);
+                self::assertStringNotContainsString('LIMIT', $this->lastSql);
+            }
+        }
+    }
+
+    public function testSpreadsheetBlanksAndZeroes(): void
+    {
+        $this->pdo->exec("UPDATE opportunity SET name = CASE id WHEN 'a' THEN 'Deal' WHEN 'b' THEN 'Deal' WHEN 'c' THEN '  ' END,
+            probability = CASE id WHEN 'a' THEN 0 WHEN 'b' THEN 100 WHEN 'c' THEN 50 END");
+        foreach (['count' => 4, 'filled' => 2, 'empty' => 2, 'unique' => 1] as $operation => $expected) {
+            self::assertSame($expected, $this->spreadsheetSummary(['name' => $operation])['values']->name);
+        }
+        foreach (['sum' => 150.0, 'avg' => 50.0, 'min' => 0.0, 'max' => 100.0, 'filled' => 3] as $operation => $expected) {
+            self::assertSame($expected, $this->spreadsheetSummary(['probability' => $operation])['values']->probability);
+        }
+        $this->filter = ['id' => 'null'];
+        self::assertNull($this->spreadsheetSummary(['amount' => 'avg'])['values']->amount);
+        self::assertSame(0.0, $this->spreadsheetSummary(['amount' => 'sum'])['values']->amount);
+    }
+
+    public function testSpreadsheetLinkedNamesAreProjectedBeforeAggregation(): void
+    {
+        $this->pdo->exec("INSERT INTO account (id, name) VALUES ('acme', 'Acme'), ('beta', 'Beta')");
+        $this->pdo->exec("UPDATE opportunity SET account_id = CASE id WHEN 'a' THEN 'acme' WHEN 'b' THEN 'acme' WHEN 'c' THEN 'beta' END");
+        foreach ([$this->mysql, $this->postgres] as $this->composer) {
+            foreach (['count' => 4, 'filled' => 3, 'empty' => 1, 'unique' => 2] as $operation => $expected) {
+                self::assertSame($expected, $this->spreadsheetSummary(['accountName' => $operation])['values']->accountName);
+            }
+        }
+    }
+
+    public function testSpreadsheetFilteredEmptyScopeAndFieldAccess(): void
+    {
+        $this->filter = ['id' => 'missing'];
+        foreach (['sum' => 0.0, 'avg' => null, 'min' => null, 'max' => null, 'count' => 0, 'empty' => 0] as $operation => $expected) {
+            $result = $this->spreadsheetSummary(['amount' => $operation]);
+            self::assertSame(0, $result['total']);
+            self::assertSame($expected, $result['values']->amount);
+        }
+        $this->filter = ['unread' => 1];
+        self::assertSame(499.0, $this->spreadsheetSummary(['amount' => 'sum'])['values']->amount);
+        $this->hiddenFields = ['Opportunity.amount'];
+        $result = $this->spreadsheetSummary(['name' => 'count', 'amount' => 'sum']);
+        self::assertNull($result['currency']);
+        self::assertNull($result['values']->amount);
+        self::assertSame(1, $result['values']->name);
+        self::assertSame(['amount'], $result['unavailable']);
+        self::assertStringNotContainsString('amount', $this->lastSql);
+    }
+
+    public function testSpreadsheetUsesActivityAndWorkspaceFilters(): void
+    {
+        self::assertSame(4, $this->spreadsheetSummary(['name' => 'count'], ['activity' => 'noNextAction'])['values']->name);
+        self::assertSame(0, $this->spreadsheetSummary(['name' => 'count'], ['activity' => 'overdue'])['values']->name);
+        $this->accounts[0]->set('tenantId', 'tenant-b');
+        self::assertSame(9999.0, $this->spreadsheetSummary(['amount' => 'sum'])['values']->amount);
+        $this->tenantMember = false;
+        $this->expectException(Forbidden::class);
+        $this->spreadsheetSummary(['name' => 'count']);
+    }
+
+    public function testSpreadsheetRejectsUnsupportedFieldsAndOperations(): void
+    {
+        foreach ([['name' => 'sum'], ['tenantId' => 'unique'], ['amount' => 'SUM(id)'], ['name' => []]] as $calculations) {
+            try {
+                $this->spreadsheetSummary($calculations);
+                self::fail('Invalid calculation was accepted.');
+            } catch (BadRequest) {
+                self::assertSame(0, $this->queryCount);
+            }
+        }
     }
 
     public function testAllPagesAclTenantDeduplicationAndBaseCurrencyInOneQuery(): void

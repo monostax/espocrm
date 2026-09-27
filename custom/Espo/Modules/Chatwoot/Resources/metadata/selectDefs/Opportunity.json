@@ -6,6 +6,9 @@
     "accessControlFilterClassNameMap": {
         "mandatory": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\AccessControlFilters\\Tenant"
     },
+    "whereItemConverterClassNameMap": {
+        "id_inChatwootReadGroup": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\Where\\ReadGroup"
+    },
     "primaryFilterClassNameMap": {
         "chatwootUnread": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\PrimaryFilters\\Unread",
         "chatwootMentions": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Opportunity\\PrimaryFilters\\Mentions"

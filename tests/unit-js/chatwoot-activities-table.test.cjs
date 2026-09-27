@@ -113,6 +113,7 @@ const ListBase = load('client/src/views/record/list-base.ts', {
     ui,
     ajax: {},
 });
+const viewport = {innerWidth: 1024};
 const List = load('client/src/views/record/list.ts', {
     'views/record/list-base': class extends ListBase {
         setup() {
@@ -146,7 +147,7 @@ const List = load('client/src/views/record/list.ts', {
         getRowActionsDefs() { return {columnName: 'buttons'}; }
     },
     ui,
-});
+}, {window: viewport});
 
 function model(scope, id, attributes = {}) {
     const fields = {
@@ -226,7 +227,7 @@ function fixture(models = [], {
         .slice(1).reduce((value, key) => value?.[key], clientDefs)});
     view.getConfig = () => ({get: () => undefined});
     view.getUser = () => ({isAdmin: () => false});
-    view.getThemeManager = () => ({getFontSizeFactor: () => 1});
+    view.getThemeManager = () => ({getFontSizeFactor: () => 1, getParam: () => 768});
     view.getFieldManager = () => ({getViewName: type => 'views/fields/' + type});
     view.rowActionsView = 'crm:views/record/row-actions/activities';
     view.wait = promise => waits.push(promise);
@@ -348,11 +349,78 @@ test('atomic editing uses native list callbacks only for real fields on each act
                 continue;
             }
             let edited;
-            view.editField = (record, name) => { edited = {record, name}; };
-            item.options.onInlineEdit();
-            assert.equal(edited.record, seed);
-            assert.equal(edited.name, field);
+            const fieldView = {model: seed, name: field};
+            view.editListField = value => { edited = value; };
+            await item.options.onInlineEdit(fieldView);
+            assert.equal(edited, fieldView);
         }
+    }
+});
+
+test('desktop edits stay in cells, close the previous editor and forward saves once after reopening', async () => {
+    const {view, ready} = fixture();
+    await ready;
+    const events = require('backbone').Events;
+    const triggered = [];
+    view.listenTo = (target, names, callback) => target.on(names, callback);
+    view.trigger = (name, record) => triggered.push([name, record]);
+    view.editField = () => assert.fail('Desktop must not open the drawer');
+    const makeField = name => Object.assign({
+        name, model: model('Meeting', 'm1'), editing: false, opens: 0, closes: 0,
+        async inlineEdit() { this.editing = true; this.opens++; },
+        isInlineEditMode() { return this.editing; },
+        async inlineEditClose() {
+            this.editing = false;
+            this.closes++;
+            this.trigger('inline-edit-off');
+        },
+    }, events);
+    const first = makeField('name');
+    const second = makeField('status');
+
+    await view.editListField(first);
+    await view.editListField(first);
+    assert.equal(first.opens, 1);
+    await view.editListField(second);
+    assert.equal(first.editing, false);
+    assert.equal(first.closes, 1);
+    assert.equal(second.editing, true);
+    await second.inlineEditClose();
+    await view.editListField(first);
+    first.trigger('before:save');
+    await first.inlineEditClose();
+    first.trigger('after:save');
+    assert.deepEqual(triggered, [['before:save', first.model], ['after:save', first.model]]);
+    first.trigger('remove');
+    assert.equal(view.inlineEditField, null);
+});
+
+test('the current viewport chooses mobile drawer or desktop inline editing at the breakpoint', async () => {
+    const {view, ready} = fixture();
+    await ready;
+    const field = {
+        model: model('Meeting', 'm1'), name: 'status',
+        inlineEdit: async () => { inline++; },
+        isInlineEditMode: () => false,
+    };
+    let drawer = 0;
+    let inline = 0;
+    view.editField = async (record, name) => {
+        assert.equal(record, field.model);
+        assert.equal(name, field.name);
+        drawer++;
+    };
+    try {
+        viewport.innerWidth = 767;
+        await view.editListField(field);
+        assert.equal(drawer, 1);
+        assert.equal(inline, 0);
+        viewport.innerWidth = 768;
+        await view.editListField(field);
+        assert.equal(drawer, 1);
+        assert.equal(inline, 1);
+    } finally {
+        viewport.innerWidth = 1024;
     }
 });
 

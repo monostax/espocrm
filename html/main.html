@@ -34,12 +34,16 @@
         />
         <script nonce="{{nonce}}">
             let loadedApp;
+            let initializing = false;
 
             const run = app => {
                 {{runScript}}
             };
 
             const init = () => {
+                if (initializing) return;
+                initializing = true;
+
                 require('{{appClientClassName}}', App => {
                     new App({
                         id: '{{applicationId}}',
@@ -61,14 +65,16 @@
                 });
             };
 
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init, {once: true});
+            } else {
+                init();
+            }
+
             window.addEventListener('pageshow', event => {
                 if (event.persisted && loadedApp) {
                     run(loadedApp);
-
-                    return;
                 }
-
-                init();
             });
         </script>
     </head>

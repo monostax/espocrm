@@ -83,15 +83,15 @@ class OpportunitySpreadsheetSummary
                 $value = Expr::create('COALESCE:(chatwootLatestEntry.createdAt,modifiedAt,createdAt)');
             } elseif ($field === 'amount' && in_array($operation, self::NUMERIC, true)) {
                 $value = $this->summaryQuery->baseAmount();
-            } elseif ($type === 'text') {
-                $value = Expr::nullIf(Expr::trim($value), '');
             }
             $query->select($operation === 'count' ? Expr::value(1) : $value, $alias);
+            // Project linked names first so the ORM supplies their joins (including person names).
+            $column = $type === 'text' ? "NULLIF(TRIM($alias), '')" : $alias;
             $aggregate = match ($operation) {
                 'count' => 'COUNT(id)',
-                'filled' => "COUNT($alias)",
-                'empty' => "COUNT(id) - COUNT($alias)",
-                'unique' => "COUNT(DISTINCT $alias)",
+                'filled' => "COUNT($column)",
+                'empty' => "COUNT(id) - COUNT($column)",
+                'unique' => "COUNT(DISTINCT $column)",
                 'sum' => "COALESCE(SUM($alias), 0)",
                 'avg' => "AVG($alias)",
                 'min' => "MIN($alias)",

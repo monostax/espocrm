@@ -13,6 +13,13 @@
         },
         "order": 0
     },
+    "OpportunityTableBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/opportunity-table-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
     "CallBridge": {
         "params": {
             "controller": "chatwoot:controllers/call-bridge",

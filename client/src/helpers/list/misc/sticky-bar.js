@@ -142,7 +142,7 @@ class StickyBarHelper {
         }
 
         const scrollTop = this.$scrollable.scrollTop();
-        const stickTop = !this.force ? this._getButtonsTop() : 0;
+        const stickTop = !this.force ? Math.max(0, this._getButtonsTop()) : 0;
         const edge = this._getMiddleTop() + this.$middle.outerHeight(true);
 
         const hide = () => {
@@ -179,8 +179,8 @@ class StickyBarHelper {
             return 0;
         }
 
-        const navbarHeight = this.themeManager.getParam('navbarHeight') * this.themeManager.getFontSizeFactor();
-        const withHeader = !this.isSmallWindow && !this.isModal;
+        const withHeader = !this.isSmallWindow && !this.isModal &&
+            document.body.classList.contains('has-navbar') && this.$navbarRight.is(':visible');
 
         let offsetTop = 0;
 
@@ -197,7 +197,8 @@ class StickyBarHelper {
         } while (element);
 
         if (withHeader) {
-            offsetTop -= navbarHeight;
+            // Use the rendered bar height, including the embedded 48px layout.
+            offsetTop -= this.$navbarRight.outerHeight();
         }
 
         if (!this.isModal) {

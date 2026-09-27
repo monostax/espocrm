@@ -52,23 +52,7 @@
             "crossorigin": true
         },
         {
-            "href": "client/fonts/tabler-icons.ttf",
-            "as": "font",
-            "type": "font/ttf",
-            "rel": "preload",
-            "noTimestamp": true,
-            "crossorigin": true
-        },
-        {
-            "href": "client/fonts/tabler-icons.woff",
-            "as": "font",
-            "type": "font/woff",
-            "rel": "preload",
-            "noTimestamp": true,
-            "crossorigin": true
-        },
-        {
-            "href": "client/fonts/tabler-icons.woff2",
+            "href": "client/fonts/tabler-icons.woff2?v3.35.0",
             "as": "font",
             "type": "font/woff2",
             "rel": "preload",

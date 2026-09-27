@@ -88,6 +88,7 @@
             this._pathsBeingLoaded = {};
             this._dataLoaded = {};
             this._definedMap = {};
+            this._defineCallbacks = {};
             this._aliasMap = {};
             this._contextId = null;
             this._responseCache = null;
@@ -357,7 +358,31 @@
             }
 
             this._set(id, value);
+
+            const initializers = this._defineCallbacks[id] || [];
+            delete this._defineCallbacks[id];
+            initializers.forEach(initialize => { initialize(value); });
+
             this._executeLoadCallback(id, value);
+        }
+
+        /**
+         * Initialize a module before its consumers, without requesting it.
+         * Already-defined modules are initialized immediately.
+         *
+         * @param {string} id
+         * @param {function(*): void} callback
+         */
+        onDefine(id, callback) {
+            id = this._normalizeId(id);
+
+            if (id in this._definedMap) {
+                callback(this._get(id));
+                return;
+            }
+
+            this._defineCallbacks[id] ??= [];
+            this._defineCallbacks[id].push(callback);
         }
 
         /**
@@ -1113,6 +1138,16 @@
          */
         define: function (id, dependencyIds, callback) {
             loader.define(id, dependencyIds, callback);
+        },
+
+        /**
+         * Register a customization without eagerly loading its module.
+         *
+         * @param {string} id
+         * @param {function(*): void} callback
+         */
+        onDefine: function (id, callback) {
+            loader.onDefine(id, callback);
         },
 
         /**

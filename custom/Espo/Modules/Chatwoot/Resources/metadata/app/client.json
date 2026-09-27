@@ -1,0 +1,6 @@
+{
+    "scriptList": [
+        "__APPEND__",
+        "client/lib/opportunity-table-init.js"
+    ]
+}

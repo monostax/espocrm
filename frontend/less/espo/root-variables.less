@@ -1,3 +1,6 @@
+@import "../monostax/palette.less";
+@import "../monostax/variables.less";
+
 :root {
     font-size: 14px;
     --1px: 0.0625rem;
@@ -192,9 +195,8 @@
     --white-color-3: darken(@white-color-value, 3%);
     --white-color-5: darken(@white-color-value, 5%);
 
-    // @todo Move values to theme variables.
-    --tooltip-bg: #1f2223;
-    --tooltip-color: #fff;
+    --tooltip-bg: @monostax-colors[slate-12];
+    --tooltip-color: @monostax-colors[slate-1];
 
     --gray-base: @gray-base-value;
     --gray-soft: @gray-soft-value;
@@ -256,15 +258,15 @@
 
     --brand-primary-text: @brand-primary-text-value;
     --brand-primary-5: darken(@brand-primary-value, 5%);
-    --brand-primary-10: darken(@brand-primary-value, 10%);
+    --brand-primary-10: @monostax-colors[blue-10];
     --brand-primary-lighten-10: lighten(@brand-primary-value, 10%);
     --brand-primary-lighten-30: lighten(@brand-primary-value, 30%);
     --brand-primary-lighten-50: lighten(@brand-primary-value, 50%);
 
-    --brand-danger-10: darken(@brand-danger-value, 10%);
+    --brand-danger-10: @monostax-colors[ruby-10];
     --brand-danger-lighten-20: lighten(@brand-danger-value, 20%);
-    --brand-success-10: darken(@brand-success-value, 10%);
-    --brand-warning-10: darken(@brand-warning-value, 10%);
+    --brand-success-10: @monostax-colors[teal-10];
+    --brand-warning-10: @monostax-colors[amber-10];
 
     --state-default-bg: @state-default-bg-value;
     --state-default-text: @state-default-text-value;
@@ -294,7 +296,7 @@
     --state-danger-text-10: darken(@state-danger-text-value, 10%);
     --state-danger-text-10l: lighten(darken(@state-danger-text-value, 10%), 20);
 
-    --brand-info-10: darken(@brand-info-value, 10%);
+    --brand-info-10: @monostax-colors[iris-10];
 
     --state-info-text-10: darken(@state-info-text-value, 10%);
     --state-info-bg-5: darken(@state-info-bg-value, 5%);
@@ -377,7 +379,7 @@
     --navbar-link-icon-color: @navbar-link-icon-color-value;
     --navbar-link-hover-color: @navbar-link-hover-color-value;
     --navbar-link-hover-bg: @navbar-link-hover-bg-value;
-    --navbar-link-active-bg: darken(@navbar-bg-value, 10%);
+    --navbar-link-active-bg: @monostax-colors[slate-4];
     --navbar-box-shadow: @navbar-box-shadow-value;
     --navbar-border-width: @navbar-border-width-value;
 
@@ -386,8 +388,8 @@
     --navbar-inverse-link-color: @navbar-inverse-link-color-value;
     --navbar-inverse-link-active-bg: @navbar-inverse-link-active-bg-value;
     --navbar-inverse-border: @navbar-inverse-border-value;
-    --navbar-inverse-toggle-hover-bg: darken(@navbar-inverse-bg-value, 10%);
-    --navbar-inverse-bg-7: darken(@navbar-inverse-bg-value, 7%);
+    --navbar-inverse-toggle-hover-bg: @monostax-colors[slate-3];
+    --navbar-inverse-bg-7: @monostax-colors[weak];
     --navbar-inverse-link-hover-color: @navbar-inverse-link-hover-color-value;
     --navbar-inverse-link-hover-bg: @navbar-inverse-link-hover-bg-value;
     --navbar-inverse-link-disabled-color: @navbar-inverse-link-disabled-color-value;

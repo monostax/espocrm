@@ -448,7 +448,7 @@ class ClientManager
         }
 
         return $this->getTabHtml() .
-            "<link rel=\"$rel\" href=\"$href\" as=\"$as\" as=\"$type\"$part>";
+            "<link rel=\"$rel\" href=\"$href\" as=\"$as\" type=\"$type\"$part>";
     }
 
     private function getTabHtml(): string

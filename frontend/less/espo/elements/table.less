@@ -189,8 +189,48 @@ table td {
 
 // Inline edit link in list rows. The field view element is the cell itself.
 .table > tbody > tr.list-row > td.cell {
+    position: relative;
+
     > .inline-edit-link {
-        margin-left: var(--6px);
+        position: absolute;
+        top: var(--table-cell-padding);
+        right: var(--table-cell-padding);
+        z-index: 4;
+        padding: 0 var(--4px);
+        border-radius: var(--border-radius);
+        background-color: var(--table-bg);
         line-height: inherit;
+    }
+
+    &.list-inline-edit {
+        z-index: 5;
+        overflow: visible;
+        white-space: normal;
+        background-color: var(--table-bg);
+        box-shadow: inset 0 0 0 var(--2px) var(--input-border-focus);
+
+        > .inline-save-link,
+        > .inline-cancel-link {
+            position: absolute;
+            top: calc(-1 * var(--26px));
+            z-index: 1;
+            width: var(--26px);
+            height: var(--26px);
+            margin: 0;
+            border: var(--1px) solid var(--input-border);
+            background-color: var(--table-bg);
+            line-height: var(--24px);
+            text-align: center;
+        }
+
+        > .inline-save-link {
+            right: var(--26px);
+            border-radius: var(--border-radius) 0 0 0;
+        }
+
+        > .inline-cancel-link {
+            right: 0;
+            border-radius: 0 var(--border-radius) 0 0;
+        }
     }
 }

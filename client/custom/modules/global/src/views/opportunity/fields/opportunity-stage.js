@@ -21,7 +21,7 @@ define("global:views/opportunity/fields/opportunity-stage", [
         listTemplate: "global:opportunity/fields/opportunity-stage/list",
         listLinkTemplate: "global:opportunity/fields/opportunity-stage/list-link",
 
-        mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle", "funnelName"],
+        mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle", "funnelId", "funnelName"],
 
         getAttributeList: function () {
             const list = Dep.prototype.getAttributeList.call(this);
