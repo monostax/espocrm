@@ -71,25 +71,7 @@ class AdminForUserPanel implements AdditionalBuilder
                 continue;
             }
 
-            // Merge each panel definition
-            foreach (get_object_vars($panelData) as $panelKey => $panelDef) {
-                if (isset($mergedPanels->$panelKey)) {
-                    // Panel already exists, merge itemList if both have it
-                    if (isset($panelDef->itemList) && isset($mergedPanels->$panelKey->itemList)) {
-                        $mergedPanels->$panelKey->itemList = array_merge(
-                            $mergedPanels->$panelKey->itemList,
-                            $panelDef->itemList
-                        );
-                    }
-                    // Keep the existing order if already set, otherwise use new one
-                    if (!isset($mergedPanels->$panelKey->order) && isset($panelDef->order)) {
-                        $mergedPanels->$panelKey->order = $panelDef->order;
-                    }
-                } else {
-                    // New panel, add it
-                    $mergedPanels->$panelKey = $panelDef;
-                }
-            }
+            $this->mergePanels($mergedPanels, $panelData);
         }
 
         // Inject merged data into metadata if we found any panels
@@ -98,6 +80,38 @@ class AdminForUserPanel implements AdditionalBuilder
                 $data->app = new stdClass();
             }
             $data->app->adminForUserPanel = $mergedPanels;
+        }
+    }
+
+    /**
+     * Modules contribute to shared task groups and sections. Keep the first
+     * definition's labels/order and append destinations within each section.
+     */
+    private function mergePanels(stdClass $target, stdClass $source): void
+    {
+        foreach (get_object_vars($source) as $key => $definition) {
+            if (!isset($target->$key)) {
+                $target->$key = new stdClass();
+            }
+
+            $panel = $target->$key;
+
+            foreach (get_object_vars($definition) as $property => $value) {
+                if ($property === 'sections') {
+                    $panel->sections ??= new stdClass();
+                    $this->mergePanels($panel->sections, $value);
+
+                    continue;
+                }
+
+                if ($property === 'itemList') {
+                    $panel->itemList = array_merge($panel->itemList ?? [], $value);
+
+                    continue;
+                }
+
+                $panel->$property ??= $value;
+            }
         }
     }
 }

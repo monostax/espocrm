@@ -1,14 +1,19 @@
 {
     "integrations": {
-        "label": "Integrations",
-        "itemList": [
-            {
-                "url": "#Credential",
-                "label": "Credentials",
-                "iconClass": "ti ti-lock",
-                "description": "credentials",
-                "tabQuickSearch": true
+        "sections": {
+            "authentication": {
+                "label": "Authentication and API",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#Credential",
+                        "label": "Credentials",
+                        "iconClass": "ti ti-lock",
+                        "description": "credentials",
+                        "tabQuickSearch": true
+                    }
+                ]
             }
-        ]
+        }
     }
 }

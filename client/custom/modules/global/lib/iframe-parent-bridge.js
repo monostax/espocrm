@@ -6,6 +6,7 @@
  * - Notifies parent when CRM navigation changes
  * - Listens for navigation commands from parent
  * - Syncs URL state between iframe and parent
+ * - Routes parent-app links through the parent SPA on normal clicks
  * - Provides public API for custom views (window.EspoCRMBridge)
  *
  * Public API:
@@ -380,6 +381,39 @@
     }
 
     /**
+     * Keep real hrefs for new-tab actions while routing normal parent links via SPA.
+     */
+    function setupParentNavigationLinks() {
+        document.addEventListener("click", function (event) {
+            if (
+                event.defaultPrevented || event.button !== 0 ||
+                event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+            ) {
+                return;
+            }
+
+            const link = event.target.closest('a[target="_top"][href]');
+            if (!link || link.hasAttribute("download")) {
+                return;
+            }
+
+            const url = new URL(link.href);
+            if (url.origin !== parentOrigin || !url.pathname.startsWith("/app/accounts/")) {
+                return;
+            }
+
+            window.parent.postMessage(
+                {
+                    type: "CRM_CHATWOOT_NAVIGATE",
+                    cwPath: url.pathname + url.search + url.hash,
+                },
+                parentOrigin
+            );
+            event.preventDefault();
+        });
+    }
+
+    /**
      * Monitor hash changes and notify parent
      */
     function setupHashChangeListener() {
@@ -460,6 +494,7 @@
         }
 
         setupParentListener();
+        setupParentNavigationLinks();
         setupHashChangeListener();
         setupBreadcrumbMonitor();
 

@@ -117,8 +117,8 @@ class AdminForUserController extends Controller {
 
         for (const panelName in panels) {
             const panel = panels[panelName];
-            if (panel.itemList) {
-                for (const item of panel.itemList) {
+            for (const section of [panel, ...Object.values(panel.sections || {})]) {
+                for (const item of section.itemList || []) {
                     // Extract entity type from URL like "#Configurations/ChatwootInboxIntegration"
                     if (item.url) {
                         const urlMatch = item.url.match(
@@ -148,6 +148,28 @@ class AdminForUserController extends Controller {
         const filteredPanelData = {};
 
         for (const [panelName, panelDefs] of Object.entries(panelData)) {
+            if (panelDefs.sections) {
+                const sections = {};
+
+                for (const [name, section] of Object.entries(panelDefs.sections)) {
+                    const itemList = (section.itemList || []).filter(item => {
+                        const entityType = this.getEntityTypeFromUrl(item.url);
+
+                        return !entityType || this.getAcl().check(entityType, "read");
+                    });
+
+                    if (itemList.length) {
+                        sections[name] = {...section, itemList};
+                    }
+                }
+
+                if (Object.keys(sections).length) {
+                    filteredPanelData[panelName] = {...panelDefs, sections};
+                }
+
+                continue;
+            }
+
             if (panelDefs.itemList) {
                 const filteredItems = panelDefs.itemList.filter((item) => {
                     // Extract entity type from URL
@@ -173,6 +195,10 @@ class AdminForUserController extends Controller {
         }
 
         return filteredPanelData;
+    }
+
+    getEntityTypeFromUrl(url) {
+        return AdminForUserIndexView.prototype.getEntityTypeFromUrl.call(this, url);
     }
 }
 

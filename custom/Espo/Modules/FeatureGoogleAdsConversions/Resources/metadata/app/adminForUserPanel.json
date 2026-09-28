@@ -1,29 +1,34 @@
 {
-    "googleAds": {
-        "label": "Google Ads",
-        "order": 26,
-        "itemList": [
-            {
-                "url": "#Configurations/GoogleAdsDestination",
-                "label": "Destinations",
-                "iconClass": "ti ti-brand-google",
-                "description": "googleAdsDestinations",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/GoogleAdsConversionMapping",
-                "label": "Conversion Mappings",
-                "iconClass": "ti ti-route",
-                "description": "googleAdsConversionMappings",
-                "roles": ["tenant-admin"]
-            },
-            {
-                "url": "#Configurations/GoogleAdsConversionUpload",
-                "label": "Conversion Uploads",
-                "iconClass": "ti ti-list-details",
-                "description": "googleAdsConversionUploads",
-                "roles": ["tenant", "tenant-admin"]
+    "marketing": {
+        "sections": {
+            "googleConversions": {
+                "label": "Google Ads Conversions",
+                "order": 70,
+                "itemList": [
+                    {
+                        "url": "#Configurations/GoogleAdsDestination",
+                        "label": "Destinations",
+                        "iconClass": "ti ti-brand-google",
+                        "description": "googleAdsDestinations",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/GoogleAdsConversionMapping",
+                        "label": "Conversion Mappings",
+                        "iconClass": "ti ti-route",
+                        "description": "googleAdsConversionMappings",
+                        "roles": ["tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/GoogleAdsConversionUpload",
+                        "label": "Conversion Uploads",
+                        "iconClass": "ti ti-list-details",
+                        "description": "googleAdsConversionUploads",
+                        "secondary": true,
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
             }
-        ]
+        }
     }
 }

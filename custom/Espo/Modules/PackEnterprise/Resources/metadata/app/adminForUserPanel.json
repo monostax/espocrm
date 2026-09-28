@@ -1,14 +1,18 @@
 {
-    "google": {
-        "label": "Google",
-        "itemList": [
-            {
-                "url": "#Configurations/MsxGoogleCalendarUser",
-                "label": "Calendar Sync",
-                "iconClass": "ti ti-calendar-event",
-                "description": "msxGoogleCalendarSync"
+    "scheduling": {
+        "sections": {
+            "calendars": {
+                "label": "Calendars",
+                "order": 10,
+                "itemList": [
+                    {
+                        "url": "#Configurations/MsxGoogleCalendarUser",
+                        "label": "Calendar Sync",
+                        "iconClass": "ti ti-calendar-event",
+                        "description": "msxGoogleCalendarSync"
+                    }
+                ]
             }
-        ],
-        "order": 25
+        }
     }
 }

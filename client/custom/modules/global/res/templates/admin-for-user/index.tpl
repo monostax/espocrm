@@ -15,11 +15,19 @@
             </div>
             <div class="admin-tables-container">
                 {{#each panelDataList}}
-                <div class="admin-content-section" data-index="{{@index}}">
-                    <h4>{{label}}</h4>
-                    <table class="table table-admin-panel" data-name="{{name}}">
+                <details class="admin-content-group" data-index="{{index}}" open>
+                    <summary class="h4">{{label}}</summary>
+                    {{#each sectionList}}
+                    <section class="admin-content-section" data-index="{{index}}">
+                    {{#if label}}<h5>{{label}}</h5>{{/if}}
+                    {{#each lists}}
+                    {{#if secondary}}
+                    <details class="admin-history">
+                        <summary>{{translate 'History and Diagnostics' scope='Configurations'}}</summary>
+                    {{/if}}
+                    <table class="table table-admin-panel" data-name="{{../name}}">
                         {{#each itemList}}
-                        <tr class="admin-content-row" data-index="{{@index}}">
+                        <tr class="admin-content-row" data-index="{{index}}">
                             <td>
                                 <div>
                                 {{#if iconClass}}
@@ -27,6 +35,7 @@
                                 {{/if}}
                                 <a
                                     {{#if url}}href="{{url}}"{{else}}role="button"{{/if}}
+                                    {{#if target}}target="{{target}}"{{/if}}
                                     tabindex="0"
                                     {{#if action}} data-action="{{action}}"{{/if}}
                                 >{{label}}</a>
@@ -36,7 +45,11 @@
                         </tr>
                         {{/each}}
                     </table>
-                </div>
+                    {{#if secondary}}</details>{{/if}}
+                    {{/each}}
+                    </section>
+                    {{/each}}
+                </details>
                 {{/each}}
                 <div class="no-data hidden">{{translate 'No Data'}}</div>
             </div>

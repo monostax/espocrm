@@ -1,15 +1,20 @@
 {
     "ai": {
-        "label": "AI",
-        "itemList": [
-            {
-                "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
-                "label": "Knowledge Base",
-                "iconClass": "ti ti-brain",
-                "description": "knowledgeBase"
+        "sections": {
+            "knowledge": {
+                "label": "Knowledge",
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
+                        "label": "Knowledge Base Categories",
+                        "iconClass": "ti ti-brain",
+                        "description": "knowledgeBase",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
             }
-        ],
-        "order": 20
+        }
     }
 }
 

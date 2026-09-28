@@ -1,97 +1,137 @@
 {
-    "users": {
-        "label": "Users",
-        "itemList": [
-            {
-                "url": "#User",
-                "label": "Users",
-                "iconClass": "ti ti-user",
-                "description": "users",
-                "tabQuickSearch": true
-            },
-            {
-                "url": "#Team",
-                "label": "Teams",
-                "iconClass": "ti ti-users",
-                "description": "teams",
-                "tabQuickSearch": true
-            },
-            {
-                "url": "#UserApiKey",
-                "label": "User API Keys",
-                "iconClass": "ti ti-key",
-                "description": "userApiKeys",
-                "tabQuickSearch": true
-            }
-        ],
-        "order": 5
+    "conversations": {
+        "label": "Conversations",
+        "order": 10,
+        "sections": {}
     },
-    "data": {
-        "label": "Data",
-        "itemList": [
-            {
-                "url": "#Import",
-                "label": "Import",
-                "iconClass": "fas fa-file-import",
-                "description": "import"
-            },
-            {
-                "url": "#CustomFieldGroup",
-                "label": "Custom Field Groups",
-                "iconClass": "fas fa-layer-group",
-                "description": "customFieldGroups",
-                "tabQuickSearch": true
-            },
-            {
-                "url": "#CustomFieldDef",
-                "label": "Custom Fields",
-                "iconClass": "fas fa-puzzle-piece",
-                "description": "customFieldDefs",
-                "tabQuickSearch": true
+    "marketing": {
+        "label": "Marketing and Sales",
+        "order": 20,
+        "sections": {
+            "funnels": {
+                "label": "Sales Funnels",
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "#Funnel",
+                        "label": "Funnels",
+                        "iconClass": "ti ti-chart-funnel",
+                        "description": "funnels"
+                    }
+                ]
             }
-        ]
+        }
     },
-    "sales": {
-        "label": "Sales",
-        "itemList": [
-            {
-                "url": "#Funnel",
-                "label": "Funnels",
-                "iconClass": "ti ti-chart-funnel",
-                "description": "funnels"
-            }
-        ]
+    "automation": {
+        "label": "Automation",
+        "order": 30,
+        "sections": {}
+    },
+    "ai": {
+        "label": "AI and Knowledge",
+        "order": 40,
+        "sections": {}
+    },
+    "scheduling": {
+        "label": "Scheduling and Meetings",
+        "order": 50,
+        "sections": {}
     },
     "integrations": {
         "label": "Integrations",
-        "itemList": [
-            {
-                "url": "#OAuthProvider",
-                "label": "OAuth Providers",
-                "iconClass": "ti ti-key",
-                "description": "oauthProviders",
-                "tabQuickSearch": true
-            },
-            {
-                "url": "#OAuthAccount",
-                "label": "OAuth Accounts",
-                "iconClass": "ti ti-link",
-                "description": "oauthAccounts",
-                "tabQuickSearch": true
+        "order": 60,
+        "sections": {
+            "authentication": {
+                "label": "Authentication and API",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#OAuthProvider",
+                        "label": "OAuth Providers",
+                        "iconClass": "ti ti-key",
+                        "description": "oauthProviders",
+                        "tabQuickSearch": true
+                    },
+                    {
+                        "url": "#OAuthAccount",
+                        "label": "OAuth Accounts",
+                        "iconClass": "ti ti-link",
+                        "description": "oauthAccounts",
+                        "tabQuickSearch": true
+                    },
+                    {
+                        "url": "#UserApiKey",
+                        "label": "User API Keys",
+                        "iconClass": "ti ti-key",
+                        "description": "userApiKeys",
+                        "tabQuickSearch": true
+                    }
+                ]
             }
-        ]
+        }
     },
-    "sidenav": {
-        "label": "Sidenav",
-        "itemList": [
-            {
-                "url": "#Configurations/SidenavConfig",
-                "label": "Sidenav Configs",
-                "iconClass": "fas fa-bars",
-                "description": "sidenavConfigs"
+    "administration": {
+        "label": "Administration",
+        "order": 70,
+        "sections": {
+            "people": {
+                "label": "People and Access",
+                "order": 10,
+                "itemList": [
+                    {
+                        "url": "#User",
+                        "label": "Users",
+                        "iconClass": "ti ti-user",
+                        "description": "users",
+                        "tabQuickSearch": true
+                    },
+                    {
+                        "url": "#Team",
+                        "label": "CRM Teams",
+                        "iconClass": "ti ti-users",
+                        "description": "teams",
+                        "tabQuickSearch": true
+                    }
+                ]
+            },
+            "data": {
+                "label": "Data and Customization",
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "#Import",
+                        "label": "Import",
+                        "iconClass": "fas fa-file-import",
+                        "description": "import"
+                    },
+                    {
+                        "url": "#CustomFieldGroup",
+                        "label": "Custom Field Groups",
+                        "iconClass": "fas fa-layer-group",
+                        "description": "customFieldGroups",
+                        "tabQuickSearch": true
+                    },
+                    {
+                        "url": "#CustomFieldDef",
+                        "label": "Custom Fields",
+                        "iconClass": "fas fa-puzzle-piece",
+                        "description": "customFieldDefs",
+                        "tabQuickSearch": true
+                    }
+                ]
+            },
+            "navigation": {
+                "label": "Navigation",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#Configurations/SidenavConfig",
+                        "label": "Sidenav Configs",
+                        "iconClass": "fas fa-bars",
+                        "description": "sidenavConfigs"
+                    }
+                ]
             }
-        ],
-        "order": 10
+        }
     }
 }
-

@@ -1,43 +1,320 @@
 {
-    "chatwoot": {
-        "label": "Chatwoot",
-        "itemList": [
-            {
-                "url": "#Configurations/ChatwootAccount",
-                "label": "Chat / Accounts",
-                "iconClass": "ti ti-building",
-                "description": "chatwootAccountsForUser",
-                "roles": ["tenant", "tenant-admin"]
+    "conversations": {
+        "sections": {
+            "channels": {
+                "label": "Channels",
+                "order": 10,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/inboxes/list",
+                        "target": "_top",
+                        "label": "Chat Inboxes",
+                        "iconClass": "ti ti-inbox",
+                        "description": "chatwootInboxes"
+                    }
+                ]
             },
-            {
-                "url": "#Configurations/ChatwootAccountUserMembership",
-                "label": "Chat / Account Users",
-                "iconClass": "ti ti-user-shield",
-                "description": "accountUserMemberships",
-                "roles": ["tenant", "tenant-admin"]
+            "team": {
+                "label": "Support Team",
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/agents/list",
+                        "target": "_top",
+                        "label": "Chat Agents",
+                        "iconClass": "ti ti-user-square",
+                        "description": "chatwootAgents"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/teams/list",
+                        "target": "_top",
+                        "label": "Chat Teams",
+                        "iconClass": "ti ti-users-group",
+                        "description": "chatwootTeamSettings"
+                    },
+                    {
+                        "url": "#ChatwootAccountUserMembership/list/primaryFilter=aiOnly",
+                        "label": "AI Agents",
+                        "iconClass": "ti ti-robot",
+                        "description": "chatwootAiAgents"
+                    }
+                ]
             },
-            {
-                "url": "#Configurations/ChatwootTeam",
-                "label": "Teams",
-                "iconClass": "ti ti-users-group",
-                "description": "chatwootTeams",
-                "roles": ["tenant", "tenant-admin"]
+            "messaging": {
+                "label": "Messaging",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#WhatsAppCampaign",
+                        "label": "WhatsApp Campaigns",
+                        "iconClass": "ti ti-send",
+                        "description": "whatsAppCampaigns",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/canned-response/list",
+                        "target": "_top",
+                        "label": "Chat Canned Responses",
+                        "iconClass": "ti ti-message-reply",
+                        "description": "chatwootCannedResponses"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/macros",
+                        "target": "_top",
+                        "label": "Chat Macros",
+                        "iconClass": "ti ti-apps",
+                        "description": "chatwootMacros"
+                    }
+                ]
             },
-            {
-                "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
-                "label": "Knowledge Base",
-                "iconClass": "ti ti-brain",
-                "description": "knowledgeBase",
-                "roles": ["tenant", "tenant-admin"]
+            "settings": {
+                "label": "Conversation Settings",
+                "order": 40,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/general",
+                        "target": "_top",
+                        "label": "Chat Account",
+                        "iconClass": "ti ti-briefcase",
+                        "description": "chatwootAccountSettings"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/custom-attributes/list",
+                        "target": "_top",
+                        "label": "Chat Custom Attributes",
+                        "iconClass": "ti ti-code",
+                        "description": "chatwootCustomAttributes"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/automation/list",
+                        "target": "_top",
+                        "label": "Chat Automation",
+                        "iconClass": "ti ti-repeat",
+                        "description": "chatwootAutomation"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/conversation-workflow",
+                        "target": "_top",
+                        "label": "Chat Conversation Workflow",
+                        "iconClass": "ti ti-schema",
+                        "description": "chatwootConversationWorkflow"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/labels/list",
+                        "target": "_top",
+                        "label": "Chat Labels",
+                        "iconClass": "ti ti-tags",
+                        "description": "chatwootLabels"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/integrations",
+                        "target": "_top",
+                        "label": "Chat Integrations",
+                        "iconClass": "ti ti-puzzle",
+                        "description": "chatwootIntegrations"
+                    }
+                ]
             },
-            {
-                "url": "#WhatsAppCampaign",
-                "label": "WhatsApp Campaigns",
-                "iconClass": "ti ti-send",
-                "description": "whatsAppCampaigns",
-                "roles": ["tenant", "tenant-admin"]
+            "knowledge": {
+                "label": "Knowledge",
+                "order": 50,
+                "itemList": [
+                    {
+                        "url": "#KnowledgeBaseArticle",
+                        "label": "Knowledge Base",
+                        "iconClass": "ti ti-books",
+                        "description": "chatwootKnowledgeBaseArticles"
+                    },
+                    {
+                        "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
+                        "label": "Knowledge Base Categories",
+                        "iconClass": "ti ti-brain",
+                        "description": "knowledgeBase",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            },
+            "reports": {
+                "label": "Conversation Reports",
+                "order": 60,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/overview",
+                        "target": "_top",
+                        "label": "Chat Report Overview",
+                        "iconClass": "ti ti-chart-line",
+                        "description": "chatwootReportOverview"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/conversation",
+                        "target": "_top",
+                        "label": "Chat Report Conversations",
+                        "iconClass": "ti ti-messages",
+                        "description": "chatwootReportConversations"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/agents_overview",
+                        "target": "_top",
+                        "label": "Chat Report Agents",
+                        "iconClass": "ti ti-user-square",
+                        "description": "chatwootReportAgents"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/labels_overview",
+                        "target": "_top",
+                        "label": "Chat Report Labels",
+                        "iconClass": "ti ti-tags",
+                        "description": "chatwootReportLabels"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/inboxes_overview",
+                        "target": "_top",
+                        "label": "Chat Report Inboxes",
+                        "iconClass": "ti ti-inbox",
+                        "description": "chatwootReportInboxes"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/teams_overview",
+                        "target": "_top",
+                        "label": "Chat Report Teams",
+                        "iconClass": "ti ti-users-group",
+                        "description": "chatwootReportTeams"
+                    }
+                ]
+            },
+            "quality": {
+                "label": "Service Quality",
+                "order": 70,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/csat",
+                        "target": "_top",
+                        "label": "CSAT",
+                        "iconClass": "ti ti-mood-smile",
+                        "description": "chatwootReportCsat"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/reports/sla",
+                        "target": "_top",
+                        "label": "SLA",
+                        "iconClass": "ti ti-clock-check",
+                        "description": "chatwootReportSla"
+                    }
+                ]
             }
-        ],
-        "order": 30
+        }
+    },
+    "marketing": {
+        "sections": {
+            "campaigns": {
+                "label": "Campaigns",
+                "order": 10,
+                "itemList": [
+                    {
+                        "url": "#WhatsAppCampaign",
+                        "label": "WhatsApp Campaigns",
+                        "iconClass": "ti ti-send",
+                        "description": "whatsAppCampaigns",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
+    },
+    "automation": {
+        "sections": {
+            "conversations": {
+                "label": "Conversation Automation",
+                "order": 40,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/automation/list",
+                        "target": "_top",
+                        "label": "Chat Automation",
+                        "iconClass": "ti ti-repeat",
+                        "description": "chatwootAutomation"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/conversation-workflow",
+                        "target": "_top",
+                        "label": "Chat Conversation Workflow",
+                        "iconClass": "ti ti-schema",
+                        "description": "chatwootConversationWorkflow"
+                    },
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/macros",
+                        "target": "_top",
+                        "label": "Chat Macros",
+                        "iconClass": "ti ti-apps",
+                        "description": "chatwootMacros"
+                    }
+                ]
+            },
+            "campaigns": {
+                "label": "Campaigns",
+                "order": 50,
+                "itemList": [
+                    {
+                        "url": "#WhatsAppCampaign",
+                        "label": "WhatsApp Campaigns",
+                        "iconClass": "ti ti-send",
+                        "description": "whatsAppCampaigns",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
+    },
+    "ai": {
+        "sections": {
+            "agents": {
+                "label": "AI Agents",
+                "order": 10,
+                "itemList": [
+                    {
+                        "url": "#ChatwootAccountUserMembership/list/primaryFilter=aiOnly",
+                        "label": "AI Agents",
+                        "iconClass": "ti ti-robot",
+                        "description": "chatwootAiAgents"
+                    }
+                ]
+            },
+            "knowledge": {
+                "label": "Knowledge",
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "#KnowledgeBaseArticle",
+                        "label": "Knowledge Base",
+                        "iconClass": "ti ti-books",
+                        "description": "chatwootKnowledgeBaseArticles"
+                    },
+                    {
+                        "url": "#KnowledgeBaseCategory/list/where[0][type]=isTrue&where[0][attribute]=aiIndexEnabled",
+                        "label": "Knowledge Base Categories",
+                        "iconClass": "ti ti-brain",
+                        "description": "knowledgeBase",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
+    },
+    "integrations": {
+        "sections": {
+            "apps": {
+                "label": "Connected Apps",
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/integrations",
+                        "target": "_top",
+                        "label": "Chat Integrations",
+                        "iconClass": "ti ti-puzzle",
+                        "description": "chatwootIntegrations"
+                    }
+                ]
+            }
+        }
     }
 }

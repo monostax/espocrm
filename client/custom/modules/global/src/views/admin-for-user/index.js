@@ -62,79 +62,121 @@ class AdminForUserIndexView extends View {
 
     setup() {
         this.panelDataList = [];
-
-        // Get the adminForUserPanel metadata
         const panels = this.getMetadata().get("app.adminForUserPanel") || {};
+        let sectionIndex = 0;
+        let itemIndex = 0;
 
-        for (const name in panels) {
-            const panelItem = Espo.Utils.cloneDeep(panels[name]);
+        for (const [name, definition] of this.sortedEntries(panels)) {
+            const panel = {
+                name,
+                index: this.panelDataList.length,
+                label: this.translate(definition.label, "labels", "Configurations"),
+                sectionList: [],
+            };
+            // Flat panels from extensions remain supported.
+            const sections = {...definition.sections};
 
-            panelItem.name = name;
-            panelItem.itemList = panelItem.itemList || [];
-            panelItem.label = this.translate(
-                panelItem.label,
-                "labels",
-                "Configurations",
-            );
+            if (definition.itemList?.length) {
+                sections[name] = {...definition, label: null};
+            }
 
-            if (panelItem.itemList) {
-                // Filter items by ACL - only show entities the user has access to
-                panelItem.itemList = panelItem.itemList.filter((item) => {
-                    // Extract entity type from URL like "#Configurations/ChatwootInboxIntegration"
-                    const entityType = this.getEntityTypeFromUrl(item.url);
+            for (const [sectionName, sectionDef] of this.sortedEntries(sections)) {
+                const itemList = this.prepareItems(sectionDef.itemList || []);
 
-                    if (entityType) {
-                        // Use ACL to check if user has read access to this entity
-                        // This automatically handles roles, teams, and all permission logic
-                        return this.getAcl().check(entityType, "read");
-                    }
+                if (!itemList.length) {
+                    continue;
+                }
 
-                    // If no entity type found, show the item (fallback)
-                    return true;
-                });
+                itemList.forEach(item => { item.index = itemIndex++; });
 
-                panelItem.itemList.forEach((item) => {
-                    item.label = this.translate(
-                        item.label,
-                        "labels",
-                        "Configurations",
-                    );
+                const lists = [
+                    {itemList: itemList.filter(item => !item.secondary)},
+                    {secondary: true, itemList: itemList.filter(item => item.secondary)},
+                ].filter(list => list.itemList.length);
 
-                    if (item.description) {
-                        item.keywords = (
-                            this.getLanguage().get(
-                                "Configurations",
-                                "keywords",
-                                item.description,
-                            ) || ""
-                        ).split(",");
-
-                        item.keywords = item.keywords.map((keyword) =>
-                            keyword.trim().toLowerCase(),
-                        );
-                    } else {
-                        item.keywords = [];
-                    }
+                panel.sectionList.push({
+                    name: sectionName,
+                    index: sectionIndex++,
+                    label: sectionDef.label && this.translate(sectionDef.label, "labels", "Configurations"),
+                    itemList,
+                    lists,
                 });
             }
 
-            // Only add panel if it has items after filtering
-            if (panelItem.itemList && panelItem.itemList.length > 0) {
-                this.panelDataList.push(panelItem);
+            if (panel.sectionList.length) {
+                this.panelDataList.push(panel);
+            }
+        }
+    }
+
+    sortedEntries(definitions) {
+        return Object.entries(definitions).sort(([nameA, a], [nameB, b]) =>
+            (a.order ?? 1000) - (b.order ?? 1000) || nameA.localeCompare(nameB)
+        );
+    }
+
+    prepareItems(items) {
+        const seen = new Set();
+
+        return Espo.Utils.cloneDeep(items).filter(item => {
+            if (item.url) {
+                item.url = this.resolveItemUrl(item.url);
+
+                if (!item.url || seen.has(item.url)) {
+                    return false;
+                }
+
+                seen.add(item.url);
+            }
+
+            const entityType = this.getEntityTypeFromUrl(item.url);
+
+            return !entityType || this.getAcl().check(entityType, "read");
+        }).map(item => ({
+            ...item,
+            label: this.translate(item.label, "labels", "Configurations"),
+            keywords: item.description
+                ? (this.getLanguage().get("Configurations", "keywords", item.description) || "").split(",")
+                : [],
+        }));
+    }
+
+    normalizeSearch(text) {
+        return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    matchesSearch(value, text) {
+        const normalized = this.normalizeSearch(value || "");
+
+        return normalized.startsWith(text) || normalized.split(/\s+/).some(word => word.startsWith(text));
+    }
+
+    getSearchMatches(text) {
+        text = this.normalizeSearch(text.trim());
+        const matches = new Map();
+
+        for (const panel of this.panelDataList) {
+            for (const section of panel.sectionList) {
+                const priority = this.matchesSearch(panel.label, text) ? 2
+                    : this.matchesSearch(section.label, text) ? 1 : 0;
+
+                for (const item of section.itemList) {
+                    if (!priority && !this.matchesSearch(item.label, text) &&
+                        !item.keywords.some(keyword => this.matchesSearch(keyword.trim(), text))) {
+                        continue;
+                    }
+
+                    const key = item.url || item.index;
+
+                    // Prefer the searched context when a destination is cross-listed.
+                    if (!matches.has(key) || matches.get(key).priority < priority) {
+                        matches.set(key, {panel, section, item, priority});
+                    }
+                }
             }
         }
 
-        this.panelDataList.sort((v1, v2) => {
-            if (!("order" in v1) && "order" in v2) {
-                return 0;
-            }
-
-            if (!("order" in v2)) {
-                return 0;
-            }
-
-            return v1.order - v2.order;
-        });
+        return [...matches.values()];
     }
 
     processQuickSearch(text) {
@@ -142,106 +184,34 @@ class AdminForUserIndexView extends View {
 
         this.quickSearchText = text;
 
-        const $noData = this.$noData || this.$el.find(".no-data");
+        this.$el.find(".no-data").addClass("hidden");
+        this.$el.find(".admin-content-group, .admin-content-section, .admin-content-row, .admin-history")
+            .toggleClass("hidden", !!text);
 
-        $noData.addClass("hidden");
-
-        if (!text) {
-            this.$el.find(".admin-content-section").removeClass("hidden");
-            this.$el.find(".admin-content-row").removeClass("hidden");
-
-            return;
-        }
-
-        text = text.toLowerCase();
-
-        this.$el.find(".admin-content-section").addClass("hidden");
-        this.$el.find(".admin-content-row").addClass("hidden");
-
-        let anythingMatched = false;
-
-        this.panelDataList.forEach((panel, panelIndex) => {
-            let panelMatched = false;
-            let panelLabelMatched = false;
-
-            if (panel.label && panel.label.toLowerCase().indexOf(text) === 0) {
-                panelMatched = true;
-                panelLabelMatched = true;
-            }
-
-            panel.itemList.forEach((row, rowIndex) => {
-                if (!row.label) {
-                    return;
-                }
-
-                let matched = false;
-
-                if (panelLabelMatched) {
-                    matched = true;
-                }
-
-                if (!matched) {
-                    matched = row.label.toLowerCase().indexOf(text) === 0;
-                }
-
-                if (!matched) {
-                    const wordList = row.label.split(" ");
-
-                    wordList.forEach((word) => {
-                        if (word.toLowerCase().indexOf(text) === 0) {
-                            matched = true;
-                        }
-                    });
-
-                    if (!matched) {
-                        matched = ~row.keywords.indexOf(text);
-                    }
-
-                    if (!matched) {
-                        if (text.length >= 3) {
-                            row.keywords.forEach((word) => {
-                                if (word.indexOf(text) === 0) {
-                                    matched = true;
-                                }
-                            });
-                        }
-                    }
-                }
-
-                if (matched) {
-                    panelMatched = true;
-
-                    this.$el
-                        .find(
-                            '.admin-content-section[data-index="' +
-                                panelIndex.toString() +
-                                '"] ' +
-                                '.admin-content-row[data-index="' +
-                                rowIndex.toString() +
-                                '"]',
-                        )
-                        .removeClass("hidden");
-
-                    anythingMatched = true;
-                }
-            });
-
-            if (panelMatched) {
-                this.$el
-                    .find(
-                        '.admin-content-section[data-index="' +
-                            panelIndex.toString() +
-                            '"]',
-                    )
-                    .removeClass("hidden");
-
-                anythingMatched = true;
+        this.$el.find("details").each((index, element) => {
+            if (text && !element.hasAttribute("data-search-open")) {
+                element.setAttribute("data-search-open", String(element.open));
+            } else if (!text && element.hasAttribute("data-search-open")) {
+                element.open = element.getAttribute("data-search-open") === "true";
+                element.removeAttribute("data-search-open");
             }
         });
 
-        if (!anythingMatched) {
-            $noData.removeClass("hidden");
+        if (!text) {
+            return;
         }
+
+        const matches = this.getSearchMatches(text);
+
+        for (const {panel, section, item} of matches) {
+            this.$el.find(`.admin-content-group[data-index="${panel.index}"]`)
+                .removeClass("hidden").prop("open", true);
+            this.$el.find(`.admin-content-section[data-index="${section.index}"]`).removeClass("hidden");
+            this.$el.find(`.admin-content-row[data-index="${item.index}"]`).removeClass("hidden")
+                .closest(".admin-history").removeClass("hidden").prop("open", true);
+        }
+
+        this.$el.find(".no-data").toggleClass("hidden", matches.length > 0);
     }
 
     updatePageTitle() {
@@ -255,13 +225,37 @@ class AdminForUserIndexView extends View {
     }
 
     /**
+     * Resolve metadata URL placeholders using the authenticated user's app parameters.
+     * Return null when a required parameter is unavailable.
+     *
+     * @param {string} url
+     * @returns {string|null}
+     */
+    resolveItemUrl(url) {
+        let missingParameter = false;
+        const resolvedUrl = url.replace(/\{\{(\w+)\}\}/g, (match, name) => {
+            const value = this.getHelper().getAppParam(name);
+
+            if (value === null || value === undefined || value === "") {
+                missingParameter = true;
+
+                return match;
+            }
+
+            return String(value);
+        });
+
+        return missingParameter ? null : resolvedUrl;
+    }
+
+    /**
      * Extract entity type from admin-for-user item URLs.
      *
      * Supported shapes:
      *   #Configurations/ChatwootInboxIntegration  → ChatwootInboxIntegration
-     *   #CustomFieldGroup                          → CustomFieldGroup
-     *   #CustomFieldDef                            → CustomFieldDef
-     *   #Funnel                                    → Funnel
+     *   #CustomFieldGroup                       → CustomFieldGroup
+     *   #ChatwootAccountUserMembership/list/...  → ChatwootAccountUserMembership
+     *   #KnowledgeBaseCategory/list/...         → KnowledgeBaseCategory
      *
      * Hash-only links that are not entity scopes (e.g. #Import) return null
      * so the ACL filter keeps them visible via the fallback.
@@ -280,8 +274,8 @@ class AdminForUserIndexView extends View {
             return configurationsMatch[1];
         }
 
-        // Plain entity hash: #EntityType (must look like an Espo scope name).
-        const plainMatch = url.match(/^#([A-Z][A-Za-z0-9_]*)$/);
+        // Entity hashes may include list actions and primary filters.
+        const plainMatch = url.match(/^#([A-Z][A-Za-z0-9_]*)(?:[/?]|$)/);
 
         if (plainMatch) {
             const entityType = plainMatch[1];

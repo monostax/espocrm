@@ -1,20 +1,25 @@
 {
-    "google": {
-        "label": "Google",
-        "itemList": [
-            {
-                "url": "#GoogleMeetSpace",
-                "label": "Meet Spaces",
-                "iconClass": "ti ti-video",
-                "description": "googleMeetSpaces"
-            },
-            {
-                "url": "#GoogleMeetConferenceRecord",
-                "label": "Meet Conference Records",
-                "iconClass": "ti ti-record-mail",
-                "description": "googleMeetConferenceRecords"
+    "scheduling": {
+        "sections": {
+            "meetings": {
+                "label": "Meetings",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#GoogleMeetSpace",
+                        "label": "Meet Spaces",
+                        "iconClass": "ti ti-video",
+                        "description": "googleMeetSpaces"
+                    },
+                    {
+                        "url": "#GoogleMeetConferenceRecord",
+                        "label": "Meet Conference Records",
+                        "iconClass": "ti ti-record-mail",
+                        "description": "googleMeetConferenceRecords",
+                        "secondary": true
+                    }
+                ]
             }
-        ],
-        "order": 25
+        }
     }
 }

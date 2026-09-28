@@ -1,36 +1,41 @@
 {
-    "tracking": {
-        "label": "Tracking",
-        "order": 27,
-        "itemList": [
-            {
-                "url": "#Configurations/TrackingSource",
-                "label": "Sources",
-                "iconClass": "ti ti-broadcast",
-                "description": "trackingSources",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/TrackingEventType",
-                "label": "Event Types",
-                "iconClass": "ti ti-list-details",
-                "description": "trackingEventTypes",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/TrackingLink",
-                "label": "Links",
-                "iconClass": "ti ti-link",
-                "description": "trackingLinks",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/TrackingEvent",
-                "label": "Events",
-                "iconClass": "ti ti-activity",
-                "description": "trackingEvents",
-                "roles": ["tenant", "tenant-admin"]
+    "marketing": {
+        "sections": {
+            "tracking": {
+                "label": "Tracking",
+                "order": 50,
+                "itemList": [
+                    {
+                        "url": "#Configurations/TrackingSource",
+                        "label": "Sources",
+                        "iconClass": "ti ti-broadcast",
+                        "description": "trackingSources",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/TrackingEventType",
+                        "label": "Event Types",
+                        "iconClass": "ti ti-list-details",
+                        "description": "trackingEventTypes",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/TrackingLink",
+                        "label": "Links",
+                        "iconClass": "ti ti-link",
+                        "description": "trackingLinks",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/TrackingEvent",
+                        "label": "Events",
+                        "iconClass": "ti ti-activity",
+                        "description": "trackingEvents",
+                        "secondary": true,
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
             }
-        ]
+        }
     }
 }

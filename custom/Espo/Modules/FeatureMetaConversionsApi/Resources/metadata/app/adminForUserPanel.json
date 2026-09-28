@@ -1,36 +1,42 @@
 {
-    "meta": {
-        "label": "Meta",
-        "order": 25,
-        "itemList": [
-            {
-                "url": "#Configurations/MetaCapiDataset",
-                "label": "CAPI Datasets",
-                "iconClass": "ti ti-radar",
-                "description": "metaCapiDatasets",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/MetaCapiDatasetSource",
-                "label": "CAPI Dataset Sources",
-                "iconClass": "ti ti-plug-connected",
-                "description": "metaCapiDatasetSources",
-                "roles": ["tenant-admin"]
-            },
-            {
-                "url": "#Configurations/MetaConversionEvent",
-                "label": "Conversion Events",
-                "iconClass": "ti ti-target-arrow",
-                "description": "metaConversionEvents",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/MetaCapiEventLog",
-                "label": "CAPI Event Log",
-                "iconClass": "ti ti-list-details",
-                "description": "metaCapiEventLog",
-                "roles": ["tenant", "tenant-admin"]
+    "marketing": {
+        "sections": {
+            "metaConversions": {
+                "label": "Meta Conversions",
+                "order": 60,
+                "itemList": [
+                    {
+                        "url": "#Configurations/MetaCapiDataset",
+                        "label": "CAPI Datasets",
+                        "iconClass": "ti ti-radar",
+                        "description": "metaCapiDatasets",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/MetaCapiDatasetSource",
+                        "label": "CAPI Dataset Sources",
+                        "iconClass": "ti ti-plug-connected",
+                        "description": "metaCapiDatasetSources",
+                        "roles": ["tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/MetaConversionEvent",
+                        "label": "Conversion Events",
+                        "iconClass": "ti ti-target-arrow",
+                        "description": "metaConversionEvents",
+                        "secondary": true,
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/MetaCapiEventLog",
+                        "label": "CAPI Event Log",
+                        "iconClass": "ti ti-list-details",
+                        "description": "metaCapiEventLog",
+                        "secondary": true,
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
             }
-        ]
+        }
     }
 }

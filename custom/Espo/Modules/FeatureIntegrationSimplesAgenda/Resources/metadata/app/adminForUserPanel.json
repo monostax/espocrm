@@ -1,14 +1,18 @@
 {
-    "simplesAgenda": {
-        "label": "Simples Agenda / Clientes",
-        "itemList": [
-            {
-                "url": "#SimplesAgendaCliente",
-                "label": "Clientes",
-                "iconClass": "fas fa-address-book",
-                "description": "simplesAgendaClientes"
+    "scheduling": {
+        "sections": {
+            "clients": {
+                "label": "Scheduling Clients",
+                "order": 40,
+                "itemList": [
+                    {
+                        "url": "#SimplesAgendaCliente",
+                        "label": "Clientes",
+                        "iconClass": "fas fa-address-book",
+                        "description": "simplesAgendaClientes"
+                    }
+                ]
             }
-        ],
-        "order": 30
+        }
     }
 }

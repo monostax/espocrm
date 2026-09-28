@@ -1,29 +1,51 @@
 {
-    "journeys": {
-        "label": "Journeys",
-        "order": 28,
-        "itemList": [
-            {
-                "url": "#Journey",
+    "automation": {
+        "sections": {
+            "journeys": {
                 "label": "Journeys",
-                "iconClass": "ti ti-route",
-                "description": "journeys",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#JourneyRecord",
-                "label": "People in journeys",
-                "iconClass": "ti ti-user-check",
-                "description": "journeyRecords",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#JourneyRecordLog",
-                "label": "Journey history",
-                "iconClass": "ti ti-list-details",
-                "description": "journeyRecordLogs",
-                "roles": ["tenant", "tenant-admin"]
+                "order": 20,
+                "itemList": [
+                    {
+                        "url": "#Journey",
+                        "label": "Journeys",
+                        "iconClass": "ti ti-route",
+                        "description": "journeys",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#JourneyRecord",
+                        "label": "People in journeys",
+                        "iconClass": "ti ti-user-check",
+                        "description": "journeyRecords",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#JourneyRecordLog",
+                        "label": "Journey history",
+                        "iconClass": "ti ti-list-details",
+                        "description": "journeyRecordLogs",
+                        "secondary": true,
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
             }
-        ]
+        }
+    },
+    "marketing": {
+        "sections": {
+            "journeys": {
+                "label": "Journeys",
+                "order": 40,
+                "itemList": [
+                    {
+                        "url": "#Journey",
+                        "label": "Journeys",
+                        "iconClass": "ti ti-route",
+                        "description": "journeys",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
     }
 }

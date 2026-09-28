@@ -1,29 +1,51 @@
 {
-    "meta": {
-        "label": "Meta",
-        "order": 25,
-        "itemList": [
-            {
-                "url": "#Configurations/MetaFacebookPage",
-                "label": "Facebook Pages",
-                "iconClass": "ti ti-brand-facebook",
-                "description": "metaFacebookPages",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/MetaLeadForm",
-                "label": "Lead Forms",
-                "iconClass": "ti ti-target-arrow",
-                "description": "metaLeadForms",
-                "roles": ["tenant", "tenant-admin"]
-            },
-            {
-                "url": "#Configurations/MetaLeadgenEvent",
-                "label": "Leadgen Events",
-                "iconClass": "ti ti-radar",
-                "description": "metaLeadgenEvents",
-                "roles": ["tenant", "tenant-admin"]
+    "marketing": {
+        "sections": {
+            "leadCapture": {
+                "label": "Lead Capture",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#Configurations/MetaFacebookPage",
+                        "label": "Facebook Pages",
+                        "iconClass": "ti ti-brand-facebook",
+                        "description": "metaFacebookPages",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/MetaLeadForm",
+                        "label": "Lead Forms",
+                        "iconClass": "ti ti-target-arrow",
+                        "description": "metaLeadForms",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Configurations/MetaLeadgenEvent",
+                        "label": "Leadgen Events",
+                        "iconClass": "ti ti-radar",
+                        "description": "metaLeadgenEvents",
+                        "secondary": true,
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
             }
-        ]
+        }
+    },
+    "integrations": {
+        "sections": {
+            "accounts": {
+                "label": "Connected Accounts",
+                "order": 10,
+                "itemList": [
+                    {
+                        "url": "#Configurations/MetaFacebookPage",
+                        "label": "Facebook Pages",
+                        "iconClass": "ti ti-brand-facebook",
+                        "description": "metaFacebookPages",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
     }
 }

@@ -43,7 +43,10 @@ class MetadataTest extends TestCase
     public function testBothAdminPanelsHaveTranslatedEntries(): void
     {
         foreach (['adminPanel' => 'Admin', 'adminForUserPanel' => 'Configurations'] as $panel => $scope) {
-            $items = $this->json("metadata/app/$panel.json")['simpleJourneys']['itemList'];
+            $definition = $this->json("metadata/app/$panel.json");
+            $items = ($panel === 'adminPanel'
+                ? $definition['simpleJourneys']
+                : $definition['automation']['sections']['simpleJourneys'])['itemList'];
             $this->assertSame(['#SimpleJourney', '#SimpleJourneyRecord'], array_column($items, 'url'));
             foreach (['en_US', 'pt_BR'] as $locale) {
                 $copy = $this->json("i18n/$locale/$scope.json");
