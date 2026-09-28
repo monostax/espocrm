@@ -101,10 +101,11 @@ class AppService
         private EmailConfigDataProvider $emailConfigDataProvider,
     ) {}
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function getUserData(): array
+    /** @var string[] */
+    private array $bootstrapTimings = [];
+
+    /** @return array<string, mixed> */
+    public function getUserData(bool $embeddedTable = false): array
     {
         $preferencesData = $this->preferences->getValueMap();
 
@@ -125,7 +126,7 @@ class AppService
             $user->loadLinkMultipleField('accounts');
         }
 
-        $settings = $this->settingsService->getConfigData();
+        $settings = $this->measure('settings', fn () => $this->settingsService->getConfigData());
 
         $dashboardTemplateId = $user->get('dashboardTemplateId');
 
@@ -142,17 +143,17 @@ class AppService
         $language = Language::detectLanguage($this->config, $this->preferences);
 
         return [
-            'user' => $this->getUserDataForFrontend(),
-            'acl' => $this->getAclDataForFrontend(),
+            'user' => $this->measure('user', fn () => $this->getUserDataForFrontend()),
+            'acl' => $this->measure('acl', fn () => $this->getAclDataForFrontend()),
             'preferences' => $preferencesData,
             'token' => $this->user->get('token'),
             'settings' => $settings,
             'language' => $language,
-            'appParams' => $this->getAppParams(),
+            'appParams' => $this->getAppParams($embeddedTable),
         ];
     }
 
-    public function getAppParams(): stdClass
+    public function getAppParams(bool $embeddedTable = false): stdClass
     {
         $user = $this->user;
 
@@ -184,6 +185,11 @@ class AppService
         $map = $this->metadata->get(['app', 'appParams']) ?? [];
 
         foreach ($map as $paramKey => $item) {
+            // Defer presentation data only; all user, field and record ACLs remain intact.
+            if ($embeddedTable && ($item['deferInEmbeddedTable'] ?? false)) {
+                continue;
+            }
+
             /** @var ?class-string<AppParam> $className */
             $className = $item['className'] ?? null;
 
@@ -192,10 +198,9 @@ class AppService
             }
 
             try {
-                /** @var AppParam $obj */
-                $obj = $this->injectableFactory->create($className);
-
-                $itemParams = $obj->get();
+                $itemParams = $this->measure('param-' . $paramKey,
+                    fn () => $this->injectableFactory->create($className)->get()
+                );
             } catch (Throwable $e) {
                 $this->log->error("AppParam $paramKey: " . $e->getMessage(), ['exception' => $e]);
 
@@ -206,6 +211,22 @@ class AppService
         }
 
         return (object) $appParams;
+    }
+
+    public function getBootstrapServerTiming(): string
+    {
+        return implode(', ', $this->bootstrapTimings);
+    }
+
+    private function measure(string $name, callable $operation): mixed
+    {
+        $start = hrtime(true);
+
+        try {
+            return $operation();
+        } finally {
+            $this->bootstrapTimings[] = $name . ';dur=' . number_format((hrtime(true) - $start) / 1e6, 2, '.', '');
+        }
     }
 
     private function getUserDataForFrontend(): stdClass

@@ -77,8 +77,6 @@ final class PlanIncludedApplier
             return [];
         }
 
-        [$includedColumn, $billableColumn] = self::outputColumns($pricingModel);
-
         $indexed = [];
 
         foreach ($rows as $i => $row) {
@@ -97,17 +95,42 @@ final class PlanIncludedApplier
             return strcmp((string) $a['row']['dayBucket'], (string) $b['row']['dayBucket']);
         });
 
-        /** @var array<string, int> $remaining tenant|YYYY-MM → free units left */
-        $remaining = [];
         $out = [];
+        $ordered = (static function () use ($indexed): \Generator {
+            foreach ($indexed as $item) {
+                yield $item['i'] => $item['row'];
+            }
+        })();
+        foreach (self::applyOrdered($ordered, $pricingModel) as $index => $row) {
+            $out[$index] = $row;
+        }
+        ksort($out);
 
-        foreach ($indexed as $item) {
-            $row = $item['row'];
+        return array_values($out);
+    }
+
+    /**
+     * Streaming variant for callers that already supply chronological tenant-month grains.
+     * Preserves input keys; one allowance state is retained per tenant-month.
+     *
+     * @param iterable<array{dayBucket: string, tenantId: string, rates: RateCard, metrics: array}> $rows
+     * @return \Generator<array{dayBucket: string, tenantId: string, metrics: array}>
+     */
+    public static function applyOrdered(iterable $rows, string $pricingModel): \Generator
+    {
+        [$includedColumn, $billableColumn] = self::outputColumns($pricingModel);
+        $remaining = [];
+        $lastDay = [];
+        foreach ($rows as $index => $row) {
             /** @var RateCard $rates */
             $rates = $row['rates'];
             $metrics = $row['metrics'];
             $day = substr((string) $row['dayBucket'], 0, 10);
             $monthKey = (string) $row['tenantId'] . '|' . substr($day, 0, 7);
+            if (isset($lastDay[$monthKey]) && $day < $lastDay[$monthKey]) {
+                throw new \InvalidArgumentException('Allowance grains must be chronological.');
+            }
+            $lastDay[$monthKey] = $day;
 
             if (!isset($remaining[$monthKey])) {
                 $remaining[$monthKey] = max(0, self::monthlyFranchise($rates, $pricingModel));
@@ -127,16 +150,12 @@ final class PlanIncludedApplier
             $metrics['__dealRaw'] = $deal;
             $metrics['__currency'] = $rates->currency;
 
-            $out[$item['i']] = [
+            yield $index => [
                 'dayBucket' => $row['dayBucket'],
                 'tenantId' => $row['tenantId'],
                 'metrics' => $metrics,
             ];
         }
-
-        ksort($out);
-
-        return array_values($out);
     }
 
     private static function monthlyFranchise(RateCard $rates, string $pricingModel): int

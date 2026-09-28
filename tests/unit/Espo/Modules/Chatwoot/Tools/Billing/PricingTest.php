@@ -482,6 +482,36 @@ class PricingTest extends TestCase
         $this->assertSame(2.45, $out[0]['metrics']['amountDeal']);
     }
 
+    public function testStreamingAllowanceConsumesLazilyAndResetsPerTenantMonth(): void
+    {
+        $rates = new RateCard(planIncludedCredits: 2, creditUnitPrice: 0.5);
+        $read = 0;
+        $source = (function () use ($rates, &$read): \Generator {
+            foreach ([['2026-08-01', 'a', 2], ['2026-08-02', 'a', 1], ['2026-08-02', 'b', 1], ['2026-09-01', 'a', 1]] as $i => [$day, $tenant, $count]) {
+                $read++;
+                yield 'grain-' . $i => $this->creditRow($day, $tenant, $rates, $count);
+            }
+        })();
+        $stream = PlanIncludedApplier::applyOrdered($source, 'credit');
+        $this->assertSame(0, $read);
+        $this->assertSame(0.0, $stream->current()['metrics']['amountDeal']);
+        $this->assertSame(1, $read);
+        $rows = iterator_to_array($stream);
+        $this->assertSame(0.5, $rows['grain-1']['metrics']['amountDeal']);
+        $this->assertSame(0.0, $rows['grain-2']['metrics']['amountDeal']);
+        $this->assertSame(0.0, $rows['grain-3']['metrics']['amountDeal']);
+    }
+
+    public function testStreamingAllowanceRefusesUnorderedInput(): void
+    {
+        $rates = new RateCard(planIncludedCredits: 2);
+        $this->expectException(\InvalidArgumentException::class);
+        iterator_to_array(PlanIncludedApplier::applyOrdered([
+            $this->creditRow('2026-08-02', 'a', $rates, 1),
+            $this->creditRow('2026-08-01', 'a', $rates, 1),
+        ], 'credit'));
+    }
+
     public function testPlanIncludedCreditIgnoresConversationFranchise(): void
     {
         // planIncludedUsage (conversation/pack franchise) must not be used

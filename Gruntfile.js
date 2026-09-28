@@ -570,8 +570,13 @@ return '${version}';
         cp.execFileSync(process.execPath, ["js/scripts/build-record-icons.js"], {stdio: "inherit"});
     });
 
+    grunt.registerTask("embed-fonts", () => {
+        cp.execFileSync("python3", ["js/scripts/build-embed-fonts.py"], {stdio: "inherit"});
+    });
+
     grunt.registerTask("internal", [
         "record-icons",
+        "embed-fonts",
         "less",
         "cssmin",
         "prepare-lib-original",

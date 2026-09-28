@@ -1,52 +1,38 @@
 [
     {
         "rows": [
-            [
-                {
-                    "name": "effectiveFrom"
-                },
-                {
-                    "name": "effectiveTo"
-                }
-            ],
-            [
-                {
-                    "name": "currency"
-                },
-                {
-                    "name": "packUnitPrice"
-                }
-            ],
-            [
-                {
-                    "name": "packSize"
-                },
-                {
-                    "name": "extraBasePrice"
-                }
-            ],
-            [
-                {
-                    "name": "extraUnitPrice"
-                },
-                {
-                    "name": "extraIncludedTurns"
-                }
-            ],
-            [
-                {
-                    "name": "planIncludedUsage"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "creditUnitPrice"
-                },
-                {
-                    "name": "planIncludedCredits"
-                }
-            ]
+            [{"name": "billingModel"}, {"name": "tenant"}],
+            [{"name": "effectiveFrom"}, {"name": "effectiveTo"}],
+            [{"name": "currency"}, false]
+        ]
+    },
+    {
+        "name": "creditModel",
+        "label": "Credit model",
+        "rows": [
+            [{"name": "creditUnitPrice"}, {"name": "planIncludedCredits"}]
+        ]
+    },
+    {
+        "name": "packModel",
+        "label": "Pack model",
+        "rows": [
+            [{"name": "packUnitPrice"}, {"name": "packSize"}]
+        ]
+    },
+    {
+        "name": "extraModel",
+        "label": "Extra model",
+        "rows": [
+            [{"name": "extraBasePrice"}, {"name": "extraUnitPrice"}],
+            [{"name": "extraIncludedTurns"}, false]
+        ]
+    },
+    {
+        "name": "planAllowance",
+        "label": "Plan franchise",
+        "rows": [
+            [{"name": "planIncludedUsage"}, false]
         ]
     }
 ]

@@ -1,5 +1,6 @@
 {
     "fields": {
+        "billingModel": "Billing Model",
         "name": "Name",
         "tenant": "Tenant",
         "effectiveFrom": "Effective From",
@@ -24,9 +25,12 @@
         "Plan franchise": "Plan franchise",
         "Pack model": "Pack model",
         "Extra model": "Extra model",
-        "Credit model": "Credit model"
+        "Credit model": "Credit model",
+        "planIncludedPacks": "Packs Included / Month",
+        "planIncludedBases": "Bases Included / Month"
     },
     "tooltips": {
+        "billingModel": "The commercial model agreed with this tenant for this period. Blank shows configuration required in AI Usage. Model and monthly allowance changes should begin at a month boundary.",
         "name": "Optional label. Left empty = auto \"YYYY-MM-DD → YYYY-MM-DD|∞\".",
         "effectiveFrom": "First calendar day (app timezone) this rate card applies to conversation-days.",
         "effectiveTo": "Last calendar day inclusive. Leave empty for the open-ended current agreement. Creating a new open period auto-closes the previous open one the day before.",
@@ -39,5 +43,8 @@
         "planIncludedUsage": "Monthly plan allowance, measured in packs for the pack model and conversations or opportunities handled for the extra model. 0 = no allowance. Use a full-month report range to apply the allowance in chronological order.",
         "creditUnitPrice": "Credit model: price per credit. Each agent run consumes 1 credit, regardless of the number of LLM calls or tokens. Applies to runs triggered by customer messages, @mentions, follow-ups or scheduled messages. Empty = 0.49.",
         "planIncludedCredits": "Credit model: credits included per calendar month, consumed in chronological order. Each agent run consumes 1 credit. Excess credits are billed at the Credit Unit Price. 0 = no allowance. Use a full-month report range."
+    },
+    "options": {
+        "billingModel": {"": "Not configured", "pack199": "Packs", "extra049": "Base + extras", "credit": "Credits"}
     }
 }

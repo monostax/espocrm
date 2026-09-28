@@ -1,6 +1,7 @@
 {
     "teamSidenavConfigs": {
-        "className": "Espo\\Modules\\Global\\Classes\\AppParams\\TeamSidenavConfigs"
+        "className": "Espo\\Modules\\Global\\Classes\\AppParams\\TeamSidenavConfigs",
+        "deferInEmbeddedTable": true
     },
     "buildVersion": {
         "className": "Espo\\Modules\\Global\\Classes\\AppParams\\BuildVersion"

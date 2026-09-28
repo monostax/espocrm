@@ -1,33 +1,33 @@
 {
     "fields": {
-        "aiBillingCurrency": "Moeda Faturamento IA (atual)",
-        "aiBillingPackUnitPrice": "Preço Pacote IA (atual)",
-        "aiBillingExtraBasePrice": "Preço Base Extra IA (atual)",
-        "aiBillingExtraUnitPrice": "Preço por Execução Adicional IA (atual)",
-        "aiBillingPackSize": "Execuções por Pacote IA (atual)",
-        "aiBillingExtraIncludedTurns": "Execuções Incluídas na Base IA (atual)",
-        "aiBillingPlanIncludedUsage": "Uso Incluído Plano IA / Mês (atual)",
-        "aiBillingCreditUnitPrice": "Preço do Crédito IA (atual)",
-        "aiBillingPlanIncludedCredits": "Créditos Incluídos Plano IA / Mês (atual)"
+        "aiBillingCurrency": "Moeda da Tarifa de IA (referência)",
+        "aiBillingPackUnitPrice": "Preço por Pacote (referência)",
+        "aiBillingExtraBasePrice": "Preço da Base Diária (referência)",
+        "aiBillingExtraUnitPrice": "Preço por Execução Adicional (referência)",
+        "aiBillingPackSize": "Execuções por Pacote (referência)",
+        "aiBillingExtraIncludedTurns": "Execuções por Mensagem do Cliente Incluídas na Base (referência)",
+        "aiBillingPlanIncludedUsage": "Franquia Mensal de Pacotes ou Bases Diárias (referência)",
+        "aiBillingCreditUnitPrice": "Preço por Crédito (referência)",
+        "aiBillingPlanIncludedCredits": "Franquia Mensal de Créditos (referência)"
     },
     "tooltips": {
-        "aiBillingCurrency": "Snapshot somente-leitura do período de tarifa IA aberto. Gerencie o histórico no painel Tarifas Faturamento IA — cada período tem Vigência Início/Fim para que faturas passadas não mudem quando o preço atual muda.",
-        "aiBillingPackUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingExtraBasePrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingExtraUnitPrice": "Snapshot somente-leitura do período aberto. Edite em Tarifas Faturamento IA.",
-        "aiBillingPackSize": "Valor atual, somente leitura. Número máximo de execuções do agente por pacote. Edite em Tarifas Faturamento IA.",
-        "aiBillingExtraIncludedTurns": "Valor atual, somente leitura. Número de execuções por mensagem do cliente incluídas na cobrança base por conversa e dia. Edite em Tarifas Faturamento IA.",
-        "aiBillingPlanIncludedUsage": "Valor atual, somente leitura. Franquia mensal de pacotes (modelo pacote) ou conversas e oportunidades atendidas (modelo extra). Edite em Tarifas Faturamento IA.",
-        "aiBillingCreditUnitPrice": "Valor atual, somente leitura. Preço por crédito no modelo crédito. Cada execução do agente consome 1 crédito, independentemente da quantidade de chamadas ao LLM ou tokens. Edite em Tarifas Faturamento IA.",
-        "aiBillingPlanIncludedCredits": "Valor atual, somente leitura. Franquia mensal de créditos no modelo crédito. Cada execução do agente consome 1 crédito. Edite em Tarifas Faturamento IA."
+        "aiBillingCurrency": "Cópia somente leitura da tarifa sem data de término mais recente; se não houver, da tarifa com início mais recente. Pode incluir uma vigência futura. Consulte as datas em Tarifas de IA: a cobrança usa a tarifa aplicável a cada dia, não apenas estes valores de referência.",
+        "aiBillingPackUnitPrice": "Preço por pacote fora da franquia, copiado da tarifa de referência. Consulte preços e vigências em Tarifas de IA.",
+        "aiBillingExtraBasePrice": "Preço fixo por conversa ou oportunidade em cada dia civil, no modelo base + adicionais. Valor somente leitura; consulte a vigência em Tarifas de IA.",
+        "aiBillingExtraUnitPrice": "Preço por execução adicional em uma base diária fora da franquia mensal. Valor somente leitura; consulte a vigência em Tarifas de IA.",
+        "aiBillingPackSize": "Máximo de execuções por pacote. Os pacotes são calculados separadamente para cada conversa ou oportunidade em cada dia. Valor somente leitura; edite em Tarifas de IA.",
+        "aiBillingExtraIncludedTurns": "Execuções por mensagem do cliente incluídas em cada base diária. Os demais gatilhos contam como adicionais. Não é a franquia mensal. Valor somente leitura; edite em Tarifas de IA.",
+        "aiBillingPlanIncludedUsage": "Franquia mensal de pacotes ou bases diárias, conforme o modelo. Uma base corresponde a uma conversa ou oportunidade em um dia; a cobertura inclui seus adicionais. Valor somente leitura; edite em Tarifas de IA.",
+        "aiBillingCreditUnitPrice": "Preço por crédito fora da franquia. Cada execução considerada na cobrança consome 1 crédito; chamadas ao LLM e tokens não consomem créditos separados. Valor somente leitura; edite em Tarifas de IA.",
+        "aiBillingPlanIncludedCredits": "Créditos cobertos pelo plano a cada mês civil, por ambiente. Zero = sem franquia. Valor somente leitura; edite em Tarifas de IA."
     },
     "links": {
         "chatwootAccounts": "Contas de Chat",
-        "chatwootAiAgentRuns": "Execuções de Agente de IA",
-        "aiBillingRates": "Tarifas Faturamento IA"
+        "chatwootAiAgentRuns": "Execuções de Agentes de IA",
+        "aiBillingRates": "Tarifas de IA"
     },
     "labels": {
-        "AI Billing": "Faturamento IA",
-        "AI Billing (current snapshot)": "Faturamento IA (snapshot atual)"
+        "AI Billing": "Faturamento de IA",
+        "AI Billing (current snapshot)": "Faturamento de IA (tarifa de referência)"
     }
 }

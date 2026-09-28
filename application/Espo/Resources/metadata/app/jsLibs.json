@@ -88,6 +88,8 @@
         "exportsAs": "intlTelInput"
     },
     "intl-tel-input-utils": {
+        "path": "client/lib/intl-tel-input-utils.js",
+        "devPath": "client/lib/original/intl-tel-input-utils.js",
         "exportsTo": "window",
         "exportsAs": "intlTelInputUtils"
     },
@@ -107,8 +109,8 @@
         "sourceMap": true
     },
     "gridstack": {
-        "exportsTo": "window",
-        "exportsAs": "GridStack"
+        "path": "client/lib/gridstack.js",
+        "devPath": "client/lib/original/gridstack.js"
     },
     "bootstrap-colorpicker": {
         "path": "client/lib/bootstrap-colorpicker.js",

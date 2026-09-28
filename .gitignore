@@ -31,5 +31,7 @@
 /install/config.php
 
 client/css/espo/*
+client/css/embedded-fonts.css
+client/fonts/embedded/
 client/lib/*
 client/modules/crm/lib/*

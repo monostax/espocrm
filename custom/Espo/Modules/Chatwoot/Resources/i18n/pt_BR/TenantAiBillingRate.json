@@ -1,18 +1,19 @@
 {
     "fields": {
+        "billingModel": "Modelo de cobrança",
         "name": "Nome",
         "tenant": "Ambiente",
-        "effectiveFrom": "Vigência Início",
-        "effectiveTo": "Vigência Fim",
-        "currency": "Moeda",
-        "packUnitPrice": "Preço Unitário do Pacote",
+        "effectiveFrom": "Início da Vigência",
+        "effectiveTo": "Fim da Vigência",
+        "currency": "Moeda dos Preços",
+        "packUnitPrice": "Preço por Pacote",
         "packSize": "Execuções por Pacote",
-        "extraBasePrice": "Preço Base Extra",
+        "extraBasePrice": "Preço da Base Diária",
         "extraUnitPrice": "Preço por Execução Adicional",
         "extraIncludedTurns": "Execuções por Mensagem do Cliente Incluídas na Base",
-        "planIncludedUsage": "Uso Incluído no Plano / Mês",
-        "creditUnitPrice": "Preço do Crédito",
-        "planIncludedCredits": "Créditos Incluídos no Plano / Mês"
+        "planIncludedUsage": "Franquia Mensal (Pacotes ou Bases Diárias)",
+        "creditUnitPrice": "Preço por Crédito",
+        "planIncludedCredits": "Franquia Mensal de Créditos"
     },
     "links": {
         "tenant": "Ambiente",
@@ -20,24 +21,30 @@
         "modifiedBy": "Modificado Por"
     },
     "labels": {
-        "Create TenantAiBillingRate": "Criar Tarifa Faturamento IA",
-        "Plan franchise": "Franquia do plano",
-        "Pack model": "Modelo pacote",
-        "Extra model": "Modelo extra",
-        "Credit model": "Modelo crédito"
+        "Create TenantAiBillingRate": "Criar Tarifa de IA",
+        "Plan franchise": "Franquia mensal do plano",
+        "Pack model": "Cobrança por pacotes",
+        "Extra model": "Base diária + execuções adicionais",
+        "Credit model": "Cobrança por créditos",
+        "planIncludedPacks": "Franquia Mensal de Pacotes",
+        "planIncludedBases": "Franquia Mensal de Bases Diárias"
     },
     "tooltips": {
-        "name": "Rótulo opcional. Vazio = auto \"AAAA-MM-DD → AAAA-MM-DD|∞\".",
-        "effectiveFrom": "Primeiro dia de calendário (fuso do app) em que esta tarifa vale para conversa-dia.",
-        "effectiveTo": "Último dia inclusive. Vazio = acordo atual aberto. Criar um novo período aberto encerra o anterior no dia anterior ao início.",
-        "currency": "Moeda do acordo para os preços unitários (Administração → Moeda). Vazio = padrão do sistema.",
-        "packUnitPrice": "Modelo pacote: preço por pacote de até N execuções do agente, por conversa ou oportunidade e por dia. Vazio = padrão (1,99).",
-        "packSize": "Modelo pacote: número máximo de execuções do agente por pacote. Cada execução conta uma vez, independentemente da quantidade de chamadas ao LLM ou tokens. Vazio = 4.",
-        "extraBasePrice": "Modelo extra: cobrança fixa por conversa ou oportunidade com execuções do agente no dia. Vazio = 0,99.",
-        "extraUnitPrice": "Modelo extra: preço por execução adicional. Aplica-se às execuções por mensagem do cliente que excederem a quantidade incluída na base e a todas as execuções por menção ou automação (@menção, follow-up ou mensagem agendada). Vazio = 0,49.",
-        "extraIncludedTurns": "Modelo extra: número de execuções por mensagem do cliente incluídas na cobrança base por conversa e dia. Execuções por menção ou automação são cobradas separadamente. Vazio = 4.",
-        "planIncludedUsage": "Franquia mensal do plano, medida em pacotes no modelo pacote e em conversas ou oportunidades atendidas no modelo extra. 0 = sem franquia. Use um mês completo no relatório para aplicar a franquia em ordem cronológica.",
-        "creditUnitPrice": "Modelo crédito: preço por crédito. Cada execução do agente consome 1 crédito, independentemente da quantidade de chamadas ao LLM ou tokens. Vale para execuções por mensagem do cliente, @menção, follow-up ou mensagem agendada. Vazio = 0,49.",
-        "planIncludedCredits": "Modelo crédito: créditos incluídos por mês civil, consumidos em ordem cronológica. Cada execução do agente consome 1 crédito. O excedente é cobrado pelo Preço do Crédito. 0 = sem franquia. Use um mês completo no relatório."
+        "billingModel": "Modelo contratado pelo ambiente durante esta vigência. Define a unidade consumida: pacote, base diária ou crédito. Sem seleção, o painel Consumo de IA não calcula a cobrança. Mudanças de modelo ou franquia devem começar no primeiro dia do mês. Execuções com resultado failed ou sem o vínculo exigido de conversa/oportunidade não entram na cobrança nem consomem a franquia.",
+        "name": "Nome opcional para identificar a tarifa. Se ficar vazio, será gerado a partir das datas de vigência; ∞ indica ausência de data de término.",
+        "effectiveFrom": "Primeiro dia civil ao qual se aplicam estes preços, no fuso do sistema. A tarifa é selecionada pela data da execução, não pela data de criação da conversa ou oportunidade.",
+        "effectiveTo": "Último dia de aplicação da tarifa, inclusive. Vazio indica vigência sem data de término. Ao criar uma nova tarifa sem término, o período aberto anterior é encerrado no dia anterior ao novo início.",
+        "currency": "Moeda em que os preços desta tarifa são definidos (Administração → Moeda). Se ficar vazia, será usada a moeda padrão do sistema.",
+        "packUnitPrice": "Preço de cada pacote fora da franquia. Pacotes são calculados separadamente para cada conversa ou oportunidade em cada dia civil. Vazio usa 1,99 na moeda da tarifa; zero é um preço válido.",
+        "packSize": "Máximo de execuções do agente por pacote. Divide-se o total de execuções consideradas na cobrança da conversa/oportunidade no dia por este número, arredondando para cima: 5 execuções com tamanho 4 consomem 2 pacotes. Chamadas ao LLM e tokens não são execuções adicionais. Vazio usa 4.",
+        "extraBasePrice": "Preço fixo por conversa ou oportunidade com execuções consideradas na cobrança em um dia civil. A mesma conversa em dois dias corresponde a duas bases diárias. Bases cobertas pela franquia mensal não geram valor a cobrar. Vazio usa 0,99 na moeda da tarifa.",
+        "extraUnitPrice": "Preço de cada execução por mensagem do cliente que ultrapassar a quantidade incluída na base, e de cada execução por outros gatilhos (@menção, follow-up ou mensagem agendada). Só gera cobrança quando a base diária está fora da franquia mensal. Vazio usa 0,49 na moeda da tarifa.",
+        "extraIncludedTurns": "Quantidade de execuções por mensagem do cliente incluídas em cada base diária. Execuções por outros gatilhos são adicionais desde a primeira. Esta quantidade é por conversa e dia, não é a franquia mensal. Vazio usa 4; zero torna todas as execuções adicionais.",
+        "planIncludedUsage": "Franquia por ambiente e mês civil: pacotes no modelo por pacotes, ou bases diárias no modelo base + adicionais. Cada base corresponde a uma conversa ou oportunidade em um dia; a cobertura inclui todos os adicionais dessa base. Zero ou vazio = sem franquia. A aplicação segue a ordem dos dias. No painel Consumo de IA, filtros não reiniciam a franquia; nos relatórios, selecione o mês completo.",
+        "creditUnitPrice": "Preço por crédito fora da franquia. Cada execução considerada na cobrança consome 1 crédito, independentemente do gatilho, das chamadas ao LLM e dos tokens. Vazio usa 0,49 na moeda da tarifa; zero é um preço válido.",
+        "planIncludedCredits": "Créditos cobertos pelo plano por ambiente e mês civil. Cada execução considerada na cobrança consome 1 crédito. A franquia é aplicada em ordem de dia; créditos excedentes são multiplicados pelo preço por crédito. Zero ou vazio = sem franquia. No painel Consumo de IA, filtros não reiniciam a franquia; nos relatórios, selecione o mês completo."
+    },
+    "options": {
+        "billingModel": {"": "Não configurado", "pack199": "Pacotes", "extra049": "Base + adicionais", "credit": "Créditos"}
     }
 }

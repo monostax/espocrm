@@ -176,9 +176,15 @@ function initOverlayScrollbars() {
     }, {passive: true});
 
     document.addEventListener('pointermove', event => {
-        if (pointer) {
-            pointer = {x: event.clientX, y: event.clientY};
+        if (event.pointerType === 'touch') {
+            return;
         }
+
+        if (!pointer) {
+            scheduleUpdate();
+        }
+
+        pointer = {x: event.clientX, y: event.clientY};
     }, {passive: true});
 
     document.addEventListener('pointerout', event => {

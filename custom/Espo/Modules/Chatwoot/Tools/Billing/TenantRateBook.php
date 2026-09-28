@@ -21,7 +21,7 @@ namespace Espo\Modules\Chatwoot\Tools\Billing;
 final class TenantRateBook
 {
     /**
-     * @param array<string, list<array{from: string, to: ?string, card: RateCard}>> $periodsByTenant
+     * @param array<string, list<array{from: string, to: ?string, card: RateCard, model?: string, id?: string}>> $periodsByTenant
      *        periods per tenant, sorted by effectiveFrom DESC
      * @param array<string, RateCard> $legacyByTenant current Tenant flat-field rate cards
      */
@@ -30,6 +30,12 @@ final class TenantRateBook
         private array $legacyByTenant,
         private string $fallbackCurrency,
     ) {}
+
+    /** Dated agreements for tenant-facing billing; unlike get(), never falls back to current rates. */
+    public function periodsFor(string $tenantId): array
+    {
+        return $this->periodsByTenant[$tenantId] ?? [];
+    }
 
     public function get(?string $tenantId, ?string $dayBucket = null): RateCard
     {

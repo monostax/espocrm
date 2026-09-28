@@ -1,6 +1,7 @@
 {
     "chatSsoUrl": {
-        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootSsoUrl"
+        "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootSsoUrl",
+        "deferInEmbeddedTable": true
     },
     "chatwootAccountId": {
         "className": "Espo\\Modules\\Chatwoot\\Classes\\AppParams\\ChatwootAccountId"

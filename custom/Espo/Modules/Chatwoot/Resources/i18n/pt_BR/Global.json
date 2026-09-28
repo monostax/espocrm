@@ -1,6 +1,7 @@
 {
     "scopeNames": {
-        "ChatwootAiAgentRun": "IA / Execução",
+        "ChatwootAiAgentRun": "IA / Execução de Agente",
+        "TenantAiBillingRate": "IA / Tarifa",
         "ChatwootReportingEvent": "Chat / Evento de Relatório",
         "ChatwootConversationEpisode": "Chat / Atendimento",
         "ChatwootAccount": "Chat / Conta",
@@ -29,7 +30,8 @@
         "CallCampaignContact": "Contato da Campanha de Ligações"
     },
     "scopeNamesPlural": {
-        "ChatwootAiAgentRun": "IA / Execuções",
+        "ChatwootAiAgentRun": "IA / Execuções de Agentes",
+        "TenantAiBillingRate": "IA / Tarifas",
         "ChatwootReportingEvent": "Chat / Eventos de Relatório",
         "ChatwootConversationEpisode": "Chat / Atendimentos",
         "ChatwootAccount": "Chat / Contas",

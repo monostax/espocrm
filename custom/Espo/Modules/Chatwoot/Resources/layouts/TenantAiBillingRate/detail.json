@@ -22,11 +22,12 @@
                 {
                     "name": "currency"
                 },
-                false
+                {"name": "billingModel"}
             ]
         ]
     },
     {
+        "name": "creditModel",
         "label": "Credit model",
         "rows": [
             [
@@ -40,17 +41,7 @@
         ]
     },
     {
-        "label": "Plan franchise",
-        "rows": [
-            [
-                {
-                    "name": "planIncludedUsage"
-                },
-                false
-            ]
-        ]
-    },
-    {
+        "name": "packModel",
         "label": "Pack model",
         "rows": [
             [
@@ -64,6 +55,7 @@
         ]
     },
     {
+        "name": "extraModel",
         "label": "Extra model",
         "rows": [
             [
@@ -80,6 +72,13 @@
                 },
                 false
             ]
+        ]
+    },
+    {
+        "name": "planAllowance",
+        "label": "Plan franchise",
+        "rows": [
+            [{"name": "planIncludedUsage"}, false]
         ]
     }
 ]

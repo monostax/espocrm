@@ -134,6 +134,14 @@
         "searchOutputTokens": {"type": "int", "readOnly": true},
         "searchMaxInputTokens": {"type": "int", "readOnly": true},
         "modelUsage": {"type": "jsonObject", "view": "views/fields/json-object", "readOnly": true, "tooltip": true},
+        "runOutcome": {
+            "type": "varchar",
+            "readOnly": true,
+            "notStorable": true,
+            "utility": true,
+            "directAccessDisabled": true,
+            "select": {"select": "AI_RUN_OUTCOME:modelUsage"}
+        },
         "model": {
             "type": "varchar",
             "maxLength": 100,
@@ -209,7 +217,8 @@
         },
         "sourceNote": {
             "type": "belongsTo",
-            "entity": "Note"
+            "entity": "Note",
+            "noForeignName": true
         },
         "chatwootAccount": {
             "type": "belongsTo",

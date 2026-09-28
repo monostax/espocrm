@@ -59,6 +59,7 @@ class ClientManager
     private string $basePath = '';
     private string $apiUrl = 'api/v1';
     private string $applicationId = 'espocrm';
+    private bool $embeddedTable = false;
 
     private string $nonce;
 
@@ -88,6 +89,11 @@ class ClientManager
     public function getBasePath(): string
     {
         return $this->basePath;
+    }
+
+    public function setEmbeddedTable(bool $embeddedTable): void
+    {
+        $this->embeddedTable = $embeddedTable;
     }
 
     /**
@@ -215,6 +221,11 @@ class ClientManager
 
         $cssFileList = $this->metadata->get(['app', 'client', 'cssList'], []);
         $linkList = $this->metadata->get(['app', 'client', 'linkList'], []);
+        if ($this->embeddedTable) {
+            // Font subsets are fetched by unicode-range when a visible glyph needs them.
+            $linkList = array_values(array_filter($linkList, fn ($item) => ($item['as'] ?? null) !== 'font'));
+            $cssFileList[] = 'client/css/embedded-fonts.css';
+        }
         $faviconAlternate = $this->metadata->get('app.client.faviconAlternate') ?? $this->faviconAlternate;
         [$favicon, $faviconType] = $this->getFaviconData();
 
@@ -278,7 +289,13 @@ class ClientManager
             'applicationDescription' =>
                 $this->escapeValue($this->config->get('applicationDescription') ?? self::APP_DESCRIPTION),
             'nonce' => $this->nonce,
+            'embeddedTable' => $this->embeddedTable ? 'true' : 'false',
+            'earlyBootstrapHtml' => $this->embeddedTable ?
+                '<script nonce="' . $this->nonce . '">' .
+                $this->fileManager->getContents('html/embedded-bootstrap.js') . '</script>' : '',
             'loaderParams' => Json::encode([
+                'apiUrl' => $this->basePath . $this->apiUrl,
+                'ajaxTimeout' => (int) ($this->config->get('ajaxTimeout') ?? 60000),
                 'basePath' => $this->basePath,
                 'cacheTimestamp' => $loaderCacheTimestamp,
                 'internalModuleList' => $internalModuleList,

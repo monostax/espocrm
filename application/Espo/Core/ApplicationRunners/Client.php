@@ -32,6 +32,8 @@ namespace Espo\Core\ApplicationRunners;
 use Espo\Core\Application\Runner;
 use Espo\Core\Utils\ClientManager;
 use Espo\Core\Utils\Config;
+use Espo\Core\Api\RequestWrapper;
+use Slim\Factory\ServerRequestCreatorFactory;
 
 /**
  * Displays the main HTML page.
@@ -49,6 +51,11 @@ class Client implements Runner
             return;
         }
 
+        $request = new RequestWrapper(ServerRequestCreatorFactory::create()->createServerRequestFromGlobals());
+        $this->clientManager->setEmbeddedTable(
+            $request->getQueryParam('embed') === 'chatwoot-opportunity' &&
+            $request->getQueryParam('navbar') === 'none'
+        );
         $this->clientManager->display();
     }
 }

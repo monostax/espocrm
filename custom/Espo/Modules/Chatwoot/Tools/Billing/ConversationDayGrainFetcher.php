@@ -94,6 +94,7 @@ final class ConversationDayGrainFetcher
         $scopeType = $this->scopeTypeExpression();
 
         $queryBuilder
+            ->where(Cond::notEqual(Expr::create("IFNULL:(AI_RUN_OUTCOME:modelUsage, '')"), 'failed'))
             ->where(Expr::isNotNull($scopeId))
             ->where(Cond::notEqual($scopeId, ''))
             ->select($scopeId, 'scopeId')
@@ -107,6 +108,11 @@ final class ConversationDayGrainFetcher
             ->group($dayExpr)
             ->group($tenantExpr)
             ->group(Expr::column('kind'))
+            // Stable daily FIFO for monthly allowances, shared with the AI Usage ledger.
+            ->order([])
+            ->order($dayExpr, 'ASC')
+            ->order($scopeType, 'ASC')
+            ->order($scopeId, 'ASC')
             ->limit(0, self::MAX_KIND_GROUPS);
 
         $sth = $this->entityManager->getQueryExecutor()->execute($queryBuilder->build());
@@ -159,6 +165,7 @@ final class ConversationDayGrainFetcher
         }
 
         $queryBuilder
+            ->where(Cond::notEqual(Expr::create("IFNULL:(AI_RUN_OUTCOME:modelUsage, '')"), 'failed'))
             ->where(Expr::isNotNull($this->scopeIdExpression()))
             ->where(Cond::notEqual($this->scopeIdExpression(), ''))
             ->select(Expr::column('id'), 'id')

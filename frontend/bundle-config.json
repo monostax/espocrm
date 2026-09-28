@@ -1,6 +1,8 @@
 {
     "order": [
         "main",
+        "phone",
+        "dashboard",
         "admin",
         "extra",
         "crm",
@@ -51,6 +53,18 @@
                 "src/views/external-account/**/*.{js,ts}",
                 "src/views/email-account/**/*.{js,ts}"
             ]
+        },
+        "phone": {
+            "patterns": ["src/**/*.{js,ts}"],
+            "dependentOn": ["intl-tel-input-utils"],
+            "requires": ["intl-tel-input-utils"],
+            "noDuplicates": true
+        },
+        "dashboard": {
+            "patterns": ["src/**/*.{js,ts}"],
+            "dependentOn": ["gridstack"],
+            "requires": ["gridstack"],
+            "noDuplicates": true
         },
         "admin": {
             "patterns": [

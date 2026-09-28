@@ -84,7 +84,7 @@ final class TenantRateLookup
 
     /**
      * @param list<string> $ids
-     * @return array<string, list<array{from: string, to: ?string, card: RateCard}>>
+     * @return array<string, list<array{from: string, to: ?string, card: RateCard, model: string, id: string}>>
      */
     private function loadPeriods(array $ids, string $fallbackCurrency): array
     {
@@ -100,6 +100,7 @@ final class TenantRateLookup
                 'tenantId',
                 'effectiveFrom',
                 'effectiveTo',
+                'billingModel',
                 'currency',
                 'packUnitPrice',
                 'packSize',
@@ -126,6 +127,8 @@ final class TenantRateLookup
             $currencyRaw = $row->get('currency');
 
             $out[$tenantId][] = [
+                'id' => (string) $row->getId(),
+                'model' => (string) ($row->get('billingModel') ?? ''),
                 'from' => $from,
                 'to' => $this->asDate($row->get('effectiveTo')),
                 'card' => RateCard::fromNullable(

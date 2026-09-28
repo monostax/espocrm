@@ -129,6 +129,8 @@ class App {
 
         this.appTimestamp = options.appTimestamp;
         this.assetVersion = options.assetVersion || this.appTimestamp;
+        this.embeddedTable = !!options.embeddedTable && window.self !== window.top &&
+            window.location.hash === '#OpportunityTableBridge';
 
         const urlParams = new URLSearchParams(window.location.search);
         const chatRedirect = urlParams.get('chat_redirect');
@@ -354,6 +356,9 @@ class App {
     initialUserData = null;
 
     /** @private */
+    embeddedTable = false;
+
+    /** @private */
     aclName = "acl";
 
     /**
@@ -503,7 +508,19 @@ class App {
             if (anotherUser) headers["X-Another-User"] = anotherUser;
 
             try {
-                this.initialUserData = await this.requestUserData({login: true, headers});
+                const early = this.embeddedTable ? window.espoEarlyBootstrap : null;
+                window.espoEarlyBootstrap = null;
+
+                if (early && early.auth === auth && early.anotherUser === anotherUser) {
+                    const result = await early.promise;
+                    if (result.error) {
+                        if (result.error.status !== 401) this._processErrorAlert(result.error, null);
+                        throw result.error;
+                    }
+                    this.initialUserData = result.data;
+                } else {
+                    this.initialUserData = await this.requestUserData({login: true, headers});
+                }
                 this.settings.setMultiple(this.initialUserData.settings);
                 return;
             } catch (xhr) {
@@ -1366,7 +1383,8 @@ class App {
      * @return {Promise<module:app~UserData>}
      */
     async requestUserData(options = {}) {
-        return Ajax.getRequest("App/user", {}, { appStart: true, ...options });
+        const data = this.embeddedTable ? {bootstrap: 'opportunity-table'} : {};
+        return Ajax.getRequest("App/user", data, { appStart: true, ...options });
     }
 
     /**
@@ -1743,7 +1761,8 @@ class App {
      * @private
      */
     async initTemplateBundles() {
-        if (!this.responseCache) {
+        // Core/table templates are precompiled; uncommon editors load theirs on demand.
+        if (!this.responseCache || this.embeddedTable) {
             return;
         }
 

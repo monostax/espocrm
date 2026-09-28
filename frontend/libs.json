@@ -95,7 +95,8 @@
     {
         "name": "gridstack",
         "src": "node_modules/gridstack/dist/gridstack-jq.js",
-        "bundle": true,
+        "dest": "client/lib/gridstack.js",
+        "minify": true,
         "amdId": "gridstack"
     },
     {
@@ -117,7 +118,8 @@
     },
     {
         "src": "node_modules/intl-tel-input/build/js/utils.js",
-        "bundle": true,
+        "dest": "client/lib/intl-tel-input-utils.js",
+        "minify": true,
         "amdId": "intl-tel-input-utils"
     },
     {

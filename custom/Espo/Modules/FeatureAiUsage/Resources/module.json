@@ -1,0 +1,6 @@
+{
+    "name": "FeatureAiUsage",
+    "description": "Tenant AI consumption and billing visibility",
+    "order": 80,
+    "jsTranspiled": true
+}

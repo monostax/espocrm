@@ -130,14 +130,14 @@ class SeedChatwootReports implements RebuildAction
                 // never leak across environments; org admins see all
                 // tenants side by side.
                 'staticId' => 'chwRptTokTnDay',
-                'name' => 'AI Agent Run (Uso de Tokens por Ambiente / Por Dia)',
+                'name' => 'IA · Tokens e Execuções / Ambiente e Dia',
                 'description' =>
-                    'Consumo de tokens LLM (entrada, entrada em cache, ' .
-                    'saída) e número de execuções do Agente IA, agrupado ' .
-                    'por dia e por Ambiente. Use para acompanhar o gasto ' .
-                    'diário por tenant. ACL-strict: cada usuário vê ' .
-                    'somente as execuções do Agente IA no Chat ' .
-                    'permitidas por sua ACL.',
+                    'Tokens de entrada, entrada em cache e saída, e número de execuções ' .
+                    'do agente, por Ambiente e dia civil no fuso do sistema. Uma execução ' .
+                    'pode fazer várias chamadas ao LLM. Tokens em cache já fazem parte ' .
+                    'da entrada; tokens de raciocínio já fazem parte da saída. ' .
+                    'Mede consumo técnico, inclusive de execuções excluídas da cobrança; ' .
+                    'não calcula valores monetários. Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => [
@@ -167,14 +167,14 @@ class SeedChatwootReports implements RebuildAction
                 // the daily report) because it is the natural ranking
                 // key; input/cached/output break the total down.
                 'staticId' => 'chwRptTokTn',
-                'name' => 'AI Agent Run (Uso de Tokens por Ambiente / Total)',
+                'name' => 'IA · Tokens e Execuções / Ambiente / Total',
                 'description' =>
-                    'Total de tokens LLM (total, entrada, entrada em ' .
-                    'cache, saída) e execuções do Agente IA por Ambiente, ' .
-                    'ordenado do maior para o menor consumo. Use o filtro ' .
-                    'de período (runAt) para limitar a janela analisada. ' .
-                    'ACL-strict: cada usuário vê somente as execuções ' .
-                    'do Agente IA no Chat permitidas por sua ACL.',
+                    'Totais de tokens e execuções do agente por Ambiente, ordenados ' .
+                    'pelo total de tokens, do maior para o menor. Use Execução Finalizada em ' .
+                    '(runAt) para selecionar o período. Entrada em cache é parte da entrada; ' .
+                    'raciocínio é parte da saída. Consumo de tokens não equivale a valor ' .
+                    'cobrado nem a créditos: uma execução pode fazer várias chamadas ao LLM. ' .
+                    'Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => [
@@ -195,27 +195,24 @@ class SeedChatwootReports implements RebuildAction
                 'applyAcl' => true,
             ],
             [
-                // Pricing matrix: Tenant × Model with the three billable
-                // token classes. This is the direct input for a cost /
-                // price-sheet calculation, since LLM pricing is per
-                // model and per token class:
-                //
-                //   cost ≈ (input − cached) × p_in
-                //        + cached × p_cacheRead   (discounted)
-                //        + output × p_out         (the expensive side)
+                // Consumption matrix: Tenant × recorded agent model.
+                // Run totals include knowledge-base search calls, which
+                // may use a different model. These aggregates are not
+                // sufficient to reconstruct provider charges per model.
                 //
                 // Grid engine caps grouping at 2 dimensions, so the
                 // date window is a runtime filter (`runAt`) rather than
-                // a group. Use `kind` to isolate follow-up spend.
+                // a group. Use `kind` to isolate follow-up consumption.
                 'staticId' => 'chwRptTokTnMdl',
-                'name' => 'AI Agent Run (Uso de Tokens por Ambiente / Por Modelo)',
+                'name' => 'IA · Tokens e Execuções / Ambiente e Modelo',
                 'description' =>
-                    'Matriz Ambiente × Modelo LLM com tokens de entrada, ' .
-                    'entrada em cache e saída — a base para cálculo de ' .
-                    'custo, já que o preço é por modelo e por classe de ' .
-                    'token. Use o filtro de período (runAt) para limitar ' .
-                    'a janela. ACL-strict: cada usuário vê somente as ' .
-                    'execuções do Agente IA no Chat permitidas por sua ACL.',
+                    'Totais de tokens e execuções por Ambiente e modelo LLM registrado ' .
+                    'na execução. Os contadores incluem chamadas do agente principal e ' .
+                    'da busca na base de conhecimento, que pode usar outro modelo. ' .
+                    'Tokens em cache são parte da entrada; raciocínio é parte da saída. ' .
+                    'Use para comparar consumo, não como fatura do provedor. ' .
+                    'O filtro de período usa Execução Finalizada em (runAt). ' .
+                    'Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => [
@@ -258,17 +255,15 @@ class SeedChatwootReports implements RebuildAction
                 // decides not to message) — distinct from the
                 // `sentFollowupMessage` flag used by chwRptFuMsgAgDay.
                 'staticId' => 'chwRptTokKindDay',
-                'name' => 'AI Agent Run (Uso de Tokens por Tipo / Por Dia)',
+                'name' => 'IA · Tokens e Execuções / Gatilho e Dia',
                 'description' =>
-                    'Consumo de tokens LLM e execuções por dia, dividido ' .
-                    'por tipo de gatilho: Mensagem do Cliente, @Menção em ' .
-                    'Nota Privada, @Menção Pública, Mensagem Agendada e ' .
-                    'Disparador de Follow-up e @Menção na Oportunidade. Use para separar o gasto ' .
-                    'gerado por clientes do uso interno (@menções de ' .
-                    'agentes) e de follow-ups proativos — a base para ' .
-                    'cobrança por tipo de uso. ACL-strict: cada usuário ' .
-                    'vê somente as execuções do Agente IA no Chat ' .
-                    'permitidas por sua ACL.',
+                    'Tokens de entrada, entrada em cache e saída, e execuções do agente ' .
+                    'por dia e tipo de gatilho: mensagem do cliente, @menção em nota privada, ' .
+                    '@menção pública, mensagem agendada, follow-up ou @menção no histórico ' .
+                    'da oportunidade. O gatilho identifica o que iniciou a execução, ' .
+                    'não seu resultado. Follow-ups contam mesmo sem envio de mensagem. ' .
+                    'Registros antigos podem classificar @menções como mensagem do cliente. ' .
+                    'Não calcula valores de cobrança. Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => [
@@ -289,11 +284,13 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptCvTnDay',
-                'name' => 'AI Agent Run (Conversas Atendidas por Ambiente / Por Dia)',
+                'name' => 'IA · Conversas com Execuções / Ambiente e Dia',
                 'description' =>
-                    'Distinct Chat conversation count engaged by the AI agent ' .
-                    'per Tenant (Ambiente) per day. ACL-strict: each viewer only ' .
-                    'sees AI agent runs they can read in Chat.',
+                    'Conversas distintas com ao menos uma execução do agente no dia, ' .
+                    'por Ambiente, no fuso do sistema. Cada conversa conta uma vez por dia; ' .
+                    'a soma dos dias não é o número de conversas únicas no período. ' .
+                    'Não exige resposta enviada ou atendimento concluído. ' .
+                    'Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -310,11 +307,13 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptCvDay',
-                'name' => 'AI Agent Run (Conversas Atendidas / Por Dia)',
+                'name' => 'IA · Conversas com Execuções / Dia',
                 'description' =>
-                    'Distinct Chat conversation count engaged by the AI agent ' .
-                    'per day. Tenancy is not a grouping dimension — each viewer ' .
-                    'sees only the count their ACL on AI agent runs in Chat permits.',
+                    'Conversas distintas com ao menos uma execução do agente em cada dia, ' .
+                    'no fuso do sistema, sem separar por Ambiente. Uma conversa pode contar ' .
+                    'em vários dias; o total soma conversas-dia, não conversas únicas ' .
+                    'no período. Não exige resposta enviada ou atendimento concluído. ' .
+                    'Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -337,19 +336,19 @@ class SeedChatwootReports implements RebuildAction
             // ------------------------------------------------------------------
             [
                 'staticId' => 'chwRptBillPkDay',
-                'name' => 'IA Faturamento · Pacotes / Por Dia',
+                'name' => 'IA · Cobrança Estimada por Pacotes / Dia',
                 'description' =>
-                    'Modelo pacote: preço por pacote de até N execuções do agente ' .
-                    'por conversa ou oportunidade e por dia civil (fuso do sistema). Cada ' .
-                    'execução conta uma vez, seja iniciada por mensagem do cliente, ' .
-                    '@menção, follow-up ou mensagem agendada. Preço e tamanho ' .
-                    'do pacote vêm do Faturamento IA de cada Ambiente; ' .
-                    'sem configuração específica, usa o padrão da plataforma. ' .
-                    'Colunas: Valor Total, Pacotes, Pacotes na Franquia, ' .
-                    'Pacotes Faturáveis, Total de Execuções do Agente, ' .
-                    'Conversas / Oportunidades Atendidas. Cada usuário vê apenas ' .
-                    'as execuções permitidas por sua ACL. ' .
-                    'Drill-down lista as execuções, com links para conversa ou oportunidade.',
+                    'Estimativa pelo modelo de pacotes: para cada conversa ou oportunidade ' .
+                    'em cada dia civil, divide as execuções pelo tamanho do pacote e arredonda ' .
+                    'para cima. Exemplo: 5 execuções com tamanho 4 consomem 2 pacotes. ' .
+                    'O excedente da franquia mensal é multiplicado pelo preço do pacote. ' .
+                    'Exclui falhas explícitas e execuções sem vínculo para cobrança. ' .
+                    'Chamadas ao LLM e tokens não alteram a quantidade de pacotes. ' .
+                    'Usa as tarifas de cada Ambiente por vigência, com padrões da plataforma ' .
+                    'quando ausentes, e o fuso do sistema. Selecione o mês completo para aplicar ' .
+                    'a franquia corretamente. O relatório sempre aplica este modelo, mesmo ' .
+                    'se o contrato usar outro. Valores sem mensalidade, restritos pela ACL do usuário; ' .
+                    'o detalhamento lista as execuções consideradas no cálculo.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -366,17 +365,18 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptBillPkTnD',
-                'name' => 'IA Faturamento · Pacotes / Ambiente / Por Dia',
+                'name' => 'IA · Cobrança Estimada por Pacotes / Ambiente e Dia',
                 'description' =>
-                    'Modelo pacote agrupado por Ambiente e dia civil. Preço ' .
-                    'do pacote e execuções por pacote são por Ambiente ' .
-                    '(Ambiente → Faturamento IA); o nome do Ambiente inclui a ' .
-                    'moeda do acordo e a linha do dia soma apenas o valor ' .
-                    'convertido. Mesmas colunas do relatório por dia (Valor ' .
-                    'Total, Pacotes, Pacotes na Franquia, Pacotes Faturáveis, ' .
-                    'Total de Execuções do Agente, Conversas / Oportunidades Atendidas) mais Valor ' .
-                    'Total na moeda do acordo. Use para faturar multi-tenant ' .
-                    'ou comparar receita estimada entre ambientes. ACL-strict.',
+                    'Estimativa pelo modelo de pacotes, por Ambiente e dia civil no fuso do sistema. ' .
+                    'Pacotes = execuções por conversa ou oportunidade no dia ÷ tamanho do pacote, ' .
+                    'arredondado para cima. Valor = pacotes fora da franquia mensal × preço do pacote. ' .
+                    'Exclui falhas explícitas e execuções sem vínculo para cobrança. ' .
+                    'Tarifas e franquia são por Ambiente e vigência, com padrões quando ausentes. ' .
+                    'Mostra o valor na moeda da tarifa e convertido para a moeda do sistema; ' .
+                    'o total monetário entre ambientes soma apenas valores convertidos. ' .
+                    'Selecione o mês completo para aplicar a franquia corretamente. ' .
+                    'Sempre aplica este modelo, mesmo se o contrato usar outro. ' .
+                    'Valores sem mensalidade, restritos pela ACL do usuário.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -398,22 +398,20 @@ class SeedChatwootReports implements RebuildAction
             // ------------------------------------------------------------------
             [
                 'staticId' => 'chwRptBillE49Day',
-                'name' => 'IA Faturamento · Base + Extra / Por Dia',
+                'name' => 'IA · Cobrança Estimada Base + Adicionais / Dia',
                 'description' =>
-                    'Modelo base + extra: cada conversa ou oportunidade com ' .
-                    'execuções do agente no dia civil tem uma cobrança base. ' .
-                    'A base inclui até N execuções por mensagem do cliente. ' .
-                    'Execuções excedentes por mensagem do cliente e todas as ' .
-                    'execuções por menção ou automação (@menção, follow-up ou ' .
-                    'mensagem agendada) são cobradas pelo preço unitário adicional. ' .
-                    'Valores e N vêm do Faturamento IA de cada Ambiente; ' .
-                    'sem configuração específica, usa o padrão da plataforma. ' .
-                    'Colunas: Valor Total, Conversas / Oportunidades Atendidas, ' .
-                    'Conversas / Oportunidades na Franquia, Conversas / Oportunidades Faturáveis, ' .
-                    'Execuções Excedentes por Mensagem do Cliente, Execuções por Menção ou Automação, ' .
-                    'Execuções Adicionais, Execuções por Mensagem do Cliente e Total de Execuções do Agente. ' .
-                    'Use um mês completo para calcular a franquia mensal. ' .
-                    'Respeita a ACL do usuário. Permite comparar os modelos base + extra, pacote e crédito.',
+                    'Estimativa pelo modelo base + adicionais. Cada conversa ou oportunidade ' .
+                    'com execuções consideradas na cobrança em um dia civil consome uma base diária. ' .
+                    'A base inclui até N execuções por mensagem do cliente; as excedentes e ' .
+                    'todas as execuções por outros gatilhos são adicionais. A franquia mensal ' .
+                    'cobre bases inteiras, incluindo seus adicionais. Fora da franquia, ' .
+                    'cobra-se o preço da base mais o preço unitário de cada execução adicional. ' .
+                    'As contagens de adicionais incluem também os cobertos pela franquia. ' .
+                    'Exclui falhas explícitas e execuções sem vínculo para cobrança. ' .
+                    'Usa tarifas por Ambiente e vigência, com padrões quando ausentes, e o fuso ' .
+                    'do sistema. Selecione o mês completo para aplicar a franquia corretamente. ' .
+                    'Sempre aplica este modelo, mesmo se o contrato usar outro. ' .
+                    'Valores sem mensalidade, restritos pela ACL do usuário.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -430,17 +428,19 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptBillE49TnD',
-                'name' => 'IA Faturamento · Base + Extra / Ambiente / Por Dia',
+                'name' => 'IA · Cobrança Estimada Base + Adicionais / Ambiente e Dia',
                 'description' =>
-                    'Modelo base + extra (base por conversa ou oportunidade atendida + ' .
-                    'execuções adicionais) por Ambiente e dia civil. ' .
-                    'Tarifas, execuções incluídas na base e franquia mensal são por ' .
-                    'Ambiente (Ambiente → Faturamento IA); o nome do Ambiente ' .
-                    'inclui a moeda do acordo e a linha do dia soma apenas o ' .
-                    'valor convertido. Mesmas colunas do relatório por dia ' .
-                    'mais Valor Total na moeda do acordo. Ideal para ' .
-                    'propostas comerciais e comparativo de fatura estimada ' .
-                    'com os modelos pacote e crédito. ACL-strict.',
+                    'Estimativa pelo modelo base + adicionais, por Ambiente e dia civil no fuso ' .
+                    'do sistema. Uma base diária corresponde a uma conversa ou oportunidade no dia. ' .
+                    'Inclui até N execuções por mensagem do cliente; as excedentes e os demais ' .
+                    'gatilhos são adicionais. A franquia mensal cobre a base e seus adicionais. ' .
+                    'Fora dela, valor = preço da base + adicionais × preço unitário. ' .
+                    'Exclui falhas explícitas e execuções sem vínculo para cobrança. ' .
+                    'Tarifas e franquia são por Ambiente e vigência, com padrões quando ausentes. ' .
+                    'Exibe valores na moeda da tarifa e do sistema; totais entre ambientes ' .
+                    'somam apenas valores convertidos. Selecione o mês completo. ' .
+                    'Sempre aplica este modelo, mesmo se o contrato usar outro. ' .
+                    'Valores sem mensalidade, restritos pela ACL do usuário.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -463,23 +463,18 @@ class SeedChatwootReports implements RebuildAction
             // ------------------------------------------------------------------
             [
                 'staticId' => 'chwRptBillCrDay',
-                'name' => 'IA Créditos · Consumo e Fatura / Por Dia',
+                'name' => 'IA · Créditos e Cobrança Estimada / Dia',
                 'description' =>
-                    'Modelo de crédito linear (extrato do cliente): cada ' .
-                    'execução do agente consome 1 crédito, independentemente ' .
-                    'da quantidade de chamadas ao LLM ou tokens. Mensagem do ' .
-                    'cliente, @menção, follow-up e mensagem agendada seguem ' .
-                    'a mesma regra. A franquia mensal do ' .
-                    'plano cobre os primeiros créditos do mês (consumo ' .
-                    'cronológico); o que passar é cobrado pelo preço unitário ' .
-                    'do crédito. Franquia e preço vêm do Faturamento IA de ' .
-                    'cada Ambiente; sem configuração específica, usa o padrão da plataforma ' .
-                    '(R$ 0,49 e sem franquia). Colunas: Total a Pagar, ' .
-                    'Créditos Consumidos, Cobertos na Franquia, Créditos ' .
-                    'Excedentes, Créditos por Mensagem do Cliente e Créditos ' .
-                    'por Menção ou Automação. Use um mês completo para calcular ' .
-                    'a franquia mensal. Respeita a ACL do usuário; ' .
-                    'o detalhamento lista as conversas e oportunidades do dia.',
+                    'Estimativa pelo modelo de créditos: cada execução considerada na cobrança ' .
+                    'consome 1 crédito, independentemente do gatilho, das chamadas ao LLM e dos tokens. ' .
+                    'Exclui falhas explícitas e execuções sem vínculo para cobrança. A franquia ' .
+                    'mensal cobre os primeiros créditos, em ordem de dia civil no fuso do sistema. ' .
+                    'Valor = créditos fora da franquia × preço por crédito. Usa tarifas por ' .
+                    'Ambiente e vigência; valores ausentes usam os padrões da plataforma ' .
+                    '(preço 0,49 na moeda aplicável e sem franquia). Selecione o mês completo ' .
+                    'para aplicar a franquia corretamente. Sempre aplica este modelo, mesmo ' .
+                    'se o contrato usar outro. Valores sem mensalidade, restritos pela ACL do usuário; ' .
+                    'o detalhamento lista as execuções consideradas no cálculo.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -496,14 +491,16 @@ class SeedChatwootReports implements RebuildAction
             ],
             [
                 'staticId' => 'chwRptBillCrTnD',
-                'name' => 'IA Créditos · Consumo e Fatura / Ambiente / Por Dia',
+                'name' => 'IA · Créditos e Cobrança Estimada / Ambiente e Dia',
                 'description' =>
-                    'Modelo de crédito linear por Ambiente e dia civil. ' .
-                    'Franquia mensal de créditos e preço unitário são por ' .
-                    'Ambiente (Ambiente → Faturamento IA); o nome do Ambiente ' .
-                    'inclui a moeda do acordo e a linha do dia soma apenas o ' .
-                    'valor convertido. Use para faturar multi-tenant ou ' .
-                    'dimensionar planos de crédito. ACL-strict.',
+                    'Estimativa pelo modelo de créditos, por Ambiente e dia civil no fuso do sistema. ' .
+                    'Cada execução considerada na cobrança consome 1 crédito. Exclui falhas explícitas ' .
+                    'e execuções sem vínculo para cobrança. Valor = créditos fora da franquia mensal ' .
+                    '× preço por crédito. Tarifas e franquia são por Ambiente e vigência, com padrões ' .
+                    'quando ausentes. Exibe valores na moeda da tarifa e do sistema; totais entre ' .
+                    'ambientes somam apenas valores convertidos. Selecione o mês completo para aplicar ' .
+                    'a franquia corretamente. Sempre aplica este modelo, mesmo se o contrato usar outro. ' .
+                    'Valores sem mensalidade, restritos pela ACL do usuário.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],
@@ -579,17 +576,14 @@ class SeedChatwootReports implements RebuildAction
                 'applyAcl' => true,
             ],
             [
-                // Counts AI-agent-emitted follow-up messages per day,
+                // Counts runs flagged for follow-up sending per day,
                 // grouped by AI Agent (Chatwoot account/user membership).
-                // The metric is "messages actually sent", NOT "follow-up
-                // runs that fired" — `sentFollowupMessage` is producer-
-                // derived from the run's tool-call list and is true iff
-                // the `send_followup_message` tool was invoked at least
-                // once. This intentionally excludes follow-up runs that
-                // terminated via a deliberate opportunity update
-                // (Ended / ActionNeeded) or a silent-done failure, both
-                // of which the AI takes as alternative outcomes to
-                // sending a message.
+                // `sentFollowupMessage` is producer-derived from tool
+                // invocations, including template sends where applicable.
+                // COUNT:id counts each flagged run once, regardless of
+                // invocation count; it is neither a message count nor a
+                // delivery confirmation. Runs without a send invocation
+                // are excluded.
                 //
                 // Performance: the `(sentFollowupMessage, runAt, deleted)`
                 // composite index makes the WHERE-bool + DAY(runAt)
@@ -611,14 +605,14 @@ class SeedChatwootReports implements RebuildAction
                 // rejected if persisted directly into
                 // `report.filters_data_list`).
                 'staticId' => 'chwRptFuMsgAgDay',
-                'name' => 'AI Agent Run (Mensagens de Follow-up Enviadas / Por Dia / Por Agente IA)',
+                'name' => 'IA · Execuções com Invocação de Envio de Follow-up / Dia e Agente',
                 'description' =>
-                    'Número de mensagens de follow-up efetivamente enviadas ' .
-                    'pelo Agente IA, agrupado por dia e por agente. Exclui ' .
-                    'execuções de follow-up que terminaram em atualização ' .
-                    'deliberada de oportunidade (Ended / ActionNeeded) ou ' .
-                    'em silent-done. ACL-strict: cada usuário vê somente ' .
-                    'as execuções do Agente IA no Chat permitidas por sua ACL.',
+                    'Execuções com o indicador sentFollowupMessage, por dia e agente. ' .
+                    'O indicador registra a invocação de envio de follow-up, incluindo ' .
+                    'templates quando aplicável. Cada execução conta uma vez, mesmo ' .
+                    'com várias invocações: não é uma contagem de mensagens nem confirmação ' .
+                    'de entrega. Exclui follow-ups que terminaram sem invocar envio. ' .
+                    'Cada usuário vê apenas as execuções permitidas por sua ACL.',
                 'entityType' => 'ChatwootAiAgentRun',
                 'type' => 'Grid',
                 'columns' => ['COUNT:id'],

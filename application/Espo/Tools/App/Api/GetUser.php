@@ -45,10 +45,16 @@ class GetUser implements Action
 
     public function process(Request $request): Response
     {
-        $data = $this->injectableFactory
-            ->create(Service::class)
-            ->getUserData();
+        $start = hrtime(true);
+        $service = $this->injectableFactory->create(Service::class);
+        $data = $service->getUserData($request->getQueryParam('bootstrap') === 'opportunity-table');
 
-        return ResponseComposer::json($data);
+        $response = ResponseComposer::json($data);
+        $response->setHeader('Server-Timing',
+            'bootstrap;dur=' . number_format((hrtime(true) - $start) / 1e6, 2, '.', '') .
+            ', ' . $service->getBootstrapServerTiming()
+        );
+
+        return $response;
     }
 }

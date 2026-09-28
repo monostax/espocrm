@@ -1,0 +1,5 @@
+[
+    {"route": "/AiUsage/context", "method": "get", "params": {"controller": "AiUsage", "action": "context"}},
+    {"route": "/AiUsage", "method": "get", "params": {"controller": "AiUsage", "action": "summary"}},
+    {"route": "/AiUsage/:id", "method": "get", "params": {"controller": "AiUsage", "action": "detail", "id": ":id"}}
+]

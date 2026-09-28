@@ -1,0 +1,4 @@
+{
+    "controller": "feature-ai-usage:controllers/ai-usage",
+    "iconClass": "ti ti-chart-histogram"
+}

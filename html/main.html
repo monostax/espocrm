@@ -6,6 +6,7 @@
         <script type="application/json" data-name="loader-params">
             {{loaderParams}}
         </script>
+        {{earlyBootstrapHtml}}
         {{scriptsHtml}}
         <link
             rel="stylesheet"
@@ -57,6 +58,7 @@
                         internalModuleList: {{internalModuleList}},
                         bundledModuleList: {{bundledModuleList}},
                         theme: {{theme}},
+                        embeddedTable: {{embeddedTable}},
                     }, app => {
                         loadedApp = app;
 
