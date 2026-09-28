@@ -94,6 +94,7 @@ final class ConversationDayGrainFetcher
         $scopeType = $this->scopeTypeExpression();
 
         $queryBuilder
+            ->where(['OR' => [['billingWaived' => false], ['billingWaived' => null]]])
             ->where(Cond::notEqual(Expr::create("IFNULL:(AI_RUN_OUTCOME:modelUsage, '')"), 'failed'))
             ->where(Expr::isNotNull($scopeId))
             ->where(Cond::notEqual($scopeId, ''))
@@ -165,6 +166,7 @@ final class ConversationDayGrainFetcher
         }
 
         $queryBuilder
+            ->where(['OR' => [['billingWaived' => false], ['billingWaived' => null]]])
             ->where(Cond::notEqual(Expr::create("IFNULL:(AI_RUN_OUTCOME:modelUsage, '')"), 'failed'))
             ->where(Expr::isNotNull($this->scopeIdExpression()))
             ->where(Cond::notEqual($this->scopeIdExpression(), ''))

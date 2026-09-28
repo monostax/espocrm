@@ -86,7 +86,7 @@ class Projection
         }
         $result['actions'] = Dataset::actions($safeActions);
         $result['day'] = $row['day'];
-        $result['billingStatus'] = ($row['runOutcome'] ?? null) === 'failed' ? 'failed' : Ledger::billingStatus($group);
+        $result['billingStatus'] = Ledger::exemption($row) ?? Ledger::billingStatus($group);
         return $result;
     }
 

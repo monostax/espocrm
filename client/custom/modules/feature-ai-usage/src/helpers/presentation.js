@@ -1,5 +1,5 @@
 const DIMENSIONS = ['kind', 'action', 'conversation', 'opportunity', 'agent', 'account'];
-const BILLING_STATUSES = ['billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', 'failed'];
+const BILLING_STATUSES = ['billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', 'failed', 'waived', 'pending'];
 export const KINDS = ['customer-message', 'private-mention', 'public-mention', 'scheduled-message', 'followup-trigger', 'opportunity-mention'];
 
 export function allowance(billing) {
@@ -34,7 +34,7 @@ export function present(payload, state, format, t) {
         {key: 'charges', money: true, caption: t('usageChargesOnly')},
     ].map(card => ({
         ...card, title: t(card.key), period,
-        value: card.money ? format.charges(b.charges, true) : format.number(card.value, true),
+        value: card.money ? format.charges(b.charges) : format.number(card.value),
         exact: card.money ? format.charges(b.charges) : format.number(card.value),
         emphasis: card.key === 'overage' && b.overage > 0,
     }));
@@ -98,7 +98,8 @@ export function present(payload, state, format, t) {
         opportunityText: format.number(payload.usage.opportunities), filteredRunsText: format.number(payload.filteredUsage.runs),
         failedRunsText: format.number(payload.filteredUsage.failedRuns), hasFailedRuns: payload.filteredUsage.failedRuns > 0,
         coverageText: payload.usage.runs ? `${Math.round(100 * payload.usage.meteredRuns / payload.usage.runs)}%` : '—',
-        unassigned: payload.usage.unassignedRuns > 0 ? format.number(payload.usage.unassignedRuns) : null,
+        waived: payload.usage.waivedRuns > 0 ? format.number(payload.usage.waivedRuns) : null,
+        pending: payload.usage.pendingRuns > 0 ? format.number(payload.usage.pendingRuns) : null,
         rates: payload.rates.map(rate => ({
             ...rate, fromText: format.date(rate.from), toText: rate.to ? format.date(rate.to) : t('ongoing'),
             unitPriceText: rate.unitPrice !== undefined ? format.money(rate.unitPrice, rate.currency) : null,

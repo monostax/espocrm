@@ -77,4 +77,16 @@ class DatasetTest extends TestCase
         $this->assertSame(0, $row['billing']['covered']);
         $this->assertSame([], $row['billing']['charges']);
     }
+
+    public function testWaivedAndFailedRunsAreNotReportedAsPendingEvenWithoutAttribution(): void
+    {
+        $base = ['day' => '2026-08-01', 'groupKey' => null, 'conversationId' => 'c'];
+        $runs = [['billingWaived' => true] + $base, ['runOutcome' => 'failed'] + $base, $base];
+        $stats = (new Dataset())->stats($runs);
+        $this->assertSame(3, $stats['unassignedRuns']);
+        $this->assertSame(1, $stats['waivedRuns']);
+        $this->assertSame(1, $stats['pendingRuns']);
+        $row = (new Dataset())->breakdown([$runs[0]], [], 'conversation', 0, 25)['list'][0];
+        $this->assertSame(0, $row['billing']['consumed']);
+    }
 }

@@ -56,12 +56,20 @@
         },
         "phone": {
             "patterns": ["src/**/*.{js,ts}"],
+            "ignoreFiles": [
+                "src/namespace.js",
+                "src/loader.js"
+            ],
             "dependentOn": ["intl-tel-input-utils"],
             "requires": ["intl-tel-input-utils"],
             "noDuplicates": true
         },
         "dashboard": {
             "patterns": ["src/**/*.{js,ts}"],
+            "ignoreFiles": [
+                "src/namespace.js",
+                "src/loader.js"
+            ],
             "dependentOn": ["gridstack"],
             "requires": ["gridstack"],
             "noDuplicates": true

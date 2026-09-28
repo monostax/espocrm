@@ -65,5 +65,7 @@ class ProjectionTest extends TestCase
             $this->assertSame($expected, $projection->activity($row, $group)['billingStatus']);
         }
         $this->assertSame('failed', $projection->activity(['id' => 'r', 'day' => '2026-09-01', 'runOutcome' => 'failed'])['billingStatus']);
+        $this->assertSame('waived', $projection->activity(['id' => 'r', 'day' => '2026-09-01', 'billingWaived' => true], $group)['billingStatus']);
+        $this->assertSame('pending', $projection->activity(['id' => 'r', 'day' => '2026-09-01'])['billingStatus']);
     }
 }

@@ -92,7 +92,7 @@ test('breakdown does not invent individual costs and historical comparison uses 
 });
 
 test('activity billing keeps failures, plan coverage, shared charges and unavailable data distinct in both languages', () => {
-    const statuses = ['failed', 'billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', undefined];
+    const statuses = ['failed', 'waived', 'pending', 'billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', undefined];
     const data = fixture();
     data.activity = {total: statuses.length, list: statuses.map((billingStatus, i) => ({
         id: String(i), runAt: '2026-09-01 12:00:00', actions: [], billingStatus,
@@ -129,12 +129,28 @@ test('breakdown shows failures inside activity totals and only offers financial 
     }
 });
 
+test('waived and pending usage have distinct neutral customer explanations', () => {
+    const data = fixture();
+    data.usage.waivedRuns = 22;
+    data.usage.pendingRuns = 2;
+    for (const labels of [en, pt]) {
+        handlebars.registerHelper('translate', key => labels[key] || key);
+        const ui = present(data, state, f, key => labels[key] || key);
+        const html = handlebars.compile(read(client + 'res/templates/page.tpl'))({...ui, hasData: true});
+        assert.ok(html.includes('22 ' + labels.waivedRuns));
+        assert.ok(html.includes('2 ' + labels.pendingRuns));
+        assert.ok(html.includes(labels.waivedExplanation));
+        assert.ok(html.includes(labels.pendingExplanation));
+        assert.ok(!html.includes('alert-warning'));
+    }
+});
+
 test('the production transpiler emits loadable AMD for every usage module', () => {
     const dir = mkdtempSync('/tmp/opencode/ai-usage-amd-');
     try {
         new Transpiler({path: path.resolve(root, client), destDir: dir}).process();
         const definitions = new Map();
-        const modules = new Map([['views/main', class {}], ['views/modal', class {}], ['controller', class {}]]);
+        const modules = new Map([['views/main', class {}], ['views/modal', class {}], ['controller', class {}], ['ui/datepicker', class {}]]);
         for (const file of readdirSync(dir, {recursive: true}).filter(file => file.endsWith('.js'))) {
             vm.runInNewContext(readFileSync(path.join(dir, file), 'utf8'), {
                 Intl, Date, define(id, deps, factory) {definitions.set('feature-ai-usage:' + id, {deps, factory});},

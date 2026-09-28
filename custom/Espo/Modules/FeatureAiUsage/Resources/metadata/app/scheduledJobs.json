@@ -1,0 +1,8 @@
+{
+    "ReconcileAiUsageLinks": {
+        "name": "Reconcile AI Usage Links",
+        "isSystem": true,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureAiUsage\\Attribution\\Job"
+    }
+}

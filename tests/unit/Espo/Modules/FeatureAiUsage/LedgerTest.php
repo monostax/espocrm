@@ -144,7 +144,7 @@ class LedgerTest extends TestCase
         $ledger = (new Ledger())->build([$this->engagement('1', scope: '')], $this->period(), [$this->agreement('credit')], 't');
         $this->assertSame(0, $ledger['summary']['consumed']);
         $this->assertSame(1, (new Dataset())->stats($ledger['runs'])['unassignedRuns']);
-        $this->assertSame('excluded', Ledger::billingStatus(null));
+        $this->assertSame('pending', Ledger::billingStatus(null));
     }
 
     public function testOnlyExplicitFailuresAreExcludedBeforePricingAndMonthlyAllowance(): void
@@ -185,5 +185,23 @@ class LedgerTest extends TestCase
         $ledger = (new Ledger())->build([$this->engagement('1'), $this->engagement('2')], $this->period(), [$this->agreement('credit', $card)], 't');
         $this->assertSame(1, $ledger['summary']['overage']);
         $this->assertSame('notBilled', Ledger::billingStatus($ledger['groups']['2026-08-01|conversation|c']));
+    }
+
+    public function testRepairingWaivedAttributionNeverConsumesAllowanceOrChangesCharges(): void
+    {
+        foreach (['credit', 'pack199', 'extra049'] as $model) {
+            $runs = [$this->engagement('billable', '2026-08-02'),
+                $this->engagement('waived', scope: '') + ['billingWaived' => true]];
+            $card = new RateCard(planIncludedCredits: 1, planIncludedUsage: 1);
+            $before = (new Ledger())->build($runs, $this->period(), [$this->agreement($model, $card)], 't');
+            $runs[1]['conversationId'] = 'repaired';
+            $after = (new Ledger())->build($runs, $this->period(), [$this->agreement($model, $card)], 't');
+            $this->assertSame($before['summary'], $after['summary'], $model);
+            $this->assertSame($before['groups'], $after['groups'], $model);
+            $stats = (new Dataset())->stats($after['runs']);
+            $this->assertSame(1, $stats['waivedRuns']);
+            $this->assertSame(0, $stats['unassignedRuns']);
+            $this->assertSame(0, $stats['pendingRuns']);
+        }
     }
 }

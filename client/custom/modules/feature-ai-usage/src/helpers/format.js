@@ -4,24 +4,23 @@ export default class Format {
         this.locale = locale.replace('_', '-');
     }
 
-    number(value, compact = false) {
+    number(value) {
         if (value === null || value === undefined) return '—';
         return new Intl.NumberFormat(this.locale, {
-            notation: compact ? 'compact' : 'standard', maximumFractionDigits: compact ? 1 : 0,
+            notation: 'standard', maximumFractionDigits: 0,
         }).format(value);
     }
 
-    money(value, currency, compact = false) {
-        const abbreviated = compact && Math.abs(value) >= 1000;
+    money(value, currency) {
         return new Intl.NumberFormat(this.locale, {
-            style: 'currency', currency, notation: abbreviated ? 'compact' : 'standard',
-            minimumFractionDigits: abbreviated ? 0 : 2, maximumFractionDigits: abbreviated ? 1 : 2,
+            style: 'currency', currency, notation: 'standard',
+            minimumFractionDigits: 2, maximumFractionDigits: 2,
         }).format(value);
     }
 
-    charges(charges, compact = false) {
+    charges(charges) {
         if (charges === null || charges === undefined) return '—';
-        return charges.length ? charges.map(c => this.money(c.amount, c.currency, compact)).join(' · ') : '0';
+        return charges.length ? charges.map(c => this.money(c.amount, c.currency)).join(' · ') : '0';
     }
 
     date(value, timeZone, withTime = false) {

@@ -124,7 +124,7 @@
         },
         "aiDebounceSeconds": {
             "type": "int",
-            "default": 1,
+            "default": 30,
             "min": 0,
             "max": 300,
             "notNull": true,

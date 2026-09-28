@@ -26,7 +26,7 @@ class Ledger
             $run['groupKey'] = $id !== '' ? $run['day'] . '|' . $type . '|' . $id : null;
             $runs[] = $run;
             $daily[$run['day']]['runs']++;
-            if ($run['groupKey'] === null || ($run['runOutcome'] ?? null) === 'failed') {
+            if ($run['groupKey'] === null || self::exemption($run) !== null) {
                 continue;
             }
             $groups[$run['groupKey']] ??= [
@@ -145,11 +145,20 @@ class Ledger
         return ['from' => $rate['from'], 'to' => $rate['to'], 'currency' => $card->currency, 'model' => $rate['model']] + $terms;
     }
 
+    /** Permanent exclusions take precedence over unresolved attribution and daily charges. */
+    public static function exemption(array $run): ?string
+    {
+        if ($run['billingWaived'] ?? false) {
+            return 'waived';
+        }
+        return ($run['runOutcome'] ?? null) === 'failed' ? 'failed' : null;
+    }
+
     /** Status of the complete daily group, not an allocation to an individual run. */
     public static function billingStatus(?array $group): string
     {
         if ($group === null) {
-            return 'excluded';
+            return 'pending';
         }
         $billing = $group['billing'] ?? null;
         if ($billing === null) {

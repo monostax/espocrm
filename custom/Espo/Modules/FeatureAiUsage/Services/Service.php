@@ -17,7 +17,7 @@ class Service
         'id', 'runAt', 'kind', 'agentId', 'chatwootAccountId', 'conversationId', 'opportunityId',
         'chatwootContactId', 'sourceNoteId', 'toolsUsed', 'wasTransferred', 'hadAppointment',
         'createdOpportunity', 'updatedOpportunity', 'deletedOpportunity', 'sentFollowupMessage',
-        'usageMetricsVersion', 'model', 'durationMs', 'modelRequestCount', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'runOutcome',
+        'usageMetricsVersion', 'model', 'durationMs', 'modelRequestCount', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'runOutcome', 'billingWaived',
     ];
 
     public function __construct(
@@ -105,7 +105,7 @@ class Service
             if ($row['id'] !== $id) {
                 continue;
             }
-            $group = $ledger['groups'][$row['groupKey']] ?? null;
+            $group = Ledger::exemption($row) === null ? ($ledger['groups'][$row['groupKey']] ?? null) : null;
             return [
                 'activity' => $this->projection->activity($row, $group),
                 'billingGroup' => $group ? [

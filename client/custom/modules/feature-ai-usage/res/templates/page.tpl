@@ -3,7 +3,7 @@
         <div><div class="au-eyebrow">{{translate 'workspaceUsage' scope='AiUsage'}}</div><h2>{{translate 'title' scope='AiUsage'}}</h2><p class="text-muted">{{translate 'subtitle' scope='AiUsage'}}</p></div>
         <div class="au-controls">
             <label><span class="sr-only">{{translate 'tenant' scope='AiUsage'}}</span><select class="form-control" data-au-tenant {{#if loading}}disabled{{/if}}>{{#each tenants}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
-            <label><span class="sr-only">{{translate 'period' scope='AiUsage'}}</span><input class="form-control" type="month" min="2000-01" max="{{maxMonth}}" value="{{month}}" data-au-month {{#if loading}}disabled{{/if}}></label>
+            <label><span class="sr-only">{{translate 'period' scope='AiUsage'}}</span><input class="form-control" type="text" autocomplete="off" placeholder="YYYY-MM" value="{{month}}" data-date-min-view-mode="1" data-date-end-date="{{maxMonth}}" data-au-month {{#if loading}}disabled{{/if}}></label>
             <button class="btn btn-default" data-au-refresh title="{{translate 'refresh' scope='AiUsage'}}" aria-label="{{translate 'refresh' scope='AiUsage'}}" {{#if loading}}disabled{{/if}}><span class="fas fa-sync-alt" aria-hidden="true"></span></button>
         </div>
     </header>
@@ -14,7 +14,6 @@
     <div class="au-content" {{#if loading}}inert{{/if}}>
     <div class="au-contract-meta"><span class="au-pill">{{modelText}}</span><span>{{period}}</span><span>{{timeZone}}</span><span class="au-freshness">{{translate 'updated' scope='AiUsage'}} {{generatedAt}}</span></div>
     {{#unless ready}}<div class="alert alert-warning" role="status"><strong>{{translate 'configurationRequired' scope='AiUsage'}}</strong><p>{{configurationText}}</p><small>{{translate 'usageStillVisible' scope='AiUsage'}}</small></div>{{/unless}}
-    {{#if unassigned}}<div class="alert alert-warning">{{unassigned}} {{translate 'unassignedWarning' scope='AiUsage'}}</div>{{/if}}
     <section class="au-allowance panel panel-default" aria-label="{{translate 'includedAllowance' scope='AiUsage'}}">
         <div class="au-allowance-heading"><div><span class="au-eyebrow">{{translate 'includedAllowance' scope='AiUsage'}}</span><h3>{{allowanceText}} <small>{{unit}} / {{translate 'month' scope='AiUsage'}}</small></h3></div><div class="au-allowance-state"><span class="au-pill au-state-{{progress.state}}">{{stateText}}</span><small class="text-muted">{{translate 'resets' scope='AiUsage'}} {{resetDate}}</small></div></div>
         <div class="au-meter" role="img" aria-label="{{translate 'covered' scope='AiUsage'}}: {{coveredText}}; {{translate 'remaining' scope='AiUsage'}}: {{remainingText}}; {{translate 'overage' scope='AiUsage'}}: {{overageText}}"><span class="au-covered" style="width:{{progress.coveredWidth}}%"></span><span class="au-overage" style="width:{{progress.overageWidth}}%"></span></div>
@@ -26,6 +25,8 @@
             <div class="panel-body"><div class="au-primary numeric-text text-primary" title="{{exact}}" aria-label="{{exact}}">{{value}}</div><div class="au-card-footer text-muted"><span title="{{caption}}">{{caption}}</span><span title="{{period}}">{{period}}</span></div></div>
         </section>{{/each}}
     </div>
+    {{#if waived}}<p class="au-footnote text-muted"><strong>{{waived}} {{translate 'waivedRuns' scope='AiUsage'}}</strong> — {{translate 'waivedExplanation' scope='AiUsage'}}</p>{{/if}}
+    {{#if pending}}<p class="au-footnote text-muted"><strong>{{pending}} {{translate 'pendingRuns' scope='AiUsage'}}</strong> — {{translate 'pendingExplanation' scope='AiUsage'}}</p>{{/if}}
     <details class="au-explanation"><summary>{{translate 'howChargesWork' scope='AiUsage'}}</summary><p>{{translate 'billingExplanation' scope='AiUsage'}}</p>
         {{#if billingModelExplanation}}<p>{{billingModelExplanation}}</p>{{/if}}
         {{#each rates}}<div class="au-rate"><strong>{{fromText}} – {{toText}} · {{currency}}</strong>{{#if unitPriceText}}<span>{{translate 'unitPrice' scope='AiUsage'}}: {{unitPriceText}}</span>{{/if}}{{#if packSize}}<span>{{packSize}} {{translate 'engagementsPerPack' scope='AiUsage'}}</span>{{/if}}{{#if basePriceText}}<span>{{translate 'basePrice' scope='AiUsage'}}: {{basePriceText}} · {{translate 'extraPrice' scope='AiUsage'}}: {{extraPriceText}} · {{includedTurns}} {{translate 'includedCustomerTurns' scope='AiUsage'}}</span>{{/if}}</div>{{/each}}

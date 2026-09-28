@@ -1,4 +1,5 @@
 import MainView from 'views/main';
+import Datepicker from 'ui/datepicker';
 import {Format, present} from 'feature-ai-usage:helpers/index';
 
 export default class extends MainView {
@@ -6,7 +7,7 @@ export default class extends MainView {
     scope = 'AiUsage';
     events = {
         'change [data-au-tenant]': function (e) { this.changeContext('tenantId', e.currentTarget.value); },
-        'change [data-au-month]': function (e) { this.changeContext('month', e.currentTarget.value); },
+        'change [data-au-month]': function (e) { this.selectMonth(e.currentTarget.value); },
         'click [data-au-view]': function (e) { this.selectView(e.currentTarget.dataset.auView); },
         'click [data-au-refresh]': function () { this.load(); },
         'change [data-au-dimension]': function (e) { this.state.dimension = e.currentTarget.value; this.state.offset = 0; this.load(); },
@@ -27,7 +28,21 @@ export default class extends MainView {
         this.format = new Format(this.getPreferences().get('language') || this.getConfig().get('language') || 'en_US');
         this.requestVersion = 0;
         this.on('remove', () => { this.disposed = true; this.requestVersion++; });
+        this.on('render remove', () => {
+            this.$monthInput?.datepicker('destroy');
+            this.$monthInput = null;
+        });
         this.wait(this.bootstrap());
+    }
+
+    afterRender() {
+        if (this.loading || !this.context?.currentMonth) return;
+        this.$monthInput = this.$el.find('[data-au-month]');
+        new Datepicker(this.$monthInput.get(0), {
+            format: 'YYYY-MM', date: this.state.month,
+            weekStart: this.getDateTime().weekStart,
+            startDate: new Date(2000, 0, 1),
+        });
     }
 
     t(key) {
@@ -99,6 +114,15 @@ export default class extends MainView {
         this.state.filterLabels = {};
         this.payload = null;
         this.load();
+    }
+
+    selectMonth(value) {
+        if (this.loading || this.disposed || value === this.state.month) return;
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value) || value < '2000-01' || value > this.context.currentMonth) {
+            this.$monthInput.datepicker('update', this.state.month);
+            return;
+        }
+        this.changeContext('month', value);
     }
 
     selectView(view) {

@@ -57,6 +57,7 @@ class ServiceTest extends TestCase
             ['id' => '2', 'tenantId' => 'a', 'runAt' => '2026-08-02 10:00:00', 'kind' => 'private-mention', 'conversationId' => 'c'],
             ['id' => '3', 'tenantId' => 'foreign', 'runAt' => '2026-08-02 10:00:00', 'kind' => 'customer-message', 'conversationId' => 'secret'],
             ['id' => '4', 'tenantId' => 'a', 'runAt' => '2026-08-02 11:00:00', 'kind' => 'private-mention', 'conversationId' => 'c', 'runOutcome' => 'failed'],
+            ['id' => '5', 'tenantId' => 'a', 'runAt' => '2026-08-02 12:00:00', 'kind' => 'private-mention', 'conversationId' => 'c', 'billingWaived' => true],
         ];
         $data = [
             'ChatwootAiAgentRun' => $runRows,
@@ -101,8 +102,9 @@ class ServiceTest extends TestCase
         $currency->method('getDefaultCurrency')->willReturn('BRL');
         $service = new Service($access, $em, $config, new TenantRateLookup($em, $currency), new Ledger(), new Dataset(), $this->createMock(Projection::class));
         $response = $service->summary(['tenantId' => 'a', 'month' => '2026-08', 'view' => 'breakdown', 'dimension' => 'kind', 'from' => '2026-08-02']);
-        $this->assertSame(3, $response['usage']['runs']);
-        $this->assertSame(2, $response['filteredUsage']['runs']);
+        $this->assertSame(4, $response['usage']['runs']);
+        $this->assertSame(3, $response['filteredUsage']['runs']);
+        $this->assertSame(1, $response['usage']['waivedRuns']);
         $this->assertSame(1, $response['filteredUsage']['failedRuns']);
         $this->assertSame(1, $response['breakdown']['list'][0]['failedRuns']);
         $this->assertSame(1, $response['billing']['covered']);

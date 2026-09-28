@@ -56,7 +56,7 @@ class Dataset
     public function stats(array $runs): array
     {
         $conversations = $opportunities = [];
-        $metered = $unassigned = $failed = 0;
+        $metered = $unassigned = $failed = $waived = $pending = 0;
         foreach ($runs as $run) {
             if ($run['conversationId'] ?? null) {
                 $conversations[$run['conversationId']] = true;
@@ -67,10 +67,13 @@ class Dataset
             $metered += (int) (($run['usageMetricsVersion'] ?? null) === 1);
             $unassigned += (int) (($run['groupKey'] ?? null) === null);
             $failed += (int) (($run['runOutcome'] ?? null) === 'failed');
+            $waived += (int) (Ledger::exemption($run) === 'waived');
+            $pending += (int) (($run['groupKey'] ?? null) === null && Ledger::exemption($run) === null);
         }
         return [
             'runs' => count($runs), 'conversations' => count($conversations), 'opportunities' => count($opportunities),
             'meteredRuns' => $metered, 'unassignedRuns' => $unassigned, 'failedRuns' => $failed,
+            'waivedRuns' => $waived, 'pendingRuns' => $pending,
         ];
     }
 
@@ -87,9 +90,10 @@ class Dataset
         foreach ($runs as $run) {
             $keys = $dimension === 'action' ? (self::actions($run) ?: ['']) : [(string) ($run[$field] ?? '')];
             foreach ($keys as $key) {
-                $buckets[$key] ??= ['key' => $key, 'runs' => 0, 'failedRuns' => 0, 'days' => 0, 'grains' => []];
+                $buckets[$key] ??= ['key' => $key, 'runs' => 0, 'failedRuns' => 0, 'exemptRuns' => 0, 'days' => 0, 'grains' => []];
                 $buckets[$key]['runs']++;
                 $buckets[$key]['failedRuns'] += (int) (($run['runOutcome'] ?? null) === 'failed');
+                $buckets[$key]['exemptRuns'] += (int) (Ledger::exemption($run) !== null);
                 $buckets[$key]['days'] |= 1 << ((int) substr($run['day'], -2) - 1);
             }
         }
@@ -100,7 +104,7 @@ class Dataset
         if (in_array($dimension, ['conversation', 'opportunity'], true)) {
             foreach ($runs as $run) {
                 $key = (string) ($run[$field] ?? '');
-                if (isset($buckets[$key]) && $run['groupKey'] !== null && ($run['runOutcome'] ?? null) !== 'failed') {
+                if (isset($buckets[$key]) && $run['groupKey'] !== null && Ledger::exemption($run) === null) {
                     $grains = &$buckets[$key]['grains'];
                     $grains[$run['groupKey']] = ($grains[$run['groupKey']] ?? 0) + 1;
                     unset($grains);
@@ -124,7 +128,7 @@ class Dataset
                 'key' => $bucket['key'], 'runs' => $bucket['runs'], 'failedRuns' => $bucket['failedRuns'],
                 'days' => substr_count(decbin($bucket['days']), '1'),
                 'share' => count($runs) ? round(100 * $bucket['runs'] / count($runs), 1) : 0,
-                'billing' => $attributable && ($bucket['grains'] || $bucket['failedRuns'] === $bucket['runs']) ? $amounts : null,
+                'billing' => $attributable && ($bucket['grains'] || $bucket['exemptRuns'] === $bucket['runs']) ? $amounts : null,
             ];
         }
         return ['dimension' => $dimension, 'total' => $total, 'offset' => $offset, 'list' => $rows];

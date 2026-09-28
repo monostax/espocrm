@@ -455,7 +455,7 @@ class CustomNavbarSiteView extends NavbarSiteView {
      * @return {boolean}
      */
     shouldShowConfigSelector() {
-        if (!this.isSide()) {
+        if (!this.isSide() || document.documentElement.classList.contains("is-embedded")) {
             return false;
         }
 

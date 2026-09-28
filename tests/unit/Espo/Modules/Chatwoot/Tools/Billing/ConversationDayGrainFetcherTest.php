@@ -35,7 +35,7 @@ class ConversationDayGrainFetcherTest extends TestCase
         $pdo->sqliteCreateFunction('DATE_FORMAT', static fn ($date, $format) => substr($date, 0, 10));
         $pdo->sqliteCreateFunction('JSON_UNQUOTE', static fn ($value) => $value);
         $pdo->exec('CREATE TABLE chatwoot_ai_agent_run (id TEXT, deleted INTEGER DEFAULT 0, kind TEXT,
-            conversation_id TEXT, opportunity_id TEXT, tenant_id TEXT, run_at TEXT, model_usage TEXT)');
+            conversation_id TEXT, opportunity_id TEXT, tenant_id TEXT, run_at TEXT, model_usage TEXT, billing_waived INTEGER DEFAULT 0)');
         $insert = $pdo->prepare('INSERT INTO chatwoot_ai_agent_run
             (id, kind, conversation_id, opportunity_id, tenant_id, run_at, model_usage) VALUES (?, ?, ?, ?, ?, ?, ?)');
         foreach ([
@@ -51,6 +51,9 @@ class ConversationDayGrainFetcherTest extends TestCase
         }
         $insert->execute(['failed-opp', 'opportunity-mention', null, 'same-id', 'tenant', '2026-09-18 03:00:00', '{"run":{"outcome":"failed"}}']);
         $insert->execute(['failed-only', 'customer-message', 'failed-only', null, 'tenant', '2026-09-18 03:00:00', '{"run":{"outcome":"failed"}}']);
+        $insert->execute(['waived', 'customer-message', 'same-id', null, 'tenant', '2026-09-18 03:00:00', null]);
+        $pdo->exec("UPDATE chatwoot_ai_agent_run SET billing_waived = 1 WHERE id = 'waived'");
+        $pdo->exec("UPDATE chatwoot_ai_agent_run SET billing_waived = NULL WHERE id = 'conv-run'");
 
         $attributes = [];
         foreach (['id', 'kind', 'conversationId', 'opportunityId', 'tenantId'] as $name) {
@@ -58,6 +61,7 @@ class ConversationDayGrainFetcherTest extends TestCase
         }
         $attributes['runAt'] = ['type' => 'datetime'];
         $attributes['deleted'] = ['type' => 'bool'];
+        $attributes['billingWaived'] = ['type' => 'bool'];
         $attributes['modelUsage'] = ['type' => 'jsonObject'];
         $entityMetadata = json_decode(file_get_contents('custom/Espo/Modules/Chatwoot/Resources/metadata/entityDefs/ChatwootAiAgentRun.json'), true);
         $attributes['runOutcome'] = array_intersect_key($entityMetadata['fields']['runOutcome'], array_flip(['type', 'notStorable', 'select']));

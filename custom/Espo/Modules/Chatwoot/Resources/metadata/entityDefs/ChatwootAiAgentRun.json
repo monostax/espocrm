@@ -63,6 +63,10 @@
             "type": "int",
             "readOnly": true
         },
+        "sourceConversationId": {"type": "int", "readOnly": true, "utility": true},
+        "billingWaived": {"type": "bool", "default": false, "readOnly": true, "directAccessDisabled": true},
+        "billingWaiverReason": {"type": "varchar", "maxLength": 255, "readOnly": true, "directAccessDisabled": true},
+        "billingWaivedAt": {"type": "datetime", "readOnly": true, "directAccessDisabled": true},
         "triggerMessageAt": {
             "type": "datetime",
             "readOnly": true,
