@@ -48,19 +48,6 @@
         ]
     },
     {
-        "label": "Custom Fields",
-        "name": "customFieldsPanel",
-        "rows": [
-            [
-                {
-                    "name": "customFields",
-                    "fullWidth": true,
-                    "noLabel": true
-                }
-            ]
-        ]
-    },
-    {
         "tabBreak": true,
         "tabLabel": "$Contacts",
         "name": "contactsTab",

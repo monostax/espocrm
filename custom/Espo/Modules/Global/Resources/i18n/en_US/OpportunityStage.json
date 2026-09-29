@@ -1,5 +1,6 @@
 {
     "fields": {
+        "requiredCustomFieldKeys": "Required fields to enter this stage",
         "targetTimeSeconds": "Target Time",
         "name": "Name",
         "order": "Order",
@@ -27,6 +28,7 @@
         "Create OpportunityStage": "Create Opportunity Stage"
     },
     "tooltips": {
+        "requiredCustomFieldKeys": "Opportunity custom fields that must be filled before entering this stage, including creation, backward moves and Won/Lost. Leave empty for no additional requirements.",
         "targetTimeSeconds": "Calendar time allowed for each visit. Changes apply to future entries only. Won/Lost stages are not timed. Leave empty for no target.",
         "order": "Display order in dropdowns (lower numbers appear first)",
         "probability": "Expected probability of closing at this stage (0-100%)",

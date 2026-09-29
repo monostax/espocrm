@@ -34,6 +34,7 @@
         "Documents": "Documents"
     },
     "labels": {
+        "Complete required fields": "Complete required fields",
         "Stage History": "Stage History",
         "Timing stopped": "Timing stopped — opportunity closed",
         "Timing unavailable": "Timing not started",
@@ -102,6 +103,9 @@
         "customFields": "Tenant-defined custom attributes. Values follow this record's ACL."
     },
     "messages": {
+        "stageRequirementsIntro": "Complete these fields to enter:",
+        "stageRequirementsConfiguration": "A required field is unavailable. Update the destination stage's required-field configuration.",
+        "stageRequirementsForbidden": "Required fields are missing and you do not have permission to edit them. Ask someone with Opportunity custom-field access to complete them.",
         "stageDeprecated": "The enum 'Stage' field has been replaced with a link to OpportunityStage. This allows custom stages with different probabilities and styles.",
         "selectFunnelFirst": "Please select a Funnel first."
     },

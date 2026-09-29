@@ -1,5 +1,6 @@
 {
     "fields": {
+        "requiredCustomFieldKeys": "Campos obrigatórios para entrar neste estágio",
         "targetTimeSeconds": "Tempo Alvo"
     },
     "labels": {
@@ -9,6 +10,7 @@
         "Empty means no target": "Deixe os três campos vazios para não definir um tempo alvo."
     },
     "tooltips": {
+        "requiredCustomFieldKeys": "Campos personalizados da oportunidade que devem ser preenchidos antes de entrar neste estágio, incluindo criação, retorno e ganho/perda. Deixe vazio para não exigir campos adicionais.",
         "targetTimeSeconds": "Tempo corrido permitido por visita. Alterações valem apenas para novas entradas. Estágios ganhos/perdidos não são cronometrados. Deixe vazio para não definir um alvo."
     },
     "messages": {

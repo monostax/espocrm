@@ -12,6 +12,8 @@ use Espo\Core\Utils\DateTime\Clock;
 use Espo\Modules\Global\Hooks\Opportunity\TrackStageTime;
 use Espo\Modules\Global\Tools\Opportunity\StageHistory;
 use Espo\Modules\Global\Tools\Opportunity\StageTiming;
+use Espo\Modules\Global\Tools\Opportunity\StageRequirements;
+use Espo\Modules\Global\Tools\CustomField\MetaProvider;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityCollection;
@@ -88,9 +90,19 @@ class StageTimingTest extends TestCase
         $this->clock->method('now')->willReturnCallback(fn () => new DateTimeImmutable($this->now . 'Z'));
         $this->timing = new StageTiming($this->em, $this->clock);
         $hook = new TrackStageTime($this->timing);
+        $meta = $this->createMock(MetaProvider::class);
+        $meta->method('getGroupedMeta')->willReturn(['groups' => [[
+            'label' => 'Qualification', 'fields' => [
+                ['valueKey' => 'budget', 'label' => 'Budget', 'type' => 'int', 'min' => 0],
+                ['valueKey' => 'approved', 'label' => 'Approved', 'type' => 'bool'],
+            ],
+        ]]]);
+        $requirements = new StageRequirements($this->em, $meta, $this->createMock(Acl::class));
         $mediator = $this->createMock(HookMediator::class);
-        $mediator->method('beforeSave')->willReturnCallback(fn ($entity, $options) =>
-            $hook->beforeSave($entity, SaveOptions::fromAssoc($options)));
+        $mediator->method('beforeSave')->willReturnCallback(function ($entity, $options) use ($hook, $requirements): void {
+            $requirements->validate($entity);
+            $hook->beforeSave($entity, SaveOptions::fromAssoc($options));
+        });
         $mediator->method('afterSave')->willReturnCallback(fn ($entity, $options) =>
             $hook->afterSave($entity, SaveOptions::fromAssoc($options)));
         $mapper = $this->createMock(RDBMapper::class);
@@ -103,9 +115,9 @@ class StageTimingTest extends TestCase
         $this->repository = new class('Opportunity', $this->em, $this->createMock(EntityFactory::class), $mediator) extends RDBRepository {
             protected bool $transactionalSave = true;
         };
-        $this->store($this->entity('Funnel', ['id' => 'funnel', 'name' => 'Sales']));
+        $this->store($this->entity('Funnel', ['id' => 'funnel', 'name' => 'Sales', 'tenantId' => 'tenant']));
         foreach (['a' => 3600, 'b' => 7200, 'closed' => null] as $id => $target) {
-            $this->store($this->entity('OpportunityStage', ['id' => $id, 'name' => strtoupper($id), 'targetTimeSeconds' => $target]));
+            $this->store($this->entity('OpportunityStage', ['id' => $id, 'name' => strtoupper($id), 'funnelId' => 'funnel', 'targetTimeSeconds' => $target]));
         }
     }
 
@@ -283,19 +295,112 @@ class StageTimingTest extends TestCase
     private function opportunity(bool $new = false): Entity
     {
         return $this->entity('Opportunity', [
-            'id' => $new ? null : 'opportunity', 'name' => 'Deal', 'funnelId' => 'funnel',
+            'id' => $new ? null : 'opportunity', 'name' => 'Deal', 'funnelId' => 'funnel', 'tenantId' => 'tenant',
             'opportunityStageId' => 'a', 'status' => 'Open', 'currentStageVisitId' => null,
         ], $new);
+    }
+
+    public function testRequirementsRejectCreationAndTransitionsWithoutWritingHistory(): void
+    {
+        $stage = $this->load('OpportunityStage', 'b');
+        $stage->set('requiredCustomFieldKeys', ['budget', 'approved']);
+        $this->store($stage);
+        $entity = $this->opportunity(true);
+        $entity->set('opportunityStageId', 'b');
+        try {
+            $this->save($entity);
+            $this->fail('Creation must require the destination fields.');
+        } catch (\Espo\Core\Exceptions\ConflictSilent $e) {
+            $this->assertCount(2, json_decode($e->getBody(), true)['fields']);
+            $this->assertCount(0, $this->all('OpportunityStageHistory'));
+            $this->assertCount(0, $this->all('Opportunity'));
+        }
+        $entity = $this->opportunity(true);
+        $this->save($entity);
+        $visit = $entity->get('currentStageVisitId');
+        $entity->set('opportunityStageId', 'b');
+        try {
+            $this->save($entity);
+            $this->fail('Transition must require the destination fields.');
+        } catch (\Espo\Core\Exceptions\ConflictSilent) {
+            $this->assertSame('a', $this->load('Opportunity', $entity->getId())->get('opportunityStageId'));
+            $this->assertNull($this->load('OpportunityStageHistory', $visit)->get('exitedAt'));
+            $this->assertCount(1, $this->all('OpportunityStageHistory'));
+        }
+        $entity->set('customFields', (object) ['budget' => 0, 'approved' => false]);
+        $this->save($entity);
+        $this->assertSame('b', $this->load('Opportunity', $entity->getId())->get('opportunityStageId'));
+        $this->assertCount(2, $this->all('OpportunityStageHistory'));
+        // Requirements apply on entry; unrelated edits do not retroactively gate records.
+        $entity->set('customFields', (object) []);
+        $this->save($entity);
+        $entity->set('status', 'Won');
+        $this->expectException(\Espo\Core\Exceptions\ConflictSilent::class);
+        $this->save($entity);
+    }
+
+    public function testRequirementsUseCurrentStoredValuesWhenTheBagWasNotSubmitted(): void
+    {
+        $stage = $this->load('OpportunityStage', 'b');
+        $stage->set('requiredCustomFieldKeys', ['budget']);
+        $this->store($stage);
+        $entity = $this->opportunity(true);
+        $entity->set('customFields', (object) ['budget' => 1]);
+        $this->save($entity);
+        $stale = $this->load('Opportunity', $entity->getId());
+        $entity->set('customFields', (object) []);
+        $this->save($entity);
+        $stale->set('opportunityStageId', 'b');
+        $this->expectException(\Espo\Core\Exceptions\ConflictSilent::class);
+        $this->save($stale);
+    }
+
+    public function testCompletionSnapshotRejectsConcurrentCustomFieldEdits(): void
+    {
+        $stage = $this->load('OpportunityStage', 'b');
+        $stage->set('requiredCustomFieldKeys', ['budget']);
+        $this->store($stage);
+        $entity = $this->opportunity(true);
+        $this->save($entity);
+        $entity->set('opportunityStageId', 'b');
+        $snapshot = null;
+        try {
+            $this->save($entity);
+        } catch (\Espo\Core\Exceptions\ConflictSilent $e) {
+            $snapshot = json_decode($e->getBody())->snapshot;
+        }
+        $this->assertNotNull($snapshot);
+        $concurrent = $this->load('Opportunity', $entity->getId());
+        $concurrent->set('customFields', (object) ['newValue' => 'keep']);
+        $this->save($concurrent);
+        $retry = $this->load('Opportunity', $entity->getId());
+        $retry->set([
+            'opportunityStageId' => 'b',
+            'stageRequirementsSnapshot' => $snapshot,
+            'customFields' => (object) ['budget' => 10],
+        ]);
+        try {
+            $this->save($retry);
+            $this->fail('A stale completion must not overwrite another edit.');
+        } catch (Conflict) {
+            $this->assertSame('a', $this->load('Opportunity', $entity->getId())->get('opportunityStageId'));
+            $this->assertSame('keep', $this->load('Opportunity', $entity->getId())->get('customFields')->newValue);
+            $this->assertCount(1, $this->all('OpportunityStageHistory'));
+        }
     }
 
     private function entity(string $type, array $data, bool $new = false): BaseEntity
     {
         $fields = [
+            'tenantId',
             'id', 'name', 'opportunityId', 'opportunityStageId', 'funnelId', 'status',
             'stageId', 'stageName', 'funnelName', 'enteredAt', 'exitedAt', 'dueAt', 'kind',
             ...StageTiming::CACHE_FIELDS,
         ];
         $attributes = array_fill_keys($fields, ['type' => 'varchar']);
+        $attributes['customFields'] = ['type' => 'jsonObject'];
+        $attributes['stageRequirementsSnapshot'] = ['type' => 'jsonObject'];
+        $attributes['requiredCustomFieldKeys'] = ['type' => 'jsonArray'];
         foreach (['sequence', 'durationSeconds', 'targetTimeSeconds', 'stageTargetTimeSeconds'] as $field) {
             $attributes[$field] = ['type' => 'int'];
         }

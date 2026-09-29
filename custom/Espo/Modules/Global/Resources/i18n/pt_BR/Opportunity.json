@@ -34,6 +34,7 @@
         "Documents": "Documentos"
     },
     "labels": {
+        "Complete required fields": "Preencha os campos obrigatórios",
         "Stage History": "Histórico de Estágios",
         "Timing stopped": "Cronômetro parado — oportunidade encerrada",
         "Timing unavailable": "Rastreamento não iniciado",
@@ -102,6 +103,9 @@
         "customFields": "Atributos personalizados do tenant. Os valores seguem o ACL do registro."
     },
     "messages": {
+        "stageRequirementsIntro": "Preencha estes campos para entrar em:",
+        "stageRequirementsConfiguration": "Um campo obrigatório está indisponível. Atualize a configuração de campos obrigatórios do estágio de destino.",
+        "stageRequirementsForbidden": "Faltam campos obrigatórios e você não tem permissão para editá-los. Peça a alguém com acesso aos campos personalizados da oportunidade para preenchê-los.",
         "stageDeprecated": "O campo enum 'Estágio' foi substituído por um link para OpportunityStage. Isso permite estágios personalizados com diferentes probabilidades e estilos.",
         "selectFunnelFirst": "Por favor, selecione um Funil primeiro."
     },

@@ -39,6 +39,10 @@
     "sidePanels": {
         "detail": [
             {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            },
+            {
                 "name": "activities",
                 "reference": "activities",
                 "view": "crm:views/opportunity/record/panels/activities"
@@ -62,6 +66,10 @@
         ],
         "detailSmall": [
             {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            },
+            {
                 "name": "activities",
                 "reference": "activities",
                 "view": "crm:views/opportunity/record/panels/activities"
@@ -74,6 +82,18 @@
                 "name": "tasks",
                 "reference": "tasks",
                 "disabled": true
+            }
+        ],
+        "edit": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ],
+        "editSmall": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
             }
         ]
     }

@@ -2,6 +2,7 @@
     {
         "label": "Overview",
         "rows": [
+            [{"name": "requiredCustomFieldKeys", "fullWidth": true}],
             [
                 {
                     "name": "name"

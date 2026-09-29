@@ -1,6 +1,17 @@
 {
     "transactionalSave": true,
     "fields": {
+        "stageRequirementsSnapshot": {
+            "type": "jsonObject",
+            "notStorable": true,
+            "utility": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "stageTrackingStartedAt": {
             "type": "datetime",
             "readOnly": true,

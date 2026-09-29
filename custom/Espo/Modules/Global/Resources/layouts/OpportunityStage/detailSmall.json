@@ -1,6 +1,7 @@
 [
     {
         "rows": [
+            [{"name": "requiredCustomFieldKeys", "fullWidth": true}],
             [{"name": "targetTimeSeconds", "fullWidth": true}],
             [
                 {

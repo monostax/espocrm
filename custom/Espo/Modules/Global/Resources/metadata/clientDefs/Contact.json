@@ -9,6 +9,10 @@
     "sidePanels": {
         "detail": [
             {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            },
+            {
                 "name": "contactConversations",
                 "label": "Conversations",
                 "view": "chatwoot:views/contact/panels/conversations",
@@ -37,6 +41,10 @@
         ],
         "detailSmall": [
             {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            },
+            {
                 "name": "activities",
                 "view": "global:views/record/panels/activities",
                 "label": "Activities",
@@ -54,6 +62,18 @@
                 "name": "tasks",
                 "reference": "tasks",
                 "disabled": true
+            }
+        ],
+        "edit": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ],
+        "editSmall": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
             }
         ]
     }

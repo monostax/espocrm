@@ -1,5 +1,15 @@
 {
+    "transactionalSave": true,
     "fields": {
+        "requiredCustomFieldKeys": {
+            "type": "array",
+            "view": "global:views/opportunity-stage/fields/required-custom-fields",
+            "default": [],
+            "tooltip": true,
+            "audited": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
         "targetTimeSeconds": {
             "type": "int",
             "min": 60,

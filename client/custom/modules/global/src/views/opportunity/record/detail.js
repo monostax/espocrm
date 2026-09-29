@@ -10,12 +10,14 @@
 
 define("global:views/opportunity/record/detail", [
     "global:views/record/detail",
-], function (Dep) {
+    "global:helpers/opportunity-stage-requirements",
+], function (Dep, StageRequirements) {
     return Dep.extend({
         mandatorySelectAttributeList: ["opportunityStageName", "opportunityStageStyle"],
 
         setup: function () {
             Dep.prototype.setup.call(this);
+            StageRequirements.install(this);
 
             // Re-render opportunityStage field after model syncs (for detailSmall modal)
             this.listenTo(this.model, 'sync', () => {

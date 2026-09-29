@@ -13,7 +13,8 @@
  */
 define("global:views/opportunity/fields/opportunity-stage", [
     "views/fields/link",
-], function (Dep) {
+    "global:helpers/opportunity-stage-requirements",
+], function (Dep, StageRequirements) {
     return Dep.extend({
         selectPrimaryFilterName: "active",
 
@@ -40,6 +41,7 @@ define("global:views/opportunity/fields/opportunity-stage", [
 
         setup: function () {
             Dep.prototype.setup.call(this);
+            StageRequirements.install(this);
 
             // Listen for funnel changes to update the stage filter
             this.listenTo(this.model, "change:funnelId", () => {

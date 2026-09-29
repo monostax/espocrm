@@ -11,7 +11,8 @@
 define("global:views/opportunity/record/kanban", [
     "crm:views/opportunity/record/kanban",
     "helpers/record-icon",
-], function (Dep, RecordIcon) {
+    "global:helpers/opportunity-stage-requirements",
+], function (Dep, RecordIcon, StageRequirements) {
     return Dep.extend({
         statusField: "opportunityStageId",
         itemViewName: "global:views/opportunity/record/kanban-item",
@@ -56,6 +57,17 @@ define("global:views/opportunity/record/kanban", [
                 null;
 
             Dep.prototype.setup.call(this);
+            const installRequirements = () => this.collection.models.forEach(model => { StageRequirements.install(this, model); });
+            this.listenTo(this.collection, 'sync reset add', installRequirements);
+            installRequirements();
+            this.groupChangeSaveHandler = model => {
+                const previous = model.previous(this.statusField);
+                return model.save({ opportunityStageId: model.get(this.statusField) }, { patch: true })
+                    .catch(error => {
+                        model.set(this.statusField, previous);
+                        throw error;
+                    });
+            };
 
             RecordIcon.listen(this, (scope, record) => {
                 if (scope === 'Funnel' && record.id === this.currentFunnelId) {
@@ -471,10 +483,14 @@ define("global:views/opportunity/record/kanban", [
 
                 model.save(attributes, {
                     patch: true,
+                    wait: true,
                     success: () => {
                         this.fetchKanbanAggregates();
                         this.reRender();
                     },
+                }).catch(() => {
+                    model.set(this.statusField, currentGroup);
+                    this.reRender();
                 });
             }
         },
@@ -513,16 +529,7 @@ define("global:views/opportunity/record/kanban", [
 
             attributes["opportunityStageId"] = group;
 
-            Espo.Ajax.getRequest("OpportunityStage/" + group).then((stage) => {
-                if (stage) {
-                    if (stage.probability !== undefined) {
-                        attributes["probability"] = stage.probability;
-                    }
-                    if (stage.name) {
-                        attributes["opportunityStageName"] = stage.name;
-                    }
-                }
-            });
+            // Probability, status and display attributes are returned by the server.
         },
     });
 });

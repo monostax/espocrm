@@ -9,6 +9,10 @@
     "sidePanels": {
         "detail": [
             {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            },
+            {
                 "name": "activities",
                 "view": "global:views/record/panels/activities",
                 "label": "Activities",
@@ -30,6 +34,10 @@
         ],
         "detailSmall": [
             {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            },
+            {
                 "name": "activities",
                 "view": "global:views/record/panels/activities",
                 "label": "Activities",
@@ -47,6 +55,18 @@
                 "name": "tasks",
                 "reference": "tasks",
                 "disabled": true
+            }
+        ],
+        "edit": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ],
+        "editSmall": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
             }
         ]
     }

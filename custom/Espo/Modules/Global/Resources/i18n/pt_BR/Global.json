@@ -63,6 +63,7 @@
         "CustomFieldDef": "Campos Personalizados"
     },
     "labels": {
+        "Custom Fields": "Campos Personalizados",
         "Home": "Dashboard",
         "Create {entityType}": "Cadastrar {entityTypeTranslated}",
         "Create": "Cadastrar",
