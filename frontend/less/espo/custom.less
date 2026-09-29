@@ -4947,8 +4947,9 @@ html.is-chatwoot-activities {
     }
 
     // These embeds hide the header, so no side navbar space is needed.
-    body > #content.content {
-        padding-inline: var(--container-padding);
+    body > #content.content,
+    body:not(.has-navbar) > #content.content {
+        padding-inline: 16px;
     }
 
     #content .list-sticky-bar {

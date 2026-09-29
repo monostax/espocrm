@@ -91,7 +91,7 @@ class OpportunityActivitySummary
         array $opportunities = [],
     ): array {
         $today = $now->format('Y-m-d');
-        $tomorrow = $now->modify('+1 day')->format('Y-m-d');
+        $nextSevenDaysEnd = $now->modify('+7 days')->format('Y-m-d');
         $opportunitiesById = array_column($opportunities, null, 'id');
         $opportunityIds = array_keys(array_filter(
             $opportunitiesById,
@@ -116,7 +116,7 @@ class OpportunityActivitySummary
                 $overdue => 'overdue',
                 $date === null => 'noDate',
                 $date === $today => 'today',
-                $date === $tomorrow => 'tomorrow',
+                $date <= $nextSevenDaysEnd => 'tomorrow',
                 default => 'upcoming',
             };
             $groups[$key][$row['parentId']] = $row['parentId'];

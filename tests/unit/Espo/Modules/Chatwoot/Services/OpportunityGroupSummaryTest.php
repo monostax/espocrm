@@ -440,6 +440,50 @@ class OpportunityGroupSummaryTest extends TestCase
         }
     }
 
+    public function testNextSevenDaysAndFutureBoundariesMatchSummaryAndSqlAcrossDst(): void
+    {
+        $now = new DateTimeImmutable('2026-03-07 12:00:00', new \DateTimeZone('America/New_York'));
+        $opportunities = [
+            ['id' => 'a', 'nextActionId' => 'task', 'nextActionType' => 'Task'],
+            ['id' => 'b', 'nextActionId' => 'call', 'nextActionType' => 'Call'],
+            ['id' => 'c', 'nextActionId' => 'meeting', 'nextActionType' => 'Meeting'],
+        ];
+        foreach ($opportunities as $opportunity) {
+            $table = strtolower($opportunity['nextActionType']);
+            $this->pdo->prepare("INSERT INTO $table (id, parent_id, parent_type, readable) VALUES (?, ?, 'Opportunity', 1)")
+                ->execute([$opportunity['nextActionId'], $opportunity['id']]);
+            $this->pdo->prepare('UPDATE opportunity SET next_action_id = ?, next_action_type = ? WHERE id = ?')
+                ->execute([$opportunity['nextActionId'], $opportunity['nextActionType'], $opportunity['id']]);
+        }
+        $scope = SelectBuilder::create()->from('Opportunity')->select(['id'])->where(['id' => ['a', 'b', 'c']])->build();
+        $query = SelectBuilder::create()->from('Opportunity')->where(['id=s' => $scope]);
+        $bucket = $this->buckets->apply($query, $scope, $now);
+        $query->select(['id'])->select($bucket, 'bucket')->order('id');
+
+        foreach ([
+            ['2026-03-07', '2026-03-08 04:59:59', 'today'],
+            ['2026-03-08', '2026-03-08 05:00:00', 'tomorrow'],
+            ['2026-03-10', '2026-03-10 16:00:00', 'tomorrow'],
+            ['2026-03-14', '2026-03-15 03:59:59', 'tomorrow'],
+            ['2026-03-15', '2026-03-15 04:00:00', 'upcoming'],
+        ] as [$date, $timestamp, $expected]) {
+            $this->pdo->prepare('UPDATE task SET date_end_date = ?')->execute([$date]);
+            $this->pdo->prepare('UPDATE call SET date_end = ?')->execute([$timestamp]);
+            $this->pdo->prepare('UPDATE meeting SET date_end = ?')->execute([$timestamp]);
+            $summary = OpportunityActivitySummary::summarize([
+                ['id' => 'task', 'parentId' => 'a', 'entityType' => 'Task', 'dateEndDate' => $date],
+                ['id' => 'call', 'parentId' => 'b', 'entityType' => 'Call', 'dateEnd' => $timestamp],
+                ['id' => 'meeting', 'parentId' => 'c', 'entityType' => 'Meeting', 'dateEnd' => $timestamp],
+            ], $now, true, $opportunities);
+            self::assertSame(['count' => 3, 'opportunityIds' => ['a', 'b', 'c']], $summary[$expected]);
+            self::assertSame(3, array_sum(array_column($summary, 'count')));
+            foreach ([$this->mysql, $this->postgres] as $composer) {
+                $rows = $this->pdo->query($composer->composeSelect($query->build()))->fetchAll(PDO::FETCH_KEY_PAIR);
+                self::assertSame(['a' => $expected, 'b' => $expected, 'c' => $expected], $rows);
+            }
+        }
+    }
+
     public function testActivitySummaryAndFilterStayInOneAggregateQuery(): void
     {
         $this->pdo->exec("INSERT INTO task (id, parent_id, parent_type, date_end_date, readable) VALUES

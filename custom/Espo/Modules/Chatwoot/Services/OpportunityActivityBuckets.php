@@ -16,6 +16,7 @@ use Espo\ORM\Query\SelectBuilder;
 /** SQL equivalent of OpportunityActivitySummary::summarize, without exporting IDs or activity rows. */
 class OpportunityActivityBuckets
 {
+    // Keep the legacy `tomorrow` query key for the next-seven-days bucket.
     public const KEYS = ['overdue', 'noNextAction', 'today', 'tomorrow', 'upcoming', 'noDate'];
 
     public function __construct(private SelectBuilderFactory $selectBuilderFactory, private Acl $acl) {}
@@ -67,13 +68,13 @@ class OpportunityActivityBuckets
     {
         $utc = new DateTimeZone('UTC');
         $tomorrow = $now->setTime(0, 0)->modify('+1 day');
-        $dayAfter = $tomorrow->modify('+1 day');
+        $futureStart = $tomorrow->modify('+7 days');
         $timestamp = Expr::column('dateEnd');
         $rank = Expr::switch(
             Expr::isNull($timestamp), 5,
             Expr::less($timestamp, $now->setTimezone($utc)->format('Y-m-d H:i:s')), 0,
             Expr::less($timestamp, $tomorrow->setTimezone($utc)->format('Y-m-d H:i:s')), 2,
-            Expr::less($timestamp, $dayAfter->setTimezone($utc)->format('Y-m-d H:i:s')), 3,
+            Expr::less($timestamp, $futureStart->setTimezone($utc)->format('Y-m-d H:i:s')), 3,
             4,
         );
         if ($type === 'Call') {
@@ -85,7 +86,7 @@ class OpportunityActivityBuckets
             Expr::isNull($date), $rank,
             Expr::less($date, $now->format('Y-m-d')), 0,
             Expr::equal($date, $now->format('Y-m-d')), 2,
-            Expr::equal($date, $tomorrow->format('Y-m-d')), 3,
+            Expr::less($date, $futureStart->format('Y-m-d')), 3,
             4,
         );
     }
