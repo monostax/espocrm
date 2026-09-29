@@ -45,13 +45,6 @@
                 "order": 30,
                 "itemList": [
                     {
-                        "url": "#WhatsAppCampaign",
-                        "label": "WhatsApp Campaigns",
-                        "iconClass": "ti ti-send",
-                        "description": "whatsAppCampaigns",
-                        "roles": ["tenant", "tenant-admin"]
-                    },
-                    {
                         "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/canned-response/list",
                         "target": "_top",
                         "label": "Chat Canned Responses",

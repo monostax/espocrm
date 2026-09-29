@@ -15,22 +15,5 @@
                 ]
             }
         }
-    },
-    "conversations": {
-        "sections": {
-            "channels": {
-                "label": "Channels",
-                "order": 10,
-                "itemList": [
-                    {
-                        "url": "#Configurations/WhatsAppBusinessAccount",
-                        "label": "WhatsApp Accounts",
-                        "iconClass": "ti ti-brand-whatsapp",
-                        "description": "whatsAppBusinessAccounts",
-                        "roles": ["tenant", "tenant-admin"]
-                    }
-                ]
-            }
-        }
     }
 }
