@@ -1,0 +1,13 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "required": true, "maxLength": 200 },
+        "instructions": { "type": "text" },
+        "references": { "type": "jsonArray", "default": [] },
+        "kind": { "type": "enum", "options": ["Check", "Task"], "default": "Check" },
+        "position": { "type": "int" },
+        "playbook": { "type": "link" }
+    },
+    "links": { "playbook": { "type": "belongsTo", "entity": "Playbook" } },
+    "collection": { "orderBy": "position", "order": "asc" },
+    "indexes": { "playbookPosition": { "columns": ["playbookId", "position", "deleted"] } }
+}

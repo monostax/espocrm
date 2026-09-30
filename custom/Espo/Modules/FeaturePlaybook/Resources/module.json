@@ -1,0 +1,7 @@
+{
+    "order": 90,
+    "version": "1.0.0",
+    "name": "FeaturePlaybook",
+    "description": "Guided opportunity checklists with optional CRM Tasks.",
+    "jsTranspiled": true
+}

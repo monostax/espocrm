@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "required": true, "maxLength": 200 },
+        "status": { "type": "enum", "options": ["Draft", "Published", "Archived"], "default": "Draft" },
+        "revision": { "type": "int", "default": 1 },
+        "tenant": { "type": "link" },
+        "teams": { "type": "linkMultiple" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true },
+        "modifiedBy": { "type": "link", "readOnly": true }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "teams": { "type": "hasMany", "entity": "Team", "relationName": "entityTeam" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "indexes": { "tenantStatus": { "columns": ["tenantId", "status", "deleted"] } }
+}

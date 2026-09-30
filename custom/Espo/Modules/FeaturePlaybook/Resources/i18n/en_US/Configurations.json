@@ -1,0 +1,15 @@
+{
+    "labels": {
+        "Playbooks": "Playbooks",
+        "Playbook Templates": "Playbook templates",
+        "Playbook Runs": "Playbook runs"
+    },
+    "descriptions": {
+        "playbookTemplates": "Create, publish and archive reusable opportunity checklists.",
+        "playbookRuns": "Apply playbooks and track checklist progress and linked Tasks on an opportunity."
+    },
+    "keywords": {
+        "playbookTemplates": "playbook,checklist,template,process,qualification",
+        "playbookRuns": "playbook,checklist,execution,progress,task,opportunity"
+    }
+}

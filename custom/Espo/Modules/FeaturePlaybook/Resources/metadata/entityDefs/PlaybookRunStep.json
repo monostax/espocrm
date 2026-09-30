@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "required": true, "maxLength": 200 },
+        "instructions": { "type": "text" },
+        "references": { "type": "jsonArray", "default": [] },
+        "kind": { "type": "enum", "options": ["Check", "Task"], "default": "Check" },
+        "position": { "type": "int" },
+        "status": { "type": "enum", "options": ["Pending", "Completed", "Skipped", "Cancelled"], "default": "Pending" },
+        "run": { "type": "link" },
+        "task": { "type": "link" },
+        "completedAt": { "type": "datetime" },
+        "completedBy": { "type": "link" }
+    },
+    "links": {
+        "run": { "type": "belongsTo", "entity": "PlaybookRun" },
+        "task": { "type": "belongsTo", "entity": "Task" },
+        "completedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "position", "order": "asc" },
+    "indexes": {
+        "runPosition": { "columns": ["runId", "position", "deleted"] },
+        "task": { "columns": ["taskId"], "unique": true }
+    }
+}

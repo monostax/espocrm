@@ -1,0 +1,4 @@
+{
+    "controller": "feature-playbook:controllers/manager",
+    "iconClass": "fas fa-list-check"
+}

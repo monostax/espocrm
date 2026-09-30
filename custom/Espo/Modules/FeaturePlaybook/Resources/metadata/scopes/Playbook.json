@@ -1,0 +1,10 @@
+{
+    "entity": true,
+    "object": false,
+    "tab": false,
+    "acl": "team",
+    "aclPortal": false,
+    "importable": false,
+    "customizable": false,
+    "module": "FeaturePlaybook"
+}

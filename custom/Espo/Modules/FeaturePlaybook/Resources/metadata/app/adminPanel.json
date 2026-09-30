@@ -1,0 +1,20 @@
+{
+    "playbooks": {
+        "label": "Playbooks",
+        "order": 31,
+        "itemList": [
+            {
+                "url": "#PlaybookManager/index/view=templates",
+                "label": "Playbook Templates",
+                "iconClass": "fas fa-list-check",
+                "description": "playbookTemplates"
+            },
+            {
+                "url": "#PlaybookManager/index/view=runs",
+                "label": "Playbook Runs",
+                "iconClass": "fas fa-tasks",
+                "description": "playbookRuns"
+            }
+        ]
+    }
+}

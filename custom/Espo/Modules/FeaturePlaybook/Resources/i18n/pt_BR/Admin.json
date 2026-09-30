@@ -1,0 +1,7 @@
+{
+    "labels": { "Playbooks": "Playbooks", "Playbook Templates": "Modelos de playbook", "Playbook Runs": "Execuções de playbook" },
+    "descriptions": {
+        "playbookTemplates": "Crie, publique e arquive checklists reutilizáveis para oportunidades.",
+        "playbookRuns": "Aplique playbooks e acompanhe o progresso de uma oportunidade."
+    }
+}

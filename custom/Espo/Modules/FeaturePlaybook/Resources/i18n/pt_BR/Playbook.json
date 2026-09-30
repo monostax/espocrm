@@ -1,0 +1,30 @@
+{
+    "labels": {
+        "templatesDescription": "Playbooks reutilizáveis deste espaço de trabalho. Alterações nos modelos afetam apenas novas execuções.",
+        "runsDescription": "Acompanhe a execução dos playbooks nas oportunidades. Abra uma oportunidade para trabalhar nos seus passos.",
+        "searchPlaybooks": "Buscar por nome…", "allStatuses": "Todos os status", "filterList": "Filtrar",
+        "filteredOpportunity": "Exibindo execuções da oportunidade selecionada.", "showAllRuns": "Ver todas as execuções",
+        "opportunity": "Oportunidade", "progress": "Progresso", "stepCount": "Passos", "owner": "Responsável",
+        "createdBy": "Criado por", "startedAt": "Início", "updatedAt": "Atualizado",
+        "emptyList": "Nenhum playbook corresponde a estes filtros.", "firstPage": "Primeira página", "nextPage": "Próxima página",
+        "listError": "Não foi possível carregar os playbooks. Atualize para tentar novamente.",
+        "manageTemplates": "Modelos de playbook", "manageRuns": "Execuções de playbook",
+        "selectOpportunity": "Selecionar oportunidade", "newTemplate": "Novo modelo",
+        "contextHint": "Selecione uma oportunidade para acessar os modelos da sua organização e equipe e gerenciar suas execuções.",
+        "snapshotHint": "Alterações valem apenas para novas execuções. Modelos publicados precisam de pelo menos uma etapa.",
+        "noTemplates": "Nenhum modelo disponível para esta oportunidade.",
+        "templateConflict": "Este modelo mudou. Feche o editor, atualize e abra novamente antes de salvar.",
+        "loading": "Carregando playbooks…", "status": "Status", "revision": "Revisão",
+        "stepTitle": "Título da etapa", "stepType": "Tipo de etapa", "moveUp": "Mover para cima", "moveDown": "Mover para baixo",
+        "Draft": "Rascunho", "Published": "Publicado", "Archived": "Arquivado",
+        "apply": "Aplicar playbook", "blank": "Checklist em branco", "name": "Nome",
+        "refresh": "Atualizar", "stop": "Interromper execução", "cancel": "Cancelar execução", "resume": "Retomar execução",
+        "reason": "Motivo (tarefas vinculadas pendentes serão canceladas)",
+        "addStep": "Adicionar etapa", "skip": "Pular", "reopen": "Reabrir", "activate": "Criar tarefa",
+        "task": "Abrir tarefa", "guidance": "Instruções e referências", "instructions": "Instruções",
+        "references": "Referências (uma URL HTTP/HTTPS por linha)", "Check": "Caixa de seleção", "Task": "Tarefa do CRM",
+        "skipped": "Puladas", "error": "Não foi possível atualizar os playbooks. Atualize e confira suas permissões e o status da execução.",
+        "Active": "Ativa", "Completed": "Concluída", "Stopped": "Interrompida", "Cancelled": "Cancelada",
+        "Pending": "Pendente", "Skipped": "Pulada", "reapply": "Aplicar novamente cria uma execução independente."
+    }
+}

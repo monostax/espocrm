@@ -1,0 +1,7 @@
+{
+    "labels": { "Playbooks": "Playbooks", "Playbook Templates": "Playbook templates", "Playbook Runs": "Playbook runs" },
+    "descriptions": {
+        "playbookTemplates": "Create, publish and archive reusable opportunity checklists.",
+        "playbookRuns": "Apply playbooks and track progress on an opportunity."
+    }
+}

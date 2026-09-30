@@ -1,0 +1,12 @@
+{
+    "sidePanels": {
+        "detail": [
+            "__APPEND__",
+            { "name": "playbooks", "label": "Playbooks", "view": "feature-playbook:views/opportunity/panels/playbooks" }
+        ],
+        "detailSmall": [
+            "__APPEND__",
+            { "name": "playbooks", "label": "Playbooks", "view": "feature-playbook:views/opportunity/panels/playbooks" }
+        ]
+    }
+}

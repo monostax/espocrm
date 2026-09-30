@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "required": true, "maxLength": 200 },
+        "status": { "type": "enum", "options": ["Active", "Completed", "Stopped", "Cancelled"], "default": "Active" },
+        "stopReason": { "type": "text" },
+        "opportunity": { "type": "link" },
+        "playbook": { "type": "link" },
+        "sourceRevision": { "type": "int" },
+        "requestKey": { "type": "varchar", "maxLength": 64 },
+        "requestHash": { "type": "varchar", "maxLength": 64 },
+        "assignedUser": { "type": "link" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "opportunity": { "type": "belongsTo", "entity": "Opportunity" },
+        "playbook": { "type": "belongsTo", "entity": "Playbook" },
+        "assignedUser": { "type": "belongsTo", "entity": "User" },
+        "createdBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "indexes": {
+        "application": { "columns": ["opportunityId", "requestKey"], "unique": true },
+        "opportunityStatus": { "columns": ["opportunityId", "status", "deleted"] }
+    }
+}

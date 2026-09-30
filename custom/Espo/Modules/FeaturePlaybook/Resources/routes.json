@@ -1,0 +1,9 @@
+[
+    { "route": "/PlaybookWorkspace/:accountId", "method": "get", "params": { "controller": "PlaybookWorkspace", "action": "list", "accountId": ":accountId" } },
+    { "route": "/PlaybookWorkspace/:accountId/templates/:id", "method": "get", "params": { "controller": "PlaybookWorkspace", "action": "detail", "accountId": ":accountId", "id": ":id" } },
+    { "route": "/PlaybookWorkspace/:accountId/templates", "method": "post", "params": { "controller": "PlaybookWorkspace", "action": "save", "accountId": ":accountId" } },
+    { "route": "/Opportunity/:id/playbooks", "method": "get", "params": { "controller": "OpportunityPlaybook", "action": "list", "id": ":id" } },
+    { "route": "/Opportunity/:id/playbooks", "method": "post", "params": { "controller": "OpportunityPlaybook", "action": "apply", "id": ":id" } },
+    { "route": "/Opportunity/:id/playbooks/templates", "method": "post", "params": { "controller": "OpportunityPlaybook", "action": "template", "id": ":id" } },
+    { "route": "/Opportunity/:id/playbooks/:runId", "method": "post", "params": { "controller": "OpportunityPlaybook", "action": "mutate", "id": ":id", "runId": ":runId" } }
+]
