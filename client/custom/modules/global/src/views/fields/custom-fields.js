@@ -28,7 +28,7 @@
  * Template variables use the immutable valueKey:
  *   {{customFields.address.city}}  /  {{customFields.plan}}
  */
-define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
+define("global:views/fields/custom-fields", ["views/fields/base", "global:helpers/custom-field-conditions"], (Dep, Conditions) =>
 	Dep.extend({
 		// language=Handlebars
 		detailTemplateContent:
@@ -133,6 +133,16 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			this._fieldViewKeys = [];
 			this._editScopeValueKey = null;
 			this._editScopeGroupName = null;
+			this._draftValues = {};
+			this._renderedFields = [];
+			this.listenTo(this.model, "sync", () => { this._draftValues = {}; });
+			this.listenTo(this.model, "change", () => {
+				if (!Conditions.dependencies(this.meta).some(attribute => this.model.hasChanged(attribute))) return;
+				if (this.isEditMode()) {
+					Object.assign(this._draftValues, this.fetchScopedValues());
+				}
+				if (this.isRendered()) this.reRender();
+			});
 
 			this.validations = Espo.Utils.clone(this.validations || []);
 			if (this.validations.indexOf("customFieldsRequired") === -1) {
@@ -159,6 +169,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 				function () {
 					this._editScopeValueKey = null;
 					this._editScopeGroupName = null;
+					this._draftValues = {};
 				}.bind(this),
 			);
 
@@ -225,7 +236,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			var raw = this.model.get(this.name);
 
 			if (!raw) {
-				return {};
+				return Object.assign({}, this._draftValues);
 			}
 
 			if (typeof raw === "string") {
@@ -237,10 +248,14 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			}
 
 			if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
-				return Espo.Utils.clone(raw);
+				return Object.assign(Espo.Utils.clone(raw), this._draftValues);
 			}
 
 			return {};
+		},
+
+		getApplicableGroups: function () {
+			return Conditions.groups(this.meta, this.model.attributes);
 		},
 
 		/**
@@ -253,7 +268,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 
 			var fields = [];
 
-			this.meta.groups.forEach((group) => {
+			this.getApplicableGroups().forEach((group) => {
 				(group.fields || []).forEach((field) => {
 					fields.push(field);
 				});
@@ -281,7 +296,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 				var groupName = this._editScopeGroupName;
 				var group =
 					this.meta &&
-					(this.meta.groups || []).find(function (g) {
+					this.getApplicableGroups().find(function (g) {
 						return g.name === groupName;
 					});
 
@@ -313,7 +328,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 		data: function () {
 			var data = Dep.prototype.data.call(this);
 			var values = this.getValues();
-			var groups = this.meta && this.meta.groups ? this.meta.groups : [];
+			var groups = this.getApplicableGroups();
 			var scopedFields = this.isEditMode() ? this.getScopedFields() : null;
 			var scopedKeys = null;
 
@@ -329,10 +344,11 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			data.emptyMessage =
 				this.translate("noCustomFieldsDefined", "messages", "Global") ||
 				"No custom fields defined for this tenant.";
-			data.isNotEmpty = Object.keys(values).length > 0;
+			var applicableKeys = new Set(this.getFlatFields().map(field => field.valueKey));
+			data.isNotEmpty = Object.keys(values).some(key => applicableKeys.has(key));
 			data.canInlineEdit = this.canInlineEdit();
 
-			var keys = Object.keys(values);
+			var keys = Object.keys(values).filter(key => applicableKeys.has(key));
 			data.summary = keys.length + " field" + (keys.length !== 1 ? "s" : "");
 			data.summaryTitle = keys.join(", ");
 
@@ -431,11 +447,11 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			if (
 				this.isEditMode() &&
 				!this.isLoading &&
-				this.meta &&
-				this.meta.groups &&
-				this.meta.groups.length
+				this.getApplicableGroups().length
 			) {
 				this.renderEditFields();
+			} else {
+				this.clearFieldViews();
 			}
 
 			if (this.isDetailMode() && this.canInlineEdit()) {
@@ -531,10 +547,12 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 		 */
 		renderEditFields: function () {
 			this.clearFieldViews();
+			var generation = this._fieldGeneration;
 
 			var values = this.getValues();
 			var fields = this.getScopedFields();
 			var fieldDefs = {};
+			this._renderedFields = fields;
 			var attrs = {};
 
 			fields.forEach(
@@ -559,6 +577,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			this.getModelFactory().create(
 				entityType,
 				function (model) {
+					if (generation !== this._fieldGeneration) return;
 					// Override defs with our dynamic custom-field defs only.
 					model.defs = { fields: fieldDefs };
 					model.set(attrs, { silent: true });
@@ -600,7 +619,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 										'"]',
 								},
 								(view) => {
-									view.render();
+									if (generation === this._fieldGeneration) view.render();
 								},
 							);
 						}.bind(this),
@@ -610,6 +629,8 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 		},
 
 		clearFieldViews: function () {
+			this._fieldGeneration = (this._fieldGeneration || 0) + 1;
+			if (this._shadowModel) this.stopListening(this._shadowModel);
 			(this._fieldViewKeys || []).forEach(
 				function (key) {
 					this.clearView(key);
@@ -618,6 +639,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 
 			this._fieldViewKeys = [];
 			this._shadowModel = null;
+			this._renderedFields = [];
 		},
 
 		viewNameForType: (type) => {
@@ -707,7 +729,7 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 		 */
 		fetchScopedValues: function () {
 			var values = {};
-			var fields = this.getScopedFields();
+			var fields = this._renderedFields || [];
 
 			fields.forEach(
 				function (field) {
@@ -768,45 +790,13 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 
 		fetch: function () {
 			var data = {};
-			var existing = this.getValues();
+			var values = this.getValues();
 			var scoped = this.fetchScopedValues();
-			var values;
-			var known = {};
-
-			this.getFlatFields().forEach(function (f) {
-				known[f.valueKey] = true;
+			// Merge only rendered inputs. Inapplicable fields and their drafts survive.
+			Object.assign(values, scoped);
+			Object.keys(values).forEach(key => {
+				if (values[key] === null) delete values[key];
 			});
-
-			if (this.isScopedEdit()) {
-				// Start from full existing bag; apply only scoped keys.
-				values = Espo.Utils.clone(existing);
-
-				Object.keys(scoped).forEach(function (k) {
-					if (scoped[k] === null) {
-						delete values[k];
-					} else {
-						values[k] = scoped[k];
-					}
-				});
-			} else {
-				// Full edit: only keys present in nested views (non-empty) + orphans.
-				values = {};
-
-				Object.keys(scoped).forEach(function (k) {
-					if (scoped[k] !== null) {
-						values[k] = scoped[k];
-					}
-				});
-
-				Object.keys(existing).forEach(function (k) {
-					if (
-						!known[k] &&
-						!Object.prototype.hasOwnProperty.call(scoped, k)
-					) {
-						values[k] = existing[k];
-					}
-				});
-			}
 
 			var hasAny = Object.keys(values).length > 0;
 
@@ -828,27 +818,6 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 			var failed = false;
 			var fields = this.getScopedFields();
 
-			// On scoped inline edit of an existing record, also skip required
-			// fields that were already empty before this edit (user did not
-			// clear them — they were never filled). Clearing a previously set
-			// required value still fails.
-			var prevBag = {};
-			var isInline = this.isInlineEditMode && this.isInlineEditMode();
-
-			if (isInline && this.initialAttributes) {
-				var raw = this.initialAttributes[this.name];
-
-				if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-					prevBag = raw;
-				} else if (typeof raw === "string") {
-					try {
-						prevBag = JSON.parse(raw) || {};
-					} catch (e) {
-						prevBag = {};
-					}
-				}
-			}
-
 			fields.forEach(
 				function (field) {
 					if (!field.isRequired) {
@@ -864,21 +833,6 @@ define("global:views/fields/custom-fields", ["views/fields/base"], (Dep) =>
 
 					if (!empty) {
 						return;
-					}
-
-					// Scoped inline: allow leaving still-empty requireds that
-					// were already empty (other group / untouched).
-					if (isInline && this.isScopedEdit()) {
-						var prev = prevBag[field.valueKey];
-						var prevEmpty =
-							prev === undefined ||
-							prev === null ||
-							prev === "" ||
-							(Array.isArray(prev) && prev.length === 0);
-
-						if (prevEmpty) {
-							return;
-						}
 					}
 
 					failed = true;

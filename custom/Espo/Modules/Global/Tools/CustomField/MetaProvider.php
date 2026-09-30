@@ -414,6 +414,8 @@ class MetaProvider
                 'valueKey' => (string) $entity->get('valueKey'),
                 'options' => $this->normalizeOptions($entity->get('options')),
                 'isRequired' => (bool) $entity->get('isRequired'),
+                'appliesWhen' => $entity->get('appliesWhen'),
+                'requiredWhen' => $entity->get('requiredWhen'),
                 'defaultValue' => $entity->get('defaultValue'),
                 'maxLength' => $entity->get('maxLength'),
                 'min' => $entity->get('min'),

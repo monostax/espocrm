@@ -104,6 +104,7 @@
     },
     "messages": {
         "stageRequirementsIntro": "Complete these fields to enter:",
+        "customFieldRequirementsIntro": "Complete these required fields to save your changes.",
         "stageRequirementsConfiguration": "A required field is unavailable. Update the destination stage's required-field configuration.",
         "stageRequirementsForbidden": "Required fields are missing and you do not have permission to edit them. Ask someone with Opportunity custom-field access to complete them.",
         "stageDeprecated": "The enum 'Stage' field has been replaced with a link to OpportunityStage. This allows custom stages with different probabilities and styles.",

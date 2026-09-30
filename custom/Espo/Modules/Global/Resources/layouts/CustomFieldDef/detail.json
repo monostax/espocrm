@@ -6,6 +6,8 @@
             [{"name": "valueKey"}, {"name": "type"}],
             [{"name": "entityType"}, {"name": "group"}],
             [{"name": "isRequired"}, {"name": "isTemplateEnabled"}],
+            [{"name": "appliesWhen", "fullWidth": true}],
+            [{"name": "requiredWhen", "fullWidth": true}],
             [{"name": "isActive"}, {"name": "sortOrder"}],
             [{"name": "defaultValue"}, {"name": "maxLength"}],
             [{"name": "min"}, {"name": "max"}],

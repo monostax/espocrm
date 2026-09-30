@@ -1,6 +1,6 @@
 [
     {
-        "tabLabel": "$Overview",
+        "tabLabel": "Geral",
         "name": "informacoesPanel",
         "label": "Informações",
         "panelIconClass": "fas fa-info-circle",
@@ -53,11 +53,19 @@
                     "name": "contacts"
                 },
                 false
-            ],
+            ]
+        ]
+    },
+    {
+        "name": "descriptionPanel",
+        "label": "Descrição",
+        "panelIconClass": "fas fa-align-left",
+        "rows": [
             [
                 {
                     "name": "description",
-                    "fullWidth": true
+                    "fullWidth": true,
+                    "noLabel": true
                 }
             ]
         ]
@@ -86,12 +94,6 @@
                 {"name": "stageDueAt"}
             ]
         ]
-    },
-    {
-        "name": "stageHistoryPanel",
-        "label": "Stage History",
-        "panelIconClass": "fas fa-history",
-        "rows": [[{"name": "stageHistory", "fullWidth": true, "noLabel": true}]]
     },
     {
         "name": "followupPanel",
@@ -124,6 +126,14 @@
                 false
             ]
         ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "Métricas",
+        "name": "stageHistoryPanel",
+        "label": "Stage History",
+        "panelIconClass": "fas fa-history",
+        "rows": [[{"name": "stageHistory", "fullWidth": true, "noLabel": true}]]
     },
     {
         "tabBreak": true,

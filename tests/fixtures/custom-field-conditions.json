@@ -1,0 +1,22 @@
+[
+    {"name":"Account type membership","condition":{"attribute":"type","operator":"in","value":["Customer","Partner"]},"context":{"type":"Customer"},"expected":true},
+    {"name":"Account type mismatch","condition":{"attribute":"type","operator":"equals","value":"Customer"},"context":{"type":"Investor"},"expected":false},
+    {"name":"Contact source","condition":{"attribute":"source","operator":"equals","value":"Campaign"},"context":{"source":"Campaign"},"expected":true},
+    {"name":"Contact primary account","condition":{"attribute":"accountId","operator":"in","value":["account-a"]},"context":{"accountId":"account-a"},"expected":true},
+    {"name":"Any matching tag","condition":{"attribute":"tags","operator":"containsAny","value":["vip","partner"]},"context":{"tags":["vip","newsletter"]},"expected":true},
+    {"name":"All matching tags","condition":{"attribute":"tags","operator":"containsAll","value":["vip","partner"]},"context":{"tags":["partner","vip","newsletter"]},"expected":true},
+    {"name":"Missing one tag","condition":{"attribute":"tags","operator":"containsAll","value":["vip","partner"]},"context":{"tags":["vip"]},"expected":false},
+    {"name":"Tags are not substrings","condition":{"attribute":"tags","operator":"containsAny","value":["vip"]},"context":{"tags":"vip"},"expected":false},
+    {"name":"Tag match is strict","condition":{"attribute":"tags","operator":"containsAny","value":["1"]},"context":{"tags":[1]},"expected":false},
+    {"name":"Whitespace empty","condition":{"attribute":"description","operator":"isEmpty"},"context":{"description":"  \t"},"expected":true},
+    {"name":"Missing direct field is empty","condition":{"attribute":"accountId","operator":"isEmpty"},"context":{},"expected":true},
+    {"name":"Unknown configuration context stays unknown","condition":{"attribute":"accountId","operator":"isEmpty"},"context":{},"partial":true,"expected":null},
+    {"name":"Zero is filled","condition":{"attribute":"amount","operator":"isFilled"},"context":{"amount":0},"expected":true},
+    {"name":"False is filled","condition":{"attribute":"approved","operator":"isFilled"},"context":{"approved":false},"expected":true},
+    {"name":"Empty tags","condition":{"attribute":"tags","operator":"isEmpty"},"context":{"tags":[]},"expected":true},
+    {"name":"Checked boolean","condition":{"attribute":"approved","operator":"isTrue"},"context":{"approved":true},"expected":true},
+    {"name":"Unchecked boolean","condition":{"attribute":"approved","operator":"isFalse"},"context":{"approved":false},"expected":true},
+    {"name":"Absent boolean is not explicit false","condition":{"attribute":"approved","operator":"isFalse"},"context":{},"expected":false},
+    {"name":"String false is not false","condition":{"attribute":"approved","operator":"isFalse"},"context":{"approved":"false"},"expected":false},
+    {"name":"Nested generic fields","condition":{"all":[{"attribute":"type","operator":"equals","value":"Customer"},{"any":[{"attribute":"industry","operator":"equals","value":"Healthcare"},{"attribute":"website","operator":"isFilled"}]}]},"context":{"type":"Customer","industry":"Other","website":"https://example.org"},"expected":true}
+]

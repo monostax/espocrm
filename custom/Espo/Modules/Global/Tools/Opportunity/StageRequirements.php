@@ -10,6 +10,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\ConflictSilent;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Modules\Global\Tools\CustomField\MetaProvider;
+use Espo\Modules\Global\Tools\CustomField\Conditions;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -43,7 +44,9 @@ class StageRequirements
         }
         $fields = [];
         foreach (array_unique($keys) as $key) {
-            if (!isset($available[$key])) {
+            if (!isset($available[$key]) || Conditions::evaluate($available[$key]['appliesWhen'] ?? null, [
+                'funnelId' => $stage->get('funnelId'), 'opportunityStageId' => $stage->getId(),
+            ], true) === false) {
                 throw ConflictSilent::createWithBody('opportunityStageConfiguration', json_encode([
                     'code' => 'opportunityStageConfiguration',
                     'stageId' => $stage->get('id'),
@@ -58,21 +61,10 @@ class StageRequirements
 
     public function validate(Entity $opportunity): void
     {
-        $snapshot = $opportunity->get('stageRequirementsSnapshot');
-        if ($snapshot !== null && !$opportunity->isNew()) {
-            $current = $this->entityManager->getRDBRepository('Opportunity')
-                ->where(['id' => $opportunity->getId()])->forUpdate()->findOne();
-            if (!$current || (array) $snapshot !== self::snapshot($current)) {
-                throw new Conflict('The opportunity changed while completing required fields. Reload and try again.');
-            }
-            $opportunity->set('stageRequirementsSnapshot', null);
-        }
-        if (!$opportunity->isNew() &&
-            !$opportunity->isAttributeChanged('opportunityStageId') &&
-            !$opportunity->isAttributeChanged('funnelId') &&
-            !$opportunity->isAttributeChanged('status')) {
-            return;
-        }
+        $isTransition = $opportunity->isNew() ||
+            $opportunity->isAttributeChanged('opportunityStageId') ||
+            $opportunity->isAttributeChanged('funnelId') ||
+            $opportunity->isAttributeChanged('status');
         $stageId = $opportunity->get('opportunityStageId');
         if (!$stageId) {
             return; // The existing required/stage-funnel validators handle this.
@@ -81,13 +73,42 @@ class StageRequirements
         if (!$stage) {
             throw new BadRequest('The selected stage does not exist.');
         }
-        $fields = $this->getFields($stage);
-        if ($fields === []) {
-            return;
-        }
+        $fields = $isTransition ? $this->getFields($stage) : [];
         $funnel = $this->entityManager->getEntityById('Funnel', $stage->get('funnelId'));
-        if ($funnel->get('tenantId') !== $opportunity->get('tenantId')) {
+        if (!$funnel || $funnel->get('tenantId') !== $opportunity->get('tenantId')) {
             throw new BadRequest('The opportunity and required fields must belong to the same tenant.');
+        }
+
+        $meta = $this->metaProvider->getGroupedMeta('Opportunity', $opportunity->get('tenantId'));
+        $allFields = $fields;
+        foreach ($meta['groups'] as $group) {
+            array_push($allFields, ...$group['fields']);
+        }
+        $snapshot = $opportunity->get('stageRequirementsSnapshot');
+        if ($snapshot !== null && !$opportunity->isNew()) {
+            $current = $this->entityManager->getRDBRepository('Opportunity')
+                ->where(['id' => $opportunity->getId()])->forUpdate()->findOne();
+            if (!$current || (array) $snapshot !== self::snapshot($current, $allFields)) {
+                throw new Conflict('The opportunity changed while completing required fields. Reload and try again.');
+            }
+            $opportunity->set('stageRequirementsSnapshot', null);
+        }
+        $context = Conditions::context($opportunity, $allFields);
+        $fieldsByKey = [];
+        foreach ($fields as $field) {
+            if (Conditions::evaluate($field['appliesWhen'] ?? null, $context) === true) {
+                $fieldsByKey[$field['valueKey']] = $field;
+            }
+        }
+        foreach ($meta['groups'] as $group) {
+            foreach ($group['fields'] as $field) {
+                if (Conditions::required($field, $context)) {
+                    $fieldsByKey[$field['valueKey']] = $field + ['groupLabel' => $group['label']];
+                }
+            }
+        }
+        if ($fieldsByKey === []) {
+            return;
         }
 
         // Lock before inspecting stored values, just as stage timing does. An unchanged
@@ -97,7 +118,7 @@ class StageRequirements
         $bag = (array) ($stored && !$opportunity->isAttributeChanged('customFields')
             ? $stored->get('customFields') : $opportunity->get('customFields'));
         $missing = [];
-        foreach ($fields as $field) {
+        foreach ($fieldsByKey as $field) {
             $reason = self::invalidReason($field, $bag[$field['valueKey']] ?? null);
             if ($reason !== null) {
                 $missing[] = array_merge($field, ['isRequired' => true, 'reason' => $reason]);
@@ -106,27 +127,31 @@ class StageRequirements
         if ($missing !== []) {
             throw ConflictSilent::createWithBody('opportunityStageRequirements', json_encode([
                 'code' => 'opportunityStageRequirements',
+                'requirementMode' => $isTransition ? 'stageEntry' : 'save',
                 'stageId' => $stageId,
                 'stageName' => $stage->get('name'),
                 'funnelId' => $stage->get('funnelId'),
                 'canEdit' => $this->acl->checkField('Opportunity', 'customFields', 'edit') &&
                     $this->acl->checkField('Opportunity', 'customFields', 'read'),
-                'snapshot' => $stored ? self::snapshot($stored) : null,
+                'snapshot' => $stored ? self::snapshot($stored, $allFields) : null,
                 'fields' => $missing,
             ], JSON_THROW_ON_ERROR));
         }
     }
 
-    private static function snapshot(Entity $entity): array
+    private static function snapshot(Entity $entity, array $fields): array
     {
         $bag = (array) $entity->get('customFields');
         ksort($bag);
+        $context = Conditions::context($entity, $fields);
+        ksort($context);
         return [
             'stageId' => $entity->get('opportunityStageId'),
             'funnelId' => $entity->get('funnelId'),
             'status' => $entity->get('status'),
             'visitId' => $entity->get('currentStageVisitId'),
             'valuesHash' => hash('sha256', json_encode($bag, JSON_THROW_ON_ERROR)),
+            'conditionsHash' => hash('sha256', json_encode($context, JSON_THROW_ON_ERROR)),
         ];
     }
 

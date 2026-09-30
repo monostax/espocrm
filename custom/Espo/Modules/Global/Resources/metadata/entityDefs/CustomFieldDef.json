@@ -51,7 +51,18 @@
         },
         "isRequired": {
             "type": "bool",
-            "default": false
+            "default": false,
+            "tooltip": true
+        },
+        "appliesWhen": {
+            "type": "jsonObject",
+            "view": "global:views/custom-field-def/fields/conditions",
+            "tooltip": true
+        },
+        "requiredWhen": {
+            "type": "jsonObject",
+            "view": "global:views/custom-field-def/fields/conditions",
+            "tooltip": true
         },
         "defaultValue": {
             "type": "varchar",

@@ -21,6 +21,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Acl;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Entities\User;
+use Espo\Modules\Global\Tools\CustomField\ConditionSchema;
 use Espo\Modules\Global\Tools\CustomField\MetaProvider;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
@@ -37,6 +38,7 @@ use Espo\ORM\EntityManager;
  *   GET CustomField/action/meta?entityType=Opportunity&teamIds=t1,t2
  *   GET CustomField/action/templateVariables?entityType=Contact
  *   GET CustomField/action/importVariables?entityType=Contact
+ *   GET CustomField/action/conditionAttributes?entityType=Account
  *
  * Tenant resolution when tenantId is omitted:
  *   1. teamIds query (only teams the user belongs to, unless admin)
@@ -52,6 +54,7 @@ class CustomField
         private EntityManager $entityManager,
         private Acl $acl,
         private User $user,
+        private ConditionSchema $conditionSchema,
     ) {}
 
     /**
@@ -64,6 +67,14 @@ class CustomField
         $tenantId = $this->resolveTenantId($request, $entityType);
 
         return $this->metaProvider->getGroupedMeta($entityType, $tenantId);
+    }
+
+    public function getActionConditionAttributes(Request $request, Response $response): array
+    {
+        $entityType = $this->requireEnabledEntityType($request);
+        $attributes = $this->conditionSchema->getAttributes($entityType);
+        $attributes = array_filter($attributes, fn ($item) => $this->acl->checkField($entityType, $item['field'], 'read'));
+        return ['attributes' => (object) $attributes];
     }
 
     /**

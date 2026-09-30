@@ -66,7 +66,7 @@
         "Meta Ads": "Meta Ads",
         "Informações": "Informações",
         "Funil & Estágio": "Funil & Estágio",
-        "Follow-up": "Follow-up"
+        "Follow-up": "Follow-up Automático"
     },
     "options": {
         "status": {
@@ -104,6 +104,7 @@
     },
     "messages": {
         "stageRequirementsIntro": "Preencha estes campos para entrar em:",
+        "customFieldRequirementsIntro": "Preencha estes campos obrigatórios para salvar suas alterações.",
         "stageRequirementsConfiguration": "Um campo obrigatório está indisponível. Atualize a configuração de campos obrigatórios do estágio de destino.",
         "stageRequirementsForbidden": "Faltam campos obrigatórios e você não tem permissão para editá-los. Peça a alguém com acesso aos campos personalizados da oportunidade para preenchê-los.",
         "stageDeprecated": "O campo enum 'Estágio' foi substituído por um link para OpportunityStage. Isso permite estágios personalizados com diferentes probabilidades e estilos.",

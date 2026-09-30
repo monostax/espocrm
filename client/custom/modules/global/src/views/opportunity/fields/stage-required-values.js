@@ -4,6 +4,12 @@ define('global:views/opportunity/fields/stage-required-values', ['global:views/f
         return Promise.resolve();
     },
 
+    getApplicableGroups() {
+        // Server already evaluated the destination record. This dialog's scratch
+        // model only carries values, not the destination funnel/stage/status.
+        return this.meta?.groups || [];
+    },
+
     toInputName(valueKey) {
         return 'requiredField' + this.options.fields.findIndex(field => field.valueKey === valueKey);
     },

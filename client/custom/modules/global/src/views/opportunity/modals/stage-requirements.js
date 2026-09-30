@@ -4,8 +4,9 @@ define('global:views/opportunity/modals/stage-requirements', ['views/modal'], De
     data() {
         return {
             opportunityName: this.options.opportunityName,
-            stageName: this.options.requirements.stageName,
-            message: this.translate('stageRequirementsIntro', 'messages', 'Opportunity'),
+            stageName: this.options.requirements.requirementMode === 'save' ? '' : this.options.requirements.stageName,
+            message: this.translate(this.options.requirements.requirementMode === 'save'
+                ? 'customFieldRequirementsIntro' : 'stageRequirementsIntro', 'messages', 'Opportunity'),
         };
     },
 

@@ -1,4 +1,4 @@
-define('global:views/opportunity-stage/fields/required-custom-fields', ['views/fields/multi-enum'], Dep => Dep.extend({
+define('global:views/opportunity-stage/fields/required-custom-fields', ['views/fields/multi-enum', 'global:helpers/custom-field-conditions'], (Dep, Conditions) => Dep.extend({
     setup() {
         Dep.prototype.setup.call(this);
         this.wait(this.loadOptions());
@@ -17,7 +17,9 @@ define('global:views/opportunity-stage/fields/required-custom-fields', ['views/f
             const meta = await Espo.Ajax.getRequest('CustomField/action/meta', {
                 entityType: 'Opportunity', tenantId: funnel.tenantId,
             });
-            fields = meta.groups.flatMap(group => group.fields.map(field => ({
+            const context = { funnelId, opportunityStageId: this.model.id || null };
+            fields = meta.groups.flatMap(group => group.fields.filter(field =>
+                Conditions.evaluate(field.appliesWhen, context, true) !== false).map(field => ({
                 ...field, label: group.name === '_general' ? field.label : `${group.label} / ${field.label}`,
             })));
         }

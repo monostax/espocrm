@@ -10,7 +10,7 @@
         "Empty means no target": "Deixe os três campos vazios para não definir um tempo alvo."
     },
     "tooltips": {
-        "requiredCustomFieldKeys": "Campos personalizados da oportunidade que devem ser preenchidos antes de entrar neste estágio, incluindo criação, retorno e ganho/perda. Deixe vazio para não exigir campos adicionais.",
+        "requiredCustomFieldKeys": "Campos personalizados obrigatórios na entrada quando aplicáveis ao registro de destino, incluindo criação, retorno e ganho/perda. Escopos de funil/estágio incompatíveis não podem ser selecionados. Deixe vazio para não exigir campos adicionais.",
         "targetTimeSeconds": "Tempo corrido permitido por visita. Alterações valem apenas para novas entradas. Estágios ganhos/perdidos não são cronometrados. Deixe vazio para não definir um alvo."
     },
     "messages": {
