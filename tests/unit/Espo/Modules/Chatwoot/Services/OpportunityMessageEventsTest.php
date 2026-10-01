@@ -7,6 +7,7 @@ namespace tests\unit\Espo\Modules\Chatwoot\Services;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\SystemUser;
+use Espo\Modules\Chatwoot\Jobs\SyncConversationsFromChatwoot;
 use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\ORM\Entity;
@@ -71,6 +72,20 @@ class OpportunityMessageEventsTest extends TestCase
         $opportunities->method('where')->with(['id' => 'opp'])->willReturn($locked);
 
         $notes = $this->createMock(RDBRepository::class);
+        $notes->method('where')->willReturnCallback(function (array $where): RDBSelectBuilder {
+            self::assertSame(OpportunityMessageEvents::TYPE, $where['type']);
+            self::assertSame('ChatwootConversation', $where['relatedType']);
+            self::assertSame('conversation', $where['relatedId']);
+            $matches = array_intersect_key($this->notes, array_flip($where['opportunityStreamEventKey']));
+            $select = $this->createMock(RDBSelectBuilder::class);
+            $select->method('find')->willReturn(new EntityCollection(array_values(array_map(
+                fn ($data) => new EntityDouble($data, 'Note'), $matches
+            ))));
+            return $select;
+        });
+        $em->method('removeEntity')->willReturnCallback(function (Entity $note): void {
+            unset($this->notes[$note->get('opportunityStreamEventKey')]);
+        });
         $notes->method('clone')->willReturnCallback(function (Select $query): RDBSelectBuilder {
             self::assertTrue($query->getRaw()['withDeleted']);
             $key = $query->getWhere()->getRaw()['opportunityStreamEventKey'];
@@ -150,5 +165,37 @@ class OpportunityMessageEventsTest extends TestCase
         ]), 'crm-account');
         self::assertCount(1, $this->notes);
         self::assertSame('2026-09-06 14:32:00', array_values($this->notes)[0]['data']->occurredAt);
+    }
+
+    public function testSyncOnlyProducesReceivedEventsForExplicitIncomingTypes(): void
+    {
+        $job = (new \ReflectionClass(SyncConversationsFromChatwoot::class))->newInstanceWithoutConstructor();
+        $normalize = new \ReflectionMethod($job, 'normalizeMessageType');
+        $types = [0, '0', 'incoming', 1, '1', 'outgoing', 2, 'activity', 3, 'template', null, 'unknown'];
+        foreach ($types as $index => $type) {
+            $messageType = $normalize->invoke($job, $type);
+            if ($messageType === null) {
+                continue;
+            }
+            $this->service->recordSyncedMessage(new EntityDouble([
+                'chatwootMessageId' => $index + 1, 'messageType' => $messageType, 'isPrivate' => false,
+                'chatwootCreatedAt' => '2026-09-06 14:32:00',
+            ]), $this->conversation);
+        }
+        self::assertSame([1, 2, 3], array_map(fn ($note) => $note['data']->chatwootMessageId, array_values($this->notes)));
+    }
+
+    public function testResyncRemovesIncorrectOutgoingAndPrivateEventsButKeepsIncomingEvents(): void
+    {
+        foreach ([1, 2, 3] as $id) {
+            $this->service->recordWebhook($this->payload($id), 'crm-account');
+        }
+        foreach ([['outgoing', false], ['incoming', true]] as $index => [$type, $private]) {
+            $this->service->recordSyncedMessage(new EntityDouble([
+                'chatwootMessageId' => $index + 1, 'messageType' => $type, 'isPrivate' => $private,
+            ]), $this->conversation);
+        }
+        self::assertCount(1, $this->notes);
+        self::assertSame(3, array_values($this->notes)[0]['data']->chatwootMessageId);
     }
 }

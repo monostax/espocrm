@@ -49,10 +49,40 @@ class OpportunityMessageEvents
     public function recordSyncedMessage(Entity $message, Entity $conversation): void
     {
         if ($message->get('messageType') !== 'incoming' || $message->get('isPrivate')) {
+            $this->removeIncorrectEvents($message, $conversation);
             return;
         }
 
         $this->record($conversation, (string) $message->get('chatwootMessageId'), $message->get('chatwootCreatedAt'));
+    }
+
+    /** Reconcile events created when an outgoing message was incorrectly synced as incoming. */
+    private function removeIncorrectEvents(Entity $message, Entity $conversation): void
+    {
+        $messageId = (string) $message->get('chatwootMessageId');
+        if (!ctype_digit($messageId) || (int) $messageId < 1) {
+            return;
+        }
+
+        $opportunities = $this->entityManager->getRDBRepository('ChatwootConversation')
+            ->getRelation($conversation, 'opportunities')->find();
+        $keys = [];
+        foreach ($opportunities as $opportunity) {
+            $keys[] = hash('sha256', implode(':', [$opportunity->getId(), $conversation->get('chatwootAccountId'), $messageId]));
+        }
+        if (!$keys) {
+            return;
+        }
+
+        $notes = $this->entityManager->getRDBRepository('Note')->where([
+            'type' => self::TYPE,
+            'relatedType' => 'ChatwootConversation',
+            'relatedId' => $conversation->getId(),
+            'opportunityStreamEventKey' => $keys,
+        ])->find();
+        foreach ($notes as $note) {
+            $this->entityManager->removeEntity($note);
+        }
     }
 
     private function record(Entity $conversation, string $messageId, mixed $timestamp): void

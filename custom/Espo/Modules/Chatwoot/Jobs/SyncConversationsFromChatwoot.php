@@ -936,9 +936,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $lastMessage = end($messages);
             $lastMessageContent = $lastMessage['content'] ?? '';
             $conversation->set('lastMessageContent', mb_substr(strip_tags($lastMessageContent), 0, 200));
-            // Map message_type: 0=incoming, 1=outgoing, 2=activity, 3=template
-            $messageTypeMap = [0 => 'incoming', 1 => 'outgoing', 2 => 'activity', 3 => 'template'];
-            $lastMessageType = $messageTypeMap[$lastMessage['message_type'] ?? 0] ?? 'incoming';
+            $lastMessageType = $this->normalizeMessageType($lastMessage['message_type'] ?? null);
             $conversation->set('lastMessageType', $lastMessageType);
         }
         
@@ -1015,9 +1013,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         if (!empty($messages)) {
             $lastMessage = end($messages);
             $lastMessageContent = mb_substr(strip_tags($lastMessage['content'] ?? ''), 0, 200);
-            // Map message_type: 0=incoming, 1=outgoing, 2=activity, 3=template
-            $messageTypeMap = [0 => 'incoming', 1 => 'outgoing', 2 => 'activity', 3 => 'template'];
-            $lastMessageType = $messageTypeMap[$lastMessage['message_type'] ?? 0] ?? 'incoming';
+            $lastMessageType = $this->normalizeMessageType($lastMessage['message_type'] ?? null);
         }
 
         $data = [
@@ -1121,6 +1117,18 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
     }
 
+    /** Chatwoot APIs expose both numeric enums and named message types. */
+    private function normalizeMessageType(mixed $type): ?string
+    {
+        return match ($type) {
+            0, '0', 'incoming' => 'incoming',
+            1, '1', 'outgoing' => 'outgoing',
+            2, '2', 'activity' => 'activity',
+            3, '3', 'template' => 'template',
+            default => null,
+        };
+    }
+
     /**
      * Sync messages for a conversation.
      *
@@ -1156,14 +1164,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
                     ])
                     ->findOne();
 
-                // Map message_type: 0=incoming, 1=outgoing, 2=activity, 3=template
-                $messageTypeMap = [
-                    0 => 'incoming',
-                    1 => 'outgoing',
-                    2 => 'activity',
-                    3 => 'template'
-                ];
-                $messageType = $messageTypeMap[$messageData['message_type'] ?? 0] ?? 'incoming';
+                $messageType = $this->normalizeMessageType($messageData['message_type'] ?? null);
+                if ($messageType === null) {
+                    continue;
+                }
 
                 // Generate display name (truncated content)
                 $content = $messageData['content'] ?? '';
