@@ -13,6 +13,7 @@ use Espo\Modules\FeatureJourney\Entities\Journey;
 use Espo\Modules\FeatureJourney\Entities\JourneyStage;
 use Espo\Modules\FeatureJourney\Services\ActionConditionEvaluator;
 use Espo\Modules\FeatureJourney\Services\ActionRecordReferences;
+use Espo\Modules\FeatureJourney\Services\BusinessDaySchedule;
 use Espo\Modules\FeatureJourney\Services\RestrictedFormulaRunner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -109,6 +110,17 @@ class ValidateType implements BeforeSave
         }
         if (!is_array($params)) {
             $params = [];
+        }
+
+        if ($type === 'createTask' && isset($params['dueInBusinessDays']) && $params['dueInBusinessDays'] !== '') {
+            BusinessDaySchedule::validateOffset($params['dueInBusinessDays']);
+            if (!empty($params['dateEnd'])) {
+                throw new BadRequest('createTask: choose dateEnd or dueInBusinessDays, not both.');
+            }
+            if (!empty($params['timeZone']) &&
+                !in_array($params['timeZone'], \DateTimeZone::listIdentifiers(), true)) {
+                throw new BadRequest('createTask: invalid timeZone.');
+            }
         }
 
         if ($type === 'runScript') {

@@ -30,7 +30,8 @@
             "options": [
                 "Contact",
                 "Account",
-                "Lead"
+                "Lead",
+                "Opportunity"
             ],
             "required": true,
             "default": "Contact"
@@ -44,6 +45,9 @@
             "type": "linkMultiple"
         },
         "manualContacts": {
+            "type": "linkMultiple"
+        },
+        "manualOpportunities": {
             "type": "linkMultiple"
         },
         "excludeTargetLists": {
@@ -103,6 +107,11 @@
         },
         "description": {
             "type": "text"
+        },
+        "timeZone": {
+            "type": "varchar",
+            "default": "UTC",
+            "tooltip": true
         },
         "createdAt": {
             "type": "datetime",
@@ -168,6 +177,12 @@
             "entity": "Contact",
             "foreign": "journeysManual",
             "relationName": "journeyManualContact"
+        },
+        "manualOpportunities": {
+            "type": "hasMany",
+            "entity": "Opportunity",
+            "foreign": "journeysManual",
+            "relationName": "journeyManualOpportunity"
         },
         "excludeTargetLists": {
             "type": "hasMany",
@@ -251,6 +266,10 @@
             },
             {
                 "table": "JourneyManualContact",
+                "column": "journeyId"
+            },
+            {
+                "table": "JourneyManualOpportunity",
                 "column": "journeyId"
             },
             {

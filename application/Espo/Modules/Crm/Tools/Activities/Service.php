@@ -95,6 +95,28 @@ class Service
         private RelationQueryHelper $relationQueryHelper,
     ) {}
 
+    protected function applyDueDateOrder(SelectBuilder $builder, \DateTimeImmutable $now): void
+    {
+        $dueDate = Expr::coalesce(Expr::alias('activity.dateEndDate'), Expr::alias('activity.dateEnd'));
+        // All-day activities become overdue only after their local due date ends.
+        $overdue = Expr::if(
+            Expr::isNotNull(Expr::alias('activity.dateEndDate')),
+            Expr::less(Expr::alias('activity.dateEndDate'), $now->format('Y-m-d')),
+            Expr::less(
+                Expr::alias('activity.dateEnd'),
+                $now->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+            ),
+        );
+
+        $builder
+            ->order(Expr::isNull($dueDate))
+            ->order($overdue, 'DESC')
+            ->order(Expr::if($overdue, $dueDate, Expr::value(null)), 'DESC')
+            ->order($dueDate, 'ASC')
+            ->order('activity._scope')
+            ->order('activity.id');
+    }
+
     protected function isPerson(string $scope): bool
     {
         return
@@ -648,7 +670,7 @@ class Service
 
         $offset = $params->getOffset() ?? 0;
 
-        if (!$onlyScope && $scope === User::ENTITY_TYPE) {
+        if (!$onlyScope && $scope === User::ENTITY_TYPE && !$params->hasDueDateOrder()) {
             // optimizing sub-queries
 
             $newQueryList = [];
@@ -707,11 +729,27 @@ class Service
             return new RecordCollection(new EntityCollection(), (int) $totalCount);
         }
 
-        $builder->order('dateStart', 'DESC');
+        if ($params->hasDueDateOrder()) {
+            // Sort the complete union before pagination, not just the loaded page.
+            $builder = $this->entityManager->getQueryBuilder()->select()
+                ->fromQuery($builder->build(), 'activity');
+
+            foreach ($queryList[0]->getSelect() as $selection) {
+                $alias = $selection->getAlias() ?? $selection->getExpression()->getValue();
+                $builder->select('activity.#' . $alias, $alias);
+            }
+
+            $timeZone = $this->entityManager->getEntityById('Preferences', $this->user->getId())
+                ?->get('timeZone') ?: $this->config->get('timeZone', 'UTC');
+            $now = new \DateTimeImmutable('now', new \DateTimeZone($timeZone));
+            $this->applyDueDateOrder($builder, $now);
+        } else {
+            $builder->order('dateStart', 'DESC');
+        }
 
         if ($scope === User::ENTITY_TYPE) {
             $maxSizeQ++;
-        } else {
+        } elseif (!$params->hasDueDateOrder()) {
             $builder->order(Field::CREATED_AT, 'DESC');
         }
 

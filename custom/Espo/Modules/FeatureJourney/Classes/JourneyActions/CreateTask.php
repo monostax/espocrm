@@ -8,6 +8,8 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\FeatureJourney\Services\BusinessDaySchedule;
+use Espo\Core\Utils\Config;
 use Espo\ORM\EntityManager;
 
 class CreateTask implements Action
@@ -15,6 +17,8 @@ class CreateTask implements Action
     public function __construct(
         private EntityManager $entityManager,
         private TenantGuard $tenantGuard,
+        private BusinessDaySchedule $businessDaySchedule,
+        private Config $config,
     ) {}
 
     public function run(ActionContext $context): void
@@ -47,6 +51,22 @@ class CreateTask implements Action
             'parentType' => $context->target->getEntityType(),
             'parentId' => $context->target->getId(),
         ]);
+        if (isset($params['dueInBusinessDays']) && $params['dueInBusinessDays'] !== '') {
+            if (!empty($params['dateEnd'])) {
+                throw new Error('CreateTask: choose dateEnd or dueInBusinessDays, not both.');
+            }
+            $base = ($params['dueDateBase'] ?? 'enrollment') === 'stageEntry'
+                ? (string) $context->record->get('enteredStageAt')
+                : (string) ($context->record->get('createdAt') ?: $context->record->get('enteredStageAt'));
+            if ($base === '') {
+                throw new Error('CreateTask: enrollment date is required for business-day scheduling.');
+            }
+            $task->set('dateEndDate', $this->businessDaySchedule->dueDate(
+                $base,
+                $params['dueInBusinessDays'],
+                (string) ($params['timeZone'] ?? $this->config->get('timeZone') ?? 'UTC'),
+            ));
+        }
         $this->tenantGuard->stampNewEntity($task, $tenantId, $teamsIds);
 
         $createdById = $context->actor?->getId() ?: 'system';

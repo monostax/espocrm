@@ -163,6 +163,10 @@ class ActivitiesPanelView extends RelationshipPanelView {
         this.collection.order = this.order;
         this.collection.maxSize = this.getConfig().get('recordsPerPageSmall') || 5;
 
+        if (this.defs.dueDateOrder && this.name === 'activities') {
+            this.collection.data.dueDateOrder = 'true';
+        }
+
         let events = `update-related:activities update-all`;
 
         for (const entityType of this.scopeList) {

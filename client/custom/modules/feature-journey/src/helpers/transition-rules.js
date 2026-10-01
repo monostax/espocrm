@@ -337,7 +337,7 @@ define("feature-journey:helpers/transition-rules", [], function () {
             return null;
         }
 
-        const m = p.trim().match(/^(\d+)\s*([A-Za-zÀ-ÿ]+)$/);
+        const m = p.trim().match(/^(\d+)\s*([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)$/);
 
         if (!m) {
             return null;
@@ -350,7 +350,7 @@ define("feature-journey:helpers/transition-rules", [], function () {
             .replace(/[óôõÓÔÕ]/g, "o")
             .replace(/[úÚ]/g, "u")
             .replace(/[çÇ]/g, "c")
-            .toLowerCase();
+            .toLowerCase().replace(/\s+/g, " ");
 
         const mult = {
             // English
@@ -359,12 +359,15 @@ define("feature-journey:helpers/transition-rules", [], function () {
             hour: 3600, hours: 3600,
             day: 86400, days: 86400,
             week: 604800, weeks: 604800,
+            "business day": 86400, "business days": 86400,
+            weekday: 86400, weekdays: 86400,
             // pt-BR
             segundo: 1, segundos: 1,
             minuto: 60, minutos: 60,
             hora: 3600, horas: 3600,
             dia: 86400, dias: 86400,
             semana: 604800, semanas: 604800,
+            "dia util": 86400, "dias uteis": 86400,
         };
 
         if (!mult[u]) {

@@ -127,6 +127,10 @@ class ActivitiesPanelsView extends DetailBottomRecordView {
             p.recordListView = "chatwoot:views/activities/table";
         }
 
+        if (name === "activities") {
+            p.dueDateOrder = true;
+        }
+
         return p;
     }
 }

@@ -170,6 +170,7 @@
         },
         "type": {
             "createTask": "Create task",
+            "cancelJourneyTasks": "Cancel open tasks from this enrollment",
             "createRecord": "Create record",
             "createRelatedRecord": "Create related record",
             "sendEmail": "Send email",

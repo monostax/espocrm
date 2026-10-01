@@ -26,6 +26,7 @@
         "eventCode": "Event",
         "eventCodesMulti": "Events (any of)",
         "minCount": "At least this many times",
+        "sinceEnrollment": "Only since this enrollment started",
         "window": "In the last",
         "elapsedPeriod": "Time in this step at least",
         "entityFilterWhere": "Target matches",

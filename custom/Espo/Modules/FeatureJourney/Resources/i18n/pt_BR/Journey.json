@@ -16,6 +16,8 @@
         "minutes": "minutos",
         "hours": "horas",
         "days": "dias",
+        "business day": "dia útil",
+        "business days": "dias úteis",
         "weeks": "semanas",
         "second": "segundo",
         "seconds": "segundos",
@@ -26,11 +28,13 @@
     },
     "fields": {
         "name": "Nome",
+        "timeZone": "Fuso dos dias úteis",
         "status": "Status",
         "targetEntityType": "Para quem é esta jornada",
         "tenant": "Workspace",
         "targetLists": "Listas de inclusão",
         "manualContacts": "Pessoas manuais",
+        "manualOpportunities": "Oportunidades incluídas",
         "excludeTargetLists": "Listas de exclusão",
         "continuousEnrollment": "Incluir novos automaticamente",
         "allowReEnrollment": "Re-inscrever automaticamente após terminar",
@@ -61,7 +65,8 @@
         "targetEntityType": {
             "Contact": "Contato",
             "Account": "Conta",
-            "Lead": "Lead"
+            "Lead": "Lead",
+            "Opportunity": "Oportunidade"
         }
     },
     "messages": {
@@ -123,6 +128,7 @@
         "periodRawPlaceholder": "ou texto livre, ex.: 3 dias"
     },
     "tooltips": {
+        "timeZone": "Fuso IANA dos temporizadores em dias úteis, ex.: America/Sao_Paulo. Segunda a sexta, sem excluir feriados. Jornadas sem valor usam UTC.",
         "continuousEnrollment": "Enquanto a jornada estiver ligada, quem entrar no público é incluído automaticamente.",
         "allowReEnrollment": "Quando ligado, a inscrição automática cria uma nova execução se quem já concluiu, saiu ou falhou ainda estiver no público. Quando desligado, essa pessoa não entra de novo sozinha (a execução terminal é permanente).",
         "goalEventCodes": "Quando um destes eventos chegar, a pessoa conta meta atingida e a execução termina.",

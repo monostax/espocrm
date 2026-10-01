@@ -50,7 +50,7 @@ class DispatchToJourneys implements AfterSave
             if (!$target) {
                 $parentType = $entity->get('parentType');
                 $parentId = $entity->get('parentId');
-                if ($parentType && $parentId && in_array($parentType, ['Contact', 'Account', 'Lead'], true)) {
+                if ($parentType && $parentId && in_array($parentType, ['Contact', 'Account', 'Lead', 'Opportunity'], true)) {
                     $target = $this->entityManager->getEntityById((string) $parentType, (string) $parentId);
                 }
             }

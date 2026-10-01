@@ -235,6 +235,8 @@ class DeliveryWebhook
                 'espoAccountId' => $espoAccountId,
                 'chatwootMessageId' => $messageId,
                 'content' => $content,
+                'createdAt' => $data->created_at ?? null,
+                'isPrivate' => (bool) ($data->private ?? false),
             ]);
         } catch (\Throwable $e) {
             $this->log->warning(

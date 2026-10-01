@@ -24,7 +24,7 @@
                 {
                     "name": "allowReEnrollment"
                 },
-                false
+                {"name": "timeZone"}
             ],
             [
                 {
@@ -47,6 +47,12 @@
             [
                 {
                     "name": "manualContacts",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "manualOpportunities",
                     "fullWidth": true
                 }
             ],

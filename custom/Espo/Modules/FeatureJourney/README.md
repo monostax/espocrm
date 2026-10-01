@@ -2,7 +2,7 @@
 
 Multi-tenant **customer-engagement journeys** and lightweight **business-process control** for Monostax CRM.
 
-Enroll Contacts, Accounts, or Leads into staged journeys; move them with signals, timers, entity changes, manual or formula rules; run OnEnter/OnExit actions; track goals — all tenant-isolated with a restricted formula sandbox.
+Enroll Contacts, Accounts, Leads, or Opportunities into staged journeys; move them with signals, timers, entity changes, manual or formula rules; run OnEnter/OnExit actions; track goals — all tenant-isolated with a restricted formula sandbox.
 
 ## Product docs
 

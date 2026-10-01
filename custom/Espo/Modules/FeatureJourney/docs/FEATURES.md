@@ -26,7 +26,7 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 | Named journeys | Required name, optional description |
 | Status machine | Draft · Active · Paused · Completed · Archived |
 | Lifecycle actions | Activate · Pause · Stop Enrollment · Archive (UI + REST) |
-| Target entity types | Contact · Account · Lead |
+| Target entity types | Contact · Account · Lead · Opportunity |
 | Teams + Tenant | Required teams; tenant auto-derived and read-only |
 | Audience sources | Target Lists, manual Contacts, exclude lists |
 | Continuous enrollment | Opt-in minute job while Active |
@@ -115,7 +115,7 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 
 | Feature | Details |
 |---|---|
-| linkParent target | Contact / Account / Lead |
+| linkParent target | Contact / Account / Lead / Opportunity |
 | Statuses | Active · Completed · Exited · Failed · Paused |
 | Stage pointer | currentStage + enteredStageAt |
 | Worker claim | claimedAt for exclusive processing |

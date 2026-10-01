@@ -46,7 +46,7 @@ class JourneyWhatsAppReplyTracker
             return;
         }
 
-        if ((string) ($message->get('messageType') ?? '') !== 'incoming') {
+        if ((string) ($message->get('messageType') ?? '') !== 'incoming' || $message->get('isPrivate')) {
             return;
         }
 
@@ -94,6 +94,10 @@ class JourneyWhatsAppReplyTracker
         if ($externalConversationId === '' || $espoAccountId === '') {
             return;
         }
+
+        $this->dispatchLinkedOpportunities(
+            $conversation, $espoAccountId, $chatwootMessageId, $message->get('chatwootCreatedAt'),
+        );
 
         // Cross-path de-dupe with webhook keys.
         $whKey = 'wh:' . $espoAccountId . ':' . $externalConversationId . ':' .
@@ -174,6 +178,9 @@ class JourneyWhatsAppReplyTracker
      */
     public function handleWebhookIncoming(array $payload): void
     {
+        if (!empty($payload['isPrivate'])) {
+            return;
+        }
         $externalConversationId = trim((string) ($payload['chatwootConversationId'] ?? ''));
         $espoAccountId = trim((string) ($payload['espoAccountId'] ?? ''));
 
@@ -196,6 +203,10 @@ class JourneyWhatsAppReplyTracker
                 'chatwootAccountId' => $espoAccountId,
             ])
             ->findOne();
+
+        $this->dispatchLinkedOpportunities(
+            $conversation, $espoAccountId, $chatwootMessageId, $payload['createdAt'] ?? null,
+        );
 
         $journeyId = $conversation
             ? (string) ($conversation->get('journeyId') ?? '')
@@ -256,6 +267,89 @@ class JourneyWhatsAppReplyTracker
             null,
             $conversation,
         );
+    }
+
+    /** Replies to manually sent messages: correlate only explicitly linked Opportunities. */
+    private function dispatchLinkedOpportunities(
+        ?Entity $conversation,
+        string $accountId,
+        mixed $messageId,
+        mixed $createdAt,
+    ): void {
+        if (!$conversation || (string) $conversation->get('chatwootAccountId') !== $accountId ||
+            $messageId === null || $createdAt === null || $createdAt === '') {
+            return;
+        }
+
+        $inbox = $conversation->get('inboxId')
+            ? $this->entityManager->getEntityById('ChatwootInbox', (string) $conversation->get('inboxId'))
+            : null;
+        $channel = $inbox?->get('channelType') ?: $conversation->get('inboxChannelType');
+        if (!in_array($channel, ['whatsappQrcode', 'whatsappCloudApi', 'whatsappCoexistence'], true)) {
+            return;
+        }
+        if ($inbox && (string) $inbox->get('chatwootAccountId') !== $accountId) {
+            return;
+        }
+
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
+        $tenantId = $account ? $this->tenantResolver->resolveTenantIdForEntity($account) : null;
+        if (!$tenantId || $this->tenantResolver->resolveTenantIdForEntity($conversation) !== $tenantId) {
+            return;
+        }
+
+        try {
+            $timestamp = is_numeric($createdAt)
+                ? (int) $createdAt
+                : (new \DateTimeImmutable((string) $createdAt, new \DateTimeZone('UTC')))->getTimestamp();
+        } catch (Throwable) {
+            return;
+        }
+        // Reject malformed/future timestamps and old messages synced after enrollment.
+        if ($timestamp <= 0 || $timestamp > time() + 300) {
+            return;
+        }
+        $occurredAt = gmdate('Y-m-d H:i:s', $timestamp);
+        $opportunities = $this->entityManager->getRDBRepository('ChatwootConversation')
+            ->getRelation($conversation, 'opportunities')->find();
+        foreach ($opportunities as $opportunity) {
+            if ($this->tenantResolver->resolveTenantIdForEntity($opportunity) !== $tenantId) {
+                continue;
+            }
+            $records = $this->entityManager->getRDBRepository('JourneyRecord')->where([
+                'tenantId' => $tenantId,
+                'targetType' => 'Opportunity',
+                'targetId' => $opportunity->getId(),
+                'status' => 'Active',
+                'createdAt<=' => $occurredAt,
+            ])->find();
+            foreach ($records as $record) {
+                $journey = $this->entityManager->getEntityById('Journey', (string) $record->get('journeyId'));
+                if (!$journey || $journey->get('status') !== 'Active' ||
+                    (string) $journey->get('tenantId') !== $tenantId) {
+                    continue;
+                }
+                $key = 'opportunity:' . $accountId . ':' . $messageId . ':' . $record->getId();
+                if (isset(self::$fired[$key])) {
+                    continue;
+                }
+                // Durable evidence also blocks a due timer before its exit signal job runs.
+                if (!$record->get('whatsAppRepliedAt')) {
+                    $record->set('whatsAppRepliedAt', $occurredAt);
+                    $this->entityManager->saveEntity($record, [SaveOption::SILENT => true]);
+                }
+                $this->emit('Opportunity', (string) $opportunity->getId(), null, [
+                    'journeyId' => $journey->getId(),
+                    'journeyRecordId' => $record->getId(),
+                    'conversationId' => $conversation->getId(),
+                    'chatwootConversationId' => $conversation->get('chatwootConversationId'),
+                    'chatwootMessageId' => $messageId,
+                    'occurredAt' => $occurredAt,
+                    'channelType' => $channel,
+                ], null, null, $conversation);
+                self::$fired[$key] = true;
+            }
+        }
     }
 
     /**

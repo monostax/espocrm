@@ -177,7 +177,10 @@ class TransitionEvaluator
         }
 
         try {
-            return (new PeriodParser())->isDue((string) $entered, $period);
+            $journey = $this->entityManager->getEntityById('Journey', (string) $record->get('journeyId'));
+            return (new PeriodParser())->isDue(
+                (string) $entered, $period, null, (string) ($journey?->get('timeZone') ?: 'UTC'),
+            );
         } catch (Throwable $e) {
             $this->log->warning('TransitionEvaluator: elapsedInStage failed: ' . $e->getMessage());
 
@@ -334,6 +337,14 @@ class TransitionEvaluator
      */
     private function evalEventHistory(array $node, Entity $record): bool
     {
+        if (!empty($node['sinceEnrollment']) && ($node['code'] ?? '') === JourneyWhatsAppSignal::CODE_REPLIED &&
+            $record->get('targetType') === 'Opportunity' && empty($node['window']) &&
+            (int) ($node['minCount'] ?? 1) === 1) {
+            // Enrollment-local evidence avoids a late sync from an earlier cycle
+            // stopping a newer enrollment of the same Opportunity.
+            return $record->get('whatsAppRepliedAt') && $record->get('createdAt') &&
+                $record->get('whatsAppRepliedAt') >= $record->get('createdAt');
+        }
         if (!class_exists('Espo\\Modules\\FeatureTrackingEvent\\Entities\\TrackingEvent')) {
             return false;
         }
@@ -354,6 +365,12 @@ class TransitionEvaluator
                 'tenantId' => $tenantId,
                 'code' => $code,
             ];
+            if (!empty($node['sinceEnrollment'])) {
+                if (!$record->get('createdAt')) {
+                    return false;
+                }
+                $where['occurredAt>='] = $record->get('createdAt');
+            }
 
             if ($targetType === 'Contact') {
                 $where['contactId'] = $targetId;
@@ -364,10 +381,8 @@ class TransitionEvaluator
 
             if (is_string($window) && $window !== '') {
                 $parser = new PeriodParser();
-                $from = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
-                    ->sub($parser->parse($window))
-                    ->format('Y-m-d H:i:s');
-                $where['occurredAt>='] = $from;
+                $from = $parser->subtractFromNow($window);
+                $where['occurredAt>='] = max($where['occurredAt>='] ?? '', $from);
             }
 
             $count = $this->entityManager

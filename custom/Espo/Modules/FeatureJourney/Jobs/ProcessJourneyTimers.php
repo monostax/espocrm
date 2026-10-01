@@ -135,7 +135,9 @@ class ProcessJourneyTimers implements JobDataLess
                 }
 
                 try {
-                    if (!$this->periodParser->isDue((string) $entered, (string) $wait)) {
+                    if (!$this->periodParser->isDue(
+                        (string) $entered, (string) $wait, null, (string) ($journey->get('timeZone') ?: 'UTC'),
+                    )) {
                         continue;
                     }
                 } catch (Throwable $e) {
@@ -208,7 +210,10 @@ class ProcessJourneyTimers implements JobDataLess
                 }
 
                 try {
-                    if (!$this->periodParser->isDue((string) $entered, (string) $max)) {
+                    $journey = $this->entityManager->getEntityById('Journey', (string) $record->get('journeyId'));
+                    if (!$this->periodParser->isDue(
+                        (string) $entered, (string) $max, null, (string) ($journey?->get('timeZone') ?: 'UTC'),
+                    )) {
                         continue;
                     }
                 } catch (Throwable $e) {

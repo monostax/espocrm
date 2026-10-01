@@ -29,6 +29,7 @@ class PeriodParser
         'minute' => 60,
         'hour' => 3600,
         'day' => 86400,
+        'business day' => 86400, // Lower bound for wake ordering; scheduling uses calendar arithmetic.
         'week' => 604800,
     ];
 
@@ -52,12 +53,15 @@ class PeriodParser
         'hour' => 'hour', 'hours' => 'hour',
         'day' => 'day', 'days' => 'day',
         'week' => 'week', 'weeks' => 'week',
+        'business day' => 'business day', 'business days' => 'business day',
+        'weekday' => 'business day', 'weekdays' => 'business day',
         // pt-BR
         'segundo' => 'second', 'segundos' => 'second',
         'minuto' => 'minute', 'minutos' => 'minute',
         'hora' => 'hour', 'horas' => 'hour',
         'dia' => 'day', 'dias' => 'day',
         'semana' => 'week', 'semanas' => 'week',
+        'dia util' => 'business day', 'dias uteis' => 'business day',
     ];
 
     public function parse(string $period): DateInterval
@@ -80,6 +84,10 @@ class PeriodParser
         }
 
         [$n, $unit] = $this->split($period);
+
+        if ($unit === 'business day') {
+            return DateInterval::createFromDateString($n . ' weekdays');
+        }
 
         return new DateInterval(sprintf(self::UNIT_SPEC[$unit], $n));
     }
@@ -140,22 +148,48 @@ class PeriodParser
         return $n . ' ' . $unit . ($n === 1 ? '' : 's');
     }
 
-    public function addToNow(string $period, ?int $fromTs = null): string
+    public function addToNow(string $period, ?int $fromTs = null, string $timeZone = 'UTC'): string
     {
         $dt = new \DateTimeImmutable('@' . ($fromTs ?? time()));
         $dt = $dt->setTimezone(new \DateTimeZone('UTC'));
-        $dt = $dt->add($this->parse($period));
+        $dt = $this->add($dt, $period, $timeZone);
 
         return $dt->format('Y-m-d H:i:s');
     }
 
-    public function isDue(string $baseDatetime, string $period, ?int $now = null): bool
+    public function isDue(string $baseDatetime, string $period, ?int $now = null, string $timeZone = 'UTC'): bool
     {
         $now = $now ?? time();
         $base = new \DateTimeImmutable($baseDatetime, new \DateTimeZone('UTC'));
-        $due = $base->add($this->parse($period));
+        $due = $this->add($base, $period, $timeZone);
 
         return $due->getTimestamp() <= $now;
+    }
+
+    public function subtractFromNow(string $period, ?int $fromTs = null): string
+    {
+        $base = new \DateTimeImmutable('@' . ($fromTs ?? time()));
+        $canonical = $this->normalise($period);
+        // PHP cannot subtract a DateInterval containing relative weekday rules.
+        $date = $canonical !== null && str_contains($canonical, 'business day')
+            ? $base->modify('-' . (int) $canonical . ' weekdays')
+            : $base->sub($this->parse($period));
+
+        return $date->format('Y-m-d H:i:s');
+    }
+
+    private function add(\DateTimeImmutable $base, string $period, string $timeZone): \DateTimeImmutable
+    {
+        $canonical = $this->normalise($period);
+        if ($canonical !== null && str_contains($canonical, 'business day')) {
+            $local = $base->setTimezone(new \DateTimeZone($timeZone));
+            while ((int) $local->format('N') > 5) {
+                $local = $local->modify('+1 day');
+            }
+            return $local->add($this->parse($period))->setTimezone(new \DateTimeZone('UTC'));
+        }
+
+        return $base->add($this->parse($period));
     }
 
     /**
@@ -163,7 +197,7 @@ class PeriodParser
      */
     private function split(string $period): array
     {
-        if (!preg_match('/^(\d+)\s*([\p{L}]+)$/u', $period, $m)) {
+        if (!preg_match('/^(\d+)\s*([\p{L}]+(?:\s+[\p{L}]+)*)$/u', $period, $m)) {
             throw new InvalidArgumentException("Invalid period '{$period}'.");
         }
 
@@ -192,6 +226,6 @@ class PeriodParser
             'ç' => 'c', 'Ç' => 'c',
         ]);
 
-        return self::UNIT_ALIASES[strtolower($word)] ?? null;
+        return self::UNIT_ALIASES[strtolower(preg_replace('/\s+/', ' ', $word))] ?? null;
     }
 }

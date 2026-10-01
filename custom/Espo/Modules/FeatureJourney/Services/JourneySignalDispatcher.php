@@ -66,6 +66,9 @@ class JourneySignalDispatcher
             $where['targetType'] = $targetEntity->getEntityType();
             $where['targetId'] = $targetEntity->getId();
         }
+        if (!empty($signal['payload']['journeyRecordId'])) {
+            $where['id'] = (string) $signal['payload']['journeyRecordId'];
+        }
 
         $records = $this->entityManager
             ->getRDBRepository(JourneyRecord::ENTITY_TYPE)
@@ -169,6 +172,10 @@ class JourneySignalDispatcher
                 Journey::ENTITY_TYPE,
                 (string) $record->get('journeyId')
             );
+            if (!empty($signal['payload']['journeyRecordId']) &&
+                $record->getId() !== (string) $signal['payload']['journeyRecordId']) {
+                continue;
+            }
 
             if (!$journey || $journey->get('status') !== Journey::STATUS_ACTIVE) {
                 continue;
@@ -197,7 +204,7 @@ class JourneySignalDispatcher
         ?Entity $targetEntity,
         array $signal,
     ): void {
-        if (!$targetEntity) {
+        if (!$targetEntity || !empty($signal['payload']['journeyRecordId'])) {
             return;
         }
 

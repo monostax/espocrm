@@ -66,7 +66,8 @@ class JourneyEnrollmentService
             'Contact' => 'contacts',
             'Account' => 'accounts',
             'Lead' => 'leads',
-            default => 'contacts',
+            'Opportunity' => null, // Opportunities are selected directly, not TargetList members.
+            default => throw new BadRequest('Unsupported Journey target type.'),
         };
 
         $targetLists = $this->entityManager
@@ -77,6 +78,9 @@ class JourneyEnrollmentService
         $journeyTenantId = $journey->get('tenantId') ? (string) $journey->get('tenantId') : null;
 
         foreach ($targetLists as $targetList) {
+            if ($relationName === null) {
+                throw new BadRequest('Opportunity journeys use manualOpportunities, not target lists.');
+            }
             if ($journeyTenantId && !$this->tenantGuard->entityBelongsToTenant($targetList, $journeyTenantId)) {
                 $this->log->warning(
                     'JourneyEnrollmentService: skip foreign targetList ' . $targetList->getId()
@@ -109,10 +113,10 @@ class JourneyEnrollmentService
 
         $includeListMemberCount = count($audience);
 
-        if ($targetType === 'Contact') {
+        if (in_array($targetType, ['Contact', 'Opportunity'], true)) {
             $manual = $this->entityManager
                 ->getRDBRepository(Journey::ENTITY_TYPE)
-                ->getRelation($journey, 'manualContacts')
+                ->getRelation($journey, $targetType === 'Opportunity' ? 'manualOpportunities' : 'manualContacts')
                 ->find();
 
             foreach ($manual as $contact) {
@@ -120,13 +124,13 @@ class JourneyEnrollmentService
                     continue;
                 }
 
-                $key = 'Contact:' . $contact->getId();
+                $key = $targetType . ':' . $contact->getId();
                 if (isset($seen[$key])) {
                     continue;
                 }
                 $seen[$key] = true;
                 $manualCount++;
-                $audience[] = ['targetType' => 'Contact', 'targetId' => $contact->getId()];
+                $audience[] = ['targetType' => $targetType, 'targetId' => $contact->getId()];
             }
         }
 
@@ -140,6 +144,9 @@ class JourneyEnrollmentService
         $excluded = [];
         $excludeListIds = [];
         foreach ($excludeLists as $targetList) {
+            if ($relationName === null) {
+                throw new BadRequest('Opportunity journeys do not support exclusion target lists.');
+            }
             $excludeListIds[$targetList->getId()] = true;
             $members = $this->entityManager
                 ->getRDBRepository('TargetList')
@@ -304,6 +311,11 @@ class JourneyEnrollmentService
         string $targetId,
         ?User $actor = null,
     ): array {
+        if (!in_array($targetType, ['Contact', 'Account', 'Lead', 'Opportunity'], true) ||
+            $targetType !== $journey->get('targetEntityType')) {
+            throw new BadRequest('Enrollment target type must match the Journey target type.');
+        }
+
         $tenantId = $journey->get('tenantId');
         if ($tenantId && !$this->rateLimiter->allowEnrollments((string) $tenantId)) {
             $this->log->warning("JourneyEnrollmentService: enrollment rate limit tenant={$tenantId}");

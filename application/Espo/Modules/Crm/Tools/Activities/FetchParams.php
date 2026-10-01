@@ -40,6 +40,7 @@ class FetchParams
         ?int $offset,
         ?string $entityType,
         private bool $countOnly = false,
+        private bool $dueDateOrder = false,
     ) {
         $this->maxSize = $maxSize;
         $this->offset = $offset;
@@ -49,6 +50,11 @@ class FetchParams
     public function getMaxSize(): ?int
     {
         return $this->maxSize;
+    }
+
+    public function hasDueDateOrder(): bool
+    {
+        return $this->dueDateOrder;
     }
 
     public function isCountOnly(): bool

@@ -170,6 +170,7 @@
         },
         "type": {
             "createTask": "Criar tarefa",
+            "cancelJourneyTasks": "Cancelar tarefas abertas desta inscrição",
             "createRecord": "Criar registro",
             "createRelatedRecord": "Criar registro relacionado",
             "sendEmail": "Enviar e-mail",

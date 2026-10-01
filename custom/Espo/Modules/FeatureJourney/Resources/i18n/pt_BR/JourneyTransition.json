@@ -26,6 +26,7 @@
         "eventCode": "Evento",
         "eventCodesMulti": "Eventos (qualquer um)",
         "minCount": "Pelo menos quantas vezes",
+        "sinceEnrollment": "Somente desde o início desta inscrição",
         "window": "Nos últimos",
         "elapsedPeriod": "Tempo nesta etapa pelo menos",
         "entityFilterWhere": "O alvo atende",

@@ -17,6 +17,7 @@ class ValidateStructure implements BeforeSave
 
     private const LOCKED = [
         'targetEntityType',
+        'timeZone',
         'allowReEnrollment',
         'goalEventCodes',
         'goalEntityFilter',
@@ -25,6 +26,10 @@ class ValidateStructure implements BeforeSave
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
+        $zone = $entity->get('timeZone');
+        if ($zone && !in_array($zone, \DateTimeZone::listIdentifiers(), true)) {
+            throw new BadRequest('Invalid Journey time zone. Use an IANA name, e.g. America/Sao_Paulo.');
+        }
         if (!$entity instanceof Journey || $entity->isNew()) {
             return;
         }

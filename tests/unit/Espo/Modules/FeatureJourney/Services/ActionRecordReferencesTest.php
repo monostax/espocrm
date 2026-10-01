@@ -120,7 +120,14 @@ class ActionRecordReferencesTest extends TestCase
         $this->actor->method('getId')->willReturn('actor-1');
 
         $factory = $this->createMock(InjectableFactory::class);
-        $factory->method('create')->willReturnCallback(fn ($class) => new $class($this->em, $this->guard));
+        $factory->method('create')->willReturnCallback(fn ($class) =>
+            $class === \Espo\Modules\FeatureJourney\Classes\JourneyActions\CreateTask::class
+                ? new $class($this->em, $this->guard,
+                    new \Espo\Modules\FeatureJourney\Services\BusinessDaySchedule(),
+                    $this->createMock(\Espo\Core\Utils\Config::class))
+                : ($class === \Espo\Modules\FeatureJourney\Classes\JourneyActions\CancelJourneyTasks::class
+                    ? new $class($this->em, $this->guard, $manager)
+                    : new $class($this->em, $this->guard)));
         $formulas = $this->createMock(FormulaManager::class);
         $formulas->method('run')->willReturnCallback(static fn ($script, $entity) => $entity->get('name'));
         $conditions = $this->createMock(ActionConditionEvaluator::class);
@@ -162,6 +169,60 @@ class ActionRecordReferencesTest extends TestCase
 
         $this->assertTrue($this->runActions([$create], 'D0')['ok']);
         $this->assertSame(3, $this->sequence, 'Replaying the create action must not create a second Opportunity.');
+    }
+
+    public function testOpportunityCadenceCreatesEightDatedTasksAndReusesThem(): void
+    {
+        $this->allowAccess();
+        $this->journey->set('targetEntityType', 'Opportunity');
+        $this->account = $this->entity('Opportunity', ['id' => 'opportunity-1', 'name' => 'Deal']);
+        $this->stored['enrollment-1']->set([
+            'targetType' => 'Opportunity', 'targetId' => 'opportunity-1',
+            'createdAt' => '2026-10-01 15:00:00',
+        ]);
+        $actions = [];
+        foreach ([0, 2, 5, 8] as $days) {
+            foreach (['call', 'whatsapp'] as $channel) {
+                $actions[] = $this->action('createTask', [
+                    'saveAs' => $channel . $days,
+                    'params' => ['name' => $channel, 'dueInBusinessDays' => $days,
+                        'timeZone' => 'America/Sao_Paulo', 'assignedUserId' => 'owner-1'],
+                ]);
+            }
+        }
+        $result = $this->runActions($actions);
+        $this->assertTrue($result['ok'], json_encode($result));
+        foreach (['2026-10-01', '2026-10-01', '2026-10-05', '2026-10-05',
+            '2026-10-08', '2026-10-08', '2026-10-13', '2026-10-13'] as $i => $date) {
+            $task = $this->stored['created-' . ($i + 1)];
+            $this->assertSame('Opportunity', $task->get('parentType'));
+            $this->assertSame('opportunity-1', $task->get('parentId'));
+            $this->assertSame('owner-1', $task->get('assignedUserId'));
+            $this->assertSame($date, $task->get('dateEndDate'));
+        }
+        $this->assertTrue($this->runActions($actions)['ok']);
+        $this->assertSame(8, $this->sequence);
+    }
+
+    public function testStageTasksUseStageDateAndReplyCancellationPreservesCompletedAndUnrelatedTasks(): void
+    {
+        $this->allowAccess();
+        $this->stored['enrollment-1']->set([
+            'createdAt' => '2026-10-01 15:00:00', 'enteredStageAt' => '2026-10-05 15:00:00',
+        ]);
+        $params = ['dueInBusinessDays' => 0, 'dueDateBase' => 'stageEntry', 'timeZone' => 'America/Sao_Paulo'];
+        $this->assertTrue($this->runActions([
+            $this->action('createTask', ['saveAs' => 'call', 'params' => $params]),
+            $this->action('createTask', ['saveAs' => 'whatsapp', 'params' => $params]),
+            $this->action('createTask', ['params' => ['name' => 'Unrelated task']]),
+        ])['ok']);
+        $this->assertSame('2026-10-05', $this->stored['created-1']->get('dateEndDate'));
+        $this->stored['created-1']->set('status', 'Completed');
+        $this->em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $this->stored[$id] ?? null);
+        $this->assertTrue($this->runActions([$this->action('cancelJourneyTasks')])['ok']);
+        $this->assertSame('Completed', $this->stored['created-1']->get('status'));
+        $this->assertSame('Canceled', $this->stored['created-2']->get('status'));
+        $this->assertSame('Not Started', $this->stored['created-3']->get('status'));
     }
 
     public function testSaveFailureRollsBackAndDoesNotPolluteTheCallersEnrollment(): void
@@ -426,7 +487,7 @@ class ActionRecordReferencesTest extends TestCase
         $attributes = array_fill_keys(array_merge(array_keys($values), [
             'id', 'tenantId', 'recordReferences', 'cycleCount', 'name', 'status', 'priority', 'description',
             'dateEnd', 'assignedUserId', 'parentType', 'parentId', 'accountId', 'saveAs', 'targetReference',
-            'continueOnError',
+            'continueOnError', 'createdAt', 'enteredStageAt', 'dateEndDate',
         ]), ['type' => 'varchar']);
         foreach (['params', 'recordReferences', 'conditionsGroup'] as $attribute) {
             $attributes[$attribute] = ['type' => 'jsonObject'];

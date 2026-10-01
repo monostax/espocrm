@@ -26,8 +26,8 @@ Journey (definition)
 | **Signal** | Named event code (often from TrackingEvent) evaluated against active records |
 | **Goal** | Completion criterion (`goalEventCodes` and/or `goalEntityFilter`) |
 
-**Targets (v1 enrollment):** Contact, Account, Lead.  
-**Entity-change watch set:** Contact, Account, Lead, Opportunity (Opportunity is watchable but not an enrollment target).
+**Enrollment targets:** Contact, Account, Lead, Opportunity.
+**Entity-change watch set:** Contact, Account, Lead, Opportunity.
 
 ---
 
@@ -76,6 +76,12 @@ Resolved like WhatsApp campaigns:
 **Invariant:** at most one non-terminal (Active/Paused) record per (journey, target).
 
 Formula enrollment: `journey\enroll(JOURNEY_ID, TARGET_TYPE, TARGET_ID)`.
+
+Opportunity journeys use **Include opportunities** (`manualOpportunities`) for their audience,
+or explicit formula enrollment. Target Lists do not contain Opportunities and cannot be used
+for inclusion/exclusion on these journeys. Continuous enrollment processes newly selected
+Opportunities; it does not enroll every Opportunity in the workspace. Enrollment target types
+must match the Journey. Tenant checks and duplicate/re-enrollment rules apply as usual.
 
 Per-tenant **enrollment rate limit** applies (best-effort fixed window).
 
@@ -155,6 +161,29 @@ Time-in-step rules require a specific source stage and are not available on jour
 
 **WhatsApp reply (`whatsapp_replied`):** journey `sendWhatsAppMessage` / `sendWhatsAppTemplate` stamp the Chatwoot conversation id on the JourneyRecord (and ChatwootConversation when already synced). An inbound message on that conversation (DeliveryWebhook and/or ChatwootMessage afterSave) emits `whatsapp_replied` — same dual-path as `email_replied` (TrackingEvent → DispatchToJourneys, with dispatcher fallback).
 
+**Manual Opportunity follow-ups:** incoming public WhatsApp messages also emit a scoped
+`whatsapp_replied` for active enrollments of Opportunities explicitly linked through
+`ChatwootConversation.opportunities`. Both webhook and CRM sync paths enforce account,
+tenant, WhatsApp channel, and message creation time (at or after enrollment). Private
+notes, other channels, and historical sync messages do not stop a new enrollment.
+`JourneyRecord.whatsAppRepliedAt` provides durable enrollment-local reply evidence.
+Signals carrying `journeyRecordId` affect only that enrollment.
+
+**Business-day timers:** `elapsedInStage.period` / `waitPeriod` accept `2 business days`
+or `2 dias úteis`. They preserve the local time in Journey **Business-day time zone**
+(`timeZone`, default UTC), skip weekends, and anchor weekend starts to Monday.
+Holidays are not excluded. A staged cadence uses delays **2 → 3 → 3 business days**.
+
+To stop a staged cadence on replies, route each active stage to an Exit stage on
+`currentSignal(whatsapp_replied)`; add a timer fallback of `elapsedInStage(1 minute)`
+AND `eventHistory(whatsapp_replied, sinceEnrollment=true)`. Guard forward timers with
+NOT that same history rule so queued forward jobs cannot advance after reply receipt.
+For Opportunity replies with minCount=1 and no window, **Only since this enrollment
+started** reads the enrollment-local evidence rather than another enrollment's events.
+The Exit stage may run **Cancel open tasks from this enrollment** (`cancelJourneyTasks`):
+it cancels only open Task references saved with `saveAs` in the current cycle, checks
+tenant/run-as edit access, and preserves completed/canceled and unrelated tasks.
+
 ### 5.3 Execution path
 
 1. Dispatcher or timer queues `ProcessJourneyTransition` job `{ journeyRecordId, transitionId, signal? }`
@@ -216,6 +245,23 @@ Per-tenant **action rate limit** (best-effort).
 **Configure HTTP egress:** set `app.journeyHttpRequest.allowedUrlPrefixList` (e.g. `["https://hooks.n8n.example/"]`) via custom metadata before enabling `sendHttpRequest` for tenants.
 
 ### 6.2 Account journeys with Opportunity-level work
+
+For existing Opportunities, prefer a Journey whose target type is **Opportunity**. A
+`createTask` action then links directly to the enrolled Opportunity. To assign its owner,
+set `paramFormulas.assignedUserId` to `entity\attribute('assignedUserId')`.
+
+`createTask.params.dueInBusinessDays` (integer 0–3650) schedules an all-day due date
+from the enrollment's creation date, using `params.timeZone` (IANA name; defaults to
+the CRM time zone). Monday–Friday are business days; holidays are not excluded.
+Weekend enrollment rolls D0 to Monday before offsets are added. Use cumulative
+offsets **0, 2, 5, 8** for gaps of **+2, +3, +3** business days. This is an alternative
+to `dateEnd`, not a timer period: all tasks can be created on entry with future due dates.
+Use unique `saveAs` names to prevent duplicate creation on action retries/revisits.
+
+For staged/on-demand creation, put each pair of actions on its own stage and use
+`dueDateBase: "stageEntry"` with `dueInBusinessDays: 0`. This makes each new pair due
+on that stage's business date instead of backdating it to enrollment. The default
+`dueDateBase: "enrollment"` preserves batch scheduling.
 
 An enrollment stays attached to its original Account/Contact/Lead. Individual record
 actions can use a saved creation from the same enrollment as their target:
@@ -439,7 +485,6 @@ i18n ships **en_US** and **pt_BR**.
 - Journey publish snapshots / immutable versions  
 - Full drag-drop node canvas (Flow panel + typed action/condition forms ship in product UI)  
 - Split/experiment stages, quiet hours, frequency caps (seams exist)  
-- Opportunity as enrollment target  
 
 ---
 

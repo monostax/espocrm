@@ -16,12 +16,15 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
         hour: "hour", hours: "hour",
         day: "day", days: "day",
         week: "week", weeks: "week",
+        "business day": "business day", "business days": "business day",
+        weekday: "business day", weekdays: "business day",
         // pt-BR
         segundo: "second", segundos: "second",
         minuto: "minute", minutos: "minute",
         hora: "hour", horas: "hour",
         dia: "day", dias: "day",
         semana: "week", semanas: "week",
+        "dia util": "business day", "dias uteis": "business day",
     };
 
     const stripAccents = (s) =>
@@ -38,13 +41,13 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
             return null;
         }
 
-        const m = value.trim().match(/^(\d+)\s*([A-Za-zÀ-ÿ]+)$/);
+        const m = value.trim().match(/^(\d+)\s*([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)$/);
 
         if (!m) {
             return null;
         }
 
-        const unit = UNIT_ALIASES[stripAccents(m[2]).toLowerCase()];
+        const unit = UNIT_ALIASES[stripAccents(m[2]).toLowerCase().replace(/\s+/g, " ")];
 
         if (!unit) {
             return null;
@@ -99,7 +102,7 @@ define("feature-journey:views/fields/period", ["views/fields/base"], function (D
             '{{#if isNotEmpty}}{{displayValue}}{{else}}' +
             '<span class="none-value">{{translate "None"}}</span>{{/if}}',
 
-        unitList: ["minutes", "hours", "days", "weeks"],
+        unitList: ["minutes", "hours", "days", "business days", "weeks"],
 
         data: function () {
             const raw = this.model.get(this.name);

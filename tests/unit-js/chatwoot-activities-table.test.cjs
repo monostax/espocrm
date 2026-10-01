@@ -55,6 +55,8 @@ test('only embedded activities/history opt in, preserving scope-specific panel b
             assert.equal(panels.getActivityPanelDefs(name).recordListView, 'chatwoot:views/activities/table');
         }
         assert.equal(panels.getActivityPanelDefs('opportunities').recordListView, undefined);
+        assert.equal(panels.getActivityPanelDefs('activities').dueDateOrder, true);
+        assert.equal(panels.getActivityPanelDefs('history').dueDateOrder, undefined);
         assert.equal(panels.getActivityPanelDefs('activities').view, scope === 'Opportunity'
             ? 'crm:views/opportunity/record/panels/activities'
             : 'chatwoot:views/activities/activities-panel');

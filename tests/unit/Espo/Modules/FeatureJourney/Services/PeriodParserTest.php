@@ -17,6 +17,29 @@ class PeriodParserTest extends TestCase
         $this->parser = new PeriodParser();
     }
 
+    /** @dataProvider businessTimers */
+    public function testBusinessDayTimers(string $base, string $period, string $zone, string $due): void
+    {
+        $baseTs = strtotime($base . ' UTC');
+        $dueTs = strtotime($due . ' UTC');
+        $this->assertTrue($this->parser->isValid($period));
+        $this->assertSame($due, $this->parser->addToNow($period, $baseTs, $zone));
+        $this->assertFalse($this->parser->isDue($base, $period, $dueTs - 1, $zone));
+        $this->assertTrue($this->parser->isDue($base, $period, $dueTs, $zone));
+    }
+
+    public static function businessTimers(): array
+    {
+        return [
+            ['2026-10-01 15:00:00', '2 business days', 'America/Sao_Paulo', '2026-10-05 15:00:00'],
+            ['2026-10-05 15:00:00', '3 dias úteis', 'America/Sao_Paulo', '2026-10-08 15:00:00'],
+            ['2026-10-08 15:00:00', '3 business days', 'America/Sao_Paulo', '2026-10-13 15:00:00'],
+            ['2026-10-03 01:00:00', '2 business days', 'America/Sao_Paulo', '2026-10-07 01:00:00'],
+            ['2026-10-03 15:00:00', '0 business days', 'America/Sao_Paulo', '2026-10-05 15:00:00'],
+            ['2026-03-06 15:00:00', '2 business days', 'America/New_York', '2026-03-10 14:00:00'],
+        ];
+    }
+
     /**
      * The pt-BR UI localises unit labels, so operators type Portuguese. These must not
      * throw, otherwise timers and SLAs silently never fire.

@@ -23,7 +23,8 @@
             "entityList": [
                 "Contact",
                 "Account",
-                "Lead"
+                "Lead",
+                "Opportunity"
             ]
         },
         "currentStage": {
@@ -51,6 +52,10 @@
         },
         "enteredStageAt": {
             "type": "datetime"
+        },
+        "whatsAppRepliedAt": {
+            "type": "datetime",
+            "readOnly": true
         },
         "claimedAt": {
             "type": "datetime",

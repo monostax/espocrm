@@ -3,6 +3,14 @@
     "iconClass": "ti ti-route",
     "dynamicLogic": {
         "fields": {
+            "timeZone": {
+                "readOnly": {
+                    "conditionGroup": [{"type": "and", "value": [
+                        {"type": "notEquals", "attribute": "status", "value": "Draft"},
+                        {"type": "notEquals", "attribute": "status", "value": "Paused"}
+                    ]}]
+                }
+            },
             "targetEntityType": {
                 "readOnly": {
                     "conditionGroup": [
@@ -15,6 +23,9 @@
                 }
             },
             "targetLists": {
+                "visible": {
+                    "conditionGroup": [{"type": "notEquals", "attribute": "targetEntityType", "value": "Opportunity"}]
+                },
                 "readOnly": {
                     "conditionGroup": [
                         {
@@ -45,6 +56,9 @@
                 }
             },
             "manualContacts": {
+                "visible": {
+                    "conditionGroup": [{"type": "equals", "attribute": "targetEntityType", "value": "Contact"}]
+                },
                 "readOnly": {
                     "conditionGroup": [
                         {
@@ -75,6 +89,9 @@
                 }
             },
             "excludeTargetLists": {
+                "visible": {
+                    "conditionGroup": [{"type": "notEquals", "attribute": "targetEntityType", "value": "Opportunity"}]
+                },
                 "readOnly": {
                     "conditionGroup": [
                         {
@@ -83,6 +100,23 @@
                             "value": "Draft"
                         }
                     ]
+                }
+            },
+            "manualOpportunities": {
+                "visible": {
+                    "conditionGroup": [{"type": "equals", "attribute": "targetEntityType", "value": "Opportunity"}]
+                },
+                "readOnly": {
+                    "conditionGroup": [{
+                        "type": "and",
+                        "value": [
+                            {"type": "notEquals", "attribute": "status", "value": "Draft"},
+                            {"type": "or", "value": [
+                                {"type": "notEquals", "attribute": "status", "value": "Active"},
+                                {"type": "isFalse", "attribute": "continuousEnrollment"}
+                            ]}
+                        ]
+                    }]
                 }
             },
             "continuousEnrollment": {

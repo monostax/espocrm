@@ -1383,6 +1383,14 @@ define("feature-journey:views/journey-transition/fields/conditions-group", [
         },
 
         appendEventHistoryFields: function ($fieldsCol, node) {
+            const $since = $('<input type="checkbox">').prop('checked', !!node.sinceEnrollment);
+            $since.on('change', () => {
+                node.sinceEnrollment = $since.prop('checked');
+                this.onTreeChanged();
+            });
+            $fieldsCol.append($('<label>').addClass('checkbox-inline').append($since).append(
+                document.createTextNode(' ' + this.translate('sinceEnrollment', 'labels', 'JourneyTransition'))
+            ));
             const codeOptions = this.getEventCodeSelectOptions(node.code);
 
             if (!node.code && codeOptions[0]) {

@@ -12,6 +12,28 @@ use ReflectionClass;
 
 class TransitionEvaluatorTest extends TestCase
 {
+    /** @dataProvider replies */
+    public function testEnrollmentReplyEvidence(?string $replyAt, bool $expected): void
+    {
+        $reflection = new ReflectionClass(TransitionEvaluator::class);
+        $evaluator = $reflection->newInstanceWithoutConstructor();
+        $record = $this->createStub(Entity::class);
+        $record->method('get')->willReturnCallback(static fn ($key) => [
+            'targetType' => 'Opportunity', 'createdAt' => '2026-10-01 15:00:00',
+            'whatsAppRepliedAt' => $replyAt,
+        ][$key] ?? null);
+        $method = $reflection->getMethod('evalEventHistory');
+        $this->assertSame($expected, $method->invoke($evaluator, [
+            'code' => 'whatsapp_replied', 'sinceEnrollment' => true,
+        ], $record));
+    }
+
+    public static function replies(): array
+    {
+        return [[null, false], ['2026-10-01 14:59:59', false], ['2026-10-01 15:00:00', true],
+            ['2026-10-02 16:00:00', true]];
+    }
+
     public function testCompareSupportsEveryPayloadOperatorFromTheRulesBuilder(): void
     {
         $reflection = new ReflectionClass(TransitionEvaluator::class);

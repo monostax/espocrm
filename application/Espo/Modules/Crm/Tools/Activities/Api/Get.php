@@ -76,7 +76,12 @@ class Get implements Action
 
         $targetEntityType = $request->getQueryParam('entityType');
 
-        $fetchParams = new ActivitiesFetchParams($maxSize, $offset, $targetEntityType);
+        $fetchParams = new ActivitiesFetchParams(
+            $maxSize,
+            $offset,
+            $targetEntityType,
+            dueDateOrder: $type === 'activities' && $request->getQueryParam('dueDateOrder') === 'true',
+        );
 
         $result = $type === 'history' ?
             $this->service->getHistory($parentType, $id, $fetchParams) :

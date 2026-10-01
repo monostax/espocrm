@@ -16,6 +16,8 @@
         "minutes": "minutes",
         "hours": "hours",
         "days": "days",
+        "business day": "business day",
+        "business days": "business days",
         "weeks": "weeks",
         "second": "second",
         "seconds": "seconds",
@@ -26,11 +28,13 @@
     },
     "fields": {
         "name": "Name",
+        "timeZone": "Business-day time zone",
         "status": "Status",
         "targetEntityType": "Who this journey is for",
         "tenant": "Workspace",
         "targetLists": "Include lists",
         "manualContacts": "Include people",
+        "manualOpportunities": "Include opportunities",
         "excludeTargetLists": "Exclude lists",
         "continuousEnrollment": "Auto-add new people",
         "allowReEnrollment": "Auto re-enroll after finish",
@@ -61,7 +65,8 @@
         "targetEntityType": {
             "Contact": "Contact",
             "Account": "Account",
-            "Lead": "Lead"
+            "Lead": "Lead",
+            "Opportunity": "Opportunity"
         }
     },
     "messages": {
@@ -123,6 +128,7 @@
         "periodRawPlaceholder": "or free-form, e.g. 3 days"
     },
     "tooltips": {
+        "timeZone": "IANA time zone for business-day timers, e.g. America/Sao_Paulo. Monday–Friday, excluding weekends but not holidays. Existing journeys without a value use UTC.",
         "continuousEnrollment": "While the journey is on, anyone newly added to the audience joins automatically.",
         "allowReEnrollment": "When on, automatic enrollment creates a new run if someone who already finished, left, or failed is still in the audience. When off, that person is never auto-enrolled again (terminal run is permanent).",
         "goalEventCodes": "When one of these events is received, count the person as goal reached and finish their run.",
