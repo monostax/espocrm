@@ -14,13 +14,20 @@
 | User configurations | `#Configurations` → Automation → Playbooks → Playbook templates / Playbook runs. Registered in `Resources/metadata/app/adminForUserPanel.json`. |
 | Administrator panel | `#Admin` → Playbooks → Playbook templates / Playbook runs. Registered in `Resources/metadata/app/adminPanel.json`. |
 | Native template manager | `#PlaybookManager/index/view=templates`. Select an opportunity for its tenant/team library; create, edit, reorder steps, publish, or archive templates. |
+| Workspace template detail | `#PlaybookManager/view/accountId=6&templateId=<id>`. Open a template name in the workspace list to view configuration, ordered steps/reference links, and paginated related runs. Edit opens the revision-aware editor; saving refreshes the detail. Newly created workspace templates open this page. |
 | Native run manager | `#PlaybookManager/index/view=runs`. Select an opportunity to apply playbooks and inspect or change its runs. |
 | Native Opportunity | `#Opportunity/view/<id>` → Playbooks side panel. “Playbook templates” opens the manager with `opportunityId=<id>`. |
 | Chatwoot Opportunity | Details/sidebar → Apply playbook → Manage templates. Both standalone and embedded Details layouts share `OpportunitySidebar.vue`. |
 
-The management page requires Opportunity read access; template authoring and run mutations retain all server-side checks. An opportunity is required as context: these screens do not expose cross-opportunity/global CRUD on the internal entities. Client entry: `client/custom/modules/feature-playbook/src/controllers/manager.js`; server entry: `Controllers/OpportunityPlaybook.php` → `Services/Playbooks.php`.
+The opportunity manager requires Opportunity read access; template authoring and run mutations retain all server-side checks. An opportunity is required for this execution context. With `accountId=<Chatwoot account ID>`, the manager opens the account-scoped workspace instead. Client entry: `client/custom/modules/feature-playbook/src/controllers/manager.js`; server entries: `Controllers/OpportunityPlaybook.php` → `Services/Playbooks.php` and `Services/Workspace.php`.
+
+The workspace extends Espo's standard `views/list`, inheriting its page template, header, search panel, record list, and pagination. There is no workspace HTML wrapper. Template/run navigation and template creation use native header menu actions. Search by name and the standard Status filter use the scoped workspace API's `whereGroup` support. Inline editing is disabled because changes go through the scoped editor and execution actions.
+
+Template and workspace run tables use standard layouts in `Resources/layouts/Playbook` and `Resources/layouts/PlaybookRun`. Status, dates, links, and numeric columns use standard field views. Only scoped name actions and completion have custom field views. Workspace pagination uses the standard collection `list`/`total` response and `offset`/`maxSize` parameters; offsets count authorized rows only. The API also retains `items`/`cursor` for embedded clients. The opportunity manager provides context selection and its run panel provides execution controls.
 
 ## API
+
+Workspace detail uses `GET /PlaybookWorkspace/:accountId/templates/:id`. Related runs use `GET /PlaybookWorkspace/:accountId?view=runs&templateId=:id`, with standard pagination. The template filter verifies template visibility and retains tenant and Opportunity read ACL boundaries.
 
 | Request | Contract |
 | --- | --- |

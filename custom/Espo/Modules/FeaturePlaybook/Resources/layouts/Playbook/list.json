@@ -1,0 +1,8 @@
+[
+    {"name": "name", "view": "feature-playbook:views/fields/name", "notSortable": true},
+    {"name": "status", "notSortable": true},
+    {"name": "total", "notSortable": true},
+    {"name": "createdByName", "type": "varchar", "notSortable": true},
+    {"name": "modifiedAt", "notSortable": true},
+    {"name": "revision", "notSortable": true}
+]

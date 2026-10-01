@@ -33,7 +33,7 @@ export default class extends ModalView {
         super.setup();
         this.headerText = this.translate('manageTemplates', 'labels', 'Playbook');
         this.buttonList = [{name: 'save', label: 'Save', style: 'primary'}, {name: 'cancel', label: 'Cancel'}];
-        const template = this.options.template;
+        const template = this.options.playbookTemplate;
         this.draft = template ? {
             id: template.id, name: template.name, status: template.status,
             expectedRevision: template.revision, steps: Espo.Utils.cloneDeep(template.steps),
@@ -76,8 +76,8 @@ export default class extends ModalView {
             const endpoint = this.options.accountId
                 ? `PlaybookWorkspace/${encodeURIComponent(this.options.accountId)}/templates`
                 : `Opportunity/${encodeURIComponent(this.options.opportunityId)}/playbooks/templates`;
-            await Espo.Ajax.postRequest(endpoint, this.draft);
-            this.trigger('saved');
+            const saved = await Espo.Ajax.postRequest(endpoint, this.draft);
+            this.trigger('saved', saved);
             this.close();
         } catch (error) {
             error?.setHandled?.();

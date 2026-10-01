@@ -1,134 +1,95 @@
-import MainView from 'views/main';
+import ListView from 'views/list';
 
-export default class extends MainView {
-    template = 'feature-playbook:workspace';
-    scope = 'PlaybookManager';
-
-    events = {
-        'submit [data-workspace-filters]': function (event) {
-            event.preventDefault();
-            const form = event.currentTarget;
-            this.search = form.elements.namedItem('search').value.trim();
-            this.status = form.elements.namedItem('status').value;
-            this.cursor = '';
-            this.navigate();
-            this.load();
-        },
-        'click [data-workspace-tab]': function (event) {
-            this.tab = event.currentTarget.dataset.workspaceTab;
-            this.status = this.search = this.cursor = this.opportunityId = '';
-            this.navigate();
-            this.updatePageTitle();
-            this.load();
-        },
-        'click [data-workspace-action="refresh"]': function () { this.load(); },
-        'click [data-workspace-action="new"]': function () { this.editTemplate(); },
-        'click [data-workspace-action="clear"]': function () {
-            this.opportunityId = this.cursor = '';
-            this.navigate();
-            this.load();
-        },
-        'click [data-workspace-action="next"]': function () {
-            this.cursor = this.snapshot.cursor;
-            this.navigate();
-            this.load();
-        },
-        'click [data-workspace-action="first"]': function () {
-            this.cursor = '';
-            this.navigate();
-            this.load();
-        },
-        'click [data-workspace-template]': function (event) {
-            this.editTemplate(event.currentTarget.dataset.workspaceTemplate);
-        },
-    };
-
+/** Standard list page; only scoped navigation and template editing are feature-specific. */
+export default class extends ListView {
     setup() {
+        this.scope = this.collection.entityType;
+        this.accountId = this.options.params.accountId;
+        this.createButton = this.scope === 'Playbook';
         super.setup();
-        const params = this.options.params || {};
-        this.accountId = params.accountId;
-        this.tab = params.view === 'runs' ? 'runs' : 'templates';
-        this.search = params.search || '';
-        this.status = params.status || '';
-        this.cursor = params.cursor || '';
-        this.opportunityId = params.opportunityId || '';
-        this.version = 0;
-        this.on('remove', () => { this.disposed = true; this.version++; });
-        this.wait(this.load(false));
-    }
 
-    data() {
-        const runs = this.tab === 'runs';
-        return {
-            runs, loading: this.loading, error: this.error,
-            title: this.translate(runs ? 'manageRuns' : 'manageTemplates', 'labels', 'Playbook'),
-            description: this.translate(runs ? 'runsDescription' : 'templatesDescription', 'labels', 'Playbook'),
-            search: this.search, opportunityId: this.opportunityId,
-            canCreate: !this.loading && this.snapshot?.canCreate,
-            hasNext: !!this.snapshot?.cursor, hasPrevious: !!this.cursor,
-            hasSnapshot: !!this.snapshot,
-            statuses: (runs ? ['Active', 'Completed', 'Stopped', 'Cancelled'] : ['Draft', 'Published', 'Archived'])
-                .map(value => ({value, label: this.translate(value, 'labels', 'Playbook'), selected: this.status === value})),
-            rows: (this.snapshot?.items || []).map(row => ({
-                ...row,
-                statusLabel: this.translate(row.status, 'labels', 'Playbook'),
-                date: this.getDateTime().toDisplay(row.createdAt || row.modifiedAt),
-                opportunityUrl: `#Opportunity/view/${encodeURIComponent(row.opportunityId || '')}`,
-                progressMax: row.total || 1,
-            })),
-        };
-    }
-
-    updatePageTitle() {
-        this.setPageTitle(this.translate(this.tab === 'runs' ? 'manageRuns' : 'manageTemplates', 'labels', 'Playbook'));
-    }
-
-    navigate() {
-        const params = new URLSearchParams({accountId: this.accountId, view: this.tab});
-        for (const key of ['search', 'status', 'opportunityId', 'cursor']) {
-            // Router decodes the whole segment, then each individual option.
-            if (this[key]) params.set(key, encodeURIComponent(this[key]));
-        }
-        this.getRouter().navigate(`PlaybookManager/index/${params}`, {trigger: false, replace: true});
-    }
-
-    async load(render = true) {
-        const version = ++this.version;
-        this.loading = true;
-        this.error = false;
-        this.snapshot = null;
-        if (render) await this.reRender();
-        try {
-            const snapshot = await Espo.Ajax.getRequest(`PlaybookWorkspace/${encodeURIComponent(this.accountId)}`, {
-                view: this.tab, search: this.search, status: this.status,
-                opportunityId: this.opportunityId, cursor: this.cursor,
+        const otherView = this.scope === 'Playbook' ? 'runs' : 'templates';
+        const params = new URLSearchParams({accountId: this.accountId, view: otherView});
+        this.addMenuItem('dropdown', {
+            name: 'switchPlaybookList',
+            text: this.translate(otherView === 'runs' ? 'manageRuns' : 'manageTemplates', 'labels', 'Playbook'),
+            link: `#PlaybookManager/index/${params}`,
+        });
+        if (this.collection.data.opportunityId) {
+            this.addMenuItem('dropdown', {
+                name: 'showAllRuns',
+                text: this.translate('showAllRuns', 'labels', 'Playbook'),
+                link: `#PlaybookManager/index/${new URLSearchParams({accountId: this.accountId, view: 'runs'})}`,
             });
-            if (!this.disposed && version === this.version) this.snapshot = snapshot;
-        } catch (error) {
-            error?.setHandled?.();
-            if (!this.disposed && version === this.version) this.error = true;
-        } finally {
-            if (!this.disposed && version === this.version) {
-                this.loading = false;
-                if (render) this.reRender();
-            }
         }
+        this.listenTo(this.collection, 'edit-template', id => this.editTemplate(id));
+        this.listenTo(this.collection, 'sync', () => {
+            this.removeMenuItem('create');
+            this.setupCreateButton();
+        });
+        this.on('remove', () => {
+            this.disposed = true;
+            this.collection.abortLastFetch();
+        });
+    }
+
+    setupCreateButton() {
+        if (!this.createButton || !this.collection.canCreate) return;
+        this.addMenuItem('buttons', {
+            name: 'create', action: 'create',
+            text: this.translate('newTemplate', 'labels', 'Playbook'),
+            iconHtml: '<span class="fas fa-plus fa-sm"></span>',
+            style: 'default',
+        });
+    }
+
+    setupSearchManager() {
+        super.setupSearchManager();
+        // Preserve legacy deep links while displaying their filters in the native search panel.
+        const {search, status} = this.options.params;
+        if (search !== undefined) this.searchManager.data.textFilter = search;
+        if (status) {
+            this.searchManager.setAdvanced({status: {
+                type: 'in', value: [status], data: {type: 'anyOf', valueList: [status]},
+            }});
+        }
+        this.collection.where = this.searchManager.getWhere();
+    }
+
+    prepareRecordViewOptions(options) {
+        super.prepareRecordViewOptions(options);
+        Object.assign(options, {
+            layoutName: 'list', pagination: true, settingsEnabled: false,
+            checkboxes: false, massActionsDisabled: true, rowActionsDisabled: true,
+            inlineEditDisabled: true,
+        });
+    }
+
+    actionCreate() {
+        return this.editTemplate();
     }
 
     async editTemplate(id = null) {
-        if (this.openingEditor) return;
+        if (this.openingEditor || (!id && !this.collection.canCreate)) return;
         this.openingEditor = true;
         try {
             const template = id ? await Espo.Ajax.getRequest(
                 `PlaybookWorkspace/${encodeURIComponent(this.accountId)}/templates/${encodeURIComponent(id)}`
             ) : null;
-            if (this.disposed || (template ? !template.canEdit : !this.snapshot?.canCreate)) return;
+            if (this.disposed || (template && !template.canEdit)) return;
             const view = await this.createView('editor', 'feature-playbook:views/template-editor', {
-                accountId: this.accountId, template,
+                accountId: this.accountId, playbookTemplate: template,
             });
             if (this.disposed) return;
-            this.listenToOnce(view, 'saved', () => {
-                if (!this.disposed) this.load();
+            this.listenToOnce(view, 'saved', saved => {
+                if (this.disposed) return;
+                if (!id && saved?.id) {
+                    this.getRouter().navigate(`PlaybookManager/view/${new URLSearchParams({
+                        accountId: this.accountId, templateId: saved.id,
+                    })}`, {trigger: true});
+                    return;
+                }
+                this.collection.fetch();
             });
             view.render();
         } catch (error) {

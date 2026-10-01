@@ -1,5 +1,12 @@
 {
+    "fields": {
+        "status": "Status", "total": "Steps", "revision": "Revision", "createdByName": "Created by"
+    },
+    "options": {
+        "status": {"Draft": "Draft", "Published": "Published", "Archived": "Archived"}
+    },
     "labels": {
+        "templateDetails": "Template configuration", "relatedRuns": "Related runs", "noSteps": "No steps configured yet.",
         "templatesDescription": "Reusable playbooks for this workspace. Template changes only affect future runs.",
         "runsDescription": "Track playbook execution across opportunities. Open an opportunity to work through its steps.",
         "searchPlaybooks": "Search by name…", "allStatuses": "All statuses", "filterList": "Filter",
@@ -8,7 +15,7 @@
         "createdBy": "Created by", "startedAt": "Started", "updatedAt": "Updated",
         "emptyList": "No playbooks match these filters.", "firstPage": "First page", "nextPage": "Next page",
         "listError": "Could not load playbooks. Refresh to try again.",
-        "manageTemplates": "Playbook templates", "manageRuns": "Playbook runs",
+        "manageTemplates": "Playbook / Templates", "manageRuns": "Playbooks",
         "selectOpportunity": "Select opportunity", "newTemplate": "New template",
         "contextHint": "Select an opportunity to use its tenant and team template library and manage its runs.",
         "snapshotHint": "Changes apply to future runs only. Published templates require at least one step.",
@@ -17,7 +24,7 @@
         "loading": "Loading playbooks…", "status": "Status", "revision": "Revision",
         "stepTitle": "Step title", "stepType": "Step type", "moveUp": "Move up", "moveDown": "Move down",
         "Draft": "Draft", "Published": "Published", "Archived": "Archived",
-        "apply": "Apply playbook", "blank": "Blank checklist", "name": "Name",
+        "apply": "Run playbook", "blank": "Blank checklist", "name": "Name",
         "refresh": "Refresh", "stop": "Stop run", "cancel": "Cancel run", "resume": "Resume run",
         "reason": "Reason (unfinished linked Tasks will be cancelled)",
         "addStep": "Add step", "skip": "Skip", "reopen": "Reopen", "activate": "Create Task",
@@ -25,6 +32,6 @@
         "references": "References (one HTTP/HTTPS URL per line)", "Check": "Checkbox", "Task": "CRM Task",
         "skipped": "Skipped", "error": "Could not update playbooks. Refresh and check your permissions and the run status.",
         "Active": "Active", "Completed": "Completed", "Stopped": "Stopped", "Cancelled": "Cancelled",
-        "Pending": "Pending", "Skipped": "Skipped", "reapply": "Applying again creates an independent run."
+        "Pending": "Pending", "Skipped": "Skipped", "reapply": "Running again creates an independent run."
     }
 }

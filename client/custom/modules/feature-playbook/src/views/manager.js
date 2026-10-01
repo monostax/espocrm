@@ -9,12 +9,10 @@ export default class extends MainView {
         'click [data-manager-action="select"]': function () { this.selectOpportunity(); },
         'click [data-manager-action="refresh"]': function () { this.load(); },
         'click [data-manager-action="new"]': function () { this.editTemplate(); },
-        'click [data-manager-template]': function (event) {
-            this.editTemplate(this.snapshot.templates.find(item => item.id === event.currentTarget.dataset.managerTemplate));
-        },
         'click [data-manager-tab]': function (event) {
             this.tab = event.currentTarget.dataset.managerTab;
             this.clearView('runs');
+            this.clearView('templates');
             this.navigate();
             this.reRender();
         },
@@ -39,9 +37,6 @@ export default class extends MainView {
             opportunityId: this.opportunityId,
             opportunityName: this.opportunity?.get('name'),
             canCreate: this.snapshot?.canCreateTemplate,
-            templates: (this.snapshot?.templates || []).map(item => ({
-                ...item, statusLabel: this.translate(item.status, 'labels', 'Playbook'),
-            })),
         };
     }
 
@@ -77,6 +72,8 @@ export default class extends MainView {
         this.error = false;
         this.snapshot = null;
         this.clearView('runs');
+        this.clearView('templates');
+        if (this.templateCollection) this.stopListening(this.templateCollection);
         if (render) await this.reRender();
         try {
             const model = await this.getModelFactory().create('Opportunity');
@@ -84,8 +81,16 @@ export default class extends MainView {
             await model.fetch();
             const snapshot = await Espo.Ajax.getRequest(`Opportunity/${encodeURIComponent(id)}/playbooks`);
             if (this.disposed || version !== this.version) return;
+            const collection = await this.getCollectionFactory().create('Playbook');
+            if (this.disposed || version !== this.version) return;
+            collection.reset(snapshot.templates);
+            collection.total = collection.length;
+            this.templateCollection = collection;
             this.opportunity = model;
             this.snapshot = snapshot;
+            this.listenTo(collection, 'edit-template', templateId => {
+                this.editTemplate(this.snapshot.templates.find(item => item.id === templateId));
+            });
         } catch (error) {
             if (this.disposed || version !== this.version) return;
             error?.setHandled?.();
@@ -99,8 +104,19 @@ export default class extends MainView {
     }
 
     async afterRender() {
-        if (this.tab !== 'runs' || !this.snapshot) return;
+        if (!this.snapshot) return;
         const version = this.version;
+        if (this.tab === 'templates') {
+            const view = await this.createView('templates', 'views/record/list', {
+                selector: '[data-manager-templates]', collection: this.templateCollection,
+                layoutName: 'listOpportunity',
+                checkboxes: false, massActionsDisabled: true, rowActionsDisabled: true,
+                buttonsDisabled: true,
+            });
+            if (this.disposed || version !== this.version || this.tab !== 'templates') return;
+            await view.render();
+            return;
+        }
         const view = await this.createView('runs', 'feature-playbook:views/opportunity/panels/playbooks', {
             selector: '[data-manager-runs]', model: this.opportunity,
         });
@@ -112,7 +128,7 @@ export default class extends MainView {
         if (!this.snapshot || (template ? !template.canEdit : !this.snapshot.canCreateTemplate)) return;
         const id = this.opportunityId;
         const view = await this.createView('editor', 'feature-playbook:views/template-editor', {
-            opportunityId: id, template,
+            opportunityId: id, playbookTemplate: template,
         });
         this.listenToOnce(view, 'saved', () => {
             if (!this.disposed && this.opportunityId === id) this.load();

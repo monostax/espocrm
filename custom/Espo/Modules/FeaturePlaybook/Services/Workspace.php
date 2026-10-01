@@ -105,10 +105,13 @@ class Workspace
         $runs = $request->getQueryParam('view') === 'runs';
         $type = $runs ? 'PlaybookRun' : 'Playbook';
         if ($runs) {
+            $templateId = $request->getQueryParam('templateId');
+            if ($templateId) $this->template($account, $templateId);
             $opportunities = $this->select->create()->from('Opportunity')->withStrictAccessControl()->buildQueryBuilder()
                 ->select('id')->where(['tenantId' => $account->get('tenantId')]);
             if ($id = $request->getQueryParam('opportunityId')) $opportunities->where(['id' => $id]);
             $query = $this->em->getQueryBuilder()->select()->from($type)->where(['opportunityId=s' => $opportunities->build()]);
+            if ($templateId) $query->where(['playbookId' => $templateId]);
         } else {
             $query = $this->templateQuery($account);
         }
@@ -121,7 +124,21 @@ class Workspace
         $search = trim((string) $request->getQueryParam('search'));
         if (mb_strlen($search) > 200) throw new BadRequest('Search is too long.');
         if ($search !== '') $query->where(['name*' => '%' . $search . '%']);
+        $where = $request->getQueryParams()['whereGroup'] ?? [];
+        if (!is_array($where) || count($where) > 20) throw new BadRequest('Invalid filters.');
+        foreach ($where as $item) {
+            $query->where($this->nativeFilter($item, $statuses));
+        }
         $cursor = (string) $request->getQueryParam('cursor');
+        // Native Espo collections use offsets; the cursor contract is also used by embedded clients.
+        $offset = $request->getQueryParam('offset') ?? '0';
+        $maxSize = $request->getQueryParam('maxSize') ?? (string) self::PAGE_SIZE;
+        if (!ctype_digit((string) $offset) || !ctype_digit((string) $maxSize) ||
+            (int) $maxSize < 1 || (int) $maxSize > 200 || (int) $offset > 100000) {
+            throw new BadRequest('Invalid pagination.');
+        }
+        $offset = (int) $offset;
+        $maxSize = (int) $maxSize;
         if ($cursor !== '') {
             if (!preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $cursor)) throw new BadRequest('Invalid cursor.');
             $query->where(['id<' => $cursor]);
@@ -130,20 +147,26 @@ class Workspace
         $items = [];
         $more = false;
         $lastId = null;
+        $skipped = 0;
         // Scan bounded batches, but paginate only authorized rows (draft visibility is record-level).
         do {
             $rows = iterator_to_array($this->em->getRDBRepository($type)->clone($query->build())->find());
             foreach ($rows as $row) {
                 if (!$runs && (!$this->acl->checkEntityRead($row) ||
                     ($row->get('status') !== 'Published' && !$this->acl->checkEntityEdit($row)))) continue;
-                if (count($items) === self::PAGE_SIZE) { $more = true; break; }
+                if ($skipped < $offset) { $skipped++; continue; }
+                if (count($items) === $maxSize) { $more = true; break; }
                 $items[] = $runs ? $this->runRow($row) : $this->templateRow($row);
                 $lastId = $row->getId();
             }
             if ($more || count($rows) < self::PAGE_SIZE + 1) break;
             $query->where(['id<' => end($rows)->getId()]);
         } while (true);
-        return (object) ['items' => $items, 'cursor' => $more ? $lastId : null, 'canCreate' => !$runs && $this->canCreate($account)];
+        return (object) [
+            'items' => $items, 'cursor' => $more ? $lastId : null,
+            'list' => $items, 'total' => $more ? -1 : $skipped + count($items),
+            'canCreate' => !$runs && $this->canCreate($account),
+        ];
     }
 
     private function templateRow(Entity $template): object
@@ -154,6 +177,42 @@ class Workspace
             'createdByName' => $template->get('createdByName'), 'canEdit' => $this->acl->checkEntityEdit($template),
             'total' => $this->em->getRDBRepository('PlaybookStep')->where(['playbookId' => $template->getId()])->count(),
         ];
+    }
+
+    /** Native search is restricted to the fields exposed in the workspace search layouts. */
+    private function nativeFilter(mixed $item, array $statuses, int $depth = 0): array
+    {
+        if (!is_array($item) || $depth > 3) throw new BadRequest('Invalid filter.');
+        $type = $item['type'] ?? '';
+        $value = $item['value'] ?? null;
+        if (in_array($type, ['and', 'or'], true)) {
+            if (!is_array($value) || count($value) > 20) throw new BadRequest('Invalid filter group.');
+            return [strtoupper($type) => array_map(
+                fn ($child) => $this->nativeFilter($child, $statuses, $depth + 1), $value
+            )];
+        }
+        if ($type === 'textFilter') {
+            if (!is_string($value) || mb_strlen($value) > 200) throw new BadRequest('Invalid search.');
+            return ['name*' => '%' . trim($value) . '%'];
+        }
+        if (($item['attribute'] ?? '') !== 'status') throw new BadRequest('Unsupported filter field.');
+        if ($type === 'any') return [];
+        if ($type === 'isNull') return ['status' => null];
+        if ($type === 'isNotNull') return ['status!=' => null];
+        if (in_array($type, ['equals', 'notEquals'], true)) {
+            if (!is_string($value) || !in_array($value, [...$statuses, ''], true)) {
+                throw new BadRequest('Invalid status.');
+            }
+            return [$type === 'equals' ? 'status' : 'status!=' => $value];
+        }
+        if (in_array($type, ['in', 'notIn'], true)) {
+            if (!is_array($value) || count($value) > count($statuses)) throw new BadRequest('Invalid statuses.');
+            foreach ($value as $status) {
+                if (!is_string($status) || !in_array($status, $statuses, true)) throw new BadRequest('Invalid status.');
+            }
+            return [$type === 'in' ? 'status' : 'status!=' => $value];
+        }
+        throw new BadRequest('Unsupported filter.');
     }
 
     private function runRow(Entity $run): object

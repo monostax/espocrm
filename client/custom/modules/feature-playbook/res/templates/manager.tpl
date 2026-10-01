@@ -16,18 +16,7 @@
 {{#if hasContext}}
     {{#if tabTemplates}}
         {{#if canCreate}}<button type="button" class="btn btn-primary" data-manager-action="new">{{translate "newTemplate" scope="Playbook"}}</button>{{/if}}
-        <div class="table-responsive">
-            <table class="table">
-                <thead><tr><th>{{translate "name" scope="Playbook"}}</th><th>{{translate "status" scope="Playbook"}}</th><th>{{translate "revision" scope="Playbook"}}</th><th>{{translate "Edit"}}</th></tr></thead>
-                <tbody>
-                    {{#each templates}}
-                    <tr><td>{{name}}</td><td>{{statusLabel}}</td><td>{{revision}}</td><td>{{#if canEdit}}<button type="button" class="btn btn-default btn-sm" data-manager-template="{{id}}">{{translate "Edit"}}</button>{{/if}}</td></tr>
-                    {{else}}
-                    <tr><td colspan="4" class="text-muted">{{translate "noTemplates" scope="Playbook"}}</td></tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
+        <div data-manager-templates>{{{templates}}}</div>
     {{/if}}
     {{#if tabRuns}}<div data-manager-runs>{{{runs}}}</div>{{/if}}
 {{/if}}

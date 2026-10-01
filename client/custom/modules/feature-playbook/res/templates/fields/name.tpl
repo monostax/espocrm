@@ -1,0 +1,1 @@
+{{#if opportunityUrl}}<a href="{{opportunityUrl}}">{{value}}</a>{{else}}{{#if templateUrl}}<a href="{{templateUrl}}">{{value}}</a>{{else}}{{#if canEdit}}<a role="button" tabindex="0" data-edit-template>{{value}}</a>{{else}}{{value}}{{/if}}{{/if}}{{/if}}

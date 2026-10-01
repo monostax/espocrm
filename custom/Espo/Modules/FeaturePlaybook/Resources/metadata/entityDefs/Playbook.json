@@ -3,6 +3,7 @@
         "name": { "type": "varchar", "required": true, "maxLength": 200 },
         "status": { "type": "enum", "options": ["Draft", "Published", "Archived"], "default": "Draft" },
         "revision": { "type": "int", "default": 1 },
+        "total": { "type": "int", "notStorable": true, "readOnly": true },
         "tenant": { "type": "link" },
         "teams": { "type": "linkMultiple" },
         "createdAt": { "type": "datetime", "readOnly": true },

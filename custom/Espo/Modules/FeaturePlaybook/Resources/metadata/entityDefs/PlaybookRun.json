@@ -6,6 +6,7 @@
         "opportunity": { "type": "link" },
         "playbook": { "type": "link" },
         "sourceRevision": { "type": "int" },
+        "completion": { "type": "varchar", "notStorable": true, "readOnly": true, "view": "feature-playbook:views/fields/completion" },
         "requestKey": { "type": "varchar", "maxLength": 64 },
         "requestHash": { "type": "varchar", "maxLength": 64 },
         "assignedUser": { "type": "link" },

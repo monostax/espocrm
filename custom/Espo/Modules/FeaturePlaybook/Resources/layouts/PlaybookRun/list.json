@@ -1,0 +1,8 @@
+[
+    {"name": "name", "view": "feature-playbook:views/fields/name", "notSortable": true},
+    {"name": "opportunity", "notSortable": true},
+    {"name": "status", "notSortable": true},
+    {"name": "completion", "notSortable": true},
+    {"name": "assignedUserName", "type": "varchar", "notSortable": true},
+    {"name": "createdAt", "notSortable": true}
+]

@@ -7,6 +7,7 @@ namespace tests\unit\Espo\Modules\FeaturePlaybook;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Select\SelectBuilder as AccessSelectBuilder;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
@@ -56,7 +57,14 @@ class WorkspaceTest extends TestCase
             $repo->method('clone')->willReturnCallback(function (Select $query) use ($type) {
                 $this->queries[$type][] = $query;
                 $builder = $this->createMock(RDBSelectBuilder::class);
-                $builder->method('find')->willReturn(new EntityCollection($this->rows[$type] ?? []));
+                $rows = $this->rows[$type] ?? [];
+                $where = $query->getWhere()->getRaw();
+                array_walk_recursive($where, function ($value, $key) use (&$rows) {
+                    if ($key === 'id<') {
+                        $rows = array_values(array_filter($rows, fn ($row) => $row->getId() < $value));
+                    }
+                });
+                $builder->method('find')->willReturn(new EntityCollection(array_slice($rows, 0, $query->getLimit())));
                 $builder->method('findOne')->willReturn($this->rows[$type][0] ?? null);
                 return $builder;
             });
@@ -104,6 +112,7 @@ class WorkspaceTest extends TestCase
         $request = $this->createMock(Request::class);
         $request->method('getRouteParam')->with('accountId')->willReturn('6');
         $request->method('getQueryParam')->willReturnCallback(fn ($key) => $query[$key] ?? null);
+        $request->method('getQueryParams')->willReturn($query);
         return $request;
     }
 
@@ -166,6 +175,58 @@ class WorkspaceTest extends TestCase
         $this->workspace->save('6', (object) ['name' => 'Template']);
     }
 
+    public function testRelatedRunsKeepTemplateAndOpportunityAccessBoundaries(): void
+    {
+        $this->rows['Playbook'] = [$this->entity('Playbook', ['id' => 'template', 'status' => 'Published'])];
+        $this->workspace->listing($this->request(['view' => 'runs', 'templateId' => 'template']));
+        self::assertSame(['ChatwootAccount', 'Playbook', 'Opportunity'], $this->accessScopes);
+        $where = $this->queries['PlaybookRun'][0]->getWhere()->getRaw();
+        self::assertSame('template', $where['playbookId']);
+        self::assertSame('tenant-a', $where['opportunityId=s']->getWhere()->getRaw()['tenantId']);
+        self::assertSame('template', $this->queries['Playbook'][0]->getWhere()->getRaw()['id']);
+    }
+
+    public function testRelatedRunsRejectAnInaccessibleTemplate(): void
+    {
+        $this->rows['Playbook'] = [$this->entity('Playbook', ['id' => 'private', 'status' => 'Draft'])];
+        $this->expectException(Forbidden::class);
+        $this->workspace->listing($this->request(['view' => 'runs', 'templateId' => 'private']));
+    }
+
+    public function testNativeSearchAndStatusFiltersPreserveTheWorkspaceBoundary(): void
+    {
+        $this->workspace->listing($this->request(['whereGroup' => [
+            ['type' => 'textFilter', 'value' => 'Follow-up'],
+            ['type' => 'in', 'attribute' => 'status', 'value' => ['Draft', 'Published']],
+        ]]));
+        $where = $this->queries['Playbook'][0]->getWhere()->getRaw();
+        self::assertSame('%Follow-up%', $where['name*']);
+        self::assertSame(['Draft', 'Published'], $where['status']);
+        self::assertSame('tenant-a', $where['tenantId']);
+        self::assertSame(['team-a'], $where['id=s']->getWhere()->getRaw()['teamId']);
+    }
+
+    public function testNativeEnumExclusionSupportsTheStandardNullAlternative(): void
+    {
+        $this->workspace->listing($this->request(['view' => 'runs', 'whereGroup' => [
+            ['type' => 'or', 'value' => [
+                ['type' => 'notIn', 'attribute' => 'status', 'value' => ['Completed']],
+                ['type' => 'isNull', 'attribute' => 'status'],
+            ]],
+        ]]));
+        $where = $this->queries['PlaybookRun'][0]->getWhere()->getRaw();
+        self::assertSame([['status!=' => ['Completed']], ['status' => null]], $where['OR']);
+        self::assertSame('tenant-a', $where['opportunityId=s']->getWhere()->getRaw()['tenantId']);
+    }
+
+    public function testNativeSearchRejectsFieldsOutsideTheWorkspaceSearchLayout(): void
+    {
+        $this->expectException(BadRequest::class);
+        $this->workspace->listing($this->request(['whereGroup' => [
+            ['type' => 'equals', 'attribute' => 'tenantId', 'value' => 'other-tenant'],
+        ]]));
+    }
+
     public function testListsReturnBoundedPagesWithAnAuthorizedContinuationCursor(): void
     {
         $this->rows['Playbook'] = array_map(fn ($index) => $this->entity('Playbook', [
@@ -185,6 +246,48 @@ class WorkspaceTest extends TestCase
         $this->playbooks->expects($this->never())->method('saveWorkspaceTemplate');
         $this->expectException(Forbidden::class);
         $this->workspace->save('6', (object) ['id' => 'published', 'name' => 'Changed']);
+    }
+
+    public function testNativePaginationCountsOnlyAuthorizedRows(): void
+    {
+        $this->rows['Playbook'] = [
+            $this->entity('Playbook', ['id' => 'private', 'status' => 'Draft']),
+            $this->entity('Playbook', ['id' => 'first', 'status' => 'Published']),
+            $this->entity('Playbook', ['id' => 'second', 'status' => 'Draft', 'editable' => true]),
+            $this->entity('Playbook', ['id' => 'third', 'status' => 'Published']),
+        ];
+        $page = $this->workspace->listing($this->request(['offset' => '1', 'maxSize' => '1']));
+        self::assertSame(['second'], array_column($page->list, 'id'));
+        self::assertSame(-1, $page->total);
+        self::assertSame($page->items, $page->list);
+        $last = $this->workspace->listing($this->request(['offset' => '2', 'maxSize' => '1']));
+        self::assertSame(['third'], array_column($last->list, 'id'));
+        self::assertSame(3, $last->total);
+        self::assertNull($last->cursor);
+        $beyond = $this->workspace->listing($this->request(['offset' => '10', 'maxSize' => '1']));
+        self::assertSame([], $beyond->list);
+        self::assertSame(3, $beyond->total);
+    }
+
+    public function testNativePaginationRejectsOversizedPages(): void
+    {
+        $this->expectException(BadRequest::class);
+        $this->workspace->listing($this->request(['maxSize' => '201']));
+    }
+
+    public function testNativePagesScanAcrossBatchesWithoutCountingPrivateDrafts(): void
+    {
+        $this->rows['Playbook'] = array_map(fn ($index) => $this->entity('Playbook', [
+            'id' => sprintf('template-%02d', $index), 'status' => $index % 2 ? 'Draft' : 'Published',
+        ]), range(80, 1));
+        $page = $this->workspace->listing($this->request(['offset' => '5', 'maxSize' => '30']));
+        self::assertCount(30, $page->list);
+        self::assertSame('template-70', $page->list[0]->id);
+        self::assertSame('template-12', $page->list[29]->id);
+        self::assertSame(-1, $page->total);
+        $last = $this->workspace->listing($this->request(['offset' => '35', 'maxSize' => '30']));
+        self::assertSame(['template-10', 'template-08', 'template-06', 'template-04', 'template-02'], array_column($last->list, 'id'));
+        self::assertSame(40, $last->total);
     }
 
     public function testCreationUsesResolvedWorkspaceContextWithoutAnOpportunity(): void

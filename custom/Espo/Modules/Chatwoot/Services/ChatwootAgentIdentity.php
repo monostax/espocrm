@@ -17,7 +17,7 @@ use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
-/** Links agents created in Chatwoot to an existing CRM identity. */
+/** Provisions CRM identities for agents returned by the authenticated Account API. */
 class ChatwootAgentIdentity
 {
     public function __construct(
@@ -59,6 +59,21 @@ class ChatwootAgentIdentity
             return null;
         }
 
+        // The scheduled import and an invitation/password reset can arrive at
+        // the same time. Serialize resolution before creating either identity.
+        return $this->entityManager->getTransactionManager()->run(function () use ($account, $agent, $platformId) {
+            $platform = $this->entityManager->getRDBRepository('ChatwootPlatform')
+                ->where(['id' => $platformId])->select(['id'])->forUpdate()->findOne();
+
+            return $platform ? $this->importIdentity($account, $agent) : null;
+        });
+    }
+
+    /** @param array<string, mixed> $agent */
+    private function importIdentity(CoreEntity $account, array $agent): ?Entity
+    {
+        $remoteId = (int) $agent['id'];
+        $platformId = $account->get('platformId');
         $repository = $this->entityManager->getRDBRepository('ChatwootUser');
         $existing = $repository->where([
             'chatwootUserId' => $remoteId,
@@ -68,7 +83,7 @@ class ChatwootAgentIdentity
             return $existing;
         }
 
-        $user = $this->findCrmUser((string) ($agent['email'] ?? ''));
+        $user = $this->findCrmUser((string) ($agent['email'] ?? '')) ?? $this->provisionCrmUser($account, $agent);
         if (!$user || !$user->isActive() || !$this->sharesAccountTeam($account, $user)) {
             return null;
         }
@@ -79,8 +94,8 @@ class ChatwootAgentIdentity
             return null;
         }
 
-        // The agent already exists remotely. Import without provisioning a user
-        // or inventing a password that could overwrite their chosen password.
+        // The agent already exists remotely. Never push a generated password
+        // back to Chatwoot or replace an existing CRM user's chosen password.
         return $this->entityManager->createEntity('ChatwootUser', [
             'name' => $user->get('name') ?: $user->getUserName(),
             'emailAddress' => $user->get('emailAddress'),
@@ -91,11 +106,58 @@ class ChatwootAgentIdentity
         ], ['silent' => true]);
     }
 
+    /** @param array<string, mixed> $agent */
+    private function provisionCrmUser(CoreEntity $account, array $agent): ?User
+    {
+        $email = strtolower(trim((string) ($agent['email'] ?? '')));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $account->get('status') !== 'active') {
+            return null;
+        }
+
+        // An email collision (inactive/admin/ambiguous identity included) needs
+        // explicit reconciliation, not a second user or an automatic reactivation.
+        if ($this->entityManager->getRDBRepository('User')->where([
+            'OR' => [['userName' => $email], ['emailAddress' => $email]],
+        ])->findOne()) {
+            return null;
+        }
+
+        $tenantId = $account->get('tenantId');
+        $tenant = $tenantId ? $this->entityManager->getEntityById('Tenant', $tenantId) : null;
+        $baseTeamId = $tenant?->get('baseUserTeamId');
+        $teamIds = $account->getLinkMultipleIdList('teams');
+        if (!$baseTeamId || !in_array($baseTeamId, $teamIds, true)) {
+            $this->log->warning("ChatwootAgentIdentity: Cannot provision agent for account {$account->getId()} without its tenant base team.");
+            return null;
+        }
+
+        $name = trim((string) ($agent['name'] ?? '')) ?: $email;
+        $parts = preg_split('/\s+/u', $name, 2);
+        /** @var User $user */
+        $user = $this->entityManager->createEntity(User::ENTITY_TYPE, [
+            'userName' => $email,
+            'emailAddress' => $email,
+            'firstName' => $parts[0],
+            'lastName' => $parts[1] ?? '',
+            'type' => User::TYPE_REGULAR,
+            'isActive' => true,
+            'defaultTeamId' => $baseTeamId,
+            'teamsIds' => [$baseTeamId],
+            // The invitation/reset callback supplies the chosen password. The
+            // scheduled import must not invent a usable/shared login password.
+            'password' => password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT),
+        ], ['silent' => true, 'skipChatwootProvisioning' => true]);
+
+        $this->log->info("ChatwootAgentIdentity: Provisioned CRM user {$user->getId()} for Chatwoot user {$agent['id']} in account {$account->getId()}.");
+
+        return $user;
+    }
+
     /** Resolve the first password reset even if the scheduled import has not run yet. */
     public function importForPasswordSync(int $remoteId, string $email, ?string $installationUrl): void
     {
         $user = $this->findCrmUser($email);
-        if (!$user || !$user->isActive() || !$installationUrl) {
+        if (($user && !$user->isActive()) || !$installationUrl) {
             return;
         }
 
@@ -110,7 +172,7 @@ class ChatwootAgentIdentity
                 ->find();
 
             foreach ($accounts as $account) {
-                if (!$this->sharesAccountTeam($account, $user) || !$account->get('apiKey') ||
+                if (($user && !$this->sharesAccountTeam($account, $user)) || !$account->get('apiKey') ||
                     !$account->get('chatwootAccountId') || !$platform->get('backendUrl')) {
                     continue;
                 }
@@ -133,7 +195,7 @@ class ChatwootAgentIdentity
                     }
 
                     $identity = $this->importForAccount($account, $agent);
-                    if ($identity && $identity->get('assignedUserId') === $user->getId()) {
+                    if ($identity && (!$user || $identity->get('assignedUserId') === $user->getId())) {
                         $this->membershipService->upsertMembership(
                             $account->getId(),
                             $identity->getId(),

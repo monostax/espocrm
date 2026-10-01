@@ -1,5 +1,5 @@
 {
-    "scopeNames": { "Playbook": "Playbook" },
-    "scopeNamesPlural": { "Playbook": "Playbooks" },
+    "scopeNames": { "Playbook": "Playbook / Modelo", "PlaybookRun": "Playbook" },
+    "scopeNamesPlural": { "Playbook": "Playbook / Modelos", "PlaybookRun": "Playbooks" },
     "labels": { "Playbooks": "Playbooks" }
 }

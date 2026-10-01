@@ -1,0 +1,8 @@
+{
+    "fields": {
+        "status": "Status", "completion": "Progress", "opportunity": "Opportunity", "assignedUserName": "Owner", "createdAt": "Started"
+    },
+    "options": {
+        "status": {"Active": "Active", "Completed": "Completed", "Stopped": "Stopped", "Cancelled": "Cancelled"}
+    }
+}

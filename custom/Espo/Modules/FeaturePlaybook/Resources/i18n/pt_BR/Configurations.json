@@ -1,12 +1,12 @@
 {
     "labels": {
         "Playbooks": "Playbooks",
-        "Playbook Templates": "Modelos de playbook",
-        "Playbook Runs": "Execuções de playbook"
+        "Playbook Templates": "Playbook / Modelos",
+        "Playbook Runs": "Playbooks"
     },
     "descriptions": {
         "playbookTemplates": "Crie, publique e arquive checklists reutilizáveis para oportunidades.",
-        "playbookRuns": "Aplique playbooks e acompanhe o progresso e as tarefas vinculadas a uma oportunidade."
+        "playbookRuns": "Execute playbooks e acompanhe o progresso e as tarefas vinculadas a uma oportunidade."
     },
     "keywords": {
         "playbookTemplates": "playbook,checklist,modelo,processo,qualificação",
