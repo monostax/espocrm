@@ -23026,6 +23026,175 @@ var EspoLexical = (function () {
 	  });
 	};
 
+	const INSERT_DATE_SEPARATOR_COMMAND = Fe$3('INSERT_DATE_SEPARATOR_COMMAND');
+	const OPEN_DATE_SEPARATOR_COMMAND = Fe$3('OPEN_DATE_SEPARATOR_COMMAND');
+
+	/** Keep calendar dates and local date-times intact, without UTC conversion. */
+	function localSeparatorValue(includeTime = false) {
+	    const now = new Date();
+	    const pad = value => String(value).padStart(2, '0');
+	    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+	    return includeTime ? `${date}T${pad(now.getHours())}:${pad(now.getMinutes())}` : date;
+	}
+
+	function isSeparatorValue(value) {
+	    if (typeof value !== 'string') return false;
+	    const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(value);
+	    if (!match) return false;
+	    const [year, month, day, hour, minute] = match.slice(1).map(Number);
+	    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+	    const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+	    return year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] &&
+	        (match[4] === undefined || (hour <= 23 && minute <= 59));
+	}
+
+	function separatorLocale(locale) {
+	    try {
+	        return new Intl.DateTimeFormat((locale || document.documentElement.lang || navigator.language).replace(/_/g, '-'))
+	            .resolvedOptions().locale;
+	    } catch (e) {
+	        return new Intl.DateTimeFormat().resolvedOptions().locale;
+	    }
+	}
+
+	function formatSeparatorDate(value, locale) {
+	    // Format wall-clock values independently of the viewer's timezone and DST.
+	    return new Intl.DateTimeFormat(locale, {
+	        dateStyle: 'long', timeZone: 'UTC', ...(value.includes('T') ? {timeStyle: 'short'} : {}),
+	    }).format(new Date(value.includes('T') ? `${value}:00Z` : `${value}T12:00:00Z`));
+	}
+
+	/** An atomic, full-width block; the picker lives outside the editable DOM. */
+	class DateSeparatorNode extends Ii {
+	    static getType() { return 'date-separator'; }
+	    static clone(node) { return new DateSeparatorNode(node.__value, node.__locale, node.__key); }
+	    constructor(value = localSeparatorValue(), locale, key) {
+	        super(key);
+	        if (!isSeparatorValue(value)) throw new Error('Invalid date separator value');
+	        this.__value = value;
+	        this.__locale = separatorLocale(locale);
+	    }
+	    static importJSON(json) {
+	        if (json.version !== 1) throw new Error('Unsupported date separator version');
+	        return $createDateSeparatorNode(json.value, json.locale).updateFromJSON(json);
+	    }
+	    exportJSON() {
+	        return {...super.exportJSON(), type: 'date-separator', version: 1, value: this.__value, locale: this.__locale};
+	    }
+	    static importDOM() {
+	        return {div: element => {
+	            if (!element.hasAttribute('data-date-separator') && !element.classList.contains('kb-date-separator')) return null;
+	            const value = element.querySelector('time')?.getAttribute('datetime');
+	            return isSeparatorValue(value) ? {priority: 4, conversion: () => ({
+	                node: $createDateSeparatorNode(value, element.lang), after: () => [],
+	            })} : null;
+	        }};
+	    }
+	    exportDOM() {
+	        const element = document.createElement('div');
+	        element.className = 'kb-date-separator';
+	        element.setAttribute('data-date-separator', '');
+	        element.lang = this.__locale;
+	        element.setAttribute('role', 'separator');
+	        element.setAttribute('aria-label', this.getTextContent());
+	        const time = document.createElement('time');
+	        time.className = 'kb-date-separator-label';
+	        time.dateTime = this.__value;
+	        time.textContent = this.getTextContent();
+	        element.appendChild(time);
+	        return {element};
+	    }
+	    createDOM(config, editor) {
+	        const element = document.createElement('div');
+	        element.className = 'kb-date-separator';
+	        element.setAttribute('data-date-separator', '');
+	        element.contentEditable = 'false';
+	        const button = document.createElement('button');
+	        button.type = 'button';
+	        button.className = 'kb-date-separator-label';
+	        button.disabled = !editor.isEditable();
+	        button.appendChild(document.createElement('time'));
+	        element.appendChild(button);
+	        this.paint(element);
+	        return element;
+	    }
+	    updateDOM(previous, element) {
+	        if (previous.__value !== this.__value || previous.__locale !== this.__locale) this.paint(element);
+	        return false;
+	    }
+	    paint(element) {
+	        const label = this.getTextContent();
+	        element.lang = this.__locale;
+	        const time = element.querySelector('time');
+	        time.dateTime = this.__value;
+	        time.textContent = label;
+	        element.querySelector('button').setAttribute('aria-label', `Edit date separator: ${label}`);
+	    }
+	    getValue() { return this.getLatest().__value; }
+	    setValue(value) {
+	        if (!isSeparatorValue(value)) throw new Error('Invalid date separator value');
+	        this.getWritable().__value = value;
+	    }
+	    getTextContent() { return formatSeparatorDate(this.getLatest().__value, this.getLatest().__locale); }
+	    isInline() { return false; }
+	}
+
+	function $createDateSeparatorNode(value, locale) {
+	    return Bl(new DateSeparatorNode(value, locale));
+	}
+
+	function registerDateSeparators(editor, locale) {
+	    const refresh = () => editor.getEditorState().read(() => {
+	        for (const node of Cl(DateSeparatorNode)) {
+	            const element = editor.getElementByKey(node.getKey());
+	            if (!element) continue;
+	            element.querySelector('button').disabled = !editor.isEditable();
+	            element.classList.toggle('kb-date-separator-selected', node.isSelected());
+	        }
+	    });
+	    return ku(
+	        editor.registerCommand(INSERT_DATE_SEPARATOR_COMMAND, value => {
+	            if (!editor.isEditable() || !isSeparatorValue(value)) return false;
+	            const selection = Lr();
+	            const block = cr(selection) && selection.isCollapsed()
+	                ? selection.anchor.getNode().getTopLevelElement() : null;
+	            const node = $createDateSeparatorNode(value, locale);
+	            if (es(block) && block.isEmpty()) block.replace(node);
+	            else Bt$3(node);
+	            let next = node.getNextSibling();
+	            if (!es(next) || !next.isEmpty()) {
+	                next = ts();
+	                node.insertAfter(next);
+	            }
+	            next.selectStart();
+	            return true;
+	        }, os),
+	        editor.registerUpdateListener(refresh),
+	        editor.registerEditableListener(refresh)
+	    );
+	}
+
+	/** Raw HTML is valid Markdown and preserves the selected date, time and locale. */
+	function dateSeparatorMarkdown(editor) {
+	    return {
+	        type: 'multiline-element', dependencies: [DateSeparatorNode],
+	        regExpStart: /^<div\b[^>]*\bdata-date-separator(?:=|\s|>)/i,
+	        regExpEnd: /<\/div>\s*$/i,
+	        export: node => node instanceof DateSeparatorNode ? node.exportDOM().element.outerHTML : null,
+	        replace: () => false,
+	        handleImportAfterStartMatch({lines, rootNode, startLineIndex}) {
+	            let end = startLineIndex;
+	            while (end < lines.length && !/<\/div>\s*$/i.test(lines[end])) end++;
+	            if (end === lines.length) return null;
+	            const dom = new DOMParser().parseFromString(lines.slice(startLineIndex, end + 1).join('\n'), 'text/html');
+	            const nodes = kn$1(editor, dom).filter(node => node instanceof DateSeparatorNode);
+	            if (!nodes.length) return null;
+	            rootNode.append(...nodes);
+	            return [true, end];
+	        },
+	    };
+	}
+
 	const h = React.createElement;
 	const blocks = [
 	    ['Paragraph', () => ts()],
@@ -23037,6 +23206,7 @@ var EspoLexical = (function () {
 	    ['Bullet list', te$1],
 	    ['Numbered list', ee$1],
 	    ['Table', ct$1],
+	    ['Date separator', OPEN_DATE_SEPARATOR_COMMAND],
 	];
 	const formats = [['bold', 'B'], ['italic', 'I'], ['underline', 'U'], ['strikethrough', 'S̶'], ['code', '</>']];
 
@@ -23291,6 +23461,102 @@ var EspoLexical = (function () {
 	    return null;
 	}
 
+	function DateSeparators({editor}) {
+	    const [state, setState] = reactExports.useState(null);
+	    const current = reactExports.useRef(null);
+	    const panel = reactExports.useRef(null);
+	    const open = state !== null;
+	    current.current = state;
+	    reactExports.useEffect(() => {
+	        const root = editor.getRootElement();
+	        const unregister = editor.registerCommand(OPEN_DATE_SEPARATOR_COMMAND, nodeKey => {
+	            if (!editor.isEditable()) return false;
+	            const node = nodeKey ? Vs(nodeKey) : null;
+	            if (nodeKey && !(node instanceof DateSeparatorNode)) return false;
+	            const value = node ? node.getValue() : localSeparatorValue();
+	            const selection = Lr();
+	            const block = cr(selection) ? selection.anchor.getNode().getTopLevelElement() : null;
+	            setState({nodeKey, value, type: value.includes('T') ? 'datetime-local' : 'date',
+	                time: value.includes('T') ? value.slice(11) : localSeparatorValue(true).slice(11),
+	                selection: selection?.clone(),
+	                range: node ? editor.getElementByKey(nodeKey) : (block && editor.getElementByKey(block.getKey())) || root});
+	            return true;
+	        }, os);
+	        const click = event => {
+	            if (!editor.isEditable() || !event.target.closest?.('.kb-date-separator-label')) return;
+	            const key = editor.read(() => {
+	                const node = Xs(event.target);
+	                return node instanceof DateSeparatorNode ? node.getKey() : null;
+	            });
+	            if (key) editor.dispatchCommand(OPEN_DATE_SEPARATOR_COMMAND, key);
+	        };
+	        const outside = event => {
+	            if (panel.current && !panel.current.contains(event.target) &&
+	                !root.contains(event.target.closest?.('.kb-date-separator-label'))) setState(null);
+	        };
+	        const unregisterEditable = editor.registerEditableListener(editable => { if (!editable) setState(null); });
+	        const unregisterUpdate = editor.registerUpdateListener(({editorState}) => {
+	            const key = current.current?.nodeKey;
+	            if (key && !editorState.read(() => Vs(key) instanceof DateSeparatorNode)) setState(null);
+	        });
+	        root.addEventListener('click', click);
+	        document.addEventListener('pointerdown', outside);
+	        return () => {
+	            unregister(); unregisterEditable(); unregisterUpdate();
+	            root.removeEventListener('click', click); document.removeEventListener('pointerdown', outside);
+	        };
+	    }, [editor]);
+	    reactExports.useEffect(() => { if (open) panel.current?.querySelector('input')?.focus(); }, [open]);
+	    if (!state) return null;
+	    const cancel = () => {
+	        if (state.selection) editor.update(() => el(state.selection.clone()));
+	        setState(null); editor.focus();
+	    };
+	    const save = event => {
+	        event.preventDefault();
+	        if (!isSeparatorValue(state.value) || !editor.isEditable()) return;
+	        editor.update(() => {
+	            if (state.selection) el(state.selection.clone());
+	            if (state.nodeKey) {
+	                const node = Vs(state.nodeKey);
+	                if (node instanceof DateSeparatorNode) node.setValue(state.value);
+	            } else editor.dispatchCommand(INSERT_DATE_SEPARATOR_COMMAND, state.value);
+	        }, {discrete: true, tag: 'history-push'});
+	        setState(null); editor.focus();
+	    };
+	    return h(Floating, {editor, range: state.range, panelRef: panel, role: 'dialog', labelledBy: 'Date separator',
+	        className: 'kb-date-separator-picker', onKeyDown: event => {
+	            if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancel(); }
+	            if (event.key === 'Tab') {
+	                const controls = [...panel.current.querySelectorAll('input, select, button:not(:disabled)')];
+	                const target = event.shiftKey ? controls.at(-1) : controls[0];
+	                if (document.activeElement === (event.shiftKey ? controls[0] : controls.at(-1))) {
+	                    event.preventDefault(); target.focus();
+	                }
+	            }
+	        }},
+	    h('form', {onSubmit: save},
+	        h('strong', null, 'Date separator'),
+	        h('label', null, 'Display', h('select', {value: state.type, onChange: event => {
+	            const type = event.target.value;
+	            setState(previous => ({...previous, type,
+	                value: type === 'date' ? previous.value.slice(0, 10) : `${previous.value.slice(0, 10)}T${previous.time}`}));
+	        }}, h('option', {value: 'date'}, 'Date'), h('option', {value: 'datetime-local'}, 'Date and time'))),
+	        h('label', null, state.type === 'date' ? 'Date' : 'Date and time', h('input', {
+	            type: state.type, value: state.value, required: true, step: state.type === 'date' ? 1 : 60,
+	            min: state.type === 'date' ? '0001-01-01' : '0001-01-01T00:00',
+	            max: state.type === 'date' ? '9999-12-31' : '9999-12-31T23:59',
+	            onChange: event => {
+	                const value = event.target.value;
+	                setState(previous => ({...previous, value, time: value.includes('T') ? value.slice(11) : previous.time}));
+	            },
+	        })),
+	        h('div', {className: 'kb-date-separator-actions'},
+	            h('button', {type: 'button', className: 'btn btn-default btn-sm', onClick: cancel}, 'Cancel'),
+	            h('button', {type: 'submit', className: 'btn btn-primary btn-sm', disabled: !isSeparatorValue(state.value)},
+	                state.nodeKey ? 'Save' : 'Insert'))));
+	}
+
 	function Blocks({editor}) {
 	    const menu = reactExports.useRef(null);
 	    const line = reactExports.useRef(null);
@@ -23300,16 +23566,18 @@ var EspoLexical = (function () {
 	        const move = event => {
 	            if (!event.altKey || !event.shiftKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
 	            event.preventDefault();
+	            event.stopPropagation();
 	            editor.update(() => {
 	                const selection = Lr();
-	                if (!cr(selection)) return;
-	                const node = selection.anchor.getNode().getTopLevelElement();
+	                const node = cr(selection) ? selection.anchor.getNode().getTopLevelElement()
+	                    : ur(selection) ? selection.getNodes()[0]?.getTopLevelElement() : null;
 	                if (event.key === 'ArrowUp') node?.getPreviousSibling()?.insertBefore(node);
 	                else node?.getNextSibling()?.insertAfter(node);
 	            });
 	        };
-	        root.addEventListener('keydown', move);
-	        return () => root.removeEventListener('keydown', move);
+	        // Reorder before Lexical's arrow handler can change a block selection.
+	        root.addEventListener('keydown', move, true);
+	        return () => root.removeEventListener('keydown', move, true);
 	    }, [editor]);
 	    const modify = action => editor.update(() => {
 	        const node = target.current && Xs(target.current)?.getTopLevelElement();
@@ -23342,6 +23610,7 @@ var EspoLexical = (function () {
 	    }, [editor]);
 	    return h(React.Fragment, null,
 	        h(References, {editor, services}),
+	        h(DateSeparators, {editor}),
 	        editable && empty ? h('div', {className: 'kb-notion-placeholder', 'aria-hidden': true}, 'Type / for commands or @ for references…') : null,
 	        editable ? h(React.Fragment, null,
 	            h(Picker, {editor, trigger: '/', services, onOpenChange: setSlashOpen}),
@@ -23439,6 +23708,7 @@ var EspoLexical = (function () {
 	        ot$1,
 	        ut$1,
 	        MentionNode,
+	        DateSeparatorNode,
 	    ];
 	}
 
@@ -23596,7 +23866,7 @@ var EspoLexical = (function () {
 	    });
 
 	    editor.setRootElement(element);
-	    const transformers = [tableMarkdown(editor), MENTION_TRANSFORMER, ...Kt];
+	    const transformers = [dateSeparatorMarkdown(editor), tableMarkdown(editor), MENTION_TRANSFORMER, ...Kt];
 
 	    const historyState = z();
 
@@ -23625,6 +23895,7 @@ var EspoLexical = (function () {
 	    const unregisters = [
 	        qt$2(editor),
 	        re$1(editor),
+	        registerDateSeparators(editor, options.locale),
 	        linkUnregister,
 	        tableUnregister,
 	        O$1(editor, historyState, 300),
@@ -23768,6 +24039,12 @@ var EspoLexical = (function () {
 	        },
 	        removeList() {
 	            editor.dispatchCommand(ne$1, undefined);
+	        },
+	        insertDateSeparator(value = localSeparatorValue()) {
+	            return editor.dispatchCommand(INSERT_DATE_SEPARATOR_COMMAND, value);
+	        },
+	        openDateSeparatorPicker() {
+	            return editor.dispatchCommand(OPEN_DATE_SEPARATOR_COMMAND, undefined);
 	        },
 	        undo() {
 	            editor.dispatchCommand(Qe$2, undefined);

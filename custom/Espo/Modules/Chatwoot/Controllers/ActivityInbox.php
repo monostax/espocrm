@@ -30,7 +30,7 @@ class ActivityInbox
     private function filters(Request $request): array
     {
         $filters = [];
-        foreach (['type', 'assignee_tab', 'assigned_user', 'status', 'search', 'due', 'timeZone', 'read_status', 'view', 'sort', 'order', 'offset', 'maxSize', 'railOnly'] as $key) {
+        foreach (['type', 'assignee_tab', 'assigned_user', 'status', 'stage', 'search', 'due', 'timeZone', 'read_status', 'view', 'sort', 'order', 'offset', 'maxSize', 'railOnly'] as $key) {
             $value = $request->getQueryParam($key);
             if ($value !== null) {
                 if (!is_scalar($value)) throw new BadRequest('Invalid filter.');

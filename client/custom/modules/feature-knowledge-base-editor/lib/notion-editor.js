@@ -8,6 +8,7 @@ import {autoUpdate, computePosition, offset, flip, shift, hide, size} from '@flo
 import {
     $getSelection, $isRangeSelection, $setSelection, $getRoot, $createParagraphNode,
     $createTextNode, $getNearestNodeFromDOMNode, FORMAT_TEXT_COMMAND, $nodesOfType, $isTextNode,
+    $getNodeByKey, $isNodeSelection, COMMAND_PRIORITY_EDITOR,
 } from 'lexical';
 import {$setBlocksType} from '@lexical/selection';
 import {$createHeadingNode, $createQuoteNode} from '@lexical/rich-text';
@@ -16,6 +17,10 @@ import {INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND} from '@lexic
 import {INSERT_TABLE_COMMAND} from '@lexical/table';
 import {TOGGLE_LINK_COMMAND, $isLinkNode} from '@lexical/link';
 import {MentionNode, $createMentionNode, CONTEXT_LABELS, referenceUrl} from './mention-node';
+import {
+    DateSeparatorNode, OPEN_DATE_SEPARATOR_COMMAND, INSERT_DATE_SEPARATOR_COMMAND,
+    localSeparatorValue, isSeparatorValue,
+} from './date-separator-node';
 
 const h = React.createElement;
 const blocks = [
@@ -28,6 +33,7 @@ const blocks = [
     ['Bullet list', INSERT_UNORDERED_LIST_COMMAND],
     ['Numbered list', INSERT_ORDERED_LIST_COMMAND],
     ['Table', INSERT_TABLE_COMMAND],
+    ['Date separator', OPEN_DATE_SEPARATOR_COMMAND],
 ];
 const formats = [['bold', 'B'], ['italic', 'I'], ['underline', 'U'], ['strikethrough', 'S̶'], ['code', '</>']];
 
@@ -282,6 +288,102 @@ function References({editor, services}) {
     return null;
 }
 
+function DateSeparators({editor}) {
+    const [state, setState] = useState(null);
+    const current = useRef(null);
+    const panel = useRef(null);
+    const open = state !== null;
+    current.current = state;
+    useEffect(() => {
+        const root = editor.getRootElement();
+        const unregister = editor.registerCommand(OPEN_DATE_SEPARATOR_COMMAND, nodeKey => {
+            if (!editor.isEditable()) return false;
+            const node = nodeKey ? $getNodeByKey(nodeKey) : null;
+            if (nodeKey && !(node instanceof DateSeparatorNode)) return false;
+            const value = node ? node.getValue() : localSeparatorValue();
+            const selection = $getSelection();
+            const block = $isRangeSelection(selection) ? selection.anchor.getNode().getTopLevelElement() : null;
+            setState({nodeKey, value, type: value.includes('T') ? 'datetime-local' : 'date',
+                time: value.includes('T') ? value.slice(11) : localSeparatorValue(true).slice(11),
+                selection: selection?.clone(),
+                range: node ? editor.getElementByKey(nodeKey) : (block && editor.getElementByKey(block.getKey())) || root});
+            return true;
+        }, COMMAND_PRIORITY_EDITOR);
+        const click = event => {
+            if (!editor.isEditable() || !event.target.closest?.('.kb-date-separator-label')) return;
+            const key = editor.read(() => {
+                const node = $getNearestNodeFromDOMNode(event.target);
+                return node instanceof DateSeparatorNode ? node.getKey() : null;
+            });
+            if (key) editor.dispatchCommand(OPEN_DATE_SEPARATOR_COMMAND, key);
+        };
+        const outside = event => {
+            if (panel.current && !panel.current.contains(event.target) &&
+                !root.contains(event.target.closest?.('.kb-date-separator-label'))) setState(null);
+        };
+        const unregisterEditable = editor.registerEditableListener(editable => { if (!editable) setState(null); });
+        const unregisterUpdate = editor.registerUpdateListener(({editorState}) => {
+            const key = current.current?.nodeKey;
+            if (key && !editorState.read(() => $getNodeByKey(key) instanceof DateSeparatorNode)) setState(null);
+        });
+        root.addEventListener('click', click);
+        document.addEventListener('pointerdown', outside);
+        return () => {
+            unregister(); unregisterEditable(); unregisterUpdate();
+            root.removeEventListener('click', click); document.removeEventListener('pointerdown', outside);
+        };
+    }, [editor]);
+    useEffect(() => { if (open) panel.current?.querySelector('input')?.focus(); }, [open]);
+    if (!state) return null;
+    const cancel = () => {
+        if (state.selection) editor.update(() => $setSelection(state.selection.clone()));
+        setState(null); editor.focus();
+    };
+    const save = event => {
+        event.preventDefault();
+        if (!isSeparatorValue(state.value) || !editor.isEditable()) return;
+        editor.update(() => {
+            if (state.selection) $setSelection(state.selection.clone());
+            if (state.nodeKey) {
+                const node = $getNodeByKey(state.nodeKey);
+                if (node instanceof DateSeparatorNode) node.setValue(state.value);
+            } else editor.dispatchCommand(INSERT_DATE_SEPARATOR_COMMAND, state.value);
+        }, {discrete: true, tag: 'history-push'});
+        setState(null); editor.focus();
+    };
+    return h(Floating, {editor, range: state.range, panelRef: panel, role: 'dialog', labelledBy: 'Date separator',
+        className: 'kb-date-separator-picker', onKeyDown: event => {
+            if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancel(); }
+            if (event.key === 'Tab') {
+                const controls = [...panel.current.querySelectorAll('input, select, button:not(:disabled)')];
+                const target = event.shiftKey ? controls.at(-1) : controls[0];
+                if (document.activeElement === (event.shiftKey ? controls[0] : controls.at(-1))) {
+                    event.preventDefault(); target.focus();
+                }
+            }
+        }},
+    h('form', {onSubmit: save},
+        h('strong', null, 'Date separator'),
+        h('label', null, 'Display', h('select', {value: state.type, onChange: event => {
+            const type = event.target.value;
+            setState(previous => ({...previous, type,
+                value: type === 'date' ? previous.value.slice(0, 10) : `${previous.value.slice(0, 10)}T${previous.time}`}));
+        }}, h('option', {value: 'date'}, 'Date'), h('option', {value: 'datetime-local'}, 'Date and time'))),
+        h('label', null, state.type === 'date' ? 'Date' : 'Date and time', h('input', {
+            type: state.type, value: state.value, required: true, step: state.type === 'date' ? 1 : 60,
+            min: state.type === 'date' ? '0001-01-01' : '0001-01-01T00:00',
+            max: state.type === 'date' ? '9999-12-31' : '9999-12-31T23:59',
+            onChange: event => {
+                const value = event.target.value;
+                setState(previous => ({...previous, value, time: value.includes('T') ? value.slice(11) : previous.time}));
+            },
+        })),
+        h('div', {className: 'kb-date-separator-actions'},
+            h('button', {type: 'button', className: 'btn btn-default btn-sm', onClick: cancel}, 'Cancel'),
+            h('button', {type: 'submit', className: 'btn btn-primary btn-sm', disabled: !isSeparatorValue(state.value)},
+                state.nodeKey ? 'Save' : 'Insert'))));
+}
+
 function Blocks({editor}) {
     const menu = useRef(null);
     const line = useRef(null);
@@ -291,16 +393,18 @@ function Blocks({editor}) {
         const move = event => {
             if (!event.altKey || !event.shiftKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
             event.preventDefault();
+            event.stopPropagation();
             editor.update(() => {
                 const selection = $getSelection();
-                if (!$isRangeSelection(selection)) return;
-                const node = selection.anchor.getNode().getTopLevelElement();
+                const node = $isRangeSelection(selection) ? selection.anchor.getNode().getTopLevelElement()
+                    : $isNodeSelection(selection) ? selection.getNodes()[0]?.getTopLevelElement() : null;
                 if (event.key === 'ArrowUp') node?.getPreviousSibling()?.insertBefore(node);
                 else node?.getNextSibling()?.insertAfter(node);
             });
         };
-        root.addEventListener('keydown', move);
-        return () => root.removeEventListener('keydown', move);
+        // Reorder before Lexical's arrow handler can change a block selection.
+        root.addEventListener('keydown', move, true);
+        return () => root.removeEventListener('keydown', move, true);
     }, [editor]);
     const modify = action => editor.update(() => {
         const node = target.current && $getNearestNodeFromDOMNode(target.current)?.getTopLevelElement();
@@ -333,6 +437,7 @@ function Plugins({editor, services}) {
     }, [editor]);
     return h(React.Fragment, null,
         h(References, {editor, services}),
+        h(DateSeparators, {editor}),
         editable && empty ? h('div', {className: 'kb-notion-placeholder', 'aria-hidden': true}, 'Type / for commands or @ for references…') : null,
         editable ? h(React.Fragment, null,
             h(Picker, {editor, trigger: '/', services, onOpenChange: setSlashOpen}),

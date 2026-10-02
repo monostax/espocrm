@@ -124,6 +124,63 @@
 }
 .kb-lex-link { color: var(--link-color, #337ab7); text-decoration: underline; }
 .kb-lex-ul, .kb-lex-ol { margin: 0.4em 0; padding-left: 1.5em; }
+/* Restore native markers removed by Tailwind Preflight. */
+.kb-lex-ul { list-style: disc outside; }
+.kb-lex-ol { list-style: decimal outside; }
+/* Lexical wraps nested lists in a markerless list item. */
+.kb-lex-nested-li { list-style-type: none; }
+.kb-date-separator {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 0.6em 0;
+    padding: 0.4em 0;
+    white-space: normal;
+}
+.kb-date-separator::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid var(--border-color, #ddd);
+}
+.kb-date-separator-label {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    padding: 4px 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 999px;
+    background: var(--panel-bg, #fff);
+    color: var(--text-color, #555);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-align: center;
+    box-shadow: 0 1px 2px #0001;
+    user-select: none;
+}
+button.kb-date-separator-label { cursor: pointer; }
+button.kb-date-separator-label:disabled { opacity: 1; cursor: default; }
+button.kb-date-separator-label:not(:disabled):hover { border-color: var(--link-color, #337ab7); }
+button.kb-date-separator-label:focus-visible,
+.kb-date-separator-selected .kb-date-separator-label { outline: 2px solid var(--link-color, #337ab7); }
+.kb-date-separator-picker { box-sizing: border-box; width: 300px; padding: 14px; }
+.kb-date-separator-picker form { display: grid; gap: 12px; }
+.kb-date-separator-picker label { display: grid; gap: 4px; font-weight: 500; }
+.kb-date-separator-picker input, .kb-date-separator-picker select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    background: var(--panel-bg, #fff);
+    color: inherit;
+    font: inherit;
+}
+.kb-date-separator-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .kb-lex-codeblock {
     font-family: Menlo, Monaco, Consolas, monospace;
     background: rgba(0, 0, 0, 0.05);

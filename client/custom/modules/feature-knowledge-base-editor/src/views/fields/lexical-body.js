@@ -43,6 +43,7 @@ class LexicalBodyFieldView extends BaseFieldView {
                     <button type="button" class="btn btn-default" data-action="ol" title="Numbered list"><span class="fas fa-list-ol fa-sm"></span></button>
                     <button type="button" class="btn btn-default" data-action="link" title="Link"><span class="fas fa-link fa-sm"></span></button>
                     <button type="button" class="btn btn-default" data-action="table" title="Insert table"><span class="fas fa-table fa-sm"></span></button>
+                    <button type="button" class="btn btn-default" data-action="date-separator" title="Date separator"><span class="fas fa-calendar-alt fa-sm"></span></button>
                 </div>
                 <span class="btn-group-divider"></span>
                 <div class="btn-group btn-group-sm">
@@ -206,6 +207,7 @@ class LexicalBodyFieldView extends BaseFieldView {
             element,
             namespace: 'Espo-' + this.model.entityType + '-' + this.cid,
             notion: true,
+            locale: this.getLanguage().name,
             references: {
                 search: (query, signal) => this.referenceRequest('get', 'EditorReference/search', {q: query}, signal).then(data => data.list),
                 resolve: references => this.referenceRequest('post', 'EditorReference/resolve', {references}).then(data => data.list),
@@ -344,6 +346,9 @@ class LexicalBodyFieldView extends BaseFieldView {
                 break;
             case 'table':
                 this.promptTable();
+                break;
+            case 'date-separator':
+                this.kbEditor.openDateSeparatorPicker();
                 break;
         }
 

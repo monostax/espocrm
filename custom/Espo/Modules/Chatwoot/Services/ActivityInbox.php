@@ -21,7 +21,7 @@ use Espo\ORM\Query\UnionBuilder;
 
 class ActivityInbox
 {
-    public const DATES = ['overdue', 'today', 'tomorrow', 'thisWeek', 'nextWeek', 'thisMonth', 'nextMonth', 'noDate'];
+    public const DATES = ['overdue', 'today', 'tomorrow', 'upcoming', 'noDate'];
 
     public function __construct(
         private EntityManager $em,
@@ -40,13 +40,25 @@ class ActivityInbox
         return array_values(array_filter($types, fn ($type) => $this->acl->checkScope($type, 'read') && !$this->metadata->get(['scopes', $type, 'disabled'])));
     }
 
+    private function finishedStatuses(string $type): array
+    {
+        return array_values(array_unique(array_merge(
+            $this->metadata->get(['scopes', $type, 'completedStatusList']) ?? ($type === 'Task' ? ['Completed'] : ['Held']),
+            $this->metadata->get(['scopes', $type, 'canceledStatusList']) ?? ($type === 'Task' ? ['Canceled'] : ['Not Held']),
+        )));
+    }
+
     public function query(string $type, Entity $tenant, array $filters): SelectBuilder
     {
         $query = $this->access->query($type, $tenant, ($filters['read_status'] ?? '') === 'unread' || ($filters['view'] ?? '') === 'mentions');
         if (($filters['assignee_tab'] ?? '') === 'me') $query->where(['assignedUserId' => $this->user->getId()]);
         if (($filters['assignee_tab'] ?? '') === 'unassigned') $query->where(['assignedUserId' => null]);
         if (!empty($filters['assigned_user'])) $query->where(['assignedUserId' => $filters['assigned_user']]);
-        if (!empty($filters['status'])) $query->where(['status' => $filters['status']]);
+        $status = $filters['status'] ?? '';
+        if ($status === 'Open') $query->where(['OR' => [['status!=' => $this->finishedStatuses($type)], ['status' => null]]]);
+        elseif ($status === 'Finished') $query->where(['status' => $this->finishedStatuses($type)]);
+        elseif ($status !== '') $query->where(['status' => $status]);
+        if (!empty($filters['stage'])) $query->where(['status' => $filters['stage']]);
         if (!empty($filters['search'])) $query->where(['name*' => '%' . trim($filters['search']) . '%']);
         if (!empty($filters['due'])) $this->applyDue($query, $type, $filters['due'], $filters['timeZone'] ?? 'UTC');
         if (($filters['read_status'] ?? '') === 'unread' || ($filters['view'] ?? '') === 'mentions') {
@@ -75,13 +87,17 @@ class ActivityInbox
             $query->where(['OR' => $clauses]);
             return;
         }
+        if ($due === 'upcoming') {
+            $start = $today->modify('+8 days');
+            $clauses = [['dateEnd>=' => $start->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')] + ($dateOnly ? ['dateEndDate' => null] : [])];
+            if ($dateOnly) $clauses[] = ['dateEndDate>=' => $start->format('Y-m-d')];
+            $query->where(['OR' => $clauses]);
+            return;
+        }
+        // Keep the legacy tomorrow key for the seven calendar days after today.
         [$start, $end] = match ($due) {
             'today' => [$today, $today->modify('+1 day')],
-            'tomorrow' => [$today->modify('+1 day'), $today->modify('+2 days')],
-            'thisWeek' => [$today->modify('monday this week'), $today->modify('monday next week')],
-            'nextWeek' => [$today->modify('monday next week'), $today->modify('monday next week')->modify('+1 week')],
-            'thisMonth' => [$today->modify('first day of this month'), $today->modify('first day of next month')],
-            'nextMonth' => [$today->modify('first day of next month'), $today->modify('first day of next month')->modify('+1 month')],
+            'tomorrow' => [$today->modify('+1 day'), $today->modify('+8 days')],
         };
         $clauses = [['dateEnd>=' => $start->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'), 'dateEnd<' => $end->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')] + ($dateOnly ? ['dateEndDate' => null] : [])];
         if ($dateOnly) $clauses[] = ['dateEndDate>=' => $start->format('Y-m-d'), 'dateEndDate<' => $end->format('Y-m-d')];
@@ -144,7 +160,7 @@ class ActivityInbox
     {
         // Counts describe sidebar destinations, retaining only the global assignee scope.
         $base = array_intersect_key($filters, array_flip(['assignee_tab', 'timeZone']));
-        $result = ['all' => 0, 'unread' => 0, 'mentions' => 0, 'types' => [], 'status' => [], 'users' => [], 'due' => []];
+        $result = ['all' => 0, 'unread' => 0, 'mentions' => 0, 'types' => [], 'status' => [], 'statusGroups' => ['Open' => 0, 'Finished' => 0], 'users' => [], 'due' => []];
         foreach ($this->types([]) as $type) {
             $repo = $this->em->getRDBRepository($type);
             if (($filters['railOnly'] ?? '') === 'true') {
@@ -155,11 +171,16 @@ class ActivityInbox
             $count = $repo->clone($query->build())->count();
             $result['all'] += $count;
             $result['types'][$type] = $count;
+            $finishedStatuses = $this->finishedStatuses($type);
             foreach (['status' => 'status', 'users' => 'assignedUserId'] as $key => $field) {
                 $groupQuery = $key === 'users' ? $this->query($type, $tenant, []) : clone $query;
                 $grouped = $groupQuery->select([$field, ['COUNT:id', 'count']])->group($field)->build();
                 foreach ($this->em->getQueryExecutor()->execute($grouped)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
                     if ($row[$field]) $result[$key][$row[$field]] = ($result[$key][$row[$field]] ?? 0) + (int) $row['count'];
+                    if ($key === 'status') {
+                        $status = in_array($row[$field], $finishedStatuses, true) ? 'Finished' : 'Open';
+                        $result['statusGroups'][$status] += (int) $row['count'];
+                    }
                 }
             }
             foreach (['unread' => ['read_status' => 'unread'], 'mentions' => ['view' => 'mentions']] as $key => $filter) {
@@ -216,6 +237,7 @@ class ActivityInbox
             }
             $result[$type] = ['fields' => $visible, 'canCreate' => $this->acl->checkScope($type, 'create'),
                 'completedStatuses' => $this->metadata->get(['scopes', $type, 'completedStatusList']) ?? ['Completed'],
+                'finishedStatuses' => $this->finishedStatuses($type),
                 'activeStatuses' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ['Not Started', 'Started']];
         }
         return (object) $result;

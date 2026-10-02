@@ -56,6 +56,10 @@ import {mergeRegister} from '@lexical/utils';
 import {MentionNode, MENTION_TRANSFORMER, parseReferenceUrl, referenceUrl} from './mention-node';
 import {mountNotionEditor} from './notion-editor';
 import {tableMarkdown} from './table-markdown';
+import {
+    DateSeparatorNode, INSERT_DATE_SEPARATOR_COMMAND, OPEN_DATE_SEPARATOR_COMMAND,
+    registerDateSeparators, dateSeparatorMarkdown, localSeparatorValue,
+} from './date-separator-node';
 
 const theme = {
     paragraph: 'kb-lex-p',
@@ -106,6 +110,7 @@ function createNodes() {
         TableCellNode,
         TableRowNode,
         MentionNode,
+        DateSeparatorNode,
     ];
 }
 
@@ -263,7 +268,7 @@ function createKbEditor(options) {
     });
 
     editor.setRootElement(element);
-    const transformers = [tableMarkdown(editor), MENTION_TRANSFORMER, ...TRANSFORMERS];
+    const transformers = [dateSeparatorMarkdown(editor), tableMarkdown(editor), MENTION_TRANSFORMER, ...TRANSFORMERS];
 
     const historyState = createEmptyHistoryState();
 
@@ -292,6 +297,7 @@ function createKbEditor(options) {
     const unregisters = [
         registerRichText(editor),
         registerList(editor),
+        registerDateSeparators(editor, options.locale),
         linkUnregister,
         tableUnregister,
         registerHistory(editor, historyState, 300),
@@ -435,6 +441,12 @@ function createKbEditor(options) {
         },
         removeList() {
             editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
+        },
+        insertDateSeparator(value = localSeparatorValue()) {
+            return editor.dispatchCommand(INSERT_DATE_SEPARATOR_COMMAND, value);
+        },
+        openDateSeparatorPicker() {
+            return editor.dispatchCommand(OPEN_DATE_SEPARATOR_COMMAND, undefined);
         },
         undo() {
             editor.dispatchCommand(UNDO_COMMAND, undefined);
