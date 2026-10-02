@@ -202,7 +202,8 @@ class ReconcileFileSearchStores implements Job
             ->find();
 
         foreach ($operations as $operation) {
-            if (!$this->entityManager->getEntityById('KnowledgeBaseArticle', $operation->get('knowledgeBaseArticleId'))) {
+            $articleId = $operation->get('knowledgeBaseArticleId');
+            if (!$articleId || !$this->entityManager->getEntityById('KnowledgeBaseArticle', $articleId)) {
                 continue;
             }
             $documentName = $operation->get('geminiDocumentName');
