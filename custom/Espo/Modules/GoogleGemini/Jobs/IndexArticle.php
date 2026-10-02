@@ -115,17 +115,20 @@ class IndexArticle implements Job
 
         if (empty($storeInfo)) {
             $this->log->warning("GoogleGemini IndexArticle: Article {$articleId} has no AI-enabled categories, skipping");
+            $this->deleteArticle($article);
             $this->updateArticleStatus($article, 'NotIndexed', 'No AI-enabled categories');
             return;
         }
 
-        // Delete all previously indexed documents (article body + attachments)
-        $this->deleteExistingDocuments($article);
+        // Keep last-known-good documents until replacement uploads succeed.
+        // Documents in removed categories must still be revoked immediately.
+        $allowedStores = array_column($storeInfo, 'storeName');
+        $this->deleteExistingDocuments($article, $allowedStores);
 
         // Resolve previous upload operations: delete documents they created
         // (referenced on the article or not) and flag still-in-flight uploads
         // so their resulting documents are discarded upon completion.
-        $this->resolveOperationsForReindex($articleId);
+        $this->resolveOperationsForReindex($articleId, $allowedStores);
 
         // Build content
         $content = $this->buildArticleContent($article);
@@ -169,12 +172,14 @@ class IndexArticle implements Job
 
             if ($result === null) {
                 $this->log->error("GoogleGemini IndexArticle: Upload to store {$storeName} failed for article {$articleId}");
-                continue;
+                $this->recordFailedUpload($articleId, 'ArticleBody', 'Article body upload failed');
+                throw new \RuntimeException('Article body upload failed; previous index retained');
             }
 
             if (!isset($result['name'])) {
                 $this->log->error("GoogleGemini IndexArticle: No operation name in response for store {$storeName}");
-                continue;
+                $this->recordFailedUpload($articleId, 'ArticleBody', 'Article body upload returned no operation');
+                throw new \RuntimeException('Article body upload returned no operation; previous index retained');
             }
 
             // Create operation entity for article body (NON-BLOCKING)
@@ -218,6 +223,7 @@ class IndexArticle implements Job
             try {
                 $this->uploadSingleAttachment($attachment, $article, $storeName, $categoryId);
             } catch (\Exception $e) {
+                $this->recordFailedUpload($articleId, 'Attachment', $e->getMessage());
                 $this->log->error(
                     "GoogleGemini IndexArticle: Failed to upload attachment {$attachment->getId()} " .
                     "for article {$articleId}: " . $e->getMessage()
@@ -239,16 +245,14 @@ class IndexArticle implements Job
 
         // Check if file exists
         if (!$this->fileStorageManager->exists($attachment)) {
-            $this->log->warning("GoogleGemini IndexArticle: Attachment file not found for {$attachmentId}");
-            return;
+            throw new \RuntimeException("Attachment file not found for {$attachmentId}");
         }
 
         // Get file contents
         $fileContents = $this->fileStorageManager->getContents($attachment);
 
         if (empty($fileContents)) {
-            $this->log->warning("GoogleGemini IndexArticle: Empty file contents for attachment {$attachmentId}");
-            return;
+            throw new \RuntimeException("Empty file contents for attachment {$attachmentId}");
         }
 
         $displayName = 'KB Attachment: ' . $article->get('name') . ' - ' . $attachmentName;
@@ -339,26 +343,25 @@ class IndexArticle implements Job
      *   discardDocument so ProcessUploadOperations deletes the document once
      *   the upload completes, instead of abandoning it.
      */
-    private function resolveOperationsForReindex(string $articleId): void
+    private function resolveOperationsForReindex(string $articleId, array $allowedStores): void
     {
         $operations = $this->entityManager
             ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
             ->where([
                 'knowledgeBaseArticleId' => $articleId,
-                'status' => ['Pending', 'Processing', 'Completed'],
+                'status' => ['Pending', 'Processing', 'Completed', 'Failed'],
             ])
             ->find();
 
         foreach ($operations as $operation) {
             $status = $operation->get('status');
 
-            if ($status === 'Completed') {
-                // The document is superseded by the re-index - remove it.
-                // deleteDocument() treats 404 as success, so documents already
-                // removed via the article references are handled gracefully.
+            if ($status === 'Completed' || $status === 'Failed') {
                 $trackedDocName = $operation->get('geminiDocumentName');
+                $retain = $trackedDocName && !$operation->get('discardDocument') &&
+                    $this->isInAllowedStore($trackedDocName, $allowedStores);
 
-                if ($trackedDocName && !$this->geminiService->deleteDocument($trackedDocName)) {
+                if ($trackedDocName && !$retain && !$this->geminiService->deleteDocument($trackedDocName)) {
                     $this->log->warning(
                         "GoogleGemini IndexArticle: Failed to delete superseded document {$trackedDocName} " .
                         "for article {$articleId} (reconciliation job will retry)"
@@ -366,7 +369,7 @@ class IndexArticle implements Job
                 }
 
                 $operation->set('status', 'Failed');
-                $operation->set('errorMessage', 'Superseded: article re-indexed');
+                $operation->set('errorMessage', $retain ? 'Superseded: retained until replacement' : 'Superseded: article re-indexed');
                 $operation->set('completedAt', date('Y-m-d H:i:s'));
                 $this->entityManager->saveEntity($operation, ['silent' => true]);
 
@@ -418,21 +421,40 @@ class IndexArticle implements Job
     /**
      * Delete all existing Gemini documents for an article (body + attachments).
      */
-    private function deleteExistingDocuments(Entity $article): void
+    private function deleteExistingDocuments(Entity $article, array $allowedStores = []): void
     {
         // Delete article body document
         $existingDocName = $article->get('geminiDocumentName');
-        if ($existingDocName) {
+        if ($existingDocName && !$this->isInAllowedStore($existingDocName, $allowedStores)) {
             $this->geminiService->deleteDocument($existingDocName);
         }
 
         // Delete attachment documents
         $attachmentDocuments = $this->normalizeAttachmentDocuments($article->get('geminiAttachmentDocuments'));
         foreach ($attachmentDocuments as $doc) {
-            if (isset($doc['documentName'])) {
+            if (isset($doc['documentName']) && !$this->isInAllowedStore($doc['documentName'], $allowedStores)) {
                 $this->geminiService->deleteDocument($doc['documentName']);
             }
         }
+    }
+
+    private function recordFailedUpload(string $articleId, string $documentType, string $message): void
+    {
+        $this->entityManager->createEntity('GeminiFileSearchStoreUploadOperation', [
+            'name' => 'Failed replacement upload', 'status' => 'Failed',
+            'documentType' => $documentType, 'knowledgeBaseArticleId' => $articleId,
+            'errorMessage' => $message, 'attempts' => 0, 'completedAt' => date('Y-m-d H:i:s'),
+        ], ['silent' => true, 'skipCreatedBy' => true]);
+    }
+
+    private function isInAllowedStore(string $documentName, array $stores): bool
+    {
+        foreach ($stores as $store) {
+            if (str_starts_with($documentName, $store . '/documents/')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

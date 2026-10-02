@@ -1,0 +1,6 @@
+[
+    {"route": "/EditorReference/search", "method": "get", "params": {"controller": "EditorReference", "action": "search"}},
+    {"route": "/EditorReference/resolve", "method": "post", "params": {"controller": "EditorReference", "action": "resolve"}},
+    {"route": "/EditorReference/backlinks", "method": "get", "params": {"controller": "EditorReference", "action": "backlinks"}},
+    {"route": "/EditorReference/prompt", "method": "post", "params": {"controller": "EditorReference", "action": "prompt"}}
+]

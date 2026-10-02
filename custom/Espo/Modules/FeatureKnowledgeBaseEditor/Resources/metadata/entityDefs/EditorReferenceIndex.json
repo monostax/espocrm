@@ -1,0 +1,14 @@
+{
+    "fields": {
+        "sourceType": {"type": "varchar", "maxLength": 64},
+        "sourceId": {"type": "varchar", "maxLength": 64},
+        "sourceField": {"type": "varchar", "maxLength": 64},
+        "targetType": {"type": "varchar", "maxLength": 64},
+        "targetId": {"type": "varchar", "maxLength": 64}
+    },
+    "indexes": {
+        "source": {"columns": ["sourceType", "sourceId", "sourceField"]},
+        "target": {"columns": ["targetType", "targetId"]},
+        "reference": {"unique": true, "columns": ["sourceType", "sourceId", "sourceField", "targetType", "targetId"]}
+    }
+}

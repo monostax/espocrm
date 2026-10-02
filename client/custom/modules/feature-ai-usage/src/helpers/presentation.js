@@ -95,6 +95,8 @@ export function present(payload, state, format, t) {
         timeZone: payload.period.timeZone,
         minDate: payload.period.from, maxDate: payload.period.through,
         runsText: format.number(payload.usage.runs), conversationText: format.number(payload.usage.conversations),
+        conversationDaysText: format.number(payload.usage.conversationDays),
+        opportunityDaysText: format.number(payload.usage.opportunityDays),
         opportunityText: format.number(payload.usage.opportunities), filteredRunsText: format.number(payload.filteredUsage.runs),
         failedRunsText: format.number(payload.filteredUsage.failedRuns), hasFailedRuns: payload.filteredUsage.failedRuns > 0,
         coverageText: payload.usage.runs ? `${Math.round(100 * payload.usage.meteredRuns / payload.usage.runs)}%` : '—',

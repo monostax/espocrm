@@ -1,0 +1,6 @@
+{
+    "transactionalSave": true,
+    "fields": {
+        "body": {"additionalAttributeList": ["__APPEND__", "editorState", "format"]}
+    }
+}

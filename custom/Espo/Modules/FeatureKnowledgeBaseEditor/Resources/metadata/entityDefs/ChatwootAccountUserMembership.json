@@ -1,0 +1,21 @@
+{
+    "transactionalSave": true,
+    "fields": {
+        "aiPrompt": {
+            "additionalAttributeList": ["__APPEND__", "editorState"],
+            "view": "feature-knowledge-base-editor:views/fields/ai-prompt"
+        },
+        "aiPromptEditorState": {
+            "type": "text",
+            "utility": true,
+            "layoutDetailDisabled": true,
+            "layoutDetailSmallDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "directUpdateDisabled": true,
+            "textFilterDisabled": true,
+            "viewFieldListDisabled": true
+        }
+    }
+}

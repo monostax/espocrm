@@ -190,6 +190,10 @@ class ProcessUploadOperations implements Job
      */
     private function handleCompletedOperation(Entity $operation, array $response, ?string $documentName): void
     {
+        if (!$documentName) {
+            $this->markOperationFailed($operation, 'Upload completed without a document name; previous index retained');
+            return;
+        }
         if ($operation->get('discardDocument')) {
             if ($documentName && !$this->geminiService->deleteDocument($documentName)) {
                 $this->log->warning(
@@ -257,9 +261,28 @@ class ProcessUploadOperations implements Job
         $failedCount = 0;
         $articleBodyDocName = null;
         $attachmentDocuments = [];
+        $newDocumentNames = [];
+        $retainedOperations = [];
+        $oldDocumentNames = array_filter([$article->get('geminiDocumentName')]);
+        foreach ((array) ($article->get('geminiAttachmentDocuments') ?? []) as $old) {
+            $old = (array) $old;
+            if (!empty($old['documentName'])) {
+                $oldDocumentNames[] = $old['documentName'];
+            }
+        }
 
         foreach ($operations as $op) {
             $status = $op->get('status');
+            // Superseded in-flight uploads are cleanup, not this publication.
+            if ($op->get('discardDocument')) {
+                continue;
+            }
+            if ($op->get('errorMessage') === 'Superseded: retained until replacement') {
+                $retainedOperations[] = $op;
+                if ($op->get('geminiDocumentName')) {
+                    $oldDocumentNames[] = $op->get('geminiDocumentName');
+                }
+            }
             
             if ($status === 'Pending' || $status === 'Processing') {
                 $pendingCount++;
@@ -268,6 +291,9 @@ class ProcessUploadOperations implements Job
                 
                 $docType = $op->get('documentType');
                 $docName = $op->get('geminiDocumentName');
+                if ($docName) {
+                    $newDocumentNames[] = $docName;
+                }
                 
                 if ($docType === 'ArticleBody' && $docName) {
                     $articleBodyDocName = $docName;
@@ -300,17 +326,10 @@ class ProcessUploadOperations implements Job
         }
 
         // All operations are complete (either succeeded or failed)
-        if ($failedCount > 0 && $completedCount === 0) {
-            // All failed
+        if ($failedCount > 0 || !$articleBodyDocName) {
+            // Do not replace a usable index with an incomplete generation.
             $article->set('geminiIndexStatus', 'Failed');
-            $article->set('geminiIndexError', "All {$failedCount} upload operation(s) failed");
-        } elseif ($failedCount > 0) {
-            // Some failed, some succeeded - partial success
-            $article->set('geminiIndexStatus', 'Indexed');
-            $article->set('geminiIndexError', "{$failedCount} of " . ($completedCount + $failedCount) . " operation(s) failed");
-            $article->set('geminiDocumentName', $articleBodyDocName);
-            $article->set('geminiAttachmentDocuments', $attachmentDocuments);
-            $article->set('geminiIndexedAt', date('Y-m-d H:i:s'));
+            $article->set('geminiIndexError', "Replacement incomplete ({$failedCount} failed uploads); previous index retained");
         } else {
             // All succeeded
             $article->set('geminiIndexStatus', 'Indexed');
@@ -326,6 +345,20 @@ class ProcessUploadOperations implements Job
             'silent' => true,
             'skipGeminiIndexing' => true,
         ]);
+
+        if ($failedCount === 0 && $articleBodyDocName) {
+            // Publish references before retiring the old generation. Failed
+            // deletions remain eligible for the reconciliation safety net.
+            foreach ($retainedOperations as $op) {
+                $op->set('errorMessage', 'Superseded: replacement published');
+                $this->entityManager->saveEntity($op, ['silent' => true]);
+            }
+            foreach (array_diff(array_unique($oldDocumentNames), $newDocumentNames) as $oldName) {
+                if (!$this->geminiService->deleteDocument($oldName)) {
+                    $this->log->warning("GoogleGemini: Replacement published; old document cleanup pending: {$oldName}");
+                }
+            }
+        }
 
         $this->log->info("GoogleGemini ProcessUploadOperations: Updated article {$articleId} status to {$article->get('geminiIndexStatus')}");
     }

@@ -28,7 +28,7 @@ const state = {view: 'overview', dimension: 'kind', offset: 0, filters: {}};
 const fixture = () => ({
     billing: {status: 'ready', model: 'credit', allowance: 100, consumed: 125, covered: 100, remaining: 0, overage: 25, charges: [{currency: 'BRL', amount: 12.25}]},
     period: {month: '2026-09', resetAt: '2026-10-01T00:00:00-03:00', timeZone: 'America/Sao_Paulo'},
-    generatedAt: '2026-09-27T12:00:00Z', usage: {runs: 125, conversations: 5, opportunities: 2, meteredRuns: 100}, filteredUsage: {runs: 125},
+    generatedAt: '2026-09-27T12:00:00Z', usage: {runs: 125, conversations: 5, conversationDays: 17, opportunities: 2, opportunityDays: 7, meteredRuns: 100}, filteredUsage: {runs: 125},
     rates: [{from: '2026-09-01', to: null, currency: 'BRL', model: 'credit', unitPrice: 0.49}],
     daily: [{day: '2026-09-01', runs: 125, consumed: 125, covered: 100, overage: 25, charges: [{currency: 'BRL', amount: 12.25}]}],
 });
@@ -53,6 +53,8 @@ test('formatting keeps currencies separate, exact money accessible and unknown d
     const ui = present(fixture(), state, f, t);
     assert.match(ui.cards[3].exact, /12\.25/);
     assert.equal(ui.coverageText, '80%');
+    assert.equal(ui.conversationDaysText, '17');
+    assert.equal(ui.opportunityDaysText, '7');
     assert.equal(ui.daily[0].coveredHeight, 80);
 });
 
@@ -61,6 +63,10 @@ test('templates render real presentation data with accessible labels and escaped
     const page = handlebars.compile(read(client + 'res/templates/page.tpl'));
     const html = page({...present(fixture(), state, f, t), hasData: true, tenants: [{id: 't', name: '<script>bad()</script>', selected: true}], month: '2026-09', maxMonth: '2026-09'});
     assert.match(html, /Covered by your plan/);
+    assert.match(html, /au-impact-value">17<\/span><span>Conversation-days with AI runs/);
+    assert.match(html, /au-impact-value">7<\/span><span>Opportunity-days with AI runs/);
+    assert.ok(html.includes(en.conversationDaysEpisodeDistinction));
+    assert.ok(html.includes('America/Sao_Paulo'));
     assert.match(html, /width:80%/);
     assert.match(html, /aria-label="R\$12\.25"/);
     assert.ok(!html.includes('<script>bad()'));

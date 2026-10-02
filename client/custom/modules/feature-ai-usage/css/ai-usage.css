@@ -74,7 +74,7 @@
 .au-chart-legend > :last-child { margin-left: auto; }
 .au-daily-table { margin-top: 16px; font-size: 12px; }
 .au-daily-table .table-responsive { max-height: 320px; overflow-y: auto; }
-.au-impact-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0 16px; }
+.au-impact-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0 16px; }
 .au-impact-grid > div { display: flex; flex-direction: column; gap: 5px; border-left: 2px solid var(--au-border); padding-left: 14px; font-size: 12px; }
 .au-impact-value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .au-footnote { font-size: 11px; margin: 14px 0; }

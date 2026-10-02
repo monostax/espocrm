@@ -24,18 +24,64 @@
 
 .kb-lexical-editor-wrap {
     padding: 0;
+    position: relative;
 }
 
 .kb-lexical-editor {
     min-height: 220px;
     max-height: 70vh;
     overflow-y: auto;
-    padding: 10px 12px;
+    padding: 24px 40px;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     outline: none;
     line-height: 1.5;
+}
+
+.kb-notion-placeholder {
+    position: absolute;
+    top: 24px;
+    left: 40px;
+    right: 12px;
+    pointer-events: none;
+    opacity: .55;
+}
+.kb-notion-popover {
+    z-index: 1200;
+    background: var(--panel-bg, #fff);
+    color: var(--text-color, #333);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    box-shadow: 0 5px 22px #0003;
+    padding: 4px;
+    overflow: auto;
+}
+.kb-selection-toolbar { display: flex; gap: 2px; }
+.kb-selection-toolbar button, .kb-block-handle button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    border-radius: 4px;
+    min-width: 32px;
+    height: 32px;
+}
+.kb-selection-toolbar button:hover, .kb-selection-toolbar button[aria-pressed="true"],
+.kb-command-menu .active, .kb-block-handle button:hover { background: var(--gray-lighter, #eee); }
+.kb-notion-popover button:focus-visible, .kb-block-handle button:focus-visible { outline: 2px solid var(--link-color, #337ab7); }
+.kb-command-menu { width: 280px; max-height: 320px; }
+.kb-command-menu [role="option"] { display: flex; gap: 8px; padding: 7px 8px; cursor: pointer; }
+.kb-command-menu small { opacity: .65; min-width: 65px; font-size: 10px; }
+.kb-mention { border-radius: 4px; background: #5588aa20; padding: 1px 4px; color: var(--link-color, #337ab7); }
+.kb-mention::before { content: '@'; opacity: .6; margin-right: 2px; }
+.kb-mention-unavailable { color: inherit; opacity: .65; }
+.kb-block-handle { position: absolute; top: 0; left: 0; opacity: 0; cursor: grab; display: flex; }
+.kb-block-handle button { min-width: 18px; width: 18px; height: 24px; padding: 0; }
+.kb-block-target { position: absolute; top: 0; left: 0; height: 3px; background: var(--link-color, #337ab7); pointer-events: none; opacity: 0; }
+.kb-typeahead-anchor { z-index: 1200; }
+@media (max-width: 600px) {
+    .kb-lexical-editor { padding: 16px 36px; }
+    .kb-notion-placeholder { top: 16px; left: 36px; }
 }
 
 .kb-lexical-editor:focus {

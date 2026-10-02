@@ -10,6 +10,8 @@ import BaseFieldView from 'views/fields/base';
  */
 class LexicalBodyFieldView extends BaseFieldView {
     type = 'wysiwyg'
+    editorStateField = 'bodyEditorState'
+    formatField = 'bodyFormat'
 
     listTemplate = 'fields/wysiwyg/detail'
     detailTemplateContent = `
@@ -49,15 +51,15 @@ class LexicalBodyFieldView extends BaseFieldView {
                     </button>
                 </div>
                 <span class="btn-group-divider"></span>
-                <div class="kb-lexical-format-select btn-group btn-group-sm">
+                {{#if hasFormatField}}<div class="kb-lexical-format-select btn-group btn-group-sm">
                     <select class="form-control input-sm" data-name="bodyFormatInline" title="{{bodyFormatFieldLabel}}">
                         <option value="Html"{{#if isHtmlFormat}} selected{{/if}}>HTML</option>
                         <option value="Markdown"{{#if isMarkdownFormat}} selected{{/if}}>Markdown</option>
                     </select>
-                </div>
+                </div>{{/if}}
             </div>
             <div class="kb-lexical-editor-wrap">
-                <div class="kb-lexical-editor form-control" contenteditable="true"></div>
+                <div class="kb-lexical-editor form-control" contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{name}}" aria-description="Type slash for blocks, at sign for references. Alt+F10 opens selection formatting. Alt+Shift+Arrow moves a block."></div>
             </div>
             <textarea class="main-element form-control kb-lexical-source hidden auto-height"
                 data-name="{{name}}"
@@ -79,7 +81,7 @@ class LexicalBodyFieldView extends BaseFieldView {
     skipNextFormatConvert = false
 
     getAttributeList() {
-        return [this.name, 'bodyEditorState', 'bodyFormat'];
+        return [this.name, this.editorStateField, this.formatField].filter(Boolean);
     }
 
     setup() {
@@ -91,7 +93,7 @@ class LexicalBodyFieldView extends BaseFieldView {
             })
         );
 
-        this.listenTo(this.model, 'change:bodyFormat', (model, value, o) => {
+        if (this.formatField) this.listenTo(this.model, 'change:' + this.formatField, (model, value, o) => {
             if (this.skipNextFormatConvert) {
                 this.skipNextFormatConvert = false;
                 if (this.isRendered()) {
@@ -114,6 +116,8 @@ class LexicalBodyFieldView extends BaseFieldView {
             const action = target.getAttribute('data-action');
             this.onToolbarAction(action);
         });
+        this.addHandler('mousedown', '.kb-lexical-toolbar button', e => e.preventDefault());
+        this.on('render', () => this.destroyEditor());
 
         this.addHandler('input', 'textarea.kb-lexical-source', () => this.trigger('change'));
 
@@ -124,7 +128,7 @@ class LexicalBodyFieldView extends BaseFieldView {
                 return;
             }
 
-            this.model.set('bodyFormat', next, {ui: true});
+            if (this.formatField) this.model.set(this.formatField, next, {ui: true});
         });
     }
 
@@ -135,6 +139,7 @@ class LexicalBodyFieldView extends BaseFieldView {
 
         data.isPlain = format === 'Markdown';
         data.bodyFormat = format;
+        data.hasFormatField = !!this.formatField;
         data.isHtmlFormat = format !== 'Markdown';
         data.isMarkdownFormat = format === 'Markdown';
         data.isNone = !data.isNotEmpty && data.valueIsSet && this.isDetailMode();
@@ -144,6 +149,9 @@ class LexicalBodyFieldView extends BaseFieldView {
         if (this.isDetailMode() || this.isListMode()) {
             if (format === 'Html') {
                 data.value = this.sanitizeHtml(value || '');
+            } else if (this.EspoLexical) {
+                data.isPlain = false;
+                data.value = this.sanitizeHtml(this.EspoLexical.markdownToHtml(value || ''));
             } else {
                 data.value = value || '';
             }
@@ -153,7 +161,7 @@ class LexicalBodyFieldView extends BaseFieldView {
     }
 
     getBodyFormat() {
-        return this.model.get('bodyFormat') || 'Html';
+        return (this.formatField && this.model.get(this.formatField)) || 'Html';
     }
 
     isHtmlMode() {
@@ -172,6 +180,7 @@ class LexicalBodyFieldView extends BaseFieldView {
         super.afterRender();
 
         if (!this.isEditMode()) {
+            this.resolveDetailReferences();
             return;
         }
 
@@ -196,6 +205,11 @@ class LexicalBodyFieldView extends BaseFieldView {
         this.kbEditor = this.EspoLexical.createKbEditor({
             element,
             namespace: 'Espo-' + this.model.entityType + '-' + this.cid,
+            notion: true,
+            references: {
+                search: (query, signal) => this.referenceRequest('get', 'EditorReference/search', {q: query}, signal).then(data => data.list),
+                resolve: references => this.referenceRequest('post', 'EditorReference/resolve', {references}).then(data => data.list),
+            },
             onChange: () => {
                 this.trigger('change');
             },
@@ -215,7 +229,7 @@ class LexicalBodyFieldView extends BaseFieldView {
             return;
         }
 
-        const state = this.model.get('bodyEditorState');
+        const state = this.model.get(this.editorStateField);
 
         if (state && this.kbEditor.setEditorStateJSON(state)) {
             return;
@@ -231,10 +245,55 @@ class LexicalBodyFieldView extends BaseFieldView {
     }
 
     destroyEditor() {
+        this.referenceGeneration = (this.referenceGeneration || 0) + 1;
+        for (const abort of this.pendingReferences || []) abort();
+        this.pendingReferences?.clear();
         if (this.kbEditor) {
             this.kbEditor.destroy();
             this.kbEditor = null;
         }
+    }
+
+    referenceRequest(method, url, data, signal) {
+        this.pendingReferences ||= new Set();
+        const request = Espo.Ajax[method === 'get' ? 'getRequest' : 'postRequest'](url, data);
+        return new Promise((resolve, reject) => {
+            const cleanup = () => { this.pendingReferences.delete(abort); signal?.removeEventListener('abort', abort); };
+            const abort = () => { request.abort(); cleanup(); reject(new DOMException('Aborted', 'AbortError')); };
+            this.pendingReferences.add(abort);
+            if (signal?.aborted) { abort(); return; }
+            signal?.addEventListener('abort', abort, {once: true});
+            request.then(value => { cleanup(); resolve(value); }, error => { cleanup(); reject(error); });
+        });
+    }
+
+    resolveDetailReferences() {
+        if (!this.EspoLexical) return;
+        const generation = (this.referenceGeneration || 0) + 1;
+        this.referenceGeneration = generation;
+        const links = [...this.el.querySelectorAll('a[href^="#crm-reference/"]')];
+        const records = [];
+        for (const link of links) {
+            const ref = this.EspoLexical.parseReferenceUrl(link.getAttribute('href'));
+            link.removeAttribute('href');
+            link.classList.add('kb-mention');
+            if (ref?.kind === 'record') {
+                link.textContent = 'Unavailable reference';
+                records.push({link, ref});
+            } else if (!ref) link.textContent = 'Unavailable reference';
+        }
+        if (!records.length) return;
+        const references = [...new Map(records.map(item => [this.EspoLexical.referenceUrl(item.ref), item.ref])).values()];
+        this.referenceRequest('post', 'EditorReference/resolve', {references}).then(data => {
+            if (generation !== this.referenceGeneration) return;
+            const resolved = new Map(data.list.map(ref => [this.EspoLexical.referenceUrl(ref), ref]));
+            for (const {link, ref} of records) {
+                const result = resolved.get(this.EspoLexical.referenceUrl(ref));
+                if (!result?.available) continue;
+                link.textContent = result.label;
+                link.href = `#${ref.entityType}/view/${ref.recordId}`;
+            }
+        }).catch(() => {});
     }
 
     onRemove() {
@@ -385,7 +444,7 @@ class LexicalBodyFieldView extends BaseFieldView {
 
     readEditorStateJSON() {
         if (!this.kbEditor) {
-            return this.model.get('bodyEditorState') || null;
+            return this.model.get(this.editorStateField) || null;
         }
 
         // If user is in source mode, import source first so state matches.
@@ -427,7 +486,7 @@ class LexicalBodyFieldView extends BaseFieldView {
 
         if (!window.confirm(msg)) {
             this.skipNextFormatConvert = true;
-            this.model.set('bodyFormat', previous, {ui: false});
+            this.model.set(this.formatField, previous, {ui: false});
             return;
         }
 
@@ -437,7 +496,7 @@ class LexicalBodyFieldView extends BaseFieldView {
             // bodyFormat already updated on the model; re-project with new format.
             this.model.set({
                 [this.name]: this.readProjectedBody() || null,
-                bodyEditorState: this.readEditorStateJSON(),
+                [this.editorStateField]: this.readEditorStateJSON(),
             }, {skipReRender: true});
             this.reRender();
             return;
@@ -485,7 +544,7 @@ class LexicalBodyFieldView extends BaseFieldView {
 
         this.model.set({
             [this.name]: converted || null,
-            bodyEditorState: nextState,
+            [this.editorStateField]: nextState,
         }, {skipReRender: true});
 
         if (this.isEditMode() && this.isRendered()) {
@@ -496,7 +555,7 @@ class LexicalBodyFieldView extends BaseFieldView {
     fetch() {
         const data = {};
         let body = this.isEditMode() ? this.readProjectedBody() : this.model.get(this.name);
-        let state = this.isEditMode() ? this.readEditorStateJSON() : this.model.get('bodyEditorState');
+        let state = this.isEditMode() ? this.readEditorStateJSON() : this.model.get(this.editorStateField);
 
         if (typeof body === 'string') {
             body = body.trim();
@@ -508,8 +567,8 @@ class LexicalBodyFieldView extends BaseFieldView {
         }
 
         data[this.name] = body;
-        data.bodyEditorState = state;
-        data.bodyFormat = this.getBodyFormat();
+        data[this.editorStateField] = state;
+        if (this.formatField) data[this.formatField] = this.getBodyFormat();
 
         return data;
     }

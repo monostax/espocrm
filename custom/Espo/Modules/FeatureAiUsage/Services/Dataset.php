@@ -55,14 +55,18 @@ class Dataset
 
     public function stats(array $runs): array
     {
-        $conversations = $opportunities = [];
+        $conversations = $conversationDays = $opportunities = $opportunityDays = [];
         $metered = $unassigned = $failed = $waived = $pending = 0;
         foreach ($runs as $run) {
             if ($run['conversationId'] ?? null) {
                 $conversations[$run['conversationId']] = true;
+                // The ledger's day is already in the reporting time zone. All
+                // triggers share one conversation-day, regardless of billing.
+                $conversationDays[$run['conversationId'] . '|' . $run['day']] = true;
             }
             if ($run['opportunityId'] ?? null) {
                 $opportunities[$run['opportunityId']] = true;
+                $opportunityDays[$run['opportunityId'] . '|' . $run['day']] = true;
             }
             $metered += (int) (($run['usageMetricsVersion'] ?? null) === 1);
             $unassigned += (int) (($run['groupKey'] ?? null) === null);
@@ -72,6 +76,8 @@ class Dataset
         }
         return [
             'runs' => count($runs), 'conversations' => count($conversations), 'opportunities' => count($opportunities),
+            'conversationDays' => count($conversationDays),
+            'opportunityDays' => count($opportunityDays),
             'meteredRuns' => $metered, 'unassignedRuns' => $unassigned, 'failedRuns' => $failed,
             'waivedRuns' => $waived, 'pendingRuns' => $pending,
         ];

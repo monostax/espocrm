@@ -1,4 +1,5 @@
 {
+    "bottomPanels": {"detail": ["__APPEND__", {"name": "mentionedIn", "label": "Mentioned in", "view": "feature-knowledge-base-editor:views/record/panels/mentioned-in", "order": 90}]},
     "recordViews": {
         "detail": "feature-knowledge-base-editor:views/knowledge-base-article/record/detail"
     },

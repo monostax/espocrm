@@ -5,10 +5,52 @@ declare(strict_types=1);
 namespace tests\unit\Espo\Modules\FeatureAiUsage;
 
 use Espo\Modules\FeatureAiUsage\Services\Dataset;
+use Espo\Modules\FeatureAiUsage\Services\Ledger;
+use Espo\Modules\FeatureAiUsage\Services\Period;
 use PHPUnit\Framework\TestCase;
 
 class DatasetTest extends TestCase
 {
+    public function testConversationDaysUseLocalMidnightAndDeduplicateAcrossTriggersAndAgents(): void
+    {
+        $period = Period::create('2026-09', 'America/Sao_Paulo', new \DateTimeImmutable('2026-10-02T00:00:00Z'));
+        $runs = [
+            ['runAt' => '2026-09-02 02:59:59', 'conversationId' => 'a', 'kind' => 'customer-message', 'agentId' => 'one'],
+            ['runAt' => '2026-09-02 02:59:59', 'conversationId' => 'a', 'kind' => 'private-mention', 'agentId' => 'two'],
+            ['runAt' => '2026-09-02 03:00:00', 'conversationId' => 'a', 'kind' => 'followup-trigger'],
+            ['runAt' => '2026-09-02 03:01:00', 'conversationId' => 'b', 'kind' => 'customer-message', 'runOutcome' => 'failed'],
+            ['runAt' => '2026-09-02 03:02:00', 'opportunityId' => 'o', 'kind' => 'opportunity-mention'],
+            ['runAt' => '2026-09-02 03:03:00', 'kind' => 'customer-message'],
+        ];
+        $ledger = (new Ledger())->build($runs, $period, [], 'tenant');
+        $dataset = new Dataset();
+        $stats = $dataset->stats($ledger['runs']);
+        $this->assertSame(6, $stats['runs']);
+        $this->assertSame(2, $stats['conversations']);
+        $this->assertSame(3, $stats['conversationDays']);
+        $filtered = $dataset->filter($ledger['runs'], ['from' => '2026-09-01', 'to' => '2026-09-01']);
+        $this->assertSame(1, $dataset->stats($filtered)['conversationDays']);
+        $this->assertSame(0, $dataset->stats([])['conversationDays']);
+    }
+
+    public function testOpportunityDaysCountLinkedRecordsOncePerDayIndependentlyOfConversations(): void
+    {
+        $runs = [
+            ['day' => '2026-09-01', 'opportunityId' => 'a', 'kind' => 'opportunity-mention'],
+            ['day' => '2026-09-01', 'opportunityId' => 'a', 'conversationId' => 'c', 'kind' => 'customer-message'],
+            ['day' => '2026-09-02', 'opportunityId' => 'a'],
+            ['day' => '2026-09-02', 'opportunityId' => 'b'],
+            ['day' => '2026-09-02'],
+        ];
+        $dataset = new Dataset();
+        $stats = $dataset->stats($runs);
+        $this->assertSame(2, $stats['opportunities']);
+        $this->assertSame(3, $stats['opportunityDays']);
+        $this->assertSame(1, $stats['conversationDays']);
+        $this->assertSame(1, $dataset->stats($dataset->filter($runs, ['to' => '2026-09-01']))['opportunityDays']);
+        $this->assertSame(0, $dataset->stats([])['opportunityDays']);
+    }
+
     public function testActionListsAndFlagsCountEachEngagementOncePerCategory(): void
     {
         $run = ['id' => '1', 'day' => '2026-08-01', 'groupKey' => null, 'kind' => 'private-mention',

@@ -40,8 +40,13 @@
         <div class="au-chart-legend">{{#if ready}}<span><i class="au-dot au-covered"></i> {{translate 'covered' scope='AiUsage'}}</span><span><i class="au-dot au-overage"></i> {{translate 'overage' scope='AiUsage'}}</span>{{else}}<span>{{translate 'engagements' scope='AiUsage'}}</span>{{/if}}<span class="text-muted">{{translate 'clickDay' scope='AiUsage'}}</span></div>
         <details class="au-daily-table"><summary>{{translate 'dailyTable' scope='AiUsage'}}</summary><div class="table-responsive"><table class="table"><thead><tr><th>{{translate 'date' scope='AiUsage'}}</th><th>{{translate 'consumed' scope='AiUsage'}}</th><th>{{translate 'covered' scope='AiUsage'}}</th><th>{{translate 'overage' scope='AiUsage'}}</th><th>{{translate 'charges' scope='AiUsage'}}</th></tr></thead><tbody>{{#each daily}}<tr><td><button class="btn btn-link" data-au-day="{{day}}">{{date}}</button></td><td>{{consumedText}}</td><td>{{coveredText}}</td><td>{{overageText}}</td><td>{{chargesText}}</td></tr>{{/each}}</tbody></table></div></details>
     </section>
-    <div class="au-impact-grid"><div><span class="au-impact-value">{{runsText}}</span><span>{{translate 'engagements' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{conversationText}}</span><span>{{translate 'distinctConversations' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{opportunityText}}</span><span>{{translate 'distinctOpportunities' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{coverageText}}</span><span>{{translate 'telemetryCoverage' scope='AiUsage'}}</span></div></div>
-    <p class="au-footnote text-muted">{{translate 'coverageExplanation' scope='AiUsage'}}</p>
+    <div class="au-impact-grid"><div><span class="au-impact-value">{{runsText}}</span><span>{{translate 'engagements' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{conversationDaysText}}</span><span>{{translate 'uniqueConversationDays' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{conversationText}}</span><span>{{translate 'distinctConversations' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{opportunityDaysText}}</span><span>{{translate 'uniqueOpportunityDays' scope='AiUsage'}}</span></div><div><span class="au-impact-value">{{opportunityText}}</span><span>{{translate 'distinctOpportunities' scope='AiUsage'}}</span></div></div>
+    <p class="au-footnote text-muted">{{translate 'conversationDaysExplanation' scope='AiUsage'}} {{timeZone}}. {{translate 'conversationDaysEpisodeDistinction' scope='AiUsage'}}</p>
+    <details class="au-explanation">
+        <summary>{{translate 'technicalDiagnostics' scope='AiUsage'}}</summary>
+        <p><strong>{{coverageText}}</strong> · {{translate 'telemetryCoverage' scope='AiUsage'}}</p>
+        <p class="au-footnote text-muted">{{translate 'coverageExplanation' scope='AiUsage'}}</p>
+    </details>
     {{else}}
     <section class="panel panel-default au-explorer">
         <div class="au-filterbar">

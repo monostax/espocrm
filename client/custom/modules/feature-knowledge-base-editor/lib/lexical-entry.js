@@ -53,6 +53,9 @@ import {
 } from '@lexical/markdown';
 import {createEmptyHistoryState, registerHistory} from '@lexical/history';
 import {mergeRegister} from '@lexical/utils';
+import {MentionNode, MENTION_TRANSFORMER, parseReferenceUrl, referenceUrl} from './mention-node';
+import {mountNotionEditor} from './notion-editor';
+import {tableMarkdown} from './table-markdown';
 
 const theme = {
     paragraph: 'kb-lex-p',
@@ -102,6 +105,7 @@ function createNodes() {
         TableNode,
         TableCellNode,
         TableRowNode,
+        MentionNode,
     ];
 }
 
@@ -131,8 +135,7 @@ function createLinkStores() {
 
         try {
             // eslint-disable-next-line no-new
-            new URL(trimmed);
-            return true;
+            return ['https:', 'http:'].includes(new URL(trimmed).protocol);
         } catch (e) {
             return false;
         }
@@ -255,10 +258,12 @@ function createKbEditor(options) {
         nodes: createNodes(),
         onError(error) {
             console.error('[EspoLexical]', error);
+            throw error;
         },
     });
 
     editor.setRootElement(element);
+    const transformers = [tableMarkdown(editor), MENTION_TRANSFORMER, ...TRANSFORMERS];
 
     const historyState = createEmptyHistoryState();
 
@@ -299,14 +304,16 @@ function createKbEditor(options) {
 
     // https://lexical.dev/docs/packages/lexical-markdown#shortcuts
     if (markdownShortcuts) {
-        unregisters.push(registerMarkdownShortcuts(editor, TRANSFORMERS));
+        unregisters.push(registerMarkdownShortcuts(editor, transformers));
     }
 
     const unregister = mergeRegister(...unregisters);
+    const unmount = options.notion ? mountNotionEditor(editor, theme, options) : () => {};
 
     return {
         editor,
         destroy() {
+            unmount();
             unregister();
             editor.setRootElement(null);
         },
@@ -355,13 +362,13 @@ function createKbEditor(options) {
         setMarkdown(markdown) {
             const body = stripFrontmatter(markdown || '');
             editor.update(() => {
-                $convertFromMarkdownString(body, TRANSFORMERS);
+                $convertFromMarkdownString(body, transformers);
             }, {discrete: true});
         },
         getMarkdown() {
             let md = '';
             editor.getEditorState().read(() => {
-                md = $convertToMarkdownString(TRANSFORMERS);
+                md = $convertToMarkdownString(transformers);
             });
             return md;
         },
@@ -398,7 +405,7 @@ function createKbEditor(options) {
         isEmpty() {
             let empty = true;
             editor.getEditorState().read(() => {
-                empty = $getRoot().getTextContent().trim() === '';
+                empty = $getRoot().getChildren().every(node => node.getType() === 'paragraph' && node.getChildrenSize() === 0);
             });
             return empty;
         },
@@ -651,6 +658,8 @@ const EspoLexical = {
     stripFrontmatter,
     joinFrontmatter,
     TRANSFORMERS,
+    parseReferenceUrl,
+    referenceUrl,
 };
 
 export default EspoLexical;

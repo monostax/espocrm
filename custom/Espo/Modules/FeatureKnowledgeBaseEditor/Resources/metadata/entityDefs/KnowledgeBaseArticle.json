@@ -1,4 +1,5 @@
 {
+    "transactionalSave": true,
     "fields": {
         "bodyFormat": {
             "type": "enum",
@@ -23,6 +24,7 @@
         },
         "body": {
             "type": "wysiwyg",
+            "additionalAttributeList": ["__APPEND__", "editorState", "format"],
             "view": "feature-knowledge-base-editor:views/knowledge-base-article/fields/body",
             "attachmentField": "attachments"
         }

@@ -190,17 +190,21 @@ class ReconcileFileSearchStores implements Job
 
         $operations = $this->entityManager
             ->getRDBRepository('GeminiFileSearchStoreUploadOperation')
-            ->select(['id', 'geminiDocumentName'])
+            ->select(['id', 'geminiDocumentName', 'knowledgeBaseArticleId'])
             ->where([
                 'geminiDocumentName!=' => null,
                 'OR' => [
-                    ['status' => ['Pending', 'Processing']],
+                    ['status' => ['Pending', 'Processing', 'Completed']],
+                    ['errorMessage' => 'Superseded: retained until replacement'],
                     ['createdAt>=' => $graceCutoff],
                 ],
             ])
             ->find();
 
         foreach ($operations as $operation) {
+            if (!$this->entityManager->getEntityById('KnowledgeBaseArticle', $operation->get('knowledgeBaseArticleId'))) {
+                continue;
+            }
             $documentName = $operation->get('geminiDocumentName');
 
             if ($documentName) {

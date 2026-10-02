@@ -7,6 +7,7 @@ const fs = require('fs');
 const {rollup} = require('rollup');
 const resolve = require('@rollup/plugin-node-resolve');
 const commonjs = require('@rollup/plugin-commonjs');
+const replace = require('@rollup/plugin-replace');
 
 const baseDir = __dirname;
 const entry = path.join(baseDir, 'lexical-entry.js');
@@ -19,9 +20,11 @@ async function build() {
     const bundle = await rollup({
         input: entry,
         plugins: [
+            replace({preventAssignment: true, 'process.env.NODE_ENV': JSON.stringify('production')}),
             resolve({
                 browser: true,
                 preferBuiltins: false,
+                exportConditions: ['production'],
             }),
             commonjs(),
         ],
@@ -41,11 +44,12 @@ async function build() {
         extend: false,
     });
 
-    const code = output[0].code;
+    const code = output[0].code.replace(/[\t ]+$/gm, '');
 
     fs.mkdirSync(path.join(baseDir, 'original'), {recursive: true});
     fs.writeFileSync(outPath, code);
     fs.writeFileSync(outOriginal, code);
+    await bundle.close();
 
     console.log('Wrote', outPath);
     console.log('Wrote', outOriginal);

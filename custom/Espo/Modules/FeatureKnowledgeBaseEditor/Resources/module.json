@@ -1,8 +1,8 @@
 {
     "order": 25,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "name": "FeatureKnowledgeBaseEditor",
-    "description": "Lexical dual-mode (Html + Markdown) editor for KnowledgeBaseArticle.body. Existing Html articles keep content (bodyFormat defaults to Html).",
+    "description": "Shared Notion-style Lexical editor for articles, wiki pages and AI prompts, with ACL-aware CRM references and backlinks.",
     "author": "Monostax",
     "jsTranspiled": true
 }
