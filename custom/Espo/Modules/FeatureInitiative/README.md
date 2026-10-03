@@ -2,7 +2,7 @@
 
 Tenant-defined work units for projects, onboarding, document collection and ongoing engagements. An initiative type defines the reusable stages; an initiative is one concrete undertaking, such as **Acme onboarding**. The feature is labeled **Initiatives** in English and **Iniciativas** in Brazilian Portuguese.
 
-Independent of the automated `FeatureJourney` engine and sales opportunities: no timers, actions, revenue forecasting or automatic transitions. Activities and playbooks remain separate capabilities; this module currently relates existing Tasks through its Related Records panel.
+Independent of the automated `FeatureJourney` engine and sales opportunities: no timers, revenue forecasting or automatic transitions. Initiatives explicitly select a pending Task, Call or Meeting as their next action, using the same API contract and implementation as opportunities. The Related Records panel can also link existing Tasks without making them the initiative's next action.
 
 ## Model
 
@@ -19,6 +19,7 @@ Tenant → InitiativeType → InitiativeStage (ordered, tenant-created records)
 - **Initiative**: a named work unit of one initiative type and in one of its stages. Both stages and initiatives inherit a read-only `Tenant` link from the initiative type.
 - **InitiativeRelation**: a small association entity, one row per related-record reference (`initiativeId`, `parentType`, `parentId`). An initiative can have **many related records of mixed types**: Account, Contact, ChatwootConversation, Task and another Initiative. Several related records of the same type are also supported. This is not a single-parent tree. Duplicate links and self-links are rejected. Deleting a link never deletes the referenced record.
 - **Status belongs to the initiative in its current stage**, not to the shared stage definition: `On Hold`, `To Do`, `Doing`, `Done`. New initiatives default to `To Do`. Changing stage resets status to `To Do`, including when a status is sent in the same update. Updating status never changes stage. `Done` completes work in that stage, not the entire initiative.
+- **Next action** is an explicit `nextActionId` / `nextActionType` reference to one pending Task, Call or Meeting whose `parentType` / `parentId` identifies the initiative. Stage/status changes preserve the selection. Like Opportunity, references are nullable during creation and after clearing/completion, and read-only through ordinary record writes.
 - Stage/status changes use Espo's audit stream. There is no per-stage completion matrix or resumable status history; revisiting a stage starts at `To Do`. Those would require a separate record-stage progress/history entity.
 
 ## Usage
@@ -53,6 +54,37 @@ POST /api/v1/InitiativeRelation
 {"initiativeId":"initiative-id","parentType":"ChatwootConversation","parentId":"conversation-id"}
 ```
 
+## Next-action API
+
+The endpoints mirror [Opportunity next action](../../../../docs/opportunity-next-action.md):
+
+- `POST /api/v1/Initiative/{id}/nextAction`: select with `activityId` and `activityType`, or clear with `activityId: null`.
+- The same endpoint accepts `createTask: true`, `name` and optional `dateEndDate` (`YYYY-MM-DD`). The Task belongs to the initiative, inherits its assigned user (or the current user) and the live initiative type's teams.
+- `POST /api/v1/Initiative/{id}/nextAction/complete`: complete the selected activity using its metadata-defined completed status and clear the reference atomically.
+
+Both endpoints require nullable `expectedId` and `expectedType` matching the displayed reference; stale references return 409. They require initiative read/edit access and a readable, pending activity belonging directly to that initiative. Completion also requires activity edit and status-field edit access. Create/select and complete/clear run in transactions and use the standard activity record services for validation and hooks. A Task linked only through `InitiativeRelation` is not eligible unless it also has the initiative as its parent.
+
+Unlike an opportunity's closed status, initiative `Done` only completes the current stage, so every initiative status supports next-action operations.
+
+```json
+POST /api/v1/Initiative/initiative-id/nextAction
+{"expectedId":null,"expectedType":null,"createTask":true,"name":"Collect onboarding documents","dateEndDate":"2026-10-05"}
+
+POST /api/v1/Initiative/initiative-id/nextAction
+{"expectedId":"task-id","expectedType":"Task","activityId":"call-id","activityType":"Call"}
+
+POST /api/v1/Initiative/initiative-id/nextAction/complete
+{"expectedId":"call-id","expectedType":"Call"}
+```
+
+## Chatwoot initiative inbox
+
+The Chatwoot workspace is available at `/app/accounts/{accountId}/initiatives`, with record permalinks at `/app/accounts/{accountId}/initiatives/{initiativeId}`. It reuses the Opportunity discussion, thread, attachment, reaction, inline-field and next-action components.
+
+The inbox supports All/Mine/Unassigned scopes, unread views, type/stage/status/owner/activity filters, condition rows, sorting, collapsible groups, and paginated group-wide selection. Groups are read status, initiative type, stage, status, owner, next action, or no grouping. Counts are computed across the authorized result set before pagination. `Done` remains visible and can have a next action because it completes only the current stage.
+
+All inbox endpoints require the Chatwoot `accountId` query parameter. List, metadata, options, navigation-count and group-summary endpoints live under `/api/v1/Initiative/action/`; record CRUD uses `/api/v1/Initiative/{id}/inbox`. Discussion uses `/{id}/discussion`, `/{id}/posts` and `/{id}/readState`. Posts and read cursors use the existing Note and ActivityReadState infrastructure. Tenant membership, live initiative-type ACL, field ACL and stream permissions apply server-side, including direct Note and Attachment access. Rebuild the CRM to register these routes.
+
 ## Integrity and access
 
 - An initiative type's teams must all belong to exactly one tenant. Its tenant cannot change after creation.
@@ -73,17 +105,19 @@ php command.php clear-cache
 php command.php rebuild
 ```
 
-Rebuild creates the initiative tables, adds default navigation and updates seeded tenant roles. Existing customized `SidenavConfig` menus are intentionally not overwritten; add `Initiative` / `InitiativeType` there if desired. The Configurations links remain available.
+Rebuild creates the initiative tables, adds the nullable next-action fields and activity parent relationships, registers the next-action routes, adds default navigation and updates seeded tenant roles. Existing initiatives start without a selected next action. Existing customized `SidenavConfig` menus are intentionally not overwritten; add `Initiative` / `InitiativeType` there if desired. The Configurations links remain available.
 
 This is a clean feature rename. Existing data is not migrated or backfilled; deployment starts with the new initiative scopes and tables.
 
 With source Composer dependencies installed:
 
 ```sh
-php phpunit.phar --do-not-cache-result tests/unit/Espo/Modules/FeatureInitiative
+php phpunit.phar --do-not-cache-result tests/unit/Espo/Modules/FeatureInitiative tests/unit/Espo/Modules/Global/Controllers/RecordNextActionTest.php
 node --test tests/unit-js/initiative-*.test.cjs
 ```
 
 Smoke-test in a running CRM: create an initiative type and stages; create an initiative from each relationship panel; change stage from Done and verify To Do; filter/list/drag status cards; verify another tenant cannot list/read/link its stages or initiatives; deactivate instead of deleting referenced configuration.
+
+For next actions, create/select a Task through the API and verify its parent, owner, teams and optional date. Select and complete a pending Call and Meeting, verify stale expected references return 409, and confirm stage/status changes preserve the selected reference. Clearing a selection must leave the activity intact.
 
 Also test with two different users on the same initiative type team: both should be able to edit permitted initiatives created/assigned to their colleague. Add and remove relations from the relationship panel and verify the referenced records remain intact. Automated framework-integration tests use in-memory dependencies, not a live database or browser; a full build/rebuild and these smoke tests are still required before production rollout.

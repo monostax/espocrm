@@ -285,7 +285,7 @@ class ActivityInbox
 
     public function options(Entity $tenant, string $type, string $search): object
     {
-        if (!in_array($type, ['User', 'Team', 'Account', 'Contact', 'Lead', 'Opportunity', 'Case', 'ChatwootConversation'], true)) throw new BadRequest('Invalid option type.');
+        if (!in_array($type, ['User', 'Team', 'Account', 'Contact', 'Lead', 'Opportunity', 'Case', 'ChatwootConversation', 'Initiative'], true)) throw new BadRequest('Invalid option type.');
         $query = $this->select->create()->from($type)->withStrictAccessControl()->buildQueryBuilder()->select('id')->limit(0, 100)->order('name');
         if ($type === 'Team') $query->where(['id' => $this->access->teamIds($tenant)]);
         elseif ($type === 'ChatwootConversation') $query->join('chatwootAccount')->where(['chatwootAccount.tenantId' => $tenant->getId()]);

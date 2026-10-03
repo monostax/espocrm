@@ -16,6 +16,8 @@ Both endpoints require `expectedId` and `expectedType`, each nullable, matching 
 
 The reference fields are read-only through ordinary Opportunity writes. Task creation/selection and activity completion/clearing each run within a transaction.
 
+Initiatives use the same shared controller implementation and request/response contract at `POST /Initiative/{id}/nextAction` and `POST /Initiative/{id}/nextAction/complete`. Initiative Tasks inherit teams from the live initiative type. Initiative `Done` is stage-local and does not block next-action operations. See the [Initiatives API documentation](../custom/Espo/Modules/FeatureInitiative/README.md#next-action-api).
+
 ## Product verification
 
 1. On an open opportunity, choose **Set next action**, select an existing activity, and reload. The same activity should remain selected even if another activity has an earlier deadline.

@@ -27,12 +27,12 @@ class OpportunityAccess
 
     public function canReadNote(User $user, Entity $note): bool
     {
-        if ($note->get('parentType') !== 'Opportunity' || $user->isAdmin()) {
+        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative'], true) || $user->isAdmin()) {
             return true;
         }
 
         $id = $note->get('parentId');
-        $parent = $id ? $this->entityManager->getEntityById('Opportunity', $id) : null;
+        $parent = $id ? $this->entityManager->getEntityById($note->get('parentType'), $id) : null;
 
         return $parent &&
             $this->tenants->canActForTenant($user, (string) $parent->get('tenantId')) &&
@@ -42,22 +42,35 @@ class OpportunityAccess
 
     public function readableOpportunities(User $user): ?Select
     {
-        if (!$this->aclManager->checkScope($user, 'Opportunity', 'read') ||
-            !$this->aclManager->checkScope($user, 'Opportunity', 'stream')) {
+        return $this->readableParents($user, 'Opportunity');
+    }
+
+    public function readableInitiatives(User $user): ?Select
+    {
+        return $this->readableParents($user, 'Initiative');
+    }
+
+    private function readableParents(User $user, string $type): ?Select
+    {
+        if (!$this->aclManager->checkScope($user, $type, 'read') ||
+            !$this->aclManager->checkScope($user, $type, 'stream')) {
             return null;
         }
 
         $tenantIds = $this->tenants->resolveTenantIds($user);
-        if (!$tenantIds) {
+        if (!$tenantIds && !$user->isAdmin()) {
             return null;
         }
 
         $factory = $this->factory->createWith(SelectBuilderFactory::class, ['user' => $user]);
-        $builder = $factory->create()->from('Opportunity')->withStrictAccessControl()
-            ->buildQueryBuilder()->select('id')->order([])->where(['tenantId' => $tenantIds]);
+        $builder = $factory->create()->from($type)->withStrictAccessControl()
+            ->buildQueryBuilder()->select('id')->order([]);
+        if (!$user->isAdmin()) {
+            $builder->where(['tenantId' => $tenantIds]);
+        }
 
         // Strict selection applies read ACL; stream may have a narrower scope.
-        $level = $this->aclManager->getLevel($user, 'Opportunity', 'stream');
+        $level = $this->aclManager->getLevel($user, $type, 'stream');
         $filter = match ($level) {
             'own' => $user->isPortal() ? 'portalOnlyOwn' : 'onlyOwn',
             'team' => 'onlyTeam',
@@ -70,7 +83,7 @@ class OpportunityAccess
             return null;
         }
         if ($filter) {
-            $this->filters->create('Opportunity', $user, $filter)->apply($builder);
+            $this->filters->create($type, $user, $filter)->apply($builder);
         }
 
         return $builder->build();
@@ -82,10 +95,12 @@ class OpportunityAccess
             return [];
         }
 
-        $conditions = [['parentType!=' => 'Opportunity'], ['parentType' => null]];
-        $parents = $this->readableOpportunities($user);
-        if ($parents) {
-            $conditions[] = ['parentType' => 'Opportunity', 'parentId=s' => $parents];
+        $conditions = [['parentType!=' => ['Opportunity', 'Initiative']], ['parentType' => null]];
+        foreach (['Opportunity', 'Initiative'] as $type) {
+            $parents = $this->readableParents($user, $type);
+            if ($parents) {
+                $conditions[] = ['parentType' => $type, 'parentId=s' => $parents];
+            }
         }
 
         return ['OR' => $conditions];

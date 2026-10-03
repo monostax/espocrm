@@ -1,0 +1,24 @@
+[
+    { "route": "/Initiative/action/inbox", "method": "get", "params": { "controller": "InitiativeInbox", "action": "list" } },
+    { "route": "/Initiative/action/inbox", "method": "post", "params": { "controller": "InitiativeInbox", "action": "create" } },
+    { "route": "/Initiative/action/navigationCounts", "method": "get", "params": { "controller": "InitiativeInbox", "action": "counts" } },
+    { "route": "/Initiative/action/groupSummary", "method": "get", "params": { "controller": "InitiativeInbox", "action": "groups" } },
+    { "route": "/Initiative/action/inboxMetadata", "method": "get", "params": { "controller": "InitiativeInbox", "action": "metadata" } },
+    { "route": "/Initiative/action/inboxOptions", "method": "get", "params": { "controller": "InitiativeInbox", "action": "options" } },
+    { "route": "/Initiative/:id/inbox", "method": "get", "params": { "controller": "InitiativeInbox", "action": "read", "id": ":id" } },
+    { "route": "/Initiative/:id/inbox", "method": "put", "params": { "controller": "InitiativeInbox", "action": "update", "id": ":id" } },
+    { "route": "/Initiative/:id/inbox", "method": "delete", "params": { "controller": "InitiativeInbox", "action": "delete", "id": ":id" } },
+    { "route": "/Initiative/:id/discussion", "method": "get", "params": { "controller": "InitiativeInbox", "action": "stream", "id": ":id" } },
+    { "route": "/Initiative/:id/posts", "method": "post", "params": { "controller": "InitiativeInbox", "action": "post", "id": ":id" } },
+    { "route": "/Initiative/:id/readState", "method": "post", "params": { "controller": "InitiativeInbox", "action": "readState", "id": ":id" } },
+    {
+        "route": "/Initiative/:id/nextAction",
+        "method": "post",
+        "params": { "controller": "InitiativeNextAction", "action": "select", "id": ":id" }
+    },
+    {
+        "route": "/Initiative/:id/nextAction/complete",
+        "method": "post",
+        "params": { "controller": "InitiativeNextAction", "action": "complete", "id": ":id" }
+    }
+]

@@ -8,7 +8,7 @@ use Espo\Core\Hook\Hook\AfterSave;
 use Espo\Core\Hook\Hook\BeforeRemove;
 use Espo\Core\Job\QueueName;
 use Espo\Modules\Chatwoot\Jobs\BroadcastActivityUpdate;
-use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -33,11 +33,12 @@ class PublishActivityUpdate implements AfterSave, BeforeRemove
         }
         $type = $entity->getEntityType();
         $record = $entity;
-        if (in_array($type, ['Note', 'ActivityReadState'], true) && in_array($entity->get('parentType'), Access::TYPES, true)) {
+        if (in_array($type, ['Note', 'ActivityReadState'], true) && in_array($entity->get('parentType'), ActivityDiscussion::PARENT_TYPES, true)) {
             $record = $this->em->getEntityById($entity->get('parentType'), $entity->get('parentId'));
-        } elseif (!in_array($type, Access::TYPES, true)) return;
+        } elseif (!in_array($type, ActivityDiscussion::PARENT_TYPES, true)) return;
         if (!$record) return;
-        $teams = $this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'teams')->find();
+        $teams = $record->getEntityType() === 'Initiative' ? []
+            : $this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'teams')->find();
         $ids = $record->get('tenantId') ? [$record->get('tenantId')] : $this->tenants->resolveAllFromTeamIds(array_map(fn ($team) => $team->getId(), [...$teams]));
         $oldTeams = $record->getFetched('teamsIds') ?? [];
         $ids = array_values(array_unique(array_filter([...$ids, ...$this->tenants->resolveAllFromTeamIds($oldTeams), $record->getFetched('tenantId')])));

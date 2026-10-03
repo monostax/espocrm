@@ -30,7 +30,7 @@ class OpportunityPostMentions
     public function resolve(Note $note, bool $includeTeams = true): array
     {
         $type = $note->getParentType();
-        if (!in_array($type, ['Opportunity', ...Access::TYPES], true)) return [];
+        if (!in_array($type, ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true)) return [];
         $opportunity = $this->entityManager->getEntityById($type, $note->getParentId());
         if (!$opportunity) {
             return [];

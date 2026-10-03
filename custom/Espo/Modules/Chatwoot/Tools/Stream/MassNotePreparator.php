@@ -11,7 +11,6 @@ use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 use Espo\Modules\Chatwoot\Services\OpportunityThreadState;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
-use Espo\Modules\Chatwoot\Tools\Activities\Access;
 
 /** Shared by streams and the Note read loader, including create/update responses. */
 class MassNotePreparator extends \Espo\Tools\Stream\MassNotePreparator
@@ -31,7 +30,7 @@ class MassNotePreparator extends \Espo\Tools\Stream\MassNotePreparator
     protected function noAvailableReactions(iterable $notes): bool
     {
         foreach ($notes as $note) {
-            if (in_array($note->getParentType(), ['Opportunity', ...Access::TYPES], true)) {
+            if (in_array($note->getParentType(), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true)) {
                 return false;
             }
         }
@@ -56,7 +55,7 @@ class MassNotePreparator extends \Espo\Tools\Stream\MassNotePreparator
         $summaries = $this->threads->summaries($roots);
         $activityRoots = [];
         foreach ($notes as $note) {
-            if ($note->getType() === Note::TYPE_POST && in_array($note->getParentType(), Access::TYPES, true) && !$note->get('opportunityThreadRootId')) {
+            if ($note->getType() === Note::TYPE_POST && in_array($note->getParentType(), ActivityDiscussion::PARENT_TYPES, true) && !$note->get('opportunityThreadRootId')) {
                 $activityRoots[] = $note->getId();
             }
         }
@@ -65,7 +64,7 @@ class MassNotePreparator extends \Espo\Tools\Stream\MassNotePreparator
         // Capabilities must also be prepared when reactions are disabled.
         foreach ($notes as $note) {
             $isOpportunityPost = $note->getType() === Note::TYPE_POST &&
-                in_array($note->getParentType(), ['Opportunity', ...Access::TYPES], true);
+                in_array($note->getParentType(), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true);
 
             $deleted = $note->get('opportunityPostDeleted');
             $note->set('opportunityCanEdit', $isOpportunityPost && !$deleted && $this->acl->checkEntityEdit($note));

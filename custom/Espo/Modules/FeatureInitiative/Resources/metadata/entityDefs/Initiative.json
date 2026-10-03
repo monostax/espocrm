@@ -1,5 +1,7 @@
 {
     "fields": {
+        "nextActionId": { "type": "varchar", "maxLength": 24, "readOnly": true, "utility": true },
+        "nextActionType": { "type": "enum", "options": ["", "Task", "Call", "Meeting"], "readOnly": true, "utility": true },
         "initiativeAccess": {
             "type": "jsonObject",
             "readOnly": true,
@@ -48,6 +50,9 @@
         "initiativeType": { "type": "belongsTo", "entity": "InitiativeType", "foreign": "initiatives" },
         "stage": { "type": "belongsTo", "entity": "InitiativeStage", "foreign": "initiatives" },
         "relations": { "type": "hasMany", "entity": "InitiativeRelation", "foreign": "initiative" },
+        "tasks": { "type": "hasChildren", "entity": "Task", "foreign": "parent", "audited": true },
+        "calls": { "type": "hasChildren", "entity": "Call", "foreign": "parent", "audited": true },
+        "meetings": { "type": "hasChildren", "entity": "Meeting", "foreign": "parent", "audited": true },
         "assignedUser": { "type": "belongsTo", "entity": "User" },
         "createdBy": { "type": "belongsTo", "entity": "User" },
         "modifiedBy": { "type": "belongsTo", "entity": "User" }

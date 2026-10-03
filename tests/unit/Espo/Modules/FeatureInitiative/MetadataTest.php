@@ -105,4 +105,29 @@ class MetadataTest extends TestCase
             $this->assertSame('feature-initiative:acl', $this->json("metadata/clientDefs/$type.json")['acl']);
         }
     }
+
+    public function testNextActionFieldsMatchOpportunityAndActivitiesSupportInitiativeParents(): void
+    {
+        $root = dirname(__DIR__, 5) . '/custom/Espo/Modules/';
+        $opportunity = json_decode(file_get_contents($root . 'Chatwoot/Resources/metadata/entityDefs/Opportunity.json'), true, 512, JSON_THROW_ON_ERROR);
+        $initiative = $this->json('metadata/entityDefs/Initiative.json');
+        foreach (['nextActionId', 'nextActionType'] as $field) {
+            $this->assertSame($opportunity['fields'][$field], $initiative['fields'][$field]);
+        }
+        foreach (['Task' => 'tasks', 'Call' => 'calls', 'Meeting' => 'meetings'] as $type => $link) {
+            $this->assertSame(['__APPEND__', 'Initiative'], $this->json("metadata/entityDefs/$type.json")['fields']['parent']['entityList']);
+            $this->assertSame('hasChildren', $initiative['links'][$link]['type']);
+            $this->assertSame($type, $initiative['links'][$link]['entity']);
+            $this->assertSame('parent', $initiative['links'][$link]['foreign']);
+        }
+        $routes = array_values(array_filter($this->json('routes.json'), fn ($route) => $route['params']['controller'] === 'InitiativeNextAction'));
+        $this->assertSame(['/Initiative/:id/nextAction', '/Initiative/:id/nextAction/complete'], array_column($routes, 'route'));
+        foreach ($routes as $route) {
+            $this->assertSame('post', $route['method']);
+            $this->assertTrue(method_exists(
+                'Espo\\Modules\\FeatureInitiative\\Controllers\\' . $route['params']['controller'],
+                'postAction' . ucfirst($route['params']['action']),
+            ));
+        }
+    }
 }

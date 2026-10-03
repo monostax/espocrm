@@ -54,6 +54,7 @@ class TenantPredicatesSqlTest extends TestCase
     private string $streamLevel = 'all';
     private bool $portal = false;
     private bool $admin = false;
+    private bool $initiativesEnabled = false;
 
     protected function setUp(): void
     {
@@ -63,6 +64,7 @@ class TenantPredicatesSqlTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $tables = [
             'Opportunity' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
+            'Initiative' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Note' => ['id', 'parentType', 'parentId', 'type', 'relatedType', 'relatedId', 'createdById', 'number', 'isPinned', 'isInternal', 'readable', 'deleted'],
             'Attachment' => ['id', 'parentType', 'parentId', 'relatedType', 'relatedId', 'createdById', 'deleted'],
             'ChatwootConversation' => ['id', 'readable', 'deleted'],
@@ -98,8 +100,14 @@ class TenantPredicatesSqlTest extends TestCase
         $this->tenants = $this->createMock(UserTenantResolver::class);
         $this->tenants->method('resolveTenantIds')->with($this->user)->willReturnCallback(fn () => $this->tenantIds);
         $this->acl = $this->createMock(AclManager::class);
-        $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) => !in_array("$scope:$action", $this->deniedScopes, true));
-        $this->acl->method('getLevel')->with($this->user, 'Opportunity', 'stream')->willReturnCallback(fn () => $this->streamLevel);
+        $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) =>
+            ($scope !== 'Initiative' || $this->initiativesEnabled) && !in_array("$scope:$action", $this->deniedScopes, true));
+        $this->acl->method('getLevel')->willReturnCallback(function ($user, $scope, $action) {
+            self::assertSame($this->user, $user);
+            self::assertContains($scope, ['Opportunity', 'Initiative']);
+            self::assertSame('stream', $action);
+            return $this->streamLevel;
+        });
         $this->em = $this->createMock(EntityManager::class);
         $this->em->method('getQueryBuilder')->willReturn(new QueryBuilder());
         $factory = $this->createMock(InjectableFactory::class);
@@ -129,7 +137,7 @@ class TenantPredicatesSqlTest extends TestCase
                 $query = SelectBuilder::create()->from($scope)->order('id', 'DESC');
                 // Fixture stock read ACL. Tenant, parent, event and attachment predicates are production code.
                 $query->where(['readable' => 1]);
-                if ($scope === 'Opportunity') {
+                if (in_array($scope, ['Opportunity', 'Initiative'], true)) {
                     (new Tenant($this->user, $this->tenants))->apply($query);
                 }
                 if ($scope === 'Note') {
@@ -144,7 +152,7 @@ class TenantPredicatesSqlTest extends TestCase
         });
         $filters = $this->createMock(FilterFactory::class);
         $filters->method('create')->willReturnCallback(function ($scope, $user, $name) {
-            self::assertSame('Opportunity', $scope);
+            self::assertContains($scope, ['Opportunity', 'Initiative']);
             self::assertSame($this->user, $user);
             $this->streamFilters[] = $name;
             $where = match ($name) {
@@ -189,6 +197,37 @@ class TenantPredicatesSqlTest extends TestCase
     private function sqlName(string $name): string
     {
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    }
+
+    public function testInitiativeNotesHonorTenantAndRecordAccessBeforePagination(): void
+    {
+        $this->initiativesEnabled = true;
+        foreach (['a', 'b'] as $tenant) {
+            $this->insert('Initiative', ['id' => "initiative-$tenant", 'tenantId' => "tenant-$tenant", 'readable' => 1]);
+            $this->insertNote("initiative-note-$tenant", 30, ['parentType' => 'Initiative', 'parentId' => "initiative-$tenant"]);
+            $this->insert('Attachment', ['id' => "initiative-attachment-$tenant", 'parentType' => 'Note', 'parentId' => "initiative-note-$tenant"]);
+            $this->insert('Attachment', ['id' => "initiative-direct-$tenant", 'parentType' => 'Initiative', 'parentId' => "initiative-$tenant"]);
+        }
+        $this->insert('Initiative', ['id' => 'initiative-hidden', 'tenantId' => 'tenant-a', 'readable' => 0]);
+        $this->insertNote('initiative-hidden-note', 31, ['parentType' => 'Initiative', 'parentId' => 'initiative-hidden']);
+        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Initiative'])
+            ->where($this->parents->where($this->user))->order('id')->limit(0, 1);
+        $this->assertRows(['initiative-note-a'], $query);
+        $this->assertRows(['initiative-attachment-a', 'initiative-direct-a'], SelectBuilder::create()->from('Attachment')
+            ->select('id')->where($this->attachments->where($this->user))->order('id'));
+        $this->tenantIds = ['tenant-b'];
+        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Initiative'])
+            ->where($this->parents->where($this->user))->order('id')->limit(0, 1);
+        $this->assertRows(['initiative-note-b'], $query);
+        $this->deniedScopes = ['Initiative:stream'];
+        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Initiative'])
+            ->where($this->parents->where($this->user));
+        $this->assertRows([], $query);
+        $this->admin = true;
+        $this->tenantIds = [];
+        $this->deniedScopes = [];
+        $this->assertRows(['initiative-a'], SelectBuilder::create()->from('Initiative')->select('id')
+            ->where(['tenantId' => 'tenant-a', 'id=s' => $this->parents->readableInitiatives($this->user)])->order('id'));
     }
 
     private function insert(string $type, array $values): void

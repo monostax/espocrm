@@ -7,7 +7,7 @@ use Espo\Entities\Note;
 use Espo\ORM\Entity;
 use Espo\ORM\Repository\Option\SaveOptions;
 use Espo\Modules\Chatwoot\Services\OpportunityPostMentions;
-use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 
 class NormalizeOpportunityMentions implements BeforeSave
 {
@@ -18,7 +18,7 @@ class NormalizeOpportunityMentions implements BeforeSave
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        if (in_array($entity->get('parentType'), ['Opportunity', ...Access::TYPES], true) && $entity->get('type') === Note::TYPE_POST &&
+        if (in_array($entity->get('parentType'), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true) && $entity->get('type') === Note::TYPE_POST &&
             ($entity->isNew() || $entity->isAttributeChanged('post'))) {
             assert($entity instanceof Note);
             $entity->set('opportunityMentionUserIds', $this->mentions->resolve($entity));

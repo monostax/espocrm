@@ -1,0 +1,5 @@
+{
+    "fields": {
+        "parent": { "entityList": ["__APPEND__", "Initiative"] }
+    }
+}

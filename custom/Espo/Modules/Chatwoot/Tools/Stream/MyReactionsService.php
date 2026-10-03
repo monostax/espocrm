@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Espo\Modules\Chatwoot\Tools\Stream;
 
 use Espo\Entities\Note;
-use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 
 class MyReactionsService extends \Espo\Tools\Stream\MyReactionsService
 {
     protected function allowsMultipleReactions(Note $note): bool
     {
-        return in_array($note->getParentType(), ['Opportunity', ...Access::TYPES], true);
+        return in_array($note->getParentType(), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true);
     }
 
     protected function isReactionAllowed(string $type, Note $note): bool
@@ -21,7 +21,7 @@ class MyReactionsService extends \Espo\Tools\Stream\MyReactionsService
         }
 
         // Store a single emoji, including ZWJ families, flags, keycaps and skin tones.
-        return in_array($note->getParentType(), ['Opportunity', ...Access::TYPES], true) &&
+        return in_array($note->getParentType(), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true) &&
             mb_strlen($type) <= 64 &&
             preg_match('/\A\X\z/u', $type) === 1 &&
             preg_match('/[\p{Extended_Pictographic}\x{1F1E6}-\x{1F1FF}\x{20E3}]/u', $type) === 1;
