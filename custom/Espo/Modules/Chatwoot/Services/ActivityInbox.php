@@ -16,6 +16,7 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\Query\UnionBuilder;
 
@@ -111,6 +112,7 @@ class ActivityInbox
         $sort = $filters['sort'] ?? 'dateEnd';
         if (!in_array($sort, ['dateEnd', 'createdAt', 'modifiedAt', 'name'], true)) throw new BadRequest('Invalid sort.');
         $order = ($filters['order'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+        $groupByRead = ($filters['group'] ?? '') === 'read';
         $union = UnionBuilder::create()->all();
         $types = $this->types($filters);
         $total = 0;
@@ -119,12 +121,20 @@ class ActivityInbox
             $repo = $this->em->getRDBRepository($type);
             $total += $repo->clone($query->build())->count();
             $expression = $sort === 'dateEnd' && $type !== 'Call' ? 'COALESCE:(dateEndDate, dateEnd)' : $sort;
+            $columns = ['id', ['VALUE:' . $type, 'type'], [$expression, 'inboxSort']];
+            if ($groupByRead) {
+                // Group before pagination so unread records cannot be hidden on a later page.
+                $unread = $this->query($type, $tenant, ['read_status' => 'unread'])->select('id')->distinct()->build();
+                $query->leftJoin($unread, 'inboxUnread', Expr::equal(Expr::alias('inboxUnread.id'), Expr::column('id')));
+                $columns[] = [Expr::if(Expr::isNull(Expr::alias('inboxUnread.id')), 0, 1), 'inboxGroup'];
+            }
             // Sort the union in the database: PHP string ordering disagrees with
             // database collations for names, invalidating merged prefix pagination.
-            $union->query($query->select(['id', ['VALUE:' . $type, 'type'], [$expression, 'inboxSort']])->order([])->build());
+            $union->query($query->select($columns)->order([])->build());
         }
+        $ordering = $groupByRead ? [['inboxGroup', 'DESC']] : [];
         $page = $types ? $this->em->getQueryExecutor()->execute(
-            $union->order([['inboxSort', $order], ['type', 'ASC'], ['id', 'ASC']])->limit($offset, $limit)->build()
+            $union->order([...$ordering, ['inboxSort', $order], ['type', 'ASC'], ['id', 'ASC']])->limit($offset, $limit)->build()
         )->fetchAll(\PDO::FETCH_ASSOC) : [];
         $records = [];
         foreach ($this->types($filters) as $type) {

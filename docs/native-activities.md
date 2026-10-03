@@ -18,6 +18,9 @@ record uses its own CRM Note stream. No activity records are copied to Chatwoot.
   workspace before filtering, counting, and pagination. Task/Meeting use tenant
   teams. Calls with a tenant use that tenant, with team scoping for legacy calls.
 - Record routes include both type and ID. IDs alone are not activity identities.
+- `group=read` orders unread activities before read activities in the database,
+  before pagination, retaining the selected sort within each group. The Chatwoot
+  list passes its active grouping, including the default read-status grouping.
 - Activity streams share the historical `opportunityThreadRootId`,
   `opportunityMentionUserIds`, and Note capability fields with Opportunities.
   Activity read cursors live separately, keyed by user, parent type, parent ID,
