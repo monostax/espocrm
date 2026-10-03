@@ -5,6 +5,8 @@ const Handlebars = require('handlebars');
 // the same script evaluation. Core/CRM dependencies are loaded by the loader.
 const modules = [
     'chatwoot:helpers/opportunity-group-icon',
+    'global:crm-tags',
+    'global:helpers/opportunity-stage-requirements',
     'global:views/opportunity/record/list',
     'global:views/opportunity/fields/opportunity-stage',
     'chatwoot:views/opportunity/table-groups',

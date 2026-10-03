@@ -24,7 +24,10 @@ class Knowledge
         $parent = $this->access->record($type, $id, $action);
         if ($parent->get('knowledgeRecordType')) throw new BadRequest('Generated overviews are terminal content nodes.');
         $binding = $this->overviews->binding($type, $id);
-        if (!$binding) throw new NotFound('Overview has not been backfilled.');
+        // Existing records can be opened before the resumable backfill reaches
+        // them. Provision through the same locked, idempotent path as saves.
+        if (!$binding) $binding = $this->overviews->ensure($parent);
+        if (!$binding) throw new NotFound('Overview is unavailable.');
         $document = $this->access->document($binding->get('overviewDocumentId'), $action);
         if ($document->get('knowledgeRecordType') !== $type || $document->get('knowledgeRecordId') !== $id) throw new Forbidden();
         return $document;

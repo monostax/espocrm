@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 const {Bundler} = require('espo-frontend-build-tools');
+const bundleOpportunityTable = require('../../js/bundle-opportunity-table');
 
 const root = path.join(__dirname, '../..');
 const read = file => readFileSync(path.join(root, file), 'utf8');
@@ -151,5 +152,52 @@ test('phone and foreign-phone resolve from one lazy bundle without fetching sour
     field.useInternational = true;
     assert.equal(field.formatNumber('+14155552671'), '+1 415-555-2671');
     assert.equal(scripts.length, 2);
+    assert.deepEqual(warnings, []);
+});
+
+test('Opportunity stage and table bridge resolve with their bundled helpers without source requests', async () => {
+    const cwd = process.cwd();
+    let bundle, init;
+    try {
+        process.chdir(root);
+        ({bundle, init} = bundleOpportunityTable());
+    } finally {
+        process.chdir(cwd);
+    }
+    const {context, scripts, warnings} = loaderContext();
+    const {loader} = context.Espo;
+    class BaseView {
+        static extend(properties) {
+            class Extended extends this {}
+            Object.assign(Extended.prototype, properties);
+            return Extended;
+        }
+        setup() {}
+    }
+    for (const id of ['controllers/record', 'views/list', 'view', 'helpers/record-icon',
+        'crm:views/opportunity/record/list', 'views/fields/link']) {
+        loader.define(id, [], () => BaseView);
+    }
+    loader.define('handlebars', [], () => require('handlebars'));
+    context.location.hash = '#Opportunity';
+    vm.runInContext(init, context);
+    const stagePromise = loader.requirePromise('global:views/opportunity/fields/opportunity-stage');
+    const bridgePromise = loader.requirePromise('chatwoot:views/opportunity/table-bridge');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(scripts.length, 1);
+    assert.equal(scripts[0].src, 'client/lib/espo-opportunity-table.js?r=test');
+    vm.runInContext(bundle, context, {filename: 'espo-opportunity-table.js'});
+    scripts[0].events.load();
+
+    const [Stage, Bridge] = await Promise.all([stagePromise, bridgePromise]);
+    assert.equal(Object.getPrototypeOf(Bridge), BaseView);
+    const stage = new Stage();
+    stage.model = {save() {}};
+    stage.listenTo = () => {};
+    stage.setup();
+    assert.equal(stage.model.stageRequirementsInstalled, true);
+    assert.equal(typeof (await loader.requirePromise('global:crm-tags')).invalidateTags, 'function');
+    assert.equal(scripts.length, 1);
+    assert.equal(typeof context.Espo.preCompiledTemplates['global:opportunity/fields/opportunity-stage/list'], 'function');
     assert.deepEqual(warnings, []);
 });

@@ -11,6 +11,8 @@ $factory = $container->get('injectableFactory');
 if ($argv[3] === 'ensure') {
     $record = $container->get('entityManager')->getEntityById($argv[4], $argv[5]);
     $factory->create(\Espo\Modules\FeatureRecordKnowledge\Services\Overviews::class)->ensure($record);
+} elseif ($argv[3] === 'read') {
+    $factory->create(\Espo\Modules\FeatureRecordKnowledge\Services\Knowledge::class)->read($argv[4], $argv[5]);
 } elseif ($argv[3] === 'predicate') {
     try {
         $container->get('entityManager')->createEntity('RecordPredicate', (array) json_decode(base64_decode($argv[4])));

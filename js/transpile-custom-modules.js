@@ -16,9 +16,11 @@
  * and the custom-module handling that was duplicated in transpile.js.
  ************************************************************************/
 
-const {Transpiler, Bundler} = require('espo-frontend-build-tools');
+const {Bundler} = require('espo-frontend-build-tools');
+const transpileCustomModule = require('./custom-module-transpiler');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const customModulesPath = 'custom/Espo/Modules';
 const clientModulesPath = 'client/custom/modules';
@@ -112,6 +114,13 @@ function validate(files, moduleName) {
 
     for (const filePath of files) {
         const content = fs.readFileSync(filePath, 'utf-8');
+        try {
+            new vm.Script(content, {filename: filePath});
+        } catch (e) {
+            console.error(`    ✗ ${path.relative('.', filePath)}: ${e.message}`);
+            errors++;
+            continue;
+        }
         const match = content.match(/(^|\n)\s*define\(\s*["']([^"']+)["']/);
 
         // Anonymous defines (no string ID) are fine - the loader resolves them
@@ -153,12 +162,10 @@ for (const mod of modules) {
 
     try {
         // Step 1: Transpile (ES6 -> AMD) and copy (hand-written AMD as-is).
-        const transpiler = new Transpiler({
+        const result = transpileCustomModule({
             path: mod.clientPath,
             destDir: path.join(mod.clientPath, 'lib/transpiled'),
         });
-
-        const result = transpiler.process();
 
         totalTranspiled += result.transpiled.length;
         totalCopied += result.copied.length;
@@ -230,7 +237,7 @@ console.log(
 
 if (validationErrors > 0) {
     console.error(
-        `\n  ✗ Validation failed: ${validationErrors} file(s) have incorrect module IDs.\n` +
+        `\n  ✗ Validation failed: ${validationErrors} file(s) have invalid scripts or module IDs.\n` +
         `    This will cause silent loading failures in production.\n`
     );
     process.exit(1);

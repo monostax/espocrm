@@ -135,6 +135,36 @@ class KnowledgeTest extends TestCase
         $this->assertSame($before, $this->em->getRDBRepository('Document')->count());
     }
 
+    public function testOverviewReadProvisionsAnUnbackfilledRecordExactlyOnce(): void
+    {
+        $account = $this->em->getNewEntity('Account');
+        $account->set(['name' => 'Legacy Acme', 'description' => "# Legacy source\n\nPreserved  \n"]);
+        $this->em->saveEntity($account, ['skipHooks' => true]);
+        $overviews = $this->service(Overviews::class);
+        $this->assertNull($overviews->binding('Account', $account->getId()));
+        $this->workers('read', ['Account', $account->getId()]);
+        $knowledge = $this->service(Knowledge::class);
+        $overview = $knowledge->read('Account', $account->getId());
+        $this->assertSame($account->get('description'), $overview['body']);
+        $this->assertSame($overview['documentId'], $knowledge->read('Account', $account->getId())['documentId']);
+        $this->assertSame($overview['documentId'], $overviews->ensure($account)->get('overviewDocumentId'));
+        $this->assertSame(1, $this->em->getRDBRepository('RecordDocument')->where(['recordType' => 'Account', 'recordId' => $account->getId()])->count());
+        $this->assertSame(1, $this->em->getRDBRepository('Document')->where(['knowledgeRecordType' => 'Account', 'knowledgeRecordId' => $account->getId()])->count());
+        $this->assertSame(1, $this->em->getRDBRepository('DocumentRevision')->where(['documentId' => $overview['documentId']])->count());
+    }
+
+    public function testOverviewReadDoesNotProvisionAnInaccessibleParent(): void
+    {
+        $account = $this->em->getNewEntity('Account');
+        $account->set('name', 'Unbackfilled private parent');
+        $this->em->saveEntity($account, ['skipHooks' => true]);
+        $actor = $this->actor([]);
+        $knowledge = $actor->getContainer()->get('injectableFactory')->create(Knowledge::class);
+        try { $knowledge->read('Account', $account->getId()); $this->fail('Inaccessible overview read succeeded.'); }
+        catch (Forbidden|NotFound) { $this->addToAssertionCount(1); }
+        $this->assertNull($this->service(Overviews::class)->binding('Account', $account->getId()));
+    }
+
     public function testIndependentWritesImmutableEvidenceDecisionStalenessAndNativeRelations(): void
     {
         $account = $this->owned('Account', ['name' => 'Evidence Acme']);
