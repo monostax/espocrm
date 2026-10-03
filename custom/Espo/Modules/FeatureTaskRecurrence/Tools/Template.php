@@ -21,12 +21,16 @@ class Template
         $attributes = [];
         foreach ($this->metadata->get(['entityDefs', 'Task', 'fields']) ?? [] as $name => $defs) {
             if (!in_array($name, self::REUSABLE, true) && !($defs['isCustom'] ?? false)) continue;
+            // Owned files cannot be reused by assigning their IDs to another Task.
+            if (in_array($defs['type'] ?? '', ['file', 'image', 'attachmentMultiple'], true) && !($defs['recurrenceReusable'] ?? false)) continue;
+            // Custom relationships need an explicit ownership contract, not scalar copying.
+            if (($defs['isCustom'] ?? false) && in_array($defs['type'] ?? '', ['link', 'linkMultiple', 'linkParent'], true)) continue;
             if (str_starts_with($name, 'recurrence') || ($defs['readOnly'] ?? false) ||
                 ($defs['recurrenceCopyDisabled'] ?? false) || ($defs['unique'] ?? false) ||
                 (($defs['duplicateIgnore'] ?? false) && $name !== 'reminders') ||
                 (($defs['notStorable'] ?? false) && $name !== 'reminders')) continue;
             foreach ($this->fieldUtil->getAttributeList('Task', $name) as $attribute) {
-                if (str_ends_with($attribute, 'Name') || str_ends_with($attribute, 'Names') || str_ends_with($attribute, 'Columns')) continue;
+                if ($attribute !== $name && (str_ends_with($attribute, 'Name') || str_ends_with($attribute, 'Names') || str_ends_with($attribute, 'Columns'))) continue;
                 $attributes[] = $attribute;
             }
         }
@@ -49,6 +53,10 @@ class Template
     public function dates(object $template, string $deadline, object $definition): object
     {
         $zone = new DateTimeZone($definition->timezone);
+        if (empty($template->dateEnd) && empty($template->dateEndDate)) {
+            return (object) ['dateEnd' => $definition->dateOnly ? null : $deadline, 'dateEndDate' => $definition->dateOnly ? $deadline : null,
+                'dateStart' => $template->dateStart ?? null, 'dateStartDate' => $template->dateStartDate ?? null];
+        }
         $old = !empty($template->dateEndDate)
             ? new DateTimeImmutable($template->dateEndDate, $zone)
             : new DateTimeImmutable($template->dateEnd, new DateTimeZone('UTC'));

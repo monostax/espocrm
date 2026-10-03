@@ -108,6 +108,40 @@ class ScheduleTest extends TestCase
         self::assertSame('2026-03-12 13:00:00', $schedule->completedDeadline($definition, new DateTimeImmutable('2026-03-05 22:00:00 UTC')));
     }
 
+    public function testSeekingRetainsCalendarDefaultsIntervalPhaseAndGapWallTime(): void
+    {
+        $schedule = new Schedule();
+        self::assertSame(['2104-02-29'], $schedule->next($this->calendar('FREQ=YEARLY', '2024-02-29'), '2099-12-31', 1));
+        self::assertSame(['2027-07-31'], $schedule->next($this->calendar('FREQ=MONTHLY;INTERVAL=3', '2026-01-31'), '2027-01-31', 1));
+        $definition = $schedule->normalize((object) ['timezone' => 'America/New_York', 'dateOnly' => false, 'anchor' => '2026-03-01 07:30:00',
+            'schedule' => "DTSTART;TZID=America/New_York:20260301T023000\nRRULE:FREQ=WEEKLY"]);
+        self::assertSame(['2026-03-22 06:30:00'], $schedule->next($definition, '2026-03-15 06:30:00', 1));
+        self::assertTrue($schedule->contains('2026-03-22 06:30:00', $definition));
+    }
+
+    public function testExplicitUtcAndUntilDuringSecondOverlap(): void
+    {
+        $schedule = new Schedule();
+        $utc = $schedule->normalize((object) ['timezone' => 'UTC', 'dateOnly' => false, 'anchor' => '2026-10-03 09:00:00',
+            'schedule' => "DTSTART:20261003T090000Z\nRRULE:FREQ=DAILY;COUNT=1"]);
+        self::assertSame(['2026-10-03 09:00:00'], $schedule->preview($utc)->dates);
+        $overlap = $schedule->normalize((object) ['timezone' => 'America/New_York', 'dateOnly' => false, 'anchor' => '2026-10-31 05:30:00',
+            'schedule' => "DTSTART;TZID=America/New_York:20261031T013000\nRRULE:FREQ=DAILY;BYMINUTE=30,45;UNTIL=20261101T063000Z"]);
+        self::assertSame(['2026-10-31 05:30:00', '2026-10-31 05:45:00', '2026-11-01 05:30:00', '2026-11-01 05:45:00'], $schedule->preview($overlap)->dates);
+    }
+
+    public function testCompletionPreviewHonorsInitialCycleCountAndInclusiveCeiling(): void
+    {
+        $schedule = new Schedule();
+        $input = (object) ['basis' => 'CompletedDate', 'dateOnly' => true, 'anchor' => '2026-10-03', 'interval' => (object) ['unit' => 'week', 'value' => 1], 'count' => 1];
+        $preview = $schedule->preview($schedule->normalize($input), '2026-10-12 12:00:00');
+        self::assertSame([], $preview->dates);
+        self::assertTrue($preview->exhausted);
+        unset($input->count); $input->until = '2026-10-19';
+        self::assertSame(['2026-10-19'], $schedule->preview($schedule->normalize($input), '2026-10-12 12:00:00')->dates);
+        self::assertSame([], $schedule->preview($schedule->normalize($input), '2026-10-13 12:00:00')->dates);
+    }
+
     public static function invalidDefinitions(): array
     {
         return [

@@ -1,5 +1,7 @@
 {
     "labels": {
+        "advancedPreserved": "This schedule needs advanced controls. Its RFC text has been preserved.",
+        "today": "Today", "tomorrow": "Tomorrow", "nextWeek": "Next week", "nextWeekend": "Next weekend", "nextMonth": "Next month",
         "repeat": "Repeat", "none": "Does not repeat", "editRecurrence": "Edit recurrence", "manageRecurrence": "Manage series",
         "basedOn": "Based on", "ScheduledDate": "Scheduled date", "CompletedDate": "Completed date",
         "DAILY": "Every day", "WEEKLY": "Every week", "MONTHLY": "Every month", "YEARLY": "Every year", "RDATE": "Specific dates",

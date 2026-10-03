@@ -85,13 +85,13 @@ class Schedule
                 'dates' => $exhausted ? [] : [$deadline], 'exhausted' => $exhausted, 'summary' => $this->summary($definition)];
         }
         return (object) ['definition' => $definition, 'hypothetical' => false, 'summary' => $this->summary($definition),
-            'dates' => array_map(fn ($date) => $this->deadline($date, $definition), $from === null ? $this->set($definition)->getOccurrences(10) : $this->set($definition)->getOccurrencesAfter($this->slotDate($from, $definition), true, 10))];
+            'dates' => array_map(fn ($date) => $this->deadline($date, $definition), $from === null ? $this->set($definition)->getOccurrences(10) : $this->set($definition, $from)->getOccurrencesAfter($this->slotDate($from, $definition), true, 10))];
     }
 
     /** Bounded, exclusive cursor. The caller persists each committed slot independently. */
     public function next(object $definition, ?string $cursor, int $limit = self::CHUNK_SIZE): array
     {
-        $set = $this->set($definition);
+        $set = $this->set($definition, $cursor);
         $dates = $cursor === null ? $set->getOccurrences($limit) : $set->getOccurrencesAfter($this->slotDate($cursor, $definition), false, $limit);
         return array_map(fn ($date) => $this->deadline($date, $definition), $dates);
     }
@@ -103,7 +103,7 @@ class Schedule
 
     public function contains(string $deadline, object $definition): bool
     {
-        return $this->set($definition)->occursAt($this->slotDate($deadline, $definition));
+        return $this->set($definition, $deadline)->occursAt($this->slotDate($deadline, $definition));
     }
 
     public function completedDeadline(object $definition, DateTimeInterface $event): string
@@ -157,11 +157,11 @@ class Schedule
     public function assertDensity(object $definition, ?string $from = null): void
     {
         $start = $this->slotDate($from ?? $definition->anchor, $definition);
-        $dates = $this->set($definition)->getOccurrencesBetween($start, $start->modify('+31 days'), self::WINDOW_LIMIT + 1);
+        $dates = $this->set($definition, $from)->getOccurrencesBetween($start, $start->modify('+31 days'), self::WINDOW_LIMIT + 1);
         if (count($dates) > self::WINDOW_LIMIT) throw new InvalidArgumentException('recurrence.schedule: At most 256 Tasks may fall within a 31-day planning window.');
     }
 
-    private function set(object $definition): RSet
+    private function set(object $definition, ?string $from = null): RSet
     {
         $starts = 0;
         $rules = 0;
@@ -207,9 +207,11 @@ class Schedule
         if ($starts !== 1 || $rules > 1) throw new InvalidArgumentException('recurrence.schedule: Exactly one DTSTART and at most one RRULE are required.');
         try {
             $parsed = new RSet($definition->schedule);
-            if ($definition->dateOnly) return $parsed;
             $set = new RSet();
-            foreach ($parsed->getRRules() as $rule) $set->addRRule(new WallTimeRule($rule));
+            foreach ($parsed->getRRules() as $rule) {
+                $point = $from === null ? null : $this->slotDate($from, $definition);
+                $set->addRRule($definition->dateOnly ? Seek::rule($rule, $point) : new WallTimeRule($rule, $point));
+            }
             foreach ($parsed->getDates() as $date) $set->addDate($date);
             foreach ($parsed->getExDates() as $date) $set->addExDate($date);
             return $set;

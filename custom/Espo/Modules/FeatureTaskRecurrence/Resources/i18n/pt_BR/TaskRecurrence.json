@@ -1,5 +1,7 @@
 {
     "labels": {
+        "advancedPreserved": "Este agendamento precisa dos controles avançados. O texto RFC foi preservado.",
+        "today": "Hoje", "tomorrow": "Amanhã", "nextWeek": "Próxima semana", "nextWeekend": "Próximo fim de semana", "nextMonth": "Próximo mês",
         "repeat": "Repetir", "none": "Não repetir", "editRecurrence": "Editar repetição", "manageRecurrence": "Gerenciar série",
         "basedOn": "Baseado em", "ScheduledDate": "Data de vencimento", "CompletedDate": "Data de conclusão",
         "DAILY": "Diariamente", "WEEKLY": "Semanalmente", "MONTHLY": "Mensalmente", "YEARLY": "Anualmente", "RDATE": "Datas específicas",

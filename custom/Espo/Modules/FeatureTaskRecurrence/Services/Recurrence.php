@@ -18,6 +18,8 @@ use Espo\Entities\User;
 use Espo\Modules\FeatureTaskRecurrence\Tools\MutationContext;
 use Espo\Modules\FeatureTaskRecurrence\Tools\Schedule;
 use Espo\Modules\FeatureTaskRecurrence\Tools\Template;
+use Espo\Modules\FeatureTaskRecurrence\Tools\EditorSpec;
+use Espo\Modules\FeatureTaskRecurrence\Tools\ReusableFiles;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -30,6 +32,7 @@ class Recurrence
         private ServiceContainer $services,
         private Schedule $schedule,
         private Template $template,
+        private ReusableFiles $reusableFiles,
         private TenantResolver $tenants,
         private Acl $acl,
         private User $user,
@@ -54,6 +57,8 @@ class Recurrence
             }
         }
         $result = $this->schedule->preview($definition, $input->exampleCompletion ?? null, $sequence, $from);
+        $result->editor = (new EditorSpec())->describe($definition);
+        if (isset($input->task) && is_object($input->task)) $result->taskDates = $this->template->dates($input->task, $definition->anchor, $definition);
         $headTask = $head?->get('taskId') ? $this->entityManager->getEntityById('Task', $head->get('taskId')) : null;
         if ($headTask && $this->acl->checkEntityRead($headTask) && $this->acl->checkField('Task', 'dateEnd')) {
             $result->head = (object) ['taskId' => $head->get('taskId'), 'sequence' => $head->get('sequence'), 'currentDeadline' => $headTask->get('dateEndDate') ?: $headTask->get('dateEnd'), 'eventAt' => $head->get('eventAt')];
@@ -149,9 +154,10 @@ class Recurrence
             'seriesId' => $series->getId(), 'lineageId' => $series->get('lineageId'), 'version' => $series->get('version'),
             'definition' => $definition, 'state' => $series->get('state'), 'originalId' => $task->get('recurrenceId'),
             'summary' => $this->schedule->summary($definition), 'lastError' => $series->get('lastError'),
+            'editor' => (new EditorSpec())->describe($definition),
             'pending' => $series->get('basis') === 'ScheduledDate' ? !$series->get('lastProcessedAt') : $this->pending($series),
-            'canEdit' => $this->acl->checkEntityEdit($task) && $this->acl->checkField('Task', 'recurrence', 'edit'),
-            'canDelete' => $this->acl->checkEntityDelete($task),
+            'canEdit' => $this->acl->checkEntityEdit($task) && $this->acl->checkField('Task', 'recurrence', 'edit') && $this->acl->checkField('Task', 'dateEnd', 'edit'),
+            'canDelete' => $this->acl->checkEntityDelete($task) && $this->acl->checkField('Task', 'recurrence', 'edit') && $this->acl->checkField('Task', 'dateEnd', 'edit'),
         ];
     }
 
@@ -164,7 +170,8 @@ class Recurrence
         }
         if (!$task->get('recurrenceSeriesId')) return;
         $series = $this->lock($task->get('recurrenceSeriesId'));
-        if (in_array($series->get('state'), ['Active', 'Paused'], true) && !$task->get('dateEnd') && !$task->get('dateEndDate')) throw new BadRequest('End recurrence explicitly before clearing its deadline.');
+        $withinSegment = !$series->get('boundaryEnd') || strcmp($task->get('recurrenceId'), $series->get('boundaryEnd')) < 0;
+        if ($withinSegment && in_array($series->get('state'), ['Active', 'Paused'], true) && !$task->get('dateEnd') && !$task->get('dateEndDate')) throw new BadRequest('End recurrence explicitly before clearing its deadline.');
         if ($task->isAttributeChanged('teamsIds') && $this->tenant($task->get('teamsIds') ?? []) !== $series->get('tenantId')) {
             throw new BadRequest('Recurring Tasks cannot move to a different workspace.');
         }
@@ -255,6 +262,14 @@ class Recurrence
                 }
             }
             $definition = isset($input->definition) ? $this->normalize($input->definition, $task->getValueMap()) : null;
+            if ($definition && json_encode($definition) === json_encode($selected->get('definition'))) $definition = null;
+            if ($action === 'edit') {
+                $currentType = $selected->get('definition')->dateOnly;
+                $changedType = $currentType ? !empty($patch->dateEnd) : !empty($patch->dateEndDate);
+                if ($changedType && (!$definition || $definition->dateOnly === $currentType)) {
+                    throw new BadRequest('recurrence.dateOnly: Explicitly change the recurrence date type before applying this deadline type to a series.');
+                }
+            }
             if (!empty($input->preview)) return (object) [
                 'affectedCount' => count($rows), 'retainedExceptions' => $exceptions, 'boundary' => $boundary,
                 'schedule' => $definition ? $this->schedule->preview($definition) : null,
@@ -318,6 +333,10 @@ class Recurrence
                 }
                 foreach ($rows as [$item, $occurrence, $segment]) $this->reconcile($item, $occurrence, $segment, $patch, $definition !== null, $item->getId() === $taskId);
             }
+            if (!$this->entityManager->getEntityById('Task', $taskId)) return (object) ['retired' => true, 'lineageId' => $selected->get('lineageId')];
+            if (isset($input->patch->status) && $input->patch->status !== $task->get('status')) {
+                $this->services->get('Task')->update($taskId, (object) ['status' => $input->patch->status]);
+            }
             return $this->read($taskId);
         });
     }
@@ -350,6 +369,12 @@ class Recurrence
         $overrides = $task->get('recurrenceOverrides') ?? [];
         if ($changed && $definition->basis === 'ScheduledDate' && !$this->schedule->contains($occurrence->get('originalDeadline'), $definition)) {
             if (!$overrides && !$selected) { $this->retire($task, $occurrence); return; }
+            $initial = $this->entityManager->getRDBRepository('TaskRecurrenceOccurrence')->where([
+                'seriesSegmentId' => $series->getId(), 'recurrenceId' => $this->schedule->identity($definition->anchor, $definition),
+            ])->findOne();
+            if ($selected && !$overrides && $initial?->get('taskId') && $initial->get('taskId') !== $task->getId()) {
+                $this->retire($task, $occurrence); return;
+            }
             // Explicit exceptions retain their Task ID and original reservation outside the new rule.
         }
         $values = clone $patch;
@@ -363,10 +388,11 @@ class Recurrence
             }
             foreach ((array) $this->template->dates($series->get('template'), $definition->anchor, $definition) as $name => $value) $values->$name = $value;
         }
-        if (array_intersect(['dateStart', 'dateStartDate', 'dateEnd', 'dateEndDate'], array_keys((array) $patch))) {
+        if (array_intersect(['dateStart', 'dateStartDate', 'dateEnd', 'dateEndDate'], array_keys((array) $patch)) && !($changed && $selected && !$this->schedule->contains($occurrence->get('originalDeadline'), $definition))) {
             foreach ((array) $this->template->dates($series->get('template'), $occurrence->get('originalDeadline'), $definition) as $name => $value) $values->$name = $value;
         }
         foreach ($overrides as $name) unset($values->$name);
+        $values = $this->reusableFiles->copy($values);
         if ((array) $values) $this->taskRecurrenceMutationContext->run(fn () => $this->services->get('Task')->update($task->getId(), $values));
         $occurrence->set('templateVersion', $series->get('version'));
         $this->entityManager->saveEntity($occurrence);
@@ -469,6 +495,7 @@ class Recurrence
         $new->set('headId', $occurrence->getId());
         $this->entityManager->saveEntity($new);
         $values = (object) array_merge((array) $patch, (array) $this->template->dates($snapshot, $definition->anchor, $definition));
+        $values = $this->reusableFiles->copy($values);
         $this->taskRecurrenceMutationContext->run(fn () => $this->services->get('Task')->update($task->getId(), $values));
         $overrides = $task->get('recurrenceOverrides') ?? [];
         $this->attach($task, $new, $id);
@@ -541,10 +568,15 @@ class Recurrence
         // A future cursor proves the next sparse slot is already visible. Do not add another.
         $cursor = $series->get('cursor');
         $upcomingFrom = $definition->dateOnly ? $today->format('Y-m-d') : $now->format('Y-m-d H:i:s');
-        if ($local > $end && $cursor && $this->entityManager->getRDBRepository('TaskRecurrenceOccurrence')->where([
-            'seriesSegmentId' => $series->getId(), 'originalDeadline>=' => $upcomingFrom,
-            'disposition' => 'Materialized', 'OR' => [['taskId!=' => null], ['aliasTaskId!=' => null]],
-        ])->findOne()) return false;
+        if ($local > $end && $cursor) {
+            $visible = $this->entityManager->getRDBRepository('TaskRecurrenceOccurrence')->where([
+                'seriesSegmentId' => $series->getId(), 'originalDeadline>=' => $upcomingFrom,
+                'disposition' => 'Materialized', 'OR' => [['taskId!=' => null], ['aliasTaskId!=' => null]],
+            ])->limit(0, Schedule::WINDOW_LIMIT + 1)->find();
+            foreach ($visible as $reservation) {
+                if ($this->schedule->contains($reservation->get('originalDeadline'), $definition)) return false;
+            }
+        }
         $paused = false;
         foreach ($series->get('pauseIntervals') ?? [] as $interval) {
             $from = $this->eventDate($interval->from, $definition);
@@ -599,7 +631,7 @@ class Recurrence
 
     private function materialize(Entity $series, Entity $occurrence): void
     {
-        $data = clone $series->get('template');
+        $data = $this->reusableFiles->copy($series->get('template'));
         foreach ((array) $this->template->dates($data, $occurrence->get('originalDeadline'), $series->get('definition')) as $name => $value) $data->$name = $value;
         $data->status = 'Not Started';
         $task = $this->taskRecurrenceMutationContext->run(fn () => $this->services->get('Task')->create($data, CreateParams::create()->withSkipDuplicateCheck())->getEntity());
@@ -625,7 +657,9 @@ class Recurrence
 
     private function permission(string $action): void
     {
-        if (!$this->acl->checkScope('Task', $action) || !$this->acl->checkField('Task', 'recurrence', $action === 'read' ? 'read' : 'edit')) throw new Forbidden();
+        $fieldAction = $action === 'read' ? 'read' : 'edit';
+        if (!$this->acl->checkScope('Task', $action) || !$this->acl->checkField('Task', 'recurrence', $fieldAction) ||
+            !$this->acl->checkField('Task', 'dateEnd', $fieldAction)) throw new Forbidden();
     }
 
     private function tenant(array $teams): string
@@ -636,9 +670,20 @@ class Recurrence
     private function validateTemplate(object $template, string $tenantId): void
     {
         if ($this->tenant($template->teamsIds ?? []) !== $tenantId) throw new Forbidden('Invalid recurrence workspace.');
+        $this->reusableFiles->normalize($template, $tenantId);
         $prototype = $this->entityManager->getNewEntity('Task');
         $prototype->setMultiple($template);
         if (!$this->services->get('Task')->checkAssignment($prototype)) throw new Forbidden('Recurrence assignment is no longer permitted.');
+        $users = array_values(array_unique(array_filter(array_merge([$template->assignedUserId ?? null], $template->collaboratorsIds ?? []))));
+        foreach ($users as $id) {
+            /** @var User $linkedUser */
+            $linkedUser = $this->entityManager->getEntityById('User', $id) ?? throw new Forbidden('A recurrence assignee or collaborator is unavailable.');
+            if (!$linkedUser->get('isActive')) throw new Forbidden('A recurrence assignee or collaborator is inactive.');
+            if ($linkedUser->isAdmin()) continue;
+            $teams = [];
+            foreach ($this->entityManager->getRDBRepository('User')->getRelation($linkedUser, 'teams')->select('id')->find() as $team) $teams[] = $team->getId();
+            if (!in_array($tenantId, $this->tenants->resolveAllFromTeamIds($teams), true)) throw new Forbidden('A recurrence assignee or collaborator belongs to another workspace.');
+        }
         foreach (['tags' => 'CrmTag', 'chatwootConversations' => 'ChatwootConversation'] as $field => $type) {
             foreach ($template->{$field . 'Ids'} ?? [] as $id) {
                 $linked = $this->entityManager->getEntityById($type, $id) ?? throw new Forbidden('A recurrence relationship is unavailable.');
@@ -654,7 +699,15 @@ class Recurrence
         if (!empty($template->parentId)) {
             $parent = $this->entityManager->getEntityById($template->parentType, $template->parentId) ?? throw new Forbidden();
             if (!$this->acl->checkEntityRead($parent)) throw new Forbidden();
-            $owner = $parent->hasAttribute('tenantId') ? $parent->get('tenantId') : $this->tenant($parent->get('teamsIds') ?? []);
+            $owner = $parent->get('tenantId');
+            if (!$owner) {
+                $teams = $parent->get('teamsIds');
+                if ($teams === null) {
+                    $teams = [];
+                    foreach ($this->entityManager->getRDBRepository($parent->getEntityType())->getRelation($parent, 'teams')->select('id')->find() as $team) $teams[] = $team->getId();
+                }
+                $owner = $this->tenant($teams);
+            }
             if ($owner !== $tenantId) throw new Forbidden('The recurrence parent belongs to another workspace.');
         }
     }

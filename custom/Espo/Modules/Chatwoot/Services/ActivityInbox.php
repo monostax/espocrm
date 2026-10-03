@@ -173,7 +173,7 @@ class ActivityInbox
             }
         }
         // One series query for the page, rather than a lookup per recurring card.
-        if ($this->acl->checkField('Task', 'recurrence')) {
+        if ($this->acl->checkField('Task', 'recurrence') && $this->acl->checkField('Task', 'dateEnd')) {
             $seriesIds = array_values(array_unique(array_filter(array_map(fn ($row) => $row->entityType === 'Task' ? ($row->recurrenceSeriesId ?? null) : null, $records))));
             $badges = [];
             foreach ($seriesIds ? $this->em->getRDBRepository('TaskRecurrenceSeries')->where(['id' => $seriesIds])->find() : [] as $series) {
@@ -235,7 +235,8 @@ class ActivityInbox
     public function present(Entity $entity): object
     {
         $data = (array) $entity->getValueMap();
-        if ($entity->getEntityType() === 'Task' && !$this->acl->checkField('Task', 'recurrence')) {
+        if ($entity->getEntityType() === 'Task') unset($data['recurrenceSeriesName']);
+        if ($entity->getEntityType() === 'Task' && (!$this->acl->checkField('Task', 'recurrence') || !$this->acl->checkField('Task', 'dateEnd'))) {
             foreach (array_keys($data) as $name) if (str_starts_with($name, 'recurrence')) unset($data[$name]);
         }
         return (object) ($data + [

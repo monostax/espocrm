@@ -41,8 +41,12 @@ define('feature-task-recurrence:views/fields/recurrence', ['views/fields/base'],
                 model: this.model, definition: this.draft || this.model.get(this.name)?.definition,
                 recurrence: this.model.get(this.name),
             });
-            this.listenToOnce(view, 'saved', definition => {
-                if (!this.model.id) { this.draft = definition; this.trigger('change'); this.reRender(); }
+            this.listenToOnce(view, 'saved', (definition, result) => {
+                if (!this.model.id) {
+                    this.draft = definition;
+                    if (definition) this.model.set(result?.taskDates || {dateEnd: definition.dateOnly ? null : definition.anchor, dateEndDate: definition.dateOnly ? definition.anchor : null});
+                    this.trigger('change'); this.reRender();
+                } else if (result?.retired) this.getRouter().navigate('Task', {trigger: true});
                 else this.model.fetch().then(() => this.reRender());
             });
             view.render();
@@ -50,7 +54,10 @@ define('feature-task-recurrence:views/fields/recurrence', ['views/fields/base'],
 
         actionManageRecurrence: async function () {
             const view = await this.createView('manager', 'feature-task-recurrence:views/modals/series', {model: this.model});
-            this.listenToOnce(view, 'saved', () => this.model.fetch().then(() => this.reRender()));
+            this.listenToOnce(view, 'saved', () => this.model.fetch().then(() => this.reRender()).catch(error => {
+                if (error.status === 404) this.getRouter().navigate('Task', {trigger: true});
+                else Espo.Ui.error(this.translate('invalid', 'labels', 'TaskRecurrence'));
+            }));
             view.render();
         },
 

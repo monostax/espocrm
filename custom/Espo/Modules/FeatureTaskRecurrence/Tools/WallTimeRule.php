@@ -17,7 +17,7 @@ class WallTimeRule extends RRule
     private ?int $validCount;
     private ?DateTimeInterface $instantUntil;
 
-    public function __construct(RRule $rule)
+    public function __construct(RRule $rule, ?DateTimeInterface $from = null)
     {
         $parts = $rule->getRule();
         $this->wallZone = $parts['DTSTART']->getTimezone();
@@ -27,9 +27,15 @@ class WallTimeRule extends RRule
         $parts['DTSTART'] = new DateTimeImmutable($parts['DTSTART']->format('Y-m-d H:i:s'), $civilZone);
         if ($this->instantUntil) {
             $local = DateTimeImmutable::createFromInterface($this->instantUntil)->setTimezone($this->wallZone);
-            $parts['UNTIL'] = new DateTimeImmutable($local->format('Y-m-d H:i:s'), $civilZone);
+            // A UTC UNTIL inside the second overlap can include later first-fold wall times.
+            $parts['UNTIL'] = new DateTimeImmutable($local->format('Y-m-d') . ' 23:59:59', $civilZone);
         }
         unset($parts['COUNT']);
+        if ($this->validCount === null && $from !== null) {
+            $localFrom = DateTimeImmutable::createFromInterface($from)->setTimezone($this->wallZone);
+            $civilFrom = new DateTimeImmutable($localFrom->format('Y-m-d H:i:s'), $civilZone);
+            $parts = Seek::rule(new RRule($parts), $civilFrom)->getRule();
+        }
         parent::__construct($parts);
     }
 
@@ -57,7 +63,8 @@ class WallTimeRule extends RRule
     private function instant(DateTimeInterface $civil): ?DateTimeImmutable
     {
         $stamp = $civil->getTimestamp();
-        $offsets = array_unique(array_column($this->wallZone->getTransitions($stamp - 86400, $stamp + 86400), 'offset'));
+        $transitions = $this->wallZone->getTransitions($stamp - 86400, $stamp + 86400);
+        $offsets = $transitions === false ? [$this->wallZone->getOffset($civil)] : array_unique(array_column($transitions, 'offset'));
         $matches = [];
         foreach ($offsets as $offset) {
             $date = (new DateTimeImmutable('@' . ($stamp - $offset)))->setTimezone($this->wallZone);

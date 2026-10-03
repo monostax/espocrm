@@ -52,7 +52,7 @@ class Task extends \Espo\Services\Record
     public function loadAdditionalFields(Entity $entity): void
     {
         parent::loadAdditionalFields($entity);
-        if ($entity->get('recurrenceSeriesId') && $this->acl->checkField('Task', 'recurrence')) {
+        if ($entity->get('recurrenceSeriesId') && $this->acl->checkField('Task', 'recurrence') && $this->acl->checkField('Task', 'dateEnd')) {
             $entity->set('recurrence', $this->recurrenceService()->read($entity->getId()));
         }
     }
@@ -60,7 +60,9 @@ class Task extends \Espo\Services\Record
     public function prepareEntityForOutput(Entity $entity): void
     {
         parent::prepareEntityForOutput($entity);
-        if (!$this->acl->checkField('Task', 'recurrence')) {
+        // The technical series name mirrors the seed name and has no independent field ACL.
+        $entity->clear('recurrenceSeriesName');
+        if (!$this->acl->checkField('Task', 'recurrence') || !$this->acl->checkField('Task', 'dateEnd')) {
             foreach (array_keys((array) $entity->getValueMap()) as $name) if (str_starts_with($name, 'recurrence')) $entity->clear($name);
         }
     }
