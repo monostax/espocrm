@@ -1,0 +1,6 @@
+{
+    "viewSetupHandlers": {
+        "record/detail": ["__APPEND__", "feature-record-knowledge:handlers/record-detail"],
+        "record/edit": ["__APPEND__", "feature-record-knowledge:handlers/record-detail"]
+    }
+}

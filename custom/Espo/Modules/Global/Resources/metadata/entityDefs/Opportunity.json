@@ -1,6 +1,7 @@
 {
     "transactionalSave": true,
     "fields": {
+        "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags" },
         "stageRequirementsSnapshot": {
             "type": "jsonObject",
             "notStorable": true,
@@ -260,6 +261,7 @@
         }
     },
     "links": {
+        "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "opportunities", "relationName": "crmTagOpportunity" },
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant",

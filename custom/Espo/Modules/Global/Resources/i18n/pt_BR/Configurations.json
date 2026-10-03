@@ -1,5 +1,6 @@
 {
     "labels": {
+        "CRM Tags": "Etiquetas do CRM",
         "Conversations": "Conversas",
         "Marketing and Sales": "Marketing e Vendas",
         "Automation": "Automação",
@@ -47,6 +48,7 @@
         "Data": "Dados"
     },
     "descriptions": {
+        "crmTags": "Gerenciar etiquetas e cores do ambiente para oportunidades e atividades",
         "userApiKeys": "Gerenciar chaves pessoais de API",
         "sidenavConfigs": "Configurar a navegação lateral por time",
         "users": "Gerenciar usuários da plataforma",
@@ -59,6 +61,7 @@
         "customFieldDefs": "Defina campos tipados cujos valores ficam no registro sem alterar o schema do banco"
     },
     "keywords": {
+        "crmTags": "crm,etiqueta,etiquetas,tag,tags,cor,oportunidade,atividade",
         "users": "usuários,usuario,usuarios",
         "data": "importar,csv",
         "sales": "funis,funil,vendas",

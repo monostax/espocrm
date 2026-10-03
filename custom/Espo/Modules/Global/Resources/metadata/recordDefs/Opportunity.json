@@ -1,4 +1,6 @@
 {
+    "beforeLinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
+    "relationships": { "tags": { "linkRequiredForeignAccess": "read", "massLink": false } },
     "kanbanClassName": "Espo\\Modules\\Global\\Tools\\Kanban\\OpportunityKanban",
     "mandatoryAttributeList": [
         "status",

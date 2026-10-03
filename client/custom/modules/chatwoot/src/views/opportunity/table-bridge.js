@@ -1,4 +1,5 @@
 import ListView from "views/list";
+import {invalidateTags} from "global:crm-tags";
 
 /** Embed the same record list used by #Opportunity, with Chatwoot's scope. */
 export default class OpportunityTableBridgeView extends ListView {
@@ -68,6 +69,7 @@ export default class OpportunityTableBridgeView extends ListView {
     }
 
     applyContext({ requestId, where, primaryFilter, groups = null, groupBy = "none" }) {
+        invalidateTags();
         this.collection.abortLastFetch();
         this.requestId = requestId;
         this.expandedGroupKeys = groupBy === this.groupBy

@@ -1,5 +1,6 @@
 {
     "labels": {
+        "CRM Tags": "CRM Tags",
         "Conversations": "Conversations",
         "Marketing and Sales": "Marketing and Sales",
         "Automation": "Automation",
@@ -44,6 +45,7 @@
         "Data": "Data"
     },
     "descriptions": {
+        "crmTags": "Manage workspace tags and colors for opportunities and activities",
         "userApiKeys": "Manage personal API keys",
         "oauthProviders": "Manage OAuth provider connections for third-party services",
         "oauthAccounts": "Manage linked OAuth accounts and authorizations",
@@ -52,6 +54,7 @@
         "customFieldDefs": "Define typed custom fields whose values are stored on each record without schema DDL"
     },
     "keywords": {
+        "crmTags": "crm,tag,tags,label,labels,color,opportunity,activity",
         "oauthProviders": "oauth,provider,integration,api,connect",
         "oauthAccounts": "oauth,account,authorization,token,linked",
         "sidenavConfigs": "navigation,sidebar,menu,tabs",

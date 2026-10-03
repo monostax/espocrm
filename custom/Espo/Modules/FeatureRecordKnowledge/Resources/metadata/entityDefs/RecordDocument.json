@@ -1,0 +1,13 @@
+{
+    "fields": {
+        "recordType": {"type": "varchar", "maxLength": 64, "required": true},
+        "recordId": {"type": "varchar", "maxLength": 64, "required": true},
+        "overviewDocument": {"type": "link", "required": true}
+    },
+    "links": {"overviewDocument": {"type": "belongsTo", "entity": "Document"}},
+    "indexes": {
+        "record": {"unique": true, "columns": ["recordType", "recordId"]},
+        "overview": {"unique": true, "columns": ["overviewDocumentId"]}
+    },
+    "transactionalSave": true
+}

@@ -8,6 +8,11 @@
         "width": 15
     },
     {
+        "name": "tags",
+        "width": 18,
+        "notSortable": true
+    },
+    {
         "name": "opportunityStage",
         "width": 15
     },

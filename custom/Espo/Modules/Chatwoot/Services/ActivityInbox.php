@@ -14,6 +14,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Global\Tools\CrmTags;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression as Expr;
@@ -33,6 +34,7 @@ class ActivityInbox
         private ActivityDiscussion $discussion,
         private ServiceContainer $services,
         private SelectBuilderFactory $select,
+        private CrmTags $tags,
     ) {}
 
     private function types(array $filters): array
@@ -60,6 +62,12 @@ class ActivityInbox
         elseif ($status === 'Finished') $query->where(['status' => $this->finishedStatuses($type)]);
         elseif ($status !== '') $query->where(['status' => $status]);
         if (!empty($filters['stage'])) $query->where(['status' => $filters['stage']]);
+        if (!empty($filters['tag'])) {
+            if (!$this->acl->checkField($type, 'tags') || !$this->acl->checkScope('CrmTag', 'read')) return $query->where(['id' => null]);
+            $tag = $this->tags->query()->where(['id' => $filters['tag'], 'tenantId' => $tenant->getId()])->select(['id'])->build();
+            $tagged = SelectBuilder::create()->from($type)->select(['id'])->join('tags', 'crmTag')->where(['crmTag.id=s' => $tag])->build();
+            $query->where(['id=s' => $tagged]);
+        }
         if (!empty($filters['search'])) $query->where(['name*' => '%' . trim($filters['search']) . '%']);
         if (!empty($filters['due'])) $this->applyDue($query, $type, $filters['due'], $filters['timeZone'] ?? 'UTC');
         if (($filters['read_status'] ?? '') === 'unread' || ($filters['view'] ?? '') === 'mentions') {
@@ -82,9 +90,11 @@ class ActivityInbox
         }
         $active = $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ($type === 'Task' ? ['Not Started', 'Started'] : ['Planned']);
         $query->where(['status' => $active]);
-        if ($due === 'overdue') {
-            $clauses = [['dateEnd<' => $now->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')] + ($dateOnly ? ['dateEndDate' => null] : [])];
-            if ($dateOnly) $clauses[] = ['dateEndDate<' => $today->format('Y-m-d')];
+        if ($due === 'overdue' || $due === 'today') {
+            // Today includes every pending deadline before the next local day.
+            $end = $due === 'today' ? $today->modify('+1 day') : $now;
+            $clauses = [['dateEnd<' => $end->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')] + ($dateOnly ? ['dateEndDate' => null] : [])];
+            if ($dateOnly) $clauses[] = ['dateEndDate<' => $end->format('Y-m-d')];
             $query->where(['OR' => $clauses]);
             return;
         }
@@ -96,10 +106,8 @@ class ActivityInbox
             return;
         }
         // Keep the legacy tomorrow key for the seven calendar days after today.
-        [$start, $end] = match ($due) {
-            'today' => [$today, $today->modify('+1 day')],
-            'tomorrow' => [$today->modify('+1 day'), $today->modify('+8 days')],
-        };
+        $start = $today->modify('+1 day');
+        $end = $today->modify('+8 days');
         $clauses = [['dateEnd>=' => $start->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'), 'dateEnd<' => $end->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s')] + ($dateOnly ? ['dateEndDate' => null] : [])];
         if ($dateOnly) $clauses[] = ['dateEndDate>=' => $start->format('Y-m-d'), 'dateEndDate<' => $end->format('Y-m-d')];
         $query->where(['OR' => $clauses]);
@@ -156,11 +164,11 @@ class ActivityInbox
                     $previews[$post->get('parentId')] = $post->getValueMap();
                 }
             }
-            foreach ($items as $item) {
-                $row = $this->present($item);
-                $row->readState = $states[$item->getId()] ?? null;
-                $row->lastPost = $previews[$item->getId()] ?? null;
-                $records[$type . ':' . $item->getId()] = $row;
+            $tagged = $this->tags->decorate($type, array_map(fn ($item) => $this->present($item), [...$items]));
+            foreach ($tagged as $row) {
+                $row->readState = $states[$row->id] ?? null;
+                $row->lastPost = $previews[$row->id] ?? null;
+                $records[$type . ':' . $row->id] = $row;
             }
         }
         return (object) ['list' => array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page))), 'total' => $total, 'hasMore' => $offset + $limit < $total];
@@ -170,7 +178,7 @@ class ActivityInbox
     {
         // Counts describe sidebar destinations, retaining only the global assignee scope.
         $base = array_intersect_key($filters, array_flip(['assignee_tab', 'timeZone']));
-        $result = ['all' => 0, 'unread' => 0, 'mentions' => 0, 'types' => [], 'status' => [], 'statusGroups' => ['Open' => 0, 'Finished' => 0], 'users' => [], 'due' => []];
+        $result = ['all' => 0, 'unread' => 0, 'mentions' => 0, 'types' => [], 'status' => [], 'statusGroups' => ['Open' => 0, 'Finished' => 0], 'users' => [], 'due' => [], 'tags' => []];
         foreach ($this->types([]) as $type) {
             $repo = $this->em->getRDBRepository($type);
             if (($filters['railOnly'] ?? '') === 'true') {
@@ -178,6 +186,9 @@ class ActivityInbox
                 continue;
             }
             $query = $this->query($type, $tenant, $base);
+            foreach ($this->tags->counts($type, $query) as $id => $count) {
+                $result['tags'][$id] = ($result['tags'][$id] ?? 0) + $count;
+            }
             $count = $repo->clone($query->build())->count();
             $result['all'] += $count;
             $result['types'][$type] = $count;
@@ -233,7 +244,7 @@ class ActivityInbox
     public function metadata(): object
     {
         $result = [];
-        $fields = ['name', 'status', 'priority', 'direction', 'description', 'dateStart', 'dateEnd', 'isAllDay', 'parent', 'assignedUser', 'teams', 'users', 'contacts', 'leads', 'reminders', 'duration'];
+        $fields = ['name', 'status', 'priority', 'direction', 'description', 'dateStart', 'dateEnd', 'isAllDay', 'parent', 'assignedUser', 'teams', 'users', 'contacts', 'leads', 'tags', 'reminders', 'duration'];
         foreach ($this->types([]) as $type) {
             $defs = $this->metadata->get(['entityDefs', $type, 'fields']) ?? [];
             $hidden = $this->acl->getScopeForbiddenFieldList($type);

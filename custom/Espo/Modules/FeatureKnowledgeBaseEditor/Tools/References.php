@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureKnowledgeBaseEditor\Tools;
 
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Utils\Markdown\Markdown;
+use Espo\ORM\Entity;
 
 /** Portable reference contract, shared by authoring, indexing and prompt preparation. */
 class References
 {
-    public const TYPES = ['User', 'Account', 'Opportunity', 'Contact', 'KnowledgeBaseArticle', 'Document'];
     public const CONTEXT = [
         'currentOpportunity' => 'Current Opportunity',
         'opportunityOwner' => 'Opportunity owner',
@@ -24,7 +25,8 @@ class References
     public static function valid(mixed $ref): bool
     {
         return is_array($ref) && (
-            (($ref['kind'] ?? null) === 'record' && in_array($ref['entityType'] ?? null, self::TYPES, true) &&
+            (($ref['kind'] ?? null) === 'record' && is_string($ref['entityType'] ?? null) &&
+                preg_match('/^[A-Z][a-zA-Z0-9]{0,63}$/D', $ref['entityType']) &&
                 is_string($ref['recordId'] ?? null) && preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $ref['recordId'])) ||
             (($ref['kind'] ?? null) === 'context' && is_string($ref['key'] ?? null) && isset(self::CONTEXT[$ref['key']]))
         );
@@ -72,5 +74,39 @@ class References
         };
         $walk($data['root']);
         return array_values($refs);
+    }
+
+    public static function fromMarkdown(string $body): array
+    {
+        if (strlen($body) > 2000000) throw new BadRequest('Markdown is too large.');
+        // Reuse the CRM Markdown parser; code fences, indented code, inline code and
+        // escaped examples cannot become links. Extract actual anchor elements only.
+        $html = Markdown::transform($body);
+        $dom = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $dom->loadHTML('<?xml encoding="UTF-8"><html><body>' . $html . '</body></html>', LIBXML_NONET);
+            $refs = [];
+            foreach ($dom->getElementsByTagName('a') as $link) {
+                $ref = self::fromUrl($link->getAttribute('href'));
+                if (!$ref) continue;
+                $refs[self::url($ref)] = $ref;
+                if (count($refs) > 200) throw new BadRequest('At most 200 distinct references per document.');
+            }
+            return array_values($refs);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+    }
+
+    public static function fromEntity(Entity $source): array
+    {
+        [$field, $state] = self::FIELDS[$source->getEntityType()];
+        if ($source->get('bodyFormat') === 'Markdown' &&
+            ($source->get('bodyAuthoringMode') === 'Markdown' || !$source->get($state))) {
+            return self::fromMarkdown((string) ($source->get($field) ?? ''));
+        }
+        return self::fromState($source->get($state));
     }
 }

@@ -1,0 +1,14 @@
+[
+    {"route": "/RecordKnowledge/schema", "method": "get", "params": {"controller": "RecordKnowledge", "action": "schema"}},
+    {"route": "/RecordKnowledge/overview", "method": "get", "params": {"controller": "RecordKnowledge", "action": "overview"}},
+    {"route": "/RecordKnowledge/overview", "method": "put", "params": {"controller": "RecordKnowledge", "action": "overview"}},
+    {"route": "/RecordKnowledge/export", "method": "get", "params": {"controller": "RecordKnowledge", "action": "export"}},
+    {"route": "/RecordKnowledge/import", "method": "post", "params": {"controller": "RecordKnowledge", "action": "import"}},
+    {"route": "/RecordKnowledge/preview", "method": "post", "params": {"controller": "RecordKnowledge", "action": "preview"}},
+    {"route": "/RecordKnowledge/revision", "method": "get", "params": {"controller": "RecordKnowledge", "action": "revision"}},
+    {"route": "/RecordKnowledge/revisions", "method": "get", "params": {"controller": "RecordKnowledge", "action": "revisions"}},
+    {"route": "/RecordKnowledge/relations", "method": "get", "params": {"controller": "RecordKnowledge", "action": "relations"}},
+    {"route": "/RecordKnowledge/propose", "method": "post", "params": {"controller": "RecordKnowledge", "action": "propose"}},
+    {"route": "/RecordKnowledge/author", "method": "post", "params": {"controller": "RecordKnowledge", "action": "author"}},
+    {"route": "/RecordKnowledge/decide", "method": "post", "params": {"controller": "RecordKnowledge", "action": "decide"}}
+]

@@ -1,0 +1,40 @@
+{
+    "fields": {
+        "subjectType": {"type": "varchar", "maxLength": 64, "required": true},
+        "subjectId": {"type": "varchar", "maxLength": 64, "required": true},
+        "predicate": {"type": "varchar", "maxLength": 32, "required": true},
+        "objectType": {"type": "varchar", "maxLength": 64, "required": true},
+        "objectId": {"type": "varchar", "maxLength": 64, "required": true},
+        "qualifiers": {"type": "jsonObject"},
+        "sourceDocument": {"type": "link", "required": true},
+        "sourceRevision": {"type": "link", "required": true},
+        "evidenceQuote": {"type": "text", "required": true},
+        "evidenceStart": {"type": "int", "required": true},
+        "evidenceEnd": {"type": "int", "required": true},
+        "anchorRevision": {"type": "link"},
+        "anchorStart": {"type": "int"},
+        "anchorEnd": {"type": "int"},
+        "status": {"type": "enum", "options": ["suggested", "confirmed", "rejected", "stale"], "default": "suggested"},
+        "origin": {"type": "enum", "options": ["manual", "assistant"]},
+        "submissionKey": {"type": "varchar", "maxLength": 64, "required": true},
+        "submissionHash": {"type": "varchar", "maxLength": 64, "required": true},
+        "createdAt": {"type": "datetime", "readOnly": true},
+        "createdBy": {"type": "link", "readOnly": true},
+        "decidedBy": {"type": "link", "readOnly": true},
+        "decidedAt": {"type": "datetime", "readOnly": true}
+    },
+    "links": {
+        "sourceDocument": {"type": "belongsTo", "entity": "Document"},
+        "sourceRevision": {"type": "belongsTo", "entity": "DocumentRevision"},
+        "anchorRevision": {"type": "belongsTo", "entity": "DocumentRevision"},
+        "createdBy": {"type": "belongsTo", "entity": "User"},
+        "decidedBy": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {
+        "outgoing": {"columns": ["subjectType", "subjectId", "status", "id"]},
+        "incoming": {"columns": ["objectType", "objectId", "status", "id"]},
+        "evidence": {"columns": ["sourceDocumentId", "status"]},
+        "submission": {"unique": true, "columns": ["submissionKey"]}
+    },
+    "transactionalSave": true
+}

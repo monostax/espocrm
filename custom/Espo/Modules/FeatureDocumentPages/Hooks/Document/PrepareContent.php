@@ -43,7 +43,7 @@ class PrepareContent implements BeforeSave
         $entity->set('bodyFormat', $format);
 
         // Format-only API edits project the existing body instead of relabelling its syntax.
-        if (!$entity->isNew() && $entity->isAttributeChanged('bodyFormat') &&
+        if ($entity->get('bodyAuthoringMode') !== 'Markdown' && !$entity->isNew() && $entity->isAttributeChanged('bodyFormat') &&
             !$entity->isAttributeChanged('body')) {
             $body = (string) ($entity->get('body') ?? '');
             $entity->set('body', $format === 'Markdown'

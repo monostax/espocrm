@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "name": {"type": "varchar", "maxLength": 255, "readOnly": true, "utility": true},
+        "document": {"type": "link", "required": true},
+        "revisionNumber": {"type": "int", "required": true},
+        "body": {"type": "text"},
+        "contentHash": {"type": "varchar", "maxLength": 64, "required": true},
+        "createdAt": {"type": "datetime", "readOnly": true},
+        "createdBy": {"type": "link", "readOnly": true}
+    },
+    "links": {
+        "document": {"type": "belongsTo", "entity": "Document"},
+        "createdBy": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {"revision": {"unique": true, "columns": ["documentId", "revisionNumber"]}},
+    "transactionalSave": true
+}

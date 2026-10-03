@@ -1,0 +1,5 @@
+{
+    "fields": { "name": "Nome", "color": "Cor", "tenant": "Ambiente", "teams": "Times" },
+    "labels": { "Create CrmTag": "Criar Etiqueta do CRM" },
+    "options": { "color": { "slate": "Cinza", "amber": "Âmbar", "teal": "Verde", "ruby": "Vermelho", "blue": "Azul", "iris": "Roxo" } }
+}

@@ -120,7 +120,7 @@ class OpportunityGroupSummary
             }
             $bucket = $this->activityBuckets->apply($query, $scope, new DateTimeImmutable('now', $zone));
             if ($activity) {
-                $query->where(Expr::equal($bucket, $activity));
+                $query->where(Expr::in($bucket, $activity === 'today' ? ['overdue', 'today'] : [$activity]));
             }
         }
 

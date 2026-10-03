@@ -56,13 +56,16 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
         $type = $entity->getEntityType();
         $link = $relationParams['relationName'] ?? null;
 
-        if ($type === 'Opportunity' && $link === 'contacts') {
+        if ($type === 'Opportunity' && in_array($link, ['contacts', 'tags'], true)) {
             $this->schedule($entity);
         } elseif ($type === 'Contact' && $link === 'opportunities') {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $relationParams['foreignId']);
             if ($opportunity) {
                 $this->schedule($opportunity);
             }
+        } elseif ($type === 'CrmTag' && $link === 'opportunities') {
+            $opportunity = $this->entityManager->getEntityById('Opportunity', $relationParams['foreignId']);
+            if ($opportunity) $this->schedule($opportunity);
         }
     }
 
@@ -73,7 +76,7 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
 
     public function afterMassRelate(Entity $entity, array $options, array $relationParams): void
     {
-        if ($entity->getEntityType() === 'Opportunity' && ($relationParams['relationName'] ?? null) === 'contacts') {
+        if ($entity->getEntityType() === 'Opportunity' && in_array($relationParams['relationName'] ?? null, ['contacts', 'tags'], true)) {
             $this->schedule($entity);
         }
     }

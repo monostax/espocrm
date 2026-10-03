@@ -1,4 +1,5 @@
 {
+    "fields": { "tags": "Etiquetas do CRM" },
     "options": {
         "weightUnit": {
             "kg": "Quilograma (kg)",
@@ -27,6 +28,7 @@
         "assignedToMe": "Atribuído a Mim"
     },
     "scopeNames": {
+        "CrmTag": "Etiqueta do CRM",
         "Activities": "Atividades",
         "Contact": "Contato",
         "FeatureClinicaBasePaciente": "Paciente",
@@ -45,6 +47,7 @@
         "CustomFieldDef": "Campo Personalizado"
     },
     "scopeNamesPlural": {
+        "CrmTag": "Etiquetas do CRM",
         "Activities": "Atividades",
         "Contact": "Contatos",
         "FeatureClinicaBasePaciente": "Pacientes",
@@ -63,6 +66,7 @@
         "CustomFieldDef": "Campos Personalizados"
     },
     "labels": {
+        "CRM Tags": "Etiquetas do CRM",
         "Custom Fields": "Campos Personalizados",
         "Home": "Dashboard",
         "Create {entityType}": "Cadastrar {entityTypeTranslated}",

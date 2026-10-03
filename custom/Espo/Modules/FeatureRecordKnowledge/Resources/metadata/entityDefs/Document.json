@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "bodyAuthoringMode": {"type": "enum", "options": ["Lexical", "Markdown"], "default": "Lexical", "layoutMassUpdateDisabled": true},
+        "bodyRevisionNumber": {"type": "int", "default": 0, "readOnly": true, "directUpdateDisabled": true, "utility": true},
+        "knowledgeRecordType": {"type": "varchar", "maxLength": 64, "readOnly": true, "directUpdateDisabled": true, "utility": true},
+        "knowledgeRecordId": {"type": "varchar", "maxLength": 64, "readOnly": true, "directUpdateDisabled": true, "utility": true}
+    },
+    "indexes": {"knowledgeRecord": {"columns": ["knowledgeRecordType", "knowledgeRecordId"]}},
+    "transactionalSave": true
+}

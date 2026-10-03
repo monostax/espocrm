@@ -105,6 +105,13 @@
                         "description": "import"
                     },
                     {
+                        "url": "#CrmTag",
+                        "label": "CRM Tags",
+                        "iconClass": "ti ti-tags",
+                        "description": "crmTags",
+                        "tabQuickSearch": true
+                    },
+                    {
                         "url": "#CustomFieldGroup",
                         "label": "Custom Field Groups",
                         "iconClass": "fas fa-layer-group",

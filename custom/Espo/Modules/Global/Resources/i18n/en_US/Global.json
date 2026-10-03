@@ -29,6 +29,7 @@
         "All Funnels": "All Funnels"
     },
     "fields": {
+        "tags": "CRM Tags",
         "weight": "Weight",
         "entityType": "Entity",
         "filterName": "Filter",
@@ -76,6 +77,7 @@
         "assignedToMe": "Assigned to Me"
     },
     "scopeNames": {
+        "CrmTag": "CRM Tag",
         "Activities": "Activities",
         "CAIPlaybook": "Playbook",
         "FeatureClinicaBasePaciente": "Patient",
@@ -92,6 +94,7 @@
         "CustomFieldDef": "Custom Field"
     },
     "scopeNamesPlural": {
+        "CrmTag": "CRM Tags",
         "Activities": "Activities",
         "CAIPlaybook": "Playbooks",
         "FeatureClinicaBasePaciente": "Patients",

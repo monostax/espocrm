@@ -153,6 +153,7 @@ test('attachment picker retains file restriction through folder changes and sear
 
 class BaseField {
     setup() {}
+    on() {}
     data() { return {}; }
 }
 const SharedBody = load(shared + 'views/fields/lexical-body.js', {'views/fields/base': {default: BaseField}}, {

@@ -12,6 +12,8 @@
 namespace Espo\Modules\Global\Controllers;
 
 use Espo\Core\Api\Request;
+use Espo\Core\Api\Response;
+use Espo\Modules\Global\Tools\CrmTags;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
@@ -26,6 +28,16 @@ use stdClass;
  */
 class Opportunity extends CrmOpportunity
 {
+    public function getActionList(Request $request, Response $response): stdClass
+    {
+        $data = parent::getActionList($request, $response);
+        $select = $this->fetchSearchParamsFromRequest($request)->getSelect();
+        if (!$select || array_intersect($select, ['tags', 'tagsIds', 'tagsNames'])) {
+            $data->list = $this->injectableFactory->create(CrmTags::class)->decorate('Opportunity', $data->list);
+        }
+        return $data;
+    }
+
     public function getActionStageHistory(Request $request): stdClass
     {
         $id = $request->getQueryParam('id');

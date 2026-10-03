@@ -498,6 +498,12 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                'CrmTag' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                ],
                 // Tenant-scoped custom field schema (admin panel: Custom Field Groups / Fields).
                 // Values on Contact/Account live in customFields jsonObject and follow host ACL.
                 'CustomFieldGroup' => [
@@ -974,6 +980,7 @@ class SeedRole implements RebuildAction
                 'Task' => (object)[],
                 'Activities' => (object)[],
                 'Funnel' => (object)[],
+                'CrmTag' => (object)[],
                 'CustomFieldGroup' => (object)[],
                 'CustomFieldDef' => (object)[],
                 'Tenant' => (object)[],

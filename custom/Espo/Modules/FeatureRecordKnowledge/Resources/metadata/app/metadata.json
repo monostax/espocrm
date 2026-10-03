@@ -1,0 +1,3 @@
+{
+    "additionalBuilderClassNameList": ["__APPEND__", "Espo\\Modules\\FeatureRecordKnowledge\\Classes\\Metadata\\RecordKnowledge"]
+}

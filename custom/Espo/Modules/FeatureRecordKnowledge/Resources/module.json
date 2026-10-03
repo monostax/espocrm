@@ -1,0 +1,8 @@
+{
+    "order": 35,
+    "version": "1.0.0",
+    "name": "FeatureRecordKnowledge",
+    "description": "Canonical record overviews, immutable Markdown revisions and evidence-backed relations.",
+    "author": "Monostax",
+    "jsTranspiled": true
+}

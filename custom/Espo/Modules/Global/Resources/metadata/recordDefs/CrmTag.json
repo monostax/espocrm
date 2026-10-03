@@ -1,0 +1,4 @@
+{
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"]
+}

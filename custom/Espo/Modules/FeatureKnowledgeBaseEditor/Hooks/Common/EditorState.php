@@ -18,11 +18,13 @@ class EditorState
         $fields = References::FIELDS[$entity->getEntityType()] ?? null;
         if (!$fields) return;
         [$projection, $state] = $fields;
+        if ($entity->get('bodyAuthoringMode') === 'Markdown') $entity->set($state, null);
         // Projection-only integrations invalidate the old canonical state.
         if (($entity->isAttributeChanged($projection) || $entity->isAttributeChanged('bodyFormat')) &&
             !$entity->isAttributeChanged($state)) $entity->set($state, null);
         if (!$entity->get($projection)) $entity->set($state, null);
         if ($entity->isAttributeChanged($state)) References::fromState($entity->get($state));
+        if ($entity->isAttributeChanged($projection) && $entity->get('bodyFormat') === 'Markdown') References::fromEntity($entity);
     }
 
     public function afterSave(Entity $entity, array $options): void

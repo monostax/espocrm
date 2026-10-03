@@ -1,6 +1,5 @@
 import {TextNode, $applyNodeReplacement} from 'lexical';
 
-export const ENTITY_TYPES = ['User', 'Account', 'Opportunity', 'Contact', 'KnowledgeBaseArticle', 'Document'];
 export const CONTEXT_LABELS = {
     currentOpportunity: 'Current Opportunity',
     opportunityOwner: 'Opportunity owner',
@@ -9,7 +8,9 @@ export const CONTEXT_LABELS = {
 const PREFIX = '#crm-reference/v1/';
 
 export function validateReference(value) {
-    if (value?.kind === 'record' && ENTITY_TYPES.includes(value.entityType) &&
+    // Syntax is portable; supported scopes and availability come from the shared
+    // metadata-backed search/resolution API, including newly added custom types.
+    if (value?.kind === 'record' && typeof value.entityType === 'string' && /^[A-Z][a-zA-Z0-9]{0,63}$/.test(value.entityType) &&
         typeof value.recordId === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value.recordId)) {
         return {kind: 'record', entityType: value.entityType, recordId: value.recordId,
             label: typeof value.label === 'string' ? value.label.slice(0, 255) : ''};

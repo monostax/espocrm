@@ -16,8 +16,10 @@ class BroadcastActivityUpdate implements Job
     public function __construct(private EntityManager $em, private Submission $socket, private ChatwootApiClient $client) {}
     public function run(Data $data): void
     {
-        $this->socket->submit('recordUpdate.' . $data->get('type') . '.' . $data->get('id'));
-        $this->socket->submit('streamUpdate.' . $data->get('type') . '.' . $data->get('id'));
+        if ($data->get('type') && $data->get('id')) {
+            $this->socket->submit('recordUpdate.' . $data->get('type') . '.' . $data->get('id'));
+            $this->socket->submit('streamUpdate.' . $data->get('type') . '.' . $data->get('id'));
+        }
         $failure = null;
         foreach ($this->em->getRDBRepository('ChatwootAccount')->where(['tenantId' => $data->get('tenantIds')])->find() as $account) {
             $platform = $this->em->getEntityById('ChatwootPlatform', (string) $account->get('platformId'));

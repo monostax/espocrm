@@ -18,6 +18,10 @@ record uses its own CRM Note stream. No activity records are copied to Chatwoot.
   workspace before filtering, counting, and pagination. Task/Meeting use tenant
   teams. Calls with a tenant use that tenant, with team scoping for legacy calls.
 - Record routes include both type and ID. IDs alone are not activity identities.
+- CRM tags use a tenant-scoped `CrmTag` catalog shared with Opportunities.
+  Assignments are independent on each Task, Call, Meeting, and Opportunity.
+  `tag=<id>` filters before pagination; navigation `tags` counts retain the
+  global assignee scope. Page badges are hydrated in one query per record type.
 - `group=read` orders unread activities before read activities in the database,
   before pagination, retaining the selected sort within each group. The Chatwoot
   list passes its active grouping, including the default read-status grouping.

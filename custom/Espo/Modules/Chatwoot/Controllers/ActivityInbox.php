@@ -30,7 +30,7 @@ class ActivityInbox
     private function filters(Request $request): array
     {
         $filters = [];
-        foreach (['type', 'assignee_tab', 'assigned_user', 'status', 'stage', 'search', 'due', 'timeZone', 'read_status', 'view', 'group', 'sort', 'order', 'offset', 'maxSize', 'railOnly'] as $key) {
+        foreach (['type', 'assignee_tab', 'assigned_user', 'status', 'stage', 'tag', 'search', 'due', 'timeZone', 'read_status', 'view', 'group', 'sort', 'order', 'offset', 'maxSize', 'railOnly'] as $key) {
             $value = $request->getQueryParam($key);
             if ($value !== null) {
                 if (!is_scalar($value)) throw new BadRequest('Invalid filter.');
@@ -87,12 +87,15 @@ class ActivityInbox
     {
         $parent = $this->record($request, true);
         $body = $request->getParsedBody();
-        if (!is_string($body->post ?? null) || trim($body->post) === '') throw new BadRequest('Post is required.');
+        $attachmentsIds = $body->attachmentsIds ?? [];
+        if (!is_array($attachmentsIds)) throw new BadRequest('Invalid attachments.');
+        if (!is_string($body->post ?? null) || (trim($body->post) === '' && !$attachmentsIds)) throw new BadRequest('Post is required.');
         if (!empty($body->rootId)) $this->discussion->root($parent, $body->rootId);
         $note = $this->services->get('Note')->create((object) [
             'parentType' => $parent->getEntityType(), 'parentId' => $parent->getId(), 'type' => 'Post', 'post' => $body->post,
             'isInternal' => true, 'opportunityThreadRootId' => $body->rootId ?? null,
             'opportunityChatwootAccountId' => (int) $request->getQueryParam('accountId'),
+            'attachmentsIds' => $attachmentsIds,
         ])->getEntity();
         return $note->getValueMap();
     }

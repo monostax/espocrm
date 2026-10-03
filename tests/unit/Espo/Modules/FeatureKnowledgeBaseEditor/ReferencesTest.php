@@ -39,7 +39,9 @@ class ReferencesTest extends TestCase
         $refs = References::fromState($this->state([$record, $context, [...$record, 'label' => 'Renamed']]));
         $this->assertCount(2, $refs);
         $this->assertSame('acme', $refs[0]['recordId']);
-        $this->assertNull(References::fromUrl('#crm-reference/v1/record/Unknown/id'));
+        // Portable syntax accepts custom types; merged metadata validates availability.
+        $this->assertSame('CustomProject', References::fromUrl('#crm-reference/v1/record/CustomProject/id')['entityType']);
+        $this->assertNull(References::fromUrl('#crm-reference/v1/record/invalid-type/id'));
         $this->assertNull(References::fromUrl('#crm-reference/v1/record/User/../secret'));
         $this->assertNull(References::fromUrl('javascript:alert(1)'));
     }
@@ -131,6 +133,10 @@ class ReferencesTest extends TestCase
         $acl->method('checkUserPermission')->willReturnCallback(fn ($id, $permission) => $id === 'teammate' && $permission === 'mention');
         $metadata = $this->createMock(Metadata::class);
         $metadata->method('get')->willReturn(true);
+        $metadata->method('getAll')->willReturn((object) [
+            'scopes' => (object) ['User' => (object) ['entity' => true, 'recordKnowledge' => true]],
+            'entityDefs' => (object) ['User' => (object) ['fields' => (object) ['name' => (object) []]]],
+        ]);
         $service = new EditorReferences($em, $select, $acl, $metadata);
         $results = $service->resolve(array_map(fn ($id) => ['kind' => 'record', 'entityType' => 'User', 'recordId' => $id, 'label' => 'Cached'], ['teammate', 'outside', 'deleted']));
         $this->assertSame('New name', $results[0]['label']);

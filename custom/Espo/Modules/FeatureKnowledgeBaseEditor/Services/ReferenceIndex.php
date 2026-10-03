@@ -28,7 +28,7 @@ class ReferenceIndex
     public function replace(Entity $source): void
     {
         [$field, $state] = References::FIELDS[$source->getEntityType()];
-        $refs = References::fromState($source->get($state));
+        $refs = References::fromEntity($source);
         $this->remove($source);
         foreach ($refs as $ref) {
             if ($ref['kind'] !== 'record') continue;
@@ -86,7 +86,7 @@ class ReferenceIndex
             if (!$source) continue;
             // Validate against canonical content too: stale/recovery rows cannot publish a backlink.
             [, $state] = References::FIELDS[$source->getEntityType()];
-            try { $refs = References::fromState($source->get($state)); } catch (BadRequest) { continue; }
+            try { $refs = References::fromEntity($source); } catch (BadRequest) { continue; }
             if (!in_array(References::url($target), array_map(References::url(...), $refs), true)) continue;
             $list[] = ['entityType' => $source->getEntityType(), 'recordId' => $source->getId(),
                 'field' => $row->get('sourceField'), 'label' => $source->get('name'), 'indexCursor' => $row->getId()];

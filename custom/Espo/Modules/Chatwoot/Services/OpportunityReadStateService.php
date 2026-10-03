@@ -14,6 +14,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
+use Espo\Modules\Global\Tools\CrmTags;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -33,6 +34,7 @@ class OpportunityReadStateService
         private SearchParamsFetcher $searchParamsFetcher,
         private OpportunityEventAccess $eventAccess,
         private OpportunityThreadState $threads,
+        private CrmTags $tags,
     ) {}
 
     /** Filter before pagination, using the same personal cutoff as getReadStates. */
@@ -282,6 +284,7 @@ class OpportunityReadStateService
             'stages' => $stageCounts,
             'funnels' => $funnelCounts,
             'users' => $userCounts,
+            'tags' => $this->tags->counts('Opportunity', $scopedQb),
         ];
     }
 

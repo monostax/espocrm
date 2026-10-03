@@ -1,0 +1,5 @@
+[
+    { "name": "name", "link": true },
+    { "name": "color", "width": 15 },
+    { "name": "tenant", "width": 25 }
+]

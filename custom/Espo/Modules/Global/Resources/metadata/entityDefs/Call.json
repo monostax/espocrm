@@ -1,0 +1,4 @@
+{
+    "fields": { "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags" } },
+    "links": { "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "calls", "relationName": "crmTagCall" } }
+}

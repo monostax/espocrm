@@ -12,6 +12,7 @@ use Espo\Core\Utils\Metadata;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
+use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 class EditorReferences
 {
@@ -24,7 +25,7 @@ class EditorReferences
 
     private function allowedType(string $type): bool
     {
-        return in_array($type, References::TYPES, true) && $this->metadata->get(['scopes', $type, 'entity']) &&
+        return (new Scopes($this->metadata))->supports($type) && $this->metadata->get(['scopes', $type, 'entity']) &&
             $this->acl->checkScope($type, 'read') && $this->acl->checkField($type, 'name') &&
             ($type !== 'User' || $this->acl->getPermissionLevel('mention') !== 'no');
     }
@@ -41,7 +42,7 @@ class EditorReferences
     {
         if (strlen($query) > 240) throw new BadRequest('Query too long.');
         $results = [];
-        foreach (References::TYPES as $type) {
+        foreach ((new Scopes($this->metadata))->all() as $type) {
             if (!$this->allowedType($type)) continue;
             try {
                 $builder = $this->select->create()->from($type)->withStrictAccessControl()->withTextFilter(trim($query));

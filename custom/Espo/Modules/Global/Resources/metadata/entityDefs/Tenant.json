@@ -100,6 +100,7 @@
         }
     },
     "links": {
+        "crmTags": { "type": "hasMany", "entity": "CrmTag", "foreign": "tenant" },
         "baseUserTeam": {
             "type": "belongsTo",
             "entity": "Team",

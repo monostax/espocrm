@@ -1,0 +1,35 @@
+{
+    "deleteId": true,
+    "fields": {
+        "name": { "type": "varchar", "required": true, "maxLength": 100, "trim": true, "pattern": "$noBadCharacters" },
+        "color": {
+            "type": "enum",
+            "options": ["slate", "amber", "teal", "ruby", "blue", "iris"],
+            "default": "blue",
+            "view": "views/fields/enum-styled",
+            "style": { "slate": "default", "amber": "warning", "teal": "success", "ruby": "danger", "blue": "primary", "iris": "info" }
+        },
+        "tenant": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "teams": { "type": "linkMultiple", "required": true, "view": "views/fields/teams" },
+        "deleteId": { "type": "varchar", "maxLength": 24, "default": "0", "readOnly": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant", "foreign": "crmTags" },
+        "teams": { "type": "hasMany", "entity": "Team", "relationName": "entityTeam", "layoutRelationshipsDisabled": true },
+        "opportunities": { "type": "hasMany", "entity": "Opportunity", "foreign": "tags", "relationName": "crmTagOpportunity", "layoutRelationshipsDisabled": true },
+        "tasks": { "type": "hasMany", "entity": "Task", "foreign": "tags", "relationName": "crmTagTask", "layoutRelationshipsDisabled": true },
+        "calls": { "type": "hasMany", "entity": "Call", "foreign": "tags", "relationName": "crmTagCall", "layoutRelationshipsDisabled": true },
+        "meetings": { "type": "hasMany", "entity": "Meeting", "foreign": "tags", "relationName": "crmTagMeeting", "layoutRelationshipsDisabled": true },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "name", "order": "asc" },
+    "indexes": {
+        "uniqueName": { "columns": ["tenantId", "name", "deleteId"], "unique": true },
+        "tenantId": { "columns": ["tenantId"] }
+    }
+}

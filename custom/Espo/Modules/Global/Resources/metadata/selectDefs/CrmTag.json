@@ -1,0 +1,3 @@
+{
+    "accessControlFilterClassNameMap": { "mandatory": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\AccessControlFilters\\Teams" }
+}

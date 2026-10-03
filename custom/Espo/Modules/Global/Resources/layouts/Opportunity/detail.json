@@ -8,6 +8,7 @@
         "gridCol": 1,
         "gridColSpan": 2,
         "rows": [
+            [{ "name": "tags", "fullWidth": true }],
             [
                 {
                     "name": "name"

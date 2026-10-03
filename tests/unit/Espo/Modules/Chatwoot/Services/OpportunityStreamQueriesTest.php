@@ -108,6 +108,7 @@ class OpportunityStreamQueriesTest extends TestCase
             $this->createMock(EntityManager::class), $this->user, $acl, $tenants,
             $this->createMock(SelectBuilderFactory::class), $this->createMock(SearchParamsFetcher::class), $this->access,
             $this->createMock(OpportunityThreadState::class),
+            $this->createMock(\Espo\Modules\Global\Tools\CrmTags::class),
         );
 
         $this->pdo->exec("INSERT INTO opportunity (id, status, assigned_user_id, tenant_id) VALUES ('opp', 'Open', 'agent', 'tenant')");
