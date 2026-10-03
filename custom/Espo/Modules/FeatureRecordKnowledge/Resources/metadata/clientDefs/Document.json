@@ -1,0 +1,9 @@
+{
+    "dynamicLogic": {
+        "fields": {
+            "bodyFormat": {"readOnly": {"conditionGroup": [{"type": "equals", "attribute": "bodyAuthoringMode", "value": "Markdown"}]}},
+            "bodyAuthoringMode": {"readOnly": {"conditionGroup": [{"type": "equals", "attribute": "bodyAuthoringMode", "value": "Markdown"}]}},
+            "contentType": {"readOnly": {"conditionGroup": [{"type": "isNotEmpty", "attribute": "knowledgeRecordType"}]}}
+        }
+    }
+}

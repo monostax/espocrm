@@ -15,7 +15,8 @@ use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 class Access
 {
-    public function __construct(private EntityManager $em, private Acl $acl, private Scopes $scopes, private SelectBuilderFactory $select) {}
+    public function __construct(private EntityManager $em, private Acl $acl, private Scopes $scopes, private SelectBuilderFactory $select,
+        private Tenancy $tenancy, private PredicateRegistry $registry) {}
 
     public function record(string $type, string $id, string $action = 'read'): Entity
     {
@@ -49,10 +50,13 @@ class Access
 
     public function claim(Entity $claim, bool $edit = false): void
     {
-        $this->record($claim->get('subjectType'), $claim->get('subjectId'), $edit ? 'edit' : 'read');
-        $this->record($claim->get('objectType'), $claim->get('objectId'));
+        if (!$claim->get('tenantId')) throw new Forbidden('Claim tenancy is missing.');
+        $subject = $this->record($claim->get('subjectType'), $claim->get('subjectId'), $edit ? 'edit' : 'read');
+        $object = $this->record($claim->get('objectType'), $claim->get('objectId'));
         $document = $this->document($claim->get('sourceDocumentId'));
         $revision = $this->revision($claim->get('sourceRevisionId'));
         if ($revision->get('documentId') !== $document->getId()) throw new Forbidden();
+        $tenantId = $this->tenancy->derive($subject, $object, $document, $claim->get('tenantId'));
+        $this->registry->resolve($claim->get('predicate'), $tenantId, false);
     }
 }

@@ -164,4 +164,24 @@ class ReferencesTest extends TestCase
         $this->assertStringContainsString('[Unresolved context: Primary contact]', $result);
         $this->assertStringNotContainsString('Stale label', $result);
     }
+
+    public function testAccessibleFileAndPageDocumentsShareTheSupportedRecordReferenceContract(): void
+    {
+        [$em, $select] = $this->queryFixture('Document', [
+            $this->entity('Document', ['id' => 'file', 'name' => 'Evidence file', 'contentType' => 'File']),
+            $this->entity('Document', ['id' => 'page', 'name' => 'Overview page', 'contentType' => 'Page']),
+        ]);
+        $acl = $this->createMock(Acl::class);
+        foreach (['checkScope', 'checkField', 'checkEntityRead'] as $method) $acl->method($method)->willReturn(true);
+        $metadata = $this->createMock(Metadata::class);
+        $metadata->method('get')->willReturn(true);
+        $metadata->method('getAll')->willReturn((object) [
+            'scopes' => (object) ['Document' => (object) ['entity' => true, 'object' => true, 'tab' => true]],
+            'entityDefs' => (object) ['Document' => (object) ['fields' => (object) ['name' => (object) []]]],
+        ]);
+        $results = (new EditorReferences($em, $select, $acl, $metadata))->resolve(array_map(
+            fn ($id) => ['kind' => 'record', 'entityType' => 'Document', 'recordId' => $id], ['file', 'page']));
+        $this->assertTrue($results[0]['available']);
+        $this->assertTrue($results[1]['available']);
+    }
 }

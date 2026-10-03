@@ -1,0 +1,12 @@
+{
+    "ai": {
+        "label": "AI and Knowledge",
+        "order": 40,
+        "sections": {
+            "knowledge": {
+                "label": "Knowledge", "order": 20,
+                "itemList": [{"url": "#RecordPredicate", "label": "Knowledge Predicates", "description": "knowledgePredicates", "iconClass": "fas fa-project-diagram", "roles": ["tenant", "tenant-admin"], "tabQuickSearch": true}]
+            }
+        }
+    }
+}

@@ -1,8 +1,9 @@
 {
     "fields": {
+        "tenant": {"type": "link", "required": true},
         "subjectType": {"type": "varchar", "maxLength": 64, "required": true},
         "subjectId": {"type": "varchar", "maxLength": 64, "required": true},
-        "predicate": {"type": "varchar", "maxLength": 32, "required": true},
+        "predicate": {"type": "varchar", "maxLength": 128, "required": true},
         "objectType": {"type": "varchar", "maxLength": 64, "required": true},
         "objectId": {"type": "varchar", "maxLength": 64, "required": true},
         "qualifiers": {"type": "jsonObject"},
@@ -24,6 +25,7 @@
         "decidedAt": {"type": "datetime", "readOnly": true}
     },
     "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
         "sourceDocument": {"type": "belongsTo", "entity": "Document"},
         "sourceRevision": {"type": "belongsTo", "entity": "DocumentRevision"},
         "anchorRevision": {"type": "belongsTo", "entity": "DocumentRevision"},
@@ -31,6 +33,7 @@
         "decidedBy": {"type": "belongsTo", "entity": "User"}
     },
     "indexes": {
+        "predicateUsage": {"columns": ["tenantId", "predicate"]},
         "outgoing": {"columns": ["subjectType", "subjectId", "status", "id"]},
         "incoming": {"columns": ["objectType", "objectId", "status", "id"]},
         "evidence": {"columns": ["sourceDocumentId", "status"]},

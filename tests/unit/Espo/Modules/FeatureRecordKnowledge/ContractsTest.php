@@ -19,6 +19,7 @@ use Espo\Modules\FeatureRecordKnowledge\Tools\Evidence;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Markdown;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Predicates;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
+use Espo\Modules\FeatureRecordKnowledge\Tools\QualifierSchema;
 use Espo\Modules\FeatureRecordKnowledge\Classes\Metadata\RecordKnowledge;
 use Espo\Modules\FeatureRecordKnowledge\Hooks\Document\MarkdownSource;
 use Espo\Modules\FeatureRecordKnowledge\Hooks\DocumentRevision\Immutable;
@@ -44,12 +45,18 @@ class ContractsTest extends TestCase
             $this->assertTrue($data->entityDefs->$type->transactionalSave);
             $this->assertCount(1, array_filter($data->clientDefs->$type->bottomPanels->detail, fn ($p) => $p->name === 'overview'));
         }
-        foreach (['RecordDocument', 'RecordRelation', 'DocumentRevision', 'EditorReferenceIndex', 'AgentMode', 'AgentSkill', 'ChatwootSyncState', 'PushNotificationQueue', 'UserApiKey'] as $type) {
+        foreach (['RecordDocument', 'RecordRelation', 'RecordPredicate', 'DocumentRevision', 'EditorReferenceIndex', 'AgentMode', 'AgentSkill', 'ChatwootSyncState', 'PushNotificationQueue', 'UserApiKey'] as $type) {
             $this->assertNotContains($type, Scopes::discover($data));
         }
         $this->assertTrue($data->entityDefs->RecordDocument->indexes->record->unique);
         $this->assertTrue($data->entityDefs->DocumentRevision->indexes->revision->unique);
         $this->assertTrue($data->entityDefs->RecordRelation->indexes->submission->unique);
+        $this->assertTrue($data->entityDefs->RecordPredicate->indexes->identity->unique);
+        $this->assertTrue($data->entityDefs->RecordPredicate->optimisticConcurrencyControl);
+        $this->assertContains(\Espo\Modules\FeatureRecordKnowledge\Classes\Record\BlockPredicateRelationships::class,
+            $data->recordDefs->RecordPredicate->beforeLinkHookClassNameList);
+        $items = $data->app->adminForUserPanel->ai->sections->knowledge->itemList;
+        $this->assertCount(1, array_filter($items, fn ($item) => $item->url === '#RecordPredicate'));
     }
 
     public function testMarkdownIsPreservedThroughNormalizationSearchProjectionAndArtifactRoundTrip(): void
@@ -102,7 +109,7 @@ class ContractsTest extends TestCase
     public function testPredicateAliasesAndDatesAreCanonical(): void
     {
         [$name, $qualifiers] = Predicates::validate('employed_by', 'Contact', 'Account', (object) ['role' => 'CTO', 'since' => '2026-10-02']);
-        $this->assertSame('works_at', $name);
+        $this->assertSame('builtin:works_at', $name);
         $this->assertSame(['role' => 'CTO', 'since' => '2026-10-02'], (array) $qualifiers);
         $this->assertCount(11, Predicates::schema());
     }
@@ -122,5 +129,22 @@ class ContractsTest extends TestCase
         $entity->setAsNotNew();
         $this->expectException(Forbidden::class);
         (new Immutable())->beforeSave($entity, []);
+    }
+
+    public function testDeclarativeQualifierSchemasValidateTypedValuesAndRejectUnsupportedFeatures(): void
+    {
+        $schema = json_decode('{"type":"object","properties":{"level":{"type":"integer","minimum":1,"maximum":5},"role":{"type":"string","enum":["advisor","sponsor"]},"active":{"type":"boolean"}},"required":["level"],"additionalProperties":false}');
+        $this->assertSame(3, QualifierSchema::validate((object) ['level' => 3, 'role' => 'advisor', 'active' => true], $schema)->level);
+        foreach ([(object) [], (object) ['level' => '3'], (object) ['level' => 9], (object) ['level' => 2, 'role' => 'invented'], (object) ['level' => 2, 'unknown' => true]] as $values) {
+            try { QualifierSchema::validate($values, $schema); $this->fail('Invalid typed qualifiers accepted.'); } catch (BadRequest) { $this->addToAssertionCount(1); }
+        }
+        foreach ([
+            '{"type":"object","properties":{},"additionalProperties":true}',
+            '{"type":"object","properties":{"nested":{"type":"object"}},"additionalProperties":false}',
+            '{"type":"object","properties":{},"additionalProperties":false,"$ref":"https://example.test"}',
+            '{"type":"object","properties":{},"additionalProperties":false,"required":[{}]}'
+        ] as $definition) {
+            try { QualifierSchema::definition(json_decode($definition)); $this->fail('Unsupported schema accepted.'); } catch (BadRequest) { $this->addToAssertionCount(1); }
+        }
     }
 }

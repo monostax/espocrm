@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "name": {"type": "varchar", "required": true, "maxLength": 100},
+        "code": {"type": "varchar", "required": true, "maxLength": 48, "readOnlyAfterCreate": true, "pattern": "^[a-z][a-z0-9_]*$"},
+        "inverseLabel": {"type": "varchar", "required": true, "maxLength": 100},
+        "description": {"type": "text"},
+        "subjectTypes": {"type": "array"},
+        "objectTypes": {"type": "array"},
+        "qualifierSchema": {"type": "jsonObject"},
+        "aliases": {"type": "array"},
+        "isActive": {"type": "bool", "default": true},
+        "tenant": {"type": "link", "required": true, "readOnlyAfterCreate": true},
+        "createdAt": {"type": "datetime", "readOnly": true},
+        "modifiedAt": {"type": "datetime", "readOnly": true},
+        "createdBy": {"type": "link", "readOnly": true},
+        "modifiedBy": {"type": "link", "readOnly": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "createdBy": {"type": "belongsTo", "entity": "User"},
+        "modifiedBy": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {
+        "identity": {"unique": true, "columns": ["tenantId", "code"]},
+        "registry": {"columns": ["tenantId", "isActive", "deleted"]}
+    },
+    "optimisticConcurrencyControl": true,
+    "transactionalSave": true
+}

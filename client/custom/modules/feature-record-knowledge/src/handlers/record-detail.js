@@ -7,6 +7,10 @@ export default class {
         // Quick-edit normally has no bottom container. Its panels use their own APIs
         // and never contribute attributes to the parent record's fetch/PATCH.
         if (!view.bottomView) view.bottomView = 'views/record/edit-bottom';
-        if (view.model.get('knowledgeRecordType')) view.hidePanel('overview');
+        const hideTerminalOverview = () => {
+            if (view.model.get('knowledgeRecordType')) view.hidePanel('overview');
+        };
+        hideTerminalOverview();
+        view.listenTo(view.model, 'sync change:knowledgeRecordType', hideTerminalOverview);
     }
 }

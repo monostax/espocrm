@@ -35,4 +35,9 @@ class Scopes
     }
 
     public function supports(string $type): bool { return in_array($type, $this->all(), true); }
+
+    public function hasSourceDescription(string $type): bool
+    {
+        return $this->metadata->get(['entityDefs', $type, 'fields', 'description', 'type']) !== 'wysiwyg';
+    }
 }

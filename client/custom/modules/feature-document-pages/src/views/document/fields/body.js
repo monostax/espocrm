@@ -3,20 +3,27 @@ import BaseFieldView from 'views/fields/base';
 import {sourceValue} from 'feature-record-knowledge:content';
 
 export default class DocumentBodyFieldView extends LexicalBodyFieldView {
+    markdownEditTemplateContent = `
+        <textarea class="main-element form-control" data-name="markdownSource" rows="18" style="resize:vertical;font-family:monospace"></textarea>
+        <button type="button" class="btn btn-default btn-sm margin-top" data-action="markdown-preview">{{translate 'Preview'}}</button>
+        <div class="html-container margin-top" data-name="markdownPreview"></div>
+    `
     isMarkdownSource() { return this.model.get('bodyAuthoringMode') === 'Markdown'; }
 
-    getAttributeList() { return [...super.getAttributeList(), 'bodyAuthoringMode']; }
+    getAttributeList() { return [...super.getAttributeList(), 'bodyAuthoringMode', 'knowledgeRecordType', 'knowledgeRecordId']; }
 
     setup() {
-        if (this.isMarkdownSource()) {
-            this.editTemplateContent = `
-                <textarea class="main-element form-control" data-name="markdownSource" rows="18" style="resize:vertical;font-family:monospace"></textarea>
-                <button type="button" class="btn btn-default btn-sm margin-top" data-action="markdown-preview">{{translate 'Preview'}}</button>
-                <div class="html-container margin-top" data-name="markdownPreview"></div>
-            `;
-        }
+        this.lexicalEditTemplateContent = this.editTemplateContent;
         super.setup();
         this.addHandler('input', '[data-name="markdownSource"]', () => this.trigger('change'));
+    }
+
+    prepareRender() {
+        // Quick-detail can start with a partial list model. Choose the template
+        // after authoring metadata has loaded, not just during initial setup.
+        if (this.isEditMode()) this.setTemplateContent(this.isMarkdownSource()
+            ? this.markdownEditTemplateContent : this.lexicalEditTemplateContent);
+        return super.prepareRender();
     }
 
     data() { return {...super.data(), source: this.model.get(this.name) || ''}; }

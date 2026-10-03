@@ -1,0 +1,13 @@
+{
+    "works_at": {"label": "works at", "subjects": ["User", "Contact", "Lead"], "objects": ["Account"], "inverse": "employs", "aliases": ["employed_by"], "qualifiers": {"since": "date", "until": "date", "role": "string"}},
+    "reports_to": {"label": "reports to", "subjects": ["User", "Contact", "Lead"], "objects": ["User", "Contact", "Lead"], "inverse": "manages", "aliases": [], "qualifiers": {"since": "date", "until": "date"}},
+    "decides_for": {"label": "decides for", "subjects": ["User", "Contact", "Lead"], "objects": ["Account", "Opportunity"], "inverse": "decision maker", "aliases": [], "qualifiers": {"since": "date", "until": "date", "role": "string"}},
+    "deal_for": {"label": "deal for", "subjects": ["Opportunity"], "objects": ["Account"], "inverse": "has deal", "aliases": [], "qualifiers": {}},
+    "deal_with": {"label": "deal with", "subjects": ["Opportunity"], "objects": ["User", "Contact", "Lead"], "inverse": "involved in deal", "aliases": [], "qualifiers": {"role": "string"}},
+    "introduced_by": {"label": "introduced by", "subjects": "*", "objects": ["User", "Contact", "Lead"], "inverse": "introduced", "aliases": [], "qualifiers": {"on": "date"}},
+    "attended": {"label": "attended", "subjects": ["User", "Contact", "Lead"], "objects": ["Meeting", "Call", "Event"], "inverse": "attendees", "aliases": [], "qualifiers": {"on": "date"}},
+    "part_of": {"label": "part of", "subjects": "*", "objects": "*", "inverse": "contains", "aliases": [], "qualifiers": {}},
+    "about": {"label": "about", "subjects": ["Document", "KnowledgeBaseArticle"], "objects": "*", "inverse": "subject of", "aliases": [], "qualifiers": {}},
+    "contradicts": {"label": "contradicts", "subjects": ["Document", "KnowledgeBaseArticle"], "objects": ["Document", "KnowledgeBaseArticle"], "inverse": "contradicted by", "aliases": [], "qualifiers": {}},
+    "supersedes": {"label": "supersedes", "subjects": ["Document", "KnowledgeBaseArticle"], "objects": ["Document", "KnowledgeBaseArticle"], "inverse": "superseded by", "aliases": ["replaces"], "qualifiers": {}}
+}

@@ -1,4 +1,5 @@
 {
+    "scopeNames": {"RecordPredicate": "Knowledge predicate"}, "scopeNamesPlural": {"RecordPredicate": "Knowledge Predicates"},
     "labels": {"Overview": "Overview", "Relations": "Relations", "Mentioned in": "Mentioned in", "Open Document": "Open Document", "Export Markdown": "Export Markdown", "Import Markdown": "Import Markdown", "Add relation": "Add relation", "Evidence": "Evidence", "Confirm": "Confirm", "Reject": "Reject", "Preview": "Preview", "Source": "Source"},
     "messages": {"knowledgeUnavailable": "Record knowledge unavailable or inaccessible.", "knowledgeConflict": "The document changed. Reopen it before saving; your source has been preserved.", "noRelations": "No accessible relations.", "emptyOverview": "This overview is empty."}
 }

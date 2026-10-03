@@ -3,7 +3,7 @@ import {identity} from 'feature-record-knowledge:content';
 
 export default class extends ModalView {
     templateContent = `
-        <div class="form-group"><label>Predicate</label><select class="form-control" data-name="predicate">{{#each predicates}}<option value="{{this}}">{{this}}</option>{{/each}}</select></div>
+        <div class="form-group"><label>Predicate</label><select class="form-control" data-name="predicate">{{#each predicates}}<option value="{{key}}">{{label}}</option>{{/each}}</select></div>
         <div class="form-group"><label>Object record</label><input class="form-control" data-name="search" aria-label="Search record" placeholder="Search records…"><select class="form-control" data-name="object" aria-label="Object record"></select></div>
         <div class="form-group"><label>Qualifiers (JSON)</label><textarea class="form-control" data-name="qualifiers">{}</textarea></div>
         <div class="form-group"><label>Exact evidence quote from the current overview</label><textarea class="form-control" data-name="quote" rows="4"></textarea></div>
@@ -28,7 +28,7 @@ export default class extends ModalView {
     }
     data() {
         const type = this.parentModel.entityType;
-        const predicates = Object.entries(this.schema || {}).filter(([, def]) => def.subjects === '*' || def.subjects.includes(type)).map(([name]) => name);
+        const predicates = Object.entries(this.schema || {}).filter(([, def]) => def.subjects === '*' || def.subjects.includes(type)).map(([key, def]) => ({key, label: def.label}));
         return {...super.data(), predicates, body: this.document?.body};
     }
     async search(generation) {
@@ -56,6 +56,7 @@ export default class extends ModalView {
             const span = value('start') === '' ? {} : {evidenceStart: Number(value('start')),
                 evidenceEnd: Number(value('start')) + new TextEncoder().encode(quote).length};
             const input = {subjectType: this.parentModel.entityType, subjectId: this.parentModel.id,
+                tenantId: this.options.tenantId,
                 objectType: object.entityType, objectId: object.recordId, predicate: value('predicate'),
                 qualifiers: JSON.parse(value('qualifiers')), evidenceQuote: quote, ...span,
                 sourceRevisionId: this.document.revision.id, idempotencyKey: this.idempotencyKey};

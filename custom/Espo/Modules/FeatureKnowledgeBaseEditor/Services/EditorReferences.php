@@ -33,7 +33,6 @@ class EditorReferences
     private function allowedRecord(Entity $entity): bool
     {
         return $this->acl->checkEntityRead($entity) &&
-            ($entity->getEntityType() !== 'Document' || $entity->get('contentType') === 'Page') &&
             ($entity->getEntityType() !== 'User' ||
             ($entity->get('isActive') && $this->acl->checkUserPermission($entity->getId(), 'mention')));
     }
@@ -51,7 +50,6 @@ class EditorReferences
                     if ($this->acl->getPermissionLevel('mention') === 'team') $builder->withBoolFilter('onlyMyTeam');
                 }
                 $queryBuilder = $builder->buildQueryBuilder()->order('name')->limit(0, 10);
-                if ($type === 'Document') $queryBuilder->where(['contentType' => 'Page']);
                 $sql = $queryBuilder->build();
                 foreach ($this->em->getRDBRepository($type)->clone($sql)->find() as $entity) {
                     if (!$this->allowedRecord($entity)) continue;

@@ -1,0 +1,1 @@
+{"labels": {"Create RecordPredicate": "Create predicate"}, "fields": {"name": "Forward label", "code": "Canonical code", "inverseLabel": "Inverse label", "subjectTypes": "Subject record types", "objectTypes": "Object record types", "qualifierSchema": "Qualifier schema", "aliases": "Aliases", "isActive": "Active", "tenant": "Workspace"}}

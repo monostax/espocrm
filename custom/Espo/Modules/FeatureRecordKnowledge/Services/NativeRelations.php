@@ -13,7 +13,7 @@ use Espo\ORM\EntityManager;
 /** Read adapters only: native fields remain authoritative, never copied into claims. */
 class NativeRelations
 {
-    public function __construct(private EntityManager $em, private Acl $acl, private Access $access, private SelectBuilderFactory $select) {}
+    public function __construct(private EntityManager $em, private Acl $acl, private Access $access, private SelectBuilderFactory $select, private Tenancy $tenancy) {}
 
     public function page(string $type, string $id, string $direction, string $after, int $limit): array
     {
@@ -35,10 +35,15 @@ class NativeRelations
             if (!$accountId) continue;
             try {
                 $account = $this->access->record('Account', $accountId);
-                $this->access->record('Opportunity', $opportunity->getId());
-            } catch (Forbidden|NotFound) { continue; }
+                $subject = $this->access->record('Opportunity', $opportunity->getId());
+                $ids = array_values(array_intersect($this->tenancy->recordIds($subject), $this->tenancy->recordIds($account)));
+                if (count($ids) !== 1) continue;
+                $this->tenancy->assert($ids[0]);
+            } catch (Forbidden|NotFound|\Espo\Core\Exceptions\BadRequest) { continue; }
             $list[] = [
-                'id' => 'native:' . $opportunity->getId() . ':account', 'predicate' => 'deal_for', 'qualifiers' => (object) [],
+                'id' => 'native:' . $opportunity->getId() . ':account', 'predicate' => 'builtin:deal_for', 'predicateLabel' => 'deal for',
+                'inverseLabel' => 'has deal', 'qualifiers' => (object) [],
+                'tenantId' => $ids[0],
                 'subjectType' => 'Opportunity', 'subjectId' => $opportunity->getId(), 'subjectLabel' => $opportunity->get('name'),
                 'objectType' => 'Account', 'objectId' => $accountId, 'objectLabel' => $account->get('name'),
                 'direction' => $type === 'Account' ? 'incoming' : 'outgoing', 'status' => 'confirmed', 'origin' => 'native',

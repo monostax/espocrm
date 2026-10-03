@@ -48,6 +48,7 @@ async function fixture(t, viewport) {
                 this.afterRender();
             }
         }
+        window.TestModal = Modal;
         window.Espo = {Ajax: {
             async putRequest(url, data, options) {
                 writes.push({url, data, options});
@@ -111,4 +112,60 @@ test('unchanged saves retain original CRLF Markdown bytes', async t => {
     await page.locator('[data-name="save"]').click();
     await page.waitForFunction(() => editor.saved);
     assert.equal(await page.evaluate(() => writes[0].data.body), original);
+});
+
+test('referenced predicate editor locks identity and semantics while versioning label/alias updates', async t => {
+    const page = await fixture(t, {width: 375, height: 812});
+    await page.evaluate(code => {
+        const exports = {};
+        new Function('require', 'exports', code)(name => ({default: TestModal}), exports);
+        window.predicateEditor = new exports.default({tenantId: 'tenantA', scopes: ['CustomProject', 'Account'], predicate: {
+            id: 'predicate1', code: 'advises', label: 'Advises', inverse: 'Advised by', aliases: ['guides'], active: true,
+            subjects: ['CustomProject'], objects: ['Account'], referenced: true, versionNumber: 4,
+            qualifierSchema: {type: 'object', properties: {}, required: [], additionalProperties: false},
+        }});
+        predicateEditor.setup(); predicateEditor.render();
+    }, compile('client/custom/modules/feature-record-knowledge/src/views/modals/predicate.js'));
+    assert.equal(await page.locator('[data-name="code"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-name="subjects"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-name="objects"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-name="schema"]').getAttribute('readonly'), '');
+    await page.locator('[data-name="name"]').fill('Advises customer');
+    await page.locator('[data-name="aliases"]').fill('guides, consults');
+    await page.locator('[data-name="save"]').click();
+    await page.waitForFunction(() => predicateEditor.saved);
+    const write = await page.evaluate(() => writes[0]);
+    assert.equal(write.url, 'RecordPredicate/predicate1');
+    assert.equal(write.options.headers['X-Version-Number'], 4);
+    assert.equal(write.data.name, 'Advises customer');
+    assert.deepEqual(write.data.aliases, ['guides', 'consults']);
+    for (const key of ['code', 'tenantId', 'subjectTypes', 'objectTypes', 'qualifierSchema']) assert.equal(Object.hasOwn(write.data, key), false);
+});
+
+test('predicate management hides write actions for ordinary tenant users and renders built-ins read-only', async t => {
+    const page = await fixture(t, {width: 900, height: 800});
+    await page.evaluate(async code => {
+        class Main {
+            constructor() { this.el = document.querySelector('.dialog'); }
+            setup() {} data() { return {}; } afterRender() {} addHandler() {}
+            wait(promise) { this.pending = promise; }
+            getAcl() { return {checkScope: () => false}; }
+            isRendered() { return false; }
+            render() { this.el.innerHTML = Handlebars.compile(this.templateContent)(this.data()); this.afterRender(); }
+        }
+        Espo.Ajax.getRequest = async url => {
+            if (url === 'RecordPredicate/contexts') return {list: [{id: 'tenantA', name: 'Tenant A', editable: false}]};
+            if (url === 'RecordKnowledge/schema') return {supportedScopes: ['CustomProject', 'Account']};
+            return {predicates: {
+                'builtin:part_of': {key: 'builtin:part_of', label: 'Part of', inverse: 'Contains', subjects: '*', objects: '*', builtin: true, qualifierSchema: {}},
+                'tenant:tenantA:advises': {id: 'predicate1', key: 'tenant:tenantA:advises', label: 'Advises', inverse: 'Advised by', subjects: ['CustomProject'], objects: ['Account'], builtin: false, active: true, qualifierSchema: {}},
+            }};
+        };
+        const exports = {};
+        new Function('require', 'exports', code)(name => ({default: Main}), exports);
+        const view = new exports.default(); view.setup(); await view.pending; view.render();
+    }, compile('client/custom/modules/feature-record-knowledge/src/views/predicates.js'));
+    assert.equal(await page.locator('[data-action="create"], [data-action="edit"], [data-action="delete"]').count(), 0);
+    await page.getByText('Platform · read-only').waitFor();
+    await page.getByText('tenant:tenantA:advises', {exact: true}).waitFor();
 });

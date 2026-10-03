@@ -21,6 +21,9 @@ use Espo\Core\Acl;
 use Espo\Modules\FeatureRecordKnowledge\Services\Knowledge;
 use Espo\Modules\FeatureRecordKnowledge\Services\Overviews;
 use Espo\Modules\FeatureRecordKnowledge\Services\Relations;
+use Espo\Modules\FeatureRecordKnowledge\Services\PredicateRegistry;
+use Espo\Modules\FeatureRecordKnowledge\Services\Tenancy;
+use Espo\Modules\FeatureRecordKnowledge\Tools\QualifierSchema;
 use Espo\Modules\FeatureRecordKnowledge\Classes\Record\Restore;
 use Espo\Modules\FeatureRecordKnowledge\Controllers\RecordKnowledge;
 use Espo\Modules\FeatureRecordKnowledge\Scripts\Backfill;
@@ -34,6 +37,7 @@ class KnowledgeTest extends TestCase
 {
     private static string $source;
     private static string $runtime;
+    private static string $tenantId;
     private Application $app;
     private EntityManager $em;
 
@@ -57,7 +61,8 @@ class KnowledgeTest extends TestCase
             'entity' => true, 'object' => true, 'tab' => true, 'layouts' => true, 'acl' => true, 'module' => 'Custom',
         ]));
         $files->putContents($custom . '/entityDefs/CustomProject.json', json_encode([
-            'fields' => ['name' => ['type' => 'varchar'], 'description' => ['type' => 'text']],
+            'fields' => ['name' => ['type' => 'varchar'], 'description' => ['type' => 'text'], 'tenant' => ['type' => 'link']],
+            'links' => ['tenant' => ['type' => 'belongsTo', 'entity' => 'Tenant']],
         ]));
         $files->mkdir(self::$runtime . '/data');
         chdir(self::$runtime);
@@ -74,6 +79,12 @@ class KnowledgeTest extends TestCase
         $installer->saveConfig($config);
         $installer->rebuild();
         $installer->setSuccess();
+        $app = new Application(new ApplicationParams(noErrorHandler: true));
+        $app->setupSystemUser();
+        $em = $app->getContainer()->get('entityManager');
+        $tenant = $em->getRDBRepository('Tenant')->where(['slug' => 'record-knowledge-tests'])->findOne()
+            ?? $em->createEntity('Tenant', ['name' => 'Record Knowledge Tests', 'slug' => 'record-knowledge-tests']);
+        self::$tenantId = $tenant->getId();
     }
 
     protected function setUp(): void
@@ -86,14 +97,20 @@ class KnowledgeTest extends TestCase
 
     private function service(string $class): object { return $this->app->getContainer()->get('injectableFactory')->create($class); }
 
+    private function owned(string $type, array $values, ?string $tenantId = null): \Espo\ORM\Entity
+    {
+        return $this->em->createEntity($type, [...$values, 'tenantId' => $tenantId ?? self::$tenantId]);
+    }
+
     public function testCreationAndRepeatedBackfillAreIdempotentAndTerminal(): void
     {
-        $account = $this->em->createEntity('Account', ['name' => 'Acme', 'description' => "# Acme\n\nSource  \n"]);
+        $body = "# Acme\n\n<https://example.test>\n\n```html\n<div>example</div>\n```\n\nSource  \n";
+        $account = $this->em->createEntity('Account', ['name' => 'Acme', 'description' => $body]);
         $overviews = $this->service(Overviews::class);
         $binding = $overviews->ensure($account);
         $this->assertSame($binding->getId(), $overviews->ensure($account)->getId());
         $document = $this->em->getEntityById('Document', $binding->get('overviewDocumentId'));
-        $this->assertSame("# Acme\n\nSource  \n", $document->get('body'));
+        $this->assertSame($body, $document->get('body'));
         $this->assertNull($overviews->ensure($document));
         $this->assertSame(1, $this->em->getRDBRepository('RecordDocument')->where(['recordType' => 'Account', 'recordId' => $account->getId()])->count());
         $this->assertSame(1, $this->em->getRDBRepository('DocumentRevision')->where(['documentId' => $document->getId()])->count());
@@ -120,8 +137,8 @@ class KnowledgeTest extends TestCase
 
     public function testIndependentWritesImmutableEvidenceDecisionStalenessAndNativeRelations(): void
     {
-        $account = $this->em->createEntity('Account', ['name' => 'Evidence Acme']);
-        $contact = $this->em->createEntity('Contact', ['firstName' => 'João', 'lastName' => 'Example']);
+        $account = $this->owned('Account', ['name' => 'Evidence Acme']);
+        $contact = $this->owned('Contact', ['firstName' => 'João', 'lastName' => 'Example']);
         $knowledge = $this->service(Knowledge::class);
         $first = $knowledge->read('Contact', $contact->getId());
         $source = "---\ntitle: João\n---\n\nJoão works at Acme.\n\n[Acme](#crm-reference/v1/record/Account/{$account->getId()})\n";
@@ -146,7 +163,7 @@ class KnowledgeTest extends TestCase
         $this->assertSame('stale', $relations->list('Contact', $contact->getId())['list'][0]['status']);
         $this->assertSame($source, $knowledge->revision($current['revision']['id'])['body']);
         $this->assertNull($this->em->getEntityById('Contact', $contact->getId())->get('description'));
-        $opportunity = $this->em->createEntity('Opportunity', ['name' => 'Native deal', 'accountId' => $account->getId()]);
+        $opportunity = $this->owned('Opportunity', ['name' => 'Native deal', 'accountId' => $account->getId()]);
         $native = array_values(array_filter($relations->list('Account', $account->getId(), 'incoming')['list'], fn ($r) => $r['origin'] === 'native'));
         $this->assertSame($opportunity->getId(), $native[0]['subjectId']);
         $this->assertSame('account', $native[0]['provenance']['field']);
@@ -202,8 +219,8 @@ class KnowledgeTest extends TestCase
 
     public function testConcurrentProposalRetriesAndMismatchedPayloadAreDeterministic(): void
     {
-        $account = $this->em->createEntity('Account', ['name' => 'Retry Acme']);
-        $contact = $this->em->createEntity('Contact', ['firstName' => 'Retry', 'lastName' => 'Person', 'description' => 'Retry person works at Acme.']);
+        $account = $this->owned('Account', ['name' => 'Retry Acme']);
+        $contact = $this->owned('Contact', ['firstName' => 'Retry', 'lastName' => 'Person', 'description' => 'Retry person works at Acme.']);
         $current = $this->service(Knowledge::class)->read('Contact', $contact->getId());
         $input = (object) ['subjectType' => 'Contact', 'subjectId' => $contact->getId(), 'predicate' => 'works_at',
             'objectType' => 'Account', 'objectId' => $account->getId(), 'sourceRevisionId' => $current['revision']['id'],
@@ -247,7 +264,7 @@ class KnowledgeTest extends TestCase
         $processes = [];
         for ($i = 0; $i < 3; $i++) {
             $process = proc_open([PHP_BINARY, self::$source . '/tests/integration/fixtures/record-knowledge-worker.php',
-                self::$source, self::$runtime, $job, ...$arguments], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+                self::$source, self::$runtime, $job, ...$arguments, (string) $i], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
             $processes[] = [$process, $pipes];
         }
         foreach ($processes as [$process, $pipes]) {
@@ -279,13 +296,14 @@ class KnowledgeTest extends TestCase
 
     public function testAssistantCanProposeButCannotConfirmOrAuthor(): void
     {
-        $account = $this->em->createEntity('Account', ['name' => 'Assistant Acme']);
-        $contact = $this->em->createEntity('Contact', ['firstName' => 'Assistant', 'lastName' => 'Subject', 'description' => 'Subject works at Acme.']);
+        $account = $this->owned('Account', ['name' => 'Assistant Acme']);
+        $contact = $this->owned('Contact', ['firstName' => 'Assistant', 'lastName' => 'Subject', 'description' => 'Subject works at Acme.']);
         $overview = $this->service(Knowledge::class)->read('Contact', $contact->getId());
-        $role = $this->em->createEntity('Role', ['name' => 'Knowledge API read', 'data' => (object) array_fill_keys(['Account', 'Contact', 'Document'],
+        $role = $this->em->createEntity('Role', ['name' => 'Knowledge API read', 'data' => (object) array_fill_keys(['Account', 'Contact', 'Document', 'RecordPredicate'],
             (object) ['read' => 'all', 'edit' => 'no', 'create' => 'no', 'delete' => 'no'])]);
         $user = $this->em->createEntity('User', ['userName' => 'knowledge-api-' . $contact->getId(), 'type' => 'api', 'isActive' => true]);
         $this->em->getRelation($user, 'roles')->relate($role);
+        $this->em->getRelation($this->em->getEntityById('Tenant', self::$tenantId), 'users')->relate($user);
         $actor = new Application(new ApplicationParams(noErrorHandler: true));
         $actor->getContainer()->set('user', $this->em->getEntityById('User', $user->getId()));
         $relations = $actor->getContainer()->get('injectableFactory')->create(Relations::class);
@@ -301,6 +319,150 @@ class KnowledgeTest extends TestCase
             catch (Forbidden) { $this->addToAssertionCount(1); }
         }
         $this->assertSame('rejected', $this->service(Relations::class)->decide($claim['id'], 'rejected')['status']);
+    }
+
+    private function predicate(string $tenantId, ?string $code = null, array $extra = []): \Espo\ORM\Entity
+    {
+        $code ??= 'advises_' . bin2hex(random_bytes(4));
+        return $this->em->createEntity('RecordPredicate', [
+            'tenantId' => $tenantId, 'code' => $code, 'name' => 'Advises ' . $code, 'inverseLabel' => 'Advised by',
+            'subjectTypes' => ['CustomProject'], 'objectTypes' => ['Account'], 'qualifierSchema' => QualifierSchema::shorthand([]),
+            'aliases' => [], 'isActive' => true, ...$extra,
+        ]);
+    }
+
+    private function tenant(): \Espo\ORM\Entity
+    {
+        $code = bin2hex(random_bytes(4));
+        return $this->em->createEntity('Tenant', ['name' => 'Predicate tenant ' . $code, 'slug' => 'predicate-' . $code]);
+    }
+
+    private function actor(array $tenants, array $adminTenants = []): Application
+    {
+        $user = $this->em->createEntity('User', ['emailAddress' => 'predicate-' . bin2hex(random_bytes(6)) . '@example.test',
+            'firstName' => 'Predicate', 'lastName' => 'User', 'type' => 'regular', 'isActive' => true]);
+        foreach ($tenants as $id) $this->em->getRelation($this->em->getEntityById('Tenant', $id), 'users')->relate($user);
+        $provisioner = $this->service(\Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner::class);
+        foreach ($adminTenants as $id) {
+            $teamId = $provisioner->findAdminTeamId($this->em->getEntityById('Tenant', $id));
+            $this->em->getRelation($user, 'teams')->relateById($teamId);
+        }
+        $app = new Application(new ApplicationParams(noErrorHandler: true));
+        $app->getContainer()->set('user', $this->em->getEntityById('User', $user->getId()));
+        return $app;
+    }
+
+    public function testTenantDefinitionsSameCodeIsolationAndManagementGates(): void
+    {
+        $a = $this->tenant(); $b = $this->tenant();
+        $code = 'advises_' . bin2hex(random_bytes(4));
+        $pa = $this->predicate($a->getId(), $code);
+        $pb = $this->predicate($b->getId(), $code);
+        $this->assertNotSame($pa->getId(), $pb->getId());
+        $app = $this->actor([$a->getId()], [$a->getId()]);
+        $factory = $app->getContainer()->get('injectableFactory');
+        $registry = $factory->create(PredicateRegistry::class);
+        $this->assertArrayHasKey('tenant:' . $a->getId() . ':' . $code, $registry->schema($a->getId()));
+        foreach ([fn () => $registry->schema($b->getId()), fn () => $factory->create(ServiceContainer::class)->get('RecordPredicate')->read($pb->getId())] as $read) {
+            try { $read(); $this->fail('Foreign predicate read accepted.'); } catch (Forbidden|NotFound) { $this->addToAssertionCount(1); }
+        }
+        $query = $factory->create(SelectBuilderFactory::class)->create()->from('RecordPredicate')->withStrictAccessControl()->buildQueryBuilder()->build();
+        $rows = $this->em->getRDBRepository('RecordPredicate')->clone($query)->find();
+        foreach ($rows as $row) $this->assertSame($a->getId(), $row->get('tenantId'));
+        $member = $this->actor([$a->getId()]);
+        $memberFactory = $member->getContainer()->get('injectableFactory');
+        $this->assertArrayHasKey('tenant:' . $a->getId() . ':' . $code, $memberFactory->create(PredicateRegistry::class)->schema($a->getId()));
+        $this->assertFalse($member->getContainer()->get('acl')->checkScope('RecordPredicate', 'create'));
+        try { $memberFactory->create(ServiceContainer::class)->get('RecordPredicate')->create((object) [
+            'tenantId' => $a->getId(), 'code' => 'forbidden', 'name' => 'Forbidden',
+        ]); $this->fail('Ordinary user created predicate.'); } catch (Forbidden) { $this->addToAssertionCount(1); }
+        $both = $this->actor([$a->getId(), $b->getId()], [$a->getId()]);
+        $access = $both->getContainer()->get('injectableFactory')->create(Tenancy::class);
+        $access->assert($a->getId(), true);
+        try { $access->assert($b->getId(), true); $this->fail('Tenant A admin managed tenant B.'); } catch (Forbidden) { $this->addToAssertionCount(1); }
+    }
+
+    public function testCustomPredicateLifecycleCacheAndHistoricalReview(): void
+    {
+        $tenant = $this->tenant();
+        $predicate = $this->predicate($tenant->getId());
+        $registry = $this->service(PredicateRegistry::class);
+        $key = 'tenant:' . $tenant->getId() . ':' . $predicate->get('code');
+        $this->assertArrayHasKey($key, $registry->schema($tenant->getId()));
+        $predicate = $this->em->getEntityById('RecordPredicate', $predicate->getId());
+        $predicate->set('name', 'Renamed ' . $predicate->get('code'));
+        $this->em->saveEntity($predicate);
+        $this->assertSame($predicate->get('name'), $registry->schema($tenant->getId())[$key]['label']);
+        $project = $this->owned('CustomProject', ['name' => 'Evidence project', 'description' => 'Project advises Acme.'], $tenant->getId());
+        $account = $this->owned('Account', ['name' => 'Custom Acme'], $tenant->getId());
+        $overview = $this->service(Knowledge::class)->read('CustomProject', $project->getId());
+        $input = (object) ['subjectType' => 'CustomProject', 'subjectId' => $project->getId(), 'objectType' => 'Account', 'objectId' => $account->getId(),
+            'predicate' => $key, 'sourceRevisionId' => $overview['revision']['id'], 'evidenceQuote' => 'Project advises Acme.', 'idempotencyKey' => 'custom-claim-' . $project->getId()];
+        $claim = $this->service(Relations::class)->submit($input);
+        $this->assertSame($key, $claim['predicate']);
+        $this->assertTrue($registry->schema($tenant->getId())[$key]['referenced']);
+        $changed = $this->em->getEntityById('RecordPredicate', $predicate->getId());
+        $changed->set('objectTypes', ['Contact']);
+        try { $this->em->saveEntity($changed); $this->fail('Referenced schema changed.'); } catch (Conflict) { $this->addToAssertionCount(1); }
+        $changed = $this->em->getEntityById('RecordPredicate', $predicate->getId());
+        try { $this->em->removeEntity($changed); $this->fail('Referenced definition deleted.'); } catch (Conflict) { $this->addToAssertionCount(1); }
+        $changed->set('isActive', false);
+        $this->em->saveEntity($changed);
+        $this->assertArrayNotHasKey($key, $registry->schema($tenant->getId()));
+        $this->assertSame($key, $this->service(Relations::class)->list('CustomProject', $project->getId())['list'][0]['predicate']);
+        $this->assertSame('confirmed', $this->service(Relations::class)->decide($claim['id'], 'confirmed')['status']);
+        $input->idempotencyKey = 'inactive-new-claim-' . $project->getId();
+        try { $this->service(Relations::class)->submit($input); $this->fail('Inactive new claim accepted.'); } catch (BadRequest) { $this->addToAssertionCount(1); }
+    }
+
+    public function testDefinitionCollisionsRetiredIdentitySchemasAndCrossTenantEvidence(): void
+    {
+        $tenant = $this->tenant();
+        foreach (['works_at', 'employed_by'] as $reserved) {
+            try { $this->predicate($tenant->getId(), $reserved); $this->fail('Built-in collision accepted.'); } catch (Conflict) { $this->addToAssertionCount(1); }
+        }
+        $predicate = $this->predicate($tenant->getId());
+        $code = $predicate->get('code');
+        $this->em->removeEntity($predicate);
+        try { $this->predicate($tenant->getId(), $code); $this->fail('Retired canonical key reused.'); } catch (Conflict) { $this->addToAssertionCount(1); }
+        try { $this->predicate($tenant->getId(), null, ['qualifierSchema' => (object) ['type' => 'object', '$ref' => 'https://example.test/schema']]);
+            $this->fail('Unsupported schema accepted.'); } catch (BadRequest) { $this->addToAssertionCount(1); }
+        $foreign = $this->tenant();
+        $project = $this->owned('CustomProject', ['name' => 'Cross project', 'description' => 'Project advises Acme.'], $tenant->getId());
+        $account = $this->owned('Account', ['name' => 'Foreign account'], $foreign->getId());
+        $predicate = $this->predicate($tenant->getId());
+        $overview = $this->service(Knowledge::class)->read('CustomProject', $project->getId());
+        $input = (object) ['subjectType' => 'CustomProject', 'subjectId' => $project->getId(), 'objectType' => 'Account', 'objectId' => $account->getId(),
+            'tenantId' => $tenant->getId(), 'predicate' => 'tenant:' . $tenant->getId() . ':' . $predicate->get('code'),
+            'sourceRevisionId' => $overview['revision']['id'], 'evidenceQuote' => 'Project advises Acme.', 'idempotencyKey' => 'cross-tenant'];
+        $this->expectException(BadRequest::class);
+        $this->service(Relations::class)->submit($input);
+    }
+
+    public function testConcurrentDefinitionCreationReservesExactlyOneIdentity(): void
+    {
+        $tenant = $this->tenant();
+        $code = 'parallel_' . bin2hex(random_bytes(4));
+        $payload = ['tenantId' => $tenant->getId(), 'code' => $code, 'name' => 'Parallel ' . $code, 'inverseLabel' => 'Parallel inverse',
+            'subjectTypes' => ['CustomProject'], 'objectTypes' => ['Account'], 'qualifierSchema' => QualifierSchema::shorthand([]), 'aliases' => [], 'isActive' => true];
+        $this->workers('predicate', [base64_encode(json_encode($payload))]);
+        $this->assertSame(1, $this->em->getRDBRepository('RecordPredicate')->where(['tenantId' => $tenant->getId(), 'code' => $code])->count());
+    }
+
+    public function testSchemaEditAndFirstUseSerializeWithoutChangingClaimSemantics(): void
+    {
+        $tenant = $this->tenant();
+        $predicate = $this->predicate($tenant->getId());
+        $project = $this->owned('CustomProject', ['name' => 'Race project', 'description' => 'Project advises Acme.'], $tenant->getId());
+        $account = $this->owned('Account', ['name' => 'Race account'], $tenant->getId());
+        $overview = $this->service(Knowledge::class)->read('CustomProject', $project->getId());
+        $key = 'tenant:' . $tenant->getId() . ':' . $predicate->get('code');
+        $proposal = ['subjectType' => 'CustomProject', 'subjectId' => $project->getId(), 'objectType' => 'Account', 'objectId' => $account->getId(),
+            'predicate' => $key, 'sourceRevisionId' => $overview['revision']['id'], 'evidenceQuote' => 'Project advises Acme.', 'idempotencyKey' => 'first-use-race-' . $project->getId()];
+        $this->workers('first-use', [base64_encode(json_encode(['predicateId' => $predicate->getId(), 'proposal' => $proposal]))]);
+        $count = $this->em->getRDBRepository('RecordRelation')->where(['tenantId' => $tenant->getId(), 'predicate' => $key])->count();
+        $this->assertContains($count, [0, 1]);
+        $this->assertSame($count === 1 ? ['Account'] : ['Contact'], $this->em->getEntityById('RecordPredicate', $predicate->getId())->get('objectTypes'));
     }
 
     public static function tearDownAfterClass(): void { if (isset(self::$source)) chdir(self::$source); }

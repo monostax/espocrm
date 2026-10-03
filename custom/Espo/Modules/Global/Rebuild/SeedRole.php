@@ -518,6 +518,10 @@ class SeedRole implements RebuildAction
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
+                // Record Knowledge predicates are tenant-filtered even with an all-level grant.
+                'RecordPredicate' => [
+                    'create' => 'no', 'read' => 'all', 'edit' => 'no', 'delete' => 'no',
+                ],
                 'Tenant' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -1604,6 +1608,9 @@ class SeedRole implements RebuildAction
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
+                    ],
+                    'RecordPredicate' => [
+                        'create' => 'yes', 'read' => 'all', 'edit' => 'all', 'delete' => 'all',
                     ],
                 ],
                 'fieldData' => [

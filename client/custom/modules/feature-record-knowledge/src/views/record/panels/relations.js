@@ -4,6 +4,7 @@ import {identity} from 'feature-record-knowledge:content';
 export default class extends BottomPanelView {
     templateContent = `
         <div class="form-inline margin-bottom">
+            {{#if tenantOptions}}<select class="form-control input-sm" aria-label="Workspace" data-name="tenant"><option value="">Select workspace…</option>{{#each tenantOptions}}<option value="{{id}}">{{name}}</option>{{/each}}</select>{{/if}}
             <select class="form-control input-sm" aria-label="Direction" data-name="direction">
                 <option value="all">All directions</option><option value="outgoing">Outgoing</option><option value="incoming">Incoming</option>
             </select>
@@ -37,9 +38,14 @@ export default class extends BottomPanelView {
         this.items = [];
         this.direction = 'all';
         this.status = '';
-        this.canAuthor = !this.model.get('knowledgeRecordType') && this.getAcl().checkModel(this.model, 'edit') && this.getUser().get('type') !== 'api';
-        this.listenTo(this.model, 'sync knowledge:updated', () => this.load(false));
-        this.addHandler('change', 'select', () => {
+        this.authorAllowed = !this.model.get('knowledgeRecordType') && this.getAcl().checkModel(this.model, 'edit') && this.getUser().get('type') !== 'api';
+        this.listenTo(this.model, 'sync knowledge:updated', () => this.loadSchema().then(() => this.load(false)));
+        this.addHandler('change', 'select', (event, target) => {
+            if (target.dataset.name === 'tenant') {
+                this.tenantId = target.value || null;
+                this.loadSchema().then(() => this.load(false));
+                return;
+            }
             this.direction = this.el.querySelector('[data-name="direction"]').value;
             this.status = this.el.querySelector('[data-name="status"]').value;
             this.load(false);
@@ -52,9 +58,23 @@ export default class extends BottomPanelView {
             this.createView('revision', 'feature-record-knowledge:views/modals/revision', {revisionId: target.dataset.id}).then(view => view.render());
         });
         this.wait(Promise.all([
-            Espo.Ajax.getRequest('RecordKnowledge/schema').then(data => { this.schema = data.predicates; }),
+            this.loadSchema(),
             this.load(false),
         ]));
+    }
+    async loadSchema() {
+        const generation = (this.schemaGeneration || 0) + 1;
+        this.schemaGeneration = generation;
+        try {
+            const data = await Espo.Ajax.getRequest('RecordKnowledge/schema', {...identity(this.model), tenantId: this.tenantId || ''});
+            if (this.isRemoved() || generation !== this.schemaGeneration) return;
+            this.schema = data.predicates; this.tenantId = data.tenantId; this.tenantOptions = data.tenantOptions;
+            this.canAuthor = this.authorAllowed && !!data.tenantId;
+        } catch (error) {
+            if (generation !== this.schemaGeneration) return;
+            this.schema = {}; this.canAuthor = false; this.error = true;
+        }
+        if (this.isRendered()) this.reRender();
     }
     async load(more) {
         if (!this.model.id) return;
@@ -64,7 +84,7 @@ export default class extends BottomPanelView {
         this.error = false;
         try {
             const data = await Espo.Ajax.getRequest('RecordKnowledge/relations', {...identity(this.model), direction: this.direction,
-                status: this.status, cursor: more ? this.cursor : ''});
+                status: this.status, cursor: more ? this.cursor : '', tenantId: this.tenantId || ''});
             if (generation !== this.generation) return;
             this.items = more ? [...this.items, ...data.list] : data.list;
             this.cursor = data.cursor;
@@ -78,22 +98,24 @@ export default class extends BottomPanelView {
     data() {
         const items = this.items.map(item => {
             const incoming = item.direction === 'incoming';
-            return {...item, displayPredicate: incoming ? (this.schema?.[item.predicate]?.inverse || item.predicate) : item.predicate.replaceAll('_', ' '),
+            return {...item, displayPredicate: incoming ? (item.inverseLabel || item.predicate) : (item.predicateLabel || item.predicate),
                 displaySubjectType: incoming ? item.objectType : item.subjectType, displaySubjectId: incoming ? item.objectId : item.subjectId,
                 displaySubjectLabel: incoming ? item.objectLabel : item.subjectLabel,
                 displayObjectType: incoming ? item.subjectType : item.objectType, displayObjectId: incoming ? item.subjectId : item.objectId,
                 displayObjectLabel: incoming ? item.subjectLabel : item.objectLabel, qualifierText: JSON.stringify(item.qualifiers || {})};
         });
-        return {...super.data(), items, canAuthor: this.canAuthor, cursor: this.cursor, error: this.error,
+        return {...super.data(), items, canAuthor: this.canAuthor, tenantOptions: this.tenantOptions?.length ? this.tenantOptions : null, cursor: this.cursor, error: this.error,
             empty: !this.loading && !this.error && !items.length};
     }
     afterRender() {
         super.afterRender();
         this.el.querySelector('[data-name="direction"]').value = this.direction;
         this.el.querySelector('[data-name="status"]').value = this.status;
+        const tenant = this.el.querySelector('[data-name="tenant"]');
+        if (tenant) tenant.value = this.tenantId || '';
     }
     async author() {
-        const view = await this.createView('author', 'feature-record-knowledge:views/modals/relation', {parentModel: this.model, schema: this.schema});
+        const view = await this.createView('author', 'feature-record-knowledge:views/modals/relation', {parentModel: this.model, schema: this.schema, tenantId: this.tenantId});
         this.listenToOnce(view, 'saved', () => this.model.trigger('knowledge:updated'));
         view.render();
     }
@@ -105,5 +127,5 @@ export default class extends BottomPanelView {
             this.model.trigger('knowledge:updated');
         } finally { target.disabled = false; }
     }
-    onRemove() { this.generation = (this.generation || 0) + 1; super.onRemove(); }
+    onRemove() { this.generation = (this.generation || 0) + 1; this.schemaGeneration = (this.schemaGeneration || 0) + 1; super.onRemove(); }
 }

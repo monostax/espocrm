@@ -1,4 +1,6 @@
 [
+    {"route": "/RecordPredicate/contexts", "method": "get", "params": {"controller": "RecordPredicate", "action": "contexts"}},
+    {"route": "/RecordPredicate/registry", "method": "get", "params": {"controller": "RecordPredicate", "action": "registry"}},
     {"route": "/RecordKnowledge/schema", "method": "get", "params": {"controller": "RecordKnowledge", "action": "schema"}},
     {"route": "/RecordKnowledge/overview", "method": "get", "params": {"controller": "RecordKnowledge", "action": "overview"}},
     {"route": "/RecordKnowledge/overview", "method": "put", "params": {"controller": "RecordKnowledge", "action": "overview"}},

@@ -1,0 +1,1 @@
+{"labels": {"Create RecordPredicate": "Criar predicado"}, "fields": {"name": "Rótulo direto", "code": "Código canônico", "inverseLabel": "Rótulo inverso", "subjectTypes": "Tipos de registro de origem", "objectTypes": "Tipos de registro de destino", "qualifierSchema": "Esquema de qualificadores", "aliases": "Aliases", "isActive": "Ativo", "tenant": "Espaço de trabalho"}}

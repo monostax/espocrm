@@ -55,8 +55,10 @@ class Overviews
     private function initialBody(Entity $record): string
     {
         $description = $record->get('description');
-        // HTML descriptions are not silently reinterpreted as Markdown.
-        return is_string($description) && !preg_match('/<\/?[a-z][^>]*>/i', $description) ? Markdown::source($description) : '';
+        // Use authoring metadata, not HTML-looking text: Markdown autolinks and
+        // fenced HTML examples are valid source and must not disappear on creation.
+        $source = $this->scopes->hasSourceDescription($record->getEntityType()) || $record->get('descriptionFormat') === 'Markdown';
+        return is_string($description) && $source ? Markdown::source($description) : '';
     }
 
     public function syncAccess(Entity $parent, Entity $document): void

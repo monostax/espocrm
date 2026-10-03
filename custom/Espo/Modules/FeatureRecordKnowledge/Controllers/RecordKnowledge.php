@@ -10,13 +10,16 @@ use Espo\Core\Utils\Markdown\Markdown;
 use Espo\Modules\FeatureRecordKnowledge\Services\Access;
 use Espo\Modules\FeatureRecordKnowledge\Services\Knowledge;
 use Espo\Modules\FeatureRecordKnowledge\Services\Relations;
+use Espo\Modules\FeatureRecordKnowledge\Services\PredicateRegistry;
+use Espo\Modules\FeatureRecordKnowledge\Services\Tenancy;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Predicates;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 /** All routes use Espo's normal authentication; no generic business-data CRUD. */
 class RecordKnowledge
 {
-    public function __construct(private Knowledge $knowledge, private Relations $relations, private Scopes $scopes, private Access $access) {}
+    public function __construct(private Knowledge $knowledge, private Relations $relations, private Scopes $scopes, private Access $access,
+        private PredicateRegistry $registry, private Tenancy $tenancy) {}
 
     private function identity(Request $request): array
     {
@@ -33,7 +36,21 @@ class RecordKnowledge
 
     public function getActionSchema(Request $request): object
     {
-        return (object) ['supportedScopes' => $this->scopes->all(), 'predicates' => (object) Predicates::schema(), 'spanEncoding' => 'utf8-bytes-end-exclusive'];
+        $tenantId = (string) $request->getQueryParam('tenantId') ?: null;
+        $options = [];
+        $type = (string) $request->getQueryParam('recordType');
+        if ($type) {
+            $record = $this->access->record($type, (string) $request->getQueryParam('recordId'));
+            $ids = $this->tenancy->recordIds($record);
+            if ($tenantId && !in_array($tenantId, $ids, true)) throw new BadRequest('Tenant does not own this record.');
+            if (!$tenantId && count($ids) === 1) $tenantId = $ids[0];
+            if (count($ids) > 1) $options = array_values(array_filter($this->tenancy->contexts(), fn ($tenant) => in_array($tenant['id'], $ids, true)));
+        } elseif (!$tenantId) {
+            $ids = $this->tenancy->ids();
+            if ($ids !== null && count($ids) === 1) $tenantId = $ids[0];
+        }
+        return (object) ['tenantId' => $tenantId, 'tenantOptions' => $options, 'supportedScopes' => $this->scopes->all(),
+            'predicates' => (object) $this->registry->schema($tenantId), 'spanEncoding' => 'utf8-bytes-end-exclusive'];
     }
     public function getActionOverview(Request $request): object { return (object) $this->knowledge->read(...$this->identity($request)); }
     public function putActionOverview(Request $request): object
@@ -66,7 +83,8 @@ class RecordKnowledge
     {
         [$type, $id] = $this->identity($request);
         return (object) $this->relations->list($type, $id, (string) ($request->getQueryParam('direction') ?: 'all'),
-            (string) $request->getQueryParam('status'), (string) $request->getQueryParam('cursor'));
+            (string) $request->getQueryParam('status'), (string) $request->getQueryParam('cursor'),
+            (string) $request->getQueryParam('tenantId') ?: null);
     }
     public function postActionPropose(Request $request): object { return (object) $this->relations->submit($request->getParsedBody()); }
     public function postActionAuthor(Request $request): object { return (object) $this->relations->submit($request->getParsedBody(), true); }

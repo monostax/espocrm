@@ -6,59 +6,30 @@ namespace Espo\Modules\FeatureRecordKnowledge\Tools;
 
 use Espo\Core\Exceptions\BadRequest;
 
-/** Closed vocabulary. Aliases normalize to the same stored direction. */
+/** Platform defaults live in module metadata; custom definitions use the same validator. */
 class Predicates
 {
     public static function schema(): array
     {
-        $people = ['User', 'Contact', 'Lead'];
-        $content = ['Document', 'KnowledgeBaseArticle'];
-        $temporal = ['since' => 'date', 'until' => 'date'];
-        $definitions = [
-            'works_at' => [$people, ['Account'], 'employs', ['employed_by'], [...$temporal, 'role' => 'string']],
-            'reports_to' => [$people, $people, 'manages', [], $temporal],
-            'decides_for' => [$people, ['Account', 'Opportunity'], 'decision maker', [], [...$temporal, 'role' => 'string']],
-            'deal_for' => [['Opportunity'], ['Account'], 'has deal', [], []],
-            'deal_with' => [['Opportunity'], $people, 'involved in deal', [], ['role' => 'string']],
-            'introduced_by' => ['*', $people, 'introduced', [], ['on' => 'date']],
-            'attended' => [$people, ['Meeting', 'Call', 'Event'], 'attendees', [], ['on' => 'date']],
-            'part_of' => ['*', '*', 'contains', [], []],
-            'about' => [$content, '*', 'subject of', [], []],
-            'contradicts' => [$content, $content, 'contradicted by', [], []],
-            'supersedes' => [$content, $content, 'superseded by', ['replaces'], []],
-        ];
-        $schema = [];
-        foreach ($definitions as $predicate => [$subjects, $objects, $inverse, $aliases, $qualifiers]) {
-            $schema[$predicate] = compact('subjects', 'objects', 'inverse', 'aliases', 'qualifiers');
-        }
-        return $schema;
+        return json_decode(file_get_contents(__DIR__ . '/../Resources/metadata/app/recordKnowledgePredicates.json'), true, 512, JSON_THROW_ON_ERROR);
     }
 
     public static function validate(string $predicate, string $subjectType, string $objectType, mixed $qualifiers): array
     {
-        $schema = self::schema();
-        foreach ($schema as $name => $definition) {
-            if (in_array($predicate, $definition['aliases'], true)) $predicate = $name;
-        }
-        $def = $schema[$predicate] ?? null;
-        if (!$def) throw new BadRequest('Unknown predicate.');
+        $name = str_starts_with($predicate, 'builtin:') ? substr($predicate, 8) : $predicate;
+        foreach (self::schema() as $code => $def) if (in_array($name, $def['aliases'], true) || $name === $def['label']) $name = $code;
+        $definition = self::schema()[$name] ?? null;
+        if (!$definition) throw new BadRequest('Unknown predicate.');
+        return ['builtin:' . $name, self::values($definition, $subjectType, $objectType, $qualifiers)];
+    }
+
+    public static function values(array $definition, string $subjectType, string $objectType, mixed $qualifiers): \stdClass
+    {
         foreach (['subjects' => $subjectType, 'objects' => $objectType] as $endpoint => $type) {
-            if ($def[$endpoint] !== '*' && !in_array($type, $def[$endpoint], true)) throw new BadRequest('Invalid predicate endpoint type.');
+            if ($definition[$endpoint] !== '*' && !in_array($type, $definition[$endpoint], true)) throw new BadRequest('Invalid predicate endpoint type.');
         }
-        if (!$qualifiers instanceof \stdClass && (!is_array($qualifiers) || ($qualifiers && array_is_list($qualifiers)))) {
-            throw new BadRequest('Qualifiers must be an object.');
-        }
-        $qualifiers = (array) $qualifiers;
-        foreach ($qualifiers as $key => $value) {
-            $kind = $def['qualifiers'][$key] ?? null;
-            if (!$kind || !is_string($value) || strlen($value) > 255) throw new BadRequest('Invalid qualifier.');
-            if ($kind === 'date') {
-                $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-                if (!$date || $date->format('Y-m-d') !== $value) throw new BadRequest('Invalid qualifier date.');
-            }
-        }
-        if (isset($qualifiers['since'], $qualifiers['until']) && $qualifiers['since'] > $qualifiers['until']) throw new BadRequest('Invalid date interval.');
-        ksort($qualifiers);
-        return [$predicate, (object) $qualifiers];
+        $schema = $definition['qualifierSchema'] ?? QualifierSchema::shorthand($definition['qualifiers'] ?? []);
+        if (!$schema instanceof \stdClass) $schema = json_decode(json_encode($schema));
+        return QualifierSchema::validate($qualifiers, $schema);
     }
 }

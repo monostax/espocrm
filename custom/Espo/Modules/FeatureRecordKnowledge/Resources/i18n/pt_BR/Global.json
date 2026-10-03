@@ -1,4 +1,5 @@
 {
+    "scopeNames": {"RecordPredicate": "Predicado de conhecimento"}, "scopeNamesPlural": {"RecordPredicate": "Predicados de conhecimento"},
     "labels": {"Overview": "Visão geral", "Relations": "Relações", "Mentioned in": "Mencionado em", "Open Document": "Abrir documento", "Export Markdown": "Exportar Markdown", "Import Markdown": "Importar Markdown", "Add relation": "Adicionar relação", "Evidence": "Evidência", "Confirm": "Confirmar", "Reject": "Rejeitar", "Preview": "Prévia", "Source": "Fonte"},
     "messages": {"knowledgeUnavailable": "Conhecimento indisponível ou sem permissão de acesso.", "knowledgeConflict": "O documento foi alterado. Reabra antes de salvar; seu texto foi preservado.", "noRelations": "Nenhuma relação acessível.", "emptyOverview": "Esta visão geral está vazia."}
 }

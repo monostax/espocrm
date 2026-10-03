@@ -16,36 +16,43 @@ use Espo\Modules\FeatureRecordKnowledge\Tools\Predicates;
 
 class Relations
 {
-    public function __construct(private EntityManager $em, private Access $access, private User $user, private NativeRelations $native) {}
+    public function __construct(private EntityManager $em, private Access $access, private User $user, private NativeRelations $native,
+        private Tenancy $tenancy, private PredicateRegistry $registry) {}
 
     public function submit(object $input, bool $manual = false): array
     {
         if ($manual && $this->user->isApi()) throw new Forbidden('API assistants submit proposals for human confirmation.');
         $allowed = ['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'sourceRevisionId', 'idempotencyKey',
-            'qualifiers', 'evidenceQuote', 'evidenceStart', 'evidenceEnd'];
+            'qualifiers', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'tenantId'];
         if (array_diff(array_keys(get_object_vars($input)), $allowed)) throw new BadRequest('Unknown proposal properties.');
         $required = ['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'sourceRevisionId', 'idempotencyKey'];
         foreach ($required as $field) {
             if (!is_string($input->$field ?? null) || $input->$field === '') throw new BadRequest("$field is required.");
         }
         if (!preg_match('/^[a-zA-Z0-9_.:-]{1,128}$/D', $input->idempotencyKey)) throw new BadRequest('Invalid idempotency key.');
-        [$predicate, $qualifiers] = Predicates::validate($input->predicate, $input->subjectType, $input->objectType, $input->qualifiers ?? (object) []);
-        $this->access->record($input->subjectType, $input->subjectId, $manual ? 'edit' : 'read');
-        $this->access->record($input->objectType, $input->objectId);
+        $subject = $this->access->record($input->subjectType, $input->subjectId, $manual ? 'edit' : 'read');
+        $object = $this->access->record($input->objectType, $input->objectId);
         $revision = $this->access->revision($input->sourceRevisionId);
+        $source = $this->access->document($revision->get('documentId'));
+        if (isset($input->tenantId) && !is_string($input->tenantId)) throw new BadRequest('Invalid tenant selection.');
+        $tenantId = $this->tenancy->derive($subject, $object, $source, $input->tenantId ?? null);
         [$start, $end] = Evidence::validate((string) $revision->get('body'), $input->evidenceQuote ?? null,
             $input->evidenceStart ?? null, $input->evidenceEnd ?? null);
         $values = [
             'subjectType' => $input->subjectType, 'subjectId' => $input->subjectId, 'objectType' => $input->objectType, 'objectId' => $input->objectId,
-            'predicate' => $predicate, 'qualifiers' => $qualifiers, 'sourceDocumentId' => $revision->get('documentId'),
+            'tenantId' => $tenantId, 'sourceDocumentId' => $revision->get('documentId'),
             'sourceRevisionId' => $revision->getId(), 'evidenceQuote' => $input->evidenceQuote, 'evidenceStart' => $start, 'evidenceEnd' => $end,
             'origin' => $manual ? 'manual' : 'assistant',
         ];
         $key = hash('sha256', $this->user->getId() . ':' . $input->idempotencyKey);
-        $hash = hash('sha256', json_encode($values, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        return $this->em->getTransactionManager()->run(function () use ($values, $key, $hash, $manual) {
+        return $this->em->getTransactionManager()->run(function () use ($values, $key, $manual, $input, $tenantId) {
             // Actor-scoped keys can be retried against different documents concurrently.
             $this->em->getRDBRepository('User')->select(['id'])->where(['id' => $this->user->getId()])->forUpdate()->findOne();
+            $this->registry->lock($tenantId);
+            $definition = $this->registry->resolve($input->predicate, $tenantId, false);
+            $values['predicate'] = $definition['key'];
+            $values['qualifiers'] = Predicates::values($definition, $input->subjectType, $input->objectType, $input->qualifiers ?? (object) []);
+            $hash = hash('sha256', json_encode($values, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             // Lock the source before comparing current evidence or submitting decisions.
             $document = $this->em->getRDBRepository('Document')->select(['id', 'body', 'bodyRevisionNumber'])->where(['id' => $values['sourceDocumentId']])->forUpdate()->findOne();
             if (!$document) throw new NotFound();
@@ -55,6 +62,7 @@ class Relations
                 if ($existing->get('submissionHash') !== $hash) throw new Conflict('Idempotency key was already used for another proposal.');
                 return $this->data($existing);
             }
+            if (!$definition['active']) throw new BadRequest('Predicate is inactive.');
             $anchor = Evidence::anchor((string) $document->get('body'), $values['evidenceQuote']);
             $current = $this->em->getRDBRepository('DocumentRevision')->where([
                 'documentId' => $document->getId(), 'revisionNumber' => $document->get('bodyRevisionNumber'),
@@ -98,9 +106,13 @@ class Relations
         });
     }
 
-    public function list(string $type, string $id, string $direction = 'all', string $status = '', string $cursor = ''): array
+    public function list(string $type, string $id, string $direction = 'all', string $status = '', string $cursor = '', ?string $tenantId = null): array
     {
-        $this->access->record($type, $id);
+        $record = $this->access->record($type, $id);
+        if ($tenantId !== null) {
+            $this->tenancy->assert($tenantId);
+            if (!in_array($tenantId, $this->tenancy->recordIds($record), true)) throw new BadRequest('Tenant does not own the record.');
+        }
         if (!in_array($direction, ['all', 'incoming', 'outgoing'], true) ||
             !in_array($status, ['', 'suggested', 'confirmed', 'rejected', 'stale'], true)) throw new BadRequest('Invalid relation filter.');
         if ($cursor && !preg_match('/^[rn]:[a-zA-Z0-9_-]{0,64}$/D', $cursor)) throw new BadRequest('Invalid cursor.');
@@ -111,6 +123,7 @@ class Relations
             if ($direction !== 'outgoing') $where[] = ['objectType' => $type, 'objectId' => $id];
             $query = $this->em->getRDBRepository('RecordRelation')->where(['OR' => $where])->order('id')->limit(0, 100);
             if ($status) $query->where(['status' => $status]);
+            if ($tenantId) $query->where(['tenantId' => $tenantId]);
             if ($cursor) $query->where(['id>' => substr($cursor, 2)]);
             $rows = iterator_to_array($query->find());
             foreach ($rows as $claim) {
@@ -130,7 +143,7 @@ class Relations
     private function data(Entity $claim): array
     {
         $values = [];
-        foreach (['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'qualifiers', 'status', 'origin', 'sourceDocumentId',
+        foreach (['tenantId', 'subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'qualifiers', 'status', 'origin', 'sourceDocumentId',
             'sourceRevisionId', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'anchorRevisionId', 'anchorStart', 'anchorEnd',
             'createdById', 'createdAt', 'decidedById', 'decidedAt'] as $field) $values[$field] = $claim->get($field);
         $subject = $this->access->record($values['subjectType'], $values['subjectId']);
@@ -139,7 +152,9 @@ class Relations
         if ($editable) {
             try { $this->access->claim($claim, true); } catch (Forbidden|NotFound) { $editable = false; }
         }
-        return ['id' => $claim->getId(), ...$values, 'subjectLabel' => $subject->get('name'), 'objectLabel' => $object->get('name'),
+        $definition = $this->registry->resolve($values['predicate'], $values['tenantId'], false);
+        return ['id' => $claim->getId(), ...$values, 'predicateLabel' => $definition['label'], 'inverseLabel' => $definition['inverse'],
+            'subjectLabel' => $subject->get('name'), 'objectLabel' => $object->get('name'),
             'editable' => $editable && $claim->get('status') === 'suggested'];
     }
 }

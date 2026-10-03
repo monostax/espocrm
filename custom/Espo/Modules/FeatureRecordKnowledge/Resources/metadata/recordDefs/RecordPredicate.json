@@ -1,0 +1,4 @@
+{
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureRecordKnowledge\\Classes\\Record\\BlockPredicateRelationships"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureRecordKnowledge\\Classes\\Record\\BlockPredicateRelationships"]
+}
