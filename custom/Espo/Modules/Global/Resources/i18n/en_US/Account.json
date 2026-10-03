@@ -10,7 +10,7 @@
         "Contacts": "Contacts",
         "Opportunities": "Opportunities",
         "Cases": "Cases",
-        "Documents": "Documents"
+        "Documents": "Files & Documents"
     },
     "tooltips": {
         "customFields": "Tenant-defined custom attributes. Values follow this record's ACL."

@@ -40,10 +40,15 @@ class ContractsTest extends TestCase
         $data->scopes->CustomProject = (object) ['entity' => true, 'object' => true, 'tab' => true];
         $data->entityDefs->CustomProject = (object) ['fields' => (object) ['name' => (object) ['type' => 'varchar']]];
         (new RecordKnowledge())->build($data);
+        $this->assertSame(['overview', 'knowledgeRelations'], array_column($data->app->recordKnowledge->panels, 'name'));
         foreach (['Account', 'Contact', 'Opportunity', 'Document', 'CustomProject'] as $type) {
             $this->assertContains($type, $data->app->recordKnowledge->supportedScopes);
             $this->assertTrue($data->entityDefs->$type->transactionalSave);
-            $this->assertCount(1, array_filter($data->clientDefs->$type->bottomPanels->detail, fn ($p) => $p->name === 'overview'));
+            foreach (['detail', 'edit'] as $mode) {
+                $bottomPanels = $data->clientDefs->$type->bottomPanels->$mode;
+                $this->assertCount(0, array_filter($bottomPanels, fn ($p) => in_array($p->name, ['overview', 'knowledgeRelations'], true)));
+                $this->assertCount(1, array_filter($bottomPanels, fn ($p) => $p->name === 'mentionedIn'));
+            }
         }
         foreach (['RecordDocument', 'RecordRelation', 'RecordPredicate', 'DocumentRevision', 'EditorReferenceIndex', 'AgentMode', 'AgentSkill', 'ChatwootSyncState', 'PushNotificationQueue', 'UserApiKey'] as $type) {
             $this->assertNotContains($type, Scopes::discover($data));
@@ -80,6 +85,39 @@ class ContractsTest extends TestCase
     {
         $this->expectException(BadRequest::class);
         Markdown::import(Markdown::export('body', 'Account', 'acme', 'doc'), 'Account', 'other', 'doc');
+    }
+
+    public function testOwnedOverviewCanSaveRichStateWhileKeepingItsMarkdownProjection(): void
+    {
+        $entity = new BaseEntity('Document', ['attributes' => array_fill_keys([
+            'contentType', 'body', 'bodyFormat', 'bodyEditorState', 'bodyAuthoringMode', 'knowledgeRecordType',
+        ], ['type' => 'text'])]);
+        $entity->set(['contentType' => 'Page', 'body' => 'Original', 'bodyFormat' => 'Markdown',
+            'bodyAuthoringMode' => 'Markdown', 'knowledgeRecordType' => 'Account']);
+        $entity->setAsNotNew();
+        $entity->setAsFetched();
+        $state = '{"root":{"type":"root","children":[]}}';
+        $entity->set(['body' => "## Rich overview\n", 'bodyAuthoringMode' => 'Lexical', 'bodyEditorState' => $state]);
+        (new MarkdownSource())->beforeSave($entity, []);
+        $this->assertSame($state, $entity->get('bodyEditorState'));
+        $this->assertSame('Markdown', $entity->get('bodyFormat'));
+        $this->assertSame("## Rich overview\n", $entity->get('body'));
+        $entity->set('bodyFormat', 'Html');
+        $this->expectException(BadRequest::class);
+        (new MarkdownSource())->beforeSave($entity, []);
+    }
+
+    public function testStandaloneMarkdownSourceCannotBeSilentlyConvertedToRichAuthoring(): void
+    {
+        $entity = new BaseEntity('Document', ['attributes' => array_fill_keys([
+            'contentType', 'bodyFormat', 'bodyAuthoringMode',
+        ], ['type' => 'text'])]);
+        $entity->set(['contentType' => 'Page', 'bodyFormat' => 'Markdown', 'bodyAuthoringMode' => 'Markdown']);
+        $entity->setAsNotNew();
+        $entity->setAsFetched();
+        $entity->set('bodyAuthoringMode', 'Lexical');
+        $this->expectException(BadRequest::class);
+        (new MarkdownSource())->beforeSave($entity, []);
     }
 
     public function testMarkdownReferenceExtractionUsesParsedLinksAndCanonicalSource(): void

@@ -1,0 +1,5 @@
+{
+    "taskRecurrenceMutationContext": {
+        "className": "Espo\\Modules\\FeatureTaskRecurrence\\Tools\\MutationContext"
+    }
+}

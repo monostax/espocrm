@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "name": { "type": "varchar" },
+        "tenant": { "type": "link" },
+        "actor": { "type": "link" },
+        "lineageId": { "type": "varchar", "maxLength": 24 },
+        "segmentOrder": { "type": "int", "default": 1 },
+        "definition": { "type": "jsonObject" },
+        "template": { "type": "jsonObject" },
+        "version": { "type": "int", "default": 1 },
+        "state": { "type": "enum", "options": ["Active", "Paused", "Ended", "Exhausted"], "default": "Active" },
+        "basis": { "type": "enum", "options": ["ScheduledDate", "CompletedDate"] },
+        "cursor": { "type": "varchar", "maxLength": 80 },
+        "boundaryStart": { "type": "varchar", "maxLength": 80 },
+        "boundaryEnd": { "type": "varchar", "maxLength": 80 },
+        "head": { "type": "link" },
+        "sequence": { "type": "int", "default": 1 },
+        "pausedAt": { "type": "datetime" },
+        "pauseIntervals": { "type": "jsonArray", "default": [] },
+        "lastError": { "type": "text" },
+        "lastProcessedAt": { "type": "datetime" },
+        "requestKey": { "type": "varchar", "maxLength": 64 },
+        "createdAt": { "type": "datetime" }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "actor": { "type": "belongsTo", "entity": "User" },
+        "head": { "type": "belongsTo", "entity": "TaskRecurrenceOccurrence" }
+    },
+    "indexes": {
+        "schedule": { "columns": ["state", "lastProcessedAt", "deleted"] },
+        "tenant": { "columns": ["tenantId", "lineageId", "deleted"] },
+        "request": { "columns": ["requestKey"], "unique": true }
+    }
+}

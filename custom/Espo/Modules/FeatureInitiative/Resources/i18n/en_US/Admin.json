@@ -1,0 +1,11 @@
+{
+    "labels": { "Initiatives": "Initiatives", "Initiative Types": "Initiative Types" },
+    "descriptions": {
+        "initiativeTypes": "Configure reusable initiative types and stages for projects, onboarding and ongoing engagements.",
+        "initiatives": "Manage initiatives and their progress in the current stage."
+    },
+    "keywords": {
+        "initiativeTypes": "initiative,type,project,onboarding,process,stage",
+        "initiatives": "initiative,project,engagement,progress,status"
+    }
+}

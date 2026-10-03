@@ -58,7 +58,7 @@ class RecordKnowledge
         [$type, $id] = $this->identity($request);
         $body = $request->getParsedBody();
         if (!property_exists($body, 'body')) throw new BadRequest('body is required.');
-        return (object) $this->knowledge->write($type, $id, $body->body, $this->version($request));
+        return (object) $this->knowledge->write($type, $id, $body->body, $this->version($request), $body->bodyEditorState ?? null);
     }
     public function getActionExport(Request $request): object { return (object) $this->knowledge->export(...$this->identity($request)); }
     public function postActionImport(Request $request): object

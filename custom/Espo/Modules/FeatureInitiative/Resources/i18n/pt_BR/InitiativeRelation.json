@@ -1,0 +1,6 @@
+{
+    "fields": { "initiative": "Iniciativa", "parent": "Registro Relacionado", "initiativeType": "Tipo de Iniciativa", "tenant": "Workspace" },
+    "links": { "initiative": "Iniciativa", "parent": "Registro Relacionado", "initiativeType": "Tipo de Iniciativa", "tenant": "Workspace" },
+    "labels": { "Create InitiativeRelation": "Adicionar Registro Relacionado", "Remove Link": "Remover Vínculo" },
+    "messages": { "removeRecordConfirmation": "Remover este vínculo? O registro relacionado não será excluído." }
+}

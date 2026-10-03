@@ -351,6 +351,37 @@ class KnowledgeTest extends TestCase
         $this->assertSame('rejected', $this->service(Relations::class)->decide($claim['id'], 'rejected')['status']);
     }
 
+    public function testRichOverviewControllerRoundTripRevisionsAndSourceImport(): void
+    {
+        $account = $this->owned('Account', ['name' => 'Rich overview']);
+        $knowledge = $this->service(Knowledge::class);
+        $first = $knowledge->read('Account', $account->getId());
+        $state = json_encode(['root' => ['type' => 'root', 'children' => [[
+            'type' => 'heading', 'tag' => 'h2', 'children' => [['type' => 'text', 'text' => 'Rich overview']],
+        ]]]]);
+        $request = (new ServerRequestFactory())->createServerRequest('PUT', '/RecordKnowledge/overview')
+            ->withQueryParams(['recordType' => 'Account', 'recordId' => $account->getId()])
+            ->withHeader('Content-Type', 'application/json')->withHeader('X-Version-Number', (string) $first['versionNumber'])
+            ->withBody((new StreamFactory())->createStream(json_encode(['body' => '## Rich overview', 'bodyEditorState' => $state])));
+        $saved = $this->service(RecordKnowledge::class)->putActionOverview(new RequestWrapper($request));
+        $this->assertSame($state, $saved->bodyEditorState);
+        $this->assertSame('Lexical', $saved->bodyAuthoringMode);
+        $this->assertSame($first['revision']['revisionNumber'] + 1, $saved->revision['revisionNumber']);
+        $this->assertSame('## Rich overview', $knowledge->revision($saved->revision['id'])['body']);
+        $this->assertSame($state, $knowledge->read('Account', $account->getId())['bodyEditorState']);
+        $this->assertNull($this->em->getEntityById('Account', $account->getId())->get('description'));
+        $stale = $request->withBody((new StreamFactory())->createStream(json_encode(['body' => '## Lost update', 'bodyEditorState' => $state])));
+        try { $this->service(RecordKnowledge::class)->putActionOverview(new RequestWrapper($stale)); $this->fail('Conflict expected.'); }
+        catch (Conflict) { $this->addToAssertionCount(1); }
+        $artifact = $knowledge->export('Account', $account->getId());
+        $this->assertStringEndsWith('## Rich overview', $artifact['content']);
+        $imported = $knowledge->import('Account', $account->getId(), $artifact['content'], $saved->versionNumber);
+        $this->assertNull($imported['bodyEditorState']);
+        $this->assertSame('Markdown', $imported['bodyAuthoringMode']);
+        $this->assertSame('## Rich overview', $imported['body']);
+        $this->assertSame($saved->revision['id'], $imported['revision']['id']);
+    }
+
     private function predicate(string $tenantId, ?string $code = null, array $extra = []): \Espo\ORM\Entity
     {
         $code ??= 'advises_' . bin2hex(random_bytes(4));

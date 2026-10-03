@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "maxLength": 80 },
+        "seriesSegment": { "type": "link" },
+        "recurrenceId": { "type": "varchar", "maxLength": 80 },
+        "originalDeadline": { "type": "varchar", "maxLength": 32 },
+        "sequence": { "type": "int" },
+        "predecessor": { "type": "link" },
+        "task": { "type": "link" },
+        "aliasTask": { "type": "link" },
+        "templateVersion": { "type": "int" },
+        "disposition": { "type": "enum", "options": ["Materialized", "Skipped", "Deleted", "Retired"], "default": "Materialized" },
+        "eventAt": { "type": "datetime" },
+        "eventType": { "type": "enum", "options": ["Completed", "Skipped", "Deleted"] },
+        "advanced": { "type": "bool", "default": false }
+    },
+    "links": {
+        "seriesSegment": { "type": "belongsTo", "entity": "TaskRecurrenceSeries" },
+        "predecessor": { "type": "belongsTo", "entity": "TaskRecurrenceOccurrence" },
+        "task": { "type": "belongsTo", "entity": "Task" },
+        "aliasTask": { "type": "belongsTo", "entity": "Task" }
+    },
+    "indexes": {
+        "slot": { "columns": ["seriesSegmentId", "recurrenceId"], "unique": true },
+        "successor": { "columns": ["predecessorId"], "unique": true },
+        "task": { "columns": ["taskId"], "unique": true },
+        "pending": { "columns": ["seriesSegmentId", "advanced", "eventAt"] }
+    }
+}

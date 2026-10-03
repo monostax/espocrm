@@ -41,6 +41,20 @@
         },
         "order": 0
     },
+    "OpportunityDocumentBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/opportunity-document-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
+    "ActivityDocumentBridge": {
+        "params": {
+            "controller": "chatwoot:controllers/activity-document-bridge",
+            "action": "index"
+        },
+        "order": 0
+    },
     "ChatwootInbox": {
         "params": {
             "controller": "chatwoot:controllers/chatwoot",

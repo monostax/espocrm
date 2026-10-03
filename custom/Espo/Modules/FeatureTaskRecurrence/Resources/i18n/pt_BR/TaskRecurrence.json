@@ -1,0 +1,20 @@
+{
+    "labels": {
+        "repeat": "Repetir", "none": "Não repetir", "editRecurrence": "Editar repetição", "manageRecurrence": "Gerenciar série",
+        "basedOn": "Baseado em", "ScheduledDate": "Data de vencimento", "CompletedDate": "Data de conclusão",
+        "DAILY": "Diariamente", "WEEKLY": "Semanalmente", "MONTHLY": "Mensalmente", "YEARLY": "Anualmente", "RDATE": "Datas específicas",
+        "HOURLY": "Por horas", "MINUTELY": "Por minutos", "SECONDLY": "Por segundos", "weekdays": "Todos os dias úteis (seg–sex)", "specific": "Datas específicas", "custom": "Personalizado", "advanced": "Avançado RFC 5545 / preservar agendamento atual",
+        "deadline": "Vencimento", "dateOnly": "Somente data", "timed": "Data e hora", "timezone": "Fuso horário (IANA)",
+        "every": "A cada", "unit": "Unidade", "day": "dias", "week": "semanas", "month": "meses", "year": "anos",
+        "MO": "Segunda-feira", "TU": "Terça-feira", "WE": "Quarta-feira", "TH": "Quinta-feira", "FR": "Sexta-feira", "SA": "Sábado", "SU": "Domingo",
+        "monthlyPattern": "Padrão mensal", "monthDays": "Nos dias", "ordinal": "No enésimo dia da semana", "lastDay": "Último dia", "months": "Meses",
+        "ordinal1": "Primeiro", "ordinal2": "Segundo", "ordinal3": "Terceiro", "ordinal4": "Quarto", "ordinal5": "Quinto", "ordinal-1": "Último",
+        "dates": "Datas do calendário", "additions": "Datas adicionais", "exclusions": "Datas excluídas", "ends": "Termina", "never": "Nunca", "until": "Na data (inclusive)", "count": "Após N ocorrências",
+        "completionHint": "Cria uma sucessora a partir da data real de conclusão. Meses e anos usam o último dia válido quando necessário.",
+        "exampleCompletion": "Exemplo de data de conclusão", "hypothetical": "Próximo vencimento hipotético; as datas reais dependem da conclusão.",
+        "scope": "Aplicar alterações a", "ThisOccurrence": "Esta ocorrência", "ThisAndFollowing": "Esta e as seguintes", "WholeSeries": "Série inteira",
+        "Active": "Ativa", "Paused": "Pausada", "Ended": "Encerrada", "Exhausted": "Esgotada", "affected": "tarefas abertas afetadas", "exceptions": "exceções individuais preservadas",
+        "action": "Ação", "pause": "Pausar série", "resume": "Retomar série", "skip": "Pular esta ocorrência", "end": "Encerrar série", "delete": "Excluir tarefas recorrentes",
+        "invalid": "Confira a definição de repetição e tente novamente."
+    }
+}

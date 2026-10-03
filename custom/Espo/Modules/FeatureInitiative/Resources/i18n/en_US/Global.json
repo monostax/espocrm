@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "InitiativeType": "Initiative Type",
+        "InitiativeStage": "Initiative Stage",
+        "Initiative": "Initiative",
+        "InitiativeRelation": "Initiative Relation"
+    },
+    "scopeNamesPlural": {
+        "InitiativeType": "Initiative Types",
+        "InitiativeStage": "Initiative Stages",
+        "Initiative": "Initiatives",
+        "InitiativeRelation": "Initiative Relations"
+    },
+    "labels": { "Initiatives": "Initiatives" }
+}

@@ -1,0 +1,7 @@
+{
+    "labels": { "Initiatives": "Initiatives", "Initiative Types": "Initiative Types" },
+    "descriptions": {
+        "initiativeTypes": "Configure reusable initiative types and stages for projects, onboarding and ongoing engagements.",
+        "initiatives": "Manage initiatives and their progress in the current stage."
+    }
+}

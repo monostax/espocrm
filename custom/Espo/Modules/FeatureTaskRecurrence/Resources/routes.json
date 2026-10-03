@@ -1,0 +1,10 @@
+[
+    { "route": "/Task/recurrence/preview", "method": "post", "params": { "controller": "TaskRecurrence", "action": "preview" } },
+    { "route": "/Task/:id/recurrence", "method": "get", "params": { "controller": "TaskRecurrence", "action": "read", "id": ":id" } },
+    { "route": "/Task/:id/recurrence", "method": "post", "params": { "controller": "TaskRecurrence", "action": "convert", "id": ":id" } },
+    { "route": "/Task/:id/recurrence/actions", "method": "post", "params": { "controller": "TaskRecurrence", "action": "mutate", "id": ":id" } },
+    { "route": "/ActivityInbox/recurrence/preview", "method": "post", "params": { "controller": "ActivityInbox", "action": "recurrencePreview" } },
+    { "route": "/ActivityInbox/:type/:id/recurrence", "method": "get", "params": { "controller": "ActivityInbox", "action": "recurrenceRead", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id/recurrence", "method": "post", "params": { "controller": "ActivityInbox", "action": "recurrenceConvert", "type": ":type", "id": ":id" } },
+    { "route": "/ActivityInbox/:type/:id/recurrence/actions", "method": "post", "params": { "controller": "ActivityInbox", "action": "recurrenceMutate", "type": ":type", "id": ":id" } }
+]

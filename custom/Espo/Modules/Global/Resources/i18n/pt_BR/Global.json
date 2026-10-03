@@ -28,6 +28,7 @@
         "assignedToMe": "Atribuído a Mim"
     },
     "scopeNames": {
+        "Document": "Arquivos & Documentos",
         "CrmTag": "Etiqueta do CRM",
         "Activities": "Atividades",
         "Contact": "Contato",
@@ -47,6 +48,7 @@
         "CustomFieldDef": "Campo Personalizado"
     },
     "scopeNamesPlural": {
+        "Document": "Arquivos & Documentos",
         "CrmTag": "Etiquetas do CRM",
         "Activities": "Atividades",
         "Contact": "Contatos",
@@ -98,6 +100,7 @@
         "View all": "Ver tudo"
     },
     "navbarTabs": {
+        "Document": "Arquivos & Documentos",
         "Conversations": "Chat / Conversas",
         "Inbox": "Caixa de Entrada",
         "All": "Todas",

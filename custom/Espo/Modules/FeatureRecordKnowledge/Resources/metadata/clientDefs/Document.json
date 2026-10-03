@@ -1,8 +1,8 @@
 {
     "dynamicLogic": {
         "fields": {
-            "bodyFormat": {"readOnly": {"conditionGroup": [{"type": "equals", "attribute": "bodyAuthoringMode", "value": "Markdown"}]}},
-            "bodyAuthoringMode": {"readOnly": {"conditionGroup": [{"type": "equals", "attribute": "bodyAuthoringMode", "value": "Markdown"}]}},
+            "bodyFormat": {"readOnly": {"conditionGroup": [{"type": "or", "value": [{"type": "equals", "attribute": "bodyAuthoringMode", "value": "Markdown"}, {"type": "isNotEmpty", "attribute": "knowledgeRecordType"}]}]}},
+            "bodyAuthoringMode": {"readOnly": {"conditionGroup": [{"type": "or", "value": [{"type": "equals", "attribute": "bodyAuthoringMode", "value": "Markdown"}, {"type": "isNotEmpty", "attribute": "knowledgeRecordType"}]}]}},
             "contentType": {"readOnly": {"conditionGroup": [{"type": "isNotEmpty", "attribute": "knowledgeRecordType"}]}}
         }
     }

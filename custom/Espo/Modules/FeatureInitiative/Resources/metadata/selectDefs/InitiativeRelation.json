@@ -1,0 +1,8 @@
+{
+    "aclAttributeList": ["createdById", "createdAt", "initiativeId", "initiativeTypeId", "tenantId"],
+    "accessControlFilterClassNameMap": {
+        "mandatory": "Espo\\Modules\\FeatureInitiative\\Classes\\Select\\AccessibleInitiative",
+        "onlyTeam": "Espo\\Core\\Select\\AccessControl\\Filters\\Mandatory",
+        "onlyOwn": "Espo\\Core\\Select\\AccessControl\\Filters\\OnlyOwn"
+    }
+}

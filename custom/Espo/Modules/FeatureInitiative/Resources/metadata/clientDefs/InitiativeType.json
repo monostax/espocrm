@@ -1,0 +1,21 @@
+{
+    "controller": "controllers/record",
+    "acl": "feature-initiative:acl",
+    "modelDefaultsPreparator": "global:handlers/tenant/defaults-preparator",
+    "iconClass": "fas fa-layer-group",
+    "filterList": ["active"],
+    "relationshipPanels": {
+        "stages": {
+            "orderBy": "order",
+            "orderDirection": "asc",
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": { "id": "initiativeTypeId", "name": "initiativeTypeName", "tenantId": "tenantId", "tenantName": "tenantName" }
+        },
+        "initiatives": {
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": { "id": "initiativeTypeId", "name": "initiativeTypeName", "tenantId": "tenantId", "tenantName": "tenantName" }
+        }
+    }
+}

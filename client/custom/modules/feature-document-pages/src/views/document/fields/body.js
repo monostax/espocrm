@@ -8,7 +8,9 @@ export default class DocumentBodyFieldView extends LexicalBodyFieldView {
         <button type="button" class="btn btn-default btn-sm margin-top" data-action="markdown-preview">{{translate 'Preview'}}</button>
         <div class="html-container margin-top" data-name="markdownPreview"></div>
     `
-    isMarkdownSource() { return this.model.get('bodyAuthoringMode') === 'Markdown'; }
+    isOverview() { return !!this.model.get('knowledgeRecordType'); }
+    isMarkdownSource() { return !this.isOverview() && this.model.get('bodyAuthoringMode') === 'Markdown'; }
+    getBodyFormat() { return this.isOverview() ? 'Markdown' : super.getBodyFormat(); }
 
     getAttributeList() { return [...super.getAttributeList(), 'bodyAuthoringMode', 'knowledgeRecordType', 'knowledgeRecordId']; }
 
@@ -26,7 +28,22 @@ export default class DocumentBodyFieldView extends LexicalBodyFieldView {
         return super.prepareRender();
     }
 
-    data() { return {...super.data(), source: this.model.get(this.name) || ''}; }
+    data() {
+        const data = super.data();
+        return {...data, hasFormatField: !this.isOverview() && data.hasFormatField, source: this.model.get(this.name) || ''};
+    }
+
+    loadContentIntoEditor() {
+        super.loadContentIntoEditor();
+        if (this.isOverview() && this.kbEditor) this.initialEditorState = this.contentState(this.readEditorStateJSON());
+    }
+
+    contentState(state) {
+        if (!state) return state;
+        // Reference resolution refreshes labels without changing authored content.
+        return JSON.stringify(JSON.parse(state), (key, value) => value?.type === 'crm-mention'
+            ? {...value, text: '', reference: {...value.reference, label: ''}} : value);
+    }
 
     afterRender() {
         if (!this.isMarkdownSource()) { super.afterRender(); return; }
@@ -43,6 +60,16 @@ export default class DocumentBodyFieldView extends LexicalBodyFieldView {
     }
 
     fetch() {
+        if (this.isOverview()) {
+            const data = super.fetch();
+            // Opening a legacy Markdown overview must not normalize its source on
+            // an unchanged save. Only edits project the rich document to Markdown.
+            if (this.contentState(data.bodyEditorState) === this.initialEditorState) {
+                return {[this.name]: this.model.get(this.name) || '', bodyEditorState: this.model.get('bodyEditorState') || null,
+                    bodyFormat: 'Markdown', bodyAuthoringMode: this.model.get('bodyAuthoringMode') || 'Markdown'};
+            }
+            return {...data, bodyAuthoringMode: 'Lexical'};
+        }
         if (!this.isMarkdownSource()) return super.fetch();
         return {[this.name]: this.isEditMode() && this.isRendered()
             ? sourceValue(this.el.querySelector('[data-name="markdownSource"]'), this.model.get(this.name) || '') : (this.model.get(this.name) || ''),

@@ -1,0 +1,30 @@
+{
+    "fields": { "isActive": "Ativo", "tenant": "Workspace" },
+    "links": { "stages": "Etapas", "initiatives": "Iniciativas" },
+    "labels": { "Create InitiativeType": "Criar Tipo de Iniciativa" },
+    "presetFilters": { "active": "Ativos" },
+    "messages": {
+        "relationshipStubsDisabled": "Crie ou edite os registros vinculados pelos campos de tipo de iniciativa, etapa ou iniciativa, e não por listas de IDs de relacionamentos.",
+        "cannotChangeInitiative": "Um vínculo não pode ser transferido para outra iniciativa.",
+        "initiativeRequired": "Selecione uma iniciativa existente.",
+        "relationTypeMismatch": "O vínculo deve pertencer ao tipo da iniciativa.",
+        "selfParent": "Uma iniciativa não pode ser relacionada a si mesma.",
+        "duplicateParent": "Este registro relacionado já está vinculado à iniciativa.",
+        "cannotReparent": "Uma etapa ou iniciativa não pode ser transferida para outro tipo de iniciativa.",
+        "initiativeTypeRequired": "Selecione um tipo de iniciativa existente vinculado a um workspace.",
+        "tenantMismatch": "O workspace deve ser o mesmo do tipo de iniciativa.",
+        "notAccessible": "Você não tem acesso ao registro selecionado.",
+        "teamsRequired": "Selecione equipes pertencentes a um único workspace.",
+        "teamsMismatch": "Todas as equipes do tipo de iniciativa devem pertencer ao mesmo workspace.",
+        "cannotChangeTenant": "Um tipo de iniciativa não pode ser transferido para outro workspace.",
+        "stageMismatch": "A etapa selecionada deve pertencer ao tipo de iniciativa selecionado.",
+        "inactiveEntry": "Iniciativas só podem entrar em tipos e etapas ativos.",
+        "invalidStatus": "O status deve ser Pausado, Pendente, Em Andamento ou Concluído.",
+        "unsupportedTarget": "Tipo de registro relacionado não suportado.",
+        "targetTenantMismatch": "O registro relacionado deve pertencer ao workspace da iniciativa.",
+        "assigneeTenantMismatch": "O usuário responsável deve pertencer ao workspace da iniciativa.",
+        "initiativeTypeInUse": "Este tipo de iniciativa possui etapas ou iniciativas. Desative-o em vez de excluí-lo.",
+        "stageInUse": "Esta etapa possui iniciativas. Desative-a em vez de excluí-la.",
+        "useRecordFields": "Edite os campos do registro em vez de vincular ou desvincular este relacionamento."
+    }
+}

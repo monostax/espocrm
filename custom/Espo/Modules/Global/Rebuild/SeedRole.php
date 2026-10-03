@@ -297,14 +297,14 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
-                // Simple journeys: operators work records; tenant admins configure stages.
-                'SimpleJourneyRecordParent' => [
+                // Initiatives: operators manage work; tenant admins configure types and stages.
+                'InitiativeRelation' => [
                     'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',
                     'delete' => 'team',
                 ],
-                'SimpleJourney' => [
+                'InitiativeType' => [
                     'create' => 'no',
                     'read' => 'team',
                     'edit' => 'no',
@@ -316,13 +316,13 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
-                'SimpleJourneyStage' => [
+                'InitiativeStage' => [
                     'create' => 'no',
                     'read' => 'team',
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
-                'SimpleJourneyRecord' => [
+                'Initiative' => [
                     'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'team',
@@ -1054,10 +1054,10 @@ class SeedRole implements RebuildAction
                 'TrackingSource' => (object)[],
                 'TrackingLink' => (object)[],
                 'Journey' => (object)[],
-                'SimpleJourney' => (object)[],
-                'SimpleJourneyStage' => (object)[],
-                'SimpleJourneyRecord' => (object)[],
-                'SimpleJourneyRecordParent' => (object)[],
+                'InitiativeType' => (object)[],
+                'InitiativeStage' => (object)[],
+                'Initiative' => (object)[],
+                'InitiativeRelation' => (object)[],
                 'JourneyStage' => (object)[],
                 'JourneyStageAction' => (object)[],
                 'JourneyTransition' => (object)[],
@@ -1510,19 +1510,19 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                     ],
 
-                    'SimpleJourney' => [
+                    'InitiativeType' => [
                         'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
                     ],
-                    'SimpleJourneyStage' => [
+                    'InitiativeStage' => [
                         'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'team',
                     ],
-                    'SimpleJourneyRecord' => [
+                    'Initiative' => [
                         'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',

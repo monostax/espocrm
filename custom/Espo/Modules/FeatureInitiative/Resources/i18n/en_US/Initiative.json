@@ -1,0 +1,8 @@
+{
+    "fields": { "initiativeType": "Initiative Type", "stage": "Stage", "status": "Stage Status", "tenant": "Tenant" },
+    "links": { "initiativeType": "Initiative Type", "stage": "Stage", "relations": "Related Records" },
+    "labels": { "Create Initiative": "Create Initiative" },
+    "options": { "status": { "On Hold": "On Hold", "To Do": "To Do", "Doing": "Doing", "Done": "Done" } },
+    "messages": { "selectInitiativeTypeFirst": "Select an initiative type before choosing a stage." },
+    "tooltips": { "status": "Progress in the current stage. Changing stage resets this to To Do; Done does not move the initiative." }
+}

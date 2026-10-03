@@ -15,6 +15,7 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\Modules\Global\Tools\CrmTags;
+use Espo\Modules\FeatureTaskRecurrence\Tools\Schedule;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression as Expr;
@@ -171,6 +172,15 @@ class ActivityInbox
                 $records[$type . ':' . $row->id] = $row;
             }
         }
+        // One series query for the page, rather than a lookup per recurring card.
+        if ($this->acl->checkField('Task', 'recurrence')) {
+            $seriesIds = array_values(array_unique(array_filter(array_map(fn ($row) => $row->entityType === 'Task' ? ($row->recurrenceSeriesId ?? null) : null, $records))));
+            $badges = [];
+            foreach ($seriesIds ? $this->em->getRDBRepository('TaskRecurrenceSeries')->where(['id' => $seriesIds])->find() : [] as $series) {
+                $badges[$series->getId()] = (object) ['state' => $series->get('state'), 'summary' => (new Schedule())->summary($series->get('definition')), 'lastError' => $series->get('lastError')];
+            }
+            foreach ($records as $row) if (!empty($row->recurrenceSeriesId)) $row->recurrenceBadge = $badges[$row->recurrenceSeriesId] ?? null;
+        }
         return (object) ['list' => array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page))), 'total' => $total, 'hasMore' => $offset + $limit < $total];
     }
 
@@ -224,7 +234,11 @@ class ActivityInbox
 
     public function present(Entity $entity): object
     {
-        return (object) ((array) $entity->getValueMap() + [
+        $data = (array) $entity->getValueMap();
+        if ($entity->getEntityType() === 'Task' && !$this->acl->checkField('Task', 'recurrence')) {
+            foreach (array_keys($data) as $name) if (str_starts_with($name, 'recurrence')) unset($data[$name]);
+        }
+        return (object) ($data + [
             'entityType' => $entity->getEntityType(),
             'canEdit' => $this->acl->checkEntityEdit($entity), 'canDelete' => $this->acl->checkEntityDelete($entity),
             'canStream' => $this->acl->checkEntity($entity, 'stream') && $this->acl->checkScope('Note', 'read'),
@@ -244,7 +258,7 @@ class ActivityInbox
     public function metadata(): object
     {
         $result = [];
-        $fields = ['name', 'status', 'priority', 'direction', 'description', 'dateStart', 'dateEnd', 'isAllDay', 'parent', 'assignedUser', 'teams', 'users', 'contacts', 'leads', 'tags', 'reminders', 'duration'];
+        $fields = ['name', 'status', 'priority', 'direction', 'description', 'dateStart', 'dateEnd', 'isAllDay', 'parent', 'assignedUser', 'teams', 'users', 'contacts', 'leads', 'tags', 'reminders', 'duration', 'recurrence'];
         foreach ($this->types([]) as $type) {
             $defs = $this->metadata->get(['entityDefs', $type, 'fields']) ?? [];
             $hidden = $this->acl->getScopeForbiddenFieldList($type);
@@ -260,6 +274,10 @@ class ActivityInbox
                 'completedStatuses' => $this->metadata->get(['scopes', $type, 'completedStatusList']) ?? ['Completed'],
                 'finishedStatuses' => $this->finishedStatuses($type),
                 'activeStatuses' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ['Not Started', 'Started']];
+            if ($type === 'Task' && isset($visible['recurrence'])) $result[$type]['recurrence'] = [
+                'bases' => ['ScheduledDate', 'CompletedDate'], 'scopes' => ['ThisOccurrence', 'ThisAndFollowing', 'WholeSeries'],
+                'windowDays' => Schedule::WINDOW_DAYS, 'windowLimit' => Schedule::WINDOW_LIMIT,
+            ];
         }
         return (object) $result;
     }

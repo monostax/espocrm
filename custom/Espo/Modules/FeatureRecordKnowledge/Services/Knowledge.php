@@ -43,18 +43,20 @@ class Knowledge
         try { $this->overview($type, $id, 'edit'); } catch (Forbidden|NotFound) { $editable = false; }
         return [
             'documentId' => $document->getId(), 'name' => $document->get('name'), 'body' => (string) $document->get('body'),
+            'bodyEditorState' => $document->get('bodyEditorState'), 'bodyAuthoringMode' => $document->get('bodyAuthoringMode'),
             'html' => Renderer::transform((string) $document->get('body')), 'versionNumber' => $document->get('versionNumber'),
             'revision' => $revision ? $this->revisionData($revision) : null, 'editable' => $editable,
         ];
     }
 
-    public function write(string $type, string $id, mixed $body, ?int $version): array
+    public function write(string $type, string $id, mixed $body, ?int $version, mixed $editorState = null): array
     {
         if ($version === null) throw new BadRequest('X-Version-Number is required.');
+        if ($editorState !== null && !is_string($editorState)) throw new BadRequest('Invalid editor state.');
         $document = $this->overview($type, $id, 'edit');
         $this->records->get('Document')->update($document->getId(), (object) [
-            'body' => Markdown::source($body), 'bodyEditorState' => null,
-            'bodyFormat' => 'Markdown', 'bodyAuthoringMode' => 'Markdown',
+            'body' => Markdown::source($body), 'bodyEditorState' => $editorState,
+            'bodyFormat' => 'Markdown', 'bodyAuthoringMode' => $editorState ? 'Lexical' : 'Markdown',
         ], UpdateParams::create()->withVersionNumber($version));
         return $this->read($type, $id);
     }

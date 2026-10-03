@@ -1,0 +1,6 @@
+{
+    "ProcessTaskRecurrences": {
+        "name": "Process Task Recurrences", "scheduling": "* * * * *", "isSystem": false,
+        "jobClassName": "Espo\\Modules\\FeatureTaskRecurrence\\Jobs\\ProcessTaskRecurrences"
+    }
+}

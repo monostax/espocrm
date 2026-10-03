@@ -1,0 +1,7 @@
+{
+    "labels": { "Initiatives": "Iniciativas", "Initiative Types": "Tipos de Iniciativas" },
+    "descriptions": {
+        "initiativeTypes": "Configure tipos de iniciativas e etapas reutilizáveis para projetos, onboarding e serviços contínuos.",
+        "initiatives": "Gerencie iniciativas e acompanhe seu progresso na etapa atual."
+    }
+}

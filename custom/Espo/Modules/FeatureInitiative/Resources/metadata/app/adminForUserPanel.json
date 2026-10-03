@@ -1,0 +1,26 @@
+{
+    "automation": {
+        "sections": {
+            "initiatives": {
+                "label": "Initiatives",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#InitiativeType",
+                        "label": "Initiative Types",
+                        "iconClass": "fas fa-layer-group",
+                        "description": "initiativeTypes",
+                        "roles": ["tenant", "tenant-admin"]
+                    },
+                    {
+                        "url": "#Initiative",
+                        "label": "Initiatives",
+                        "iconClass": "fas fa-flag",
+                        "description": "initiatives",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "initiativeAccess": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "notStorable": true,
+            "utility": true,
+            "customizationDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": []
+        },
+        "name": {
+            "type": "varchar",
+            "required": true,
+            "pattern": "$noBadCharacters",
+            "maxLength": 100,
+            "trim": true
+        },
+        "initiativeType": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "order": { "type": "int", "required": true, "default": 10, "min": 1 },
+        "isActive": { "type": "bool", "default": true },
+        "description": { "type": "text" },
+        "tenant": { "type": "link", "readOnly": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "initiativeType": { "type": "belongsTo", "entity": "InitiativeType", "foreign": "stages" },
+        "initiatives": { "type": "hasMany", "entity": "Initiative", "foreign": "stage" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "order", "order": "asc" },
+    "indexes": {
+        "typeOrder": { "columns": ["initiativeTypeId", "order", "deleted"] }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "earlyBeforeCreateHookClassNameList": [
+        "Espo\\Modules\\FeatureInitiative\\Hooks\\Common\\BlockRelationshipStubs",
+        "Espo\\Modules\\FeatureInitiative\\Services\\Defaults"
+    ],
+    "readLoaderClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\FieldProcessing\\AccessLoader"],
+    "listLoaderClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\FieldProcessing\\AccessLoader"],
+    "loadAdditionalFieldsAfterUpdate": true,
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\RecordHooks\\BlockRelationshipMutation"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\RecordHooks\\BlockRelationshipMutation"]
+}

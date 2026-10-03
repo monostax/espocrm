@@ -1,0 +1,7 @@
+{
+    "order": 30,
+    "version": "1.0.0",
+    "name": "FeatureInitiative",
+    "description": "Tenant-defined initiative types with ordered stages and per-initiative stage progress.",
+    "jsTranspiled": true
+}

@@ -1,0 +1,15 @@
+{
+    "scopeNames": {
+        "InitiativeType": "Tipo de Iniciativa",
+        "InitiativeStage": "Etapa de Iniciativa",
+        "Initiative": "Iniciativa",
+        "InitiativeRelation": "Vínculo de Iniciativa"
+    },
+    "scopeNamesPlural": {
+        "InitiativeType": "Tipos de Iniciativas",
+        "InitiativeStage": "Etapas de Iniciativas",
+        "Initiative": "Iniciativas",
+        "InitiativeRelation": "Vínculos de Iniciativas"
+    },
+    "labels": { "Initiatives": "Iniciativas" }
+}

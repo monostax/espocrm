@@ -1,0 +1,6 @@
+{
+    "fields": { "initiative": "Initiative", "parent": "Related Record", "initiativeType": "Initiative Type", "tenant": "Tenant" },
+    "links": { "initiative": "Initiative", "parent": "Related Record", "initiativeType": "Initiative Type", "tenant": "Tenant" },
+    "labels": { "Create InitiativeRelation": "Add Related Record", "Remove Link": "Remove Link" },
+    "messages": { "removeRecordConfirmation": "Remove this link? The related record itself will not be deleted." }
+}

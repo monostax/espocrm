@@ -16,7 +16,7 @@ class Revisions
 
     public function beforeSave(Entity $entity, array $options): void
     {
-        if ($entity->get('bodyAuthoringMode') !== 'Markdown') return;
+        if ($entity->get('bodyAuthoringMode') !== 'Markdown' && !$entity->get('knowledgeRecordType')) return;
         if (!$entity->isNew()) {
             $current = $this->em->getRDBRepository('Document')->select(['id', 'bodyRevisionNumber'])->where(['id' => $entity->getId()])->forUpdate()->findOne();
             if (!$current || (int) $current->get('bodyRevisionNumber') !== (int) $entity->getFetched('bodyRevisionNumber')) {
@@ -30,7 +30,8 @@ class Revisions
 
     public function afterSave(Entity $entity, array $options): void
     {
-        if ($entity->get('bodyAuthoringMode') !== 'Markdown' || !$entity->isAttributeChanged('bodyRevisionNumber')) return;
+        if (($entity->get('bodyAuthoringMode') !== 'Markdown' && !$entity->get('knowledgeRecordType')) ||
+            !$entity->isAttributeChanged('bodyRevisionNumber')) return;
         $body = (string) $entity->get('body');
         $revision = $this->em->createEntity('DocumentRevision', [
             'name' => $entity->getId() . ' / ' . $entity->get('bodyRevisionNumber'),

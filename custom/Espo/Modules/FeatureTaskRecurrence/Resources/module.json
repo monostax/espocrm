@@ -1,0 +1,7 @@
+{
+    "order": 65,
+    "version": "0.1.0",
+    "name": "FeatureTaskRecurrence",
+    "description": "Calendar and completion-relative Task recurrence with durable occurrence reservations.",
+    "jsTranspiled": true
+}

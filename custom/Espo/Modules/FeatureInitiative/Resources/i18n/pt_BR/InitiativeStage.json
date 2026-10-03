@@ -1,0 +1,6 @@
+{
+    "fields": { "initiativeType": "Tipo de Iniciativa", "order": "Ordem", "isActive": "Ativa", "tenant": "Workspace" },
+    "links": { "initiativeType": "Tipo de Iniciativa", "initiatives": "Iniciativas" },
+    "labels": { "Create InitiativeStage": "Criar Etapa" },
+    "presetFilters": { "active": "Ativas" }
+}

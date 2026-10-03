@@ -1,0 +1,20 @@
+{
+    "initiatives": {
+        "label": "Initiatives",
+        "order": 29,
+        "itemList": [
+            {
+                "url": "#InitiativeType",
+                "label": "Initiative Types",
+                "iconClass": "fas fa-layer-group",
+                "description": "initiativeTypes"
+            },
+            {
+                "url": "#Initiative",
+                "label": "Initiatives",
+                "iconClass": "fas fa-flag",
+                "description": "initiatives"
+            }
+        ]
+    }
+}

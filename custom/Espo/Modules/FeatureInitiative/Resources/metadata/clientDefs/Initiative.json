@@ -1,0 +1,15 @@
+{
+    "controller": "controllers/record",
+    "acl": "feature-initiative:acl",
+    "iconClass": "fas fa-flag",
+    "boolFilterList": ["onlyMy"],
+    "kanbanViewMode": true,
+    "relationshipPanels": {
+        "relations": {
+            "rowActionsView": "feature-initiative:views/initiative-relation/row-actions",
+            "selectDisabled": true,
+            "unlinkDisabled": true,
+            "createAttributeMap": { "id": "initiativeId", "name": "initiativeName" }
+        }
+    }
+}

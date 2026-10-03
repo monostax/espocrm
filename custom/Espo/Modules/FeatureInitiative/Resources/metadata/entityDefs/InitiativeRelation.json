@@ -1,0 +1,44 @@
+{
+    "deleteId": true,
+    "fields": {
+        "initiativeAccess": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "notStorable": true,
+            "utility": true,
+            "customizationDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "layoutAvailabilityList": []
+        },
+        "deleteId": { "type": "varchar", "maxLength": 17, "default": "0", "readOnly": true },
+        "name": { "type": "varchar", "readOnly": true },
+        "initiative": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "parent": {
+            "type": "linkParent",
+            "required": true,
+            "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "Initiative"]
+        },
+        "description": { "type": "text" },
+        "initiativeType": { "type": "link", "readOnly": true },
+        "tenant": { "type": "link", "readOnly": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
+    },
+    "links": {
+        "initiative": { "type": "belongsTo", "entity": "Initiative", "foreign": "relations" },
+        "parent": { "type": "belongsToParent", "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "Initiative"] },
+        "initiativeType": { "type": "belongsTo", "entity": "InitiativeType" },
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "createdAt", "order": "asc" },
+    "indexes": {
+        "uniqueParent": { "unique": true, "columns": ["initiativeId", "parentType", "parentId", "deleteId"] },
+        "parent": { "columns": ["parentType", "parentId", "deleted"] },
+        "initiativeType": { "columns": ["initiativeTypeId", "deleted"] }
+    }
+}

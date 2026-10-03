@@ -10,12 +10,13 @@ use Espo\Core\Record\ServiceContainer;
 use Espo\Modules\Chatwoot\Services\ActivityInbox as Inbox;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\FeatureTaskRecurrence\Services\Recurrence;
 use Espo\ORM\Entity;
 use Espo\Tools\Stream\MassNotePreparator;
 
 class ActivityInbox
 {
-    public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator) {}
+    public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator, private Recurrence $recurrence) {}
 
     private function tenant(Request $request): Entity
     {
@@ -74,6 +75,37 @@ class ActivityInbox
         $record = $this->record($request);
         $this->services->get($record->getEntityType())->delete($record->getId());
         return true;
+    }
+
+    private function recurrenceTask(Request $request): Entity
+    {
+        $record = $this->record($request);
+        if ($record->getEntityType() !== 'Task') throw new BadRequest('Only Tasks support recurrence.');
+        return $record;
+    }
+
+    public function postActionRecurrencePreview(Request $request): object
+    {
+        $this->tenant($request);
+        $body = clone $request->getParsedBody();
+        if (!empty($body->taskId)) $this->access->record('Task', $body->taskId, $this->tenant($request));
+        return $this->recurrence->preview($body);
+    }
+
+    public function getActionRecurrenceRead(Request $request): ?object { return $this->recurrence->read($this->recurrenceTask($request)->getId()); }
+    public function postActionRecurrenceConvert(Request $request): object
+    {
+        $task = $this->recurrenceTask($request);
+        $body = clone $request->getParsedBody();
+        if (isset($body->patch)) $this->access->validateTeams($body->patch, $this->tenant($request), false);
+        return $this->recurrence->convert($task->getId(), $body);
+    }
+    public function postActionRecurrenceMutate(Request $request): ?object
+    {
+        $task = $this->recurrenceTask($request);
+        $body = clone $request->getParsedBody();
+        if (isset($body->patch)) $this->access->validateTeams($body->patch, $this->tenant($request), false);
+        return $this->recurrence->mutate($task->getId(), $body);
     }
 
     public function getActionStream(Request $request): object

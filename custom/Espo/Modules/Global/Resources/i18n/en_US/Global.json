@@ -77,6 +77,7 @@
         "assignedToMe": "Assigned to Me"
     },
     "scopeNames": {
+        "Document": "Files & Documents",
         "CrmTag": "CRM Tag",
         "Activities": "Activities",
         "CAIPlaybook": "Playbook",
@@ -94,6 +95,7 @@
         "CustomFieldDef": "Custom Field"
     },
     "scopeNamesPlural": {
+        "Document": "Files & Documents",
         "CrmTag": "CRM Tags",
         "Activities": "Activities",
         "CAIPlaybook": "Playbooks",
@@ -111,6 +113,7 @@
         "CustomFieldDef": "Custom Fields"
     },
     "navbarTabs": {
+        "Document": "Files & Documents",
         "Lists": "Lists",
         "Outros": "Other",
         "Main": "Main",

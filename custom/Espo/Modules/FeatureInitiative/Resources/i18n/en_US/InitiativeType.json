@@ -1,0 +1,30 @@
+{
+    "fields": { "isActive": "Active", "tenant": "Tenant" },
+    "links": { "stages": "Stages", "initiatives": "Initiatives" },
+    "labels": { "Create InitiativeType": "Create Initiative Type" },
+    "presetFilters": { "active": "Active" },
+    "messages": {
+        "relationshipStubsDisabled": "Create or update children through their initiative type, stage or initiative fields, not relationship ID lists.",
+        "cannotChangeInitiative": "A relation cannot be moved to another initiative.",
+        "initiativeRequired": "Select an existing initiative.",
+        "relationTypeMismatch": "The relation must belong to the initiative's type.",
+        "selfParent": "An initiative cannot be related to itself.",
+        "duplicateParent": "This related record is already linked to the initiative.",
+        "cannotReparent": "A stage or initiative cannot be reassigned to another initiative type.",
+        "initiativeTypeRequired": "Select an existing initiative type with an owning tenant.",
+        "tenantMismatch": "The tenant must match the initiative type tenant.",
+        "notAccessible": "The selected record is not accessible.",
+        "teamsRequired": "Select teams belonging to one tenant.",
+        "teamsMismatch": "Every initiative type team must belong to the same tenant.",
+        "cannotChangeTenant": "An initiative type cannot be moved to another tenant.",
+        "stageMismatch": "The selected stage must belong to the selected initiative type.",
+        "inactiveEntry": "Initiatives can only enter active types and stages.",
+        "invalidStatus": "Status must be On Hold, To Do, Doing or Done.",
+        "unsupportedTarget": "Unsupported related record type.",
+        "targetTenantMismatch": "The related record must belong to the initiative tenant.",
+        "assigneeTenantMismatch": "The assigned user must belong to the initiative tenant.",
+        "initiativeTypeInUse": "This initiative type has stages or initiatives. Deactivate it instead of deleting it.",
+        "stageInUse": "This stage has initiatives. Deactivate it instead of deleting it.",
+        "useRecordFields": "Update the record fields instead of linking or unlinking this relationship."
+    }
+}

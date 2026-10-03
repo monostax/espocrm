@@ -10,7 +10,7 @@
         "Contacts": "Contatos",
         "Opportunities": "Oportunidades",
         "Cases": "Casos",
-        "Documents": "Documentos"
+        "Documents": "Arquivos & Documentos"
     },
     "tooltips": {
         "customFields": "Atributos personalizados do tenant. Os valores seguem o ACL do registro."

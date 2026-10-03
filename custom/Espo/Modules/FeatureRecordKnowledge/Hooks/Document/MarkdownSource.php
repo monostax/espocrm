@@ -24,11 +24,13 @@ class MarkdownSource
         $mode = $entity->get('bodyAuthoringMode') ?: 'Lexical';
         if (!in_array($mode, ['Lexical', 'Markdown'], true)) throw new BadRequest('Invalid authoring mode.');
         if ($entity->get('knowledgeRecordType')) {
-            if ($entity->get('contentType') !== 'Page' || $mode !== 'Markdown' || $entity->get('bodyFormat') !== 'Markdown') {
+            if ($entity->get('contentType') !== 'Page' || $entity->get('bodyFormat') !== 'Markdown') {
                 throw new BadRequest('Owned overviews must remain Markdown pages.');
             }
+            $entity->set('body', Markdown::source($entity->get('body')));
         }
-        if (!$entity->isNew() && $entity->getFetched('bodyAuthoringMode') === 'Markdown' && $mode !== 'Markdown') {
+        if (!$entity->get('knowledgeRecordType') && !$entity->isNew() &&
+            $entity->getFetched('bodyAuthoringMode') === 'Markdown' && $mode !== 'Markdown') {
             throw new BadRequest('Markdown source pages cannot be converted through a lossy editor.');
         }
         if ($mode !== 'Markdown') return;

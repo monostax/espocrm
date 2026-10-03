@@ -1,0 +1,11 @@
+{
+    "transactionalSave": true,
+    "fields": {
+        "recurrence": { "type": "jsonObject", "notStorable": true, "view": "feature-task-recurrence:views/fields/recurrence", "duplicateIgnore": true },
+        "recurrenceSeries": { "type": "link", "readOnly": true, "duplicateIgnore": true, "utility": true },
+        "recurrenceId": { "type": "varchar", "maxLength": 80, "readOnly": true, "duplicateIgnore": true, "utility": true },
+        "recurrenceOverrides": { "type": "jsonArray", "readOnly": true, "duplicateIgnore": true, "utility": true }
+    },
+    "links": { "recurrenceSeries": { "type": "belongsTo", "entity": "TaskRecurrenceSeries" } },
+    "indexes": { "recurrenceSeries": { "columns": ["recurrenceSeriesId", "deleted"] } }
+}

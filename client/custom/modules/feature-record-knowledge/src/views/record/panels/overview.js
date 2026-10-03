@@ -57,7 +57,7 @@ export default class extends BottomPanelView {
 
     async edit() {
         if (!this.document?.editable) return;
-        const view = await this.createView('knowledgeEditor', 'feature-record-knowledge:views/modals/markdown', {parentModel: this.model, document: this.document});
+        const view = await this.createView('knowledgeEditor', 'feature-record-knowledge:views/modals/editor', {parentModel: this.model, document: this.document});
         this.listenToOnce(view, 'saved', () => this.model.trigger('knowledge:updated'));
         view.render();
     }

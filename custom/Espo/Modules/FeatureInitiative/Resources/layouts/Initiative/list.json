@@ -1,0 +1,7 @@
+[
+    {"name": "name", "link": true},
+    {"name": "initiativeType", "link": true},
+    {"name": "stage", "link": true},
+    {"name": "status"},
+    {"name": "assignedUser", "link": true}
+]

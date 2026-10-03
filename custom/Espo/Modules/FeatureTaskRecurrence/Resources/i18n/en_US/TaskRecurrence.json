@@ -1,0 +1,20 @@
+{
+    "labels": {
+        "repeat": "Repeat", "none": "Does not repeat", "editRecurrence": "Edit recurrence", "manageRecurrence": "Manage series",
+        "basedOn": "Based on", "ScheduledDate": "Scheduled date", "CompletedDate": "Completed date",
+        "DAILY": "Every day", "WEEKLY": "Every week", "MONTHLY": "Every month", "YEARLY": "Every year", "RDATE": "Specific dates",
+        "HOURLY": "Hourly", "MINUTELY": "By minutes", "SECONDLY": "By seconds", "weekdays": "Every weekday (Mon–Fri)", "specific": "Specific dates", "custom": "Custom", "advanced": "Advanced RFC 5545 / preserve existing schedule",
+        "deadline": "Deadline", "dateOnly": "Date only", "timed": "Date and time", "timezone": "Time zone (IANA)",
+        "every": "Every", "unit": "Unit", "day": "days", "week": "weeks", "month": "months", "year": "years",
+        "MO": "Monday", "TU": "Tuesday", "WE": "Wednesday", "TH": "Thursday", "FR": "Friday", "SA": "Saturday", "SU": "Sunday",
+        "monthlyPattern": "Monthly pattern", "monthDays": "On day(s)", "ordinal": "On the nth weekday", "lastDay": "Last day", "months": "Months",
+        "ordinal1": "First", "ordinal2": "Second", "ordinal3": "Third", "ordinal4": "Fourth", "ordinal5": "Fifth", "ordinal-1": "Last",
+        "dates": "Calendar dates", "additions": "Additional dates", "exclusions": "Excluded dates", "ends": "Ends", "never": "Never", "until": "On date (inclusive)", "count": "After N occurrences",
+        "completionHint": "Creates one successor from the actual completion date. Months and years clamp to the last valid day.",
+        "exampleCompletion": "Example completion date", "hypothetical": "Hypothetical next deadline; actual dates depend on completion.",
+        "scope": "Apply changes to", "ThisOccurrence": "This occurrence", "ThisAndFollowing": "This and following", "WholeSeries": "Whole series",
+        "Active": "Active", "Paused": "Paused", "Ended": "Ended", "Exhausted": "Exhausted", "affected": "open Tasks affected", "exceptions": "occurrence exceptions retained",
+        "action": "Action", "pause": "Pause series", "resume": "Resume series", "skip": "Skip this occurrence", "end": "End series", "delete": "Delete recurring Tasks",
+        "invalid": "Check the recurrence definition and try again."
+    }
+}

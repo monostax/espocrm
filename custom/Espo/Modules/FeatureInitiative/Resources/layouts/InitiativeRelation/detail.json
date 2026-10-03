@@ -1,0 +1,9 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [{"name": "initiative"}, {"name": "parent"}],
+            [{"name": "description", "fullWidth": true}]
+        ]
+    }
+]

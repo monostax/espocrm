@@ -1,0 +1,5 @@
+{
+    "controller": "controllers/record",
+    "acl": "feature-initiative:acl",
+    "iconClass": "fas fa-link"
+}
