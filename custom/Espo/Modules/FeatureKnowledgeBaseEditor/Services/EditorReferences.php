@@ -123,6 +123,7 @@ class EditorReferences
             $results[] = [
                 'kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId(), 'label' => $entity->get('name'),
                 'recentlyViewed' => (bool) $row['lastViewedNumber'],
+                ...$this->visual($entity),
             ];
         }
         return $results;
@@ -138,7 +139,7 @@ class EditorReferences
             $ref = (array) $reference;
             if (!References::valid($ref)) throw new BadRequest('Invalid reference.');
             if ($ref['kind'] !== 'record') continue;
-            unset($ref['label']);
+            $ref = ['kind' => 'record', 'entityType' => $ref['entityType'], 'recordId' => $ref['recordId']];
             $results[References::url($ref)] = [...$ref, 'available' => false, 'label' => 'Unavailable reference'];
             $groups[$ref['entityType']][] = $ref['recordId'];
         }
@@ -150,11 +151,30 @@ class EditorReferences
                 foreach ($this->em->getRDBRepository($type)->clone($sql)->find() as $entity) {
                     if (!$this->allowedRecord($entity)) continue;
                     $ref = ['kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId()];
-                    $results[References::url($ref)] = [...$ref, 'available' => true, 'label' => $entity->get('name')];
+                    $results[References::url($ref)] = [
+                        ...$ref, 'available' => true, 'label' => $entity->get('name'), ...$this->visual($entity),
+                    ];
                 }
             } catch (Forbidden) { continue; }
         }
         return array_values($results);
+    }
+
+    private function visual(Entity $entity): array
+    {
+        $type = $entity->getEntityType();
+        $iconAttribute = $this->metadata->get(['clientDefs', $type, 'recordIconAttribute']);
+        $avatarReadable = $this->metadata->get(['entityDefs', $type, 'fields', 'avatar']) &&
+            $this->acl->checkField($type, 'avatar');
+        $urlReadable = $this->metadata->get(['entityDefs', $type, 'fields', 'avatarUrl']) &&
+            $this->acl->checkField($type, 'avatarUrl');
+
+        return [
+            'avatarId' => $avatarReadable ? $entity->get('avatarId') : null,
+            'avatarUrl' => $urlReadable ? $entity->get('avatarUrl') : null,
+            'icon' => $iconAttribute && $this->acl->checkField($type, $iconAttribute)
+                ? $entity->get($iconAttribute) : null,
+        ];
     }
 
     public function context(array $ref, array $bindings): ?array
