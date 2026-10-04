@@ -59,6 +59,7 @@ class InitiativeInbox
             'parentType' => 'Initiative', 'parentId' => $parent->getId(), 'type' => 'Post', 'post' => $body->post,
             'isInternal' => true, 'opportunityThreadRootId' => $body->rootId ?? null,
             'opportunityChatwootAccountId' => (int) $request->getQueryParam('accountId'), 'attachmentsIds' => $attachments,
+            'postEditorState' => $body->postEditorState ?? null,
         ])->getEntity();
         return $note->getValueMap();
     }

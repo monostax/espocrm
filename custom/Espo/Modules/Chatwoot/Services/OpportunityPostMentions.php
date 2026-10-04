@@ -11,8 +11,9 @@ use Espo\ORM\EntityManager;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
 
-/** Resolve the editor's Chatwoot IDs once, at write time, into verified CRM IDs. */
+/** Resolve legacy Chatwoot mentions and document references into authorized CRM recipients at write time. */
 class OpportunityPostMentions
 {
     // Only identity mappings are cached for this request/chunk. Record ACL is evaluated on every post.
@@ -40,8 +41,8 @@ class OpportunityPostMentions
             $teams = $this->entityManager->getRDBRepository($type)->getRelation($opportunity, 'teams')->find();
             $opportunity->set('tenantId', $this->teamTenants->resolveUniqueFromTeamIds(array_map(fn ($team) => $team->getId(), [...$teams])));
         }
-        $ids = [];
-        $nativeText = preg_replace('~\[[^\]]*\]\(mention://[^)]*\)~', '', $note->getPost() ?? '');
+        $ids = $this->referenceUserIds($note, $includeTeams);
+        $nativeText = preg_replace('~\[[^\]]*\]\((?:mention://|#crm-reference/)[^)]*\)~', '', $note->getPost() ?? '');
         foreach ($note->getData()->mentions ?? (object) [] as $token => $mention) {
             // The native parser also sees @labels inside Chatwoot links. Those labels
             // are display names, not CRM usernames, and must not identify a second user.
@@ -138,8 +139,8 @@ class OpportunityPostMentions
         // platform ID rather than waking every AI linked to the same CRM user.
         preg_match_all('~\(mention://user/(\d+)/[^)]*\)~', $note->getPost() ?? '', $directMatches);
         $platformUserIds = array_map('intval', $directMatches[1]);
-        $nativeUserIds = [];
-        $nativeText = preg_replace('~\[[^\]]*\]\(mention://[^)]*\)~', '', $note->getPost() ?? '');
+        $nativeUserIds = $this->referenceUserIds($note, false);
+        $nativeText = preg_replace('~\[[^\]]*\]\((?:mention://|#crm-reference/)[^)]*\)~', '', $note->getPost() ?? '');
         foreach ($note->getData()->mentions ?? (object) [] as $token => $mention) {
             if (($mention->_scope ?? null) === 'User' && isset($mention->id) &&
                 preg_match('/(?<![\w@.-])' . preg_quote($token, '/') . '(?![\w@.-])/u', $nativeText)) {
@@ -171,6 +172,27 @@ class OpportunityPostMentions
             }
         }
         return $targets;
+    }
+
+    private function referenceUserIds(Note $note, bool $includeTeams): array
+    {
+        $post = $note->getPost() ?? '';
+        if (!str_contains($post, '#crm-reference/')) return [];
+        $ids = [];
+        foreach (References::fromMarkdown($post) as $reference) {
+            $type = $reference['entityType'] ?? null;
+            if ($type !== 'User' && !($includeTeams && $type === 'Team')) continue;
+            $record = $this->entityManager->getEntityById($type, $reference['recordId']);
+            if (!$record || !$this->acl->check($record, 'read')) continue;
+            if ($type === 'User') {
+                $ids[] = $record->getId();
+            } else {
+                foreach ($this->entityManager->getRDBRepository('Team')->getRelation($record, 'users')->find() as $user) {
+                    $ids[] = $user->getId();
+                }
+            }
+        }
+        return $ids;
     }
 
     private function accounts(array $where): array

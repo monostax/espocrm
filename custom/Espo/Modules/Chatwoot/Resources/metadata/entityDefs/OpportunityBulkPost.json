@@ -8,6 +8,7 @@
         "platformId": { "type": "varchar", "maxLength": 64 },
         "chatwootAccountId": { "type": "int", "required": true },
         "post": { "type": "text" },
+        "postEditorState": { "type": "text" },
         "status": { "type": "enum", "options": ["Queued", "Running", "Completed", "Partial"], "default": "Queued" },
         "total": { "type": "int", "default": 0 },
         "succeeded": { "type": "int", "default": 0 },

@@ -128,6 +128,7 @@ class ActivityInbox
             'isInternal' => true, 'opportunityThreadRootId' => $body->rootId ?? null,
             'opportunityChatwootAccountId' => (int) $request->getQueryParam('accountId'),
             'attachmentsIds' => $attachmentsIds,
+            'postEditorState' => $body->postEditorState ?? null,
         ])->getEntity();
         return $note->getValueMap();
     }

@@ -51,10 +51,12 @@ class OpportunityBulkPost
         $ids = array_values(array_unique($ids));
         sort($ids);
         $post = trim($post);
+        $postEditorState = $data->postEditorState ?? null;
+        \Espo\Modules\Chatwoot\Tools\PostContent::validate($post, $postEditorState);
         $requestKey = hash('sha256', $this->user->getId() . ':' . $account->getId() . ':' . $key);
-        $payloadHash = hash('sha256', json_encode([$ids, $post], JSON_THROW_ON_ERROR));
+        $payloadHash = hash('sha256', json_encode($postEditorState ? [$ids, $post, $postEditorState] : [$ids, $post], JSON_THROW_ON_ERROR));
 
-        $operation = $this->em->getTransactionManager()->run(function () use ($account, $ids, $post, $requestKey, $payloadHash): Entity {
+        $operation = $this->em->getTransactionManager()->run(function () use ($account, $ids, $post, $postEditorState, $requestKey, $payloadHash): Entity {
             // Serialize submissions by the same actor, including the first use of a key.
             $this->em->getRDBRepository('User')->select('id')->where(['id' => $this->user->getId()])->forUpdate()->findOne();
             $existing = $this->em->getRDBRepository(self::OPERATION)->where(['requestKey' => $requestKey])->findOne();
@@ -71,6 +73,7 @@ class OpportunityBulkPost
             }
             $operation = $this->em->createEntity(self::OPERATION, [
                 'requestKey' => $requestKey, 'payloadHash' => $payloadHash, 'post' => $post,
+                'postEditorState' => $postEditorState,
                 'userId' => $this->user->getId(), 'accountId' => $account->getId(),
                 'tenantId' => $account->get('tenantId'), 'platformId' => $account->get('platformId'),
                 'chatwootAccountId' => (int) $account->get('chatwootAccountId'),
@@ -213,6 +216,7 @@ class OpportunityBulkPost
                 $note = $this->records->create('Note')->create((object) [
                     'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => $opportunity->getId(),
                     'post' => $operation->get('post'), 'opportunityChatwootAccountId' => (int) $account->get('chatwootAccountId'),
+                    'postEditorState' => $operation->get('postEditorState'),
                 ])->getEntity();
                 $target->set(['status' => 'Succeeded', 'noteId' => $note->getId(), 'error' => null]);
                 $operation->set([

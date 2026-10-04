@@ -1,6 +1,16 @@
 {
     "transactionalSave": true,
     "fields": {
+        "postEditorState": {
+            "type": "text",
+            "utility": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "textFilterDisabled": true
+        },
+        "post": {
+            "additionalAttributeList": ["__APPEND__", "editorState"]
+        },
         "opportunityThreadRoot": {
             "type": "link",
             "readOnlyAfterCreate": true,

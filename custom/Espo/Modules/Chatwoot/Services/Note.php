@@ -27,7 +27,7 @@ class Note extends Service
             foreach ($this->getRepository()->getRelation($note, 'attachments')->find() as $attachment) {
                 $this->entityManager->removeEntity($attachment);
             }
-            $note->set(['post' => '', 'data' => (object) [], 'opportunityMentionUserIds' => [], 'opportunityPostDeleted' => true]);
+            $note->set(['post' => '', 'postEditorState' => null, 'data' => (object) [], 'opportunityMentionUserIds' => [], 'opportunityPostDeleted' => true]);
             $this->entityManager->saveEntity($note);
             $this->processActionHistoryRecord('delete', $note);
             return new DeleteResult();
