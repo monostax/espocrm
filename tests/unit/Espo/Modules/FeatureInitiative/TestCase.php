@@ -12,7 +12,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     {
         $attributes = array_fill_keys([
             'id', 'name', 'tenantId', 'tenantName', 'initiativeTypeId', 'stageId', 'status', 'initiativeId', 'parentType', 'parentId',
-            'assignedUserId', 'baseUserTeamId', 'chatwootAccountId',
+            'assignedUserId', 'baseUserTeamId', 'chatwootAccountId', 'category',
         ], ['type' => 'varchar']);
         $attributes['isActive'] = ['type' => 'bool'];
         $attributes['teamsIds'] = ['type' => 'jsonArray'];

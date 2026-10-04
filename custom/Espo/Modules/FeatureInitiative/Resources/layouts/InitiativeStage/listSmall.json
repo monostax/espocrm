@@ -1,5 +1,6 @@
 [
     {"name": "name", "link": true},
     {"name": "order"},
+    {"name": "category"},
     {"name": "isActive"}
 ]

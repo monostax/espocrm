@@ -17,7 +17,7 @@ class ValidateProgress implements BeforeSave
 {
     public static int $order = 10;
 
-    public const STATUSES = ['On Hold', 'To Do', 'Doing', 'Done'];
+    public const STATUSES = ['Open', 'In Progress', 'Paused', 'Completed', 'Canceled'];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -43,18 +43,8 @@ class ValidateProgress implements BeforeSave
             throw ValidationError::badRequest('inactiveEntry', 'Initiatives can only enter active types and stages.');
         }
 
-        if ($entity->isNew() && $entity->get('status') === null) {
-            $entity->set('status', 'To Do');
-        }
-
-        if (!in_array($entity->get('status'), self::STATUSES, true)) {
-            throw ValidationError::badRequest('invalidStatus', 'Status must be On Hold, To Do, Doing or Done.');
-        }
-
-        // Status belongs to the current record/stage pair, never to the stage itself.
-        if (!$entity->isNew() && $enteringStage) {
-            $entity->set('status', 'To Do');
-        }
+        // Always derive from the stage, including ORM/import writes and unrelated edits.
+        $entity->set('status', $stage->get('category'));
 
         $this->validateAssignee($entity, (string) $initiativeType->get('tenantId'));
     }

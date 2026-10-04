@@ -19,6 +19,16 @@
         },
         "initiativeType": { "type": "link", "required": true, "readOnlyAfterCreate": true },
         "order": { "type": "int", "required": true, "default": 10, "min": 1 },
+        "category": {
+            "type": "enum",
+            "options": ["Open", "In Progress", "Paused", "Completed", "Canceled"],
+            "default": "Open",
+            "required": true,
+            "audited": true,
+            "displayAsLabel": true,
+            "tooltip": true,
+            "style": { "Open": "default", "In Progress": "primary", "Paused": "warning", "Completed": "success", "Canceled": "danger" }
+        },
         "isActive": { "type": "bool", "default": true },
         "description": { "type": "text" },
         "tenant": { "type": "link", "readOnly": true },

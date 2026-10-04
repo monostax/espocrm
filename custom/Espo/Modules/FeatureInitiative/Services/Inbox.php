@@ -297,7 +297,7 @@ class Inbox
         $list = $this->records->get($entity)->find(SearchParams::fromRaw([
             'maxSize' => 100, 'orderBy' => $entity === 'InitiativeStage' ? 'order' : 'name', 'order' => 'asc',
             'select' => $entity === 'User' ? ['id', 'name'] : ($entity === 'InitiativeStage'
-                ? ['id', 'name', 'initiativeTypeId', 'initiativeTypeName', 'order', 'isActive'] : ['id', 'name', 'isActive']),
+                ? ['id', 'name', 'initiativeTypeId', 'initiativeTypeName', 'order', 'category', 'isActive'] : ['id', 'name', 'isActive']),
             'where' => [['type' => 'in', 'attribute' => 'id', 'value' => $ids]],
         ]))->getValueMapList();
         return (object) ['list' => $list, 'hasMore' => count($ids) === 100];

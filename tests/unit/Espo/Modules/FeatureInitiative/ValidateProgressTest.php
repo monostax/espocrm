@@ -25,7 +25,7 @@ class ValidateProgressTest extends TestCase
     protected function setUp(): void
     {
         $this->initiativeType = $this->entity('InitiativeType', ['id' => 'type-1', 'tenantId' => 'tenant-1', 'isActive' => true]);
-        $this->stage = $this->entity('InitiativeStage', ['id' => 'stage-1', 'initiativeTypeId' => 'type-1', 'isActive' => true]);
+        $this->stage = $this->entity('InitiativeStage', ['id' => 'stage-1', 'initiativeTypeId' => 'type-1', 'isActive' => true, 'category' => 'Open']);
         $this->entityManager = $this->createMock(EntityManager::class);
         $this->access = $this->createMock(InitiativeTypeAccess::class);
         $this->access->method('requireParent')->willReturn($this->initiativeType);
@@ -35,7 +35,7 @@ class ValidateProgressTest extends TestCase
     private function record(array $values = [], bool $existing = false): BaseEntity
     {
         return $this->entity('Initiative', array_merge([
-            'initiativeTypeId' => 'type-1', 'stageId' => 'stage-1', 'status' => 'To Do',
+            'initiativeTypeId' => 'type-1', 'stageId' => 'stage-1', 'status' => 'Open',
         ], $values), $existing);
     }
 
@@ -47,52 +47,57 @@ class ValidateProgressTest extends TestCase
 
     public static function statuses(): array
     {
-        return array_map(fn ($status) => [$status], ['On Hold', 'To Do', 'Doing', 'Done']);
+        return array_map(fn ($status) => [$status], ['Open', 'In Progress', 'Paused', 'Completed', 'Canceled']);
     }
 
     #[DataProvider('statuses')]
-    public function testStatusIsPerRecordAndDoesNotMoveStage(string $status): void
+    public function testStatusComesFromStageCategoryAndCannotBeOverridden(string $status): void
     {
+        $this->stage->set('category', $status);
         $this->entityManager->method('getEntityById')->willReturn($this->stage);
         $record = $this->record([], true);
-        $record->set('status', $status);
+        $record->set('status', 'Manual override');
         $this->save($record);
         $this->assertSame($status, $record->get('status'));
         $this->assertSame('stage-1', $record->get('stageId'));
         $this->assertNull($this->stage->get('status'));
     }
 
-    public function testNewRecordDefaultsToToDo(): void
+    #[DataProvider('statuses')]
+    public function testNewRecordDerivesStatusFromStage(string $status): void
     {
+        $this->stage->set('category', $status);
         $this->entityManager->method('getEntityById')->willReturn($this->stage);
         $record = $this->record(['status' => null]);
         $this->save($record);
-        $this->assertSame('To Do', $record->get('status'));
+        $this->assertSame($status, $record->get('status'));
     }
 
-    public function testStageMoveResetsStatusEvenIfStatusWasExplicitlyUpdated(): void
+    public function testStageMoveDerivesStatusEvenIfStatusWasExplicitlyUpdated(): void
     {
+        $this->stage->set('category', 'In Progress');
         $this->entityManager->method('getEntityById')->willReturn($this->stage);
-        $record = $this->record(['stageId' => 'old-stage', 'status' => 'Done'], true);
-        $record->set(['stageId' => 'stage-1', 'status' => 'Doing']);
+        $record = $this->record(['stageId' => 'old-stage', 'status' => 'Completed'], true);
+        $record->set(['stageId' => 'stage-1', 'status' => 'Canceled']);
         $this->save($record);
-        $this->assertSame('To Do', $record->get('status'));
+        $this->assertSame('In Progress', $record->get('status'));
     }
 
-    public function testUnrelatedUpdatePreservesDone(): void
+    public function testUnrelatedUpdateRefreshesStaleStatusFromStage(): void
     {
         $this->entityManager->method('getEntityById')->willReturn($this->stage);
-        $record = $this->record(['status' => 'Done'], true);
+        $record = $this->record(['status' => 'Completed'], true);
         $record->set('name', 'Renamed');
         $this->save($record);
-        $this->assertSame('Done', $record->get('status'));
+        $this->assertSame('Open', $record->get('status'));
     }
 
-    public function testInvalidStatusIsRejected(): void
+    public function testInvalidManualStatusIsReplacedByCategory(): void
     {
         $this->entityManager->method('getEntityById')->willReturn($this->stage);
-        $this->expectException(BadRequest::class);
-        $this->save($this->record(['status' => 'Completed']));
+        $record = $this->record(['status' => 'Invalid']);
+        $this->save($record);
+        $this->assertSame('Open', $record->get('status'));
     }
 
     public function testMissingStageIsRejected(): void
@@ -126,15 +131,15 @@ class ValidateProgressTest extends TestCase
         $this->save($this->record());
     }
 
-    public function testArchivedStageAndInitiativeTypeStillAllowExistingWork(): void
+    public function testInactiveStageAndInitiativeTypeStillAllowExistingWork(): void
     {
         $this->initiativeType->set('isActive', false);
         $this->stage->set('isActive', false);
         $this->entityManager->method('getEntityById')->willReturn($this->stage);
         $record = $this->record([], true);
-        $record->set('status', 'Done');
+        $record->set('name', 'Renamed');
         $this->save($record);
-        $this->assertSame('Done', $record->get('status'));
+        $this->assertSame('Open', $record->get('status'));
     }
 
     public function testForeignAssigneeIsRejected(): void

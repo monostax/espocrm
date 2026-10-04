@@ -33,10 +33,14 @@ class MetadataTest extends TestCase
     {
         $defs = $this->json('metadata/entityDefs/Initiative.json');
         $this->assertSame(ValidateProgress::STATUSES, $defs['fields']['status']['options']);
+        $this->assertSame(ValidateProgress::STATUSES, $this->json('metadata/entityDefs/InitiativeStage.json')['fields']['category']['options']);
+        $this->assertTrue($defs['fields']['status']['readOnly']);
+        $this->assertTrue($defs['fields']['status']['importDisabled']);
+        $this->assertFalse($this->json('metadata/clientDefs/Initiative.json')['kanbanViewMode']);
         $this->assertTrue($defs['fields']['stage']['audited']);
         $this->assertTrue($defs['fields']['status']['audited']);
         $this->assertSame([
-            'On Hold' => 'Pausado', 'To Do' => 'Pendente', 'Doing' => 'Em Andamento', 'Done' => 'Concluído',
+            'Open' => 'Aberta', 'In Progress' => 'Em andamento', 'Paused' => 'Pausada', 'Completed' => 'Concluída', 'Canceled' => 'Cancelada',
         ], $this->json('i18n/pt_BR/Initiative.json')['options']['status']);
         $this->assertSame('Iniciativas', $this->json('i18n/pt_BR/Global.json')['scopeNamesPlural']['Initiative']);
         $this->assertSame('Initiatives', $this->json('i18n/en_US/Global.json')['scopeNamesPlural']['Initiative']);

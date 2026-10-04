@@ -102,8 +102,8 @@ class InboxQueryTest extends TestCase
         $request->method('getQueryParam')->willReturnCallback(fn ($name) => $name === 'accountId' ? '6' : null);
         $this->scope = $this->inbox->scope($request);
         $this->pdo->exec("INSERT INTO initiative (id, tenant_id, initiative_type_id, status, readable) VALUES
-            ('a', 'tenant-a', 'type-a', 'To Do', 1), ('b', 'tenant-a', 'type-a', 'Done', 1),
-            ('c', 'tenant-b', 'type-b', 'Doing', 1), ('d', 'tenant-a', 'type-b', 'Doing', 0)");
+            ('a', 'tenant-a', 'type-a', 'Open', 1), ('b', 'tenant-a', 'type-a', 'Completed', 1),
+            ('c', 'tenant-b', 'type-b', 'In Progress', 1), ('d', 'tenant-a', 'type-b', 'In Progress', 0)");
         $this->pdo->exec("INSERT INTO note (id, parent_type, parent_id, type, created_by_id, number)
             VALUES ('post-a', 'Initiative', 'a', 'Post', 'other', 1), ('post-c', 'Initiative', 'c', 'Post', 'other', 2)");
     }
@@ -136,9 +136,9 @@ class InboxQueryTest extends TestCase
         return $result;
     }
 
-    public function testGroupTotalsRespectTheAuthorizedScopeAndKeepDoneRecords(): void
+    public function testGroupTotalsRespectTheAuthorizedScopeAndKeepCompletedRecords(): void
     {
-        self::assertSame(['status:Done' => 1, 'status:To Do' => 1], $this->queryGroups('status'));
+        self::assertSame(['status:Completed' => 1, 'status:Open' => 1], $this->queryGroups('status'));
         self::assertSame(['initiativeType:type-a' => 2], $this->queryGroups('initiativeType'));
         self::assertSame(['all' => 2], $this->queryGroups('none'));
         self::assertSame(['activity:noNextAction' => 2], $this->queryGroups('activity'));

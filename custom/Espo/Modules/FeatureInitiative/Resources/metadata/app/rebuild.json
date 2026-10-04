@@ -1,6 +1,7 @@
 {
     "actionClassNameList": [
         "__APPEND__",
-        "Espo\\Modules\\FeatureInitiative\\Rebuild\\ConfigureNavbar"
+        "Espo\\Modules\\FeatureInitiative\\Rebuild\\ConfigureNavbar",
+        "Espo\\Modules\\FeatureInitiative\\Rebuild\\BackfillStageCategories"
     ]
 }

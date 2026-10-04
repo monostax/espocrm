@@ -4,6 +4,7 @@
         "rows": [
             [{"name": "name"}, {"name": "initiativeType"}],
             [{"name": "order"}, {"name": "isActive"}],
+            [{"name": "category"}, false],
             [{"name": "description", "fullWidth": true}]
         ]
     }

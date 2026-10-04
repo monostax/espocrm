@@ -2,5 +2,6 @@
     {"name": "name", "link": true},
     {"name": "initiativeType", "link": true},
     {"name": "order"},
+    {"name": "category"},
     {"name": "isActive"}
 ]

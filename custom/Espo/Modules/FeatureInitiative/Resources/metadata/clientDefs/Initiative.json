@@ -3,7 +3,7 @@
     "acl": "feature-initiative:acl",
     "iconClass": "fas fa-flag",
     "boolFilterList": ["onlyMy"],
-    "kanbanViewMode": true,
+    "kanbanViewMode": false,
     "relationshipPanels": {
         "relations": {
             "rowActionsView": "feature-initiative:views/initiative-relation/row-actions",

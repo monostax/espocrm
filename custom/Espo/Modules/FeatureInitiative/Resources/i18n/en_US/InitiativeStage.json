@@ -1,5 +1,7 @@
 {
-    "fields": { "initiativeType": "Initiative Type", "order": "Order", "isActive": "Active", "tenant": "Tenant" },
+    "fields": { "initiativeType": "Initiative Type", "order": "Order", "category": "Category", "isActive": "Active", "tenant": "Tenant" },
+    "options": { "category": { "Open": "Open", "In Progress": "In Progress", "Paused": "Paused", "Completed": "Completed", "Canceled": "Canceled" } },
+    "tooltips": { "category": "Determines the status of every initiative in this stage. Changing the category updates existing initiatives too." },
     "links": { "initiativeType": "Initiative Type", "initiatives": "Initiatives" },
     "labels": { "Create InitiativeStage": "Create Stage" },
     "presetFilters": { "active": "Active" }

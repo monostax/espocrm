@@ -29,13 +29,14 @@
         },
         "status": {
             "type": "enum",
-            "options": ["On Hold", "To Do", "Doing", "Done"],
-            "default": "To Do",
-            "required": true,
+            "options": ["Open", "In Progress", "Paused", "Completed", "Canceled"],
+            "readOnly": true,
+            "importDisabled": true,
+            "layoutMassUpdateDisabled": true,
             "audited": true,
             "displayAsLabel": true,
             "tooltip": true,
-            "style": { "On Hold": "warning", "To Do": "default", "Doing": "primary", "Done": "success" }
+            "style": { "Open": "default", "In Progress": "primary", "Paused": "warning", "Completed": "success", "Canceled": "danger" }
         },
         "assignedUser": { "type": "link", "view": "views/fields/assigned-user", "audited": true },
         "description": { "type": "text" },

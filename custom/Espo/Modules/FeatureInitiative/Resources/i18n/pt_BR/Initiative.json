@@ -1,8 +1,8 @@
 {
-    "fields": { "initiativeType": "Tipo de Iniciativa", "stage": "Etapa", "status": "Status na Etapa", "tenant": "Workspace" },
+    "fields": { "initiativeType": "Tipo de Iniciativa", "stage": "Etapa", "status": "Status", "tenant": "Workspace" },
     "links": { "initiativeType": "Tipo de Iniciativa", "stage": "Etapa", "relations": "Registros Relacionados" },
     "labels": { "Create Initiative": "Criar Iniciativa" },
-    "options": { "status": { "On Hold": "Pausado", "To Do": "Pendente", "Doing": "Em Andamento", "Done": "Concluído" } },
+    "options": { "status": { "Open": "Aberta", "In Progress": "Em andamento", "Paused": "Pausada", "Completed": "Concluída", "Canceled": "Cancelada" } },
     "messages": { "selectInitiativeTypeFirst": "Selecione um tipo de iniciativa antes de escolher uma etapa." },
-    "tooltips": { "status": "Progresso na etapa atual. Ao mudar de etapa, o status volta para Pendente. Concluído não move a iniciativa." }
+    "tooltips": { "status": "Determinado automaticamente pela categoria da etapa selecionada. Altere a etapa para avançar a iniciativa." }
 }
