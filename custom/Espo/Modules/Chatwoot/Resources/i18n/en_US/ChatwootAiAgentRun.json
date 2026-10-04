@@ -157,7 +157,8 @@
             "public-mention": "Public @Mention",
             "scheduled-message": "Scheduled Message",
             "followup-trigger": "Follow-up Trigger",
-            "opportunity-mention": "Opportunity Stream @Mention"
+            "opportunity-mention": "Opportunity Stream @Mention",
+            "stream-mention": "Record Stream @Mention"
         }
     }
 }

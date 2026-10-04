@@ -11,6 +11,7 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Hooks\Note\KeepOpportunityEventsInternal;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamAgent;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
+use Espo\Modules\Chatwoot\Tools\Activities\Access as ActivityAccess;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Select;
 use Espo\ORM\Repository\RDBRepository;
@@ -37,12 +38,13 @@ class OpportunityStreamAgentTest extends TestCase
     {
         $defs = ['attributes' => []];
         foreach (['id', 'type', 'post', 'parentType', 'parentId', 'createdById', 'createdByName', 'createdAt',
-            'opportunityChatwootAccountId', 'opportunityStreamEventKey', 'number'] as $field) {
+            'opportunityChatwootAccountId', 'opportunityStreamEventKey', 'opportunityThreadRootId', 'number'] as $field) {
             $defs['attributes'][$field] = ['type' => 'varchar'];
         }
         $defs['attributes']['data'] = ['type' => 'jsonObject'];
         $defs['attributes']['isInternal'] = ['type' => 'bool'];
         $defs['attributes']['deleted'] = ['type' => 'bool'];
+        $defs['attributes']['opportunityPostDeleted'] = ['type' => 'bool'];
         $note = new Note('Note', $defs);
         $note->set($values);
         return $note;
@@ -111,7 +113,14 @@ class OpportunityStreamAgentTest extends TestCase
         $access->method('canReadNote')->willReturnCallback(fn () => $this->canRead);
         $acl = $this->createMock(Acl::class);
         $acl->method('check')->willReturnCallback(fn ($entity, $action) => $action === 'create' ? $this->canCreate : $this->canRead);
-        $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class));
+        $activities = $this->createMock(ActivityAccess::class);
+        $activities->method('record')->willReturnCallback(function ($type, $id, $tenant, $stream) {
+            self::assertTrue($stream);
+            if (!$this->canRead || ($this->records["$type/$id"]->get('tenantId') !== $tenant->getId())) throw new Forbidden();
+            return $this->records["$type/$id"];
+        });
+        $this->records['Tenant/tenant'] = new EntityDouble(['id' => 'tenant']);
+        $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities);
     }
 
     public function testLostResponseAndDeletedReplyDoNotCreateAnotherPost(): void
@@ -204,5 +213,34 @@ class OpportunityStreamAgentTest extends TestCase
         self::assertFalse($this->service->claim('source', 'ai', str_repeat('0', 64), 'run-1')->claimed);
         $this->service->reply('source', 'ai', $this->postHash, 'Done', 'run-1');
         self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run-2')->claimed);
+    }
+
+    public function testAllSupportedStreamsKeepTheirParentThreadAndDeduplication(): void
+    {
+        foreach (['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call'] as $type) {
+            $this->setUp();
+            $this->source->set(['parentType' => $type, 'parentId' => 'record', 'opportunityThreadRootId' => 'thread']);
+            $this->records["$type/record"] = new EntityDouble(['tenantId' => 'tenant']);
+            $context = $this->service->context('source', 'ai', $this->postHash);
+            self::assertTrue($context->shouldRespond);
+            self::assertSame($type, $context->parentType);
+            self::assertSame('record', $context->parentId);
+            self::assertTrue($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+            self::assertTrue($this->service->reply('source', 'ai', $this->postHash, 'Reply', 'run')->published);
+            $reply = array_values($this->replies)[0];
+            self::assertSame($type, $reply->getParentType());
+            self::assertSame('record', $reply->getParentId());
+            self::assertSame('thread', $reply->get('opportunityThreadRootId'));
+            self::assertTrue($reply->isInternal());
+            self::assertFalse($this->service->reply('source', 'ai', $this->postHash, 'Retry', 'run')->published);
+            $this->replies = [];
+        }
+    }
+
+    public function testTombstonedPostsCannotExecute(): void
+    {
+        $this->source->set('opportunityPostDeleted', true);
+        self::assertFalse($this->service->context('source', 'ai', $this->postHash)->shouldRespond);
+        self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
     }
 }

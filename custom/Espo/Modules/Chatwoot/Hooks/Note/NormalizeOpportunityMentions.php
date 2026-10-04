@@ -22,7 +22,7 @@ class NormalizeOpportunityMentions implements BeforeSave
             ($entity->isNew() || $entity->isAttributeChanged('post'))) {
             assert($entity instanceof Note);
             $entity->set('opportunityMentionUserIds', $this->mentions->resolve($entity));
-            if ($entity->isNew() && $entity->get('parentType') === 'Opportunity') {
+            if ($entity->isNew()) {
                 // Note.data is server-owned. Keep the author-authorized targets for the async worker.
                 $data = $entity->getData();
                 $data->opportunityAiMentionTargets = $this->mentions->resolveAiTargets($entity);

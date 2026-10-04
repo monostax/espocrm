@@ -56,6 +56,36 @@
         }
     },
     {
+        "route": "/Note/:id/streamAiClaim/:membershipId",
+        "method": "post",
+        "params": {
+            "controller": "StreamAgent",
+            "action": "claim",
+            "id": ":id",
+            "membershipId": ":membershipId"
+        }
+    },
+    {
+        "route": "/Note/:id/streamAiContext/:membershipId",
+        "method": "get",
+        "params": {
+            "controller": "StreamAgent",
+            "action": "context",
+            "id": ":id",
+            "membershipId": ":membershipId"
+        }
+    },
+    {
+        "route": "/Note/:id/streamAiReply/:membershipId",
+        "method": "post",
+        "params": {
+            "controller": "StreamAgent",
+            "action": "reply",
+            "id": ":id",
+            "membershipId": ":membershipId"
+        }
+    },
+    {
         "route": "/Note/:id/opportunityAiClaim/:membershipId",
         "method": "post",
         "params": {

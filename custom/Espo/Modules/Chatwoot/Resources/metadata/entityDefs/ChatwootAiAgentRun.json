@@ -20,7 +20,8 @@
                 "public-mention",
                 "scheduled-message",
                 "followup-trigger",
-                "opportunity-mention"
+                "opportunity-mention",
+                "stream-mention"
             ],
             "default": "customer-message",
             "required": true,

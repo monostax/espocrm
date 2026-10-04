@@ -157,7 +157,8 @@
             "public-mention": "@Menção Pública",
             "scheduled-message": "Mensagem Agendada",
             "followup-trigger": "Gatilho de Follow-up",
-            "opportunity-mention": "@Menção no Histórico da Oportunidade"
+            "opportunity-mention": "@Menção no Histórico da Oportunidade",
+            "stream-mention": "@Menção na Discussão do Registro"
         }
     }
 }

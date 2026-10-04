@@ -15,7 +15,7 @@ class KeepOpportunityEventsInternal
     public function beforeSave(Entity $entity, array $options): void
     {
         if (in_array($entity->get('type'), OpportunityStreamEvents::EVENT_TYPES, true) ||
-            ($entity->get('parentType') === 'Opportunity' &&
+            (in_array($entity->get('parentType'), ['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call'], true) &&
                 ($entity->get('data')->opportunityStreamAgent ?? null))) {
             $entity->set('isInternal', true);
         }

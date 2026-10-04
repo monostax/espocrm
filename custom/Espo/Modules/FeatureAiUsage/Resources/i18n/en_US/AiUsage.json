@@ -134,6 +134,7 @@
         "scheduled-message": "Scheduled message",
         "followup-trigger": "Follow-up trigger",
         "opportunity-mention": "Opportunity @mention",
+        "stream-mention": "Record stream @mention",
         "transfer": "Transfer tool",
         "appointments": "Appointment tool",
         "create_opportunity": "Create opportunity tool",

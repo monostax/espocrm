@@ -14,15 +14,18 @@ class DispatchOpportunityStreamAgent implements Job
 {
     public function run(Data $data): void
     {
-        $url = getenv('CRM_OPPORTUNITY_STREAM_AGENT_WEBHOOK_URL');
-        $secret = getenv('CRM_OPPORTUNITY_STREAM_AGENT_WEBHOOK_SECRET');
+        $url = getenv('CRM_STREAM_AGENT_WEBHOOK_URL') ?: getenv('CRM_OPPORTUNITY_STREAM_AGENT_WEBHOOK_URL');
+        $secret = getenv('CRM_STREAM_AGENT_WEBHOOK_SECRET') ?: getenv('CRM_OPPORTUNITY_STREAM_AGENT_WEBHOOK_SECRET');
         if (!$url || !$secret) {
-            throw new RuntimeException('Opportunity stream agent webhook URL and secret must be configured.');
+            throw new RuntimeException('Stream agent webhook URL and secret must be configured.');
         }
         $payload = [];
-        foreach (['noteId', 'opportunityId', 'postHash', 'aiAgentMembershipId', 'chatwootAccountCrmId', 'crmTenantId'] as $key) {
+        foreach (['noteId', 'postHash', 'aiAgentMembershipId', 'chatwootAccountCrmId', 'crmTenantId'] as $key) {
             $payload[$key] = $data->get($key);
         }
+        // Jobs saved before the generic stream deployment remain deliverable.
+        $payload['parentType'] = $data->get('parentType') ?: 'Opportunity';
+        $payload['parentId'] = $data->get('parentId') ?: $data->get('opportunityId');
         $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $timestamp = (string) time();
         $response = (new Client())->post($url, [

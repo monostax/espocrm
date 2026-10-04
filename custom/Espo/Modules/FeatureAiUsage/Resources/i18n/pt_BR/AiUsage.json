@@ -134,6 +134,7 @@
         "scheduled-message": "Mensagem agendada",
         "followup-trigger": "Gatilho de follow-up",
         "opportunity-mention": "@Menção no histórico da oportunidade",
+        "stream-mention": "@Menção na discussão do registro",
         "transfer": "Transferência",
         "appointments": "Agendamentos",
         "create_opportunity": "Criar oportunidade",

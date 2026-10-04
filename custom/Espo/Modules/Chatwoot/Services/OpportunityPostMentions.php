@@ -8,6 +8,7 @@ use Espo\Core\Acl;
 use Espo\Core\AclManager;
 use Espo\Entities\Note;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Entity;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
@@ -32,14 +33,9 @@ class OpportunityPostMentions
     {
         $type = $note->getParentType();
         if (!in_array($type, ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true)) return [];
-        $opportunity = $this->entityManager->getEntityById($type, $note->getParentId());
+        $opportunity = $this->streamParent($note);
         if (!$opportunity) {
             return [];
-        }
-        // Activity posts share mention normalization, including posts written in Espo itself.
-        if (!$opportunity->get('tenantId') && in_array($type, Access::TYPES, true)) {
-            $teams = $this->entityManager->getRDBRepository($type)->getRelation($opportunity, 'teams')->find();
-            $opportunity->set('tenantId', $this->teamTenants->resolveUniqueFromTeamIds(array_map(fn ($team) => $team->getId(), [...$teams])));
         }
         $ids = $this->referenceUserIds($note, $includeTeams);
         $nativeText = preg_replace('~\[[^\]]*\]\((?:mention://|#crm-reference/)[^)]*\)~', '', $note->getPost() ?? '');
@@ -118,8 +114,8 @@ class OpportunityPostMentions
         if ($note->getData()->opportunityStreamAgent ?? null) {
             return [];
         }
-        $opportunity = $this->entityManager->getEntityById('Opportunity', $note->getParentId());
-        if (!$opportunity?->get('tenantId') || !$note->get('opportunityMentionUserIds')) {
+        $opportunity = $this->streamParent($note);
+        if (!$opportunity?->get('tenantId')) {
             return [];
         }
         $where = ['tenantId' => $opportunity->get('tenantId')];
@@ -139,7 +135,11 @@ class OpportunityPostMentions
         // platform ID rather than waking every AI linked to the same CRM user.
         preg_match_all('~\(mention://user/(\d+)/[^)]*\)~', $note->getPost() ?? '', $directMatches);
         $platformUserIds = array_map('intval', $directMatches[1]);
-        $nativeUserIds = $this->referenceUserIds($note, false);
+        $nativeUserIds = $this->referenceUserIds($note, false, false);
+        $membershipIds = array_column(array_filter(
+            References::fromMarkdown($note->getPost() ?? ''),
+            fn ($ref) => ($ref['entityType'] ?? null) === 'ChatwootAccountUserMembership',
+        ), 'recordId');
         $nativeText = preg_replace('~\[[^\]]*\]\((?:mention://|#crm-reference/)[^)]*\)~', '', $note->getPost() ?? '');
         foreach ($note->getData()->mentions ?? (object) [] as $token => $mention) {
             if (($mention->_scope ?? null) === 'User' && isset($mention->id) &&
@@ -163,7 +163,8 @@ class OpportunityPostMentions
             }
             if ($userId && in_array($userId, $userIds, true) &&
                 (in_array((int) $chatwootUser->get('chatwootUserId'), $platformUserIds, true) ||
-                    in_array($userId, $nativeUserIds, true))) {
+                    in_array($userId, $nativeUserIds, true) ||
+                    (in_array($membership->getId(), $membershipIds, true) && $this->acl->check($membership, 'read')))) {
                 $targets[] = (object) [
                     'aiAgentMembershipId' => $membership->getId(),
                     'chatwootAccountCrmId' => $account->getId(),
@@ -174,17 +175,29 @@ class OpportunityPostMentions
         return $targets;
     }
 
-    private function referenceUserIds(Note $note, bool $includeTeams): array
+    private function referenceUserIds(Note $note, bool $includeTeams, bool $includeMemberships = true): array
     {
         $post = $note->getPost() ?? '';
         if (!str_contains($post, '#crm-reference/')) return [];
         $ids = [];
         foreach (References::fromMarkdown($post) as $reference) {
             $type = $reference['entityType'] ?? null;
-            if ($type !== 'User' && !($includeTeams && $type === 'Team')) continue;
+            if (!in_array($type, ['User', 'ChatwootAccountUserMembership'], true) && !($includeTeams && $type === 'Team')) continue;
             $record = $this->entityManager->getEntityById($type, $reference['recordId']);
             if (!$record || !$this->acl->check($record, 'read')) continue;
-            if ($type === 'User') {
+            if ($type === 'ChatwootAccountUserMembership') {
+                if (!$includeMemberships) continue;
+                if (!$record->get('isAI')) continue;
+                $account = $this->entityManager->getEntityById('ChatwootAccount', $record->get('chatwootAccountId'));
+                $parent = $this->streamParent($note);
+                $user = $this->entityManager->getEntityById('ChatwootUser', $record->get('chatwootUserId'));
+                if (!$parent || !$account || !$user ||
+                    $account->get('tenantId') !== $parent->get('tenantId') ||
+                    $user->get('platformId') !== $account->get('platformId') ||
+                    ($note->get('opportunityChatwootAccountId') &&
+                        (int) $account->get('chatwootAccountId') !== (int) $note->get('opportunityChatwootAccountId'))) continue;
+                if ($user->get('assignedUserId')) $ids[] = $user->get('assignedUserId');
+            } elseif ($type === 'User') {
                 $ids[] = $record->getId();
             } else {
                 foreach ($this->entityManager->getRDBRepository('Team')->getRelation($record, 'users')->find() as $user) {
@@ -193,6 +206,18 @@ class OpportunityPostMentions
             }
         }
         return $ids;
+    }
+
+    private function streamParent(Note $note): ?Entity
+    {
+        $type = $note->getParentType();
+        if (!in_array($type, ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true)) return null;
+        $parent = $this->entityManager->getEntityById($type, $note->getParentId());
+        if ($parent && !$parent->get('tenantId') && in_array($type, Access::TYPES, true)) {
+            $teams = $this->entityManager->getRDBRepository($type)->getRelation($parent, 'teams')->find();
+            $parent->set('tenantId', $this->teamTenants->resolveUniqueFromTeamIds(array_map(fn ($team) => $team->getId(), [...$teams])));
+        }
+        return $parent;
     }
 
     private function accounts(array $where): array
