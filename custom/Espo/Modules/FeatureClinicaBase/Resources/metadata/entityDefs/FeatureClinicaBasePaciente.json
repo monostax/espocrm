@@ -97,7 +97,7 @@
     "collection": {
         "orderBy": "createdAt",
         "order": "desc",
-        "textFilterFields": ["name", "contact"]
+        "textFilterFields": ["name", "contact.name"]
     },
     "indexes": {
         "contactId": {

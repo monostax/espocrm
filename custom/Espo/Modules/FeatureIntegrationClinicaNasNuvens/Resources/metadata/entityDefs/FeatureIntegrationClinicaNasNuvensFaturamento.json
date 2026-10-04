@@ -163,8 +163,8 @@
             "conta",
             "parcela",
             "description",
-            "paciente",
-            "agendamento"
+            "paciente.name",
+            "agendamento.name"
         ]
     },
     "indexes": {

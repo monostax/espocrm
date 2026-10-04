@@ -185,6 +185,10 @@ class Service
 
         $nameAttribute = $entityDefs->hasField(Field::NAME) ? Field::NAME : Attribute::ID;
 
+        if ($nameAttribute === Field::NAME && !$this->acl->checkField($entityType, Field::NAME)) {
+            return null;
+        }
+
         $selectList = [
             Attribute::ID,
             $nameAttribute,

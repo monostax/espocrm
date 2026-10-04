@@ -1,0 +1,6 @@
+{
+    "indexes": {
+        "searchLastName": {"columns": ["lastName", "deleted"]},
+        "searchAccountName": {"columns": ["accountName", "deleted"]}
+    }
+}

@@ -19,6 +19,7 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
+use Espo\Modules\Chatwoot\Tools\Activities\Access as ActivityAccess;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
 use Espo\Modules\Global\Services\RecordActivityBuckets;
 use Espo\ORM\Entity;
@@ -50,6 +51,7 @@ class Inbox
         private RecordActivityBuckets $buckets,
         private Metadata $metadata,
         private OpportunityAccess $streamAccess,
+        private ActivityAccess $activityAccess,
     ) {}
 
     public function workspace(Request $request): Entity
@@ -90,7 +92,7 @@ class Inbox
             ->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
         $query = $this->select->create()->from('Initiative')->withSearchParams($params)
             ->withStrictAccessControl()->withWherePermissionCheck()->withComplexExpressionsForbidden()->buildQueryBuilder()
-            ->where(['tenantId' => $workspace->get('tenantId')])->select('id')->distinct()->order([])->limit(null, null);
+            ->where(['tenantId' => $workspace->get('tenantId')])->select(['id'])->distinct()->order([])->limit(null, null);
         $assignee = $request->getQueryParam('assignee_tab');
         if ($assignee === 'me') $query->where(['assignedUserId' => $this->user->getId()]);
         elseif ($assignee === 'unassigned') $query->where(['assignedUserId' => null]);
@@ -237,9 +239,9 @@ class Inbox
         [$query, $key] = $this->groupedQuery($scope, $request, 'activity');
         $result['activity'] = [];
         foreach ($this->em->getQueryExecutor()->execute(
-            $query->select($key, 'key')->select(Expr::count(Expr::column('id')), 'count')->group(Expr::alias('key'))->build(),
+            $query->select($key, 'groupKey')->select(Expr::count(Expr::column('id')), 'count')->group(Expr::alias('groupKey'))->build(),
         )->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $result['activity'][substr($row['key'], strlen('activity:'))] = (int) $row['count'];
+            $result['activity'][substr($row['groupKey'], strlen('activity:'))] = (int) $row['count'];
         }
         return (object) $result;
     }
@@ -275,7 +277,9 @@ class Inbox
         if (!in_array($entity, ['InitiativeType', 'InitiativeStage', 'User'], true)) throw new BadRequest('Invalid initiative option.');
         $query = $this->select->create()->from($entity)->withStrictAccessControl()->buildQueryBuilder();
         if ($entity === 'User') {
-            $query->join('teams', 'initiativeTeam')->where(['initiativeTeam.tenantId' => $workspace->get('tenantId')])
+            $tenant = $this->em->getEntityById('Tenant', (string) $workspace->get('tenantId'));
+            if (!$tenant) throw new NotFound('Workspace tenant not found.');
+            $query->join('teams', 'initiativeTeam')->where(['initiativeTeam.id' => $this->activityAccess->teamIds($tenant)])
                 ->where(['isActive' => true, 'type' => ['regular', 'admin', 'super-admin']])->distinct();
         } else {
             $query->where(['tenantId' => $workspace->get('tenantId')]);

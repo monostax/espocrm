@@ -558,7 +558,20 @@ return '${version}';
         cp.execSync("npm ci", { stdio: "ignore" });
     });
 
-    grunt.loadNpmTasks("grunt-contrib-clean");
+    grunt.registerMultiTask("clean", "Remove generated build files", function () {
+        const fs = require("node:fs");
+        const path = require("node:path");
+        const cwd = process.cwd();
+
+        for (const filename of this.filesSrc) {
+            const resolved = path.resolve(filename);
+            if (resolved === cwd || !resolved.startsWith(cwd + path.sep)) {
+                grunt.fail.warn("Refusing to clean outside the project: " + filename);
+                return;
+            }
+            fs.rmSync(resolved, {recursive: true, force: true});
+        }
+    });
     grunt.loadNpmTasks("grunt-mkdir");
     grunt.loadNpmTasks("grunt-contrib-less");
     grunt.loadNpmTasks("grunt-contrib-cssmin");

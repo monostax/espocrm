@@ -233,10 +233,16 @@
             "bairro",
             "convenio",
             "numeroConvenio",
-            "contact"
+            "contact.name"
         ]
     },
     "indexes": {
+        "searchCpfcnpj": {"columns": ["cpfcnpj", "deleted"]},
+        "searchCidade": {"columns": ["cidade", "deleted"]},
+        "searchEstado": {"columns": ["estado", "deleted"]},
+        "searchBairro": {"columns": ["bairro", "deleted"]},
+        "searchConvenio": {"columns": ["convenio", "deleted"]},
+        "searchNumeroConvenio": {"columns": ["numeroConvenio", "deleted"]},
         "contactId": {
             "columns": ["contactId"]
         },

@@ -189,7 +189,7 @@
             "profissionalCodigo",
             "registroProfissional",
             "especialidadesTexto",
-            "credential"
+            "credential.name"
         ]
     },
     "indexes": {

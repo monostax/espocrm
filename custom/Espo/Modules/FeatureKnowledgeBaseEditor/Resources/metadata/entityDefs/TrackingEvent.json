@@ -1,0 +1,5 @@
+{
+    "indexes": {
+        "searchName": {"columns": ["name", "deleted"]}
+    }
+}

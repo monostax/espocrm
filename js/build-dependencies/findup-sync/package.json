@@ -1,0 +1,9 @@
+{
+  "name": "crm-findup-sync",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "minimatch": "^10.2.4"
+  }
+}

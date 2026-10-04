@@ -275,7 +275,7 @@
             "cidadeResidencial",
             "estadoResidencial",
             "convenio",
-            "contact"
+            "contact.name"
         ]
     },
     "indexes": {

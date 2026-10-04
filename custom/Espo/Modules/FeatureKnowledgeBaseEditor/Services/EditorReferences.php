@@ -11,11 +11,14 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Metadata;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\UnionBuilder;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 class EditorReferences
 {
+    private ?array $supportedTypes = null;
+
     public function __construct(
         private EntityManager $em,
         private SelectBuilderFactory $select,
@@ -25,7 +28,8 @@ class EditorReferences
 
     private function allowedType(string $type): bool
     {
-        return (new Scopes($this->metadata))->supports($type) && $this->metadata->get(['scopes', $type, 'entity']) &&
+        $this->supportedTypes ??= (new Scopes($this->metadata))->all();
+        return in_array($type, $this->supportedTypes, true) && $this->metadata->get(['scopes', $type, 'entity']) &&
             $this->acl->checkScope($type, 'read') && $this->acl->checkField($type, 'name') &&
             ($type !== 'User' || $this->acl->getPermissionLevel('mention') !== 'no');
     }
@@ -41,7 +45,10 @@ class EditorReferences
     {
         if (strlen($query) > 240) throw new BadRequest('Query too long.');
         $results = [];
-        foreach ((new Scopes($this->metadata))->all() as $type) {
+        $union = UnionBuilder::create()->all()->order('rank')->order('name');
+        $queries = [];
+        $this->supportedTypes ??= (new Scopes($this->metadata))->all();
+        foreach ($this->supportedTypes as $rank => $type) {
             if (!$this->allowedType($type)) continue;
             try {
                 $builder = $this->select->create()->from($type)->withStrictAccessControl()->withTextFilter(trim($query));
@@ -50,12 +57,30 @@ class EditorReferences
                     if ($this->acl->getPermissionLevel('mention') === 'team') $builder->withBoolFilter('onlyMyTeam');
                 }
                 $queryBuilder = $builder->buildQueryBuilder()->order('name')->limit(0, 10);
-                $sql = $queryBuilder->build();
-                foreach ($this->em->getRDBRepository($type)->clone($sql)->find() as $entity) {
-                    if (!$this->allowedRecord($entity)) continue;
-                    $results[] = ['kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId(), 'label' => $entity->get('name')];
-                }
+                $queries[$type] = $queryBuilder->build();
+                $union->query($queryBuilder->select(['id', 'name', ['VALUE:' . $type, 'entityType'], [(string) $rank, 'rank']])->build());
             } catch (Forbidden) { continue; }
+        }
+        if (!$queries) return [];
+        $rows = $this->em->getQueryExecutor()->execute($union->build())->fetchAll();
+        $groups = [];
+        foreach ($rows as $row) $groups[$row['entityType']][] = $row['id'];
+        $entities = [];
+        foreach ($groups as $type => $ids) {
+            // Hydrate full records only for matches, keeping the original ACL
+            // query and all attributes used by custom record access checkers.
+            $sql = $this->em->getQueryBuilder()->select()->clone($queries[$type])
+                ->where(['id' => $ids])->limit(0, 10)->build();
+            foreach ($this->em->getRDBRepository($type)->clone($sql)->find() as $entity) {
+                if (!$this->allowedRecord($entity)) continue;
+                $entities[$type][$entity->getId()] = $entity;
+            }
+        }
+        foreach ($rows as $row) {
+            $type = $row['entityType'];
+            $entity = $entities[$type][$row['id']] ?? null;
+            if (!$entity) continue;
+            $results[] = ['kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId(), 'label' => $entity->get('name')];
         }
         return $results;
     }

@@ -133,6 +133,13 @@ class MetadataProvider
         return $entityDefs->getField($field)->getType();
     }
 
+    public function getPersonNameAttributes(string $entityType, string $field): array
+    {
+        $where = $this->ormDefs->getEntity($entityType)->getAttribute($field)->getParam('where');
+        return array_map(fn ($item) => rtrim($item, '*'), array_values(array_filter(
+            array_keys($where['LIKE']['whereClause']['OR'] ?? []), fn ($item) => !str_contains($item, ':'))));
+    }
+
     public function getRelationEntityType(string $entityType, string $link): ?string
     {
         $relationDefs = $this->ormDefs
@@ -144,6 +151,14 @@ class MetadataProvider
         }
 
         return $relationDefs->getForeignEntityType();
+    }
+
+    public function getSimpleBelongsToKey(string $entityType, string $link): ?string
+    {
+        $relation = $this->ormDefs->getEntity($entityType)->getRelation($link);
+        if ($relation->getType() !== 'belongsTo' || $relation->getParam('conditions') ||
+            ($relation->getParam('foreignKey') ?? 'id') !== 'id') return null;
+        return $relation->getParam('key') ?? $link . 'Id';
     }
 
     public function getAttributeRelationParam(string $entityType, string $attribute): ?string

@@ -321,10 +321,19 @@
             "profissional",
             "convenio",
             "especialidade",
-            "paciente"
+            "paciente.name"
         ]
     },
     "indexes": {
+        "searchName": {"columns": ["name", "deleted"]},
+        "searchIdPaciente": {"columns": ["idPaciente", "deleted"]},
+        "searchIdPessoaExecutor": {"columns": ["idPessoaExecutor", "deleted"]},
+        "searchIdTipoConsulta": {"columns": ["idTipoConsulta", "deleted"]},
+        "searchStatus": {"columns": ["status", "deleted"]},
+        "searchStatusFaturamento": {"columns": ["statusFaturamento", "deleted"]},
+        "searchProfissional": {"columns": ["profissional", "deleted"]},
+        "searchConvenio": {"columns": ["convenio", "deleted"]},
+        "searchEspecialidade": {"columns": ["especialidade", "deleted"]},
         "pacienteId": {
             "columns": ["pacienteId"]
         },

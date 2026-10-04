@@ -139,6 +139,19 @@ class DefaultFilter implements Filter
 
         $expression = addslashes($expression);
 
+        // A single-token person-name prefix is already covered by its parts;
+        // concatenating the parts adds no matches but disables index access.
+        if ($this->metadataProvider->getFieldType($this->entityType, $attribute) === FieldType::PERSON_NAME &&
+            !preg_match('/[\s%_*]/u', $filter) && !$this->checkWhetherToUseContains($attribute, $filter, $attributeType)) {
+            $parts = $this->metadataProvider->getPersonNameAttributes($this->entityType, $attribute);
+            if ($parts) {
+                foreach ($parts as $part) {
+                    $orGroupBuilder->add(Cmp::like(Expr::column($part), $expression));
+                }
+                return;
+            }
+        }
+
         $orGroupBuilder->add(
             Cmp::like(
                 Expr::column($attribute),

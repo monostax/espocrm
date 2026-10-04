@@ -7,6 +7,8 @@ namespace Espo\Modules\FeatureRecordKnowledge\Services;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Acl;
+use Espo\Core\Utils\Metadata;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Record\UpdateParams;
 use Espo\Core\Utils\Markdown\Markdown as Renderer;
@@ -17,7 +19,38 @@ use Espo\Modules\FeatureRecordKnowledge\Tools\Markdown;
 class Knowledge
 {
     public function __construct(private EntityManager $em, private Access $access, private Overviews $overviews,
-        private ServiceContainer $records) {}
+        private ServiceContainer $records, private Metadata $metadata, private Acl $acl) {}
+
+    private function recordHeader(Entity $record): array
+    {
+        $type = $record->getEntityType();
+        $attribute = $this->metadata->get(['clientDefs', $type, 'recordIconAttribute']);
+        $readable = $attribute && $this->acl->checkField($type, $attribute);
+        return [
+            'name' => $record->get('name'),
+            'icon' => $readable ? $record->get($attribute) : null,
+            'iconEditable' => $readable && $this->acl->checkEntity($record, 'edit') &&
+                $this->acl->checkField($type, $attribute, 'edit'),
+        ];
+    }
+
+    public function iconOptions(string $type, string $id): array
+    {
+        $this->access->record($type, $id);
+        return array_values(array_unique([
+            ...$this->metadata->get('app.clientIcons.classList', []),
+            ...$this->metadata->get('app.recordIcons.fontAwesomeClassList', []),
+        ]));
+    }
+
+    public function writeIcon(string $type, string $id, mixed $icon): array
+    {
+        $record = $this->access->record($type, $id, 'edit');
+        $attribute = $this->metadata->get(['clientDefs', $type, 'recordIconAttribute']);
+        if (!$attribute || !$this->acl->checkField($type, $attribute, 'edit')) throw new Forbidden();
+        $record = $this->records->get($type)->update($id, (object) [$attribute => $icon])->getEntity();
+        return $this->recordHeader($record);
+    }
 
     private function overview(string $type, string $id, string $action = 'read'): Entity
     {
@@ -42,6 +75,7 @@ class Knowledge
         $editable = true;
         try { $this->overview($type, $id, 'edit'); } catch (Forbidden|NotFound) { $editable = false; }
         return [
+            'record' => $this->recordHeader($this->access->record($type, $id)),
             'documentId' => $document->getId(), 'name' => $document->get('name'), 'body' => (string) $document->get('body'),
             'bodyEditorState' => $document->get('bodyEditorState'), 'bodyAuthoringMode' => $document->get('bodyAuthoringMode'),
             'html' => Renderer::transform((string) $document->get('body')), 'versionNumber' => $document->get('versionNumber'),

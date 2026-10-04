@@ -107,7 +107,7 @@
         "textFilterFields": [
             "name",
             "convenioTipoId",
-            "credential"
+            "credential.name"
         ]
     },
     "indexes": {

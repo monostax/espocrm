@@ -8,11 +8,14 @@ use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Record\SearchParamsFetcher;
 use Espo\Core\Record\ServiceContainer;
+use Espo\Core\Select\SearchParams;
+use Espo\Core\Select\SelectBuilder as CoreSelectBuilder;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Metadata as AppMetadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
+use Espo\Modules\Chatwoot\Tools\Activities\Access as ActivityAccess;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
 use Espo\Modules\FeatureInitiative\Services\Inbox;
 use Espo\Modules\Global\Services\RecordActivityBuckets;
@@ -72,14 +75,32 @@ class InboxQueryTest extends TestCase
         $user->method('getId')->willReturn('agent');
         $factory = $this->createMock(SelectBuilderFactory::class);
         $this->scope = SelectBuilder::create()->from('Initiative')->select('id')->where(['tenantId' => 'tenant-a', 'readable' => 1])->build();
+        $builder = $this->createMock(CoreSelectBuilder::class);
+        foreach (['from', 'withSearchParams', 'withStrictAccessControl', 'withWherePermissionCheck', 'withComplexExpressionsForbidden'] as $method) {
+            $builder->method($method)->willReturnSelf();
+        }
+        // Production selection adds mandatory attributes even when the caller requests only id.
+        $builder->method('buildQueryBuilder')->willReturnCallback(fn () => SelectBuilder::create()
+            ->from('Initiative')->select(['assignedUserId', 'initiativeTypeId', 'tenantId', 'id'])
+            ->where(['readable' => 1]));
+        $factory->method('create')->willReturn($builder);
+        $searchParams = $this->createMock(SearchParamsFetcher::class);
+        $searchParams->method('fetch')->willReturn(SearchParams::fromRaw([]));
+        $workspaces = $this->createMock(OpportunityBulkPostAccess::class);
+        $workspace = new BaseEntity('ChatwootAccount', ['attributes' => ['tenantId' => ['type' => 'varchar']]]);
+        $workspace->set('tenantId', 'tenant-a');
+        $workspaces->method('workspace')->willReturn($workspace);
         $streamAccess = $this->createMock(OpportunityAccess::class);
         $streamAccess->method('readableInitiatives')->willReturn($this->scope);
         $this->inbox = new Inbox(
-            $em, $acl, $user, $factory, $this->createMock(SearchParamsFetcher::class),
-            $this->createMock(ServiceContainer::class), $this->createMock(OpportunityBulkPostAccess::class),
+            $em, $acl, $user, $factory, $searchParams,
+            $this->createMock(ServiceContainer::class), $workspaces,
             new ActivityDiscussion($em, $user, $acl), new RecordActivityBuckets($factory, $acl),
-            $this->createMock(AppMetadata::class), $streamAccess,
+            $this->createMock(AppMetadata::class), $streamAccess, $this->createMock(ActivityAccess::class),
         );
+        $request = $this->createMock(Request::class);
+        $request->method('getQueryParam')->willReturnCallback(fn ($name) => $name === 'accountId' ? '6' : null);
+        $this->scope = $this->inbox->scope($request);
         $this->pdo->exec("INSERT INTO initiative (id, tenant_id, initiative_type_id, status, readable) VALUES
             ('a', 'tenant-a', 'type-a', 'To Do', 1), ('b', 'tenant-a', 'type-a', 'Done', 1),
             ('c', 'tenant-b', 'type-b', 'Doing', 1), ('d', 'tenant-a', 'type-b', 'Doing', 0)");
@@ -90,6 +111,15 @@ class InboxQueryTest extends TestCase
     private function sqlName(string $name): string
     {
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    }
+
+    public function testScopeProjectsOnlyIdsAfterMandatorySelection(): void
+    {
+        self::assertSame(['id'], $this->scope->getRaw()['select']);
+        foreach ($this->composers as $composer) {
+            $query = SelectBuilder::create()->from('Initiative')->select(['id'])->where(['id=s' => $this->scope])->order('id')->build();
+            self::assertSame(['a', 'b'], $this->pdo->query($composer->composeSelect($query))->fetchAll(PDO::FETCH_COLUMN));
+        }
     }
 
     private function queryGroups(string $group): array

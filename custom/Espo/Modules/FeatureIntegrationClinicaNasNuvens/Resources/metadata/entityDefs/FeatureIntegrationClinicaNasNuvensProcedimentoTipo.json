@@ -108,7 +108,7 @@
         "textFilterFields": [
             "name",
             "procedimentoTipoId",
-            "credential"
+            "credential.name"
         ]
     },
     "indexes": {

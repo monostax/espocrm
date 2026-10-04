@@ -53,6 +53,17 @@ class RecordKnowledge
             'predicates' => (object) $this->registry->schema($tenantId), 'spanEncoding' => 'utf8-bytes-end-exclusive'];
     }
     public function getActionOverview(Request $request): object { return (object) $this->knowledge->read(...$this->identity($request)); }
+    public function getActionIconOptions(Request $request): object
+    {
+        return (object) ['list' => $this->knowledge->iconOptions(...$this->identity($request))];
+    }
+    public function putActionIcon(Request $request): object
+    {
+        [$type, $id] = $this->identity($request);
+        $body = $request->getParsedBody();
+        if (!property_exists($body, 'icon')) throw new BadRequest('icon is required.');
+        return (object) $this->knowledge->writeIcon($type, $id, $body->icon);
+    }
     public function putActionOverview(Request $request): object
     {
         [$type, $id] = $this->identity($request);

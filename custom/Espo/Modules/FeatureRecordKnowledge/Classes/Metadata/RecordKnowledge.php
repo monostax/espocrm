@@ -29,6 +29,13 @@ class RecordKnowledge implements AdditionalBuilder
             }
             $record->deletedRestorerClassName = Restore::class;
             $client = $data->clientDefs->$type ??= new stdClass();
+            if (!isset($client->recordIconAttribute)) {
+                $client->recordIconAttribute = 'recordIcon';
+                $data->entityDefs->$type->fields->recordIcon ??= (object) [
+                    'type' => 'jsonObject', 'view' => 'global:views/fields/record-icon',
+                    'layoutFiltersDisabled' => true, 'layoutMassUpdateDisabled' => true,
+                ];
+            }
             $bottom = $client->bottomPanels ??= new stdClass();
             foreach (['detail', 'edit'] as $mode) {
                 $bottomPanels = array_values(array_filter($bottom->$mode ?? [],

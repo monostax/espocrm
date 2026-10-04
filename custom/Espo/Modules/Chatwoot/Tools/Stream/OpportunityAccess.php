@@ -64,7 +64,7 @@ class OpportunityAccess
 
         $factory = $this->factory->createWith(SelectBuilderFactory::class, ['user' => $user]);
         $builder = $factory->create()->from($type)->withStrictAccessControl()
-            ->buildQueryBuilder()->select('id')->order([]);
+            ->buildQueryBuilder()->select(['id'])->order([]);
         if (!$user->isAdmin()) {
             $builder->where(['tenantId' => $tenantIds]);
         }
