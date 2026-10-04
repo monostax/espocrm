@@ -3,14 +3,17 @@
     "fields": {
         "name": { "type": "varchar", "required": true, "maxLength": 100, "trim": true, "pattern": "$noBadCharacters" },
         "color": {
-            "type": "enum",
-            "options": ["slate", "amber", "teal", "ruby", "blue", "iris"],
-            "default": "blue",
-            "view": "views/fields/enum-styled",
-            "style": { "slate": "default", "amber": "warning", "teal": "success", "ruby": "danger", "blue": "primary", "iris": "info" }
+            "type": "varchar",
+            "maxLength": 7,
+            "default": "#3b82f6",
+            "pattern": "^(#[0-9a-fA-F]{6}|slate|amber|teal|ruby|blue|iris)$",
+            "view": "global:views/crm-tag/fields/color"
         },
+        "visibility": { "type": "enum", "options": ["team", "personal"], "default": "team", "notNull": true, "required": true, "readOnlyAfterCreate": true, "view": "global:views/crm-tag/fields/visibility" },
+        "ownerUser": { "type": "link", "readOnly": true, "view": "views/fields/user" },
+        "nameScope": { "type": "varchar", "maxLength": 32, "default": "team", "notNull": true, "readOnly": true, "utility": true },
         "tenant": { "type": "link", "required": true, "readOnlyAfterCreate": true },
-        "teams": { "type": "linkMultiple", "required": true, "view": "views/fields/teams" },
+        "teams": { "type": "linkMultiple", "view": "views/fields/teams" },
         "deleteId": { "type": "varchar", "maxLength": 24, "default": "0", "readOnly": true },
         "createdAt": { "type": "datetime", "readOnly": true },
         "modifiedAt": { "type": "datetime", "readOnly": true },
@@ -18,6 +21,7 @@
         "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
     },
     "links": {
+        "ownerUser": { "type": "belongsTo", "entity": "User" },
         "tenant": { "type": "belongsTo", "entity": "Tenant", "foreign": "crmTags" },
         "teams": { "type": "hasMany", "entity": "Team", "relationName": "entityTeam", "layoutRelationshipsDisabled": true },
         "opportunities": { "type": "hasMany", "entity": "Opportunity", "foreign": "tags", "relationName": "crmTagOpportunity", "layoutRelationshipsDisabled": true },
@@ -29,7 +33,7 @@
     },
     "collection": { "orderBy": "name", "order": "asc" },
     "indexes": {
-        "uniqueName": { "columns": ["tenantId", "name", "deleteId"], "unique": true },
+        "uniqueName": { "columns": ["tenantId", "name", "nameScope", "deleteId"], "unique": true },
         "tenantId": { "columns": ["tenantId"] }
     }
 }

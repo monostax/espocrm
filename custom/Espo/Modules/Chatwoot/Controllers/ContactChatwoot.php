@@ -42,7 +42,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
      * Initiates a new conversation on a ChatwootInbox for a Contact that may
      * or may not have an existing linked ChatwootContact.
      *
-     * Request body: { "inboxId": "<EspoCRM ChatwootInbox entity ID>" }
+     * Request body: { "inboxId": "<CRM inbox ID>", "channelIdentityId": "<optional CRM identity ID>" }
      *
      * @throws BadRequest
      * @throws Error
@@ -171,6 +171,26 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
         $rawChannelType = $chatwootInbox->get('channelType');
         $mappedChannelType = $reconciler->mapChannelType($rawChannelType);
 
+        $selectedIdentity = null;
+        if (isset($body->channelIdentityId)) {
+            $selectedIdentity = $entityManager->getEntityById('ContactChannelIdentity', $body->channelIdentityId);
+            if (!$selectedIdentity || !$this->acl->check($selectedIdentity, 'read') ||
+                $selectedIdentity->get('contactId') !== $contactEntityId ||
+                $selectedIdentity->get('tenantId') !== $this->extractTenantId($chatwootAccount)) {
+                throw new Forbidden('The selected identity does not belong to this contact and workspace.');
+            }
+            $identityChannel = $selectedIdentity->get('channelType');
+            if ($identityChannel !== $mappedChannelType ||
+                !ContactReconciler::isRoutableSourceId($identityChannel, (string) $selectedIdentity->get('sourceId'))) {
+                throw new BadRequest('The selected identity cannot be used with this inbox.');
+            }
+            if (!in_array($identityChannel, ['whatsapp', 'sms', 'email'], true) &&
+                (($selectedIdentity->get('chatwootAccountId') && $selectedIdentity->get('chatwootAccountId') !== $inboxAccountId) ||
+                ($selectedIdentity->get('chatwootInboxId') && $selectedIdentity->get('chatwootInboxId') !== $inboxEntityId))) {
+                throw new BadRequest('This identity belongs to another inbox.');
+            }
+        }
+
         $contactName = $contact->get('name') ?? '';
 
         // === Resolve teams (from inbox, fallback to account) ===
@@ -181,6 +201,24 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
         }
 
         $apiClient = $this->injectableFactory->create(ChatwootApiClient::class);
+
+        // Explicit identity selection uses the viewer's permissions for both reuse and creation.
+        $conversationToken = $accountApiKey;
+        if ($selectedIdentity) {
+            $viewer = $entityManager->getRDBRepository('ChatwootUser')->where([
+                'assignedUserId' => $currentUserId,
+                'platformId' => $platformId,
+            ])->findOne();
+            $conversationToken = $viewer ? $viewer->get('userAccessToken') : null;
+            if (!$conversationToken && $viewer && $platform->get('accessToken')) {
+                $conversationToken = $apiClient->fetchUserAccessToken(
+                    $platformUrl, $platform->get('accessToken'), (int) $viewer->get('chatwootUserId')
+                );
+            }
+            if (!$conversationToken) {
+                throw new Forbidden('Chatwoot user access is unavailable.');
+            }
+        }
 
         $resolution = $this->resolveExternalContactForChannel(
             $apiClient,
@@ -194,25 +232,43 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             $externalInboxId,
             $platformUrl,
             $accountApiKey,
-            $externalAccountId
+            $externalAccountId,
+            $selectedIdentity
         );
 
         $externalContactId = $resolution['externalContactId'];
         $chatwootContactData = $resolution['chatwootContactData'];
         $wasCreated = $resolution['wasCreated'];
         $sourceId = $resolution['sourceId'];
+        // WhatsApp contact_inboxes use the phone without the E.164 plus sign.
+        $conversationSourceId = $mappedChannelType === 'whatsapp' ? ltrim((string) $sourceId, '+') : $sourceId;
 
         if (!$externalContactId) {
             throw new Error("Failed to resolve Chatwoot contact ID.");
         }
 
+        if ($selectedIdentity) {
+            $conversations = $apiClient->getContactConversations(
+                $platformUrl, $conversationToken, $externalAccountId, $externalContactId, $externalInboxId, $conversationSourceId
+            );
+            foreach ($conversations as $conversation) {
+                if ((int) $conversation['inbox_id'] === $externalInboxId) {
+                    return (object) [
+                        'chatwootConversationId' => (int) $conversation['id'],
+                        'chatwootAccountIdExternal' => $externalAccountId,
+                    ];
+                }
+            }
+        }
+
         // === Create conversation in Chatwoot ===
         $chatwootConversationResponse = $apiClient->createConversation(
             $platformUrl,
-            $accountApiKey,
+            $conversationToken,
             $externalAccountId,
             $externalContactId,
-            $externalInboxId
+            $externalInboxId,
+            $selectedIdentity ? $conversationSourceId : null
         );
 
         $chatwootConversationId = $chatwootConversationResponse['display_id']
@@ -297,6 +353,9 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             'inboxChannelType' => $inboxChannelType,
             'status' => 'open',
         ];
+        if ($selectedIdentity) {
+            $conversationData['channelIdentityId'] = $selectedIdentity->getId();
+        }
 
         if (!empty($teamsIds)) {
             $conversationData['teamsIds'] = $teamsIds;
@@ -581,7 +640,8 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
         int $externalInboxId,
         string $platformUrl,
         string $accountApiKey,
-        int $externalAccountId
+        int $externalAccountId,
+        ?\Espo\ORM\Entity $selectedIdentity = null
     ): array {
         $entityManager = $this->entityManager;
 
@@ -597,8 +657,11 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
         if ($phoneBased || $mappedChannelType === null) {
             // null channelType -> assume phone (current legacy behavior for
             // inboxes without a registered integration).
-            $rawPhone = $contact->get('phoneNumber');
+            $rawPhone = $selectedIdentity ? $selectedIdentity->get('sourceId') : $contact->get('phoneNumber');
             $normalizedPhone = PhoneNormalizer::normalize($rawPhone);
+            if ($selectedIdentity && !$normalizedPhone) {
+                throw new BadRequest('The selected identity has no valid phone number.');
+            }
 
             // Fallback: the Contact record may have no phone number while a
             // whatsapp ContactChannelIdentity holds the E.164 phone as its
@@ -606,7 +669,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             // a webhook before the phone field was enriched). Reuse it so
             // outbound initiation works without duplicating the number onto
             // the Contact.
-            if (!$normalizedPhone && $phoneBased) {
+            if (!$normalizedPhone && $phoneBased && !$selectedIdentity) {
                 $identityPhone = $this->findPhoneFromChannelIdentity(
                     $contactEntityId,
                     $inboxAccountId,
@@ -652,10 +715,11 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
                 ->where([
                     'contactId' => $contactEntityId,
                     'chatwootAccountId' => $inboxAccountId,
+                    ...($selectedIdentity ? ['phoneNumber' => $normalizedPhone] : []),
                 ])
                 ->findOne();
 
-            if ($existingBridge && $existingBridge->get('chatwootContactId')) {
+            if (!$selectedIdentity && $existingBridge && $existingBridge->get('chatwootContactId')) {
                 return [
                     'externalContactId' => (int) $existingBridge->get('chatwootContactId'),
                     'chatwootContactData' => [
@@ -703,8 +767,24 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
 
         // --- Email channel ---
         if ($emailBased) {
-            $email = $contact->get('emailAddress');
+            $email = $selectedIdentity ? $selectedIdentity->get('sourceId') : $contact->get('emailAddress');
             $normalizedEmail = $email ? strtolower(trim((string) $email)) : null;
+            if ($selectedIdentity && !filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL)) {
+                throw new BadRequest('The selected identity has no valid email address.');
+            }
+            if ($selectedIdentity) {
+                $results = $apiClient->searchContacts($platformUrl, $accountApiKey, $externalAccountId, $normalizedEmail);
+                foreach ($results['payload'] ?? [] as $match) {
+                    if (strtolower((string) ($match['email'] ?? '')) === $normalizedEmail) {
+                        return [
+                            'externalContactId' => (int) $match['id'],
+                            'chatwootContactData' => $match,
+                            'wasCreated' => false,
+                            'sourceId' => $normalizedEmail,
+                        ];
+                    }
+                }
+            }
 
             if (!$normalizedEmail) {
                 throw new BadRequest(
@@ -720,10 +800,11 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
                 ->where([
                     'contactId' => $contactEntityId,
                     'chatwootAccountId' => $inboxAccountId,
+                    ...($selectedIdentity ? ['email' => $normalizedEmail] : []),
                 ])
                 ->findOne();
 
-            if ($existingBridge && $existingBridge->get('chatwootContactId')) {
+            if (!$selectedIdentity && $existingBridge && $existingBridge->get('chatwootContactId')) {
                 $externalContactId = (int) $existingBridge->get('chatwootContactId');
 
                 // Ensure contact_inbox exists for this inbox with the email
@@ -791,7 +872,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             // the source_id must be the numeric page-scoped user id — a
             // handle-keyed row (manual entry, scoped id not yet observed)
             // would create an unroutable contact_inbox on Chatwoot.
-            $identity = $this->findRoutableIdentity($mappedChannelType, [
+            $identity = $selectedIdentity ?? $this->findRoutableIdentity($mappedChannelType, [
                 'contactId' => $contactEntityId,
                 'channelType' => $mappedChannelType,
                 'chatwootAccountId' => $inboxAccountId,
@@ -818,12 +899,36 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
 
             $sourceId = (string) $identity->get('sourceId');
 
+            if ($selectedIdentity) {
+                $contactInbox = $entityManager->getRDBRepository('ChatwootContactInbox')->where([
+                    'contactId' => $contactEntityId,
+                    'inboxId' => $chatwootInbox->getId(),
+                    'chatwootAccountId' => $inboxAccountId,
+                    'sourceId' => $sourceId,
+                ])->findOne();
+                $bridge = $contactInbox && $contactInbox->get('chatwootContactId')
+                    ? $entityManager->getEntityById('ChatwootContact', $contactInbox->get('chatwootContactId'))
+                    : null;
+                if ($bridge && $bridge->get('chatwootContactId')) {
+                    return [
+                        'externalContactId' => (int) $bridge->get('chatwootContactId'),
+                        'chatwootContactData' => [
+                            'id' => (int) $bridge->get('chatwootContactId'),
+                            'name' => $contactName,
+                        ],
+                        'wasCreated' => false,
+                        'sourceId' => $sourceId,
+                    ];
+                }
+            }
+
             // Reuse existing Chatwoot contact within this account when possible.
             $existingBridge = $entityManager
                 ->getRDBRepository('ChatwootContact')
                 ->where([
                     'contactId' => $contactEntityId,
                     'chatwootAccountId' => $inboxAccountId,
+                    ...($selectedIdentity ? ['identifier' => $sourceId] : []),
                 ])
                 ->findOne();
 
@@ -864,7 +969,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
                 $accountApiKey,
                 $externalAccountId,
                 [
-                    'inbox_id' => $externalInboxId,
+                    ...(!$selectedIdentity ? ['inbox_id' => $externalInboxId] : []),
                     'identifier' => $sourceId,
                     'name' => $contactName,
                 ]

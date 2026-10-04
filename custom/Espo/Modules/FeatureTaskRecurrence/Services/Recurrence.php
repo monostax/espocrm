@@ -633,7 +633,7 @@ class Recurrence
     {
         $data = $this->reusableFiles->copy($series->get('template'));
         foreach ((array) $this->template->dates($data, $occurrence->get('originalDeadline'), $series->get('definition')) as $name => $value) $data->$name = $value;
-        $data->status = 'Not Started';
+        $data->status = 'Planned';
         $task = $this->taskRecurrenceMutationContext->run(fn () => $this->services->get('Task')->create($data, CreateParams::create()->withSkipDuplicateCheck())->getEntity());
         $occurrence->set('taskId', $task->getId());
         $this->entityManager->saveEntity($occurrence);

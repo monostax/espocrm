@@ -222,7 +222,7 @@ class ActionRecordReferencesTest extends TestCase
         $this->assertTrue($this->runActions([$this->action('cancelJourneyTasks')])['ok']);
         $this->assertSame('Completed', $this->stored['created-1']->get('status'));
         $this->assertSame('Canceled', $this->stored['created-2']->get('status'));
-        $this->assertSame('Not Started', $this->stored['created-3']->get('status'));
+        $this->assertSame('Planned', $this->stored['created-3']->get('status'));
     }
 
     public function testSaveFailureRollsBackAndDoesNotPolluteTheCallersEnrollment(): void

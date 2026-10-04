@@ -1,7 +1,7 @@
 {
     "controller": "controllers/record",
     "acl": "feature-initiative:acl",
-    "iconClass": "fas fa-flag",
+    "iconClass": "lucide-folder-kanban",
     "boolFilterList": ["onlyMy"],
     "kanbanViewMode": false,
     "relationshipPanels": {

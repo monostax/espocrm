@@ -12,7 +12,7 @@
             {
                 "url": "#Initiative",
                 "label": "Initiatives",
-                "iconClass": "fas fa-flag",
+                "iconClass": "lucide-folder-kanban",
                 "description": "initiatives"
             }
         ]

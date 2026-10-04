@@ -1,4 +1,7 @@
 {
+    "earlyBeforeCreateHookClassNameList": ["Espo\\Modules\\Global\\Hooks\\CrmTag\\ValidateWorkspace"],
+    "earlyBeforeUpdateHookClassNameList": ["Espo\\Modules\\Global\\Hooks\\CrmTag\\ValidateWorkspace"],
+    "mandatoryAttributeList": ["visibility", "ownerUserId", "tenantId"],
     "beforeLinkHookClassNameList": ["Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
     "beforeUnlinkHookClassNameList": ["Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"]
 }

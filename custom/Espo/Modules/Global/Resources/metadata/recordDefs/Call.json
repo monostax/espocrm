@@ -1,4 +1,5 @@
 {
     "beforeLinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
+    "beforeUnlinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
     "relationships": { "tags": { "linkRequiredForeignAccess": "read", "massLink": false } }
 }

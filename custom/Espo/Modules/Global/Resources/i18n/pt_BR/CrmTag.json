@@ -1,5 +1,5 @@
 {
-    "fields": { "name": "Nome", "color": "Cor", "tenant": "Ambiente", "teams": "Times" },
+    "fields": { "name": "Nome", "color": "Cor", "tenant": "Ambiente", "teams": "Times", "visibility": "Visibilidade", "ownerUser": "Proprietário" },
     "labels": { "Create CrmTag": "Criar Etiqueta do CRM" },
-    "options": { "color": { "slate": "Cinza", "amber": "Âmbar", "teal": "Verde", "ruby": "Vermelho", "blue": "Azul", "iris": "Roxo" } }
+    "options": { "visibility": { "team": "Time", "personal": "Pessoal" }, "color": { "slate": "Cinza", "amber": "Âmbar", "teal": "Verde", "ruby": "Vermelho", "blue": "Azul", "iris": "Roxo" } }
 }

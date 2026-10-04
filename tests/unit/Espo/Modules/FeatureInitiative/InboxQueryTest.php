@@ -97,6 +97,7 @@ class InboxQueryTest extends TestCase
             $this->createMock(ServiceContainer::class), $workspaces,
             new ActivityDiscussion($em, $user, $acl), new RecordActivityBuckets($factory, $acl),
             $this->createMock(AppMetadata::class), $streamAccess, $this->createMock(ActivityAccess::class),
+            $this->createMock(\Espo\Modules\Global\Tools\CrmTags::class),
         );
         $request = $this->createMock(Request::class);
         $request->method('getQueryParam')->willReturnCallback(fn ($name) => $name === 'accountId' ? '6' : null);

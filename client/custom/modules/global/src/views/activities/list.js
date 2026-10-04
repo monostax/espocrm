@@ -67,7 +67,6 @@ class ActivitiesListView extends ListView {
                     "Planned",
                     "Held",
                     "Not Held",
-                    "Not Started",
                     "Started",
                     "Completed",
                     "Canceled",

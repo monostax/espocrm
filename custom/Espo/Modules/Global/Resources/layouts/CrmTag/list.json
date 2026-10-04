@@ -1,5 +1,6 @@
 [
     { "name": "name", "link": true },
     { "name": "color", "width": 15 },
+    { "name": "visibility", "width": 15 },
     { "name": "tenant", "width": 25 }
 ]

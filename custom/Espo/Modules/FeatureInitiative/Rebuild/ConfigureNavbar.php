@@ -21,8 +21,14 @@ class ConfigureNavbar implements RebuildAction
         }
 
         // Preserve existing navigation customizations and positions on subsequent rebuilds.
-        foreach ($tabs as $tab) {
+        foreach ($tabs as $index => $tab) {
             if ((is_object($tab) || is_array($tab)) && (((array) $tab)['id'] ?? null) === 'initiative-group') {
+                if ((((array) $tab)['iconClass'] ?? null) === 'fas fa-flag') {
+                    $tabs[$index] = (object) array_replace((array) $tab, ['iconClass' => 'lucide-folder-kanban']);
+                    $this->configWriter->set('tabList', $tabs);
+                    $this->configWriter->save();
+                }
+
                 return;
             }
         }
@@ -30,7 +36,7 @@ class ConfigureNavbar implements RebuildAction
         $tabs[] = (object) [
             'type' => 'group',
             'text' => '$Initiatives',
-            'iconClass' => 'fas fa-flag',
+            'iconClass' => 'lucide-folder-kanban',
             'id' => 'initiative-group',
             'itemList' => ['Initiative', 'InitiativeType'],
         ];

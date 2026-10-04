@@ -22,6 +22,7 @@ use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
 use Espo\Modules\Chatwoot\Tools\Activities\Access as ActivityAccess;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
 use Espo\Modules\Global\Services\RecordActivityBuckets;
+use Espo\Modules\Global\Tools\CrmTags;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression as Expr;
@@ -52,6 +53,7 @@ class Inbox
         private Metadata $metadata,
         private OpportunityAccess $streamAccess,
         private ActivityAccess $activityAccess,
+        private CrmTags $tags,
     ) {}
 
     public function workspace(Request $request): Entity
@@ -96,6 +98,15 @@ class Inbox
         $assignee = $request->getQueryParam('assignee_tab');
         if ($assignee === 'me') $query->where(['assignedUserId' => $this->user->getId()]);
         elseif ($assignee === 'unassigned') $query->where(['assignedUserId' => null]);
+        if ($tagId = $request->getQueryParam('tag')) {
+            if (!$this->acl->checkField('Initiative', 'tags') || !$this->acl->checkScope('CrmTag', 'read')) {
+                $query->where(['id' => null]);
+            } else {
+                $tag = $this->tags->query()->where(['id' => $tagId, 'tenantId' => $workspace->get('tenantId')])->select(['id'])->build();
+                $tagged = SelectBuilder::create()->from('Initiative')->select(['id'])->join('tags', 'crmTag')->where(['crmTag.id=s' => $tag])->build();
+                $query->where(['id=s' => $tagged]);
+            }
+        }
         $read = $request->getQueryParam('read_status');
         if ($read === 'unread' || $request->getQueryParam('view') === 'mentions') {
             if (!$this->acl->checkScope('Note', 'read') || !$this->acl->checkScope('Initiative', 'stream')) {
@@ -212,7 +223,7 @@ class Inbox
             $data->readState = $states[$row['id']] ?? null;
             $list[] = $data;
         }
-        return (object) ['list' => $list, 'total' => $total, 'hasMore' => $offset + count($page) < $total];
+        return (object) ['list' => $this->tags->decorate('Initiative', $list), 'total' => $total, 'hasMore' => $offset + count($page) < $total];
     }
 
     public function counts(Request $request): object
@@ -227,6 +238,8 @@ class Inbox
             $result['unread'] = $this->em->getRDBRepository('Initiative')->clone($unread->build())->count();
         }
         if ($request->getQueryParam('railOnly') === 'true') return (object) ['unread' => $result['unread']];
+        $result['tags'] = $this->tags->counts('Initiative', SelectBuilder::create()->clone($scope));
+        $result['tagsUnread'] = isset($unread) ? $this->tags->counts('Initiative', $unread) : [];
         foreach (['status' => 'status', 'stages' => 'stageId', 'types' => 'initiativeTypeId', 'users' => 'assignedUserId'] as $name => $field) {
             $link = ['stages' => 'stage', 'types' => 'initiativeType', 'users' => 'assignedUser'][$name] ?? $field;
             if (!$this->acl->checkField('Initiative', $link)) continue;
@@ -261,7 +274,7 @@ class Inbox
         $this->workspace($request);
         if (!$this->acl->checkScope('Initiative', 'read')) throw new Forbidden();
         $fields = [];
-        foreach (['name', 'initiativeType', 'stage', 'status', 'assignedUser', 'description', 'createdAt', 'modifiedAt', 'createdBy'] as $name) {
+        foreach (['name', 'initiativeType', 'stage', 'status', 'assignedUser', 'tags', 'description', 'createdAt', 'modifiedAt', 'createdBy'] as $name) {
             if (!$this->acl->checkField('Initiative', $name)) continue;
             $def = $this->metadata->get(['entityDefs', 'Initiative', 'fields', $name]) ?? [];
             $fields[$name] = array_intersect_key($def, array_flip(['type', 'options', 'required', 'readOnly', 'readOnlyAfterCreate', 'maxLength']));

@@ -8,7 +8,7 @@
         "status": {
             "type": "enum",
             "options": [
-                "Not Started",
+                "Planned",
                 "Started",
                 "Completed",
                 "Canceled",
@@ -19,7 +19,7 @@
                 "Started": "primary",
                 "Canceled": "info"
             },
-            "default": "Not Started",
+            "default": "Planned",
             "displayAsLabel": true,
             "labelType": "state",
             "audited": true,

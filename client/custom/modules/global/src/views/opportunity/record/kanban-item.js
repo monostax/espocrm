@@ -161,7 +161,7 @@ define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item
 
         getTaskStatusStyle: function (status) {
             const styleMap = {
-                'Not Started': 'task-status-not-started',
+                'Planned': 'task-status-not-started',
                 'Started': 'task-status-started',
                 'Completed': 'task-status-completed',
                 'Canceled': 'task-status-canceled',
@@ -374,11 +374,11 @@ define('global:views/opportunity/record/kanban-item', ['views/record/kanban-item
                     const newTask = {
                         id: savedModel.id,
                         name: savedModel.get('name') || 'New Task',
-                        status: savedModel.get('status') || 'Not Started',
+                        status: savedModel.get('status') || 'Planned',
                         priority: savedModel.get('priority') || 'Normal',
                         dateEnd: savedModel.get('dateEnd'),
-                        statusLabel: this.getLanguage().translateOption(savedModel.get('status') || 'Not Started', 'status', 'Task'),
-                        statusStyle: this.getTaskStatusStyle(savedModel.get('status') || 'Not Started'),
+                        statusLabel: this.getLanguage().translateOption(savedModel.get('status') || 'Planned', 'status', 'Task'),
+                        statusStyle: this.getTaskStatusStyle(savedModel.get('status') || 'Planned'),
                         priorityStyle: this.getTaskPriorityStyle(savedModel.get('priority') || 'Normal'),
                     };
                     

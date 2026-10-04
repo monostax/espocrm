@@ -40,7 +40,7 @@ class MetadataTest extends TestCase
         $this->assertTrue($defs['fields']['stage']['audited']);
         $this->assertTrue($defs['fields']['status']['audited']);
         $this->assertSame([
-            'Open' => 'Aberta', 'In Progress' => 'Em andamento', 'Paused' => 'Pausada', 'Completed' => 'Concluída', 'Canceled' => 'Cancelada',
+            'Open' => 'Planejada', 'In Progress' => 'Em andamento', 'Paused' => 'Pausada', 'Completed' => 'Concluída', 'Canceled' => 'Cancelada',
         ], $this->json('i18n/pt_BR/Initiative.json')['options']['status']);
         $this->assertSame('Iniciativas', $this->json('i18n/pt_BR/Global.json')['scopeNamesPlural']['Initiative']);
         $this->assertSame('Initiatives', $this->json('i18n/en_US/Global.json')['scopeNamesPlural']['Initiative']);

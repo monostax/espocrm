@@ -1,5 +1,6 @@
 {
     "fields": {
+        "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "nextActionId": { "type": "varchar", "maxLength": 24, "readOnly": true, "utility": true },
         "nextActionType": { "type": "enum", "options": ["", "Task", "Call", "Meeting"], "readOnly": true, "utility": true },
         "initiativeAccess": {
@@ -47,6 +48,7 @@
         "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
     },
     "links": {
+        "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "initiatives", "relationName": "crmTagInitiative" },
         "tenant": { "type": "belongsTo", "entity": "Tenant" },
         "initiativeType": { "type": "belongsTo", "entity": "InitiativeType", "foreign": "initiatives" },
         "stage": { "type": "belongsTo", "entity": "InitiativeStage", "foreign": "initiatives" },

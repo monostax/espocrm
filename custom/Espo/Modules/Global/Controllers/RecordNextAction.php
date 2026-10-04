@@ -52,7 +52,7 @@ abstract class RecordNextAction
                 // Use normal record creation for validation, assignments, ACL and activity hooks.
                 $created = $this->records->get('Task')->create((object) [
                     'name' => trim($body->name),
-                    'status' => 'Not Started',
+                    'status' => 'Planned',
                     'parentType' => $record->getEntityType(),
                     'parentId' => $record->getId(),
                     'assignedUserId' => $record->get('assignedUserId') ?: $this->user->getId(),

@@ -151,7 +151,7 @@ class RecordNextActionTest extends TestCase
     {
         $activity = $this->entity($type, $values + [
             'id' => 'activity-id', 'parentType' => $this->record->getEntityType(),
-            'parentId' => 'record-id', 'status' => $type === 'Task' ? 'Not Started' : 'Planned',
+            'parentId' => 'record-id', 'status' => 'Planned',
         ]);
         $this->activities[$type . ':' . $activity->getId()] = $activity;
         $this->pdo->prepare('INSERT INTO activity VALUES (?, ?)')->execute([$activity->getId(), $activity->get('status')]);
@@ -219,7 +219,7 @@ class RecordNextActionTest extends TestCase
             'createTask' => true, 'name' => '  Collect documents  ', 'dateEndDate' => $date,
         ]));
         $this->assertSame([[
-            'name' => 'Collect documents', 'status' => 'Not Started', 'parentType' => $type, 'parentId' => 'record-id',
+            'name' => 'Collect documents', 'status' => 'Planned', 'parentType' => $type, 'parentId' => 'record-id',
             'assignedUserId' => $owner ?: 'actor-id', 'teamsIds' => $teams, 'dateEndDate' => $date,
         ]], $this->created);
         $this->assertSame('created-id', $result->nextActionId);

@@ -192,7 +192,7 @@ class PlaybooksTest extends TestCase
         $this->assertSame('Completed', $this->service->overview('deal')->runs[0]->status);
         $reopened = $this->step($run, 'Pending');
         $this->assertSame('Active', $reopened->status);
-        $this->assertSame('Not Started', $this->rows['Task'][$activated->steps[0]->taskId]->get('status'));
+        $this->assertSame('Planned', $this->rows['Task'][$activated->steps[0]->taskId]->get('status'));
     }
 
     public function testStopCancelsPendingTasksAndResumeDoesNotRestartThem(): void
@@ -205,7 +205,7 @@ class PlaybooksTest extends TestCase
         $this->assertSame(0, $stopped->completed);
         $this->assertSame('Canceled', $this->rows['Task'][$taskId]->get('status'));
         try {
-            $this->tasks->update($taskId, (object) ['status' => 'Not Started']);
+            $this->tasks->update($taskId, (object) ['status' => 'Planned']);
             $this->fail('A stopped run must not restart through a Task edit.');
         } catch (Conflict) {
             $this->assertSame('Canceled', $this->rows['Task'][$taskId]->get('status'));
@@ -213,7 +213,7 @@ class PlaybooksTest extends TestCase
         $this->service->mutate('deal', $run->id, (object) ['action' => 'resume']);
         $this->assertSame('Canceled', $this->rows['Task'][$taskId]->get('status'));
         $this->step($run, 'Pending');
-        $this->assertSame('Not Started', $this->rows['Task'][$taskId]->get('status'));
+        $this->assertSame('Planned', $this->rows['Task'][$taskId]->get('status'));
     }
 
     public function testStopRollsBackWhenLinkedTaskCannotBeEdited(): void
@@ -226,7 +226,7 @@ class PlaybooksTest extends TestCase
             $this->fail('Task permission must be required.');
         } catch (Forbidden) {
             $this->assertSame('Active', $this->rows['PlaybookRun'][$run->id]->get('status'));
-            $this->assertSame('Not Started', $this->rows['Task'][$activated->steps[0]->taskId]->get('status'));
+            $this->assertSame('Planned', $this->rows['Task'][$activated->steps[0]->taskId]->get('status'));
         }
     }
 

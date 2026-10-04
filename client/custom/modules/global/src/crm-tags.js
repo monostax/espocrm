@@ -7,6 +7,25 @@ const colors = {
     iris: "bg-purple-100 text-purple-800",
 };
 
+const legacyHex = {
+    slate: "#64748b", amber: "#f59e0b", teal: "#14b8a6",
+    ruby: "#ef4444", blue: "#3b82f6", iris: "#a855f7",
+};
+
+export const tagHex = color => legacyHex[color] || (/^#[0-9a-f]{6}$/i.test(color || "") ? color : null);
+
+export const tagStyle = color => {
+    if (colors[color]) return {};
+    const hex = tagHex(color);
+    if (!hex) return {};
+    const channels = hex.slice(1).match(/../g).map(value => {
+        const channel = parseInt(value, 16) / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    return {backgroundColor: hex, color: luminance > 0.179 ? "#000000" : "#ffffff"};
+};
+
 let request;
 let expires = 0;
 let userId;
@@ -36,4 +55,4 @@ export async function loadTags(user) {
     return request;
 }
 
-export const tagClasses = color => colors[color] || colors.slate;
+export const tagClasses = color => colors[color] || (tagHex(color) ? "" : colors.slate);

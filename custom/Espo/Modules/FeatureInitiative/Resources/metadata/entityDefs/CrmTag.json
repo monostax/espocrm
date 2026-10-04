@@ -1,0 +1,5 @@
+{
+    "links": {
+        "initiatives": { "type": "hasMany", "entity": "Initiative", "foreign": "tags", "relationName": "crmTagInitiative", "layoutRelationshipsDisabled": true }
+    }
+}

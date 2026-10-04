@@ -1,4 +1,4 @@
 {
-    "fields": { "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags" } },
+    "fields": { "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" } },
     "links": { "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "calls", "relationName": "crmTagCall" } }
 }

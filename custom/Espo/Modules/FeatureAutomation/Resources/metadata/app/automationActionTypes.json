@@ -32,7 +32,7 @@
                 {"name": "name", "type": "varchar", "label": "Task Name"},
                 {"name": "assignedUserId", "type": "link", "entity": "User", "label": "Assigned User", "nameKey": "assignedUserName"},
                 {"name": "description", "type": "text", "label": "Description"},
-                {"name": "status", "type": "enum", "label": "Status", "options": ["Not Started", "Started", "Completed", "Canceled", "Deferred"], "default": "Not Started"},
+                {"name": "status", "type": "enum", "label": "Status", "options": ["Planned", "Started", "Completed", "Canceled", "Deferred"], "default": "Planned"},
                 {"name": "priority", "type": "enum", "label": "Priority", "options": ["Low", "Normal", "High", "Urgent"], "default": "Normal"}
             ]
         },

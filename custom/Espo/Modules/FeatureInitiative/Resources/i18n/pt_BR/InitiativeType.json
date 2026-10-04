@@ -19,7 +19,7 @@
         "cannotChangeTenant": "Um tipo de iniciativa não pode ser transferido para outro workspace.",
         "stageMismatch": "A etapa selecionada deve pertencer ao tipo de iniciativa selecionado.",
         "inactiveEntry": "Iniciativas só podem entrar em tipos e etapas ativos.",
-        "invalidCategory": "A categoria da etapa deve ser Aberta, Em andamento, Pausada, Concluída ou Cancelada.",
+        "invalidCategory": "A categoria da etapa deve ser Planejada, Em andamento, Pausada, Concluída ou Cancelada.",
         "unsupportedTarget": "Tipo de registro relacionado não suportado.",
         "targetTenantMismatch": "O registro relacionado deve pertencer ao workspace da iniciativa.",
         "assigneeTenantMismatch": "O usuário responsável deve pertencer ao workspace da iniciativa.",

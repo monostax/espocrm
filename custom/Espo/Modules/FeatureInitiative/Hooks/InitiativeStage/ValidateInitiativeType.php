@@ -26,7 +26,7 @@ class ValidateInitiativeType implements BeforeSave
         }
 
         if (!in_array($entity->get('category'), ValidateProgress::STATUSES, true)) {
-            throw ValidationError::badRequest('invalidCategory', 'Stage category must be Open, In Progress, Paused, Completed or Canceled.');
+            throw ValidationError::badRequest('invalidCategory', 'Stage category must be Planned, In Progress, Paused, Completed or Canceled.');
         }
     }
 }

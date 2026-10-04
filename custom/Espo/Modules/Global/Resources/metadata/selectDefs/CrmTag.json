@@ -1,3 +1,8 @@
 {
-    "accessControlFilterClassNameMap": { "mandatory": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\AccessControlFilters\\Teams" }
+    "aclAttributeList": ["visibility", "ownerUserId", "tenantId"],
+    "accessControlFilterClassNameMap": {
+        "mandatory": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\AccessControlFilters\\Teams",
+        "onlyTeam": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\AccessControlFilters\\Teams",
+        "onlyOwn": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\AccessControlFilters\\Own"
+    }
 }

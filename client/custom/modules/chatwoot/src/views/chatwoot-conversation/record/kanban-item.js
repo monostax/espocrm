@@ -293,7 +293,7 @@ define("chatwoot:views/chatwoot-conversation/record/kanban-item", [
          */
         getTaskStatusStyle: function (status) {
             const styleMap = {
-                "Not Started": "task-status-not-started",
+                "Planned": "task-status-not-started",
                 Started: "task-status-started",
                 Completed: "task-status-completed",
                 Canceled: "task-status-canceled",

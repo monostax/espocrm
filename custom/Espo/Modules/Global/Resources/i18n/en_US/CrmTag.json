@@ -1,5 +1,5 @@
 {
-    "fields": { "name": "Name", "color": "Color", "tenant": "Workspace", "teams": "Teams" },
+    "fields": { "name": "Name", "color": "Color", "tenant": "Workspace", "teams": "Teams", "visibility": "Visibility", "ownerUser": "Owner" },
     "labels": { "Create CrmTag": "Create CRM Tag" },
-    "options": { "color": { "slate": "Gray", "amber": "Amber", "teal": "Teal", "ruby": "Red", "blue": "Blue", "iris": "Purple" } }
+    "options": { "visibility": { "team": "Team", "personal": "Personal" }, "color": { "slate": "Gray", "amber": "Amber", "teal": "Teal", "ruby": "Red", "blue": "Blue", "iris": "Purple" } }
 }

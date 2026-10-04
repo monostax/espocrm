@@ -5,7 +5,7 @@
     "acl": true,
     "aclPortal": true,
     "aclPortalLevelList": ["all", "account", "contact", "own", "no"],
-    "activityStatusList": ["Not Started", "Started"],
+    "activityStatusList": ["Planned", "Started"],
     "historyStatusList": ["Completed"],
     "completedStatusList": ["Completed"],
     "canceledStatusList": ["Canceled"],

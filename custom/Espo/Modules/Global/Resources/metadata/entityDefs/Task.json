@@ -1,6 +1,6 @@
 {
     "fields": {
-        "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags" },
+        "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
         },

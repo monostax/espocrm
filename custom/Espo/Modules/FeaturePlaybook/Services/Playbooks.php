@@ -319,7 +319,7 @@ class Playbooks
             }
             $task = $this->records->get('Task')->create((object) [
                 'name' => $step->get('name'), 'description' => $step->get('instructions'),
-                'parentType' => 'Opportunity', 'parentId' => $opportunity->getId(), 'status' => 'Not Started',
+                'parentType' => 'Opportunity', 'parentId' => $opportunity->getId(), 'status' => 'Planned',
                 'assignedUserId' => $body->assignedUserId ?? $run->get('assignedUserId'),
                 'teamsIds' => $this->teamsAccess->entityTeamIds($opportunity),
                 'dateEndDate' => $body->dateEndDate ?? null,
@@ -344,7 +344,7 @@ class Playbooks
             if (!$task) {
                 throw new Conflict('The linked Task was deleted; skip the deleted step explicitly.');
             }
-            $this->updateTask($task, $status === 'Completed' ? 'Completed' : 'Not Started');
+            $this->updateTask($task, $status === 'Completed' ? 'Completed' : 'Planned');
         } else {
             if ($step->get('kind') === 'Task' && $status === 'Completed') {
                 throw new Conflict('Activate and complete the linked Task first.');

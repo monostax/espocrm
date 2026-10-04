@@ -1,6 +1,6 @@
 {
     "fields": { "initiativeType": "Tipo de Iniciativa", "order": "Ordem", "category": "Categoria", "isActive": "Ativa", "tenant": "Workspace" },
-    "options": { "category": { "Open": "Aberta", "In Progress": "Em andamento", "Paused": "Pausada", "Completed": "Concluída", "Canceled": "Cancelada" } },
+    "options": { "category": { "Open": "Planejada", "In Progress": "Em andamento", "Paused": "Pausada", "Completed": "Concluída", "Canceled": "Cancelada" } },
     "tooltips": { "category": "Determina o status de todas as iniciativas nesta etapa. Alterar a categoria também atualiza as iniciativas existentes." },
     "links": { "initiativeType": "Tipo de Iniciativa", "initiatives": "Iniciativas" },
     "labels": { "Create InitiativeStage": "Criar Etapa" },

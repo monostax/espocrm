@@ -10,35 +10,50 @@ use Espo\Core\Acl\ScopeData;
 use Espo\Core\Acl\Traits\DefaultAccessCheckerDependency;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\Acl\TeamsAccess;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 
-/** Catalog access is bounded by teams even when a role grants the all level. */
+/** Personal ownership also applies to instance administrators. */
 class AccessChecker implements AccessEntityCREDSChecker
 {
     use DefaultAccessCheckerDependency;
 
-    public function __construct(DefaultAccessChecker $defaultAccessChecker, private TeamsAccess $teams)
+    public function __construct(
+        DefaultAccessChecker $defaultAccessChecker,
+        private TeamsAccess $teams,
+        private UserTenantResolver $tenants,
+    )
     {
         $this->defaultAccessChecker = $defaultAccessChecker;
     }
 
     public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
     {
-        return $user->isAdmin() || ($this->defaultAccessChecker->checkRead($user, $data) && $this->teams->userSharesTeam($user, $entity));
+        return $this->canAccess($user, $entity) && $this->defaultAccessChecker->checkRead($user, $data);
     }
 
     public function checkEntityEdit(User $user, Entity $entity, ScopeData $data): bool
     {
-        return $user->isAdmin() || ($this->defaultAccessChecker->checkEdit($user, $data) && $this->teams->userSharesTeam($user, $entity));
+        return $this->canAccess($user, $entity) && $this->defaultAccessChecker->checkEdit($user, $data);
     }
 
     public function checkEntityDelete(User $user, Entity $entity, ScopeData $data): bool
     {
-        return $user->isAdmin() || ($this->defaultAccessChecker->checkDelete($user, $data) && $this->teams->userSharesTeam($user, $entity));
+        return $this->canAccess($user, $entity) && $this->defaultAccessChecker->checkDelete($user, $data);
     }
 
     public function checkEntityStream(User $user, Entity $entity, ScopeData $data): bool
     {
         return $this->checkEntityRead($user, $entity, $data);
+    }
+
+    private function canAccess(User $user, Entity $entity): bool
+    {
+        if ($entity->get('visibility') === 'personal') {
+            return $entity->get('ownerUserId') === $user->getId() &&
+                $this->tenants->canActForTenant($user, (string) $entity->get('tenantId'));
+        }
+
+        return $user->isAdmin() || $this->teams->userSharesTeam($user, $entity);
     }
 }

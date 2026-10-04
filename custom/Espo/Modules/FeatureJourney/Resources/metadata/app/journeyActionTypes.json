@@ -56,8 +56,8 @@
                     "name": "status",
                     "type": "enum",
                     "label": "Status",
-                    "options": ["Not Started", "Started", "Completed", "Canceled", "Deferred"],
-                    "default": "Not Started"
+                    "options": ["Planned", "Started", "Completed", "Canceled", "Deferred"],
+                    "default": "Planned"
                 },
                 {
                     "name": "priority",

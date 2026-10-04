@@ -43,7 +43,7 @@ class CreateTask implements Action
         $task = $this->entityManager->getNewEntity('Task');
         $task->set([
             'name' => $name,
-            'status' => $params['status'] ?? 'Not Started',
+            'status' => $params['status'] ?? 'Planned',
             'priority' => $params['priority'] ?? 'Normal',
             'description' => $params['description'] ?? null,
             'dateEnd' => $params['dateEnd'] ?? null,

@@ -3058,29 +3058,42 @@ public function deleteConversation(
         return $contact;
     }
 
-    /**
-     * Create a new conversation with a contact in Chatwoot.
-     *
-     * @param string $platformUrl The base URL of the Chatwoot platform
-     * @param string $accountApiKey The account-level API key
-     * @param int $accountId The Chatwoot account ID
-     * @param int $contactId The Chatwoot contact ID
-     * @param int $inboxId The Chatwoot inbox ID
-     * @return array<string, mixed> Conversation data
-     * @throws Error
-     */
+    /** Retrieve the viewer's latest conversations for an exact inbox and recipient. */
+    public function getContactConversations(
+        string $platformUrl,
+        string $userAccessToken,
+        int $accountId,
+        int $contactId,
+        int $inboxId,
+        string $sourceId
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
+            . '/contacts/' . $contactId . '/conversations?inbox_id=' . $inboxId . '&source_id=' . urlencode($sourceId);
+        $response = $this->executeRequest($url, 'GET', null, [
+            'api_access_token: ' . $userAccessToken,
+            'Content-Type: application/json',
+        ]);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Failed to retrieve contact conversations: HTTP ' . $response['code']);
+        }
+        return $response['body']['payload'] ?? [];
+    }
+
+    /** Create a conversation, optionally addressing an explicit contact-inbox source. */
     public function createConversation(
         string $platformUrl,
         string $accountApiKey,
         int $accountId,
         int $contactId,
-        int $inboxId
+        int $inboxId,
+        ?string $sourceId = null
     ): array {
         $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations';
 
         $payload = json_encode([
             'contact_id' => $contactId,
             'inbox_id' => $inboxId,
+            ...($sourceId !== null ? ['source_id' => $sourceId] : []),
         ]);
 
         if ($payload === false) {

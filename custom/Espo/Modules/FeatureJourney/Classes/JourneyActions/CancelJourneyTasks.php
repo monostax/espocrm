@@ -44,7 +44,7 @@ class CancelJourneyTasks implements Action
                 in_array('status', $acl->getScopeForbiddenAttributeList('Task', 'edit'), true)) {
                 throw new Error('Run-as user cannot cancel cadence tasks.');
             }
-            if (!in_array($task->get('status'), ['Not Started', 'Started', 'Deferred'], true)) {
+            if (!in_array($task->get('status'), ['Planned', 'Started', 'Deferred'], true)) {
                 continue;
             }
             $task->set('status', 'Canceled');

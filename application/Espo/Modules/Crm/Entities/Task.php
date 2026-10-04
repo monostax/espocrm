@@ -44,7 +44,7 @@ class Task extends Entity
 {
     public const ENTITY_TYPE = 'Task';
 
-    public const STATUS_NOT_STARTED = 'Not Started';
+    public const STATUS_PLANNED = 'Planned';
     public const STATUS_STARTED = 'Started';
     public const STATUS_COMPLETED = 'Completed';
     public const STATUS_CANCELED = 'Canceled';

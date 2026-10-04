@@ -68,6 +68,9 @@ class EditorReferences
             if (!$this->allowedType($type)) continue;
             try {
                 $builder = $this->select->create()->from($type)->withStrictAccessControl();
+                if ($type === 'ChatwootAccountUserMembership') {
+                    $builder->withPrimaryFilter('aiOnly');
+                }
                 if ($type === 'User') {
                     $builder->withPrimaryFilter('active');
                     if ($this->acl->getPermissionLevel('mention') === 'team') $builder->withBoolFilter('onlyMyTeam');

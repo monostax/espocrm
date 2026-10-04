@@ -1,4 +1,11 @@
 {
+    "whereItemConverterClassNameMap": {
+        "tags_linkedWith": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "tags_notLinkedWith": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "tags_linkedWithAll": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "tags_isLinked": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "tags_isNotLinked": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter"
+    },
     "boolFilterClassNameMap": {
         "assignedToMe": "Espo\\Modules\\Global\\Classes\\Select\\Call\\BoolFilters\\AssignedToMe"
     },

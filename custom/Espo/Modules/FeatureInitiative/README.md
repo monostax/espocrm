@@ -30,7 +30,7 @@ Tenant → InitiativeType → InitiativeStage (ordered, tenant-created records)
    In the initiative's **Related Records** panel, use Create / Add Related Record for each relation. Choose the entity type and select a record; repeat to add any number of related records. Use **Remove Link / Remover Vínculo** in a row's menu to remove only the association, never the referenced record.
 4. The initiatives list supports initiative type/stage/status filters. The old status-column Kanban is disabled because status is derived; change the Stage field to advance the process.
 
-English and Brazilian Portuguese copy is included in both admin panels, forms, tooltips and feature validation messages. The pt-BR category/status labels are **Aberta**, **Em andamento**, **Pausada**, **Concluída** and **Cancelada**; API values are the English category names.
+English and Brazilian Portuguese copy is included in both admin panels, forms, tooltips and feature validation messages. The English category/status labels are **Planned**, **In Progress**, **Paused**, **Completed** and **Canceled**. The pt-BR labels are **Planejada**, **Em andamento**, **Pausada**, **Concluída** and **Cancelada**. The Planned/Planejada category retains the internal API value `Open` for compatibility with existing records and filters; the other API values match their English labels.
 
 Example REST payloads (standard Espo CRUD endpoints):
 

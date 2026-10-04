@@ -180,9 +180,11 @@ class OpportunityReadStateService
 
         // 2. Unread
         $unread = 0;
+        $tagsUnread = [];
         if ($this->acl->checkScope('Opportunity', 'stream')) {
             $unreadQb = SelectBuilder::create()->clone($scopedQb->build());
             $this->applyListFilter($unreadQb, onlyUnread: true);
+            $tagsUnread = $this->tags->counts('Opportunity', $unreadQb);
             $unread = $this->entityManager->getRDBRepository('Opportunity')
                 ->clone($unreadQb->build())
                 ->count();
@@ -285,6 +287,7 @@ class OpportunityReadStateService
             'funnels' => $funnelCounts,
             'users' => $userCounts,
             'tags' => $this->tags->counts('Opportunity', $scopedQb),
+            'tagsUnread' => $tagsUnread,
         ];
     }
 

@@ -1,4 +1,12 @@
 {
     "controller": "controllers/record",
-    "iconClass": "ti ti-tags"
+    "iconClass": "ti ti-tags",
+    "dynamicLogic": {
+        "fields": {
+            "teams": {
+                "visible": { "conditionGroup": [{ "type": "equals", "attribute": "visibility", "value": "team" }] },
+                "required": { "conditionGroup": [{ "type": "equals", "attribute": "visibility", "value": "team" }] }
+            }
+        }
+    }
 }

@@ -6,6 +6,7 @@
     "readLoaderClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\FieldProcessing\\AccessLoader"],
     "listLoaderClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\FieldProcessing\\AccessLoader"],
     "loadAdditionalFieldsAfterUpdate": true,
-    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\RecordHooks\\BlockRelationshipMutation"],
-    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\RecordHooks\\BlockRelationshipMutation"]
+    "relationships": { "tags": { "linkRequiredForeignAccess": "read", "massLink": false } },
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\RecordHooks\\BlockRelationshipMutation", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureInitiative\\Classes\\RecordHooks\\BlockRelationshipMutation", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"]
 }

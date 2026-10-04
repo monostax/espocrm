@@ -6,8 +6,11 @@ namespace Espo\Modules\Global\Tools;
 
 use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Forbidden;
+use Espo\Entities\User;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Modules\Global\Tools\Tenant\TenantResolver;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -15,15 +18,80 @@ use Espo\ORM\Query\SelectBuilder;
 
 class CrmTags
 {
-    public const TYPES = ['Opportunity', 'Task', 'Call', 'Meeting'];
-    public const LINKS = ['opportunities' => 'Opportunity', 'tasks' => 'Task', 'calls' => 'Call', 'meetings' => 'Meeting'];
+    public const TYPES = ['Opportunity', 'Task', 'Call', 'Meeting', 'Initiative'];
+    public const LINKS = ['opportunities' => 'Opportunity', 'tasks' => 'Task', 'calls' => 'Call', 'meetings' => 'Meeting', 'initiatives' => 'Initiative'];
 
     public function __construct(
         private EntityManager $em,
         private Acl $acl,
         private SelectBuilderFactory $select,
         private TenantResolver $tenants,
+        private User $user,
+        private UserTenantResolver $userTenants,
     ) {}
+
+    public function defaultWorkspace(): \stdClass
+    {
+        $ids = $this->userTenants->resolveTenantIds($this->user);
+        if (count($ids) !== 1) return (object) [];
+
+        $tenant = $this->em->getEntityById('Tenant', $ids[0]);
+        return (object) ['tenantId' => $ids[0], 'tenantName' => $tenant?->get('name')];
+    }
+
+    /** Never serialize a hidden tag, even through a record's linkMultiple data. */
+    public function filterOutput(Entity $entity): void
+    {
+        if ($entity->getEntityType() === 'CrmTag') {
+            if (!$this->acl->checkEntityRead($entity)) throw new Forbidden();
+            return;
+        }
+        if (!in_array($entity->getEntityType(), self::TYPES, true)) return;
+        if (!$entity->has('tagsIds') && !$entity->has('tagsNames') && !$entity->has('tagsColumns')) return;
+
+        $rows = $this->decorate($entity->getEntityType(), [(object) ['id' => $entity->getId()]]);
+        $entity->set('tagsIds', $rows[0]->tagsIds ?? []);
+        $entity->set('tagsNames', $rows[0]->tagsNames ?? (object) []);
+        if ($entity->has('tagsColumns')) {
+            $entity->set('tagsColumns', (object) array_intersect_key(
+                (array) $entity->get('tagsColumns'), array_flip($rows[0]->tagsIds ?? [])
+            ));
+        }
+    }
+
+    /** Replace only the actor's visible set; retain hidden associations in storage. */
+    public function preserveHidden(Entity $record): void
+    {
+        if ($record->isNew()) return;
+        $ids = $record->get('tagsIds') ?? [];
+        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'tags')->find() as $tag) {
+            if (!$this->acl->checkEntityRead($tag)) {
+                $ids[] = $tag->getId();
+            }
+        }
+        $record->set('tagsIds', array_values(array_unique($ids)));
+    }
+
+    public function validateStoredWorkspace(Entity $record): void
+    {
+        if ($record->isNew()) return;
+        $tenantId = $this->recordTenantId($record);
+        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'tags')->find() as $tag) {
+            if ($tag->get('tenantId') !== $tenantId) {
+                throw new BadRequest('Tagged records must stay in the tag workspace.');
+            }
+        }
+    }
+
+    private function recordTenantId(Entity $record): ?string
+    {
+        $tenantId = $record->get('tenantId');
+        if (!$tenantId) {
+            $teamIds = $record instanceof CoreEntity ? $record->getLinkMultipleIdList('teams') : ($record->get('teamsIds') ?? []);
+            $tenantId = $this->tenants->resolveUniqueFromTeamIds($teamIds);
+        }
+        return $tenantId;
+    }
 
     public function query(): SelectBuilder
     {
@@ -33,11 +101,7 @@ class CrmTags
     public function validate(Entity $record, array $ids): void
     {
         if (!$ids) return;
-        $tenantId = $record->get('tenantId');
-        if (!$tenantId) {
-            $teamIds = $record instanceof CoreEntity ? $record->getLinkMultipleIdList('teams') : ($record->get('teamsIds') ?? []);
-            $tenantId = $this->tenants->resolveUniqueFromTeamIds($teamIds);
-        }
+        $tenantId = $this->recordTenantId($record);
         if (!$tenantId) throw new BadRequest('Tags require a workspace.');
         foreach (array_unique($ids) as $id) {
             $tag = $this->em->getEntityById('CrmTag', $id);
@@ -50,7 +114,15 @@ class CrmTags
     /** Hydrate page badges in one query; default list loaders omit linkMultiple IDs. */
     public function decorate(string $type, array $rows): array
     {
-        if (!$rows || !$this->acl->checkField($type, 'tags') || !$this->acl->checkScope('CrmTag', 'read')) return $rows;
+        if (!$rows) return $rows;
+        if (!$this->acl->checkField($type, 'tags') || !$this->acl->checkScope('CrmTag', 'read')) {
+            foreach ($rows as $row) {
+                $row->tagsIds = [];
+                $row->tagsNames = (object) [];
+                if (isset($row->tagsColumns)) $row->tagsColumns = (object) [];
+            }
+            return $rows;
+        }
         $query = SelectBuilder::create()->from($type)->join('tags', 'crmTag')
             ->where(['id' => array_map(fn ($row) => $row->id, $rows), 'crmTag.id=s' => $this->query()->select(['id'])->build()])
             ->select(['id', ['crmTag.id', 'tagId'], ['crmTag.name', 'tagName']])->order('crmTag.name')->build();

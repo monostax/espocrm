@@ -25,7 +25,7 @@
     },
     "options": {
         "status": {
-            "Not Started": "Not Started",
+            "Planned": "Planned",
             "Started": "Started",
             "Completed": "Completed",
             "Canceled": "Canceled",

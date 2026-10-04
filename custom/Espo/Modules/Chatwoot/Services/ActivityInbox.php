@@ -89,7 +89,7 @@ class ActivityInbox
             $query->where(['dateEnd' => null] + ($dateOnly ? ['dateEndDate' => null] : []));
             return;
         }
-        $active = $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ($type === 'Task' ? ['Not Started', 'Started'] : ['Planned']);
+        $active = $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ($type === 'Task' ? ['Planned', 'Started'] : ['Planned']);
         $query->where(['status' => $active]);
         if ($due === 'overdue' || $due === 'today') {
             // Today includes every pending deadline before the next local day.
@@ -188,6 +188,7 @@ class ActivityInbox
     {
         // Counts describe sidebar destinations, retaining only the global assignee scope.
         $base = array_intersect_key($filters, array_flip(['assignee_tab', 'timeZone']));
+        $tagsUnread = [];
         $result = ['all' => 0, 'unread' => 0, 'mentions' => 0, 'types' => [], 'status' => [], 'statusGroups' => ['Open' => 0, 'Finished' => 0], 'users' => [], 'due' => [], 'tags' => []];
         foreach ($this->types([]) as $type) {
             $repo = $this->em->getRDBRepository($type);
@@ -215,13 +216,20 @@ class ActivityInbox
                 }
             }
             foreach (['unread' => ['read_status' => 'unread'], 'mentions' => ['view' => 'mentions']] as $key => $filter) {
-                $result[$key] += $repo->clone($this->query($type, $tenant, $base + $filter)->build())->count();
+                $filtered = $this->query($type, $tenant, $base + $filter);
+                $result[$key] += $repo->clone($filtered->build())->count();
+                if ($key === 'unread') {
+                    foreach ($this->tags->counts($type, $filtered) as $id => $count) {
+                        $tagsUnread[$id] = ($tagsUnread[$id] ?? 0) + $count;
+                    }
+                }
             }
             foreach (self::DATES as $due) {
                 $result['due'][$due] = ($result['due'][$due] ?? 0) + $repo->clone($this->query($type, $tenant, $base + ['due' => $due])->build())->count();
             }
         }
         $result['ownerNames'] = [];
+        $result['tagsUnread'] = $tagsUnread;
         foreach ($this->acl->checkScope('User', 'read') ? array_chunk(array_keys($result['users']), 100) : [] as $ids) {
             $owners = $this->services->get('User')->find(SearchParams::fromRaw([
                 'select' => ['id', 'name'], 'maxSize' => 100,
@@ -274,7 +282,7 @@ class ActivityInbox
             $result[$type] = ['fields' => $visible, 'canCreate' => $this->acl->checkScope($type, 'create'),
                 'completedStatuses' => $this->metadata->get(['scopes', $type, 'completedStatusList']) ?? ['Completed'],
                 'finishedStatuses' => $this->finishedStatuses($type),
-                'activeStatuses' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ['Not Started', 'Started']];
+                'activeStatuses' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ['Planned', 'Started']];
             if ($type === 'Task' && isset($visible['recurrence'])) $result[$type]['recurrence'] = [
                 'bases' => ['ScheduledDate', 'CompletedDate'], 'scopes' => ['ThisOccurrence', 'ThisAndFollowing', 'WholeSeries'],
                 'windowDays' => Schedule::WINDOW_DAYS, 'windowLimit' => Schedule::WINDOW_LIMIT,

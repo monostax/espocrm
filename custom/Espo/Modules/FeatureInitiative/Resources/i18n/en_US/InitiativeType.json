@@ -19,7 +19,7 @@
         "cannotChangeTenant": "An initiative type cannot be moved to another tenant.",
         "stageMismatch": "The selected stage must belong to the selected initiative type.",
         "inactiveEntry": "Initiatives can only enter active types and stages.",
-        "invalidCategory": "Stage category must be Open, In Progress, Paused, Completed or Canceled.",
+        "invalidCategory": "Stage category must be Planned, In Progress, Paused, Completed or Canceled.",
         "unsupportedTarget": "Unsupported related record type.",
         "targetTenantMismatch": "The related record must belong to the initiative tenant.",
         "assigneeTenantMismatch": "The assigned user must belong to the initiative tenant.",

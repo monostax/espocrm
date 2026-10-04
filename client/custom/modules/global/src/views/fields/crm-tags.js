@@ -1,5 +1,5 @@
 import LinkMultiple from "views/fields/link-multiple";
-import {loadTags, tagClasses} from "global:crm-tags";
+import {loadTags, tagClasses, tagStyle} from "global:crm-tags";
 
 export default class CrmTagsField extends LinkMultiple {
     setup() {
@@ -15,13 +15,20 @@ export default class CrmTagsField extends LinkMultiple {
     }
 
     getCreateAttributes() {
-        return {...super.getCreateAttributes(), tenantId: this.model.get("tenantId"), teamsIds: this.model.get("teamsIds")};
+        return {
+            ...super.getCreateAttributes(),
+            tenantId: this.model.get("tenantId"),
+            tenantName: this.model.get("tenantName"),
+            teamsIds: this.model.get("teamsIds"),
+            teamsNames: this.model.get("teamsNames"),
+        };
     }
 
     getDetailLinkHtml(id, name) {
         const tag = this.tags?.[id];
         return $("<a>").attr("href", this.getUrl(id)).attr("data-id", id)
             .addClass(`inline-flex rounded px-2 py-0.5 text-xs ${tagClasses(tag?.color)}`)
+            .css(tagStyle(tag?.color))
             .text(tag?.name || name || this.nameHash?.[id] || id)[0].outerHTML;
     }
 }
