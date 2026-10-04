@@ -8,7 +8,9 @@ use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Select\SelectBuilder as RecordSelectBuilder;
+use Espo\Core\Select\Text\FilterFactory;
 use Espo\Core\Utils\Metadata;
+use Espo\Entities\User;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\EntityCollection;
@@ -75,7 +77,8 @@ class ReferencesTest extends TestCase
         $metadata->method('get')->willReturn(true);
         $select = $this->createMock(SelectBuilderFactory::class);
         $select->expects($this->never())->method('create');
-        $service = new EditorReferences($this->createMock(EntityManager::class), $select, $acl, $metadata);
+        $service = new EditorReferences($this->createMock(EntityManager::class), $select, $acl, $metadata,
+            $this->createMock(User::class), $this->createMock(FilterFactory::class));
         $results = $service->resolve([['kind' => 'record', 'entityType' => 'Contact', 'recordId' => 'secret', 'label' => 'Private name']]);
         $this->assertSame('Unavailable reference', $results[0]['label']);
         $this->assertFalse($results[0]['available']);
@@ -87,7 +90,8 @@ class ReferencesTest extends TestCase
         $em->expects($this->never())->method('getEntityById');
         $select = $this->createMock(SelectBuilderFactory::class);
         $select->expects($this->never())->method('create');
-        $service = new EditorReferences($em, $select, $this->createMock(Acl::class), $this->createMock(Metadata::class));
+        $service = new EditorReferences($em, $select, $this->createMock(Acl::class), $this->createMock(Metadata::class),
+            $this->createMock(User::class), $this->createMock(FilterFactory::class));
         foreach (array_keys(References::CONTEXT) as $key) {
             $this->assertNull($service->context(['kind' => 'context', 'key' => $key], []));
         }
@@ -137,7 +141,8 @@ class ReferencesTest extends TestCase
             'scopes' => (object) ['User' => (object) ['entity' => true, 'recordKnowledge' => true]],
             'entityDefs' => (object) ['User' => (object) ['fields' => (object) ['name' => (object) []]]],
         ]);
-        $service = new EditorReferences($em, $select, $acl, $metadata);
+        $service = new EditorReferences($em, $select, $acl, $metadata,
+            $this->createMock(User::class), $this->createMock(FilterFactory::class));
         $results = $service->resolve(array_map(fn ($id) => ['kind' => 'record', 'entityType' => 'User', 'recordId' => $id, 'label' => 'Cached'], ['teammate', 'outside', 'deleted']));
         $this->assertSame('New name', $results[0]['label']);
         $this->assertTrue($results[0]['available']);
@@ -179,7 +184,8 @@ class ReferencesTest extends TestCase
             'scopes' => (object) ['Document' => (object) ['entity' => true, 'object' => true, 'tab' => true]],
             'entityDefs' => (object) ['Document' => (object) ['fields' => (object) ['name' => (object) []]]],
         ]);
-        $results = (new EditorReferences($em, $select, $acl, $metadata))->resolve(array_map(
+        $results = (new EditorReferences($em, $select, $acl, $metadata,
+            $this->createMock(User::class), $this->createMock(FilterFactory::class)))->resolve(array_map(
             fn ($id) => ['kind' => 'record', 'entityType' => 'Document', 'recordId' => $id], ['file', 'page']));
         $this->assertTrue($results[0]['available']);
         $this->assertTrue($results[1]['available']);

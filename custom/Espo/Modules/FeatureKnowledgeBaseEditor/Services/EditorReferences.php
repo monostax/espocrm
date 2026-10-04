@@ -8,9 +8,14 @@ use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Core\Select\Text\Filter\Data as TextFilterData;
+use Espo\Core\Select\Text\FilterFactory;
 use Espo\Core\Utils\Metadata;
+use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Expression as Expr;
+use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\Query\UnionBuilder;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
@@ -24,6 +29,8 @@ class EditorReferences
         private SelectBuilderFactory $select,
         private Acl $acl,
         private Metadata $metadata,
+        private User $user,
+        private FilterFactory $textFilterFactory,
     ) {}
 
     private function allowedType(string $type): bool
@@ -44,27 +51,60 @@ class EditorReferences
     public function search(string $query): array
     {
         if (strlen($query) > 240) throw new BadRequest('Query too long.');
+        $query = trim($query);
         $results = [];
-        $union = UnionBuilder::create()->all()->order('rank')->order('name');
+        $union = UnionBuilder::create()->all()->order('lastViewedNumber', 'DESC')->order('rank')->order('name');
         $queries = [];
+        $historyQuery = SelectBuilder::create()->from('ActionHistoryRecord')
+            ->select(['targetType', 'targetId', ['MAX:number', 'lastViewedNumber']])
+            ->where(['userId' => $this->user->getId(), 'action' => ['read', 'create']])
+            ->group(['targetType', 'targetId'])->build();
+        $history = [];
+        foreach ($this->em->getQueryExecutor()->execute($historyQuery)->fetchAll() as $row) {
+            $history[$row['targetType']][$row['targetId']] = (int) $row['lastViewedNumber'];
+        }
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         foreach ($this->supportedTypes as $rank => $type) {
             if (!$this->allowedType($type)) continue;
             try {
-                $builder = $this->select->create()->from($type)->withStrictAccessControl()->withTextFilter(trim($query));
+                $builder = $this->select->create()->from($type)->withStrictAccessControl();
                 if ($type === 'User') {
                     $builder->withPrimaryFilter('active');
                     if ($this->acl->getPermissionLevel('mention') === 'team') $builder->withBoolFilter('onlyMyTeam');
                 }
-                $queryBuilder = $builder->buildQueryBuilder()->order('name')->limit(0, 10);
+                // Hydration needs ACL, but must not repeat the expensive text search.
+                $queryBuilder = $builder->buildQueryBuilder();
                 $queries[$type] = $queryBuilder->build();
-                $union->query($queryBuilder->select(['id', 'name', ['VALUE:' . $type, 'entityType'], [(string) $rank, 'rank']])->build());
+                $queryBuilder->order('name')->limit(0, 10);
+                $this->textFilterFactory->create($type, $this->user)
+                    ->apply($queryBuilder, TextFilterData::create($query, ['name']));
+                $columns = [
+                    'id', 'name', ['VALUE:' . $type, 'entityType'], [(string) $rank, 'rank'],
+                ];
+                $union->query($queryBuilder->select([...$columns, ['0', 'lastViewedNumber']])->build());
+                if (!empty($history[$type])) {
+                    $mapping = [Expr::column('id')];
+                    foreach ($history[$type] as $id => $number) array_push($mapping, $id, $number);
+                    $mapping[] = 0;
+                    $lastViewed = Expr::map(...$mapping);
+                    // Only sort the user's viewed IDs, never the whole matching table.
+                    $union->query($queryBuilder->where(['id' => array_keys($history[$type])])
+                        ->order([])->order(Expr::alias('lastViewedNumber'), 'DESC')->order('name')
+                        ->select([...$columns, [$lastViewed, 'lastViewedNumber']])->build());
+                }
             } catch (Forbidden) { continue; }
         }
         if (!$queries) return [];
-        $rows = $this->em->getQueryExecutor()->execute($union->build())->fetchAll();
+        $candidates = $this->em->getQueryExecutor()->execute($union->build())->fetchAll();
+        $rows = [];
         $groups = [];
-        foreach ($rows as $row) $groups[$row['entityType']][] = $row['id'];
+        foreach ($candidates as $row) {
+            $type = $row['entityType'];
+            $ids = $groups[$type] ?? [];
+            if (count($ids) >= 10 || in_array($row['id'], $ids, true)) continue;
+            $groups[$type][] = $row['id'];
+            $rows[] = $row;
+        }
         $entities = [];
         foreach ($groups as $type => $ids) {
             // Hydrate full records only for matches, keeping the original ACL
@@ -80,7 +120,10 @@ class EditorReferences
             $type = $row['entityType'];
             $entity = $entities[$type][$row['id']] ?? null;
             if (!$entity) continue;
-            $results[] = ['kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId(), 'label' => $entity->get('name')];
+            $results[] = [
+                'kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId(), 'label' => $entity->get('name'),
+                'recentlyViewed' => (bool) $row['lastViewedNumber'],
+            ];
         }
         return $results;
     }
