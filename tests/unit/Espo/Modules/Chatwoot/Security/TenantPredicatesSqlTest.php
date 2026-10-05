@@ -65,6 +65,7 @@ class TenantPredicatesSqlTest extends TestCase
         $tables = [
             'Opportunity' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Initiative' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
+            'Contact' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Note' => ['id', 'parentType', 'parentId', 'type', 'relatedType', 'relatedId', 'createdById', 'number', 'isPinned', 'isInternal', 'readable', 'deleted'],
             'Attachment' => ['id', 'parentType', 'parentId', 'relatedType', 'relatedId', 'createdById', 'deleted'],
             'ChatwootConversation' => ['id', 'readable', 'deleted'],
@@ -101,10 +102,11 @@ class TenantPredicatesSqlTest extends TestCase
         $this->tenants->method('resolveTenantIds')->with($this->user)->willReturnCallback(fn () => $this->tenantIds);
         $this->acl = $this->createMock(AclManager::class);
         $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) =>
-            ($scope !== 'Initiative' || $this->initiativesEnabled) && !in_array("$scope:$action", $this->deniedScopes, true));
+            $scope !== 'Contact' && ($scope !== 'Initiative' || $this->initiativesEnabled) &&
+            !in_array("$scope:$action", $this->deniedScopes, true));
         $this->acl->method('getLevel')->willReturnCallback(function ($user, $scope, $action) {
             self::assertSame($this->user, $user);
-            self::assertContains($scope, ['Opportunity', 'Initiative']);
+            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact']);
             self::assertSame('stream', $action);
             return $this->streamLevel;
         });
@@ -137,7 +139,7 @@ class TenantPredicatesSqlTest extends TestCase
                 $query = SelectBuilder::create()->from($scope)->order('id', 'DESC');
                 // Fixture stock read ACL. Tenant, parent, event and attachment predicates are production code.
                 $query->where(['readable' => 1]);
-                if (in_array($scope, ['Opportunity', 'Initiative'], true)) {
+                if (in_array($scope, ['Opportunity', 'Initiative', 'Contact'], true)) {
                     (new Tenant($this->user, $this->tenants))->apply($query);
                 }
                 if ($scope === 'Note') {

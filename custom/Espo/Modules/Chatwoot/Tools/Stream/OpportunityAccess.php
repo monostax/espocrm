@@ -27,7 +27,7 @@ class OpportunityAccess
 
     public function canReadNote(User $user, Entity $note): bool
     {
-        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative'], true) || $user->isAdmin()) {
+        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative', 'Contact'], true) || $user->isAdmin()) {
             return true;
         }
 
@@ -48,6 +48,11 @@ class OpportunityAccess
     public function readableInitiatives(User $user): ?Select
     {
         return $this->readableParents($user, 'Initiative');
+    }
+
+    public function readableContacts(User $user): ?Select
+    {
+        return $this->readableParents($user, 'Contact');
     }
 
     private function readableParents(User $user, string $type): ?Select
@@ -95,8 +100,8 @@ class OpportunityAccess
             return [];
         }
 
-        $conditions = [['parentType!=' => ['Opportunity', 'Initiative']], ['parentType' => null]];
-        foreach (['Opportunity', 'Initiative'] as $type) {
+        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact']], ['parentType' => null]];
+        foreach (['Opportunity', 'Initiative', 'Contact'] as $type) {
             $parents = $this->readableParents($user, $type);
             if ($parents) {
                 $conditions[] = ['parentType' => $type, 'parentId=s' => $parents];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\Chatwoot\Hooks\Note;
 
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
+use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\ORM\Entity;
 
 class KeepOpportunityEventsInternal
@@ -15,7 +16,7 @@ class KeepOpportunityEventsInternal
     public function beforeSave(Entity $entity, array $options): void
     {
         if (in_array($entity->get('type'), OpportunityStreamEvents::EVENT_TYPES, true) ||
-            (in_array($entity->get('parentType'), ['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call'], true) &&
+            (in_array($entity->get('parentType'), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true) &&
                 ($entity->get('data')->opportunityStreamAgent ?? null))) {
             $entity->set('isInternal', true);
         }

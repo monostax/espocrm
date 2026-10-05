@@ -33,21 +33,22 @@ class OpportunityConversations
 
     public function getActionList(Request $request): object
     {
+        $type = $this->entityType();
         $id = $request->getRouteParam('id');
         $accountId = filter_var($request->getQueryParam('chatwootAccountId'), FILTER_VALIDATE_INT);
         $page = filter_var($request->getQueryParam('page') ?? 1, FILTER_VALIDATE_INT);
         if (!$id || !$accountId || $accountId < 1 || !$page || $page < 1) {
-            throw new BadRequest('Opportunity ID, Chatwoot account ID and a positive page are required.');
+            throw new BadRequest('Record ID, Chatwoot account ID and a positive page are required.');
         }
 
-        if (!$this->aclManager->checkScope($this->user, 'Opportunity', 'read') ||
+        if (!$this->aclManager->checkScope($this->user, $type, 'read') ||
             !$this->aclManager->checkScope($this->user, 'ChatwootConversation', 'read') ||
-            !$this->aclManager->checkLink($this->user, 'Opportunity', 'chatwootConversations') ||
-            !$this->aclManager->checkField($this->user, 'Opportunity', 'chatwootConversations')) {
+            !$this->aclManager->checkLink($this->user, $type, 'chatwootConversations') ||
+            !$this->aclManager->checkField($this->user, $type, 'chatwootConversations')) {
             throw new Forbidden();
         }
 
-        $opportunity = $this->entityManager->getEntityById('Opportunity', $id);
+        $opportunity = $this->entityManager->getEntityById($type, $id);
         if (!$opportunity) {
             throw new NotFound();
         }
@@ -78,7 +79,7 @@ class OpportunityConversations
         // with authorization through the viewer's own Chatwoot token.
         $scopeData = $this->tableFactory->create($this->user)->getScopeData('ChatwootConversation');
         $ids = [];
-        $linked = $this->entityManager->getRDBRepository('Opportunity')
+        $linked = $this->entityManager->getRDBRepository($type)
             ->getRelation($opportunity, 'chatwootConversations')
             ->where(['chatwootAccountId' => $account->getId()])
             ->find();
@@ -116,6 +117,11 @@ class OpportunityConversations
             'list' => $response['payload'],
             'total' => $meta['mine_count'] + $meta['unassigned_count'] + $meta['others_count'],
         ];
+    }
+
+    protected function entityType(): string
+    {
+        return 'Opportunity';
     }
 
     private function userAccessToken(Entity $chatwootUser, Entity $platform): string
