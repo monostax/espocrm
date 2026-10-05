@@ -42,7 +42,8 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
      * Initiates a new conversation on a ChatwootInbox for a Contact that may
      * or may not have an existing linked ChatwootContact.
      *
-     * Request body: { "inboxId": "<CRM inbox ID>", "channelIdentityId": "<optional CRM identity ID>" }
+     * Request body: { "inboxId": "<CRM inbox ID>", "channelIdentityId": "<optional CRM identity ID>",
+     *                 "opportunityId": "<optional CRM opportunity ID>" }
      *
      * @throws BadRequest
      * @throws Error
@@ -133,6 +134,18 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
 
         if (!$chatwootAccount) {
             throw new BadRequest("Linked ChatwootAccount not found.");
+        }
+
+        $opportunity = null;
+        if (isset($body->opportunityId)) {
+            $opportunity = $entityManager->getEntityById('Opportunity', $body->opportunityId);
+            if (!$opportunity) {
+                throw new NotFound('Opportunity not found.');
+            }
+            if (!$this->acl->check($opportunity, 'edit') ||
+                $opportunity->get('tenantId') !== $this->extractTenantId($chatwootAccount)) {
+                throw new Forbidden('You cannot link conversations to this opportunity.');
+            }
         }
 
         $accountApiKey = $chatwootAccount->get('apiKey');
@@ -365,6 +378,12 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             'ChatwootConversation',
             $conversationData
         );
+
+        if ($opportunity) {
+            $entityManager->getRDBRepository('Opportunity')
+                ->getRelation($opportunity, 'chatwootConversations')
+                ->relateById($conversationEntity->getId());
+        }
 
         // === Return response (same shape as existing createConversation endpoint) ===
         $result = new stdClass();
