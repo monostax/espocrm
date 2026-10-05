@@ -1,5 +1,6 @@
 {
- "fields": {
+  "fields": {
+    "crmTags": "CRM Tags",
   "cpf": "CPF",
   "dataNascimento": "Date of Birth",
   "sexo": "Sex",

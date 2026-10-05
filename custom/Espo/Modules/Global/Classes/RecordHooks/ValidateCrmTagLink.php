@@ -20,7 +20,7 @@ class ValidateCrmTagLink implements LinkHook, UnlinkHook
         if ($entity->getEntityType() === 'CrmTag' && $link === 'teams' && $entity->get('visibility') === 'personal') {
             throw new Forbidden('Personal tags cannot be assigned to teams.');
         }
-        if (in_array($entity->getEntityType(), CrmTags::TYPES, true) && $link === 'tags') {
+        if (in_array($entity->getEntityType(), CrmTags::TYPES, true) && $link === CrmTags::field($entity->getEntityType())) {
             $this->tags->validate($entity, [$foreignEntity->getId()]);
         } elseif ($entity->getEntityType() === 'CrmTag' && isset(CrmTags::LINKS[$link])) {
             if (!$this->acl->checkEntityEdit($foreignEntity)) throw new Forbidden();

@@ -1,5 +1,6 @@
 {
     "fields": {
+        "crmTags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
         },
@@ -26,6 +27,7 @@
         }
     },
     "links": {
+        "crmTags": { "type": "hasMany", "entity": "CrmTag", "foreign": "accounts", "relationName": "crmTagAccount" },
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant",

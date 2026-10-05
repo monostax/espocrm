@@ -1,5 +1,6 @@
 {
     "fields": {
+        "crmTags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "cpf": {
             "type": "varchar",
             "maxLength": 14,
@@ -65,6 +66,7 @@
         }
     },
     "links": {
+        "crmTags": { "type": "hasMany", "entity": "CrmTag", "foreign": "contacts", "relationName": "crmTagContact" },
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant",

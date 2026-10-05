@@ -18,12 +18,12 @@ class AccountInbox extends ContactInbox
         'name', 'website', 'emailAddress', 'phoneNumber', 'type', 'industry', 'assignedUser', 'teams',
         'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode',
         'shippingAddressStreet', 'shippingAddressCity', 'shippingAddressState', 'shippingAddressCountry', 'shippingAddressPostalCode',
-        'description', 'customFields', 'createdAt', 'modifiedAt', 'createdBy',
+        'description', 'customFields', 'crmTags', 'createdAt', 'modifiedAt', 'createdBy',
     ];
     protected const EDIT_FIELDS = [
         'name', 'website', 'emailAddress', 'phoneNumber', 'type', 'industry', 'assignedUserId',
         'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode',
         'shippingAddressStreet', 'shippingAddressCity', 'shippingAddressState', 'shippingAddressCountry', 'shippingAddressPostalCode',
-        'description', 'customFields',
+        'description', 'customFields', 'crmTagsIds',
     ];
 }

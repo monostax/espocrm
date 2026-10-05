@@ -1,6 +1,5 @@
 {
     "beforeLinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
     "beforeUnlinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ValidateCrmTagLink"],
-    "relationships": { "crmTags": { "linkRequiredForeignAccess": "read", "massLink": false } },
-    "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer"
+    "relationships": { "crmTags": { "linkRequiredForeignAccess": "read", "massLink": false } }
 }

@@ -21,6 +21,8 @@
         "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
     },
     "links": {
+        "contacts": { "type": "hasMany", "entity": "Contact", "foreign": "crmTags", "relationName": "crmTagContact", "layoutRelationshipsDisabled": true },
+        "accounts": { "type": "hasMany", "entity": "Account", "foreign": "crmTags", "relationName": "crmTagAccount", "layoutRelationshipsDisabled": true },
         "ownerUser": { "type": "belongsTo", "entity": "User" },
         "tenant": { "type": "belongsTo", "entity": "Tenant", "foreign": "crmTags" },
         "teams": { "type": "hasMany", "entity": "Team", "relationName": "entityTeam", "layoutRelationshipsDisabled": true },
