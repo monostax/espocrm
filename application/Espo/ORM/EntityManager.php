@@ -119,6 +119,10 @@ class EntityManager
         $this->collectionFactory = new CollectionFactory($this);
         $this->transactionManager = new TransactionManager($this->pdoProvider->get(), $this->queryComposer);
 
+        if ($this->sqlExecutor instanceof DefaultSqlExecutor) {
+            $this->sqlExecutor->setTransactionManager($this->transactionManager);
+        }
+
         $this->initLocker();
 
         $eventDispatcher->subscribeToMetadataUpdate(function () {
