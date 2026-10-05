@@ -62,8 +62,18 @@ abstract class RecordNextAction
                 $activity = $this->activity($record, 'Task', $created->getId());
                 $this->checkPending($activity);
             } elseif ($body->activityId ?? null) {
-                $activity = $this->activity($record, $body->activityType ?? null, $body->activityId);
+                $activity = $this->activity($record, $body->activityType ?? null, $body->activityId, true);
                 $this->checkPending($activity);
+                if (!$activity->get('parentId')) {
+                    $type = $activity->getEntityType();
+                    if (!$this->acl->checkEntityEdit($activity) || !$this->acl->checkField($type, 'parent', 'edit')) {
+                        throw new Forbidden();
+                    }
+                    $this->records->get($type)->update($activity->getId(), (object) [
+                        'parentType' => $record->getEntityType(),
+                        'parentId' => $record->getId(),
+                    ]);
+                }
             } else {
                 $activity = null;
             }
@@ -122,13 +132,15 @@ abstract class RecordNextAction
         }
     }
 
-    private function activity(Entity $record, mixed $type, mixed $id): Entity
+    private function activity(Entity $record, mixed $type, mixed $id, bool $allowUnlinked = false): Entity
     {
         if (!in_array($type, ['Task', 'Call', 'Meeting'], true) || !is_string($id) || $id === '') {
             throw new BadRequest('A supported activity reference is required.');
         }
+        $parent = ['parentType' => $record->getEntityType(), 'parentId' => $record->getId()];
+        $where = $allowUnlinked ? ['OR' => [$parent, ['parentId' => null]]] : $parent;
         $activity = $this->entityManager->getRDBRepository($type)->where([
-            'id' => $id, 'parentType' => $record->getEntityType(), 'parentId' => $record->getId(),
+            'id' => $id, ...$where,
         ])->forUpdate()->findOne();
         if (!$activity) {
             throw new NotFound();

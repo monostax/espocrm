@@ -17,7 +17,17 @@ class EditorReference
 
     public function getActionSearch(Request $request): object
     {
-        return (object) ['list' => $this->references->search((string) $request->getQueryParam('q'))];
+        $parent = null;
+        if ($request->getQueryParam('nextActionParentType')) {
+            $parent = [
+                'type' => (string) $request->getQueryParam('nextActionParentType'),
+                'id' => (string) $request->getQueryParam('nextActionParentId'),
+            ];
+            if (!in_array($parent['type'], ['Opportunity', 'Initiative'], true) || !$parent['id']) {
+                throw new BadRequest('A supported next-action parent is required.');
+            }
+        }
+        return (object) ['list' => $this->references->search((string) $request->getQueryParam('q'), $parent)];
     }
 
     public function postActionResolve(Request $request): object
