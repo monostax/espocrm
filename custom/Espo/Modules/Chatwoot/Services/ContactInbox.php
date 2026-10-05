@@ -17,6 +17,7 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
+use Espo\Modules\Global\Tools\CrmTags;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression as Expr;
@@ -29,14 +30,14 @@ class ContactInbox
 {
     protected const ENTITY_TYPE = 'Contact';
     protected const SORT_FIELDS = ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'accountName', 'assignedUserName', 'source'];
-    protected const EDIT_FIELDS = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'source', 'emailAddress', 'phoneNumber', 'description', 'customFields'];
+    protected const EDIT_FIELDS = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'crmTagsIds', 'source', 'emailAddress', 'phoneNumber', 'description', 'customFields'];
     protected const GROUP_FIELDS = [
         'assignee' => ['assignedUserId', 'assignedUser'],
         'account' => ['accountId', 'account'],
         'source' => ['source', 'source'],
     ];
     protected const FIELDS = [
-        'name', 'firstName', 'lastName', 'account', 'assignedUser', 'teams', 'tags', 'source',
+        'name', 'firstName', 'lastName', 'account', 'assignedUser', 'teams', 'tags', 'crmTags', 'source',
         'emailAddress', 'phoneNumber', 'channelIdentitiesData', 'description', 'customFields',
         'createdAt', 'modifiedAt', 'createdBy',
     ];
@@ -53,6 +54,7 @@ class ContactInbox
         private OpportunityAccess $streamAccess,
         private Access $activityAccess,
         private Metadata $metadata,
+        private CrmTags $tags,
     ) {}
 
     public function workspace(Request $request): Entity
@@ -97,6 +99,12 @@ class ContactInbox
             $query->where(['assignedUserId' => $assignee === 'me' ? $this->user->getId() : null]);
         }
         $scope = $query->build();
+        if ($tag = $request->getQueryParam('tag')) {
+            if (!$this->acl->checkField(static::ENTITY_TYPE, 'crmTags') || !$this->acl->checkScope('CrmTag', 'read')) throw new Forbidden();
+            $tagged = SelectBuilder::create()->from(static::ENTITY_TYPE)->select(['id'])->join('crmTags', 'crmTag')
+                ->where(['crmTag.id=s' => $this->tags->query()->select(['id'])->where(['id' => $tag])->build()])->build();
+            $query->where(['id=s' => $tagged]);
+        }
         if ($request->getQueryParam('view') === 'mentions') $query->where(['id=s' => $this->unreadScope($scope, false)]);
         $read = $request->getQueryParam('read_status');
         if (in_array($read, ['read', 'unread'], true)) {
@@ -177,7 +185,7 @@ class ContactInbox
         $records = [];
         $streamIds = [];
         foreach ($items as $item) {
-            $records[$item->getId()] = $this->present($item);
+            $records[$item->getId()] = $this->present($item, false);
             if ($records[$item->getId()]->canStream) $streamIds[] = $item->getId();
         }
         $states = $this->discussion->states(static::ENTITY_TYPE, $streamIds);
@@ -189,7 +197,7 @@ class ContactInbox
             $data->readState = $states[$row['id']] ?? null;
             $list[] = $data;
         }
-        return (object) ['list' => $list, 'total' => $total, 'hasMore' => $offset + count($page) < $total];
+        return (object) ['list' => $this->tags->decorate(static::ENTITY_TYPE, $list), 'total' => $total, 'hasMore' => $offset + count($page) < $total];
     }
 
     public function counts(Request $request): object
@@ -199,16 +207,18 @@ class ContactInbox
             'all' => $this->em->getRDBRepository(static::ENTITY_TYPE)->clone($scope)->count(),
             'unread' => $this->em->getRDBRepository(static::ENTITY_TYPE)->clone($this->unreadScope($scope))->count(),
             'mentions' => $this->em->getRDBRepository(static::ENTITY_TYPE)->clone($this->unreadScope($scope, false))->count(),
+            'tags' => (object) $this->tags->counts(static::ENTITY_TYPE, SelectBuilder::create()->clone($scope)),
         ];
     }
 
-    public function present(Entity $entity): object
+    public function present(Entity $entity, bool $withTags = true): object
     {
-        return (object) ((array) $entity->getValueMap() + [
+        $data = (object) ((array) $entity->getValueMap() + [
             'entityType' => static::ENTITY_TYPE, 'canEdit' => $this->acl->checkEntityEdit($entity), 'canDelete' => $this->acl->checkEntityDelete($entity),
             'canStream' => $this->acl->checkEntityStream($entity) && $this->acl->checkScope('Note', 'read'),
             'canPost' => $this->acl->checkEntityStream($entity) && $this->acl->checkScope('Note', 'create') && $this->acl->checkScope('Note', 'read'),
         ]);
+        return $withTags ? $this->tags->decorate(static::ENTITY_TYPE, [$data])[0] : $data;
     }
 
     public function metadata(Request $request): object

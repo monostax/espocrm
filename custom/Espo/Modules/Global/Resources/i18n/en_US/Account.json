@@ -1,5 +1,6 @@
 {
     "fields": {
+        "crmTags": "CRM Tags",
         "tenant": "Tenant",
         "customFields": "Custom Fields"
     },

@@ -18,8 +18,13 @@ use Espo\ORM\Query\SelectBuilder;
 
 class CrmTags
 {
-    public const TYPES = ['Opportunity', 'Task', 'Call', 'Meeting', 'Initiative'];
-    public const LINKS = ['opportunities' => 'Opportunity', 'tasks' => 'Task', 'calls' => 'Call', 'meetings' => 'Meeting', 'initiatives' => 'Initiative'];
+    public const TYPES = ['Opportunity', 'Task', 'Call', 'Meeting', 'Initiative', 'Contact', 'Account'];
+    public const LINKS = ['opportunities' => 'Opportunity', 'tasks' => 'Task', 'calls' => 'Call', 'meetings' => 'Meeting', 'initiatives' => 'Initiative', 'contacts' => 'Contact', 'accounts' => 'Account'];
+
+    public static function field(string $type): string
+    {
+        return in_array($type, ['Contact', 'Account'], true) ? 'crmTags' : 'tags';
+    }
 
     public function __construct(
         private EntityManager $em,
@@ -47,14 +52,15 @@ class CrmTags
             return;
         }
         if (!in_array($entity->getEntityType(), self::TYPES, true)) return;
-        if (!$entity->has('tagsIds') && !$entity->has('tagsNames') && !$entity->has('tagsColumns')) return;
+        $field = self::field($entity->getEntityType());
+        if (!$entity->has($field . 'Ids') && !$entity->has($field . 'Names') && !$entity->has($field . 'Columns')) return;
 
         $rows = $this->decorate($entity->getEntityType(), [(object) ['id' => $entity->getId()]]);
-        $entity->set('tagsIds', $rows[0]->tagsIds ?? []);
-        $entity->set('tagsNames', $rows[0]->tagsNames ?? (object) []);
-        if ($entity->has('tagsColumns')) {
-            $entity->set('tagsColumns', (object) array_intersect_key(
-                (array) $entity->get('tagsColumns'), array_flip($rows[0]->tagsIds ?? [])
+        $entity->set($field . 'Ids', $rows[0]->{$field . 'Ids'} ?? []);
+        $entity->set($field . 'Names', $rows[0]->{$field . 'Names'} ?? (object) []);
+        if ($entity->has($field . 'Columns')) {
+            $entity->set($field . 'Columns', (object) array_intersect_key(
+                (array) $entity->get($field . 'Columns'), array_flip($rows[0]->{$field . 'Ids'} ?? [])
             ));
         }
     }
@@ -63,20 +69,21 @@ class CrmTags
     public function preserveHidden(Entity $record): void
     {
         if ($record->isNew()) return;
-        $ids = $record->get('tagsIds') ?? [];
-        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'tags')->find() as $tag) {
+        $field = self::field($record->getEntityType());
+        $ids = $record->get($field . 'Ids') ?? [];
+        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, $field)->find() as $tag) {
             if (!$this->acl->checkEntityRead($tag)) {
                 $ids[] = $tag->getId();
             }
         }
-        $record->set('tagsIds', array_values(array_unique($ids)));
+        $record->set($field . 'Ids', array_values(array_unique($ids)));
     }
 
     public function validateStoredWorkspace(Entity $record): void
     {
         if ($record->isNew()) return;
         $tenantId = $this->recordTenantId($record);
-        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'tags')->find() as $tag) {
+        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, self::field($record->getEntityType()))->find() as $tag) {
             if ($tag->get('tenantId') !== $tenantId) {
                 throw new BadRequest('Tagged records must stay in the tag workspace.');
             }
@@ -115,15 +122,16 @@ class CrmTags
     public function decorate(string $type, array $rows): array
     {
         if (!$rows) return $rows;
-        if (!$this->acl->checkField($type, 'tags') || !$this->acl->checkScope('CrmTag', 'read')) {
+        $field = self::field($type);
+        if (!$this->acl->checkField($type, $field) || !$this->acl->checkScope('CrmTag', 'read')) {
             foreach ($rows as $row) {
-                $row->tagsIds = [];
-                $row->tagsNames = (object) [];
-                if (isset($row->tagsColumns)) $row->tagsColumns = (object) [];
+                $row->{$field . 'Ids'} = [];
+                $row->{$field . 'Names'} = (object) [];
+                if (isset($row->{$field . 'Columns'})) $row->{$field . 'Columns'} = (object) [];
             }
             return $rows;
         }
-        $query = SelectBuilder::create()->from($type)->join('tags', 'crmTag')
+        $query = SelectBuilder::create()->from($type)->join($field, 'crmTag')
             ->where(['id' => array_map(fn ($row) => $row->id, $rows), 'crmTag.id=s' => $this->query()->select(['id'])->build()])
             ->select(['id', ['crmTag.id', 'tagId'], ['crmTag.name', 'tagName']])->order('crmTag.name')->build();
         $assignments = [];
@@ -131,8 +139,8 @@ class CrmTags
             $assignments[$row['id']][$row['tagId']] = $row['tagName'];
         }
         foreach ($rows as $row) {
-            $row->tagsIds = array_keys($assignments[$row->id] ?? []);
-            $row->tagsNames = (object) ($assignments[$row->id] ?? []);
+            $row->{$field . 'Ids'} = array_keys($assignments[$row->id] ?? []);
+            $row->{$field . 'Names'} = (object) ($assignments[$row->id] ?? []);
         }
         return $rows;
     }
@@ -140,11 +148,12 @@ class CrmTags
     /** Aggregate a semi-joined record scope so team joins never multiply tag counts. */
     public function counts(string $type, SelectBuilder $scope): array
     {
-        if (!$this->acl->checkScope('CrmTag', 'read') || !$this->acl->checkField($type, 'tags')) return [];
+        $field = self::field($type);
+        if (!$this->acl->checkScope('CrmTag', 'read') || !$this->acl->checkField($type, $field)) return [];
         $ids = (clone $scope)->select(['id'])->order([])->limit(null, null)->build();
         $tags = $this->query()->select(['id'])->build();
         $query = SelectBuilder::create()->from($type)->where(['id=s' => $ids])
-            ->join('tags', 'crmTag')->where(['crmTag.id=s' => $tags])
+            ->join($field, 'crmTag')->where(['crmTag.id=s' => $tags])
             ->select([['crmTag.id', 'tagId'], ['COUNT:id', 'count']])->group('crmTag.id')->build();
         $counts = [];
         foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {

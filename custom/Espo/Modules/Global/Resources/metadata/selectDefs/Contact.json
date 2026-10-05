@@ -1,0 +1,9 @@
+{
+    "whereItemConverterClassNameMap": {
+        "crmTags_linkedWith": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "crmTags_notLinkedWith": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "crmTags_linkedWithAll": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "crmTags_isLinked": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
+        "crmTags_isNotLinked": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter"
+    }
+}
