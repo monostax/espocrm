@@ -881,6 +881,10 @@ class ContactReconciler
             return null;
         }
 
+        if (WhatsAppChannel::isSendable($channelType)) {
+            return 'whatsapp';
+        }
+
         $map = [
             'Channel::Whatsapp' => 'whatsapp',
             'Channel::Email' => 'email',

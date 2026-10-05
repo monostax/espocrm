@@ -168,7 +168,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
         // === Channel-aware contact resolution ===
         // Map the inbox's raw channel_type to our enum (whatsapp, instagram, …).
         $reconciler = $this->injectableFactory->create(ContactReconciler::class);
-        $rawChannelType = $chatwootInbox->get('channelType');
+        $rawChannelType = $chatwootInbox->get('channelType') ?: $chatwootInbox->get('remoteChannelType');
         $mappedChannelType = $reconciler->mapChannelType($rawChannelType);
 
         $selectedIdentity = null;
