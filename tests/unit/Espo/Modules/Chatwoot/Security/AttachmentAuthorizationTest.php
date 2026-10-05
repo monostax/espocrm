@@ -62,7 +62,7 @@ class AttachmentAuthorizationTest extends SecurityTestCase
         yield 'foreign parent beats own related' => ['Note', 'foreign', 'Note', 'own', false];
         yield 'own parent beats foreign related' => ['Note', 'own', 'Note', 'foreign', true];
         yield 'missing parent beats own related' => ['Note', 'missing', 'Note', 'own', false];
-        yield 'unrelated parent beats foreign related' => ['Account', 'account', 'Note', 'foreign', null];
+        yield 'unrelated parent beats foreign related' => ['Case', 'case', 'Note', 'foreign', null];
         yield 'missing parent type uses related' => [null, 'own', 'Note', 'foreign', false];
         yield 'missing parent id uses related' => ['Note', null, 'Note', 'foreign', false];
         yield 'empty parent id uses related' => ['Note', '', 'Note', 'foreign', false];
@@ -115,8 +115,8 @@ class AttachmentAuthorizationTest extends SecurityTestCase
     public function testUnrelatedAttachmentRetainsFieldAclAndSettingsLogo(): void
     {
         $this->explicitTenants = [];
-        $this->entity('Account', ['id' => 'account']);
-        $attachment = $this->attachment(['parentType' => 'Account', 'parentId' => 'account']);
+        $this->entity('Case', ['id' => 'case']);
+        $attachment = $this->attachment(['parentType' => 'Case', 'parentId' => 'case']);
         self::assertNull($this->attachments->check($this->user, $attachment));
         self::assertTrue($this->attachmentChecker->checkEntityRead($this->user, $attachment, $this->scope));
         $attachment->set('field', 'privateDocument');

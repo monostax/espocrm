@@ -13,6 +13,7 @@ use Espo\Tools\Stream\MassNotePreparator;
 
 class ContactInbox
 {
+    protected const ENTITY_TYPE = 'Contact';
     public function __construct(
         private Inbox $inbox,
         private ActivityDiscussion $discussion,
@@ -31,8 +32,8 @@ class ContactInbox
     public function getActionRead(Request $request): object
     {
         $record = $this->inbox->record($request);
-        $data = $this->inbox->present($this->records->get('Contact')->read($record->getId())->getEntity());
-        $data->readState = $data->canStream ? $this->discussion->states('Contact', [$record->getId()])[$record->getId()] : null;
+        $data = $this->inbox->present($this->records->get(static::ENTITY_TYPE)->read($record->getId())->getEntity());
+        $data->readState = $data->canStream ? $this->discussion->states(static::ENTITY_TYPE, [$record->getId()])[$record->getId()] : null;
         return $data;
     }
 
@@ -55,7 +56,7 @@ class ContactInbox
         if (!is_string($body->post ?? null) || (trim($body->post) === '' && !$attachments)) throw new BadRequest('Post is required.');
         if (!empty($body->rootId)) $this->discussion->root($parent, $body->rootId);
         return $this->records->get('Note')->create((object) [
-            'parentType' => 'Contact', 'parentId' => $parent->getId(), 'type' => 'Post', 'post' => $body->post,
+            'parentType' => static::ENTITY_TYPE, 'parentId' => $parent->getId(), 'type' => 'Post', 'post' => $body->post,
             'isInternal' => true, 'opportunityThreadRootId' => $body->rootId ?? null,
             'opportunityChatwootAccountId' => (int) $request->getQueryParam('accountId'),
             'attachmentsIds' => $attachments, 'postEditorState' => $body->postEditorState ?? null,

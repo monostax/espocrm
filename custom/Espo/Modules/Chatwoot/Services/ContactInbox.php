@@ -27,12 +27,15 @@ use PDO;
 /** Contact's own inbox: all grouping, ordering and counts precede pagination. */
 class ContactInbox
 {
-    private const GROUP_FIELDS = [
+    protected const ENTITY_TYPE = 'Contact';
+    protected const SORT_FIELDS = ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'accountName', 'assignedUserName', 'source'];
+    protected const EDIT_FIELDS = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'source', 'emailAddress', 'phoneNumber', 'description', 'customFields'];
+    protected const GROUP_FIELDS = [
         'assignee' => ['assignedUserId', 'assignedUser'],
         'account' => ['accountId', 'account'],
         'source' => ['source', 'source'],
     ];
-    private const FIELDS = [
+    protected const FIELDS = [
         'name', 'firstName', 'lastName', 'account', 'assignedUser', 'teams', 'tags', 'source',
         'emailAddress', 'phoneNumber', 'channelIdentitiesData', 'description', 'customFields',
         'createdAt', 'modifiedAt', 'createdBy',
@@ -56,14 +59,14 @@ class ContactInbox
     {
         $id = filter_var($request->getQueryParam('accountId'), FILTER_VALIDATE_INT);
         if (!$id || $id < 1) throw new BadRequest('A workspace is required.');
-        if (!$this->acl->checkScope('Contact', 'read')) throw new Forbidden();
+        if (!$this->acl->checkScope(static::ENTITY_TYPE, 'read')) throw new Forbidden();
         return $this->workspaces->workspace($id);
     }
 
     public function record(Request $request, bool $stream = false): Entity
     {
         $workspace = $this->workspace($request);
-        $record = $this->em->getEntityById('Contact', (string) $request->getRouteParam('id'));
+        $record = $this->em->getEntityById(static::ENTITY_TYPE, (string) $request->getRouteParam('id'));
         if (!$record || $record->get('tenantId') !== $workspace->get('tenantId') || !$this->acl->checkEntityRead($record)) {
             throw new NotFound();
         }
@@ -74,10 +77,10 @@ class ContactInbox
     private function unreadScope(Select $scope, bool $unread = true): Select
     {
         $query = SelectBuilder::create()->clone($scope);
-        $readable = $this->streamAccess->readableContacts($this->user);
+        $readable = $this->streamAccess->readableParents($this->user, static::ENTITY_TYPE);
         if (!$readable || !$this->acl->checkScope('Note', 'read')) return $query->where(['id' => null])->build();
         $query->where(['id=s' => $readable]);
-        $this->discussion->applyFilter($query, 'Contact', $unread);
+        $this->discussion->applyFilter($query, static::ENTITY_TYPE, $unread);
         return $query->build();
     }
 
@@ -85,12 +88,12 @@ class ContactInbox
     {
         $workspace = $this->workspace($request);
         $params = $this->searchParams->fetch($request)->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
-        $query = $this->select->create()->from('Contact')->withSearchParams($params)
+        $query = $this->select->create()->from(static::ENTITY_TYPE)->withSearchParams($params)
             ->withStrictAccessControl()->withWherePermissionCheck()->withComplexExpressionsForbidden()->buildQueryBuilder()
             ->where(['tenantId' => $workspace->get('tenantId')])->select(['id'])->distinct()->order([])->limit(null, null);
         $assignee = $request->getQueryParam('assignee_tab');
         if (in_array($assignee, ['me', 'unassigned'], true)) {
-            if (!$this->acl->checkField('Contact', 'assignedUser')) throw new Forbidden();
+            if (!$this->acl->checkField(static::ENTITY_TYPE, 'assignedUser')) throw new Forbidden();
             $query->where(['assignedUserId' => $assignee === 'me' ? $this->user->getId() : null]);
         }
         $scope = $query->build();
@@ -105,20 +108,20 @@ class ContactInbox
     private function groupBy(Request $request): string
     {
         $group = $request->getQueryParam('groupBy') ?: 'readStatus';
-        if (!in_array($group, [...array_keys(self::GROUP_FIELDS), 'readStatus', 'none'], true)) throw new BadRequest('Invalid contact grouping.');
-        if (isset(self::GROUP_FIELDS[$group]) && !$this->acl->checkField('Contact', self::GROUP_FIELDS[$group][1])) throw new Forbidden();
+        if (!in_array($group, [...array_keys(static::GROUP_FIELDS), 'readStatus', 'none'], true)) throw new BadRequest('Invalid inbox grouping.');
+        if (isset(static::GROUP_FIELDS[$group]) && !$this->acl->checkField(static::ENTITY_TYPE, static::GROUP_FIELDS[$group][1])) throw new Forbidden();
         return $group;
     }
 
     private function groupedQuery(Select $scope, string $group): array
     {
-        $query = SelectBuilder::create()->from('Contact')->where(['id=s' => $scope]);
+        $query = SelectBuilder::create()->from(static::ENTITY_TYPE)->where(['id=s' => $scope]);
         if ($group === 'readStatus') {
             $query->leftJoin($this->unreadScope($scope), 'contactUnread', Expr::equal(Expr::alias('contactUnread.id'), Expr::column('id')));
             $key = Expr::if(Expr::isNull(Expr::alias('contactUnread.id')), 'read', 'unread');
         } else {
             $key = $group === 'none' ? Expr::value('all')
-                : Expr::concat($group . ':', Expr::ifNull(Expr::column(self::GROUP_FIELDS[$group][0]), ''));
+                : Expr::concat($group . ':', Expr::ifNull(Expr::column(static::GROUP_FIELDS[$group][0]), ''));
         }
         return [$query, $key];
     }
@@ -144,21 +147,21 @@ class ContactInbox
         $offset = max(0, (int) $request->getQueryParam('offset'));
         $limit = min(100, max(1, (int) ($request->getQueryParam('maxSize') ?: 25)));
         $sort = $request->getQueryParam('sort') ?: 'streamUpdatedAt';
-        if (!in_array($sort, ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'accountName', 'assignedUserName', 'source'], true)) {
-            throw new BadRequest('Invalid contact sort.');
+        if (!in_array($sort, static::SORT_FIELDS, true)) {
+            throw new BadRequest('Invalid inbox sort.');
         }
         if ($sort === 'streamUpdatedAt') {
             // Only visible mural posts contribute to the inbox's last-update order.
-            $readable = $this->streamAccess->readableContacts($this->user);
+            $readable = $this->streamAccess->readableParents($this->user, static::ENTITY_TYPE);
             $posts = SelectBuilder::create()->from('Note')->select(['parentId', ['MAX:createdAt', 'updatedAt']])
-                ->where(['parentType' => 'Contact', 'type' => 'Post', 'opportunityPostDeleted' => false])->group('parentId');
+                ->where(['parentType' => static::ENTITY_TYPE, 'type' => 'Post', 'opportunityPostDeleted' => false])->group('parentId');
             if ($readable && $this->acl->checkScope('Note', 'read')) $posts->where(['parentId=s' => $readable]);
             else $posts->where(['id' => null]);
             $query->leftJoin($posts->build(), 'contactMural', Expr::equal(Expr::alias('contactMural.parentId'), Expr::column('id')));
             $sortExpression = Expr::ifNull(Expr::alias('contactMural.updatedAt'), Expr::column('createdAt'));
         } else {
             $field = ['accountName' => 'account', 'assignedUserName' => 'assignedUser'][$sort] ?? $sort;
-            if (!$this->acl->checkField('Contact', $field)) throw new Forbidden();
+            if (!$this->acl->checkField(static::ENTITY_TYPE, $field)) throw new Forbidden();
             $sortExpression = $sort;
         }
         $query->select(['id'])->select($key, 'groupKey');
@@ -168,7 +171,7 @@ class ContactInbox
         )->fetchAll(PDO::FETCH_ASSOC);
         $ids = array_column($page, 'id');
         if (!$ids) return (object) ['list' => [], 'total' => $total, 'hasMore' => false];
-        $items = $this->records->get('Contact')->find(SearchParams::fromRaw([
+        $items = $this->records->get(static::ENTITY_TYPE)->find(SearchParams::fromRaw([
             'maxSize' => $limit, 'where' => [['type' => 'in', 'attribute' => 'id', 'value' => $ids]],
         ]))->getCollection();
         $records = [];
@@ -177,7 +180,7 @@ class ContactInbox
             $records[$item->getId()] = $this->present($item);
             if ($records[$item->getId()]->canStream) $streamIds[] = $item->getId();
         }
-        $states = $this->discussion->states('Contact', $streamIds);
+        $states = $this->discussion->states(static::ENTITY_TYPE, $streamIds);
         $list = [];
         foreach ($page as $row) {
             if (!isset($records[$row['id']])) continue;
@@ -193,16 +196,16 @@ class ContactInbox
     {
         $scope = $this->scope($request);
         return (object) [
-            'all' => $this->em->getRDBRepository('Contact')->clone($scope)->count(),
-            'unread' => $this->em->getRDBRepository('Contact')->clone($this->unreadScope($scope))->count(),
-            'mentions' => $this->em->getRDBRepository('Contact')->clone($this->unreadScope($scope, false))->count(),
+            'all' => $this->em->getRDBRepository(static::ENTITY_TYPE)->clone($scope)->count(),
+            'unread' => $this->em->getRDBRepository(static::ENTITY_TYPE)->clone($this->unreadScope($scope))->count(),
+            'mentions' => $this->em->getRDBRepository(static::ENTITY_TYPE)->clone($this->unreadScope($scope, false))->count(),
         ];
     }
 
     public function present(Entity $entity): object
     {
         return (object) ((array) $entity->getValueMap() + [
-            'entityType' => 'Contact', 'canEdit' => $this->acl->checkEntityEdit($entity), 'canDelete' => $this->acl->checkEntityDelete($entity),
+            'entityType' => static::ENTITY_TYPE, 'canEdit' => $this->acl->checkEntityEdit($entity), 'canDelete' => $this->acl->checkEntityDelete($entity),
             'canStream' => $this->acl->checkEntityStream($entity) && $this->acl->checkScope('Note', 'read'),
             'canPost' => $this->acl->checkEntityStream($entity) && $this->acl->checkScope('Note', 'create') && $this->acl->checkScope('Note', 'read'),
         ]);
@@ -212,13 +215,14 @@ class ContactInbox
     {
         $this->workspace($request);
         $fields = [];
-        foreach (self::FIELDS as $name) {
-            if (!$this->acl->checkField('Contact', $name)) continue;
-            $def = $this->metadata->get(['entityDefs', 'Contact', 'fields', $name]) ?? [];
+        foreach (static::FIELDS as $name) {
+            if (!$this->acl->checkField(static::ENTITY_TYPE, $name)) continue;
+            $def = $this->metadata->get(['entityDefs', static::ENTITY_TYPE, 'fields', $name]);
+            if (!$def) continue;
             $fields[$name] = array_intersect_key($def, array_flip(['type', 'options', 'required', 'readOnly', 'maxLength']));
-            if (!$this->acl->checkField('Contact', $name, 'edit')) $fields[$name]['readOnly'] = true;
+            if (!$this->acl->checkField(static::ENTITY_TYPE, $name, 'edit')) $fields[$name]['readOnly'] = true;
         }
-        return (object) ['Contact' => ['fields' => $fields]];
+        return (object) [static::ENTITY_TYPE => ['fields' => $fields]];
     }
 
     public function options(Request $request): object
@@ -253,19 +257,18 @@ class ContactInbox
         $record = $this->record($request);
         $data = $request->getParsedBody();
         // The inbox edits a record inside its current workspace, never moves it.
-        $allowed = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'source', 'emailAddress', 'phoneNumber', 'description', 'customFields'];
-        if (array_diff(array_keys((array) $data), $allowed)) throw new BadRequest('Unsupported contact fields.');
+        if (array_diff(array_keys((array) $data), static::EDIT_FIELDS)) throw new BadRequest('Unsupported inbox fields.');
         if (!empty($data->accountId)) {
             $account = $this->em->getEntityById('Account', $data->accountId);
             if (!$account || $account->get('tenantId') !== $record->get('tenantId') || !$this->acl->checkEntityRead($account)) throw new Forbidden();
         }
-        return $this->present($this->records->get('Contact')->update($record->getId(), $data)->getEntity());
+        return $this->present($this->records->get(static::ENTITY_TYPE)->update($record->getId(), $data)->getEntity());
     }
 
     public function delete(Request $request): bool
     {
         $record = $this->record($request);
-        $this->records->get('Contact')->delete($record->getId());
+        $this->records->get(static::ENTITY_TYPE)->delete($record->getId());
         return true;
     }
 }

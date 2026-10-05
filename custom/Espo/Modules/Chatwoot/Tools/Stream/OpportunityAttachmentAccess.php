@@ -30,17 +30,17 @@ class OpportunityAttachmentAccess
         $hasParent = $attachment->get('parentType') && $attachment->get('parentId');
         $type = $attachment->get($hasParent ? 'parentType' : 'relatedType');
         $id = $attachment->get($hasParent ? 'parentId' : 'relatedId');
-        if (!$id || !in_array($type, ['Note', 'Opportunity', 'Initiative', 'Contact'], true)) {
+        if (!$id || !in_array($type, ['Note', 'Opportunity', 'Initiative', 'Contact', 'Account'], true)) {
             return null;
         }
         $parent = $this->entityManager->getEntityById($type, $id);
         if (!$parent) {
             return false;
         }
-        if ($type === 'Note' && in_array($parent->get('parentType'), ['Opportunity', 'Initiative', 'Contact'], true)) {
+        if ($type === 'Note' && in_array($parent->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account'], true)) {
             return $this->access->canReadNote($user, $parent) && $this->aclManager->checkEntityRead($user, $parent);
         }
-        if (in_array($type, ['Opportunity', 'Initiative', 'Contact'], true) && !$this->aclManager->checkEntityRead($user, $parent)) {
+        if (in_array($type, ['Opportunity', 'Initiative', 'Contact', 'Account'], true) && !$this->aclManager->checkEntityRead($user, $parent)) {
             return false;
         }
 
@@ -67,8 +67,12 @@ class OpportunityAttachmentAccess
             ? $factory->create()->from('Contact')->withStrictAccessControl()->buildQueryBuilder()->select('id')->order([])->build()
             : SelectBuilder::create()->from('Contact')->select('id')->where(['id' => []])->build();
 
+        $accounts = $this->aclManager->checkScope($user, 'Account', 'read')
+            ? $factory->create()->from('Account')->withStrictAccessControl()->buildQueryBuilder()->select('id')->order([])->build()
+            : SelectBuilder::create()->from('Account')->select('id')->where(['id' => []])->build();
+
         $allowed = static fn (string $type, string $id) => ['OR' => [
-            [$type . '!=' => ['Note', 'Opportunity', 'Initiative', 'Contact']],
+            [$type . '!=' => ['Note', 'Opportunity', 'Initiative', 'Contact', 'Account']],
             [$type => null],
             [$id => null],
             [$id => ['', '0']],
@@ -76,6 +80,7 @@ class OpportunityAttachmentAccess
             [$type => 'Opportunity', $id . '=s' => $opportunities],
             [$type => 'Initiative', $id . '=s' => $initiatives],
             [$type => 'Contact', $id . '=s' => $contacts],
+            [$type => 'Account', $id . '=s' => $accounts],
         ]];
 
         return ['OR' => [

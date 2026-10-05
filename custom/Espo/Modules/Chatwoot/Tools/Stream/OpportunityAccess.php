@@ -27,7 +27,7 @@ class OpportunityAccess
 
     public function canReadNote(User $user, Entity $note): bool
     {
-        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative', 'Contact'], true) || $user->isAdmin()) {
+        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account'], true) || $user->isAdmin()) {
             return true;
         }
 
@@ -55,7 +55,7 @@ class OpportunityAccess
         return $this->readableParents($user, 'Contact');
     }
 
-    private function readableParents(User $user, string $type): ?Select
+    public function readableParents(User $user, string $type): ?Select
     {
         if (!$this->aclManager->checkScope($user, $type, 'read') ||
             !$this->aclManager->checkScope($user, $type, 'stream')) {
@@ -100,8 +100,8 @@ class OpportunityAccess
             return [];
         }
 
-        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact']], ['parentType' => null]];
-        foreach (['Opportunity', 'Initiative', 'Contact'] as $type) {
+        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact', 'Account']], ['parentType' => null]];
+        foreach (['Opportunity', 'Initiative', 'Contact', 'Account'] as $type) {
             $parents = $this->readableParents($user, $type);
             if ($parents) {
                 $conditions[] = ['parentType' => $type, 'parentId=s' => $parents];

@@ -22,9 +22,9 @@ use Espo\ORM\EntityManager;
 class OpportunityConversations
 {
     public function __construct(
-        private User $user,
-        private EntityManager $entityManager,
-        private AclManager $aclManager,
+        protected User $user,
+        protected EntityManager $entityManager,
+        protected AclManager $aclManager,
         private DefaultAccessChecker $defaultAccessChecker,
         private TableFactory $tableFactory,
         private UserTenantResolver $tenants,
@@ -43,8 +43,7 @@ class OpportunityConversations
 
         if (!$this->aclManager->checkScope($this->user, $type, 'read') ||
             !$this->aclManager->checkScope($this->user, 'ChatwootConversation', 'read') ||
-            !$this->aclManager->checkLink($this->user, $type, 'chatwootConversations') ||
-            !$this->aclManager->checkField($this->user, $type, 'chatwootConversations')) {
+            !$this->canReadRelationship()) {
             throw new Forbidden();
         }
 
@@ -79,16 +78,14 @@ class OpportunityConversations
         // with authorization through the viewer's own Chatwoot token.
         $scopeData = $this->tableFactory->create($this->user)->getScopeData('ChatwootConversation');
         $ids = [];
-        $linked = $this->entityManager->getRDBRepository($type)
-            ->getRelation($opportunity, 'chatwootConversations')
-            ->where(['chatwootAccountId' => $account->getId()])
-            ->find();
+        $linked = $this->linkedConversations($opportunity, $account);
         foreach ($linked as $conversation) {
             if (!$this->defaultAccessChecker->checkEntityRead($this->user, $conversation, $scopeData)) {
                 continue;
             }
             $ids[] = (int) $conversation->get('chatwootConversationId');
         }
+        $ids = array_values(array_unique($ids));
         if (!$ids) {
             return (object) ['list' => [], 'total' => 0];
         }
@@ -122,6 +119,19 @@ class OpportunityConversations
     protected function entityType(): string
     {
         return 'Opportunity';
+    }
+
+    protected function canReadRelationship(): bool
+    {
+        return $this->aclManager->checkLink($this->user, $this->entityType(), 'chatwootConversations') &&
+            $this->aclManager->checkField($this->user, $this->entityType(), 'chatwootConversations');
+    }
+
+    protected function linkedConversations(Entity $record, Entity $workspace): iterable
+    {
+        return $this->entityManager->getRDBRepository($record->getEntityType())
+            ->getRelation($record, 'chatwootConversations')
+            ->where(['chatwootAccountId' => $workspace->getId()])->find();
     }
 
     private function userAccessToken(Entity $chatwootUser, Entity $platform): string

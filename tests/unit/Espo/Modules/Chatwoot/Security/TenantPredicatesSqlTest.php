@@ -54,7 +54,7 @@ class TenantPredicatesSqlTest extends TestCase
     private string $streamLevel = 'all';
     private bool $portal = false;
     private bool $admin = false;
-    private bool $initiativesEnabled = false;
+    private array $enabledParents = ['Opportunity'];
 
     protected function setUp(): void
     {
@@ -66,6 +66,7 @@ class TenantPredicatesSqlTest extends TestCase
             'Opportunity' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Initiative' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Contact' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
+            'Account' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Note' => ['id', 'parentType', 'parentId', 'type', 'relatedType', 'relatedId', 'createdById', 'number', 'isPinned', 'isInternal', 'readable', 'deleted'],
             'Attachment' => ['id', 'parentType', 'parentId', 'relatedType', 'relatedId', 'createdById', 'deleted'],
             'ChatwootConversation' => ['id', 'readable', 'deleted'],
@@ -102,11 +103,11 @@ class TenantPredicatesSqlTest extends TestCase
         $this->tenants->method('resolveTenantIds')->with($this->user)->willReturnCallback(fn () => $this->tenantIds);
         $this->acl = $this->createMock(AclManager::class);
         $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) =>
-            $scope !== 'Contact' && ($scope !== 'Initiative' || $this->initiativesEnabled) &&
+            (!in_array($scope, ['Contact', 'Initiative', 'Account'], true) || in_array($scope, $this->enabledParents, true)) &&
             !in_array("$scope:$action", $this->deniedScopes, true));
         $this->acl->method('getLevel')->willReturnCallback(function ($user, $scope, $action) {
             self::assertSame($this->user, $user);
-            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact']);
+            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account']);
             self::assertSame('stream', $action);
             return $this->streamLevel;
         });
@@ -139,7 +140,7 @@ class TenantPredicatesSqlTest extends TestCase
                 $query = SelectBuilder::create()->from($scope)->order('id', 'DESC');
                 // Fixture stock read ACL. Tenant, parent, event and attachment predicates are production code.
                 $query->where(['readable' => 1]);
-                if (in_array($scope, ['Opportunity', 'Initiative', 'Contact'], true)) {
+                if (in_array($scope, ['Opportunity', 'Initiative', 'Contact', 'Account'], true)) {
                     (new Tenant($this->user, $this->tenants))->apply($query);
                 }
                 if ($scope === 'Note') {
@@ -154,7 +155,7 @@ class TenantPredicatesSqlTest extends TestCase
         });
         $filters = $this->createMock(FilterFactory::class);
         $filters->method('create')->willReturnCallback(function ($scope, $user, $name) {
-            self::assertContains($scope, ['Opportunity', 'Initiative']);
+            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account']);
             self::assertSame($this->user, $user);
             $this->streamFilters[] = $name;
             $where = match ($name) {
@@ -192,7 +193,7 @@ class TenantPredicatesSqlTest extends TestCase
         $this->insertNote('own-post', 20);
         $this->insertNote('own-update', 21, ['type' => 'Update']);
         $this->insertNote('own-event', 22, ['type' => OpportunityStreamEvents::MESSAGE_RECEIVED, 'relatedType' => 'ChatwootConversation', 'relatedId' => 'visible']);
-        $this->insertNote('unrelated', 23, ['parentType' => 'Account', 'parentId' => 'account']);
+        $this->insertNote('unrelated', 23, ['parentType' => 'Case', 'parentId' => 'case']);
         $this->insertNote('unparented', 24, ['parentType' => null, 'parentId' => null]);
     }
 
@@ -201,35 +202,42 @@ class TenantPredicatesSqlTest extends TestCase
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
     }
 
-    public function testInitiativeNotesHonorTenantAndRecordAccessBeforePagination(): void
+    public static function nativeParents(): iterable
     {
-        $this->initiativesEnabled = true;
+        yield 'initiative' => ['Initiative'];
+        yield 'company' => ['Account'];
+    }
+
+    #[DataProvider('nativeParents')]
+    public function testNativeNotesHonorTenantAndRecordAccessBeforePagination(string $type): void
+    {
+        $this->enabledParents[] = $type;
         foreach (['a', 'b'] as $tenant) {
-            $this->insert('Initiative', ['id' => "initiative-$tenant", 'tenantId' => "tenant-$tenant", 'readable' => 1]);
-            $this->insertNote("initiative-note-$tenant", 30, ['parentType' => 'Initiative', 'parentId' => "initiative-$tenant"]);
+            $this->insert($type, ['id' => "initiative-$tenant", 'tenantId' => "tenant-$tenant", 'readable' => 1]);
+            $this->insertNote("initiative-note-$tenant", 30, ['parentType' => $type, 'parentId' => "initiative-$tenant"]);
             $this->insert('Attachment', ['id' => "initiative-attachment-$tenant", 'parentType' => 'Note', 'parentId' => "initiative-note-$tenant"]);
-            $this->insert('Attachment', ['id' => "initiative-direct-$tenant", 'parentType' => 'Initiative', 'parentId' => "initiative-$tenant"]);
+            $this->insert('Attachment', ['id' => "initiative-direct-$tenant", 'parentType' => $type, 'parentId' => "initiative-$tenant"]);
         }
-        $this->insert('Initiative', ['id' => 'initiative-hidden', 'tenantId' => 'tenant-a', 'readable' => 0]);
-        $this->insertNote('initiative-hidden-note', 31, ['parentType' => 'Initiative', 'parentId' => 'initiative-hidden']);
-        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Initiative'])
+        $this->insert($type, ['id' => 'initiative-hidden', 'tenantId' => 'tenant-a', 'readable' => 0]);
+        $this->insertNote('initiative-hidden-note', 31, ['parentType' => $type, 'parentId' => 'initiative-hidden']);
+        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => $type])
             ->where($this->parents->where($this->user))->order('id')->limit(0, 1);
         $this->assertRows(['initiative-note-a'], $query);
         $this->assertRows(['initiative-attachment-a', 'initiative-direct-a'], SelectBuilder::create()->from('Attachment')
             ->select('id')->where($this->attachments->where($this->user))->order('id'));
         $this->tenantIds = ['tenant-b'];
-        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Initiative'])
+        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => $type])
             ->where($this->parents->where($this->user))->order('id')->limit(0, 1);
         $this->assertRows(['initiative-note-b'], $query);
-        $this->deniedScopes = ['Initiative:stream'];
-        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Initiative'])
+        $this->deniedScopes = ["$type:stream"];
+        $query = SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => $type])
             ->where($this->parents->where($this->user));
         $this->assertRows([], $query);
         $this->admin = true;
         $this->tenantIds = [];
         $this->deniedScopes = [];
-        $this->assertRows(['initiative-a'], SelectBuilder::create()->from('Initiative')->select('id')
-            ->where(['tenantId' => 'tenant-a', 'id=s' => $this->parents->readableInitiatives($this->user)])->order('id'));
+        $this->assertRows(['initiative-a'], SelectBuilder::create()->from($type)->select('id')
+            ->where(['tenantId' => 'tenant-a', 'id=s' => $this->parents->readableParents($this->user, $type)])->order('id'));
     }
 
     private function insert(string $type, array $values): void
@@ -375,7 +383,7 @@ class TenantPredicatesSqlTest extends TestCase
             '08-related-opportunity' => [null, null, 'Opportunity', 'opp-b'],
             '09-tenantless-note' => ['Note', 'denied-4', null, null],
             '10-own-parent' => ['Note', 'own-post', 'Note', 'denied-0'],
-            '11-unrelated-parent' => ['Account', 'account', 'Note', 'denied-0'],
+            '11-unrelated-parent' => ['Case', 'case', 'Note', 'denied-0'],
             '12-unlinked' => [null, null, null, null],
             '13-own-related' => [null, null, 'Note', 'own-post'],
             '14-own-opportunity' => ['Opportunity', 'opp-a', 'Note', 'denied-0'],
