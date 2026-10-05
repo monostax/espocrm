@@ -143,8 +143,8 @@ class OpportunityNoteAclTest extends SecurityTestCase
         $note = $this->note(['parentType' => null, 'parentId' => null]);
         self::assertTrue($this->noteChecker()->checkEntityRead($this->user, $note, $this->scope));
         self::assertTrue($this->noteChecker()->checkEntityEdit($this->user, $note, $this->scope));
-        $this->entity('Account', ['id' => 'account']);
-        $note = $this->note(['parentType' => 'Account', 'parentId' => 'account']);
+        $this->entity('Case', ['id' => 'case']);
+        $note = $this->note(['parentType' => 'Case', 'parentId' => 'case']);
         self::assertTrue($this->parents->canReadNote($this->user, $note));
         $this->streamAllowed = false;
         self::assertFalse($this->noteChecker()->checkEntityRead($this->user, $note, $this->scope));
