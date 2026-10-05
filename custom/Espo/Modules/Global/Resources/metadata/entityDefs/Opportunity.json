@@ -261,6 +261,9 @@
         }
     },
     "links": {
+        "tasks": {
+            "cascadeRemoval": true
+        },
         "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "opportunities", "relationName": "crmTagOpportunity" },
         "tenant": {
             "type": "belongsTo",

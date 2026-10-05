@@ -4,6 +4,7 @@
         "Case",
         "Meeting",
         "Call",
+        "Email",
         "Opportunity",
         "Note",
         "Contact",
@@ -48,6 +49,12 @@
             "dateEnd",
             "description",
             "direction",
+            "assignedUserId"
+        ],
+        "Email": [
+            "name",
+            "body",
+            "isHtml",
             "assignedUserId"
         ],
         "Opportunity": [

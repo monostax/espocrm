@@ -1,5 +1,10 @@
 {
     "fields": {
+        "journeyDueDate": {
+            "type": "date",
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true
+        },
         "journeyToken": {
             "type": "varchar",
             "maxLength": 64,

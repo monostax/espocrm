@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Modules\FeaturePlaybook\Services\Progress;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\SelectBuilder;
 
 class PlaybookProgress
 {
@@ -80,10 +81,10 @@ class PlaybookProgress
         if (!$step) {
             return;
         }
-        $this->lockRun($step);
+        $this->lockRun($step, removing: true);
     }
 
-    private function lockRun(Entity $step): Entity
+    private function lockRun(Entity $step, bool $removing = false): Entity
     {
         $run = $this->entityManager->getEntityById('PlaybookRun', $step->get('runId'));
         if (!$run) {
@@ -92,7 +93,20 @@ class PlaybookProgress
         // Serialize Task edits with apply/stop/step operations for this opportunity.
         $opportunity = $this->entityManager->getRDBRepository('Opportunity')
             ->where(['id' => $run->get('opportunityId')])->forUpdate()->findOne();
+        // Native cascade removal marks the Opportunity deleted before removing its Tasks.
+        // Only removal may access this parent, and it requires delete rather than edit access.
+        if (!$opportunity && $removing) {
+            $opportunity = $this->entityManager->getRDBRepository('Opportunity')
+                ->clone(SelectBuilder::create()->from('Opportunity')->withDeleted()->build())
+                ->where(['id' => $run->get('opportunityId'), 'deleted' => true])
+                ->forUpdate()->findOne();
+            if ($opportunity && $this->applicationState->isLogged() &&
+                !$this->acl->checkEntity($opportunity, 'delete')) {
+                throw new Forbidden('The playbook opportunity cannot be deleted.');
+            }
+        }
         if (!$opportunity || ($this->applicationState->isLogged() &&
+            !$opportunity->get('deleted') &&
             (!$this->acl->checkEntityRead($opportunity) || !$this->acl->checkEntityEdit($opportunity)))) {
             throw new Forbidden('The playbook opportunity cannot be edited.');
         }

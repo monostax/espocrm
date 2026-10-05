@@ -11,7 +11,7 @@ use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Espo\ORM\EntityManager;
 
-/** Cancel only open tasks saved by this enrollment, never unrelated Opportunity tasks. */
+/** Close only open activities saved by this enrollment; preserve completed work. */
 class CancelJourneyTasks implements Action
 {
     public function __construct(
@@ -31,23 +31,36 @@ class CancelJourneyTasks implements Action
 
         foreach ((array) ($context->record->get('recordReferences') ?? []) as $reference) {
             $ref = (array) $reference;
-            if (($ref['entityType'] ?? '') !== 'Task' ||
+            $entityType = $ref['entityType'] ?? '';
+            if (!in_array($entityType, ['Task', 'Call', 'Email'], true) ||
                 (int) ($ref['cycleCount'] ?? -1) !== (int) $context->record->get('cycleCount')) {
                 continue;
             }
-            $task = $this->entityManager->getEntityById('Task', (string) ($ref['id'] ?? ''));
+            $task = $this->entityManager->getEntityById($entityType, (string) ($ref['id'] ?? ''));
             if (!$task) {
                 continue;
             }
             $this->tenantGuard->assertEntityTenant($task, $context->tenantId, 'cadence task');
-            if (!$acl->check($task, 'edit') ||
-                in_array('status', $acl->getScopeForbiddenAttributeList('Task', 'edit'), true)) {
-                throw new Error('Run-as user cannot cancel cadence tasks.');
-            }
-            if (!in_array($task->get('status'), ['Planned', 'Started', 'Deferred'], true)) {
+            $openStatuses = match ($entityType) {
+                'Call' => ['Planned'],
+                'Email' => ['Draft'],
+                default => ['Planned', 'Started', 'Deferred'],
+            };
+            if (!in_array($task->get('status'), $openStatuses, true)) {
                 continue;
             }
-            $task->set('status', 'Canceled');
+            if ($entityType === 'Email') {
+                if (!$acl->check($task, 'delete')) {
+                    throw new Error('Run-as user cannot remove cadence email drafts.');
+                }
+                $this->entityManager->removeEntity($task, [SaveOption::SILENT => true]);
+                continue;
+            }
+            if (!$acl->check($task, 'edit') ||
+                in_array('status', $acl->getScopeForbiddenAttributeList($entityType, 'edit'), true)) {
+                throw new Error('Run-as user cannot cancel cadence tasks.');
+            }
+            $task->set('status', $entityType === 'Call' ? 'Not Held' : 'Canceled');
             $this->entityManager->saveEntity($task, [
                 SaveOption::SILENT => true,
                 SaveOption::MODIFIED_BY_ID => $context->actor->getId(),

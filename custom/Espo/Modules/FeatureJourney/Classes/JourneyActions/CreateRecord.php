@@ -8,6 +8,8 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\FeatureJourney\Services\BusinessDaySchedule;
+use Espo\Core\Utils\Config;
 use Espo\ORM\EntityManager;
 
 /**
@@ -19,6 +21,8 @@ class CreateRecord implements Action
     public function __construct(
         private EntityManager $entityManager,
         private TenantGuard $tenantGuard,
+        private BusinessDaySchedule $businessDaySchedule,
+        private Config $config,
     ) {}
 
     public function run(ActionContext $context): void
@@ -52,6 +56,13 @@ class CreateRecord implements Action
             $this->tenantGuard->applyTargetUpdateFields($entity, $filtered);
         }
 
+        // Creating an email is a manual draft, never a send/schedule operation.
+        if ($entityType === 'Email') {
+            $entity->set('status', 'Draft');
+            $entity->set('sendAt', null);
+        }
+        $this->applySchedule($entity, $context);
+
         $linkToTarget = (string) ($context->params['linkToTarget'] ?? '');
         if ($linkToTarget !== '') {
             $this->attachTargetLink($entity, $context, $linkToTarget);
@@ -71,6 +82,38 @@ class CreateRecord implements Action
         ]);
 
         $context->createdRecord = $entity;
+    }
+
+    private function applySchedule(\Espo\ORM\Entity $entity, ActionContext $context): void
+    {
+        $params = $context->params;
+        if (!isset($params['dueInBusinessDays']) || $params['dueInBusinessDays'] === '') {
+            return;
+        }
+        $type = $entity->getEntityType();
+        if (!in_array($type, ['Call', 'Email'], true)) {
+            throw new Error('Business-day record scheduling supports Call and Email only.');
+        }
+        $timeZone = (string) ($params['timeZone'] ?? $this->config->get('timeZone') ?? 'UTC');
+        $base = ($params['dueDateBase'] ?? 'enrollment') === 'stageEntry'
+            ? $context->record->get('enteredStageAt')
+            : ($context->record->get('createdAt') ?: $context->record->get('enteredStageAt'));
+        if (!$base) {
+            throw new Error('Business-day scheduling requires an enrollment date.');
+        }
+        $date = $this->businessDaySchedule->dueDate((string) $base, $params['dueInBusinessDays'], $timeZone);
+        if ($type === 'Email') {
+            $entity->set('journeyDueDate', $date);
+            return;
+        }
+        if ($entity->get('dateStart') || $entity->get('dateEnd')) {
+            throw new Error('Choose explicit call dates or dueInBusinessDays, not both.');
+        }
+        // Calls require a time and duration; cadence calls use 09:00 local, five minutes.
+        $start = (new \DateTimeImmutable($date . ' 09:00:00', new \DateTimeZone($timeZone)))
+            ->setTimezone(new \DateTimeZone('UTC'));
+        $entity->set('dateStart', $start->format('Y-m-d H:i:s'));
+        $entity->set('dateEnd', $start->modify('+5 minutes')->format('Y-m-d H:i:s'));
     }
 
     private function attachTargetLink(\Espo\ORM\Entity $entity, ActionContext $context, string $link): void

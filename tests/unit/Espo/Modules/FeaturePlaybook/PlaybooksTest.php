@@ -66,12 +66,16 @@ class PlaybooksTest extends TestCase
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => isset($this->rows[$type][$id]) ? clone $this->rows[$type][$id] : null);
         $em->method('getRDBRepository')->willReturnCallback(function ($type) {
             $repo = $this->createMock(RDBRepository::class);
+            $deletedQuery = $this->createMock(RDBSelectBuilder::class);
+            $deletedQuery->method('where')->willReturnCallback(fn ($where) => $repo->where($where));
+            $repo->method('clone')->willReturn($deletedQuery);
             $repo->method('where')->willReturnCallback(function ($where) use ($type) {
                 $query = $this->createMock(RDBSelectBuilder::class);
                 $query->method('forUpdate')->willReturnSelf();
                 $query->method('order')->willReturnSelf();
                 $matches = function () use ($type, $where) {
                     $rows = array_filter($this->rows[$type] ?? [], function ($row) use ($where) {
+                        if (!array_key_exists('deleted', $where) && $row->get('deleted')) return false;
                         foreach ($where as $key => $value) {
                             if ($row->get($key) !== $value) return false;
                         }
@@ -252,6 +256,40 @@ class PlaybooksTest extends TestCase
         $this->service->mutate('other', $run->id, (object) ['action' => 'stop', 'reason' => 'No']);
     }
 
+    public function testOpportunityCascadeCanRemovePlaybookTask(): void
+    {
+        $run = $this->blank(kind: 'Task');
+        $activated = $this->service->mutate('deal', $run->id, (object) ['action' => 'activate', 'stepId' => $run->steps[0]->id]);
+        $task = $this->rows['Task'][$activated->steps[0]->taskId];
+        $this->rows['Opportunity']['deal']->set('deleted', true);
+
+        $this->hook->beforeRemove($task, []);
+        $this->hook->afterRemove($task, []);
+
+        $this->assertSame('Cancelled', $this->rows['PlaybookRunStep'][$run->steps[0]->id]->get('status'));
+    }
+
+    public function testDeletedOpportunityStillRequiresDeleteAccessForTaskRemoval(): void
+    {
+        $run = $this->blank(kind: 'Task');
+        $activated = $this->service->mutate('deal', $run->id, (object) ['action' => 'activate', 'stepId' => $run->steps[0]->id]);
+        $this->rows['Opportunity']['deal']->set('deleted', true);
+        $this->denied[] = 'deal';
+
+        $this->expectException(Forbidden::class);
+        $this->hook->beforeRemove($this->rows['Task'][$activated->steps[0]->taskId], []);
+    }
+
+    public function testDeletedOpportunityDoesNotAllowTaskEdits(): void
+    {
+        $run = $this->blank(kind: 'Task');
+        $activated = $this->service->mutate('deal', $run->id, (object) ['action' => 'activate', 'stepId' => $run->steps[0]->id]);
+        $this->rows['Opportunity']['deal']->set('deleted', true);
+
+        $this->expectException(Forbidden::class);
+        $this->tasks->update($activated->steps[0]->taskId, (object) ['status' => 'Completed']);
+    }
+
     public function testOpportunityReadPermissionIsRequired(): void
     {
         $this->blank();
@@ -360,6 +398,7 @@ class PlaybooksTest extends TestCase
         foreach (['revision', 'sourceRevision', 'position'] as $name) $attributes[$name] = ['type' => 'int'];
         $attributes['references'] = ['type' => 'jsonArray'];
         $attributes['teamsIds'] = ['type' => 'jsonArray'];
+        $attributes['deleted'] = ['type' => 'bool'];
         $entity = new BaseEntity($type, ['attributes' => $attributes]);
         $entity->set($values);
         return $entity;

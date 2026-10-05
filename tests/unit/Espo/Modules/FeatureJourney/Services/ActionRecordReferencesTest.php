@@ -121,7 +121,10 @@ class ActionRecordReferencesTest extends TestCase
 
         $factory = $this->createMock(InjectableFactory::class);
         $factory->method('create')->willReturnCallback(fn ($class) =>
-            $class === \Espo\Modules\FeatureJourney\Classes\JourneyActions\CreateTask::class
+            in_array($class, [
+                \Espo\Modules\FeatureJourney\Classes\JourneyActions\CreateTask::class,
+                \Espo\Modules\FeatureJourney\Classes\JourneyActions\CreateRecord::class,
+            ], true)
                 ? new $class($this->em, $this->guard,
                     new \Espo\Modules\FeatureJourney\Services\BusinessDaySchedule(),
                     $this->createMock(\Espo\Core\Utils\Config::class))
@@ -444,6 +447,59 @@ class ActionRecordReferencesTest extends TestCase
         $this->references->validateAction($this->action('sendEmail', ['saveAs' => 'mail']));
     }
 
+    public function testCadenceCreatesScheduledCallAndManualEmailDraftAndReusesReferences(): void
+    {
+        $this->allowAccess();
+        $this->stored['enrollment-1']->set('createdAt', '2026-10-02 15:00:00');
+        $actions = [];
+        foreach (['Call', 'Email'] as $type) {
+            $actions[] = $this->action('createRecord', [
+                'saveAs' => strtolower($type),
+                'params' => [
+                    'entityType' => $type, 'linkToTarget' => 'parent',
+                    'fields' => ['name' => 'Follow up', 'status' => 'Planned', 'assignedUserId' => 'owner-1'],
+                    'dueInBusinessDays' => 2, 'timeZone' => 'America/Sao_Paulo',
+                ],
+            ]);
+        }
+        $result = $this->runActions($actions);
+        $this->assertTrue($result['ok'], json_encode($result));
+        $call = $this->stored['created-1'];
+        $email = $this->stored['created-2'];
+        $this->assertSame('Call', $call->getEntityType());
+        $this->assertSame('2026-10-06 12:00:00', $call->get('dateStart'));
+        $this->assertSame('2026-10-06 12:05:00', $call->get('dateEnd'));
+        $this->assertSame('account-1', $call->get('parentId'));
+        $this->assertSame('owner-1', $call->get('assignedUserId'));
+        $this->assertSame('Draft', $email->get('status'));
+        $this->assertNull($email->get('sendAt'));
+        $this->assertSame('2026-10-06', $email->get('journeyDueDate'));
+        $this->assertSame('account-1', $email->get('parentId'));
+        $this->assertTrue($this->runActions($actions)['ok']);
+        $this->assertSame(2, $this->sequence);
+    }
+
+    public function testCadenceCleanupClosesPlannedCallsAndRemovesOnlyDraftEmails(): void
+    {
+        $this->allowAccess();
+        $this->em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $this->stored[$id] ?? null);
+        $refs = [];
+        foreach (['Call' => ['Planned', 'Held'], 'Email' => ['Draft', 'Sent']] as $type => $statuses) {
+            foreach ($statuses as $status) {
+                $id = $type . $status;
+                $this->stored[$id] = $this->entity($type, ['id' => $id, 'status' => $status]);
+                $refs[$id] = (object) ['entityType' => $type, 'id' => $id, 'cycleCount' => 0];
+            }
+        }
+        $this->stored['enrollment-1']->set('recordReferences', (object) $refs);
+        $this->em->expects($this->once())->method('removeEntity')
+            ->with($this->callback(fn ($entity) => $entity->getId() === 'EmailDraft'));
+        $this->assertTrue($this->runActions([$this->action('cancelJourneyTasks')])['ok']);
+        $this->assertSame('Not Held', $this->stored['CallPlanned']->get('status'));
+        $this->assertSame('Held', $this->stored['CallHeld']->get('status'));
+        $this->assertSame('Sent', $this->stored['EmailSent']->get('status'));
+    }
+
     private function allowAccess(): void
     {
         $this->acl->method('check')->willReturn(true);
@@ -488,6 +544,7 @@ class ActionRecordReferencesTest extends TestCase
             'id', 'tenantId', 'recordReferences', 'cycleCount', 'name', 'status', 'priority', 'description',
             'dateEnd', 'assignedUserId', 'parentType', 'parentId', 'accountId', 'saveAs', 'targetReference',
             'continueOnError', 'createdAt', 'enteredStageAt', 'dateEndDate',
+            'dateStart', 'sendAt', 'journeyDueDate',
         ]), ['type' => 'varchar']);
         foreach (['params', 'recordReferences', 'conditionsGroup'] as $attribute) {
             $attributes[$attribute] = ['type' => 'jsonObject'];

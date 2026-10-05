@@ -112,14 +112,24 @@ class ValidateType implements BeforeSave
             $params = [];
         }
 
-        if ($type === 'createTask' && isset($params['dueInBusinessDays']) && $params['dueInBusinessDays'] !== '') {
+        if (in_array($type, ['createTask', 'createRecord'], true) &&
+            isset($params['dueInBusinessDays']) && $params['dueInBusinessDays'] !== '') {
             BusinessDaySchedule::validateOffset($params['dueInBusinessDays']);
+            if ($type === 'createRecord') {
+                if (!in_array($params['entityType'] ?? '', ['Call', 'Email'], true)) {
+                    throw new BadRequest('Business-day record scheduling supports Call and Email only.');
+                }
+                $fields = (array) ($params['fields'] ?? []);
+                if (!empty($fields['dateStart']) || !empty($fields['dateEnd'])) {
+                    throw new BadRequest('Choose explicit dates or dueInBusinessDays, not both.');
+                }
+            }
             if (!empty($params['dateEnd'])) {
                 throw new BadRequest('createTask: choose dateEnd or dueInBusinessDays, not both.');
             }
             if (!empty($params['timeZone']) &&
                 !in_array($params['timeZone'], \DateTimeZone::listIdentifiers(), true)) {
-                throw new BadRequest('createTask: invalid timeZone.');
+                throw new BadRequest('Invalid schedule timeZone.');
             }
         }
 

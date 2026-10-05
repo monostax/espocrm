@@ -258,6 +258,15 @@ offsets **0, 2, 5, 8** for gaps of **+2, +3, +3** business days. This is an alte
 to `dateEnd`, not a timer period: all tasks can be created on entry with future due dates.
 Use unique `saveAs` names to prevent duplicate creation on action retries/revisits.
 
+For native call/email activities, use `createRecord` with `entityType: "Call"` or
+`"Email"`, `linkToTarget: "parent"`, and the same business-day scheduling parameters.
+Calls are scheduled at 09:00 in the schedule time zone with a five-minute duration.
+Emails are manual **Draft** records; their date is stored as `journeyDueDate`, never
+`sendAt` (which would automatically send the draft). Set owner formulas under
+`paramFormulas["fields.assignedUserId"]`. `cancelJourneyTasks` also marks referenced
+planned calls **Not Held** and soft-deletes referenced email drafts on exit, preserving
+held calls and sent emails.
+
 For staged/on-demand creation, put each pair of actions on its own stage and use
 `dueDateBase: "stageEntry"` with `dueInBusinessDays: 0`. This makes each new pair due
 on that stage's business date instead of backdating it to enrollment. The default

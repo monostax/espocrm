@@ -105,7 +105,7 @@
                     "name": "entityType",
                     "type": "enum",
                     "label": "Record type",
-                    "options": ["Task", "Case", "Meeting", "Call", "Opportunity", "Note", "Contact", "Lead", "Account"],
+                    "options": ["Task", "Case", "Meeting", "Call", "Email", "Opportunity", "Note", "Contact", "Lead", "Account"],
                     "required": true
                 },
                 {
@@ -118,6 +118,26 @@
                     "type": "varchar",
                     "label": "Link name to target (optional)",
                     "placeholder": "parent / contact / account"
+                },
+                {
+                    "name": "dueInBusinessDays",
+                    "type": "int",
+                    "label": "Business days after base date (Call / Email)",
+                    "min": 0,
+                    "max": 3650
+                },
+                {
+                    "name": "dueDateBase",
+                    "type": "enum",
+                    "label": "Due date base",
+                    "options": ["enrollment", "stageEntry"],
+                    "default": "enrollment"
+                },
+                {
+                    "name": "timeZone",
+                    "type": "varchar",
+                    "label": "Schedule time zone",
+                    "placeholder": "America/Sao_Paulo"
                 }
             ]
         },
