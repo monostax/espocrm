@@ -35,6 +35,32 @@ class ChatwootApiClient
     private const DEFAULT_TIMEOUT = 30;
     private const CONNECT_TIMEOUT = 10;
 
+    public function identityOwnership(string $url, string $token, int $accountId, int $conversationId, ?array $report = null): array
+    {
+        $url = rtrim($url, '/') . "/api/v1/accounts/{$accountId}/conversations/{$conversationId}/identity_ownership";
+        $response = $this->executeRequest($url, $report === null ? 'GET' : 'POST', $report === null ? null : json_encode($report), [
+            'api_access_token: ' . $token, 'Content-Type: application/json',
+        ], false);
+        if (in_array($response['code'], [401, 403], true)) {
+            throw new \Espo\Core\Exceptions\Forbidden();
+        }
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Could not verify or report identity ownership: HTTP ' . $response['code']);
+        }
+        return $response['body'];
+    }
+
+    public function mirrorIdentityRejection(string $url, string $token, int $accountId, int $contactId, array $report): void
+    {
+        $url = rtrim($url, '/') . "/api/v1/accounts/{$accountId}/contacts/{$contactId}/identity_rejections";
+        $response = $this->executeRequest($url, 'POST', json_encode($report), [
+            'api_access_token: ' . $token, 'Content-Type: application/json',
+        ], false);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Could not synchronize identity rejection: HTTP ' . $response['code']);
+        }
+    }
+
     public function __construct(
         private Config $config,
         private Log $log

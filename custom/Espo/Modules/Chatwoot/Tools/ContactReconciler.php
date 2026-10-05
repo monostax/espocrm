@@ -487,6 +487,9 @@ class ContactReconciler
 
     private function contactFromIdentity(?Entity $identity): ?Entity
     {
+        if ($identity && $identity->get('ownershipStatus') === 'rejected') {
+            return null;
+        }
         if (!$identity) {
             return null;
         }
@@ -527,6 +530,9 @@ class ContactReconciler
             return null;
         }
 
+        if ((new IdentityOwnership($this->entityManager))->isRejected($contact, $field === 'emailAddress' ? 'email' : 'phone', $value)) {
+            return null;
+        }
         $this->entityManager->getRDBRepository('Contact')->restoreDeleted($contact->getId());
         return $this->entityManager->getEntityById('Contact', $contact->getId());
     }
@@ -659,11 +665,12 @@ class ContactReconciler
             $contact->set('lastName', $lastName);
             $changed = true;
         }
-        if (!$contact->get('phoneNumber') && $normalizedPhone) {
+        $ownership = new IdentityOwnership($this->entityManager);
+        if (!$contact->get('phoneNumber') && $normalizedPhone && !$ownership->isRejected($contact, 'phone', $normalizedPhone)) {
             $contact->set('phoneNumber', $normalizedPhone);
             $changed = true;
         }
-        if (!$contact->get('emailAddress') && $normalizedEmail) {
+        if (!$contact->get('emailAddress') && $normalizedEmail && !$ownership->isRejected($contact, 'email', $normalizedEmail)) {
             $contact->set('emailAddress', $normalizedEmail);
             $changed = true;
         }
@@ -750,6 +757,10 @@ class ContactReconciler
         }
 
         if ($existing) {
+            // Human ownership corrections outrank stale provider profiles and imports.
+            if ($existing->get('ownershipStatus') === 'rejected') {
+                return $existing;
+            }
             $this->entityManager
                 ->getRDBRepository('ContactChannelIdentity')
                 ->restoreDeleted($existing->getId());

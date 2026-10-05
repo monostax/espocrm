@@ -336,7 +336,11 @@ class WhatsAppCampaignService
             }
         }
 
-        return $phonesByContactId[$contactId] = $phones;
+        $ownership = new \Espo\Modules\Chatwoot\Tools\IdentityOwnership($this->entityManager);
+        return $phonesByContactId[$contactId] = array_values(array_filter(
+            $phones,
+            fn (string $phone): bool => !$ownership->isRejected($contact, 'phone', $phone)
+        ));
     }
 
     /**

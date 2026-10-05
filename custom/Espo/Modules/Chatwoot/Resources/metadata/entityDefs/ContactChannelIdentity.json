@@ -56,6 +56,18 @@
             "type": "bool",
             "default": false
         },
+        "ownershipStatus": {
+            "type": "enum",
+            "options": ["unverified", "rejected"],
+            "default": "unverified",
+            "readOnly": true
+        },
+        "ownershipReason": { "type": "varchar", "readOnly": true },
+        "ownershipReviewedAt": { "type": "datetime", "readOnly": true },
+        "ownershipReviewedById": { "type": "varchar", "maxLength": 24, "readOnly": true },
+        "ownershipConversationId": { "type": "varchar", "maxLength": 24, "readOnly": true },
+        "ownershipEvidenceMessageId": { "type": "varchar", "maxLength": 32, "readOnly": true },
+        "ownershipSyncedAt": { "type": "datetime", "readOnly": true },
         "contact": {
             "type": "link",
             "required": true

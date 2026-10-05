@@ -462,6 +462,12 @@ class ProcessWhatsAppCampaignChunk implements Job
                 $phoneNumber = $campaignContact->get('phoneNumber');
                 $contactName = $campaignContact->get('contactName');
 
+                $contact = $this->entityManager->getEntityById('Contact', $campaignContact->get('contactId'));
+                if (!$contact) {
+                    throw new Error('The campaign contact no longer exists.');
+                }
+                (new \Espo\Modules\Chatwoot\Tools\IdentityOwnership($this->entityManager))->assertAllowed($contact, 'phone', $phoneNumber);
+
                 $chatwootContact = $this->chatwootApiClient->findOrCreateContact(
                     $ctx['platformUrl'],
                     $ctx['accountApiKey'],

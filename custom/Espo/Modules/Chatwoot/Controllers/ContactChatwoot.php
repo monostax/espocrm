@@ -206,6 +206,14 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
 
         $contactName = $contact->get('name') ?? '';
 
+        $ownership = $this->injectableFactory->create(\Espo\Modules\Chatwoot\Tools\IdentityOwnership::class);
+        $ownership->assertAllowed(
+            $contact,
+            $mappedChannelType ?? '',
+            $selectedIdentity ? $selectedIdentity->get('sourceId') :
+                ($mappedChannelType === 'email' ? $contact->get('emailAddress') : $contact->get('phoneNumber'))
+        );
+
         // === Resolve teams (from inbox, fallback to account) ===
         $teamsIds = $chatwootInbox->getLinkMultipleIdList('teams');
 
@@ -253,6 +261,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
         $chatwootContactData = $resolution['chatwootContactData'];
         $wasCreated = $resolution['wasCreated'];
         $sourceId = $resolution['sourceId'];
+        $ownership->assertAllowed($contact, $mappedChannelType ?? '', $sourceId);
         // WhatsApp contact_inboxes use the phone without the E.164 plus sign.
         $conversationSourceId = $mappedChannelType === 'whatsapp' ? ltrim((string) $sourceId, '+') : $sourceId;
 

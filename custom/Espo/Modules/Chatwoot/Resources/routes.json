@@ -11,6 +11,8 @@
     { "route": "/Contact/:id/posts", "method": "post", "params": { "controller": "ContactInbox", "action": "post", "id": ":id" } },
     { "route": "/Contact/:id/readState", "method": "post", "params": { "controller": "ContactInbox", "action": "readState", "id": ":id" } },
     { "route": "/Contact/:id/chatwootConversationsForUser", "method": "get", "params": { "controller": "ContactConversations", "action": "list", "id": ":id" } },
+    { "route": "/ChatwootConversation/workspaces/:accountId/:conversationId/wrongPerson", "method": "get", "params": { "controller": "IdentityOwnership", "action": "preview", "accountId": ":accountId", "conversationId": ":conversationId" } },
+    { "route": "/ChatwootConversation/workspaces/:accountId/:conversationId/wrongPerson", "method": "post", "params": { "controller": "IdentityOwnership", "action": "report", "accountId": ":accountId", "conversationId": ":conversationId" } },
     { "route": "/Opportunity/action/spreadsheetSummary", "method": "get", "params": { "controller": "OpportunitySpreadsheetSummary", "action": "summary" } },
     { "route": "/OpportunityBulkPost/workspaces/:accountId", "method": "post", "params": { "controller": "OpportunityBulkPost", "action": "submit", "accountId": ":accountId" } },
     { "route": "/OpportunityBulkPost/workspaces/:accountId", "method": "get", "params": { "controller": "OpportunityBulkPost", "action": "recent", "accountId": ":accountId" } },

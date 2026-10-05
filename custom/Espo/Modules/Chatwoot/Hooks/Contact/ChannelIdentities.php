@@ -273,7 +273,7 @@ class ChannelIdentities
 
         // Remove rows the user deleted from the field.
         foreach ($existingMap as $id => $existing) {
-            if (isset($keptIdSet[$id])) {
+            if (isset($keptIdSet[$id]) || $existing->get('ownershipStatus') === 'rejected') {
                 continue;
             }
 
