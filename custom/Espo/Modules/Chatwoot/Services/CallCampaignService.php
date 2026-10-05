@@ -231,7 +231,7 @@ class CallCampaignService
 
         $phone = PhoneNormalizer::normalize($contact->get('phoneNumber'));
 
-        if (!$phone) {
+        if (!$phone || (new \Espo\Modules\Chatwoot\Tools\IdentityOwnership($this->entityManager))->isRejected($contact, 'phone', $phone)) {
             return;
         }
 

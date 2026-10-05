@@ -235,6 +235,8 @@ class ProcessEmailCampaignChunk implements Job
             throw new Error("Contact {$contactId} not found.");
         }
 
+        (new \Espo\Modules\Chatwoot\Tools\IdentityOwnership($this->entityManager))->assertAllowed($contact, 'email', $emailAddress);
+
         /** @var EmailTemplate $emailTemplate */
         $emailTemplate = $ctx['emailTemplate'];
         /** @var Entity $campaign */

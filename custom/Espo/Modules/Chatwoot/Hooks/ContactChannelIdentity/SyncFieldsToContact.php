@@ -71,7 +71,7 @@ class SyncFieldsToContact
      */
     public function afterSave(Entity $entity, array $options): void
     {
-        if (!empty($options['skipFieldSyncToContact'])) {
+        if (!empty($options['skipFieldSyncToContact']) || $entity->get('ownershipStatus') === 'rejected') {
             return;
         }
 
