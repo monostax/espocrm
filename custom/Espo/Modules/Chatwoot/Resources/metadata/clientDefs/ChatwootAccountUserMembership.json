@@ -1,5 +1,8 @@
 {
     "controller": "controllers/record",
+    "views": {
+        "list": "chatwoot:views/account-user-membership/list"
+    },
     "iconClass": "ti ti-user-shield",
     "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-account-user-membership/defaults-preparator",
     "defaultSidePanelFieldList": ["teams"],

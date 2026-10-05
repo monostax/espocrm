@@ -14,6 +14,7 @@
         "webhooks": "Chat / Account / Webhooks"
     },
     "labels": {
+        "Create AI Agent": "Create AI Agent",
         "Create Inbox Channel": "Create Inbox Channel",
         "Add Account User": "Add Account User",
         "tabInboxes": "Inboxes",

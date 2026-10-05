@@ -12,6 +12,19 @@ use stdClass;
 
 class ChatwootAccount extends \Espo\Core\Templates\Controllers\Base
 {
+    public function postActionCreateAiAgent(Request $request): stdClass
+    {
+        $input = $request->getParsedBody();
+        if (!is_object($input) || !is_string($input->id ?? null) || $input->id === '') {
+            throw new BadRequest('Account ID is required.');
+        }
+        $membership = $this->injectableFactory->create(
+            \Espo\Modules\Chatwoot\Services\AiAgentProvisioning::class
+        )->create($input->id, $input);
+
+        return (object) ['id' => $membership->getId(), 'name' => $membership->get('name')];
+    }
+
     /**
      * POST ChatwootAccount/:id/addUserMembership
      *

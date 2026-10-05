@@ -35,6 +35,33 @@ class ChatwootApiClient
     private const DEFAULT_TIMEOUT = 30;
     private const CONNECT_TIMEOUT = 10;
 
+    /** Retries are reconciled by the remote protected binding, never by email. */
+    public function provisionMachineIdentity(string $url, string $token, int $accountId, array $data): array
+    {
+        $response = $this->executeRequest(
+            rtrim($url, '/') . "/platform/api/v1/accounts/{$accountId}/machine_identities",
+            'POST', json_encode($data, JSON_THROW_ON_ERROR),
+            ['api_access_token: ' . $token, 'Content-Type: application/json'], false
+        );
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Managed AI identity provisioning failed: HTTP ' . $response['code']);
+        }
+        return $response['body'];
+    }
+
+    public function retireMachineIdentity(string $url, string $token, int $accountId, array $data): void
+    {
+        $id = rawurlencode($data['machine_identity_id']);
+        $response = $this->executeRequest(
+            rtrim($url, '/') . "/platform/api/v1/accounts/{$accountId}/machine_identities/{$id}",
+            'DELETE', json_encode($data, JSON_THROW_ON_ERROR),
+            ['api_access_token: ' . $token, 'Content-Type: application/json'], false
+        );
+        if ($response['code'] !== 204) {
+            throw new Error('Managed AI identity retirement failed: HTTP ' . $response['code']);
+        }
+    }
+
     public function identityOwnership(string $url, string $token, int $accountId, int $conversationId, ?array $report = null): array
     {
         $url = rtrim($url, '/') . "/api/v1/accounts/{$accountId}/conversations/{$conversationId}/identity_ownership";

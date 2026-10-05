@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "tenantId": {"type": "varchar", "maxLength": 24, "required": true},
+        "namespace": {"type": "varchar", "maxLength": 63, "required": true}
+    },
+    "indexes": {
+        "tenant": {"columns": ["tenantId"], "unique": true},
+        "namespace": {"columns": ["namespace"], "unique": true}
+    }
+}

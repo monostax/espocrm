@@ -60,6 +60,10 @@ class DeleteFromChatwoot
      */
     public function beforeRemove(Entity $entity, array $options): void
     {
+        // The protected provisioning path handles retirement (including lost create responses).
+        if ($this->entityManager->getRDBRepository('ChatwootMachineIdentity')
+            ->where(['membershipId' => $entity->getId()])->findOne()) return;
+
         // Skip if this is a cascade delete from parent (remote cleanup already handled by parent)
         if (!empty($options['cascadeParent'])) {
             return;

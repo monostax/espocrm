@@ -1,5 +1,6 @@
 {
     "fields": {
+        "instructions": "Instruções (opcional)",
         "tasksEnabled": "Habilitar gestão de tarefas",
         "taskManagementPrompt": "Instruções para gestão de tarefas",
         "taskAssignees": "Responsáveis por tarefas gerenciadas",
@@ -58,6 +59,7 @@
         "wahaSessionLabels": "Etiquetas de Sessão"
     },
     "labels": {
+        "Create AI Agent": "Criar agente de IA",
         "tabInboxes": "Caixas de Entrada",
         "tabUsers": "Agentes",
         "Create ChatwootAccountUserMembership": "Cadastrar Agente",
@@ -74,6 +76,12 @@
         "aiOnly": "Agentes de IA"
     },
     "messages": {
+        "createAiAgentHelp": "Dê um nome ao agente e escolha a conta de chat. A identidade será criada automaticamente. Depois, conecte caixas de entrada e personalize seu comportamento.",
+        "aiAgentCreated": "Agente de IA criado. Conecte uma caixa de entrada para começar a usar.",
+        "aiAgentCreateFailed": "Não foi possível concluir a criação do agente. Tente novamente para continuar a mesma solicitação sem criar uma duplicata.",
+        "aiAgentAccountNotReady": "A conta de chat precisa estar ativa e sincronizada antes de criar um agente de IA.",
+        "aiAgentTenantRequired": "A conta de chat precisa estar vinculada a um workspace com um domínio de identidade válido e exclusivo.",
+        "aiAgentOperationConflict": "Esta solicitação não corresponde mais à conta ou ao agente. Feche esta janela e comece novamente.",
         "confirmEnableAiProfile": "Isto habilitará as capacidades de Agente de IA para este membro da conta. Continuar?",
         "confirmDisableAiProfile": "Isto desativará as capacidades de Agente de IA deste membro da conta. Continuar?",
         "aiProfileEnabled": "Perfil de Agente de IA ativado com sucesso.",

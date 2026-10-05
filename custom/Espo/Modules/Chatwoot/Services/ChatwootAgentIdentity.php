@@ -30,6 +30,7 @@ class ChatwootAgentIdentity
     public function findCrmUser(string $email): ?User
     {
         $email = strtolower(trim($email));
+        if (ManagedIdentityPolicy::isReservedEmail($email)) return null;
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;
         }
@@ -53,6 +54,8 @@ class ChatwootAgentIdentity
     /** @param array<string, mixed> $agent Profile from the authenticated Account API. */
     public function importForAccount(Entity $account, array $agent): ?Entity
     {
+        // Reserved identities are only materialized by trusted provisioning, never email import.
+        if (ManagedIdentityPolicy::isReservedEmail($agent['email'] ?? null)) return null;
         $remoteId = (int) ($agent['id'] ?? 0);
         $platformId = $account->get('platformId');
         if (!$remoteId || !$platformId || !$account instanceof CoreEntity) {
@@ -80,6 +83,8 @@ class ChatwootAgentIdentity
             'platformId' => $platformId,
         ])->findOne();
         if ($existing) {
+            if ($this->entityManager->getRDBRepository('ChatwootMachineIdentity')
+                ->where(['chatwootUserId' => $existing->getId()])->findOne()) return null;
             return $existing;
         }
 

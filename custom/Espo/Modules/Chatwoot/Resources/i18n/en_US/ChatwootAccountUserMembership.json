@@ -1,5 +1,6 @@
 {
     "fields": {
+        "instructions": "Instructions (optional)",
         "name": "Name",
         "chatwootAccount": "Chat Account",
         "chatwootUser": "Chat User",
@@ -58,6 +59,7 @@
         "wahaSessionLabels": "Session Labels"
     },
     "labels": {
+        "Create AI Agent": "Create AI Agent",
         "tabInboxes": "Inboxes",
         "Create ChatwootAccountUserMembership": "Create Account User",
         "Enable AI Profile": "Enable AI Profile",
@@ -72,6 +74,12 @@
         "aiOnly": "AI Agents"
     },
     "messages": {
+        "createAiAgentHelp": "Give your agent a name and choose its chat account. Its identity is created automatically. Next, you can connect inboxes and customize its behavior.",
+        "aiAgentCreated": "AI agent created. Connect an inbox to start using it.",
+        "aiAgentCreateFailed": "We couldn't finish creating your agent. Retry to continue the same request without creating a duplicate.",
+        "aiAgentAccountNotReady": "This chat account must be active and synchronized before creating an AI agent.",
+        "aiAgentTenantRequired": "This chat account needs a linked workspace with a valid, unique identity namespace.",
+        "aiAgentOperationConflict": "This creation request no longer matches the account or agent. Close this dialog and start again.",
         "confirmEnableAiProfile": "This will enable AI capabilities for this account member. Continue?",
         "confirmDisableAiProfile": "This will disable AI capabilities for this account member. Continue?",
         "aiProfileEnabled": "AI profile has been enabled successfully.",

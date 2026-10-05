@@ -176,6 +176,13 @@ class ChatwootAccountUserMembershipService
      */
     public function enableAiProfile(Entity $membership): Entity
     {
+        $binding = $this->entityManager->getRDBRepository('ChatwootMachineIdentity')
+            ->where(['membershipId' => $membership->getId(), 'status' => 'active'])->findOne();
+        if ($binding) {
+            $membership->set('isAI', true);
+            $this->entityManager->saveEntity($membership, ['silent' => true]);
+            return $membership;
+        }
         $accountId = $membership->get('chatwootAccountId');
         $userId = $membership->get('chatwootUserId');
 

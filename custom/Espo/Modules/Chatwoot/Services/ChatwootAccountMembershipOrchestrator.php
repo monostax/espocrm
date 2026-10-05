@@ -128,6 +128,10 @@ class ChatwootAccountMembershipOrchestrator
 
         $email = $this->extractCrmUserEmail($user);
 
+        if (ManagedIdentityPolicy::isReservedEmail($email)) {
+            throw new BadRequest('Managed identities cannot be added as human users.');
+        }
+
         if (!$email) {
             throw new BadRequest('selectedUserMustHaveEmail');
         }

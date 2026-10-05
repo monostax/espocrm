@@ -99,7 +99,12 @@ class ChatwootAgentIdentityTest extends TestCase
         $accountSelect = $this->createMock(RDBSelectBuilder::class);
         $accountSelect->method('find')->willReturn(new EntityCollection([$this->account]));
         $accounts->method('where')->with(['platformId' => 'platform', 'status' => 'active'])->willReturn($accountSelect);
+        $machines = $this->createMock(RDBRepository::class);
+        $machineSelect = $this->createMock(RDBSelectBuilder::class);
+        $machineSelect->method('findOne')->willReturn(null);
+        $machines->method('where')->willReturn($machineSelect);
         $this->em->method('getRDBRepository')->willReturnMap([
+            ['ChatwootMachineIdentity', $machines],
             ['User', $users], ['ChatwootUser', $identities], ['ChatwootPlatform', $platformRepo], ['ChatwootAccount', $accounts],
         ]);
         $this->em->method('createEntity')->willReturnCallback(function ($type, $values, $options) {

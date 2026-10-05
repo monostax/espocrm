@@ -1,0 +1,25 @@
+{
+    "fields": {
+        "machineIdentityId": {"type": "varchar", "maxLength": 32, "required": true},
+        "kind": {"type": "varchar", "maxLength": 16, "default": "agent"},
+        "operationId": {"type": "varchar", "maxLength": 36, "required": true},
+        "payloadHash": {"type": "varchar", "maxLength": 64, "required": true},
+        "tenantId": {"type": "varchar", "maxLength": 24, "required": true},
+        "accountId": {"type": "varchar", "maxLength": 24, "required": true},
+        "membershipId": {"type": "varchar", "maxLength": 24, "required": true},
+        "chatwootUserId": {"type": "varchar", "maxLength": 24, "required": true},
+        "platformId": {"type": "varchar", "maxLength": 24, "required": true},
+        "remoteAccountId": {"type": "int", "required": true},
+        "remoteUserId": {"type": "int"},
+        "email": {"type": "varchar", "maxLength": 255, "required": true},
+        "status": {"type": "enum", "options": ["pending", "active", "retired"], "default": "pending"}
+    },
+    "indexes": {
+        "identity": {"columns": ["machineIdentityId"], "unique": true},
+        "operation": {"columns": ["operationId"], "unique": true},
+        "membership": {"columns": ["membershipId"], "unique": true},
+        "user": {"columns": ["chatwootUserId"], "unique": true},
+        "email": {"columns": ["email"], "unique": true},
+        "remoteUser": {"columns": ["platformId", "remoteUserId"], "unique": true}
+    }
+}

@@ -33,6 +33,7 @@
         "accountUserMemberships": "Agentes"
     },
     "labels": {
+        "Create AI Agent": "Criar agente de IA",
         "Overview": "Visão Geral",
         "Create ChatwootAccount": "Criar Nova Conta",
         "Create Inbox Channel": "Adicionar Caixa de Entrada",
