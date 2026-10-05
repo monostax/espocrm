@@ -85,11 +85,16 @@ class RecordNextActionTest extends TestCase
                         return $this->record;
                     }
                     // Query predicates, not just the activity ID, enforce the parent boundary.
-                    $this->assertSame($type, $where['parentType']);
-                    $this->assertSame('record-id', $where['parentId']);
+                    $parent = $where['OR'][0] ?? $where;
+                    $this->assertSame($type, $parent['parentType']);
+                    $this->assertSame('record-id', $parent['parentId']);
                     $activity = $this->activities[$entityType . ':' . $where['id']] ?? null;
-                    return $activity && $activity->get('parentType') === $where['parentType'] &&
-                        $activity->get('parentId') === $where['parentId'] ? $activity : null;
+                    if ($activity && isset($where['OR']) && !$activity->get('parentId')) {
+                        $this->assertSame(['parentId' => null], $where['OR'][1]);
+                        return $activity;
+                    }
+                    return $activity && $activity->get('parentType') === $parent['parentType'] &&
+                        $activity->get('parentId') === $parent['parentId'] ? $activity : null;
                 });
                 return $query;
             });
@@ -111,7 +116,7 @@ class RecordNextActionTest extends TestCase
             fn ($entity) => !in_array($entity === $this->record ? 'recordEdit' : 'activityEdit', $this->denied, true),
         );
         $acl->method('checkField')->willReturnCallback(
-            fn ($scope, $field, $action = 'read') => !in_array('status' . ucfirst($action), $this->denied, true),
+            fn ($scope, $field, $action = 'read') => !in_array($field . ucfirst($action), $this->denied, true),
         );
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('actor-id');
@@ -128,7 +133,9 @@ class RecordNextActionTest extends TestCase
             $service->method('update')->willReturnCallback(function (string $id, object $data) use ($activityType) {
                 $this->assertTrue($this->pdo->inTransaction());
                 $this->updated[] = [$activityType, $id, (array) $data];
-                $this->pdo->prepare('UPDATE activity SET status = ? WHERE id = ?')->execute([$data->status, $id]);
+                if (property_exists($data, 'status')) {
+                    $this->pdo->prepare('UPDATE activity SET status = ? WHERE id = ?')->execute([$data->status, $id]);
+                }
                 $activity = $this->activities[$activityType . ':' . $id];
                 $activity->set($data);
                 return new UpdateResult($activity);

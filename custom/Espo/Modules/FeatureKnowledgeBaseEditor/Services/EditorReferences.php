@@ -48,7 +48,7 @@ class EditorReferences
             ($entity->get('isActive') && $this->acl->checkUserPermission($entity->getId(), 'mention')));
     }
 
-    public function search(string $query): array
+    public function search(string $query, ?array $nextActionParent = null): array
     {
         if (strlen($query) > 240) throw new BadRequest('Query too long.');
         $query = trim($query);
@@ -65,7 +65,9 @@ class EditorReferences
         }
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         foreach ($this->supportedTypes as $rank => $type) {
+            if ($nextActionParent && !in_array($type, ['Task', 'Meeting', 'Call'], true)) continue;
             if (!$this->allowedType($type)) continue;
+            if ($nextActionParent && (!$this->acl->checkField($type, 'status') || !$this->acl->checkField($type, 'parent'))) continue;
             try {
                 $builder = $this->select->create()->from($type)->withStrictAccessControl();
                 if ($type === 'ChatwootAccountUserMembership') {
@@ -77,6 +79,20 @@ class EditorReferences
                 }
                 // Hydration needs ACL, but must not repeat the expensive text search.
                 $queryBuilder = $builder->buildQueryBuilder();
+                if ($nextActionParent) {
+                    $parents = [[
+                        'parentType' => $nextActionParent['type'], 'parentId' => $nextActionParent['id'],
+                    ]];
+                    if ($this->acl->checkScope($type, 'edit') && $this->acl->checkField($type, 'parent', 'edit')) {
+                        $parents[] = ['parentId' => null];
+                    }
+                    $queryBuilder->where(['OR' => $parents]);
+                    $queryBuilder->where($type === 'Task' ? [
+                        'status!=' => $this->metadata->get(['entityDefs', 'Task', 'fields', 'status', 'notActualOptions']) ?? [],
+                    ] : [
+                        'status' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? [],
+                    ]);
+                }
                 $queries[$type] = $queryBuilder->build();
                 $queryBuilder->order('name')->limit(0, 10);
                 $this->textFilterFactory->create($type, $this->user)
@@ -116,6 +132,7 @@ class EditorReferences
                 ->where(['id' => $ids])->limit(0, 10)->build();
             foreach ($this->em->getRDBRepository($type)->clone($sql)->find() as $entity) {
                 if (!$this->allowedRecord($entity)) continue;
+                if ($nextActionParent && !$entity->get('parentId') && !$this->acl->checkEntityEdit($entity)) continue;
                 $entities[$type][$entity->getId()] = $entity;
             }
         }
