@@ -1729,6 +1729,24 @@ public function filterContacts(
     return $response['body'];
 }
 
+/** @return list<array{id: int, inbox_id: int}> */
+public function getConversationVisibility(string $platformUrl, string $userToken, int $accountId, array $ids): array
+{
+    $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/visibility';
+    $payload = json_encode(['conversation_ids' => array_values($ids)], JSON_THROW_ON_ERROR);
+    $response = $this->executeRequest($url, 'POST', $payload, [
+        'api_access_token: ' . $userToken,
+        'Content-Type: application/json',
+    ]);
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        throw new Error('Unable to authorize Chatwoot conversations: HTTP ' . $response['code']);
+    }
+    if (!isset($response['body']['payload']) || !is_array($response['body']['payload'])) {
+        throw new Error('Invalid Chatwoot conversation visibility response.');
+    }
+    return $response['body']['payload'];
+}
+
 /**
  * Filter conversations from a Chatwoot account using the filter API.
  * Supports cursor-based incremental sync using last_activity_at.

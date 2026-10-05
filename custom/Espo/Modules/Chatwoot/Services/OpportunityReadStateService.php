@@ -35,6 +35,7 @@ class OpportunityReadStateService
         private OpportunityEventAccess $eventAccess,
         private OpportunityThreadState $threads,
         private CrmTags $tags,
+        private OpportunityInboxFilter $inboxes,
     ) {}
 
     /** Filter before pagination, using the same personal cutoff as getReadStates. */
@@ -276,7 +277,13 @@ class OpportunityReadStateService
             $userCounts[$row['assignedUserId']] = (int) $row['count'];
         }
 
+        $body = $request->getParsedBody();
+        $inboxAccountId = $request->getQueryParam('chatwootAccountId') ??
+            (is_object($body) ? ($body->chatwootAccountId ?? null) : null);
+
         return [
+            'inboxAccountId' => $inboxAccountId,
+            'inboxes' => $this->inboxes->counts($scopedQb, $inboxAccountId),
             'all' => $all,
             'unread' => $unread,
             'mentions' => $mentions,

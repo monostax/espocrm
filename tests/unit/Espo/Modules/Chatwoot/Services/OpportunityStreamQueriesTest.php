@@ -109,6 +109,7 @@ class OpportunityStreamQueriesTest extends TestCase
             $this->createMock(SelectBuilderFactory::class), $this->createMock(SearchParamsFetcher::class), $this->access,
             $this->createMock(OpportunityThreadState::class),
             $this->createMock(\Espo\Modules\Global\Tools\CrmTags::class),
+            $this->createMock(\Espo\Modules\Chatwoot\Services\OpportunityInboxFilter::class),
         );
 
         $this->pdo->exec("INSERT INTO opportunity (id, status, assigned_user_id, tenant_id) VALUES ('opp', 'Open', 'agent', 'tenant')");
@@ -204,6 +205,7 @@ class OpportunityStreamQueriesTest extends TestCase
             ->bindInstance(AclManager::class, $this->createMock(AclManager::class))
             ->bindInstance(Config::class, $this->createMock(Config::class))
             ->bindInstance(TextMetadataProvider::class, $this->createMock(TextMetadataProvider::class))
+            ->bindInstance(\Espo\Modules\Chatwoot\Services\ChatwootApiClient::class, $this->createMock(\Espo\Modules\Chatwoot\Services\ChatwootApiClient::class))
             ->build();
 
         // Do NOT bind these three dependencies: nullable params made the real factory skip them.

@@ -28,6 +28,11 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
 
     public function afterSave(Entity $entity, SaveOptions $options): void
     {
+        if ($entity->getEntityType() === 'ChatwootConversation' &&
+            ($entity->isAttributeChanged('inboxId') || $entity->isAttributeChanged('chatwootAccountId') ||
+                $entity->isAttributeChanged('assignedUserId') || $entity->isAttributeChanged('teamsIds'))) {
+            $this->scheduleLinkedOpportunities($entity);
+        }
         $this->schedule($entity);
     }
 
@@ -38,12 +43,17 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
 
     public function beforeRemove(Entity $entity, RemoveOptions $options): void
     {
-        if ($entity->getEntityType() !== 'Contact') {
+        if (!in_array($entity->getEntityType(), ['Contact', 'ChatwootConversation'], true)) {
             return;
         }
 
-        // Capture linked opportunities before deleting the contact and its relations.
-        $opportunities = $this->entityManager->getRDBRepository('Contact')
+        // Capture links before removal deletes the relationship rows.
+        $this->scheduleLinkedOpportunities($entity);
+    }
+
+    private function scheduleLinkedOpportunities(Entity $entity): void
+    {
+        $opportunities = $this->entityManager->getRDBRepository($entity->getEntityType())
             ->getRelation($entity, 'opportunities')->find();
 
         foreach ($opportunities as $opportunity) {
@@ -56,9 +66,9 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
         $type = $entity->getEntityType();
         $link = $relationParams['relationName'] ?? null;
 
-        if ($type === 'Opportunity' && in_array($link, ['contacts', 'tags'], true)) {
+        if ($type === 'Opportunity' && in_array($link, ['contacts', 'tags', 'chatwootConversations'], true)) {
             $this->schedule($entity);
-        } elseif ($type === 'Contact' && $link === 'opportunities') {
+        } elseif (in_array($type, ['Contact', 'ChatwootConversation'], true) && $link === 'opportunities') {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $relationParams['foreignId']);
             if ($opportunity) {
                 $this->schedule($opportunity);
@@ -76,8 +86,11 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
 
     public function afterMassRelate(Entity $entity, array $options, array $relationParams): void
     {
-        if ($entity->getEntityType() === 'Opportunity' && in_array($relationParams['relationName'] ?? null, ['contacts', 'tags'], true)) {
+        if ($entity->getEntityType() === 'Opportunity' &&
+            in_array($relationParams['relationName'] ?? null, ['contacts', 'tags', 'chatwootConversations'], true)) {
             $this->schedule($entity);
+        } elseif ($entity->getEntityType() === 'ChatwootConversation' && ($relationParams['relationName'] ?? null) === 'opportunities') {
+            $this->scheduleLinkedOpportunities($entity);
         }
     }
 
