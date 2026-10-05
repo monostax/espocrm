@@ -60,6 +60,14 @@ class TransactionManager
         return $this->level;
     }
 
+    /** Fail closed when the database has rolled back a still-open application scope. */
+    public function assertActive(): void
+    {
+        if ($this->level > 0 && !$this->pdo->inTransaction()) {
+            throw new RuntimeException('The database transaction was aborted. Retry the entire operation.');
+        }
+    }
+
     /**
      * Run a function in a transaction. Commits if success, rolls back if an exception occurs.
      *
@@ -91,6 +99,7 @@ class TransactionManager
     public function start(): void
     {
         if ($this->level > 0) {
+            $this->assertActive();
             $this->createSavepoint();
 
             $this->level++;
@@ -112,15 +121,17 @@ class TransactionManager
             throw new RuntimeException("Can't commit not started transaction.");
         }
 
-        $this->level--;
+        $this->assertActive();
 
-        if ($this->level > 0) {
-            $this->releaseSavepoint();
-
-            return;
+        // Keep the scope open if commit fails, so run() can roll it back and
+        // preserve the original exception instead of masking it with level=0.
+        if ($this->level > 1) {
+            $this->releaseSavepoint($this->level - 1);
+        } else {
+            $this->pdo->commit();
         }
 
-        $this->pdo->commit();
+        $this->level--;
     }
 
     /**
@@ -133,6 +144,12 @@ class TransactionManager
         }
 
         $this->level--;
+
+        // InnoDB deadlocks already roll back every savepoint. Unwind one
+        // application scope at a time; outer scopes must remain poisoned.
+        if (!$this->pdo->inTransaction()) {
+            return;
+        }
 
         if ($this->level > 0) {
             $this->rollbackToSavepoint();
@@ -155,9 +172,9 @@ class TransactionManager
         $this->pdo->exec($sql);
     }
 
-    private function releaseSavepoint(): void
+    private function releaseSavepoint(int $level): void
     {
-        $sql = $this->queryComposer->composeReleaseSavepoint($this->getCurrentSavepoint());
+        $sql = $this->queryComposer->composeReleaseSavepoint('POINT_' . (string) $level);
 
         $this->pdo->exec($sql);
     }

@@ -39,10 +39,12 @@ class TransactionManagerTest extends TestCase
 {
     private $pdo;
     private $manager;
+    private bool $transactionActive = true;
 
     protected function setUp() : void
     {
         $this->pdo = $this->createMock(PDO::class);
+        $this->pdo->method('inTransaction')->willReturnCallback(fn () => $this->transactionActive);
         $composer = $this->createMock(MysqlQueryComposer::class);
 
         $composer
@@ -272,5 +274,67 @@ class TransactionManagerTest extends TestCase
                 }
             );
         } catch (RuntimeException $e) {}
+    }
+
+    public function testFailedCommitPreservesOriginalExceptionAndRollsBack(): void
+    {
+        $failure = new \PDOException('Commit failed');
+        $this->pdo->expects($this->once())->method('commit')->willThrowException($failure);
+        $this->pdo->expects($this->once())->method('rollBack');
+
+        try {
+            $this->manager->run(function () {});
+            $this->fail('Expected commit failure.');
+        } catch (\PDOException $e) {
+            $this->assertSame($failure, $e);
+        }
+
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    public function testDatabaseRollbackUnwindsNestedScopesWithoutMaskingFailure(): void
+    {
+        $failure = new \PDOException('Deadlock');
+        $this->pdo->expects($this->never())->method('rollBack');
+        $this->pdo->expects($this->never())->method('commit');
+        $this->pdo->expects($this->once())->method('exec')->with('SAVEPOINT POINT_1');
+
+        try {
+            $this->manager->run(function () use ($failure) {
+                $this->manager->run(function () use ($failure) {
+                    $this->transactionActive = false;
+                    throw $failure;
+                });
+            });
+            $this->fail('Expected deadlock.');
+        } catch (\PDOException $e) {
+            $this->assertSame($failure, $e);
+        }
+
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    public function testSwallowedNestedDeadlockCannotCommitOuterScope(): void
+    {
+        $this->pdo->expects($this->never())->method('commit');
+        $this->pdo->expects($this->never())->method('rollBack');
+
+        try {
+            $this->manager->run(function () {
+                try {
+                    $this->manager->run(function () {
+                        $this->transactionActive = false;
+                        throw new \PDOException('Deadlock');
+                    });
+                } catch (\PDOException) {}
+
+                $this->assertSame(1, $this->manager->getLevel());
+            });
+            $this->fail('An aborted transaction must not report success.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('transaction was aborted', $e->getMessage());
+        }
+
+        $this->assertSame(0, $this->manager->getLevel());
     }
 }

@@ -31,6 +31,8 @@ namespace tests\unit\Espo\ORM;
 
 use Espo\ORM\Executor\DefaultSqlExecutor;
 use Espo\ORM\PDO\PDOProvider;
+use Espo\ORM\QueryComposer\MysqlQueryComposer;
+use Espo\ORM\TransactionManager;
 
 use PDO;
 use PDOStatement;
@@ -160,5 +162,57 @@ class SqlExecutorTest extends TestCase
         $sth = $this->executor->execute($sql, true);
 
         $this->assertInstanceOf(PDOStatement::class, $sth);
+    }
+
+    public function testTransactionalDeadlockDoesNotRetryStatement(): void
+    {
+        $e = new PDOException('Deadlock');
+        $e->errorInfo = ['40001', 1213];
+        $this->pdo->method('inTransaction')->willReturn(true);
+        $this->pdo->expects($this->once())->method('query')->willThrowException($e);
+
+        $this->expectExceptionObject($e);
+        $this->executor->execute('UPDATE opportunity SET status = \'Won\'', true);
+    }
+
+    public function testCaughtDeadlockCannotPersistHistoryOutsideTransaction(): void
+    {
+        $active = false;
+        $this->pdo->method('inTransaction')->willReturnCallback(function () use (&$active) {
+            return $active;
+        });
+        $this->pdo->method('beginTransaction')->willReturnCallback(function () use (&$active) {
+            $active = true;
+            return true;
+        });
+        $failure = new PDOException('Deadlock');
+        $failure->errorInfo = ['40001', 1213];
+        $this->pdo->expects($this->once())->method('query')->willReturnCallback(
+            function () use (&$active, $failure) {
+                $active = false; // InnoDB rolls back the entire transaction.
+                throw $failure;
+            }
+        );
+        $this->pdo->expects($this->never())->method('commit');
+        $this->pdo->expects($this->never())->method('rollBack');
+        $manager = new TransactionManager($this->pdo, $this->createMock(MysqlQueryComposer::class));
+        $this->executor->setTransactionManager($manager);
+
+        try {
+            $manager->run(function () {
+                try {
+                    $this->executor->execute('UPDATE tracking_source SET total_events_received = 1', true);
+                } catch (PDOException) {
+                    // Best-effort analytics hooks can swallow the original failure.
+                }
+
+                $this->executor->execute('INSERT INTO opportunity_stage_history VALUES (1)', true);
+            });
+            $this->fail('The history write must never reach PDO after a rollback.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('transaction was aborted', $e->getMessage());
+        }
+
+        $this->assertSame(0, $manager->getLevel());
     }
 }

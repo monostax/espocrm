@@ -30,6 +30,7 @@
 namespace Espo\ORM\Executor;
 
 use Espo\ORM\PDO\PDOProvider;
+use Espo\ORM\TransactionManager;
 use Psr\Log\LoggerInterface;
 
 use PDO;
@@ -43,6 +44,7 @@ class DefaultSqlExecutor implements SqlExecutor
     private const MAX_ATTEMPT_COUNT = 4;
 
     private PDO $pdo;
+    private ?TransactionManager $transactionManager = null;
 
     public function __construct(
         PDOProvider $pdoProvider,
@@ -53,16 +55,27 @@ class DefaultSqlExecutor implements SqlExecutor
         $this->pdo = $pdoProvider->get();
     }
 
+    public function setTransactionManager(TransactionManager $transactionManager): void
+    {
+        $this->transactionManager = $transactionManager;
+    }
+
     /**
      * Execute a query.
      */
     public function execute(string $sql, bool $rerunIfDeadlock = false): PDOStatement
     {
+        // A hook may have caught a deadlock that rolled back the whole transaction.
+        // Never let subsequent writes escape into autocommit.
+        $this->transactionManager?->assertActive();
+
         if ($this->logAll) {
             $this->logger?->info("SQL: " . $sql, ['isSql' => true]);
         }
 
-        if (!$rerunIfDeadlock) {
+        // InnoDB rolls back the entire transaction on a deadlock. Retrying only
+        // this statement would persist a fragment of the original operation.
+        if (!$rerunIfDeadlock || $this->pdo->inTransaction()) {
             return $this->executeSqlWithDeadlockHandling($sql, 1);
         }
 
