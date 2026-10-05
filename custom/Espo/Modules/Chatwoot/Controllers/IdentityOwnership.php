@@ -107,8 +107,10 @@ class IdentityOwnership
                 throw new Forbidden();
             }
         }
-        if (!$this->acl->checkField('ContactChannelIdentity', 'ownershipStatus', 'edit') ||
-            !$this->acl->checkLink('ContactChannelIdentity', 'contact') ||
+        // ownershipStatus is a read-only, service-managed field, including for admins.
+        // Authorize this action through contact/identity record edit access below,
+        // rather than generic field editing, which metadata intentionally forbids.
+        if (!$this->acl->checkLink('ContactChannelIdentity', 'contact') ||
             !$this->acl->checkLink('ChatwootConversation', 'channelIdentity') ||
             !$this->acl->checkLink('ChatwootConversation', 'contact') ||
             !$this->acl->checkField('ChatwootConversation', 'channelIdentity') ||
