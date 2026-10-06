@@ -13,6 +13,19 @@ use PHPUnit\Framework\TestCase;
 
 class LedgerTest extends TestCase
 {
+    public function testGenericStreamCreditsShareTheTenantAllowance(): void
+    {
+        $runs = [$this->engagement('customer'), [
+            'id' => 'stream', 'runAt' => '2026-08-02 12:00:00', 'kind' => 'stream-mention',
+            'conversationId' => null, 'opportunityId' => null, 'sourceNoteId' => 'task-note',
+        ]];
+        $ledger = (new Ledger())->build($runs, $this->period(),
+            [$this->agreement('credit', new RateCard(planIncludedCredits: 1))], 't');
+        $this->assertSame(2, $ledger['summary']['consumed']);
+        $this->assertSame(1, $ledger['summary']['overage']);
+        $this->assertSame('billed', Ledger::billingStatus($ledger['groups']['2026-08-02|stream|task-note']));
+    }
+
     private function period(): Period
     {
         return Period::create('2026-08', 'UTC', new DateTimeImmutable('2026-09-27T12:00:00Z'));

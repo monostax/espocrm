@@ -1,5 +1,15 @@
 {
     "fields": {
+        "budgetStatus": {
+            "type": "varchar", "notStorable": true, "readOnly": true,
+            "view": "chatwoot:views/fields/ai-budget-status"
+        },
+        "overagePolicy": {
+            "type": "enum",
+            "options": ["allow", "block"],
+            "default": "allow",
+            "tooltip": true
+        },
         "billingModel": {
             "type": "enum",
             "options": ["", "pack199", "extra049", "credit"],

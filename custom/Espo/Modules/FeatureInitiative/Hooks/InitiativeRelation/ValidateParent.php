@@ -18,7 +18,7 @@ use Espo\ORM\Repository\Option\SaveOptions;
 class ValidateParent implements BeforeSave, SaveHook
 {
     public static int $order = 10;
-    public const PARENT_TYPES = ['Account', 'Contact', 'ChatwootConversation', 'Task', 'Initiative'];
+    public const PARENT_TYPES = ['Account', 'Contact', 'ChatwootConversation', 'Task', 'Initiative', 'Opportunity'];
 
     public function __construct(
         private EntityManager $entityManager,

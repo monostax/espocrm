@@ -99,6 +99,13 @@ class RecordKnowledge
     }
     public function postActionPropose(Request $request): object { return (object) $this->relations->submit($request->getParsedBody()); }
     public function postActionAuthor(Request $request): object { return (object) $this->relations->submit($request->getParsedBody(), true); }
+    public function postActionUnlink(Request $request): object
+    {
+        $id = $request->getParsedBody()->id ?? null;
+        if (!is_string($id) || $id === '') throw new BadRequest('id is required.');
+        $this->relations->unlink($id);
+        return (object) ['id' => $id];
+    }
     public function postActionDecide(Request $request): object
     {
         $body = $request->getParsedBody();

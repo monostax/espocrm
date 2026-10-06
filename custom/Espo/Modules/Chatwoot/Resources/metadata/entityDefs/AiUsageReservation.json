@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "tenant": {"type": "link"},
+        "run": {"type": "link"},
+        "workflowRunId": {"type": "varchar", "maxLength": 64},
+        "executionId": {"type": "varchar", "maxLength": 36},
+        "period": {"type": "varchar", "maxLength": 7},
+        "state": {"type": "enum", "options": ["reserved", "consumed", "released"]},
+        "auxiliary": {"type": "bool", "default": false},
+        "admittedAt": {"type": "datetime"},
+        "settledAt": {"type": "datetime"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "run": {"type": "belongsTo", "entity": "ChatwootAiAgentRun"}
+    },
+    "indexes": {
+        "tenantPeriod": {"columns": ["tenantId", "period", "state"]},
+        "runId": {"columns": ["runId"], "unique": true}
+    }
+}

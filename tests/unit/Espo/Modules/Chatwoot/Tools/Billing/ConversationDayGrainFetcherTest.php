@@ -35,7 +35,7 @@ class ConversationDayGrainFetcherTest extends TestCase
         $pdo->sqliteCreateFunction('DATE_FORMAT', static fn ($date, $format) => substr($date, 0, 10));
         $pdo->sqliteCreateFunction('JSON_UNQUOTE', static fn ($value) => $value);
         $pdo->exec('CREATE TABLE chatwoot_ai_agent_run (id TEXT, deleted INTEGER DEFAULT 0, kind TEXT,
-            conversation_id TEXT, opportunity_id TEXT, tenant_id TEXT, run_at TEXT, model_usage TEXT, billing_waived INTEGER DEFAULT 0)');
+            conversation_id TEXT, opportunity_id TEXT, source_note_id TEXT, tenant_id TEXT, run_at TEXT, model_usage TEXT, billing_waived INTEGER DEFAULT 0)');
         $insert = $pdo->prepare('INSERT INTO chatwoot_ai_agent_run
             (id, kind, conversation_id, opportunity_id, tenant_id, run_at, model_usage) VALUES (?, ?, ?, ?, ?, ?, ?)');
         foreach ([
@@ -56,7 +56,7 @@ class ConversationDayGrainFetcherTest extends TestCase
         $pdo->exec("UPDATE chatwoot_ai_agent_run SET billing_waived = NULL WHERE id = 'conv-run'");
 
         $attributes = [];
-        foreach (['id', 'kind', 'conversationId', 'opportunityId', 'tenantId'] as $name) {
+        foreach (['id', 'kind', 'conversationId', 'opportunityId', 'sourceNoteId', 'tenantId'] as $name) {
             $attributes[$name] = ['type' => 'varchar'];
         }
         $attributes['runAt'] = ['type' => 'datetime'];

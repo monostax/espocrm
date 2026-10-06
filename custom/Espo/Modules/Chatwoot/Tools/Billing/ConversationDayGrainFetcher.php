@@ -52,13 +52,15 @@ final class ConversationDayGrainFetcher
         return Expr::if(
             Expr::equal(Expr::column('kind'), 'opportunity-mention'),
             Expr::column('opportunityId'),
-            Expr::column('conversationId'),
+            Expr::if(Expr::equal(Expr::column('kind'), 'stream-mention'),
+                Expr::column('sourceNoteId'), Expr::column('conversationId')),
         );
     }
 
     private function scopeTypeExpression(): Expr
     {
-        return Expr::if(Expr::equal(Expr::column('kind'), 'opportunity-mention'), 'opportunity', 'conversation');
+        return Expr::if(Expr::equal(Expr::column('kind'), 'opportunity-mention'), 'opportunity',
+            Expr::if(Expr::equal(Expr::column('kind'), 'stream-mention'), 'stream', 'conversation'));
     }
 
     /**

@@ -14,5 +14,6 @@
     {"route": "/RecordKnowledge/relations", "method": "get", "params": {"controller": "RecordKnowledge", "action": "relations"}},
     {"route": "/RecordKnowledge/propose", "method": "post", "params": {"controller": "RecordKnowledge", "action": "propose"}},
     {"route": "/RecordKnowledge/author", "method": "post", "params": {"controller": "RecordKnowledge", "action": "author"}},
+    {"route": "/RecordKnowledge/unlink", "method": "post", "params": {"controller": "RecordKnowledge", "action": "unlink"}},
     {"route": "/RecordKnowledge/decide", "method": "post", "params": {"controller": "RecordKnowledge", "action": "decide"}}
 ]

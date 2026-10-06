@@ -30,6 +30,8 @@
         "name": "creditModel",
         "label": "Credit model",
         "rows": [
+            [{"name": "overagePolicy"}, false],
+            [{"name": "budgetStatus", "fullWidth": true}],
             [
                 {
                     "name": "creditUnitPrice"

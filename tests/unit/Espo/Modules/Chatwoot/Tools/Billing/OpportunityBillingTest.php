@@ -9,6 +9,17 @@ use PHPUnit\Framework\TestCase;
 
 class OpportunityBillingTest extends TestCase
 {
+    public function testGenericStreamMentionsConsumeCreditsWithoutAConversation(): void
+    {
+        $grains = ConversationDayGrain::fromGroupedCounts([
+            ['scopeType' => 'stream', 'scopeId' => 'note', 'dayBucket' => '2026-09-18',
+                'tenantId' => 'tenant', 'kind' => 'stream-mention', 'cnt' => 2],
+        ]);
+        $this->assertCount(1, $grains);
+        $this->assertSame('note', $grains[0]->sourceNoteId);
+        $this->assertSame(2, $grains[0]->priceCredit()['credits']);
+    }
+
     public function testOpportunityMentionsAreIncludedInAllPricingModels(): void
     {
         $grains = ConversationDayGrain::fromGroupedCounts([

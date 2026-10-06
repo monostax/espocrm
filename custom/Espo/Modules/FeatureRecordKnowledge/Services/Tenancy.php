@@ -61,6 +61,10 @@ class Tenancy
 
     public function recordIds(Entity $record): array
     {
+        if ($record->getEntityType() === 'ChatwootConversation') {
+            $account = $this->em->getEntityById('ChatwootAccount', $record->get('chatwootAccountId'));
+            return $account ? $this->recordIds($account) : [];
+        }
         if ($record->getEntityType() === 'Tenant') return [$record->getId()];
         if ($record->getEntityType() === 'User' && $record instanceof User) return $this->users->resolveTenantIds($record);
         if ($record->get('knowledgeRecordType')) {
@@ -76,9 +80,10 @@ class Tenancy
         return $teamIds;
     }
 
-    public function derive(Entity $subject, Entity $object, Entity $document, ?string $selected = null): string
+    public function derive(Entity $subject, Entity $object, ?Entity $document = null, ?string $selected = null): string
     {
-        $ids = array_values(array_intersect($this->recordIds($subject), $this->recordIds($object), $this->recordIds($document)));
+        $ids = array_values(array_intersect($this->recordIds($subject), $this->recordIds($object)));
+        if ($document) $ids = array_values(array_intersect($ids, $this->recordIds($document)));
         if (!$selected && count($ids) === 1) $selected = $ids[0];
         if (!$selected || !in_array($selected, $ids, true)) throw new BadRequest('Endpoint/evidence tenancy is missing, ambiguous or cross-tenant.');
         $this->assert($selected);

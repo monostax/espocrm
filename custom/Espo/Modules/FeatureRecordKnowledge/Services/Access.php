@@ -12,6 +12,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
+use Espo\Modules\FeatureRecordKnowledge\Tools\Evidence;
 
 class Access
 {
@@ -53,9 +54,16 @@ class Access
         if (!$claim->get('tenantId')) throw new Forbidden('Claim tenancy is missing.');
         $subject = $this->record($claim->get('subjectType'), $claim->get('subjectId'), $edit ? 'edit' : 'read');
         $object = $this->record($claim->get('objectType'), $claim->get('objectId'));
-        $document = $this->document($claim->get('sourceDocumentId'));
-        $revision = $this->revision($claim->get('sourceRevisionId'));
-        if ($revision->get('documentId') !== $document->getId()) throw new Forbidden();
+        $document = null;
+        $hasEvidence = Evidence::provided($claim->get('sourceRevisionId'), $claim->get('evidenceQuote'),
+            $claim->get('evidenceStart'), $claim->get('evidenceEnd'), $claim->get('origin') !== 'manual');
+        if ($hasEvidence) {
+            $document = $this->document($claim->get('sourceDocumentId'));
+            $revision = $this->revision($claim->get('sourceRevisionId'));
+            if ($revision->get('documentId') !== $document->getId()) throw new Forbidden();
+        } elseif ($claim->get('sourceDocumentId')) {
+            throw new Forbidden('Incomplete relation evidence.');
+        }
         $tenantId = $this->tenancy->derive($subject, $object, $document, $claim->get('tenantId'));
         $this->registry->resolve($claim->get('predicate'), $tenantId, false);
     }

@@ -21,8 +21,8 @@ class Ledger
         }
         foreach ($source as $run) {
             $run['day'] = $period->day($run['runAt']);
-            $type = $run['kind'] === 'opportunity-mention' ? 'opportunity' : 'conversation';
-            $id = (string) ($run[$type . 'Id'] ?? '');
+            $type = match ($run['kind']) { 'opportunity-mention' => 'opportunity', 'stream-mention' => 'stream', default => 'conversation' };
+            $id = (string) ($run[$type === 'stream' ? 'sourceNoteId' : $type . 'Id'] ?? '');
             $run['groupKey'] = $id !== '' ? $run['day'] . '|' . $type . '|' . $id : null;
             $runs[] = $run;
             $daily[$run['day']]['runs']++;

@@ -1,4 +1,6 @@
 [
+    { "route": "/TenantAiBillingRate/:id/budgetStatus", "method": "get", "params": { "controller": "AiBudgetStatus", "action": "read", "id": ":id" } },
+    { "route": "/AiBudget", "method": "post", "noAuth": true, "params": { "controller": "AiBudget", "action": "execute" } },
     { "route": "/Account/action/inbox", "method": "get", "params": { "controller": "AccountInbox", "action": "list" } },
     { "route": "/Account/action/navigationCounts", "method": "get", "params": { "controller": "AccountInbox", "action": "counts" } },
     { "route": "/Account/action/groupSummary", "method": "get", "params": { "controller": "AccountInbox", "action": "groups" } },

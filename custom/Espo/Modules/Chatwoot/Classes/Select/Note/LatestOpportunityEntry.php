@@ -9,6 +9,7 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\Query\Select;
+use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\SelectBuilder;
 
 /** One preview per opportunity; a busy conversation must not starve other cards. */
@@ -18,19 +19,24 @@ class LatestOpportunityEntry implements Filter
 
     public function apply(SelectBuilder $queryBuilder): void
     {
-        $queryBuilder->where([
-            'parentType' => 'Opportunity',
-            'number=s' => $this->latestNumber('note.parentId'),
-        ]);
+        $parents = SelectBuilder::create()->clone($queryBuilder->build())
+            ->select(['parentId'])->order([])->limit(null, null)->build();
+        $queryBuilder->join($this->latestNumbers($parents), 'latestOpportunityEntry',
+            Expr::equal(Expr::alias('latestOpportunityEntry.lastNumber'), Expr::column('number')));
+        $queryBuilder->where(['parentType' => 'Opportunity']);
     }
 
-    public function latestNumber(string $parentIdColumn): Select
+    /** Evaluate event visibility once per note set, rather than once per parent row. */
+    public function latestNumbers(?Select $opportunities = null): Select
     {
-        return SelectBuilder::create()->from('Note', 'latestEntry')
-            ->select([['MAX:number', 'lastNumber']])->where([
+        $query = SelectBuilder::create()->from('Note', 'latestEntry')
+            ->select(['parentId', ['MAX:number', 'lastNumber']])->where([
                 'parentType' => 'Opportunity',
-                'parentId:' => $parentIdColumn,
                 'type' => OpportunityStreamEvents::TYPES,
-            ])->where($this->access->where($this->user))->build();
+            ])->where($this->access->where($this->user))->group('parentId');
+        if ($opportunities) {
+            $query->where(['parentId=s' => $opportunities]);
+        }
+        return $query->build();
     }
 }

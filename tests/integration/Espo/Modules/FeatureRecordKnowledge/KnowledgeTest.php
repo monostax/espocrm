@@ -199,6 +199,122 @@ class KnowledgeTest extends TestCase
         $this->assertSame('account', $native[0]['provenance']['field']);
     }
 
+    public function testManualRelationWithoutEvidenceIsConfirmedIdempotentAndUnaffectedByDocumentEdits(): void
+    {
+        $account = $this->owned('Account', ['name' => 'Manual relation account']);
+        $contact = $this->owned('Contact', ['firstName' => 'Manual', 'lastName' => 'Relation']);
+        $relations = $this->service(Relations::class);
+        $input = (object) ['subjectType' => 'Contact', 'subjectId' => $contact->getId(), 'predicate' => 'works_at',
+            'objectType' => 'Account', 'objectId' => $account->getId(), 'idempotencyKey' => 'manual-' . $contact->getId()];
+        $claim = $relations->submit($input, true);
+        $this->assertSame('confirmed', $claim['status']);
+        $this->assertSame('manual', $claim['origin']);
+        $this->assertNotEmpty($claim['createdById']);
+        $this->assertSame($claim['createdById'], $claim['decidedById']);
+        $this->assertNotEmpty($claim['decidedAt']);
+        foreach (['sourceDocumentId', 'sourceRevisionId', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'anchorRevisionId', 'anchorStart', 'anchorEnd'] as $field) {
+            $this->assertNull($claim[$field]);
+        }
+        $this->assertSame($claim['id'], $relations->submit($input, true)['id']);
+        $this->assertSame($claim['id'], $relations->list('Account', $account->getId(), 'incoming')['list'][0]['id']);
+        $this->assertSame('confirmed', $relations->decide($claim['id'], 'confirmed')['status']);
+        $knowledge = $this->service(Knowledge::class);
+        $overview = $knowledge->read('Contact', $contact->getId());
+        $knowledge->write('Contact', $contact->getId(), 'An unrelated overview edit.', $overview['versionNumber']);
+        $this->assertSame('confirmed', $relations->list('Contact', $contact->getId())['list'][0]['status']);
+        $this->assertNull($this->em->getEntityById('Contact', $contact->getId())->get('accountId'));
+        $input->qualifiers = (object) ['role' => 'Changed'];
+        $this->expectException(Conflict::class);
+        $relations->submit($input, true);
+    }
+
+    public function testManualOptionalEvidenceRemainsValidatedAndAssistantEvidenceIsRequired(): void
+    {
+        $account = $this->owned('Account', ['name' => 'Optional evidence account']);
+        $contact = $this->owned('Contact', ['firstName' => 'Optional', 'description' => 'Optional works at Acme.']);
+        $relations = $this->service(Relations::class);
+        $knowledge = $this->service(Knowledge::class);
+        $overview = $knowledge->read('Contact', $contact->getId());
+        $base = ['subjectType' => 'Contact', 'subjectId' => $contact->getId(), 'predicate' => 'works_at',
+            'objectType' => 'Account', 'objectId' => $account->getId(), 'idempotencyKey' => 'optional-' . $contact->getId()];
+        foreach ([[], ['sourceRevisionId' => $overview['revision']['id']], ['evidenceQuote' => 'Optional works at Acme.'], ['evidenceStart' => 0]] as $evidence) {
+            foreach ($evidence ? [true, false] : [false] as $manual) {
+                try { $relations->submit((object) [...$base, ...$evidence], $manual); $this->fail('Incomplete evidence accepted.'); }
+                catch (BadRequest) { $this->addToAssertionCount(1); }
+            }
+        }
+        $claim = $relations->submit((object) [...$base, 'sourceRevisionId' => $overview['revision']['id'], 'evidenceQuote' => 'Optional works at Acme.'], true);
+        $this->assertSame('confirmed', $claim['status']);
+        $this->assertSame($overview['revision']['id'], $claim['sourceRevisionId']);
+        $knowledge->write('Contact', $contact->getId(), 'Evidence removed.', $overview['versionNumber']);
+        $this->assertSame('stale', $relations->list('Contact', $contact->getId())['list'][0]['status']);
+        try { $relations->submit((object) [...$base, 'idempotencyKey' => 'stale-' . $contact->getId(),
+            'sourceRevisionId' => $overview['revision']['id'], 'evidenceQuote' => 'Optional works at Acme.'], true);
+            $this->fail('Stale manual evidence accepted.'); } catch (Conflict) { $this->addToAssertionCount(1); }
+    }
+
+    public function testEvidenceFreeRelationsStillEnforceTenantAndOrmBoundaries(): void
+    {
+        $account = $this->owned('Account', ['name' => 'Foreign manual account'], $this->tenant()->getId());
+        $contact = $this->owned('Contact', ['firstName' => 'Manual boundary']);
+        $base = ['subjectType' => 'Contact', 'subjectId' => $contact->getId(), 'predicate' => 'works_at',
+            'objectType' => 'Account', 'objectId' => $account->getId(), 'idempotencyKey' => 'cross-manual-' . $contact->getId()];
+        try { $this->service(Relations::class)->submit((object) $base, true); $this->fail('Cross-tenant manual link accepted.'); }
+        catch (BadRequest) { $this->addToAssertionCount(1); }
+        $account = $this->owned('Account', ['name' => 'Same tenant manual account']);
+        $values = [...$base, 'objectId' => $account->getId(), 'tenantId' => self::$tenantId,
+            'origin' => 'assistant', 'status' => 'suggested', 'submissionKey' => hash('sha256', $contact->getId()), 'submissionHash' => hash('sha256', 'manual')];
+        unset($values['idempotencyKey']);
+        try { $this->em->createEntity('RecordRelation', $values); $this->fail('ORM assistant claim without evidence accepted.'); }
+        catch (BadRequest) { $this->addToAssertionCount(1); }
+        $claim = $this->em->createEntity('RecordRelation', [...$values, 'origin' => 'manual']);
+        $this->assertSame('confirmed', $claim->get('status'));
+        $claim->set('evidenceQuote', 'Added without revision');
+        $this->expectException(Conflict::class);
+        $this->em->saveEntity($claim);
+    }
+
+    public function testManualUnlinkRemovesOnlyTheAssociationAndOldRetriesCannotResurrectIt(): void
+    {
+        $account = $this->owned('Account', ['name' => 'Unlink account']);
+        $contact = $this->owned('Contact', ['firstName' => 'Unlink', 'accountId' => $account->getId()]);
+        $relations = $this->service(Relations::class);
+        $input = (object) ['subjectType' => 'Contact', 'subjectId' => $contact->getId(), 'predicate' => 'works_at',
+            'objectType' => 'Account', 'objectId' => $account->getId(), 'idempotencyKey' => 'unlink-' . $contact->getId()];
+        $claim = $relations->submit($input, true);
+        $this->assertTrue($claim['canUnlink']);
+        $request = (new ServerRequestFactory())->createServerRequest('POST', '/RecordKnowledge/unlink')
+            ->withHeader('Content-Type', 'application/json')->withBody((new StreamFactory())->createStream(json_encode(['id' => $claim['id']])));
+        $this->assertSame($claim['id'], $this->service(RecordKnowledge::class)->postActionUnlink(new RequestWrapper($request))->id);
+        $this->assertNull($this->em->getEntityById('RecordRelation', $claim['id']));
+        $this->assertSame([], $relations->list('Contact', $contact->getId())['list']);
+        $this->assertNotNull($this->em->getEntityById('Account', $account->getId()));
+        $this->assertSame($account->getId(), $this->em->getEntityById('Contact', $contact->getId())->get('accountId'));
+        try { $relations->submit($input, true); $this->fail('Unlinked relation resurrected by a retry.'); }
+        catch (Conflict) { $this->addToAssertionCount(1); }
+        $input->idempotencyKey .= '-new';
+        $this->assertNotSame($claim['id'], $relations->submit($input, true)['id']);
+    }
+
+    public function testConversationRelationTenancyComesFromItsChatwootAccount(): void
+    {
+        $account = $this->em->getNewEntity('ChatwootAccount');
+        $account->set(['name' => 'Relation workspace', 'tenantId' => self::$tenantId, 'chatwootAccountId' => 91919]);
+        $this->em->saveEntity($account, ['skipHooks' => true]);
+        $conversation = $this->em->getNewEntity('ChatwootConversation');
+        $conversation->set(['name' => 'Conversation relation', 'chatwootAccountId' => $account->getId(), 'chatwootConversationId' => 91919]);
+        $this->em->saveEntity($conversation, ['skipHooks' => true]);
+        $this->assertSame([self::$tenantId], $this->service(Tenancy::class)->recordIds($conversation));
+        $this->assertTrue($this->service(\Espo\Modules\FeatureRecordKnowledge\Tools\Scopes::class)->supports('ChatwootConversation'));
+        $contact = $this->owned('Contact', ['firstName' => 'Conversation target']);
+        $claim = $this->service(Relations::class)->submit((object) [
+            'subjectType' => 'ChatwootConversation', 'subjectId' => $conversation->getId(),
+            'objectType' => 'Contact', 'objectId' => $contact->getId(), 'predicate' => 'part_of',
+            'idempotencyKey' => 'conversation-' . $conversation->getId(),
+        ], true);
+        $this->assertSame('confirmed', $claim['status']);
+    }
+
     public function testVersionConflictsAndCanonicalDeleteRestore(): void
     {
         $account = $this->em->createEntity('Account', ['name' => 'Restore Acme']);
@@ -343,8 +459,15 @@ class KnowledgeTest extends TestCase
         $claim = $relations->submit($input);
         $this->assertSame('suggested', $claim['status']);
         $this->assertSame('assistant', $claim['origin']);
+        $this->assertFalse($claim['canUnlink']);
+        try { $this->service(Relations::class)->unlink($claim['id']); $this->fail('Assistant proposal was unlinked as a manual association.'); }
+        catch (Forbidden) { $this->addToAssertionCount(1); }
+        $withoutEvidence = clone $input;
+        unset($withoutEvidence->sourceRevisionId, $withoutEvidence->evidenceQuote);
+        try { $relations->submit($withoutEvidence); $this->fail('Assistant omitted required evidence.'); }
+        catch (BadRequest) { $this->addToAssertionCount(1); }
         $this->assertSame($user->getId(), $claim['createdById']);
-        foreach ([fn () => $relations->decide($claim['id'], 'confirmed'), fn () => $relations->submit($input, true)] as $write) {
+        foreach ([fn () => $relations->decide($claim['id'], 'confirmed'), fn () => $relations->submit($input, true), fn () => $relations->unlink($claim['id'])] as $write) {
             try { $write(); $this->fail('Assistant decided its own proposal.'); }
             catch (Forbidden) { $this->addToAssertionCount(1); }
         }

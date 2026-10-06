@@ -17,7 +17,7 @@
         "parent": {
             "type": "linkParent",
             "required": true,
-            "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "Initiative"]
+            "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "Initiative", "Opportunity"]
         },
         "description": { "type": "text" },
         "initiativeType": { "type": "link", "readOnly": true },
@@ -29,7 +29,7 @@
     },
     "links": {
         "initiative": { "type": "belongsTo", "entity": "Initiative", "foreign": "relations" },
-        "parent": { "type": "belongsToParent", "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "Initiative"] },
+        "parent": { "type": "belongsToParent", "entityList": ["Account", "Contact", "ChatwootConversation", "Task", "Initiative", "Opportunity"] },
         "initiativeType": { "type": "belongsTo", "entity": "InitiativeType" },
         "tenant": { "type": "belongsTo", "entity": "Tenant" },
         "createdBy": { "type": "belongsTo", "entity": "User" },

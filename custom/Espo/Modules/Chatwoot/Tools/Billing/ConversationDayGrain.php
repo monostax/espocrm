@@ -23,6 +23,7 @@ final class ConversationDayGrain
         public readonly int $customerMessageTurns,
         public readonly int $nonCustomerTurns,
         public readonly ?string $opportunityId = null,
+        public readonly ?string $sourceNoteId = null,
     ) {}
 
     /**
@@ -38,7 +39,7 @@ final class ConversationDayGrain
             $scopeId = (string) ($row['scopeId'] ?? '');
             $scopeType = (string) ($row['scopeType'] ?? '');
             $count = (int) ($row['cnt'] ?? 0);
-            if ($scopeId === '' || !in_array($scopeType, ['conversation', 'opportunity'], true) || $count <= 0) {
+            if ($scopeId === '' || !in_array($scopeType, ['conversation', 'opportunity', 'stream'], true) || $count <= 0) {
                 continue;
             }
             $day = (string) ($row['dayBucket'] ?? '-');
@@ -56,6 +57,7 @@ final class ConversationDayGrain
             $row['scopeType'] === 'conversation' ? $row['scopeId'] : null,
             $row['day'], $row['tenant'], $row['customer'], $row['nonCustomer'],
             $row['scopeType'] === 'opportunity' ? $row['scopeId'] : null,
+            $row['scopeType'] === 'stream' ? $row['scopeId'] : null,
         ), $merged));
     }
 

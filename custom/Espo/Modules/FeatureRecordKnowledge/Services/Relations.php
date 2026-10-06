@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\SelectBuilder;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Evidence;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Predicates;
 
@@ -25,27 +26,30 @@ class Relations
         $allowed = ['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'sourceRevisionId', 'idempotencyKey',
             'qualifiers', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'tenantId'];
         if (array_diff(array_keys(get_object_vars($input)), $allowed)) throw new BadRequest('Unknown proposal properties.');
-        $required = ['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'sourceRevisionId', 'idempotencyKey'];
+        $required = ['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'idempotencyKey'];
         foreach ($required as $field) {
             if (!is_string($input->$field ?? null) || $input->$field === '') throw new BadRequest("$field is required.");
         }
         if (!preg_match('/^[a-zA-Z0-9_.:-]{1,128}$/D', $input->idempotencyKey)) throw new BadRequest('Invalid idempotency key.');
         $subject = $this->access->record($input->subjectType, $input->subjectId, $manual ? 'edit' : 'read');
         $object = $this->access->record($input->objectType, $input->objectId);
-        $revision = $this->access->revision($input->sourceRevisionId);
-        $source = $this->access->document($revision->get('documentId'));
+        $hasEvidence = Evidence::provided($input->sourceRevisionId ?? null, $input->evidenceQuote ?? null,
+            $input->evidenceStart ?? null, $input->evidenceEnd ?? null, !$manual);
+        $revision = $hasEvidence ? $this->access->revision($input->sourceRevisionId) : null;
+        $source = $revision ? $this->access->document($revision->get('documentId')) : null;
         if (isset($input->tenantId) && !is_string($input->tenantId)) throw new BadRequest('Invalid tenant selection.');
         $tenantId = $this->tenancy->derive($subject, $object, $source, $input->tenantId ?? null);
-        [$start, $end] = Evidence::validate((string) $revision->get('body'), $input->evidenceQuote ?? null,
-            $input->evidenceStart ?? null, $input->evidenceEnd ?? null);
+        [$start, $end] = $hasEvidence
+            ? Evidence::validate((string) $revision->get('body'), $input->evidenceQuote, $input->evidenceStart ?? null, $input->evidenceEnd ?? null)
+            : [null, null];
         $values = [
             'subjectType' => $input->subjectType, 'subjectId' => $input->subjectId, 'objectType' => $input->objectType, 'objectId' => $input->objectId,
-            'tenantId' => $tenantId, 'sourceDocumentId' => $revision->get('documentId'),
-            'sourceRevisionId' => $revision->getId(), 'evidenceQuote' => $input->evidenceQuote, 'evidenceStart' => $start, 'evidenceEnd' => $end,
+            'tenantId' => $tenantId, 'sourceDocumentId' => $revision?->get('documentId'),
+            'sourceRevisionId' => $revision?->getId(), 'evidenceQuote' => $input->evidenceQuote ?? null, 'evidenceStart' => $start, 'evidenceEnd' => $end,
             'origin' => $manual ? 'manual' : 'assistant',
         ];
         $key = hash('sha256', $this->user->getId() . ':' . $input->idempotencyKey);
-        return $this->em->getTransactionManager()->run(function () use ($values, $key, $manual, $input, $tenantId) {
+        return $this->em->getTransactionManager()->run(function () use ($values, $key, $manual, $input, $tenantId, $hasEvidence) {
             // Actor-scoped keys can be retried against different documents concurrently.
             $this->em->getRDBRepository('User')->select(['id'])->where(['id' => $this->user->getId()])->forUpdate()->findOne();
             $this->registry->lock($tenantId);
@@ -54,26 +58,30 @@ class Relations
             $values['qualifiers'] = Predicates::values($definition, $input->subjectType, $input->objectType, $input->qualifiers ?? (object) []);
             $hash = hash('sha256', json_encode($values, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             // Lock the source before comparing current evidence or submitting decisions.
-            $document = $this->em->getRDBRepository('Document')->select(['id', 'body', 'bodyRevisionNumber'])->where(['id' => $values['sourceDocumentId']])->forUpdate()->findOne();
-            if (!$document) throw new NotFound();
-            $existing = $this->em->getRDBRepository('RecordRelation')->where(['submissionKey' => $key])->findOne();
+            $document = $hasEvidence
+                ? $this->em->getRDBRepository('Document')->select(['id', 'body', 'bodyRevisionNumber'])->where(['id' => $values['sourceDocumentId']])->forUpdate()->findOne()
+                : null;
+            if ($hasEvidence && !$document) throw new NotFound();
+            $existing = $this->em->getRDBRepository('RecordRelation')->clone(SelectBuilder::create()->from('RecordRelation')
+                ->withDeleted()->where(['submissionKey' => $key])->build())->findOne();
             if ($existing) {
                 $this->access->claim($existing);
+                if ($existing->get('deleted')) throw new Conflict('This relation was unlinked. Use a new idempotency key to link again.');
                 if ($existing->get('submissionHash') !== $hash) throw new Conflict('Idempotency key was already used for another proposal.');
                 return $this->data($existing);
             }
             if (!$definition['active']) throw new BadRequest('Predicate is inactive.');
-            $anchor = Evidence::anchor((string) $document->get('body'), $values['evidenceQuote']);
-            $current = $this->em->getRDBRepository('DocumentRevision')->where([
+            $anchor = $document ? Evidence::anchor((string) $document->get('body'), $values['evidenceQuote']) : null;
+            $current = $document ? $this->em->getRDBRepository('DocumentRevision')->where([
                 'documentId' => $document->getId(), 'revisionNumber' => $document->get('bodyRevisionNumber'),
-            ])->findOne();
+            ])->findOne() : null;
             // An explicitly selected span in the current revision is already anchored,
             // even when that quote occurs more than once.
-            if ($current?->getId() === $values['sourceRevisionId']) $anchor = [$values['evidenceStart'], $values['evidenceEnd']];
-            if ($manual && !$anchor) throw new Conflict('Evidence is no longer supported by the current document.');
+            if ($current && $current->getId() === $values['sourceRevisionId']) $anchor = [$values['evidenceStart'], $values['evidenceEnd']];
+            if ($hasEvidence && $manual && !$anchor) throw new Conflict('Evidence is no longer supported by the current document.');
             $claim = $this->em->createEntity('RecordRelation', [...$values,
                 'submissionKey' => $key, 'submissionHash' => $hash,
-                'status' => $anchor ? ($manual ? 'confirmed' : 'suggested') : 'stale',
+                'status' => !$hasEvidence || $anchor ? ($manual ? 'confirmed' : 'suggested') : 'stale',
                 'anchorRevisionId' => $anchor ? $current?->getId() : null, 'anchorStart' => $anchor[0] ?? null, 'anchorEnd' => $anchor[1] ?? null,
                 'decidedById' => $manual ? $this->user->getId() : null, 'decidedAt' => $manual ? gmdate('Y-m-d H:i:s') : null,
             ]);
@@ -88,6 +96,10 @@ class Relations
         $claim = $this->em->getEntityById('RecordRelation', $id);
         if (!$claim) throw new NotFound();
         $this->access->claim($claim, true);
+        if (!$claim->get('sourceDocumentId')) {
+            if ($claim->get('status') === $status) return $this->data($claim);
+            throw new Conflict('Only suggested claims can be decided.');
+        }
         return $this->em->getTransactionManager()->run(function () use ($claim, $status) {
             // Same lock order as document revision maintenance: document, then claim.
             $document = $this->em->getRDBRepository('Document')->select(['id', 'body'])->where(['id' => $claim->get('sourceDocumentId')])->forUpdate()->findOne();
@@ -103,6 +115,20 @@ class Relations
             $claim->set(['status' => $status, 'decidedById' => $this->user->getId(), 'decidedAt' => gmdate('Y-m-d H:i:s')]);
             $this->em->saveEntity($claim);
             return $this->data($claim);
+        });
+    }
+
+    public function unlink(string $id): void
+    {
+        if ($this->user->isApi()) throw new Forbidden('A human CRM user must remove manual relations.');
+        $claim = $this->em->getEntityById('RecordRelation', $id);
+        if (!$claim) throw new NotFound();
+        $this->access->claim($claim, true);
+        if ($claim->get('origin') !== 'manual') throw new Forbidden('Only manual relations can be unlinked.');
+        $this->em->getTransactionManager()->run(function () use ($claim) {
+            $this->registry->lock($claim->get('tenantId'));
+            $this->em->removeEntity($claim);
+            $this->registry->changed($claim->get('tenantId'));
         });
     }
 
@@ -155,6 +181,7 @@ class Relations
         $definition = $this->registry->resolve($values['predicate'], $values['tenantId'], false);
         return ['id' => $claim->getId(), ...$values, 'predicateLabel' => $definition['label'], 'inverseLabel' => $definition['inverse'],
             'subjectLabel' => $subject->get('name'), 'objectLabel' => $object->get('name'),
-            'editable' => $editable && $claim->get('status') === 'suggested'];
+            'editable' => $editable && $claim->get('status') === 'suggested',
+            'canUnlink' => $editable && $claim->get('origin') === 'manual'];
     }
 }

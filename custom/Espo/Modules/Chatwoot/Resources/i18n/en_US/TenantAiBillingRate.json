@@ -1,5 +1,7 @@
 {
     "fields": {
+        "budgetStatus": "Current tenant credit balance",
+        "overagePolicy": "When credits run out",
         "billingModel": "Billing Model",
         "name": "Name",
         "tenant": "Tenant",
@@ -21,6 +23,10 @@
         "modifiedBy": "Modified By"
     },
     "labels": {
+        "budgetConsumed": "Consumed", "budgetReserved": "Reserved", "budgetRemaining": "Remaining",
+        "budgetResets": "Resets", "budgetPaused": "AI paused: credit allowance exhausted",
+        "budgetUnavailable": "AI budget status unavailable", "budgetAllow": "Overage allowed",
+        "budgetBlock": "New engagements stop at the allowance",
         "Create TenantAiBillingRate": "Create AI Billing Rate",
         "Plan franchise": "Plan franchise",
         "Pack model": "Pack model",
@@ -30,6 +36,7 @@
         "planIncludedBases": "Bases Included / Month"
     },
     "tooltips": {
+        "overagePolicy": "Allow overage bills additional engagements. Block at allowance pauses new AI work when consumed credits plus active reservations reach the monthly allowance; already authorized engagements finish normally. With Block and zero included credits, AI is paused immediately.",
         "billingModel": "The commercial model agreed with this tenant for this period. Blank shows configuration required in AI Usage. Model and monthly allowance changes should begin at a month boundary.",
         "name": "Optional label. Left empty = auto \"YYYY-MM-DD → YYYY-MM-DD|∞\".",
         "effectiveFrom": "First calendar day (app timezone) this rate card applies to conversation-days.",
@@ -42,9 +49,10 @@
         "extraIncludedTurns": "Extra model: number of customer message runs included in the base charge per conversation and day. Mention or automation runs are billed separately. Empty = 4.",
         "planIncludedUsage": "Monthly plan allowance, measured in packs for the pack model and conversations or opportunities handled for the extra model. 0 = no allowance. Use a full-month report range to apply the allowance in chronological order.",
         "creditUnitPrice": "Credit model: price per credit. Each agent run consumes 1 credit, regardless of the number of LLM calls or tokens. Applies to runs triggered by customer messages, @mentions, follow-ups or scheduled messages. Empty = 0.49.",
-        "planIncludedCredits": "Credit model: credits included per calendar month, consumed in chronological order. Each agent run consumes 1 credit. Excess credits are billed at the Credit Unit Price. 0 = no allowance. Use a full-month report range."
+        "planIncludedCredits": "Credits included per calendar month. Each agent engagement consumes 1 credit. Allow overage bills additional credits at the Credit Unit Price; Block at allowance pauses new AI work when consumed and reserved credits reach this limit. Zero means no included credits (and pauses AI immediately when blocking). Use a full-month report range."
     },
     "options": {
+        "overagePolicy": {"allow": "Allow overage", "block": "Block at allowance"},
         "billingModel": {"": "Not configured", "pack199": "Packs", "extra049": "Base + extras", "credit": "Credits"}
     }
 }

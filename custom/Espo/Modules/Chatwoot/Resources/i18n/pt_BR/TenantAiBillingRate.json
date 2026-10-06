@@ -1,5 +1,7 @@
 {
     "fields": {
+        "budgetStatus": "Saldo atual de créditos do tenant",
+        "overagePolicy": "Quando os créditos acabarem",
         "billingModel": "Modelo de cobrança",
         "name": "Nome",
         "tenant": "Ambiente",
@@ -21,6 +23,10 @@
         "modifiedBy": "Modificado Por"
     },
     "labels": {
+        "budgetConsumed": "Consumidos", "budgetReserved": "Reservados", "budgetRemaining": "Disponíveis",
+        "budgetResets": "Renovação", "budgetPaused": "IA pausada: franquia de créditos esgotada",
+        "budgetUnavailable": "Saldo de IA indisponível", "budgetAllow": "Excedente permitido",
+        "budgetBlock": "Novas execuções param na franquia",
         "Create TenantAiBillingRate": "Criar Tarifa de IA",
         "Plan franchise": "Franquia mensal do plano",
         "Pack model": "Cobrança por pacotes",
@@ -30,6 +36,7 @@
         "planIncludedBases": "Franquia Mensal de Bases Diárias"
     },
     "tooltips": {
+        "overagePolicy": "Permitir excedente cobra os atendimentos adicionais. Bloquear na franquia pausa novas execuções quando créditos consumidos e reservados atingem a franquia mensal; execuções já autorizadas terminam normalmente. Bloquear com zero créditos incluídos pausa a IA imediatamente.",
         "billingModel": "Modelo contratado pelo ambiente durante esta vigência. Define a unidade consumida: pacote, base diária ou crédito. Sem seleção, o painel Consumo de IA não calcula a cobrança. Mudanças de modelo ou franquia devem começar no primeiro dia do mês. Execuções com resultado failed ou sem o vínculo exigido de conversa/oportunidade não entram na cobrança nem consomem a franquia.",
         "name": "Nome opcional para identificar a tarifa. Se ficar vazio, será gerado a partir das datas de vigência; ∞ indica ausência de data de término.",
         "effectiveFrom": "Primeiro dia civil ao qual se aplicam estes preços, no fuso do sistema. A tarifa é selecionada pela data da execução, não pela data de criação da conversa ou oportunidade.",
@@ -42,9 +49,10 @@
         "extraIncludedTurns": "Quantidade de execuções por mensagem do cliente incluídas em cada base diária. Execuções por outros gatilhos são adicionais desde a primeira. Esta quantidade é por conversa e dia, não é a franquia mensal. Vazio usa 4; zero torna todas as execuções adicionais.",
         "planIncludedUsage": "Franquia por ambiente e mês civil: pacotes no modelo por pacotes, ou bases diárias no modelo base + adicionais. Cada base corresponde a uma conversa ou oportunidade em um dia; a cobertura inclui todos os adicionais dessa base. Zero ou vazio = sem franquia. A aplicação segue a ordem dos dias. No painel Consumo de IA, filtros não reiniciam a franquia; nos relatórios, selecione o mês completo.",
         "creditUnitPrice": "Preço por crédito fora da franquia. Cada execução considerada na cobrança consome 1 crédito, independentemente do gatilho, das chamadas ao LLM e dos tokens. Vazio usa 0,49 na moeda da tarifa; zero é um preço válido.",
-        "planIncludedCredits": "Créditos cobertos pelo plano por ambiente e mês civil. Cada execução considerada na cobrança consome 1 crédito. A franquia é aplicada em ordem de dia; créditos excedentes são multiplicados pelo preço por crédito. Zero ou vazio = sem franquia. No painel Consumo de IA, filtros não reiniciam a franquia; nos relatórios, selecione o mês completo."
+        "planIncludedCredits": "Créditos incluídos por ambiente e mês civil. Cada execução do agente consome 1 crédito. Permitir excedente cobra os créditos adicionais pelo preço por crédito; Bloquear na franquia pausa novas execuções quando consumidos e reservados atingem este limite. Zero = sem créditos incluídos (pausa imediata se o bloqueio estiver ativo). Filtros não reiniciam a franquia; nos relatórios, selecione o mês completo."
     },
     "options": {
+        "overagePolicy": {"allow": "Permitir excedente", "block": "Bloquear na franquia"},
         "billingModel": {"": "Não configurado", "pack199": "Pacotes", "extra049": "Base + adicionais", "credit": "Créditos"}
     }
 }

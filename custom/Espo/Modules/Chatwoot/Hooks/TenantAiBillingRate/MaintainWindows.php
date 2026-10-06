@@ -41,6 +41,15 @@ class MaintainWindows
             return;
         }
 
+        $policy = $entity->get('overagePolicy') ?: 'allow';
+        if (!in_array($policy, ['allow', 'block'], true)) {
+            throw new BadRequest('Invalid AI overage policy.');
+        }
+        if ($policy === 'block' && $entity->get('billingModel') !== 'credit') {
+            throw new BadRequest('Block at allowance requires the credit billing model.');
+        }
+        $entity->set('overagePolicy', $policy);
+
         $from = $this->asDate($entity->get('effectiveFrom'));
         $to = $this->asDate($entity->get('effectiveTo'));
 

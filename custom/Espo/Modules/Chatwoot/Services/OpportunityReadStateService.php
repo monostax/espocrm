@@ -19,6 +19,7 @@ use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Condition as Cond;
+use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\SelectBuilder;
 use Closure;
 
@@ -54,16 +55,22 @@ class OpportunityReadStateService
 
         $userId = $this->user->getId();
         $mention = ['opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+        $scope = SelectBuilder::create()->clone($queryBuilder->build())
+            ->select(['id'])->order([])->limit(null, null)->build();
         $posts = SelectBuilder::create()
             ->from('Note', 'streamPost')
-            ->select('id')
+            ->select('parentId')->group('parentId')
             ->where([
                 'parentType' => 'Opportunity',
-                'parentId:' => 'opportunity.id',
+                'parentId=s' => $scope,
                 'OR' => [['createdById!=' => $userId], ['createdById' => null]],
             ])->where(['type' => OpportunityStreamEvents::TYPES])->where($this->eventAccess->where($this->user));
 
         if ($onlyUnread) {
+            $posts->join('Opportunity', 'unreadOpportunity', [
+                'unreadOpportunity.id:' => 'streamPost.parentId',
+                'unreadOpportunity.deleted' => false,
+            ]);
             $posts->leftJoin('OpportunityReadState', 'readState', [
                 'readState.opportunityId:' => 'streamPost.parentId',
                 'readState.userId' => $userId,
@@ -72,10 +79,10 @@ class OpportunityReadStateService
                 'OR' => [
                     $mention,
                     [
-                        'opportunity.status!=' => ['Won', 'Lost'],
+                        'unreadOpportunity.status!=' => ['Won', 'Lost'],
                         'OR' => [
-                            ['opportunity.assignedUserId' => null],
-                            ['opportunity.assignedUserId' => $userId],
+                            ['unreadOpportunity.assignedUserId' => null],
+                            ['unreadOpportunity.assignedUserId' => $userId],
                             ['readState.isParticipant' => true],
                         ],
                     ],
@@ -86,19 +93,27 @@ class OpportunityReadStateService
             $posts->where($mention);
         }
 
-        $condition = Cond::exists($posts->build());
+        // GROUP BY makes this a one-row-per-opportunity derived table. In particular,
+        // MariaDB must not re-evaluate the event ACL and unread predicate for every
+        // opportunity, as it did with the correlated EXISTS inside the manual-mark OR.
+        $alias = $onlyUnread ? 'unreadStream' : 'mentionedStream';
+        $queryBuilder->leftJoin($posts->build(), $alias,
+            Expr::equal(Expr::alias("$alias.parentId"), Expr::column('id')));
+        $condition = Cond::not(Cond::equal(Expr::alias("$alias.parentId"), null));
         if ($onlyUnread) {
             // Manual reminders also apply to closed, unrelated, and empty streams.
             $markedUnread = SelectBuilder::create()
                 ->from('OpportunityReadState', 'markedUnreadState')
-                ->select('id')
+                ->select('opportunityId')->group('opportunityId')
                 ->where([
-                    'opportunityId:' => 'opportunity.id',
                     'userId' => $userId,
                     'isMarkedUnread' => true,
                     'deleted' => false,
                 ]);
-            $condition = Cond::or($condition, Cond::exists($markedUnread->build()));
+            $queryBuilder->leftJoin($markedUnread->build(), 'manualUnread',
+                Expr::equal(Expr::alias('manualUnread.opportunityId'), Expr::column('id')));
+            $condition = Cond::or($condition,
+                Cond::not(Cond::equal(Expr::alias('manualUnread.opportunityId'), null)));
         }
 
         $queryBuilder->where($condition);
@@ -117,12 +132,14 @@ class OpportunityReadStateService
 
         $userId = $this->user->getId();
         $mention = ['opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+        $scope = SelectBuilder::create()->clone($queryBuilder->build())
+            ->select(['id'])->order([])->limit(null, null)->build();
         $posts = SelectBuilder::create()
             ->from('Note', 'streamPost')
-            ->select('id')
+            ->select('parentId')->group('parentId')
             ->where([
                 'parentType' => 'Opportunity',
-                'parentId:' => 'opportunity.id',
+                'parentId=s' => $scope,
                 'type' => Note::TYPE_POST,
                 'OR' => [['createdById!=' => $userId], ['createdById' => null]],
             ])
@@ -136,7 +153,8 @@ class OpportunityReadStateService
             ])->where($this->personalUnreadWhere($userId));
         }
 
-        $queryBuilder->where(Cond::exists($posts->build()));
+        $queryBuilder->join($posts->build(), 'personalMentions',
+            Expr::equal(Expr::alias('personalMentions.parentId'), Expr::column('id')));
     }
 
     /** @return array<string, mixed> */
@@ -181,14 +199,20 @@ class OpportunityReadStateService
 
         // 2. Unread
         $unread = 0;
+        $unreadIds = [];
         $tagsUnread = [];
         if ($this->acl->checkScope('Opportunity', 'stream')) {
             $unreadQb = SelectBuilder::create()->clone($scopedQb->build());
             $this->applyListFilter($unreadQb, onlyUnread: true);
-            $tagsUnread = $this->tags->counts('Opportunity', $unreadQb);
-            $unread = $this->entityManager->getRDBRepository('Opportunity')
-                ->clone($unreadQb->build())
-                ->count();
+            // Resolve the expensive permission-aware predicate once. Only IDs are
+            // materialized, never opportunity records; tag/status queries reuse them.
+            $unreadQb->select(['id'])->order([])->limit(null, null)->distinct();
+            $unreadIds = $this->entityManager->getQueryExecutor()->execute($unreadQb->build())->fetchAll(\PDO::FETCH_COLUMN);
+            $unread = count($unreadIds);
+            if ($unreadIds) {
+                $tagsUnread = $this->tags->counts('Opportunity',
+                    SelectBuilder::create()->from('Opportunity')->where(['id' => $unreadIds]));
+            }
         }
 
         // 3. Mentions (personal across all assignees)
@@ -223,13 +247,11 @@ class OpportunityReadStateService
         }
 
         $statusUnreadCounts = ['Open' => 0, 'Won' => 0, 'Lost' => 0];
-        if ($this->acl->checkScope('Opportunity', 'stream')) {
+        if ($unreadIds) {
             $statusUnreadQb = SelectBuilder::create()
-                ->clone($scopedQb->build())
-                ->order([])
+                ->from('Opportunity')->where(['id' => $unreadIds])
                 ->select(['status', ['COUNT:id', 'count']])
                 ->group('status');
-            $this->applyListFilter($statusUnreadQb, onlyUnread: true);
             $sth = $this->entityManager->getQueryExecutor()->execute($statusUnreadQb->build());
             while ($row = $sth->fetch()) {
                 if ($row['status']) {

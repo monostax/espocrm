@@ -8,6 +8,16 @@ use Espo\Core\Exceptions\BadRequest;
 
 class Evidence
 {
+    /** Optional evidence must be omitted as a whole, never partially supplied. */
+    public static function provided(mixed $revision, mixed $quote, mixed $start = null, mixed $end = null, bool $required = true): bool
+    {
+        if ($revision === null && $quote === null && $start === null && $end === null && !$required) return false;
+        if (!is_string($revision) || $revision === '' || !is_string($quote) || $quote === '') {
+            throw new BadRequest('A source revision and exact quote are required when providing evidence.');
+        }
+        return true;
+    }
+
     /** Spans are UTF-8 byte offsets, end-exclusive, against the exact immutable source. */
     public static function validate(string $body, mixed $quote, mixed $start = null, mixed $end = null): array
     {

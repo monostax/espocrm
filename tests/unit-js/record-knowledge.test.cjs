@@ -14,6 +14,66 @@ function load(file, imports, globals = {}) {
     return exports.default;
 }
 
+function relationModal(postRequest, getRequest = async () => { throw new Error('Overview must not be loaded.'); }) {
+    const Modal = load('client/custom/modules/feature-record-knowledge/src/views/modals/relation.js', {
+        'views/modal': {default: class { setup() {} }},
+        'feature-record-knowledge:content': {identity: model => ({recordType: model.entityType, recordId: model.id})},
+    }, {Espo: {Ajax: {postRequest, getRequest}}, crypto: require('node:crypto').webcrypto, TextEncoder});
+    const fields = Object.fromEntries(['predicate', 'object', 'qualifiers', 'quote', 'start', 'error', 'includeEvidence', 'evidenceFields', 'evidenceBody'].map(name => [name, {value: '', checked: false, textContent: ''}]));
+    fields.predicate.value = 'builtin:works_at'; fields.object.value = '0'; fields.qualifiers.value = '{}';
+    const view = new Modal();
+    Object.assign(view, {options: {parentModel: {entityType: 'Contact', id: 'contact'}, schema: {}, tenantId: 'tenant'},
+        el: {querySelector: selector => fields[selector.match(/data-name="([^"]+)"/)[1]]},
+        addHandler() {}, translate: key => key, disableButton() {}, enableButton() {}, trigger() {}, close() {}, isRemoved: () => false});
+    view.setup();
+    view.results = [{entityType: 'Account', recordId: 'account'}];
+    return {view, fields};
+}
+
+test('manual relation modal saves without fetching an overview or sending evidence and reuses retry keys', async () => {
+    const requests = [];
+    const {view, fields} = relationModal(async (url, input) => { requests.push({url, input}); });
+    await view.actionSave(); await view.actionSave();
+    assert.equal(requests[0].url, 'RecordKnowledge/author');
+    assert.equal(requests[0].input.sourceRevisionId, undefined);
+    assert.equal(requests[0].input.evidenceQuote, undefined);
+    assert.equal(requests[0].input.idempotencyKey, requests[1].input.idempotencyKey);
+    fields.qualifiers.value = '{"role":"CTO"}';
+    await view.actionSave();
+    assert.notEqual(requests[1].input.idempotencyKey, requests[2].input.idempotencyKey);
+});
+
+test('manual relation modal sends optional evidence with UTF-8 byte offsets only when enabled', async () => {
+    const requests = [];
+    const {view, fields} = relationModal(async (url, input) => requests.push(input), async () => ({body: 'João', revision: {id: 'revision'}}));
+    fields.includeEvidence.checked = true;
+    await view.toggleEvidence();
+    assert.equal(fields.evidenceFields.hidden, false);
+    assert.equal(fields.evidenceBody.textContent, 'João');
+    fields.quote.value = 'João'; fields.start.value = '0';
+    await view.actionSave();
+    assert.equal(requests[0].sourceRevisionId, 'revision');
+    assert.equal(requests[0].evidenceEnd, 5);
+    fields.includeEvidence.checked = false;
+    await view.toggleEvidence(); await view.actionSave();
+    assert.equal(fields.evidenceFields.hidden, true);
+    assert.equal(requests[1].sourceRevisionId, undefined);
+    assert.notEqual(requests[0].idempotencyKey, requests[1].idempotencyKey);
+});
+
+test('unavailable optional evidence blocks evidence submissions but not evidence-free manual links', async () => {
+    const requests = [];
+    const {view, fields} = relationModal(async (url, input) => requests.push(input));
+    fields.includeEvidence.checked = true;
+    await view.toggleEvidence();
+    assert.equal(fields.error.textContent, 'knowledgeUnavailable');
+    await view.actionSave();
+    assert.equal(requests.length, 0);
+    fields.includeEvidence.checked = false;
+    await view.toggleEvidence(); await view.actionSave();
+    assert.equal(requests.length, 1);
+});
+
 test('Document Markdown source fetch does not trim or serialize an editor snapshot', () => {
     class Lexical { fetch() { throw new Error('Lossy editor path used.'); } }
     const Field = load('client/custom/modules/feature-document-pages/src/views/document/fields/body.js', {
