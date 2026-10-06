@@ -40,7 +40,8 @@
                 "contact_updated",
                 "message_created",
                 "message_updated",
-                "webwidget_triggered"
+                "webwidget_triggered",
+                "dialer_lead_dispositioned"
             ],
             "tooltip": true
         },

@@ -104,6 +104,7 @@ class ValidateBeforeSync
             'contact_updated',
             'message_created',
             'message_updated',
+            'dialer_lead_dispositioned',
             'webwidget_triggered'
         ];
 
