@@ -10,6 +10,7 @@ use Espo\Core\Record\ServiceContainer;
 use Espo\Modules\Chatwoot\Services\ActivityInbox as Inbox;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Chatwoot\Tools\Inbox\BulkReadState;
 use Espo\Modules\FeatureTaskRecurrence\Services\Recurrence;
 use Espo\ORM\Entity;
 use Espo\Tools\Stream\MassNotePreparator;
@@ -136,5 +137,19 @@ class ActivityInbox
     public function postActionReadState(Request $request): object
     {
         return (object) $this->discussion->mark($this->record($request, true), $request->getParsedBody());
+    }
+
+    public function postActionBulkReadState(Request $request): object
+    {
+        $tenant = $this->tenant($request);
+        $body = $request->getParsedBody();
+        return BulkReadState::run($body, function (string $key) use ($tenant, $body): array {
+            $parts = explode(':', $key);
+            if (count($parts) !== 2) throw new BadRequest('Expected an activity type and ID.');
+            return $this->discussion->mark(
+                $this->access->record($parts[0], $parts[1], $tenant, true),
+                (object) ['unread' => $body->unread, 'allThreads' => !$body->unread],
+            );
+        });
     }
 }

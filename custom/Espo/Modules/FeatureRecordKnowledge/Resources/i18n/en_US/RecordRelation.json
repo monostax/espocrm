@@ -1,0 +1,29 @@
+{
+    "labels": {
+        "Create RecordRelation": "Create relation",
+        "Object record": "Object record",
+        "Search records": "Search records…",
+        "Qualifiers (JSON)": "Qualifiers (JSON)",
+        "Select workspace": "Select workspace…",
+        "All directions": "All directions",
+        "All statuses": "All statuses"
+    },
+    "fields": {"tenant": "Workspace", "predicate": "Predicate", "direction": "Direction", "status": "Status"},
+    "options": {
+        "status": {"suggested": "Suggested", "confirmed": "Confirmed", "rejected": "Rejected", "stale": "Stale"},
+        "origin": {"manual": "Manual", "assistant": "Assistant", "native": "Native"},
+        "direction": {"incoming": "Incoming", "outgoing": "Outgoing"}
+    },
+    "predicates": {
+        "works_at": "works at", "reports_to": "reports to", "decides_for": "decides for",
+        "deal_for": "deal for", "deal_with": "deal with", "introduced_by": "introduced by",
+        "attended": "attended", "part_of": "part of", "about": "about",
+        "contradicts": "contradicts", "supersedes": "supersedes"
+    },
+    "inversePredicates": {
+        "works_at": "employs", "reports_to": "manages", "decides_for": "decision maker",
+        "deal_for": "has deal", "deal_with": "involved in deal", "introduced_by": "introduced",
+        "attended": "attendees", "part_of": "contains", "about": "subject of",
+        "contradicts": "contradicted by", "supersedes": "superseded by"
+    }
+}

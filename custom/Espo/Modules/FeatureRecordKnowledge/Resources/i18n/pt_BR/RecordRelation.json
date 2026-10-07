@@ -1,0 +1,68 @@
+{
+    "labels": {
+        "Create RecordRelation": "Criar relação",
+        "Object record": "Registro de destino",
+        "Search records": "Buscar registros…",
+        "Qualifiers (JSON)": "Qualificadores (JSON)",
+        "Select workspace": "Selecione um espaço de trabalho…",
+        "All directions": "Todas as direções",
+        "All statuses": "Todos os status"
+    },
+    "fields": {
+        "tenant": "Espaço de trabalho",
+        "subjectType": "Tipo de registro de origem",
+        "subjectId": "ID do registro de origem",
+        "predicate": "Predicado",
+        "objectType": "Tipo de registro de destino",
+        "objectId": "ID do registro de destino",
+        "qualifiers": "Qualificadores",
+        "sourceDocument": "Documento de origem",
+        "sourceRevision": "Revisão de origem",
+        "evidenceQuote": "Trecho de evidência",
+        "evidenceStart": "Início da evidência",
+        "evidenceEnd": "Fim da evidência",
+        "anchorRevision": "Revisão de ancoragem",
+        "anchorStart": "Início da ancoragem",
+        "anchorEnd": "Fim da ancoragem",
+        "status": "Status",
+        "origin": "Origem",
+        "direction": "Direção",
+        "submissionKey": "Chave de envio",
+        "submissionHash": "Hash do envio",
+        "createdAt": "Criado em",
+        "createdBy": "Criado por",
+        "decidedBy": "Decidido por",
+        "decidedAt": "Decidido em"
+    },
+    "options": {
+        "status": {"suggested": "Sugerida", "confirmed": "Confirmada", "rejected": "Rejeitada", "stale": "Desatualizada"},
+        "origin": {"manual": "Manual", "assistant": "Assistente", "native": "Nativa"},
+        "direction": {"incoming": "Entrada", "outgoing": "Saída"}
+    },
+    "predicates": {
+        "works_at": "trabalha em",
+        "reports_to": "responde a",
+        "decides_for": "decide por",
+        "deal_for": "negócio para",
+        "deal_with": "negócio com",
+        "introduced_by": "apresentado por",
+        "attended": "participou de",
+        "part_of": "faz parte de",
+        "about": "sobre",
+        "contradicts": "contradiz",
+        "supersedes": "substitui"
+    },
+    "inversePredicates": {
+        "works_at": "emprega",
+        "reports_to": "gerencia",
+        "decides_for": "tem como responsável pela decisão",
+        "deal_for": "tem negócio",
+        "deal_with": "envolvido no negócio",
+        "introduced_by": "apresentou",
+        "attended": "tem como participante",
+        "part_of": "contém",
+        "about": "é assunto de",
+        "contradicts": "contradito por",
+        "supersedes": "substituído por"
+    }
+}

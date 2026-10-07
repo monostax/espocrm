@@ -93,10 +93,10 @@ class ChatwootApiClient
         private Log $log
     ) {}
 
-    public function notifyActivityUpdate(string $platformUrl, string $apiKey, int $accountId): void
+    public function notifyActivityUpdate(string $platformUrl, string $apiKey, int $accountId, array $event = []): void
     {
         $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/activity_events';
-        $response = $this->executeRequest($url, 'POST', '{}', ['api_access_token: ' . $apiKey, 'Content-Type: application/json'], false);
+        $response = $this->executeRequest($url, 'POST', json_encode((object) $event), ['api_access_token: ' . $apiKey, 'Content-Type: application/json'], false);
         if ($response['code'] < 200 || $response['code'] >= 300) {
             throw new Error('Activity notification failed: HTTP ' . $response['code']);
         }

@@ -66,6 +66,11 @@
         "Disable AI Profile": "Disable AI Profile",
         "Account Users": "Account Users",
         "AI Configuration": "AI Configuration",
+        "[Admin]": "[Admin]",
+        "Agent State": "Agent State",
+        "Sync": "Sync",
+        "WhatsApp Configuration": "WhatsApp Configuration",
+        "Follow-up Configuration": "Follow-up Configuration",
         "Edit Internal Notes": "Edit Internal Notes",
         "Save": "Save",
         "Cancel": "Cancel"

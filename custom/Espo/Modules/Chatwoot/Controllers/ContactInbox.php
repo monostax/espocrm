@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Services\ContactInbox as Inbox;
+use Espo\Modules\Chatwoot\Tools\Inbox\BulkReadState;
 use Espo\Tools\Stream\MassNotePreparator;
 
 class ContactInbox
@@ -66,5 +67,15 @@ class ContactInbox
     public function postActionReadState(Request $request): object
     {
         return (object) $this->discussion->mark($this->inbox->record($request, true), $request->getParsedBody());
+    }
+
+    public function postActionBulkReadState(Request $request): object
+    {
+        $this->inbox->workspace($request);
+        $body = $request->getParsedBody();
+        return BulkReadState::run($body, fn (string $id) => $this->discussion->mark(
+            $this->inbox->record($request, true, $id),
+            (object) ['unread' => $body->unread, 'allThreads' => !$body->unread],
+        ));
     }
 }

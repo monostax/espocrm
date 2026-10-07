@@ -1,11 +1,12 @@
 import ModalView from 'views/modal';
 import {identity} from 'feature-record-knowledge:content';
+import {predicateLabel} from 'feature-record-knowledge:labels';
 
 export default class extends ModalView {
     templateContent = `
-        <div class="form-group"><label>Predicate</label><select class="form-control" data-name="predicate">{{#each predicates}}<option value="{{key}}">{{label}}</option>{{/each}}</select></div>
-        <div class="form-group"><label>Object record</label><input class="form-control" data-name="search" aria-label="Search record" placeholder="Search records…"><select class="form-control" data-name="object" aria-label="Object record"></select></div>
-        <div class="form-group"><label>Qualifiers (JSON)</label><textarea class="form-control" data-name="qualifiers">{}</textarea></div>
+        <div class="form-group"><label>{{translate 'predicate' category='fields' scope='RecordRelation'}}</label><select class="form-control" data-name="predicate">{{#each predicates}}<option value="{{key}}">{{label}}</option>{{/each}}</select></div>
+        <div class="form-group"><label>{{translate 'Object record' scope='RecordRelation'}}</label><input class="form-control" data-name="search" aria-label="{{translate 'Search records' scope='RecordRelation'}}" placeholder="{{translate 'Search records' scope='RecordRelation'}}"><select class="form-control" data-name="object" aria-label="{{translate 'Object record' scope='RecordRelation'}}"></select></div>
+        <div class="form-group"><label>{{translate 'Qualifiers (JSON)' scope='RecordRelation'}}</label><textarea class="form-control" data-name="qualifiers">{}</textarea></div>
         <div class="checkbox"><label><input type="checkbox" data-name="includeEvidence">{{translate 'Include evidence'}}</label></div>
         <div data-name="evidenceFields" hidden>
             <div class="form-group"><label>{{translate 'Exact evidence quote'}}</label><textarea class="form-control" data-name="quote" rows="4"></textarea></div>
@@ -31,7 +32,7 @@ export default class extends ModalView {
     }
     data() {
         const type = this.parentModel.entityType;
-        const predicates = Object.entries(this.schema || {}).filter(([, def]) => def.subjects === '*' || def.subjects.includes(type)).map(([key, def]) => ({key, label: def.label}));
+        const predicates = Object.entries(this.schema || {}).filter(([, def]) => def.subjects === '*' || def.subjects.includes(type)).map(([key, def]) => ({key, label: predicateLabel(this, key, def.label)}));
         return {...super.data(), predicates};
     }
     async toggleEvidence() {
@@ -60,7 +61,7 @@ export default class extends ModalView {
         for (const [index, ref] of this.results.entries()) {
             const objects = this.schema[predicate]?.objects;
             if (objects !== '*' && !objects?.includes(ref.entityType)) continue;
-            select.add(new Option(`${ref.label} (${ref.entityType})`, index));
+            select.add(new Option(`${ref.label} (${this.translate(ref.entityType, 'scopeNames')})`, index));
         }
     }
     async actionSave() {

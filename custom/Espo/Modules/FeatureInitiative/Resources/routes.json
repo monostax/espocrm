@@ -1,4 +1,5 @@
 [
+    { "route": "/Initiative/action/bulkReadState", "method": "post", "params": { "controller": "InitiativeInbox", "action": "bulkReadState" } },
     { "route": "/Initiative/action/inbox", "method": "get", "params": { "controller": "InitiativeInbox", "action": "list" } },
     { "route": "/Initiative/action/inbox", "method": "post", "params": { "controller": "InitiativeInbox", "action": "create" } },
     { "route": "/Initiative/action/navigationCounts", "method": "get", "params": { "controller": "InitiativeInbox", "action": "counts" } },

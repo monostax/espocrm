@@ -65,10 +65,10 @@ class Inbox
         return $this->workspaces->workspace($id);
     }
 
-    public function record(Request $request, bool $stream = false): Entity
+    public function record(Request $request, bool $stream = false, ?string $id = null): Entity
     {
         $workspace = $this->workspace($request);
-        $record = $this->em->getEntityById('Initiative', (string) $request->getRouteParam('id'));
+        $record = $this->em->getEntityById('Initiative', $id ?? (string) $request->getRouteParam('id'));
         if (!$record || $record->get('tenantId') !== $workspace->get('tenantId') || !$this->acl->checkEntityRead($record)) {
             throw new NotFound();
         }

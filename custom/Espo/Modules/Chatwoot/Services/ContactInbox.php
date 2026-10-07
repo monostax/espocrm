@@ -65,10 +65,10 @@ class ContactInbox
         return $this->workspaces->workspace($id);
     }
 
-    public function record(Request $request, bool $stream = false): Entity
+    public function record(Request $request, bool $stream = false, ?string $id = null): Entity
     {
         $workspace = $this->workspace($request);
-        $record = $this->em->getEntityById(static::ENTITY_TYPE, (string) $request->getRouteParam('id'));
+        $record = $this->em->getEntityById(static::ENTITY_TYPE, $id ?? (string) $request->getRouteParam('id'));
         if (!$record || $record->get('tenantId') !== $workspace->get('tenantId') || !$this->acl->checkEntityRead($record)) {
             throw new NotFound();
         }
@@ -232,7 +232,7 @@ class ContactInbox
             $fields[$name] = array_intersect_key($def, array_flip(['type', 'options', 'required', 'readOnly', 'maxLength']));
             if (!$this->acl->checkField(static::ENTITY_TYPE, $name, 'edit')) $fields[$name]['readOnly'] = true;
         }
-        return (object) [static::ENTITY_TYPE => ['fields' => $fields]];
+        return (object) [static::ENTITY_TYPE => ['fields' => $fields, 'canCreate' => $this->acl->checkScope(static::ENTITY_TYPE, 'create')]];
     }
 
     public function options(Request $request): object

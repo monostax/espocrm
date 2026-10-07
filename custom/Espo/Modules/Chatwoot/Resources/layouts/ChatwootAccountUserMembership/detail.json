@@ -12,94 +12,10 @@
             ],
             [
                 {
-                    "name": "chatwootUser"
-                },
-                {
-                    "name": "role"
-                }
-            ],
-            [
-                {
                     "name": "email"
                 },
                 {
                     "name": "availableName"
-                }
-            ]
-        ]
-    },
-    {
-        "label": "Agent State",
-        "name": "agentState",
-        "rows": [
-            [
-                {
-                    "name": "availabilityStatus"
-                },
-                {
-                    "name": "autoOffline"
-                }
-            ],
-            [
-                {
-                    "name": "confirmed"
-                },
-                {
-                    "name": "avatarUrl"
-                }
-            ],
-            [
-                {
-                    "name": "customRoleId"
-                },
-                {
-                    "name": "isAI"
-                }
-            ],
-            [
-                {
-                    "name": "contextualTransferIsEnabled"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "transferScenarios",
-                    "fullWidth": true
-                }
-            ]
-        ]
-    },
-    {
-        "label": "Sync",
-        "name": "syncInfo",
-        "rows": [
-            [
-                {
-                    "name": "syncStatus"
-                },
-                {
-                    "name": "lastSyncedAt"
-                }
-            ],
-            [
-                {
-                    "name": "lastSyncError",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
-                    "name": "chatwootAccountUserId"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "createdAt"
-                },
-                {
-                    "name": "modifiedAt"
                 }
             ]
         ]
@@ -164,14 +80,6 @@
                     "name": "timeZone"
                 },
                 {
-                    "name": "followupsEnabled"
-                }
-            ],
-            [
-                {
-                    "name": "followupBreakoutLimit"
-                },
-                {
                     "name": "aiMessageVisibility"
                 }
             ],
@@ -185,6 +93,32 @@
             ],
             [
                 {
+                    "name": "contextualTransferIsEnabled"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "transferScenarios",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "WhatsApp Configuration",
+        "name": "whatsappConfiguration",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isTrue",
+                    "attribute": "isAI"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
                     "name": "whatsappMessageTemplates",
                     "fullWidth": true
                 }
@@ -195,6 +129,108 @@
                 },
                 {
                     "name": "ignoreStatusBroadcast"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Follow-up Configuration",
+        "name": "followupConfiguration",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isTrue",
+                    "attribute": "isAI"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "followupsEnabled"
+                },
+                {
+                    "name": "followupBreakoutLimit"
+                }
+            ]
+        ]
+    },
+    {
+        "tabBreak": true,
+        "tabLabel": "[Admin]",
+        "label": "[Admin]",
+        "name": "admin",
+        "rows": [
+            [
+                {
+                    "name": "chatwootUser"
+                },
+                {
+                    "name": "chatwootAccountUserId"
+                }
+            ],
+            [
+                {
+                    "name": "role"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "customRoleId"
+                },
+                {
+                    "name": "isAI"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Agent State",
+        "name": "agentState",
+        "rows": [
+            [
+                {
+                    "name": "availabilityStatus"
+                },
+                {
+                    "name": "autoOffline"
+                }
+            ],
+            [
+                {
+                    "name": "confirmed"
+                },
+                {
+                    "name": "avatarUrl"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Sync",
+        "name": "syncInfo",
+        "rows": [
+            [
+                {
+                    "name": "syncStatus"
+                },
+                {
+                    "name": "lastSyncedAt"
+                }
+            ],
+            [
+                {
+                    "name": "lastSyncError",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "createdAt"
+                },
+                {
+                    "name": "modifiedAt"
                 }
             ]
         ]

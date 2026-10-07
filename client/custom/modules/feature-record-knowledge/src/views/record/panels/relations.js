@@ -1,15 +1,16 @@
 import BottomPanelView from 'views/record/panels/bottom';
 import {identity} from 'feature-record-knowledge:content';
+import {predicateLabel} from 'feature-record-knowledge:labels';
 
 export default class extends BottomPanelView {
     templateContent = `
         <div class="form-inline margin-bottom">
-            {{#if tenantOptions}}<select class="form-control input-sm" aria-label="Workspace" data-name="tenant"><option value="">Select workspace…</option>{{#each tenantOptions}}<option value="{{id}}">{{name}}</option>{{/each}}</select>{{/if}}
-            <select class="form-control input-sm" aria-label="Direction" data-name="direction">
-                <option value="all">All directions</option><option value="outgoing">Outgoing</option><option value="incoming">Incoming</option>
+            {{#if tenantOptions}}<select class="form-control input-sm" aria-label="{{translate 'tenant' category='fields' scope='RecordRelation'}}" data-name="tenant"><option value="">{{translate 'Select workspace' scope='RecordRelation'}}</option>{{#each tenantOptions}}<option value="{{id}}">{{name}}</option>{{/each}}</select>{{/if}}
+            <select class="form-control input-sm" aria-label="{{translate 'direction' category='fields' scope='RecordRelation'}}" data-name="direction">
+                <option value="all">{{translate 'All directions' scope='RecordRelation'}}</option><option value="outgoing">{{translateOption 'outgoing' field='direction' scope='RecordRelation'}}</option><option value="incoming">{{translateOption 'incoming' field='direction' scope='RecordRelation'}}</option>
             </select>
-            <select class="form-control input-sm" aria-label="Status" data-name="status">
-                <option value="">All statuses</option><option>suggested</option><option>confirmed</option><option>rejected</option><option>stale</option>
+            <select class="form-control input-sm" aria-label="{{translate 'status' category='fields' scope='RecordRelation'}}" data-name="status">
+                <option value="">{{translate 'All statuses' scope='RecordRelation'}}</option><option value="suggested">{{translateOption 'suggested' field='status' scope='RecordRelation'}}</option><option value="confirmed">{{translateOption 'confirmed' field='status' scope='RecordRelation'}}</option><option value="rejected">{{translateOption 'rejected' field='status' scope='RecordRelation'}}</option><option value="stale">{{translateOption 'stale' field='status' scope='RecordRelation'}}</option>
             </select>
             {{#if canAuthor}}<button type="button" class="btn btn-default btn-sm" data-action="add">{{translate 'Add relation'}}</button>{{/if}}
         </div>
@@ -19,11 +20,11 @@ export default class extends BottomPanelView {
             <a href="#{{displaySubjectType}}/view/{{displaySubjectId}}">{{displaySubjectLabel}}</a>
             <strong>{{displayPredicate}}</strong>
             <a href="#{{displayObjectType}}/view/{{displayObjectId}}">{{displayObjectLabel}}</a>
-            <small>{{direction}} · {{status}} · {{origin}}</small>
+            <small>{{translateOption direction field='direction' scope='RecordRelation'}} · {{translateOption status field='status' scope='RecordRelation'}} · {{translateOption origin field='origin' scope='RecordRelation'}}</small>
             <div class="text-muted small">{{qualifierText}}</div>
             {{#if sourceRevisionId}}<a href="#RecordKnowledge/revision/{{sourceRevisionId}}" data-action="evidence" data-id="{{sourceRevisionId}}">{{translate 'Evidence'}}</a>
                 <blockquote class="small">{{evidenceQuote}}</blockquote>{{/if}}
-            {{#if provenance}}<small>Opportunity/{{provenance.recordId}} · {{provenance.field}}</small>{{/if}}
+            {{#if provenance}}<small>{{translate 'Opportunity' category='scopeNames'}}/{{provenance.recordId}} · {{translate provenance.field category='fields' scope='Opportunity'}}</small>{{/if}}
             {{#if editable}}
                 <button class="btn btn-default btn-sm" type="button" data-action="confirm" data-id="{{id}}">{{translate 'Confirm'}}</button>
                 <button class="btn btn-default btn-sm" type="button" data-action="reject" data-id="{{id}}">{{translate 'Reject'}}</button>
@@ -98,7 +99,7 @@ export default class extends BottomPanelView {
     data() {
         const items = this.items.map(item => {
             const incoming = item.direction === 'incoming';
-            return {...item, displayPredicate: incoming ? (item.inverseLabel || item.predicate) : (item.predicateLabel || item.predicate),
+            return {...item, displayPredicate: predicateLabel(this, item.predicate, incoming ? item.inverseLabel : item.predicateLabel, incoming),
                 displaySubjectType: incoming ? item.objectType : item.subjectType, displaySubjectId: incoming ? item.objectId : item.subjectId,
                 displaySubjectLabel: incoming ? item.objectLabel : item.subjectLabel,
                 displayObjectType: incoming ? item.subjectType : item.objectType, displayObjectId: incoming ? item.subjectId : item.objectId,

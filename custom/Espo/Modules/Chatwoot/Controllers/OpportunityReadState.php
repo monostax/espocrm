@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
+use Espo\Modules\Chatwoot\Tools\Inbox\BulkReadState;
 
 // Do not inherit generic CRUD endpoints: this is private, per-user state.
 class OpportunityReadState
@@ -34,6 +35,17 @@ class OpportunityReadState
     public function postActionMarkUnread(Request $request): object
     {
         return (object) $this->service->markUnread($this->id($request));
+    }
+
+    public function postActionBulkReadState(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        return BulkReadState::run($body, function (string $id) use ($body): array {
+            if ($body->unread) return $this->service->markUnread($id);
+            $version = $body->versions->{$id} ?? null;
+            if (!is_int($version) || $version < 0) throw new BadRequest('A read-state version is required.');
+            return $this->service->markRead($id, null, $version, true);
+        });
     }
 
     public function getActionNavigationCounts(Request $request, Response $response): object

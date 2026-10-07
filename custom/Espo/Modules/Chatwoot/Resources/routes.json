@@ -1,4 +1,8 @@
 [
+    { "route": "/Account/action/bulkReadState", "method": "post", "params": { "controller": "AccountInbox", "action": "bulkReadState" } },
+    { "route": "/Contact/action/bulkReadState", "method": "post", "params": { "controller": "ContactInbox", "action": "bulkReadState" } },
+    { "route": "/Opportunity/action/bulkReadState", "method": "post", "params": { "controller": "OpportunityReadState", "action": "bulkReadState" } },
+    { "route": "/ActivityInbox/bulkReadState", "method": "post", "params": { "controller": "ActivityInbox", "action": "bulkReadState" } },
     { "route": "/TenantAiBillingRate/:id/budgetStatus", "method": "get", "params": { "controller": "AiBudgetStatus", "action": "read", "id": ":id" } },
     { "route": "/AiBudget", "method": "post", "noAuth": true, "params": { "controller": "AiBudget", "action": "execute" } },
     { "route": "/Account/action/inbox", "method": "get", "params": { "controller": "AccountInbox", "action": "list" } },

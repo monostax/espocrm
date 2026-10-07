@@ -68,6 +68,11 @@
         "Chat / Account / Inboxes": "Chat / Conta / Caixas de Entrada",
         "Account Users": "Chat / Conta / Agentes",
         "AI Configuration": "Configuração do Agente de IA",
+        "[Admin]": "[Admin]",
+        "Agent State": "Estado do Agente",
+        "Sync": "Sincronização",
+        "WhatsApp Configuration": "Configurações do WhatsApp",
+        "Follow-up Configuration": "Configurações de Follow-up",
         "Edit Internal Notes": "Editar Instruções",
         "Save": "Salvar",
         "Cancel": "Cancelar"

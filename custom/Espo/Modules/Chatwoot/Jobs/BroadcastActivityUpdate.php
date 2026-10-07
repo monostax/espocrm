@@ -25,7 +25,11 @@ class BroadcastActivityUpdate implements Job
             $platform = $this->em->getEntityById('ChatwootPlatform', (string) $account->get('platformId'));
             if (!$platform?->get('backendUrl') || !$account->get('apiKey') || !$account->get('chatwootAccountId')) continue;
             try {
-                $this->client->notifyActivityUpdate($platform->get('backendUrl'), $account->get('apiKey'), (int) $account->get('chatwootAccountId'));
+                $event = $data->get('affectedRecords') === null ? [] : [
+                    'entityType' => $data->get('type'), 'recordId' => $data->get('id'),
+                    'affectedRecords' => $data->get('affectedRecords'),
+                ];
+                $this->client->notifyActivityUpdate($platform->get('backendUrl'), $account->get('apiKey'), (int) $account->get('chatwootAccountId'), $event);
             } catch (Throwable $e) { $failure = $e; }
         }
         if ($failure) throw $failure;

@@ -1,4 +1,5 @@
 import MainView from 'views/main';
+import {predicateLabel} from 'feature-record-knowledge:labels';
 
 export default class extends MainView {
     templateContent = `
@@ -64,8 +65,9 @@ export default class extends MainView {
 
     data() {
         return {...super.data(), tenants: this.tenants, editable: this.editable, needsSelection: !this.tenantId, error: this.error,
-            predicates: this.predicates.map(p => ({...p, schemaText: JSON.stringify(p.qualifierSchema, null, 2),
-                endpointText: `${p.subjects === '*' ? '*' : p.subjects.join(', ')} → ${p.objects === '*' ? '*' : p.objects.join(', ')}`}))};
+            predicates: this.predicates.map(p => ({...p, label: predicateLabel(this, p.key, p.label),
+                inverse: predicateLabel(this, p.key, p.inverse, true), schemaText: JSON.stringify(p.qualifierSchema, null, 2),
+                endpointText: `${p.subjects === '*' ? '*' : p.subjects.map(type => this.translate(type, 'scopeNames')).join(', ')} → ${p.objects === '*' ? '*' : p.objects.map(type => this.translate(type, 'scopeNames')).join(', ')}`}))};
     }
     afterRender() { super.afterRender(); this.el.querySelector('[data-name="tenant"]').value = this.tenantId || ''; }
     async edit(predicate = null) {
