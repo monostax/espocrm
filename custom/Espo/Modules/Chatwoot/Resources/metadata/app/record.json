@@ -1,0 +1,6 @@
+{
+    "beforeLinkHookClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ProtectManagedCrmLinks"
+    ]
+}

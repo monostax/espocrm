@@ -4,6 +4,7 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootAccountUserMembership;
 
 use Espo\Modules\Chatwoot\Services\ManagedIdentityPolicy;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Services\ManagedAgentCrmUser;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -15,6 +16,7 @@ class ProtectMachineIdentity
         private ManagedIdentityPolicy $policy,
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
+        private ManagedAgentCrmUser $managedCrmUser,
     ) {}
 
     public function beforeSave(Entity $entity, array $options): void
@@ -44,7 +46,10 @@ class ProtectMachineIdentity
         $this->entityManager->getTransactionManager()->run(function () use ($identity, $options) {
             $identity = $this->entityManager->getRDBRepository('ChatwootMachineIdentity')
                 ->where(['id' => $identity->getId()])->forUpdate()->findOne();
-            if ($identity->get('status') === 'retired') return;
+            if ($identity->get('status') === 'retired') {
+                $this->managedCrmUser->retire($identity);
+                return;
+            }
             if (empty($options['skipChatwootSync']) && empty($options['cascadeParent'])) {
                 $platform = $this->entityManager->getEntityById('ChatwootPlatform', $identity->get('platformId'));
                 $this->apiClient->retireMachineIdentity(
@@ -60,6 +65,7 @@ class ProtectMachineIdentity
             }
             $identity->set('status', 'retired');
             $this->entityManager->saveEntity($identity);
+            $this->managedCrmUser->retire($identity);
         });
     }
 }

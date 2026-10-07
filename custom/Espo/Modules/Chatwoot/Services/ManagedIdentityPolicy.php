@@ -38,4 +38,31 @@ class ManagedIdentityPolicy
             throw new Forbidden('Managed AI identity ownership cannot be changed.');
         }
     }
+
+    public function forCrmUser(string $userId): ?Entity
+    {
+        return $this->entityManager->getRDBRepository('ChatwootMachineIdentity')
+            ->where(['crmUserId' => $userId])->findOne();
+    }
+
+    public function permitsCrmRelation(Entity $entity, string $link, string $foreignId): bool
+    {
+        $type = $entity->getEntityType();
+        if ($type === 'User' && in_array($link, ['teams', 'tenants', 'roles'], true)) {
+            $identity = $this->forCrmUser($entity->getId());
+            $targetType = ['teams' => 'Team', 'tenants' => 'Tenant', 'roles' => 'Role'][$link];
+            $targetId = $foreignId;
+        } elseif (in_array($type, ['Team', 'Tenant', 'Role'], true) && $link === 'users') {
+            $identity = $this->forCrmUser($foreignId);
+            $targetType = $type;
+            $targetId = $entity->getId();
+        } else {
+            return true;
+        }
+        if (!$identity) return true;
+        if ($targetType === 'Tenant') return $targetId === $identity->get('tenantId');
+        if ($targetType !== 'Team') return false;
+        $tenant = $this->entityManager->getEntityById('Tenant', $identity->get('tenantId'));
+        return $targetId === $tenant?->get('baseUserTeamId');
+    }
 }

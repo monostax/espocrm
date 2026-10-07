@@ -25,10 +25,15 @@ class AiAgentProvisioning
         private User $user,
         private UserTenantResolver $tenants,
         private TeamTenantAccess $teamTenantAccess,
+        private ManagedAgentCrmUser $managedCrmUser,
     ) {}
 
     public function create(string $accountId, object $input): Entity
     {
+        if ($this->user->isApi() && $this->entityManager->getRDBRepository('ChatwootMachineIdentity')
+            ->where(['crmUserId' => $this->user->getId()])->findOne()) {
+            throw new Forbidden('Managed AI users cannot provision other identities.');
+        }
         if (!$this->acl->check('ChatwootAccountUserMembership', 'create')) {
             throw new Forbidden();
         }
@@ -110,7 +115,10 @@ class AiAgentProvisioning
                 (int) $account->get('chatwootAccountId') !== (int) $identity->get('remoteAccountId')) {
                 throw new BadRequest('aiAgentOperationConflict');
             }
-            if ($identity->get('status') === 'active') return $membership;
+            if ($identity->get('status') === 'active') {
+                $this->managedCrmUser->ensure($identity->getId());
+                return $membership;
+            }
 
             $platform = $this->entityManager->getEntityById('ChatwootPlatform', $identity->get('platformId'));
             $result = $this->apiClient->provisionMachineIdentity(
@@ -142,6 +150,7 @@ class AiAgentProvisioning
                 'lastSyncError' => null,
             ]);
             $this->entityManager->saveEntity($membership, ['silent' => true, 'skipAssignedUserApiKeyProvision' => true]);
+            $this->managedCrmUser->ensure($identity->getId());
             return $membership;
         });
     }

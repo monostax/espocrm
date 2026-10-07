@@ -17,13 +17,17 @@ class ProtectMachineIdentity
         if (!empty($options['managedIdentityProvisioning'])) return;
         $identity = $entity->getId() ? $this->policy->forUser($entity->getId()) : null;
         if (!$identity) {
+            if ($entity->get('assignedUserId') && $this->policy->forCrmUser($entity->get('assignedUserId'))) {
+                throw new Forbidden('A managed CRM user cannot be attached to another Chatwoot identity.');
+            }
             if (($entity->isNew() || $entity->isAttributeChanged('emailAddress')) &&
                 ManagedIdentityPolicy::isReservedEmail($entity->get('emailAddress'))) {
                 throw new Forbidden('Managed identities must be created through AI agent provisioning.');
             }
             return;
         }
-        if ($entity->get('emailAddress') !== $identity->get('email') || $entity->get('assignedUserId') ||
+        if ($entity->get('emailAddress') !== $identity->get('email') ||
+            $entity->get('assignedUserId') !== $identity->get('crmUserId') ||
             $entity->get('platformId') !== $identity->get('platformId') ||
             (int) $entity->get('chatwootUserId') !== (int) $identity->get('remoteUserId') ||
             $entity->isAttributeChanged('password') || $entity->isAttributeChanged('userAccessToken')) {

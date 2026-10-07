@@ -8,6 +8,7 @@
         "accountId": {"type": "varchar", "maxLength": 24, "required": true},
         "membershipId": {"type": "varchar", "maxLength": 24, "required": true},
         "chatwootUserId": {"type": "varchar", "maxLength": 24, "required": true},
+        "crmUserId": {"type": "varchar", "maxLength": 24},
         "platformId": {"type": "varchar", "maxLength": 24, "required": true},
         "remoteAccountId": {"type": "int", "required": true},
         "remoteUserId": {"type": "int"},
@@ -19,6 +20,7 @@
         "operation": {"columns": ["operationId"], "unique": true},
         "membership": {"columns": ["membershipId"], "unique": true},
         "user": {"columns": ["chatwootUserId"], "unique": true},
+        "crmUser": {"columns": ["crmUserId"], "unique": true},
         "email": {"columns": ["email"], "unique": true},
         "remoteUser": {"columns": ["platformId", "remoteUserId"], "unique": true}
     }
