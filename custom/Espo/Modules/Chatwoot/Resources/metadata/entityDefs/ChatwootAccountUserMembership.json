@@ -30,6 +30,9 @@
             "type": "bool",
             "default": false,
             "readOnly": true,
+            "layoutDetailDisabled": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
             "tooltip": true
         },
         "email": {

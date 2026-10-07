@@ -20,12 +20,6 @@
             ],
             [
                 {
-                    "name": "globalAdmin"
-                },
-                false
-            ],
-            [
-                {
                     "name": "email"
                 },
                 {

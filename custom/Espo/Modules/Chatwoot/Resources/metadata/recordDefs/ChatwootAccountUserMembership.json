@@ -1,4 +1,10 @@
 {
+    "createInputFilterClassNameList": [
+        "Espo\\Modules\\Chatwoot\\Classes\\Record\\Input\\MembershipPrivileges"
+    ],
+    "updateInputFilterClassNameList": [
+        "Espo\\Modules\\Chatwoot\\Classes\\Record\\Input\\MembershipPrivileges"
+    ],
     "duplicateWhereBuilderClassName": "Espo\\Classes\\DuplicateWhereBuilders\\General",
     "deletedRestorerClassName": "Espo\\Modules\\Global\\Classes\\Record\\Deleted\\TeamAwareRestorer"
 }
