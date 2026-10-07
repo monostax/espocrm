@@ -40,6 +40,10 @@ The editor and detail view resolve labels through `EditorReference/resolve` rath
 
 All identity parsing uses an entity allow-list and restricted IDs; stored URLs cannot supply arbitrary navigation destinations. Batch resolution uses strict list ACL plus record and name-field ACL. Users also require the existing active-user/mention permissions, including team restrictions. There is a limit of 200 distinct references per document and ten search results per entity group.
 
+## Reference search
+
+`EditorReference/search` matches all whitespace-separated words anywhere in the record name, in any order. For example, `Kibu` matches `IA (Kibu) — Overview`. Entity type names and translated singular/plural labels can qualify a query in either position (`oportunidade nowle`, `manuella contato`). Portuguese opportunity/contact aliases also work with an English UI. A label by itself remains a name search. Search terms are literal (SQL wildcard characters are escaped); this is substring matching, not typo correction. Existing recent-view ordering, access checks and ten-results-per-type limits apply.
+
 ## Persistence and API writes
 
 The editor saves the projection and canonical JSON together. Source-mode saves import the source before collecting canonical JSON. Invalid/unknown canonical state falls back to the projection when opened.

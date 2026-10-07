@@ -18,6 +18,7 @@ use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\RDBSelectBuilder;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
+use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\ReferenceSearch;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Hooks\Common\EditorState;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Services\ReferenceIndex;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Services\EditorReferences;
@@ -26,6 +27,54 @@ use PHPUnit\Framework\TestCase;
 
 class ReferencesTest extends TestCase
 {
+    public function testSearchNarrowsEntityAndAppliesContainsToEveryNameWord(): void
+    {
+        $metadata = $this->createMock(Metadata::class);
+        $metadata->method('get')->willReturn(true);
+        $metadata->method('getAll')->willReturn((object) [
+            'scopes' => (object) [
+                'Contact' => (object) ['entity' => true, 'recordKnowledge' => true],
+                'Opportunity' => (object) ['entity' => true, 'recordKnowledge' => true],
+            ],
+            'entityDefs' => (object) [
+                'Contact' => (object) ['fields' => (object) ['name' => (object) []]],
+                'Opportunity' => (object) ['fields' => (object) ['name' => (object) []]],
+            ],
+        ]);
+        $acl = $this->createMock(Acl::class);
+        $acl->method('checkScope')->willReturn(true);
+        $acl->method('checkField')->willReturn(true);
+        $builder = $this->createMock(RecordSelectBuilder::class);
+        $builder->expects($this->once())->method('from')->with('Opportunity')->willReturnSelf();
+        $builder->expects($this->once())->method('withStrictAccessControl')->willReturnSelf();
+        $builder->method('buildQueryBuilder')->willReturn(SelectBuilder::create()->from('Opportunity'));
+        $select = $this->createMock(SelectBuilderFactory::class);
+        $select->expects($this->once())->method('create')->willReturn($builder);
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->method('fetchAll')->willReturn([]);
+        $executor = $this->createMock(\Espo\ORM\Executor\QueryExecutor::class);
+        $executor->expects($this->exactly(2))->method('execute')->willReturn($statement);
+        $em = $this->createMock(EntityManager::class);
+        $em->method('getQueryExecutor')->willReturn($executor);
+        $em->expects($this->never())->method('getRDBRepository');
+        $patterns = [];
+        $filter = $this->createMock(\Espo\Core\Select\Text\Filter::class);
+        $filter->expects($this->exactly(2))->method('apply')->willReturnCallback(
+            function ($query, $data) use (&$patterns) {
+                $this->assertTrue($data->skipWildcards());
+                $this->assertSame(['name'], $data->getAttributeList());
+                $patterns[] = $data->getFilter();
+            });
+        $filters = $this->createMock(FilterFactory::class);
+        $filters->expects($this->exactly(2))->method('create')->with('Opportunity')->willReturn($filter);
+        $language = $this->createMock(\Espo\Core\Utils\Language::class);
+        $language->method('translateLabel')->willReturnArgument(0);
+        $service = new EditorReferences($em, $select, $acl, $metadata, $this->createMock(User::class),
+            $filters, new ReferenceSearch($language));
+        $this->assertSame([], $service->search('oportunidade nowle renewal'));
+        $this->assertSame(['%nowle%', '%renewal%'], $patterns);
+    }
+
     private function state(array $refs): string
     {
         return json_encode(['root' => ['type' => 'root', 'children' => array_map(fn ($ref) =>
@@ -74,11 +123,11 @@ class ReferencesTest extends TestCase
         $acl = $this->createMock(Acl::class);
         $acl->method('checkScope')->willReturn(false);
         $metadata = $this->createMock(Metadata::class);
-        $metadata->method('get')->willReturn(true);
+        $metadata->method('get')->willReturnCallback(fn ($path) => end($path) === 'recordIconAttribute' ? null : true);
         $select = $this->createMock(SelectBuilderFactory::class);
         $select->expects($this->never())->method('create');
         $service = new EditorReferences($this->createMock(EntityManager::class), $select, $acl, $metadata,
-            $this->createMock(User::class), $this->createMock(FilterFactory::class));
+            $this->createMock(User::class), $this->createMock(FilterFactory::class), $this->createMock(ReferenceSearch::class));
         $results = $service->resolve([['kind' => 'record', 'entityType' => 'Contact', 'recordId' => 'secret', 'label' => 'Private name']]);
         $this->assertSame('Unavailable reference', $results[0]['label']);
         $this->assertFalse($results[0]['available']);
@@ -91,7 +140,7 @@ class ReferencesTest extends TestCase
         $select = $this->createMock(SelectBuilderFactory::class);
         $select->expects($this->never())->method('create');
         $service = new EditorReferences($em, $select, $this->createMock(Acl::class), $this->createMock(Metadata::class),
-            $this->createMock(User::class), $this->createMock(FilterFactory::class));
+            $this->createMock(User::class), $this->createMock(FilterFactory::class), $this->createMock(ReferenceSearch::class));
         foreach (array_keys(References::CONTEXT) as $key) {
             $this->assertNull($service->context(['kind' => 'context', 'key' => $key], []));
         }
@@ -136,13 +185,13 @@ class ReferencesTest extends TestCase
         $acl->method('getPermissionLevel')->with('mention')->willReturn('team');
         $acl->method('checkUserPermission')->willReturnCallback(fn ($id, $permission) => $id === 'teammate' && $permission === 'mention');
         $metadata = $this->createMock(Metadata::class);
-        $metadata->method('get')->willReturn(true);
+        $metadata->method('get')->willReturnCallback(fn ($path) => end($path) === 'recordIconAttribute' ? null : true);
         $metadata->method('getAll')->willReturn((object) [
             'scopes' => (object) ['User' => (object) ['entity' => true, 'recordKnowledge' => true]],
             'entityDefs' => (object) ['User' => (object) ['fields' => (object) ['name' => (object) []]]],
         ]);
         $service = new EditorReferences($em, $select, $acl, $metadata,
-            $this->createMock(User::class), $this->createMock(FilterFactory::class));
+            $this->createMock(User::class), $this->createMock(FilterFactory::class), $this->createMock(ReferenceSearch::class));
         $results = $service->resolve(array_map(fn ($id) => ['kind' => 'record', 'entityType' => 'User', 'recordId' => $id, 'label' => 'Cached'], ['teammate', 'outside', 'deleted']));
         $this->assertSame('New name', $results[0]['label']);
         $this->assertTrue($results[0]['available']);
@@ -179,13 +228,13 @@ class ReferencesTest extends TestCase
         $acl = $this->createMock(Acl::class);
         foreach (['checkScope', 'checkField', 'checkEntityRead'] as $method) $acl->method($method)->willReturn(true);
         $metadata = $this->createMock(Metadata::class);
-        $metadata->method('get')->willReturn(true);
+        $metadata->method('get')->willReturnCallback(fn ($path) => end($path) === 'recordIconAttribute' ? null : true);
         $metadata->method('getAll')->willReturn((object) [
             'scopes' => (object) ['Document' => (object) ['entity' => true, 'object' => true, 'tab' => true]],
             'entityDefs' => (object) ['Document' => (object) ['fields' => (object) ['name' => (object) []]]],
         ]);
         $results = (new EditorReferences($em, $select, $acl, $metadata,
-            $this->createMock(User::class), $this->createMock(FilterFactory::class)))->resolve(array_map(
+            $this->createMock(User::class), $this->createMock(FilterFactory::class), $this->createMock(ReferenceSearch::class)))->resolve(array_map(
             fn ($id) => ['kind' => 'record', 'entityType' => 'Document', 'recordId' => $id], ['file', 'page']));
         $this->assertTrue($results[0]['available']);
         $this->assertTrue($results[1]['available']);

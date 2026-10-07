@@ -18,6 +18,7 @@ use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\Query\UnionBuilder;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
+use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\ReferenceSearch;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 class EditorReferences
@@ -31,6 +32,7 @@ class EditorReferences
         private Metadata $metadata,
         private User $user,
         private FilterFactory $textFilterFactory,
+        private ReferenceSearch $referenceSearch,
     ) {}
 
     private function allowedType(string $type): bool
@@ -52,6 +54,8 @@ class EditorReferences
     {
         if (strlen($query) > 240) throw new BadRequest('Query too long.');
         $query = trim($query);
+        $this->supportedTypes ??= (new Scopes($this->metadata))->all();
+        $search = $this->referenceSearch->parse($query, $this->supportedTypes);
         $results = [];
         $union = UnionBuilder::create()->all()->order('lastViewedNumber', 'DESC')->order('rank')->order('name');
         $queries = [];
@@ -65,6 +69,7 @@ class EditorReferences
         }
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         foreach ($this->supportedTypes as $rank => $type) {
+            if (!in_array($type, $search['types'], true)) continue;
             if ($nextActionParent && !in_array($type, ['Task', 'Meeting', 'Call'], true)) continue;
             if (!$this->allowedType($type)) continue;
             if ($nextActionParent && (!$this->acl->checkField($type, 'status') || !$this->acl->checkField($type, 'parent'))) continue;
@@ -95,8 +100,10 @@ class EditorReferences
                 }
                 $queries[$type] = $queryBuilder->build();
                 $queryBuilder->order('name')->limit(0, 10);
-                $this->textFilterFactory->create($type, $this->user)
-                    ->apply($queryBuilder, TextFilterData::create($query, ['name']));
+                foreach ($search['terms'] as $term) {
+                    $this->textFilterFactory->create($type, $this->user)->apply($queryBuilder,
+                        TextFilterData::create(ReferenceSearch::pattern($term), ['name'])->withSkipWildcards());
+                }
                 $columns = [
                     'id', 'name', ['VALUE:' . $type, 'entityType'], [(string) $rank, 'rank'],
                 ];
