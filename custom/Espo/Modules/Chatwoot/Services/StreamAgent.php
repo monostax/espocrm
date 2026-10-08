@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Acl;
+use Espo\Core\AclManager;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Entities\Note;
@@ -14,6 +15,7 @@ use Espo\Modules\Chatwoot\Tools\Activities\Access as ActivityAccess;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\Tools\Stream\NoteUtil;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 
 /** The AI's linked CRM User is the authenticated actor for both actions. */
 class StreamAgent
@@ -26,6 +28,8 @@ class StreamAgent
         private NoteUtil $noteUtil,
         private ActivityAccess $activityAccess,
         private StreamAgentProgress $progress,
+        private AclManager $aclManager,
+        private UserTenantResolver $tenants,
     ) {}
 
     public function context(string $noteId, string $membershipId, string $postHash): object
@@ -48,6 +52,7 @@ class StreamAgent
             'crmTenantId' => $target->crmTenantId,
             'chatwootAccountCrmId' => $target->chatwootAccountCrmId,
             'executionRunId' => $note->getData()->opportunityAiExecutions->{$membershipId} ?? null,
+            'initiatorUserId' => $this->delegatedInitiator($note, $target),
             'trigger' => (object) [
                 'id' => $note->getId(),
                 'post' => $note->getPost(),
@@ -189,6 +194,21 @@ class StreamAgent
             $this->entityManager->saveEntity($reply);
             return (object) ['updated' => true];
         });
+    }
+
+    /** Null is deliberate for legacy/revoked triggers; callers must never substitute the AI. */
+    private function delegatedInitiator(Note $note, object $target): ?string
+    {
+        $id = $note->getData()->opportunityAiInitiatorUserId ?? null;
+        if (!is_string($id) || $id === '' || $id !== $note->getCreatedById()) return null;
+        $initiator = $this->entityManager->getEntityById('User', $id);
+        $parent = $this->entityManager->getEntityById($note->getParentType(), $note->getParentId());
+        if (!$initiator instanceof User || !$initiator->isActive() || $initiator->isApi() || $initiator->isPortal() ||
+            !$parent || !$this->tenants->canActForTenant($initiator, $target->crmTenantId) ||
+            !$this->aclManager->checkEntityRead($initiator, $parent) ||
+            !$this->aclManager->checkEntityStream($initiator, $parent) ||
+            !$this->aclManager->checkEntityRead($initiator, $note)) return null;
+        return $id;
     }
 
     private function validate(Note $note, string $membershipId, string $postHash): ?object

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace tests\unit\Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Acl;
+use Espo\Core\AclManager;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\Core\ApplicationState;
 use Espo\Core\Repositories\Database;
 use Espo\Core\Exceptions\Forbidden;
@@ -40,6 +42,8 @@ class OpportunityStreamAgentTest extends TestCase
     private bool $locked = false;
     private EntityManager $em;
     private array $sourceSaveOptions = [];
+    private bool $humanAccess = true;
+    private bool $humanTenant = true;
 
     private function note(array $values = []): Note
     {
@@ -130,8 +134,33 @@ class OpportunityStreamAgentTest extends TestCase
             return $this->records["$type/$id"];
         });
         $this->records['Tenant/tenant'] = new EntityDouble(['id' => 'tenant']);
+        $aclManager = $this->createMock(AclManager::class);
+        $aclManager->method('checkEntityRead')->willReturnCallback(fn () => $this->humanAccess);
+        $aclManager->method('checkEntityStream')->willReturnCallback(fn () => $this->humanAccess);
+        $tenants = $this->createMock(UserTenantResolver::class);
+        $tenants->method('canActForTenant')->willReturnCallback(fn () => $this->humanTenant);
         $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities,
-            $this->createMock(StreamAgentProgress::class));
+            $this->createMock(StreamAgentProgress::class), $aclManager, $tenants);
+    }
+
+    public function testDelegationRequiresCapturedHumanAndCurrentAccess(): void
+    {
+        self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+        $human = $this->createMock(User::class);
+        $human->method('isActive')->willReturn(true);
+        $this->records['User/human'] = $human;
+        $data = $this->source->getData();
+        $data->opportunityAiInitiatorUserId = 'human';
+        $this->source->setData($data);
+        self::assertSame('human', $this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+        $this->humanAccess = false;
+        self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+        $this->humanAccess = true;
+        $this->humanTenant = false;
+        self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+        $this->humanTenant = true;
+        $this->source->set('createdById', 'other-human');
+        self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
     }
 
     public function testLostResponseAndDeletedReplyDoNotCreateAnotherPost(): void

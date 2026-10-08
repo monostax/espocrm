@@ -43,6 +43,7 @@ use Espo\Core\Utils\Metadata\OrmMetadataData;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Module;
 use Espo\Core\Rebuild\RebuildActionProcessor;
+use Espo\Core\Rebuild\RebuildTiming;
 use Espo\Core\ORM\DatabaseParamsFactory;
 use Espo\Core\Utils\Config\MissingDefaultParamsSaver as ConfigMissingDefaultParamsSaver;
 
@@ -80,19 +81,19 @@ class DataManager
      */
     public function rebuild(?array $entityTypeList = null): void
     {
-        $this->clearCache();
-        $this->disableHooks();
-        $this->checkModules();
-        $this->rebuildMetadata();
-        $this->populateConfigParameters();
-        $this->rebuildDatabase($entityTypeList);
-        $this->rebuildActionProcessor->process();
-        $this->configMissingDefaultParamsSaver->process();
+        RebuildTiming::run('clearCache', fn () => $this->clearCache());
+        RebuildTiming::run('disableHooks', fn () => $this->disableHooks());
+        RebuildTiming::run('checkModules', fn () => $this->checkModules());
+        RebuildTiming::run('rebuildMetadata', fn () => $this->rebuildMetadata());
+        RebuildTiming::run('populateConfigParameters', fn () => $this->populateConfigParameters());
+        RebuildTiming::run('rebuildDatabase', fn () => $this->rebuildDatabase($entityTypeList));
+        RebuildTiming::run('rebuildActions', fn () => $this->rebuildActionProcessor->process());
+        RebuildTiming::run('saveMissingConfigDefaults', fn () => $this->configMissingDefaultParamsSaver->process());
         // Clear hook cache to ensure modules and hooks are discovered after metadata rebuild
-        $this->hookManager->clearCache();
-        $this->enableHooks();
+        RebuildTiming::run('clearHookCache', fn () => $this->hookManager->clearCache());
+        RebuildTiming::run('enableHooks', fn () => $this->enableHooks());
         // Preload hooks so they are cached with updated module information
-        $this->hookManager->preloadHooks();
+        RebuildTiming::run('preloadHooks', fn () => $this->hookManager->preloadHooks());
     }
 
     /**

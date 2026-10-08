@@ -269,29 +269,30 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             throw new Error("Failed to resolve Chatwoot contact ID.");
         }
 
+        $chatwootConversationResponse = null;
         if ($selectedIdentity) {
             $conversations = $apiClient->getContactConversations(
                 $platformUrl, $conversationToken, $externalAccountId, $externalContactId, $externalInboxId, $conversationSourceId
             );
             foreach ($conversations as $conversation) {
                 if ((int) $conversation['inbox_id'] === $externalInboxId) {
-                    return (object) [
-                        'chatwootConversationId' => (int) $conversation['id'],
-                        'chatwootAccountIdExternal' => $externalAccountId,
-                    ];
+                    $chatwootConversationResponse = $conversation;
+                    break;
                 }
             }
         }
 
-        // === Create conversation in Chatwoot ===
-        $chatwootConversationResponse = $apiClient->createConversation(
-            $platformUrl,
-            $conversationToken,
-            $externalAccountId,
-            $externalContactId,
-            $externalInboxId,
-            $selectedIdentity ? $conversationSourceId : null
-        );
+        // Reused conversations also need local bridge records and the opportunity link.
+        if (!$chatwootConversationResponse) {
+            $chatwootConversationResponse = $apiClient->createConversation(
+                $platformUrl,
+                $conversationToken,
+                $externalAccountId,
+                $externalContactId,
+                $externalInboxId,
+                $selectedIdentity ? $conversationSourceId : null
+            );
+        }
 
         $chatwootConversationId = $chatwootConversationResponse['display_id']
             ?? $chatwootConversationResponse['id']
@@ -373,7 +374,7 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
             'inboxId' => $inboxEntityId, // Decision #13: fixes ACL gap
             'inboxName' => $chatwootInbox->get('name'),
             'inboxChannelType' => $inboxChannelType,
-            'status' => 'open',
+            'status' => $chatwootConversationResponse['status'] ?? 'open',
         ];
         if ($selectedIdentity) {
             $conversationData['channelIdentityId'] = $selectedIdentity->getId();

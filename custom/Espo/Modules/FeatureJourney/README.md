@@ -30,6 +30,28 @@ Enroll Contacts, Accounts, Leads, or Opportunities into staged journeys; move th
 - Logs: `#JourneyRecordLog`
 - Platform: Administration → Journeys panel
 
+## Chatwoot record relationships
+
+The **Relationships → Journeys** group shows `JourneyRecord` enrollment cycles for
+Contacts, Accounts, Leads, and Opportunities. Its link picker lists active journeys
+whose `targetEntityType` matches the current record, excluding live enrollments and
+previous cycles when re-enrollment is disabled. Linking calls the enrollment engine
+immediately; it does not change the journey's manual audience. Unlinking exits a
+cycle without deleting it or running stage OnExit actions. Historical cycles remain
+visible, and bulk unlink exits each selected eligible cycle independently.
+
+The Chatwoot module serves `JourneyRelationships/:type/:targetId` (GET list / POST
+enroll), `/options` (GET), and `/:id` (GET details / DELETE exit), with `accountId`
+identifying the Chatwoot workspace. Each request resolves authenticated workspace
+membership and target tenancy/read access. Queries enforce tenant and record ACL;
+enrollment additionally requires target edit and JourneyRecord create/link-field
+permissions. Exit requires target edit, enrollment edit, and status-field edit.
+Read responses respect field-level restrictions and never accept client-provided
+tenant, target overrides, stage, status, or run-as identity.
+
+After deploying the new routes, clear the CRM cache. Focused security coverage:
+`php phpunit.phar --do-not-cache-result tests/unit/Espo/Modules/Chatwoot/Services/JourneyRelationshipsTest.php`.
+
 ## Engine at a glance
 
 ```

@@ -408,6 +408,16 @@ class SyncConversationsFromChatwoot implements JobDataLess
         // Sync messages for this conversation
         if ($conversation && $result === 'synced') {
             $messages = $chatwootConversation['messages'] ?? [];
+            $replyReconciler = 'Espo\\Modules\\FeatureJourney\\Services\\JourneyWhatsAppReplyReconciler';
+            if (class_exists($replyReconciler)) {
+                try {
+                    $recovered = $this->injectableFactory->create($replyReconciler)->reconcile($conversation);
+                    $messages = array_values(array_column([...$messages, ...$recovered], null, 'id'));
+                } catch (\Throwable $e) {
+                    // Keep ordinary sync working; active enrollments are retried next run.
+                    $this->log->warning('Journey WhatsApp reply reconciliation ' . $conversation->getId() . ': ' . $e->getMessage());
+                }
+            }
             $tokenCandidates = [];
             if (!empty($messages)) {
                 $tokenCandidates = $this->syncMessages($messages, $conversation, $cwtContact, $espoAccountId, $teamId);

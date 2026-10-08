@@ -310,8 +310,7 @@ class JourneyWhatsAppReplyTracker
             return;
         }
         $occurredAt = gmdate('Y-m-d H:i:s', $timestamp);
-        $opportunities = $this->entityManager->getRDBRepository('ChatwootConversation')
-            ->getRelation($conversation, 'opportunities')->find();
+        $opportunities = $this->getLinkedOpportunities($conversation, $tenantId, $occurredAt);
         foreach ($opportunities as $opportunity) {
             if ($this->tenantResolver->resolveTenantIdForEntity($opportunity) !== $tenantId) {
                 continue;
@@ -350,6 +349,52 @@ class JourneyWhatsAppReplyTracker
                 self::$fired[$key] = true;
             }
         }
+    }
+
+    /**
+     * Native links and confirmed membership links shown by RecordKnowledge.
+     * Do not treat arbitrary knowledge predicates (e.g. competitors) as membership.
+     *
+     * @return list<Entity>
+     */
+    public function getLinkedOpportunities(Entity $conversation, string $tenantId, string $occurredAt): array
+    {
+        $opportunities = [];
+        foreach ($this->entityManager->getRDBRepository('ChatwootConversation')
+            ->getRelation($conversation, 'opportunities')->find() as $opportunity) {
+            if ($this->tenantResolver->resolveTenantIdForEntity($opportunity) === $tenantId) {
+                $opportunities[$opportunity->getId()] = $opportunity;
+            }
+        }
+
+        // FeatureRecordKnowledge is optional on some installations.
+        if ($this->entityManager->hasRepository('RecordRelation')) {
+            $relations = $this->entityManager->getRDBRepository('RecordRelation')->where([
+                'tenantId' => $tenantId,
+                'status' => 'confirmed',
+                'predicate' => 'builtin:part_of',
+                'createdAt<=' => $occurredAt,
+                'decidedAt<=' => $occurredAt,
+                'OR' => [
+                    ['subjectType' => 'Opportunity', 'objectType' => 'ChatwootConversation',
+                        'objectId' => $conversation->getId()],
+                    ['objectType' => 'Opportunity', 'subjectType' => 'ChatwootConversation',
+                        'subjectId' => $conversation->getId()],
+                ],
+            ])->find();
+            foreach ($relations as $relation) {
+                $id = (string) $relation->get($relation->get('subjectType') === 'Opportunity' ? 'subjectId' : 'objectId');
+                if (isset($opportunities[$id])) {
+                    continue;
+                }
+                $opportunity = $this->entityManager->getEntityById('Opportunity', $id);
+                if ($opportunity && $this->tenantResolver->resolveTenantIdForEntity($opportunity) === $tenantId) {
+                    $opportunities[$id] = $opportunity;
+                }
+            }
+        }
+
+        return array_values($opportunities);
     }
 
     /**

@@ -42,7 +42,7 @@ class RebuildActionProcessor
     public function process(): void
     {
         foreach ($this->getActionList() as $action) {
-            $action->process();
+            RebuildTiming::run('action ' . get_class($action), fn () => $action->process());
         }
     }
 

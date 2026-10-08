@@ -3027,10 +3027,14 @@ public function deleteConversation(
         string $platformUrl,
         string $accountApiKey,
         int $accountId,
-        int $conversationId
+        int $conversationId,
+        ?int $before = null,
     ): array {
         $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId
             . '/conversations/' . $conversationId . '/messages';
+        if ($before !== null) {
+            $url .= '?before=' . $before;
+        }
 
         $headers = [
             'api_access_token: ' . $accountApiKey,
