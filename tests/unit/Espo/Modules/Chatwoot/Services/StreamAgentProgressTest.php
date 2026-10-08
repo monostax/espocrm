@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace tests\unit\Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\AclManager;
+use Espo\Core\ApplicationState;
+use Espo\Core\Repositories\Database;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\StreamAgentProgress;
@@ -38,8 +40,20 @@ class StreamAgentProgressTest extends TestCase
             'User' => $user,
         });
         $em->method('getNewEntity')->with('Note')->willReturnCallback(fn () => new Note('Note', $defs));
+        $human = $this->createMock(User::class);
+        $human->method('getId')->willReturn('human');
+        $state = $this->createMock(ApplicationState::class);
+        $state->method('hasUser')->willReturn(true);
+        $state->method('getUser')->willReturn($human);
+        // Exercise the real ORM author stamping; an in-memory save alone misses
+        // the overwrite that happens when this hook runs in the human's request.
+        $reflection = new \ReflectionClass(Database::class);
+        $database = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('applicationState')->setValue($database, $state);
+        $stampAuthor = $reflection->getMethod('processCreatedAndModifiedFieldsSaveNew');
         $saved = [];
-        $em->method('saveEntity')->willReturnCallback(function (Note $reply) use (&$saved): void {
+        $em->method('saveEntity')->willReturnCallback(function (Note $reply, array $options = []) use (&$saved, $database, $stampAuthor): void {
+            $stampAuthor->invoke($database, $reply, $options);
             $reply->set('id', 'reply-' . count($saved));
             $saved[] = $reply;
         });

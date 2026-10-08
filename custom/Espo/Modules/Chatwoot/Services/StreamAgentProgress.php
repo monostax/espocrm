@@ -6,6 +6,7 @@ namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\AclManager;
 use Espo\Core\Job\QueueName;
+use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Jobs\ExpireStreamAgentReply;
@@ -49,7 +50,9 @@ class StreamAgentProgress
             ]],
         ]);
         if (!$this->acl->check($user, $reply, 'create')) return;
-        $this->em->saveEntity($reply);
+        // This hook runs as the human author. The ORM replaces the entity's
+        // createdById unless the intended author is also supplied as a save option.
+        $this->em->saveEntity($reply, [SaveOption::CREATED_BY_ID => $user->getId()]);
         // A real reaction under the AI's linked user; ordinary reaction hooks broadcast it.
         $reaction = ['parentType' => 'Note', 'parentId' => $source->getId(), 'userId' => $user->getId(), 'type' => '👀'];
         if (!$this->em->getRDBRepository('UserReaction')->where($reaction)->findOne()) {

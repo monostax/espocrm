@@ -6,6 +6,7 @@ namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Acl;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
@@ -82,6 +83,7 @@ class StreamAgent
                 $data = $existing->getData();
                 $data->opportunityStreamAgent->status = 'completed';
                 $existing->setData($data);
+                $existing->set('createdById', $this->user->getId());
                 $existing->setPost($post);
                 $this->noteUtil->handlePostText($existing);
                 $this->entityManager->saveEntity($existing);
@@ -144,12 +146,16 @@ class StreamAgent
             $data->opportunityAiExecutions ??= (object) [];
             $data->opportunityAiExecutions->{$membershipId} = $runId;
             $source->setData($data);
-            $this->entityManager->saveEntity($source);
+            // Execution bookkeeping is not a human edit. Preserve modifiedAt
+            // and modifiedBy (including any genuine earlier edit).
+            $this->entityManager->saveEntity($source, [SaveOption::SKIP_MODIFIED_BY => true]);
             if ($existing) {
                 $replyData = $existing->getData();
                 $replyData->opportunityStreamAgent->status = 'running';
                 $replyData->opportunityStreamAgent->workflowRunId = $runId;
                 $existing->setData($replyData);
+                // Repair placeholders created before explicit ORM attribution.
+                $existing->set('createdById', $this->user->getId());
                 $existing->setPost('Working on your request…');
                 $this->entityManager->saveEntity($existing);
                 $this->progress->scheduleExpiry($existing);

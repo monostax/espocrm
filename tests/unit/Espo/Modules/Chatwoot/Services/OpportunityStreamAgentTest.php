@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace tests\unit\Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Acl;
+use Espo\Core\ApplicationState;
+use Espo\Core\Repositories\Database;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Job\Job\Data;
 use Espo\Entities\Note;
@@ -37,12 +39,13 @@ class OpportunityStreamAgentTest extends TestCase
     private bool $canCreate = true;
     private bool $locked = false;
     private EntityManager $em;
+    private array $sourceSaveOptions = [];
 
     private function note(array $values = []): Note
     {
         $defs = ['attributes' => []];
         foreach (['id', 'type', 'post', 'parentType', 'parentId', 'createdById', 'createdByName', 'createdAt',
-            'opportunityChatwootAccountId', 'opportunityStreamEventKey', 'opportunityThreadRootId', 'number'] as $field) {
+            'opportunityChatwootAccountId', 'opportunityStreamEventKey', 'opportunityThreadRootId', 'number', 'modifiedAt', 'modifiedById'] as $field) {
             $defs['attributes'][$field] = ['type' => 'varchar'];
         }
         $defs['attributes']['data'] = ['type' => 'jsonObject'];
@@ -78,9 +81,12 @@ class OpportunityStreamAgentTest extends TestCase
         $em = $this->em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $this->records["$type/$id"] ?? null);
         $em->method('getNewEntity')->with('Note')->willReturnCallback(fn () => $this->note());
-        $em->method('saveEntity')->willReturnCallback(function (Note $note): void {
+        $em->method('saveEntity')->willReturnCallback(function (Note $note, array $options = []): void {
             self::assertTrue($this->locked, 'Publication must hold the source row lock.');
-            if ($note === $this->source) return; // Persisting the execution claim, not a reply.
+            if ($note === $this->source) {
+                $this->sourceSaveOptions = $options;
+                return; // Persisting the execution claim, not a reply.
+            }
             (new KeepOpportunityEventsInternal())->beforeSave($note, []);
             if (!$note->get('id')) $note->set('id', 'reply-' . count($this->replies));
             $this->replies[$note->get('opportunityStreamEventKey')] = $note;
@@ -315,6 +321,41 @@ class OpportunityStreamAgentTest extends TestCase
         $this->canCreate = false;
         $this->expectException(Forbidden::class);
         $this->service->reply('source', 'ai', $this->postHash, 'Answer', 'run');
+    }
+
+    public function testLegacyPlaceholderAuthorIsCorrectedAtClaimAndCompletion(): void
+    {
+        $reply = $this->queuedReply();
+        $reply->set('createdById', 'human');
+        self::assertTrue($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+        self::assertSame('ai-user', $reply->getCreatedById());
+        // Also cover a run already claimed before the fix was deployed.
+        $reply->set('createdById', 'human');
+        self::assertTrue($this->service->reply('source', 'ai', $this->postHash, 'Answer', 'run')->published);
+        self::assertSame('ai-user', $reply->getCreatedById());
+    }
+
+    public function testExecutionClaimPreservesTheTriggersExistingEditHistory(): void
+    {
+        $this->source->setAsNotNew();
+        $this->source->set(['modifiedAt' => '2026-09-15 12:05:00', 'modifiedById' => 'human-editor']);
+        $post = $this->source->getPost();
+        self::assertTrue($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+
+        $actor = $this->createMock(User::class);
+        $actor->method('getId')->willReturn('ai-user');
+        $state = $this->createMock(ApplicationState::class);
+        $state->method('hasUser')->willReturn(true);
+        $state->method('getUser')->willReturn($actor);
+        $reflection = new \ReflectionClass(Database::class);
+        $database = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('applicationState')->setValue($database, $state);
+        $reflection->getMethod('processCreatedAndModifiedFieldsSave')->invoke($database, $this->source, $this->sourceSaveOptions);
+
+        self::assertSame($post, $this->source->getPost());
+        self::assertSame('2026-09-15 12:05:00', $this->source->get('modifiedAt'));
+        self::assertSame('human-editor', $this->source->get('modifiedById'));
+        self::assertSame('run', $this->source->getData()->opportunityAiExecutions->ai);
     }
 
     public function testQueuedExpiryCannotStopAClaimedRunAndCompletedAnswersSurviveExpiry(): void
