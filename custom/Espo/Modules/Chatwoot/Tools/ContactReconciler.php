@@ -611,7 +611,6 @@ class ContactReconciler
             'phoneNumber' => $normalizedPhone,
             'emailAddress' => $normalizedEmail,
             'tenantId' => $tenantId,
-            'description' => 'Imported from Chatwoot',
         ];
 
         if (!empty($teamsIds)) {
