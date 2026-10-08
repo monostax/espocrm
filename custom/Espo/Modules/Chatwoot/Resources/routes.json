@@ -1,4 +1,5 @@
 [
+    { "route": "/Note/:id/streamAiStatus/:membershipId", "method": "post", "params": { "controller": "StreamAgent", "action": "status", "id": ":id", "membershipId": ":membershipId" } },
     { "route": "/Account/action/bulkReadState", "method": "post", "params": { "controller": "AccountInbox", "action": "bulkReadState" } },
     { "route": "/Contact/action/bulkReadState", "method": "post", "params": { "controller": "ContactInbox", "action": "bulkReadState" } },
     { "route": "/Opportunity/action/bulkReadState", "method": "post", "params": { "controller": "OpportunityReadState", "action": "bulkReadState" } },

@@ -9,6 +9,7 @@ use Espo\Core\Job\QueueName;
 use Espo\Entities\Note;
 use Espo\Modules\Chatwoot\Jobs\DispatchOpportunityStreamAgent;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
+use Espo\Modules\Chatwoot\Services\StreamAgentProgress;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
@@ -17,7 +18,7 @@ class QueueOpportunityStreamAgent implements AfterSave
 {
     public static int $order = 99;
 
-    public function __construct(private EntityManager $entityManager) {}
+    public function __construct(private EntityManager $entityManager, private StreamAgentProgress $progress) {}
 
     public function afterSave(Entity $entity, SaveOptions $options): void
     {
@@ -28,6 +29,7 @@ class QueueOpportunityStreamAgent implements AfterSave
         }
         assert($entity instanceof Note);
         foreach ($entity->getData()->opportunityAiMentionTargets ?? [] as $target) {
+            $this->progress->queue($entity, $target);
             // Like PublishOpportunityUpdate: consumed only after commit, discarded on rollback.
             $this->entityManager->createEntity('Job', [
                 'name' => DispatchOpportunityStreamAgent::class,

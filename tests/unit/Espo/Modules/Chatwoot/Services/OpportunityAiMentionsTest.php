@@ -41,7 +41,7 @@ class OpportunityAiMentionsTest extends TestCase
             $identities["cw-$platformId"] = new EntityDouble(['chatwootUserId' => $platformId, 'assignedUserId' => 'ai-user', 'platformId' => 'platform']);
         }
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => match ($type) {
-            'Opportunity', 'Initiative', 'Task', 'Meeting', 'Call' => $opportunity,
+            'Opportunity', 'Initiative', 'Task', 'Meeting', 'Call', 'Account', 'Contact' => $opportunity,
             'ChatwootAccountUserMembership' => array_values(array_filter($memberships, fn ($m) => $m->getId() === $id))[0] ?? null,
             'ChatwootAccount' => $account,
             'ChatwootUser' => $identities[$id] ?? null,
@@ -137,7 +137,7 @@ class OpportunityAiMentionsTest extends TestCase
 
     public function testMembershipReferencesSelectTheExactAiAcrossAllStreamTypes(): void
     {
-        foreach (['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call'] as $type) {
+        foreach (['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call', 'Account', 'Contact'] as $type) {
             $this->note->set('parentType', $type);
             $this->note->setPost('[Assistant](#crm-reference/v1/record/ChatwootAccountUserMembership/ai-7) Help');
             self::assertSame(['ai-7'], array_column($this->mentions->resolveAiTargets($this->note), 'aiAgentMembershipId'));

@@ -52,6 +52,18 @@ class StreamAgent
         );
     }
 
+    public function postActionStatus(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        $runId = $body->workflowRunId ?? null;
+        $status = $body->status ?? null;
+        if (!is_string($runId) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $runId) ||
+            !in_array($status, ['failed', 'cancelled', 'blocked'], true)) {
+            throw new BadRequest('A workflow run ID and terminal status are required.');
+        }
+        return $this->service->status($this->id($request, 'id'), $this->id($request, 'membershipId'), $runId, $status);
+    }
+
     private function id(Request $request, string $key): string
     {
         $id = $request->getRouteParam($key);

@@ -24,6 +24,7 @@ class StreamAgent
         private OpportunityAccess $access,
         private NoteUtil $noteUtil,
         private ActivityAccess $activityAccess,
+        private StreamAgentProgress $progress,
     ) {}
 
     public function context(string $noteId, string $membershipId, string $postHash): object
@@ -34,7 +35,7 @@ class StreamAgent
             return (object) ['shouldRespond' => false, 'reason' => 'Trigger no longer valid'];
         }
         $existing = $this->existingReply($noteId, $membershipId);
-        if ($existing) {
+        if ($existing && !StreamAgentProgress::isPending($existing)) {
             return (object) ['shouldRespond' => false, 'reason' => 'Already replied'];
         }
         return (object) [
@@ -67,12 +68,24 @@ class StreamAgent
             if (!$target) {
                 return (object) ['published' => false, 'noteId' => null, 'reason' => 'Trigger no longer valid'];
             }
-            if ($existing = $this->existingReply($noteId, $membershipId)) {
+            $existing = $this->existingReply($noteId, $membershipId);
+            if ($existing && !StreamAgentProgress::isPending($existing)) {
                 return (object) ['published' => false, 'noteId' => $existing->getId(), 'reason' => 'Already replied'];
             }
             $owner = $source->getData()->opportunityAiExecutions->{$membershipId} ?? null;
             if ($owner !== null && $owner !== $runId) {
                 throw new Forbidden('Another workflow owns this request.');
+            }
+            if ($existing) {
+                if ($owner !== $runId) throw new Forbidden('Claim the request before completing it.');
+                if (!$this->acl->check($existing, 'create')) throw new Forbidden('No permission to post in this stream.');
+                $data = $existing->getData();
+                $data->opportunityStreamAgent->status = 'completed';
+                $existing->setData($data);
+                $existing->setPost($post);
+                $this->noteUtil->handlePostText($existing);
+                $this->entityManager->saveEntity($existing);
+                return (object) ['published' => true, 'noteId' => $existing->getId(), 'reason' => 'Replied'];
             }
             $reply = $this->entityManager->getNewEntity('Note');
             assert($reply instanceof Note);
@@ -91,6 +104,7 @@ class StreamAgent
                         'sourceNoteId' => $noteId,
                         'aiAgentMembershipId' => $membershipId,
                         'workflowRunId' => $runId,
+                        'status' => 'completed',
                     ],
                 ],
             ]);
@@ -109,8 +123,9 @@ class StreamAgent
     {
         return $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $postHash, $runId): object {
             $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
+            $existing = $this->existingReply($noteId, $membershipId);
             if (!$source instanceof Note || !$this->validate($source, $membershipId, $postHash) ||
-                $this->existingReply($noteId, $membershipId)) {
+                ($existing && !StreamAgentProgress::isPending($existing))) {
                 return (object) ['claimed' => false];
             }
             $data = $source->getData();
@@ -130,7 +145,43 @@ class StreamAgent
             $data->opportunityAiExecutions->{$membershipId} = $runId;
             $source->setData($data);
             $this->entityManager->saveEntity($source);
+            if ($existing) {
+                $replyData = $existing->getData();
+                $replyData->opportunityStreamAgent->status = 'running';
+                $replyData->opportunityStreamAgent->workflowRunId = $runId;
+                $existing->setData($replyData);
+                $existing->setPost('Working on your request…');
+                $this->entityManager->saveEntity($existing);
+                $this->progress->scheduleExpiry($existing);
+            }
             return (object) ['claimed' => true];
+        });
+    }
+
+    /** Terminal feedback may outlive an edited trigger, but must belong to this AI/run. */
+    public function status(string $noteId, string $membershipId, string $runId, string $status): object
+    {
+        return $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $status): object {
+            $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
+            $reply = $this->existingReply($noteId, $membershipId);
+            if (!StreamAgentProgress::isPending($reply)) return (object) ['updated' => false];
+            if ($reply->getCreatedById() !== $this->user->getId() || !$this->user->isActive() || !$this->acl->check($reply, 'read')) {
+                throw new Forbidden('Authenticate as the mentioned AI profile.');
+            }
+            $data = $reply->getData();
+            $owner = $source?->getData()->opportunityAiExecutions->{$membershipId} ?? $data->opportunityStreamAgent->workflowRunId ?? null;
+            if ($owner !== null && $owner !== $runId) return (object) ['updated' => false];
+            $post = match ($status) {
+                'cancelled' => 'This request was stopped or replaced by a newer mention.',
+                'blocked' => 'This request could not start because the AI budget is unavailable.',
+                'failed' => 'This request could not finish. Check the workflow before requesting another execution.',
+                default => throw new \InvalidArgumentException('Invalid stream agent status.'),
+            };
+            $data->opportunityStreamAgent->status = $status;
+            $reply->setData($data);
+            $reply->setPost($post);
+            $this->entityManager->saveEntity($reply);
+            return (object) ['updated' => true];
         });
     }
 

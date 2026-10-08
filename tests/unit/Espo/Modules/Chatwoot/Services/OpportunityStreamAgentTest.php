@@ -6,10 +6,13 @@ namespace tests\unit\Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Acl;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Job\Job\Data;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Hooks\Note\KeepOpportunityEventsInternal;
+use Espo\Modules\Chatwoot\Jobs\ExpireStreamAgentReply;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamAgent;
+use Espo\Modules\Chatwoot\Services\StreamAgentProgress;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
 use Espo\Modules\Chatwoot\Tools\Activities\Access as ActivityAccess;
 use Espo\ORM\EntityManager;
@@ -33,6 +36,7 @@ class OpportunityStreamAgentTest extends TestCase
     private bool $canRead = true;
     private bool $canCreate = true;
     private bool $locked = false;
+    private EntityManager $em;
 
     private function note(array $values = []): Note
     {
@@ -71,14 +75,14 @@ class OpportunityStreamAgentTest extends TestCase
             'ChatwootAccount/account' => new EntityDouble(['tenantId' => 'tenant', 'platformId' => 'platform']),
             'Opportunity/opp' => new EntityDouble(['tenantId' => 'tenant']),
         ];
-        $em = $this->createMock(EntityManager::class);
+        $em = $this->em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $this->records["$type/$id"] ?? null);
         $em->method('getNewEntity')->with('Note')->willReturnCallback(fn () => $this->note());
         $em->method('saveEntity')->willReturnCallback(function (Note $note): void {
             self::assertTrue($this->locked, 'Publication must hold the source row lock.');
             if ($note === $this->source) return; // Persisting the execution claim, not a reply.
             (new KeepOpportunityEventsInternal())->beforeSave($note, []);
-            $note->set('id', 'reply-' . count($this->replies));
+            if (!$note->get('id')) $note->set('id', 'reply-' . count($this->replies));
             $this->replies[$note->get('opportunityStreamEventKey')] = $note;
         });
         $transaction = $this->createMock(TransactionManager::class);
@@ -120,7 +124,8 @@ class OpportunityStreamAgentTest extends TestCase
             return $this->records["$type/$id"];
         });
         $this->records['Tenant/tenant'] = new EntityDouble(['id' => 'tenant']);
-        $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities);
+        $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities,
+            $this->createMock(StreamAgentProgress::class));
     }
 
     public function testLostResponseAndDeletedReplyDoNotCreateAnotherPost(): void
@@ -217,7 +222,7 @@ class OpportunityStreamAgentTest extends TestCase
 
     public function testAllSupportedStreamsKeepTheirParentThreadAndDeduplication(): void
     {
-        foreach (['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call'] as $type) {
+        foreach (['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call', 'Account', 'Contact'] as $type) {
             $this->setUp();
             $this->source->set(['parentType' => $type, 'parentId' => 'record', 'opportunityThreadRootId' => 'thread']);
             $this->records["$type/record"] = new EntityDouble(['tenantId' => 'tenant']);
@@ -242,5 +247,100 @@ class OpportunityStreamAgentTest extends TestCase
         $this->source->set('opportunityPostDeleted', true);
         self::assertFalse($this->service->context('source', 'ai', $this->postHash)->shouldRespond);
         self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+    }
+
+    private function queuedReply(): Note
+    {
+        $key = hash('sha256', 'opportunity-stream-agent:source:ai');
+        return $this->records['Note/pending-reply'] = $this->replies[$key] = $this->note([
+            'id' => 'pending-reply', 'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => 'opp',
+            'createdById' => 'ai-user', 'post' => 'Waiting to start…', 'opportunityStreamEventKey' => $key,
+            'data' => (object) ['opportunityStreamAgent' => (object) [
+                'sourceNoteId' => 'source', 'aiAgentMembershipId' => 'ai', 'status' => 'queued', 'workflowRunId' => null,
+            ]],
+        ]);
+    }
+
+    public function testQueuedReplyIsClaimedAndCompletedInPlaceExactlyOnce(): void
+    {
+        $reply = $this->queuedReply();
+        self::assertTrue($this->service->context('source', 'ai', $this->postHash)->shouldRespond);
+        self::assertTrue($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+        self::assertSame('running', $reply->getData()->opportunityStreamAgent->status);
+        self::assertSame('run', $reply->getData()->opportunityStreamAgent->workflowRunId);
+        self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+        $result = $this->service->reply('source', 'ai', $this->postHash, 'Final answer', 'run');
+        self::assertTrue($result->published);
+        self::assertSame('pending-reply', $result->noteId);
+        self::assertCount(1, $this->replies);
+        self::assertSame('Final answer', $reply->getPost());
+        self::assertSame('completed', $reply->getData()->opportunityStreamAgent->status);
+        self::assertFalse($this->service->reply('source', 'ai', $this->postHash, 'Duplicate', 'run')->published);
+        self::assertFalse($this->service->status('source', 'ai', 'run', 'failed')->updated);
+        self::assertSame('Final answer', $reply->getPost());
+    }
+
+    public function testOnlyTheOwningRunCanStopARunningReplyEvenAfterTheSourceIsEdited(): void
+    {
+        $reply = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'owner');
+        self::assertFalse($this->service->status('source', 'ai', 'duplicate', 'failed')->updated);
+        $this->source->setPost('Edited');
+        self::assertTrue($this->service->status('source', 'ai', 'owner', 'cancelled')->updated);
+        self::assertSame('cancelled', $reply->getData()->opportunityStreamAgent->status);
+        self::assertFalse(StreamAgentProgress::isPending($reply));
+    }
+
+    public function testBudgetBlockEndsQueuedFeedbackWithoutAnExecutionClaim(): void
+    {
+        $reply = $this->queuedReply();
+        self::assertTrue($this->service->status('source', 'ai', 'run', 'blocked')->updated);
+        self::assertSame('blocked', $reply->getData()->opportunityStreamAgent->status);
+        self::assertFalse($this->service->claim('source', 'ai', $this->postHash, 'run')->claimed);
+    }
+
+    public function testDeletedPlaceholderIsNeverResurrected(): void
+    {
+        $reply = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $reply->set('opportunityPostDeleted', true);
+        self::assertFalse($this->service->reply('source', 'ai', $this->postHash, 'Answer', 'run')->published);
+        self::assertFalse($this->service->status('source', 'ai', 'run', 'failed')->updated);
+    }
+
+    public function testPostingPermissionIsRecheckedWhenCompletingAPendingReply(): void
+    {
+        $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $this->canCreate = false;
+        $this->expectException(Forbidden::class);
+        $this->service->reply('source', 'ai', $this->postHash, 'Answer', 'run');
+    }
+
+    public function testQueuedExpiryCannotStopAClaimedRunAndCompletedAnswersSurviveExpiry(): void
+    {
+        $reply = $this->queuedReply();
+        $job = new ExpireStreamAgentReply($this->em);
+        $data = ['sourceNoteId' => 'source', 'noteId' => 'pending-reply', 'workflowRunId' => null];
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $job->run(Data::create($data));
+        self::assertSame('running', $reply->getData()->opportunityStreamAgent->status);
+        $this->service->reply('source', 'ai', $this->postHash, 'Final', 'run');
+        $job->run(Data::create([...$data, 'workflowRunId' => 'run']));
+        self::assertSame('completed', $reply->getData()->opportunityStreamAgent->status);
+        self::assertSame('Final', $reply->getPost());
+    }
+
+    public function testAbandonedQueuedAndRunningRepliesExpire(): void
+    {
+        foreach ([null, 'run'] as $runId) {
+            $reply = $this->queuedReply();
+            if ($runId) $this->service->claim('source', 'ai', $this->postHash, $runId);
+            (new ExpireStreamAgentReply($this->em))->run(Data::create([
+                'sourceNoteId' => 'source', 'noteId' => 'pending-reply', 'workflowRunId' => $runId,
+            ]));
+            self::assertSame('failed', $reply->getData()->opportunityStreamAgent->status);
+            self::assertFalse(StreamAgentProgress::isPending($reply));
+        }
     }
 }
