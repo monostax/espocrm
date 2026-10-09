@@ -1,5 +1,6 @@
 {
     "indexes": {
-        "searchLastName": {"columns": ["lastName", "deleted"]}
+        "searchLastName": {"columns": ["lastName", "deleted"]},
+        "editorReferenceName": {"columns": ["firstName", "lastName"], "flags": ["fulltext"]}
     }
 }

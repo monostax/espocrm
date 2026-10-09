@@ -42,7 +42,24 @@ All identity parsing uses an entity allow-list and restricted IDs; stored URLs c
 
 ## Reference search
 
-`EditorReference/search` matches all whitespace-separated words anywhere in the record name, in any order. For example, `Kibu` matches `IA (Kibu) — Overview`. Entity type names and translated singular/plural labels can qualify a query in either position (`oportunidade nowle`, `manuella contato`). Portuguese opportunity/contact aliases also work with an English UI. A label by itself remains a name search. Search terms are literal (SQL wildcard characters are escaped); this is substring matching, not typo correction. Existing recent-view ordering, access checks and ten-results-per-type limits apply.
+`EditorReference/search` matches all whitespace-separated word prefixes anywhere in the record name, in any order. For example, `Kibu` matches `AI Kibu` and `IA (Kibu) — Overview`, while `ibu` does not match `Kibu`. Entity type names and translated singular/plural labels can qualify a query in either position (`oportunidade drogasil`, `manuella contato`). Portuguese opportunity/contact aliases also work with an English UI. A label by itself remains a name search. Search terms are literal, not user-supplied SQL/full-text operators. Existing recent-view ordering, access checks and ten-results-per-type limits apply.
+
+Large record tables have a dedicated `editorReferenceName` full-text index on their name columns (first/last name for Contact). This keeps matching independent of document bodies and uses indexed boolean word-prefix queries instead of `%term%` scans. Short terms, default InnoDB stopwords, punctuation, and unindexed types use an escaped word-boundary regular expression. Those fallback-only searches can be slower. The MariaDB indexes assume the standard InnoDB token size range 3–84 and default stopword list; rebuild the indexes and update the eligibility check if those settings change. Roll out the index metadata and run the CRM schema rebuild before serving the updated endpoint. Document parent ACL subqueries use correlated primary-key lookups instead of materializing all readable parents.
+
+Recent-view ranking uses the covering `editorReferenceHistory` index and only reads history for the requested entity types.
+
+### Production benchmark (2026-10-09)
+
+The regression was introduced when whole-name prefix filtering became `%term%` filtering. The original `Kibu` search took 1.6–2.0 seconds inside the CRM pod, with approximately 1.67 seconds in its SQL union. After the indexed word-prefix rollout, authenticated HTTP checks (one initial request excluded, 20 sequential samples, a temporary admin session, requests originating inside the cluster) measured:
+
+| Query | Loopback p50 / p95 | Public HTTPS p50 / p95 | Results |
+| --- | --- | --- | --- |
+| `Kibu` | 220 / 298 ms | 263 / 315 ms | 4 |
+| `oportunidade drogasil` | 66 / 133 ms | 95 / 102 ms | 0 |
+| `Kibu IA` | 216 / 237 ms | 260 / 289 ms | 4 |
+| `Contact manuella` | 80 / 103 ms | 105 / 121 ms | 10 |
+
+`Kibu` retained both agent/user names and their Overview documents. The qualified Drogasil query correctly restricted its scope to Opportunity, but there were no matching records for the benchmark identity. These are warm sequential measurements, not a concurrent load test or browser-to-server timings. The 50 ms end-to-end goal is not met: even an empty authenticated `EditorReference/resolve` request measured 52 ms median before doing search work. Remaining work includes cross-type query construction, record hydration, request initialization, and network overhead.
 
 ## Persistence and API writes
 

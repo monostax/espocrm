@@ -132,6 +132,7 @@ abstract class BaseQueryComposer implements QueryComposer
     protected array $comparisonFunctionOperatorMap = [
         'LIKE' => 'LIKE',
         'NOT_LIKE' => 'NOT LIKE',
+        'REGEXP' => 'REGEXP',
         'EQUAL' => '=',
         'NOT_EQUAL' => '<>',
         'GREATER_THAN' => '>',

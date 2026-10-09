@@ -27,10 +27,10 @@ use PHPUnit\Framework\TestCase;
 
 class ReferencesTest extends TestCase
 {
-    public function testSearchNarrowsEntityAndAppliesContainsToEveryNameWord(): void
+    public function testSearchNarrowsEntityAndRequiresEveryWordPrefixInsideTheAclQuery(): void
     {
         $metadata = $this->createMock(Metadata::class);
-        $metadata->method('get')->willReturn(true);
+        $metadata->method('get')->willReturnCallback(fn ($path) => in_array('indexes', $path, true) ? ['name'] : true);
         $metadata->method('getAll')->willReturn((object) [
             'scopes' => (object) [
                 'Contact' => (object) ['entity' => true, 'recordKnowledge' => true],
@@ -53,26 +53,25 @@ class ReferencesTest extends TestCase
         $statement = $this->createMock(\PDOStatement::class);
         $statement->method('fetchAll')->willReturn([]);
         $executor = $this->createMock(\Espo\ORM\Executor\QueryExecutor::class);
-        $executor->expects($this->exactly(2))->method('execute')->willReturn($statement);
+        $executed = [];
+        $executor->expects($this->exactly(2))->method('execute')->willReturnCallback(function ($query) use (&$executed, $statement) {
+            $executed[] = $query->getRaw();
+            return $statement;
+        });
         $em = $this->createMock(EntityManager::class);
         $em->method('getQueryExecutor')->willReturn($executor);
         $em->expects($this->never())->method('getRDBRepository');
-        $patterns = [];
-        $filter = $this->createMock(\Espo\Core\Select\Text\Filter::class);
-        $filter->expects($this->exactly(2))->method('apply')->willReturnCallback(
-            function ($query, $data) use (&$patterns) {
-                $this->assertTrue($data->skipWildcards());
-                $this->assertSame(['name'], $data->getAttributeList());
-                $patterns[] = $data->getFilter();
-            });
         $filters = $this->createMock(FilterFactory::class);
-        $filters->expects($this->exactly(2))->method('create')->with('Opportunity')->willReturn($filter);
+        $filters->expects($this->never())->method('create');
         $language = $this->createMock(\Espo\Core\Utils\Language::class);
         $language->method('translateLabel')->willReturnArgument(0);
         $service = new EditorReferences($em, $select, $acl, $metadata, $this->createMock(User::class),
             $filters, new ReferenceSearch($language));
-        $this->assertSame([], $service->search('oportunidade nowle renewal'));
-        $this->assertSame(['%nowle%', '%renewal%'], $patterns);
+        $this->assertSame([], $service->search('oportunidade nowle renewal IA'));
+        $sqlParams = json_encode($executed[1]['queries'][0]->getRaw());
+        $this->assertStringContainsString('MATCH_BOOLEAN', $sqlParams);
+        $this->assertStringContainsString('+nowle* +renewal*', $sqlParams);
+        $this->assertStringContainsString('(^|[^[:alnum:]_])IA', $sqlParams);
     }
 
     private function state(array $refs): string

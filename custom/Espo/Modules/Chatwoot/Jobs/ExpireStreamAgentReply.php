@@ -24,6 +24,7 @@ class ExpireStreamAgentReply implements Job
             $metadata = $reply->getData();
             if (($metadata->opportunityStreamAgent->workflowRunId ?? null) !== $data->get('workflowRunId')) return;
             $metadata->opportunityStreamAgent->status = 'failed';
+            unset($metadata->opportunityStreamAgent->draft);
             $metadata->opportunityStreamAgent->finishedAt = gmdate('Y-m-d\TH:i:s\Z');
             $reply->setData($metadata);
             $reply->setPost('This request timed out. Check the workflow before requesting another execution.');

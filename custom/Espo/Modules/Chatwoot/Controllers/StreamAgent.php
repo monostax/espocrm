@@ -64,11 +64,51 @@ class StreamAgent
         return $this->service->status($this->id($request, 'id'), $this->id($request, 'membershipId'), $runId, $status);
     }
 
+    public function getActionPreview(Request $request): object
+    {
+        return $this->service->preview($this->id($request, 'id'));
+    }
+
+    public function postActionSubscribe(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        if (!is_int($body->accountId ?? null) || $body->accountId < 1 || !is_int($body->userId ?? null) || $body->userId < 1 ||
+            !is_string($body->pubsubToken ?? null) || $body->pubsubToken === '' || strlen($body->pubsubToken) > 512) {
+            throw new BadRequest('Valid Chat account and user identity are required.');
+        }
+        return $this->service->subscribe($this->id($request, 'id'), $body->accountId, $body->userId, $body->pubsubToken);
+    }
+
     public function getActionAttachments(Request $request): object
     {
         $runId = $request->getQueryParam('workflowRunId');
         $postId = $request->getQueryParam('sourcePostId');
         $attachmentId = $request->getQueryParam('attachmentId');
+        $postIds = $request->getQueryParam('sourcePostIds');
+        if ($postIds !== null) {
+            $ids = is_string($postIds) ? explode(',', $postIds) : [];
+            if (!$ids || count($ids) > 42 || $attachmentId !== null || $postId !== null) {
+                throw new BadRequest('At most 42 source posts can be listed together.');
+            }
+            foreach ([$runId, ...$ids] as $value) {
+                if (!is_string($value) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $value)) {
+                    throw new BadRequest('Valid run and source post IDs are required.');
+                }
+            }
+            $lists = (object) [];
+            foreach (array_unique($ids) as $id) {
+                // Each source retains its own ACL check. A revoked historical
+                // post must not prevent processing the other readable posts.
+                try {
+                    $lists->{$id} = $this->service->attachments($this->id($request, 'id'),
+                        $this->id($request, 'membershipId'), $this->postHash($request->getQueryParam('postHash')),
+                        $runId, $id, null);
+                } catch (\Espo\Core\Exceptions\Forbidden) {
+                    $lists->{$id} = (object) ['unavailable' => true];
+                }
+            }
+            return (object) ['posts' => $lists];
+        }
         foreach ([$runId, $postId, ...($attachmentId !== null ? [$attachmentId] : [])] as $value) {
             if (!is_string($value) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $value)) {
                 throw new BadRequest('Valid run, source post and attachment IDs are required.');
@@ -89,6 +129,14 @@ class StreamAgent
             throw new BadRequest('Invalid stream progress snapshot.');
         }
         $activities = [];
+        $thinking = $body->thinking ?? '';
+        $draft = $body->draft ?? null;
+        if ($draft !== null && (!is_string($draft) || mb_strlen($draft) > 20000)) {
+            throw new BadRequest('Invalid stream draft.');
+        }
+        if (!is_string($thinking) || mb_strlen($thinking) > 20000) {
+            throw new BadRequest('Invalid stream thinking summary.');
+        }
         $ids = [];
         foreach ($body->activities as $activity) {
             if (!is_object($activity) || !is_string($activity->id ?? null) ||
@@ -105,7 +153,8 @@ class StreamAgent
             $activities[] = $entry;
         }
         return $this->service->updateProgress($this->id($request, 'id'), $this->id($request, 'membershipId'), $runId,
-            (object) ['sequence' => $body->sequence, 'phase' => $body->phase, 'activities' => $activities]);
+            (object) ['sequence' => $body->sequence, 'phase' => $body->phase, 'activities' => $activities, 'thinking' => $thinking,
+                ...($draft !== null ? ['draft' => $draft, 'postHash' => $this->postHash($body->postHash ?? null)] : [])]);
     }
 
     private function timestamp(mixed $value): string

@@ -25,6 +25,7 @@ class Dispatch extends DispatchOpportunityStreamAgent
             if (!StreamAgentProgress::isPending($reply)) continue;
             $payload = (object) [];
             foreach (['noteId', 'parentType', 'parentId', 'postHash', 'aiAgentMembershipId', 'chatwootAccountCrmId', 'crmTenantId'] as $key) $payload->$key = $data->get($key);
+            if ($data->get('queuedAt')) $payload->queuedAt = $data->get('queuedAt');
             $this->em->createEntity('Job', ['name' => self::class, 'className' => self::class, 'queue' => QueueName::Q0,
                 'attempts' => 3, 'executeTime' => gmdate('Y-m-d H:i:s', time() + 5), 'data' => $payload]);
             return;

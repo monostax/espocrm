@@ -32,6 +32,7 @@ class StreamAgent
         private UserTenantResolver $tenants,
         private \Espo\Modules\FeatureAiSession\Services\Execution $sessions,
         private \Espo\Core\FileStorage\Manager $files,
+        private ?StreamAgentLive $live = null,
     ) {}
 
     /** Runtime-only media transport: never embed bytes/URLs in workflow context. */
@@ -56,12 +57,13 @@ class StreamAgent
             ($postId !== $noteId && (int) $post->get('number') >= (int) $source->get('number')) ||
             ($source->getParentType() !== 'AiSession' && $postId !== $source->get('opportunityThreadRootId') &&
                 $post->get('opportunityThreadRootId') !== $source->get('opportunityThreadRootId')) ||
-            !$this->aclManager->checkEntityRead($reader, $post) || !$this->aclManager->checkField($reader, 'Note', 'attachments')) {
+            !$this->aclManager->checkEntityRead($reader, $post)) {
             throw new Forbidden('Attachment source is outside the readable discussion.');
         }
         $items = [];
         foreach ($this->entityManager->getRDBRepository('Note')->getRelation($post, 'attachments')->find() as $attachment) {
-            if (!$attachment instanceof \Espo\Entities\Attachment || !$this->aclManager->checkEntityRead($reader, $attachment) ||
+            if (!$this->aclManager->checkField($reader, 'Note', 'attachments') ||
+                !$attachment instanceof \Espo\Entities\Attachment || !$this->aclManager->checkEntityRead($reader, $attachment) ||
                 !$this->aclManager->checkField($reader, 'Attachment', 'type') ||
                 !$this->aclManager->checkField($reader, 'Attachment', 'size')) continue;
             $item = ['id' => $attachment->getId(),
@@ -82,6 +84,18 @@ class StreamAgent
             }
             $items[] = (object) $item;
             if ($attachmentId === null && count($items) >= 20) break;
+        }
+        if ($this->aclManager->checkField($reader, 'Note', 'post')) {
+            $account = $this->entityManager->getEntityById('ChatwootAccount', $target->chatwootAccountCrmId);
+            $platformId = $account?->get('platformId');
+            $platform = $platformId ? $this->entityManager->getEntityById('ChatwootPlatform', $platformId) : null;
+            foreach (\Espo\Modules\Chatwoot\Tools\Stream\InlineMedia::fromPost($post->getPost() ?? '',
+                (string) $platform?->get('frontendUrl'), (string) $platform?->get('backendUrl')) as $item) {
+                if ($attachmentId === $item['id']) return (object) $item;
+                if (count($items) >= 20) break;
+                unset($item['storageUrl']); // The signed locator is returned only on an authorized load.
+                $items[] = (object) $item;
+            }
         }
         if ($attachmentId !== null) throw new Forbidden('Attachment is not linked to the readable source.');
         return (object) ['list' => $items];
@@ -121,7 +135,7 @@ class StreamAgent
 
     public function reply(string $noteId, string $membershipId, string $postHash, string $post, string $runId): object
     {
-        return $this->entityManager->getTransactionManager()->run(function () use (
+        $result = $this->entityManager->getTransactionManager()->run(function () use (
             $noteId, $membershipId, $postHash, $post, $runId,
         ): object {
             // All retries for this source post serialize here, including a lost HTTP response.
@@ -146,6 +160,7 @@ class StreamAgent
                 if ($source->getParentType() !== 'AiSession' && !$this->acl->check($existing, 'create')) throw new Forbidden('No permission to post in this stream.');
                 $data = $existing->getData();
                 $data->opportunityStreamAgent->status = 'completed';
+                unset($data->opportunityStreamAgent->draft);
                 $data->opportunityStreamAgent->finishedAt = gmdate('Y-m-d\TH:i:s\Z');
                 $existing->setData($data);
                 $existing->set('createdById', $this->user->getId());
@@ -183,6 +198,8 @@ class StreamAgent
             $this->entityManager->saveEntity($reply);
             return (object) ['published' => true, 'noteId' => $reply->getId(), 'reason' => 'Replied'];
         });
+        if ($result->published) $this->live?->publish($this->existingReply($noteId, $membershipId));
+        return $result;
     }
 
     /** One execution per mention, before any external side effects. No lease expiry/replay. */
@@ -222,6 +239,7 @@ class StreamAgent
                 $replyData->opportunityStreamAgent->phase = 'preparing';
                 $replyData->opportunityStreamAgent->sequence = 0;
                 $replyData->opportunityStreamAgent->activities = [];
+                $replyData->opportunityStreamAgent->thinking = '';
                 $existing->setData($replyData);
                 // Repair placeholders created before explicit ORM attribution.
                 $existing->set('createdById', $this->user->getId());
@@ -236,7 +254,7 @@ class StreamAgent
     /** Terminal feedback may outlive an edited trigger, but must belong to this AI/run. */
     public function status(string $noteId, string $membershipId, string $runId, string $status): object
     {
-        return $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $status): object {
+        $result = $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $status): object {
             $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
             $reply = $this->existingReply($noteId, $membershipId);
             if (!StreamAgentProgress::isPending($reply)) return (object) ['updated' => false];
@@ -255,17 +273,20 @@ class StreamAgent
                 default => throw new \InvalidArgumentException('Invalid stream agent status.'),
             };
             $data->opportunityStreamAgent->status = $status;
+            unset($data->opportunityStreamAgent->draft);
             $data->opportunityStreamAgent->finishedAt = gmdate('Y-m-d\TH:i:s\Z');
             $reply->setData($data);
             $reply->setPost($post);
             $this->entityManager->saveEntity($reply);
             return (object) ['updated' => true];
         });
+        if ($result->updated) $this->live?->publish($this->existingReply($noteId, $membershipId));
+        return $result;
     }
 
     public function updateProgress(string $noteId, string $membershipId, string $runId, object $snapshot): object
     {
-        return $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $snapshot): object {
+        $result = $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $snapshot): object {
             // Serialize with claim, publication, cancellation and expiry; terminal states never regress.
             $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
             $reply = $this->existingReply($noteId, $membershipId);
@@ -280,13 +301,50 @@ class StreamAgent
             if ($reply->getCreatedById() !== $this->user->getId() || !$this->user->isActive() || !$sessionAccess) {
                 throw new Forbidden('Authenticate as the mentioned AI profile.');
             }
+            if (isset($snapshot->draft)) {
+                $target = $this->validate($source, $membershipId, $snapshot->postHash);
+                if (!$target || (isset($source->getData()->opportunityAiInitiatorUserId) && !$this->delegatedInitiator($source, $target))) {
+                    throw new Forbidden('Source access was revoked or the request changed.');
+                }
+                $progress->draft = $snapshot->draft;
+                if ($snapshot->draft !== '' && !isset($progress->firstTextAt)) {
+                    $progress->firstTextAt = (new \DateTimeImmutable())->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z');
+                }
+            }
             $progress->sequence = $snapshot->sequence;
             $progress->phase = $snapshot->phase;
             $progress->activities = $snapshot->activities;
+            $progress->thinking = $snapshot->thinking ?? '';
             $reply->setData($data);
-            $this->entityManager->saveEntity($reply, [SaveOption::SKIP_MODIFIED_BY => true]);
+            // Preview snapshots are transient UI state, not new discussion
+            // activity. Avoid a global inbox invalidation job for every chunk.
+            $this->entityManager->saveEntity($reply, [SaveOption::SKIP_MODIFIED_BY => true,
+                SaveOption::SKIP_HOOKS => true]);
             return (object) ['updated' => true];
         });
+        if ($result->updated) $this->live?->publish($this->existingReply($noteId, $membershipId));
+        return $result;
+    }
+
+    public function subscribe(string $noteId, int $accountId, int $userId, string $pubsubToken): object
+    {
+        $this->preview($noteId); // Reauthorize on every short-lived grant renewal.
+        $reply = $this->entityManager->getEntityById('Note', $noteId);
+        if (!$reply instanceof Note || !$this->live) throw new Forbidden('Live replies are unavailable.');
+        return $this->live->ticket($reply, $accountId, $userId, $pubsubToken);
+    }
+
+    /** Small, ACL-checked live snapshot. The final post still uses normal publication. */
+    public function preview(string $noteId): object
+    {
+        $reply = $this->entityManager->getEntityById('Note', $noteId);
+        if (!$reply instanceof Note || $reply->get('opportunityPostDeleted') || !$this->acl->check($reply, 'read')) {
+            throw new Forbidden('No access to this reply.');
+        }
+        $progress = clone ($reply->getData()->opportunityStreamAgent ?? (object) []);
+        if (!StreamAgentProgress::isPending($reply)) unset($progress->draft);
+        return (object) ['progress' => $progress,
+            'post' => ($progress->status ?? null) === 'completed' ? $reply->getPost() : null];
     }
 
     /** Null is deliberate for legacy/revoked triggers; callers must never substitute the AI. */

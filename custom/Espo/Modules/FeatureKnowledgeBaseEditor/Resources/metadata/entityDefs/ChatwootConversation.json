@@ -1,0 +1,5 @@
+{
+    "indexes": {
+        "editorReferenceName": {"columns": ["name"], "flags": ["fulltext"]}
+    }
+}

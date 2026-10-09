@@ -213,6 +213,26 @@ class OpportunityStreamAgentTest extends TestCase
         $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', 'image');
     }
 
+    public function testInlineImageIsListedWithoutAttachmentRecordAndRevalidatedOnLoad(): void
+    {
+        $path = '/rails/active_storage/blobs/redirect/eyJfcmFpbHMi==--' . str_repeat('a', 40) . '/photo.jpg';
+        $this->source->setPost('<img src="https://chat.test' . $path . '"> What is this?');
+        $this->postHash = hash('sha256', $this->source->getPost());
+        $this->records['ChatwootAccount/account']->set('platformId', 'platform');
+        $this->records['ChatwootPlatform/platform'] = new EntityDouble(['frontendUrl' => 'https://chat.test', 'backendUrl' => 'http://chatwoot-service:3000']);
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $manifest = $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', null);
+        self::assertCount(1, $manifest->list);
+        self::assertSame('image/jpeg', $manifest->list[0]->type);
+        self::assertFalse(isset($manifest->list[0]->storageUrl));
+        $this->files->expects(self::never())->method('getStream');
+        $file = $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', $manifest->list[0]->id);
+        self::assertSame('http://chatwoot-service:3000' . $path, $file->storageUrl);
+        $this->attachmentFields = false;
+        $this->expectException(Forbidden::class);
+        $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', $manifest->list[0]->id);
+    }
+
     public function testDelegationRequiresCapturedHumanAndCurrentAccess(): void
     {
         self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
@@ -424,6 +444,45 @@ class OpportunityStreamAgentTest extends TestCase
         $this->service->status('source', 'ai', 'run', 'cancelled');
         self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
         self::assertNotEmpty($reply->getData()->opportunityStreamAgent->finishedAt);
+    }
+
+    public function testDraftIsPreviewOnlyAndCannotRegressFinalPublication(): void
+    {
+        $reply = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $snapshot = (object) ['sequence' => 1, 'phase' => 'thinking', 'activities' => [],
+            'draft' => 'Boa', 'postHash' => $this->postHash];
+        self::assertTrue($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        self::assertNotSame('Boa', $reply->getPost());
+        $preview = $this->service->preview('pending-reply');
+        self::assertSame('Boa', $preview->progress->draft);
+        self::assertNull($preview->post);
+        self::assertNotEmpty($preview->progress->firstTextAt);
+        $this->service->reply('source', 'ai', $this->postHash, 'Boa noite!', 'run');
+        $snapshot->sequence = 2;
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        $preview = $this->service->preview('pending-reply');
+        self::assertFalse(isset($preview->progress->draft));
+        self::assertSame('Boa noite!', $preview->post);
+    }
+
+    public function testEditedTriggerCannotPublishDraft(): void
+    {
+        $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $this->source->setPost('Changed request');
+        $this->expectException(Forbidden::class);
+        $this->service->updateProgress('source', 'ai', 'run', (object) [
+            'sequence' => 1, 'phase' => 'thinking', 'activities' => [], 'draft' => 'Old response', 'postHash' => $this->postHash,
+        ]);
+    }
+
+    public function testPreviewRequiresViewerReadAccess(): void
+    {
+        $this->queuedReply();
+        $this->canRead = false;
+        $this->expectException(Forbidden::class);
+        $this->service->preview('pending-reply');
     }
 
     public function testProgressRequiresTheAuthenticatedReplyAuthor(): void

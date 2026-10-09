@@ -50,6 +50,15 @@ require_once 'tests/unit/testData/DB/MockDBResult.php';
 
 class PostgresqlQueryComposerTest extends TestCase
 {
+    public function testLiteralWordPrefixRegexp(): void
+    {
+        $query = SelectBuilder::create()->from('Account')->select('id')->where(Condition::equal(
+            \Espo\ORM\Query\Part\Expression\Util::composeFunction('REGEXP', Expression::column('name'),
+                '(^|[^[:alnum:]_])Kibu'), true))->build();
+        $this->assertStringContainsString('"account"."name" ~* \'(^|[^[:alnum:]_])Kibu\' = true',
+            $this->queryComposer->compose($query));
+    }
+
     private ?QueryComposer $queryComposer;
     private ?EntityManager $entityManager;
 

@@ -1,5 +1,6 @@
 {
     "indexes": {
+        "editorReferenceName": {"columns": ["name"], "flags": ["fulltext"]},
         "searchName": {"columns": ["name", "deleted"]}
     }
 }

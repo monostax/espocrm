@@ -66,6 +66,14 @@ require_once 'tests/unit/testData/DB/MockDBResult.php';
 
 class MysqlQueryComposerTest extends TestCase
 {
+    public function testLiteralWordPrefixRegexp(): void
+    {
+        $query = SelectBuilder::create()->from('Account')->select('id')->where(Comparison::equal(
+            \Espo\ORM\Query\Part\Expression\Util::composeFunction('REGEXP', Expression::column('name'),
+                '(^|[^[:alnum:]_])Kibu'), true))->build();
+        $this->assertStringContainsString("account.name REGEXP '(^|[^[:alnum:]_])Kibu' = 1", $this->query->compose($query));
+    }
+
     protected ?QueryComposer $query = null;
     protected $pdo = null;
     protected ?EntityFactory $entityFactory = null;

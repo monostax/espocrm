@@ -1,7 +1,8 @@
 {
     "transactionalSave": true,
     "indexes": {
-        "searchName": {"columns": ["name", "deleted"]}
+        "searchName": {"columns": ["name", "deleted"]},
+        "editorReferenceName": {"columns": ["name"], "flags": ["fulltext"]}
     },
     "fields": {
         "body": {"additionalAttributeList": ["__APPEND__", "editorState", "format"]}

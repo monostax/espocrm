@@ -1,4 +1,7 @@
 [
+    { "route": "/StreamIdentity", "method": "get", "params": { "controller": "StreamIdentity", "action": "read" } },
+    { "route": "/Note/:id/streamAiPreview", "method": "get", "params": { "controller": "StreamAgent", "action": "preview", "id": ":id" } },
+    { "route": "/Note/:id/streamAiSubscribe", "method": "post", "params": { "controller": "StreamAgent", "action": "subscribe", "id": ":id" } },
     { "route": "/JourneyRelationships/:type/:targetId/options", "method": "get", "params": { "controller": "JourneyRelationships", "action": "options", "type": ":type", "targetId": ":targetId" } },
     { "route": "/JourneyRelationships/:type/:targetId", "method": "get", "params": { "controller": "JourneyRelationships", "action": "list", "type": ":type", "targetId": ":targetId" } },
     { "route": "/JourneyRelationships/:type/:targetId", "method": "post", "params": { "controller": "JourneyRelationships", "action": "enroll", "type": ":type", "targetId": ":targetId" } },

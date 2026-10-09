@@ -74,6 +74,7 @@ class PostgresqlQueryComposer extends BaseQueryComposer
     protected array $comparisonFunctionOperatorMap = [
         'LIKE' => 'ILIKE',
         'NOT_LIKE' => 'NOT ILIKE',
+        'REGEXP' => '~*',
         'EQUAL' => '=',
         'NOT_EQUAL' => '<>',
         'GREATER_THAN' => '>',

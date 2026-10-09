@@ -1,0 +1,7 @@
+{
+    "indexes": {
+        "editorReferenceHistory": {
+            "columns": ["userId", "deleted", "action", "targetType", "targetId", "number"]
+        }
+    }
+}

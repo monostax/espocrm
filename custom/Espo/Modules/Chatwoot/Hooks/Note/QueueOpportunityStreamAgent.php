@@ -51,6 +51,7 @@ class QueueOpportunityStreamAgent implements AfterSave
                     'aiAgentMembershipId' => $target->aiAgentMembershipId,
                     'chatwootAccountCrmId' => $target->chatwootAccountCrmId,
                     'crmTenantId' => $target->crmTenantId,
+                    'queuedAt' => (new \DateTimeImmutable())->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
                 ],
             ]);
         }

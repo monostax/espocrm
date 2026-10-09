@@ -24,6 +24,7 @@ class ReferenceSearchTest extends TestCase
             ['Kibu', $types, ['Kibu']],
             ['Overview IA', $types, ['Overview', 'IA']],
             ['oportunidade nowle', ['Opportunity'], ['nowle']],
+            ['oportunidade drogasil', ['Opportunity'], ['drogasil']],
             ['NOWLE OPORTUNIDADES', ['Opportunity'], ['NOWLE']],
             ['manuella contato', ['Contact'], ['manuella']],
             ['contacts manuella silva', ['Contact'], ['manuella', 'silva']],
@@ -43,6 +44,25 @@ class ReferenceSearchTest extends TestCase
     {
         $this->assertSame('%Kibu%', ReferenceSearch::pattern('Kibu'));
         $this->assertSame('%50\\%\\_off\\\\sale%', ReferenceSearch::pattern('50%_off\\sale'));
+    }
+
+    public function testWordPrefixesFindWordsAfterSpacesAndPunctuation(): void
+    {
+        foreach (['AI Kibu', 'IA (Kibu) — Overview', 'Kibu assistant'] as $name) {
+            $this->assertSame(1, preg_match('~' . ReferenceSearch::wordPattern('kibu') . '~iu', $name));
+        }
+        $this->assertSame(0, preg_match('~' . ReferenceSearch::wordPattern('ibu') . '~iu', 'AI Kibu'));
+        $this->assertSame(1, preg_match('~' . ReferenceSearch::wordPattern('50%_off') . '~iu', 'Sale 50%_off'));
+        $this->assertSame(0, preg_match('~' . ReferenceSearch::wordPattern('a.*') . '~iu', 'anything'));
+    }
+
+    public function testFullTextGuardDoesNotDropShortStopwordOrLiteralQueries(): void
+    {
+        $this->assertSame('+Kibu*', ReferenceSearch::fullTextTerm('Kibu'));
+        $this->assertSame('+drogasil*', ReferenceSearch::fullTextTerm('drogasil'));
+        foreach (['AI', 'the', 'WITH', '50%', 'foo-bar', '+admin', 'a.*', str_repeat('x', 85)] as $term) {
+            $this->assertNull(ReferenceSearch::fullTextTerm($term), $term);
+        }
     }
 
     public function testUsesTheUsersTranslatedSingularAndPluralLabels(): void

@@ -46,6 +46,22 @@ class ReferenceSearch
         return '%' . strtr($term, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']) . '%';
     }
 
+    /** Literal prefix at the start of any Unicode word, not just the name. */
+    public static function wordPattern(string $term): string
+    {
+        return '(^|[^[:alnum:]_])' . preg_quote($term, '~');
+    }
+
+    /** InnoDB does not index these default stopwords, or words shorter than three characters. */
+    public static function fullTextTerm(string $term): ?string
+    {
+        $stopwords = ['a', 'about', 'an', 'are', 'as', 'at', 'be', 'by', 'com', 'de', 'en',
+            'for', 'from', 'how', 'i', 'in', 'is', 'it', 'la', 'of', 'on', 'or', 'that',
+            'the', 'this', 'to', 'was', 'what', 'when', 'where', 'who', 'will', 'with', 'und', 'www'];
+        return preg_match('/^[\p{L}\p{N}_]{3,84}$/u', $term) &&
+            !in_array(self::normalize($term), $stopwords, true) ? '+' . $term . '*' : null;
+    }
+
     private static function normalize(string $value): string
     {
         return strtr(mb_strtolower(trim($value)), [

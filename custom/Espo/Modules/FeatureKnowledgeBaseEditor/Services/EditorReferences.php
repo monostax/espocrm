@@ -8,13 +8,14 @@ use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\Core\Select\Text\Filter\Data as TextFilterData;
 use Espo\Core\Select\Text\FilterFactory;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression as Expr;
+use Espo\ORM\Query\Part\Expression\Util as ExpressionUtil;
+use Espo\ORM\Query\Part\Where\Comparison as Cmp;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\Query\UnionBuilder;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
@@ -61,7 +62,8 @@ class EditorReferences
         $queries = [];
         $historyQuery = SelectBuilder::create()->from('ActionHistoryRecord')
             ->select(['targetType', 'targetId', ['MAX:number', 'lastViewedNumber']])
-            ->where(['userId' => $this->user->getId(), 'action' => ['read', 'create']])
+            ->where(['userId' => $this->user->getId(), 'action' => ['read', 'create'],
+                'targetType' => $nextActionParent ? array_values(array_intersect($search['types'], ['Task', 'Meeting', 'Call'])) : $search['types']])
             ->group(['targetType', 'targetId'])->build();
         $history = [];
         foreach ($this->em->getQueryExecutor()->execute($historyQuery)->fetchAll() as $row) {
@@ -100,9 +102,19 @@ class EditorReferences
                 }
                 $queries[$type] = $queryBuilder->build();
                 $queryBuilder->order('name')->limit(0, 10);
+                $fullTextColumns = $this->metadata->get(['entityDefs', $type, 'indexes', 'editorReferenceName', 'columns']);
+                $fullTextTerms = array_values(array_filter(array_map(ReferenceSearch::fullTextTerm(...), $search['terms'])));
+                if ($fullTextColumns && $fullTextTerms) {
+                    // Keep strict ACL on the indexed query. Boolean operators are
+                    // generated only from plain words, never accepted from input.
+                    $queryBuilder->where(Cmp::greater(ExpressionUtil::composeFunction('MATCH_BOOLEAN',
+                        ...[...array_map(Expr::column(...), $fullTextColumns), implode(' ', $fullTextTerms)]), 0));
+                }
                 foreach ($search['terms'] as $term) {
-                    $this->textFilterFactory->create($type, $this->user)->apply($queryBuilder,
-                        TextFilterData::create(ReferenceSearch::pattern($term), ['name'])->withSkipWildcards());
+                    if ($fullTextColumns && ReferenceSearch::fullTextTerm($term) !== null) continue;
+                    // Short words, stopwords and punctuation remain searchable.
+                    $queryBuilder->where(Cmp::equal(ExpressionUtil::composeFunction('REGEXP',
+                        Expr::column('name'), ReferenceSearch::wordPattern($term)), true));
                 }
                 $columns = [
                     'id', 'name', ['VALUE:' . $type, 'entityType'], [(string) $rank, 'rank'],

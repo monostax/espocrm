@@ -68,7 +68,7 @@ class AiSessionInbox
         foreach ($this->em->getRDBRepository('ChatwootAccountUserMembership')->where(['chatwootAccountId' => $account->getId(), 'isAI' => true])->find() as $agent) {
             try { $this->access->agent($this->user, $session, $agent->getId()); }
             catch (\Espo\Core\Exceptions\Forbidden) { continue; }
-            $list[] = (object) ['id' => $agent->getId(), 'name' => $agent->get('name')];
+            $list[] = (object) ['id' => $agent->getId(), 'name' => $agent->get('name'), 'avatarUrl' => $agent->get('avatarUrl')];
         }
         return (object) ['list' => $list];
     }

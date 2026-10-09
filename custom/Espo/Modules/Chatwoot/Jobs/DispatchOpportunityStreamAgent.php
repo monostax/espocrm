@@ -26,6 +26,8 @@ class DispatchOpportunityStreamAgent implements Job
         // Jobs saved before the generic stream deployment remain deliverable.
         $payload['parentType'] = $data->get('parentType') ?: 'Opportunity';
         $payload['parentId'] = $data->get('parentId') ?: $data->get('opportunityId');
+        if ($data->get('queuedAt')) $payload['queuedAt'] = $data->get('queuedAt');
+        $payload['dispatchedAt'] = (new \DateTimeImmutable())->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z');
         $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $timestamp = (string) time();
         $response = (new Client())->post($url, [

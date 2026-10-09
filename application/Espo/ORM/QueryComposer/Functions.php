@@ -111,6 +111,7 @@ class Functions
         'IF',
         'LIKE',
         'NOT_LIKE',
+        'REGEXP',
         'EQUAL',
         'NOT_EQUAL',
         'GREATER_THAN',
@@ -147,6 +148,7 @@ class Functions
     public const COMPARISON_FUNCTION_LIST = [
         'LIKE',
         'NOT_LIKE',
+        'REGEXP',
         'EQUAL',
         'NOT_EQUAL',
         'GREATER_THAN',

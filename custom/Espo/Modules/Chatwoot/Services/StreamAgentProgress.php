@@ -46,6 +46,7 @@ class StreamAgentProgress
                 'sourceNoteId' => $source->getId(),
                 'aiAgentMembershipId' => $target->aiAgentMembershipId,
                 'status' => 'queued',
+                'queuedAt' => (new \DateTimeImmutable())->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
                 'workflowRunId' => null,
             ]],
         ]);

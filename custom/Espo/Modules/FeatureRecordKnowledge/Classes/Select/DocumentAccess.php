@@ -10,6 +10,8 @@ use Espo\Core\Select\Applier\AdditionalApplier;
 use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\ORM\Query\SelectBuilder;
+use Espo\ORM\Query\Part\Expression as Expr;
+use Espo\ORM\Query\Part\Where\Comparison as Cmp;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 /** Applied to all Document selects, including lists, fulltext search and exports. */
@@ -29,7 +31,13 @@ class DocumentAccess implements AdditionalApplier
             if (!$this->acl->checkScope($type, 'read') || !$this->acl->checkField($type, 'name')) continue;
             try {
                 self::$ordinaryDocumentParent = $type === 'Document';
-                $parent = $this->select->create()->from($type)->withStrictAccessControl()->buildQueryBuilder()->select(['id'])->build();
+                $parentBuilder = $this->select->create()->from($type)->withStrictAccessControl()->buildQueryBuilder()->select(['id']);
+                // Correlate the parent lookup rather than materializing every
+                // readable record of every supported type for each document query.
+                if ($type !== 'Document') {
+                    $parentBuilder->where(Cmp::equal(Expr::column('id'), Expr::column('document.knowledgeRecordId')));
+                }
+                $parent = $parentBuilder->build();
                 $or[] = ['knowledgeRecordType' => $type, 'knowledgeRecordId=s' => $parent];
             } catch (Forbidden) {
                 continue;
